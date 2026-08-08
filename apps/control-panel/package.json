@@ -25,6 +25,7 @@
     "vitest": "^4.1.10"
   },
   "overrides": {
-    "postcss": "8.5.24"
+    "postcss": "8.5.24",
+    "nanoid": "3.3.17"
   }
 }
