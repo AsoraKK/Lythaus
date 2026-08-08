@@ -118,14 +118,14 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
 
-    - name: Auth callback screen tests
-      run: flutter test test/features/auth/presentation/auth_callback_screen_test.dart
+    - name: Email and guest auth choice tests
+      run: flutter test test/features/auth/presentation/auth_choice_screen_test.dart
 
-    - name: Web auth service tests
-      run: flutter test test/features/auth/application/web_auth_service_test.dart
+    - name: Email auth service tests
+      run: flutter test test/features/auth/application/auth_service_test.dart
 
-    - name: Web token storage tests
-      run: flutter test test/features/auth/application/web_token_storage_test.dart
+    - name: Auth gate tests
+      run: flutter test test/features/auth/presentation/auth_gate_test.dart
 
     - name: GoRouter navigation tests
       run: flutter test test/core/routing/app_router_test.dart
