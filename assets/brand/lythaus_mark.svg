@@ -1,10 +1,10 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="asoraGradient" x1="10" y1="54" x2="54" y2="10" gradientUnits="userSpaceOnUse">
+    <linearGradient id="lythausGradient" x1="10" y1="54" x2="54" y2="10" gradientUnits="userSpaceOnUse">
       <stop stop-color="#1CA3A3"/>
       <stop offset="1" stop-color="#5EEAD4"/>
     </linearGradient>
   </defs>
-  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#asoraGradient)"/>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#lythausGradient)"/>
   <path d="M20.5 46.5L32 16L43.5 46.5H38.1L35.2 38.8H28.7L25.9 46.5H20.5ZM30.1 33.7H33.8L32 28.3L30.1 33.7Z" fill="white"/>
 </svg>

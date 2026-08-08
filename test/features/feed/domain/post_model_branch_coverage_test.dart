@@ -111,7 +111,7 @@ void main() {
             score: 0.95,
             flags: ['spam'],
             analyzedAt: now,
-            provider: 'hive_ai',
+            provider: 'lythaus_authenticity_ai',
           ),
         );
 
@@ -128,14 +128,14 @@ void main() {
           score: 0.95,
           flags: ['explicit'],
           analyzedAt: DateTime.now(),
-          provider: 'hive_ai',
+          provider: 'lythaus_authenticity_ai',
         );
         final lowConfidence = PostModerationData(
           confidence: 'low',
           score: 0.1,
           flags: [],
           analyzedAt: DateTime.now(),
-          provider: 'hive_ai',
+          provider: 'lythaus_authenticity_ai',
         );
 
         expect(highConfidence.score > 0.8, isTrue);
@@ -150,7 +150,7 @@ void main() {
             score: 0.5,
             flags: [],
             analyzedAt: DateTime.now(),
-            provider: 'hive_ai',
+            provider: 'lythaus_authenticity_ai',
           );
           expect(levels.contains(mod.confidence), isTrue);
         }
@@ -162,14 +162,14 @@ void main() {
           score: 0.9,
           flags: ['explicit', 'spam'],
           analyzedAt: DateTime.now(),
-          provider: 'hive_ai',
+            provider: 'lythaus_authenticity_ai',
         );
         final noFlags = PostModerationData(
           confidence: 'low',
           score: 0.1,
           flags: [],
           analyzedAt: DateTime.now(),
-          provider: 'hive_ai',
+            provider: 'lythaus_authenticity_ai',
         );
 
         expect(withFlags.flags.isNotEmpty, isTrue);

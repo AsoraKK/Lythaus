@@ -70,7 +70,7 @@ void main() {
         score: 0.95,
         flags: ['safe'],
         analyzedAt: now,
-        provider: 'hive_ai',
+        provider: 'lythaus_authenticity_ai',
       );
       const meta = PostMetadata(
         location: 'NYC',
@@ -241,7 +241,7 @@ void main() {
           'score': 0.9,
           'flags': ['safe'],
           'analyzedAt': now.toIso8601String(),
-          'provider': 'hive_ai',
+          'provider': 'lythaus_authenticity_ai',
         },
       };
       final post = Post.fromJson(json);

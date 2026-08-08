@@ -210,12 +210,16 @@ test('production config reuses existing Workers and disables paid or incomplete 
 
 test('active runtimes have an explicit retired-provider dependency scan', () => {
   const script = fs.readFileSync(path.join(root, 'scripts/validate-no-retired-provider-dependencies.mjs'), 'utf8');
+  const allowlist = JSON.parse(fs.readFileSync(path.join(root, 'scripts/retired-reference-allowlist.json'), 'utf8'));
   assert.match(script, /retiredBrand/);
   assert.match(script, /retiredProvider/);
   assert.match(script, /retiredDatabase/);
   assert.match(script, /retiredClassifier/);
   assert.match(script, /retired authentication/);
   assert.match(script, /git', \['ls-files', '-z'\]/);
+  assert.match(script, /retired-reference-allowlist\.json/);
+  assert.ok(allowlist.entries.some((entry) => entry.path === 'docs/history/**'));
+  assert.ok(allowlist.entries.every((entry) => entry.reason && entry.kind));
 });
 
 test('jobs Worker exposes durable privacy and appeal workflows', () => {

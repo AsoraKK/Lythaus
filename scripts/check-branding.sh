@@ -18,7 +18,8 @@ content_matches="$({
     --glob '!.codex-*/**' -- "$RETIRED_BRAND" \
     "$ROOT/lib" "$ROOT/test" "$ROOT/integration_test" "$ROOT/android" "$ROOT/ios" \
     "$ROOT/macos" "$ROOT/linux" "$ROOT/windows" "$ROOT/web" "$ROOT/apps" "$ROOT/api" \
-    "$ROOT/packages" "$ROOT/scripts" "$ROOT/.github" "$ROOT/pubspec.yaml" "$ROOT/package.json" \
+    "$ROOT/packages" "$ROOT/scripts" "$ROOT/.github" "$ROOT/assets" "$ROOT/docs/product" \
+    "$ROOT/docs/architecture" "$ROOT/pubspec.yaml" "$ROOT/package.json" \
     2>/dev/null || true
 } | rg -v "$OWNER_EXCEPTION|$EMAIL_EXCEPTION" || true)"
 

@@ -44,7 +44,7 @@ void main() {
         score: 0.95,
         flags: ['spam'],
         analyzedAt: testDate,
-        provider: 'hive_ai',
+        provider: 'lythaus_authenticity_ai',
       );
 
       const metadata = PostMetadata(
@@ -128,7 +128,7 @@ void main() {
           'score': 0.95,
           'flags': ['spam'],
           'analyzedAt': '2023-01-01T12:00:00.000Z',
-          'provider': 'hive_ai',
+          'provider': 'lythaus_authenticity_ai',
         },
         'metadata': {
           'location': 'New York',
@@ -216,7 +216,7 @@ void main() {
         score: 0.95,
         flags: ['spam'],
         analyzedAt: testDate,
-        provider: 'hive_ai',
+        provider: 'lythaus_authenticity_ai',
       );
 
       const metadata = PostMetadata(
@@ -272,14 +272,14 @@ void main() {
         score: 0.95,
         flags: ['spam', 'hate'],
         analyzedAt: testDate,
-        provider: 'hive_ai',
+        provider: 'lythaus_authenticity_ai',
       );
 
       expect(moderation.confidence, 'high');
       expect(moderation.score, 0.95);
       expect(moderation.flags, ['spam', 'hate']);
       expect(moderation.analyzedAt, testDate);
-      expect(moderation.provider, 'hive_ai');
+      expect(moderation.provider, 'lythaus_authenticity_ai');
     });
 
     test('fromJson', () {
@@ -288,7 +288,7 @@ void main() {
         'score': 0.95,
         'flags': ['spam', 'hate'],
         'analyzedAt': '2023-01-01T12:00:00.000Z',
-        'provider': 'hive_ai',
+        'provider': 'lythaus_authenticity_ai',
       };
 
       final moderation = PostModerationData.fromJson(json);
@@ -297,7 +297,7 @@ void main() {
       expect(moderation.score, 0.95);
       expect(moderation.flags, ['spam', 'hate']);
       expect(moderation.analyzedAt, testDate);
-      expect(moderation.provider, 'hive_ai');
+      expect(moderation.provider, 'lythaus_authenticity_ai');
     });
 
     test('fromJson with empty flags', () {
@@ -323,7 +323,7 @@ void main() {
         score: 0.95,
         flags: ['spam', 'hate'],
         analyzedAt: testDate,
-        provider: 'hive_ai',
+        provider: 'lythaus_authenticity_ai',
       );
 
       final json = moderation.toJson();
@@ -332,7 +332,7 @@ void main() {
       expect(json['score'], 0.95);
       expect(json['flags'], ['spam', 'hate']);
       expect(json['analyzedAt'], '2023-01-01T12:00:00.000Z');
-      expect(json['provider'], 'hive_ai');
+      expect(json['provider'], 'lythaus_authenticity_ai');
     });
   });
 

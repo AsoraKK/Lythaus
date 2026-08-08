@@ -11,7 +11,6 @@ data are never stored in this file or in Git.
 - `JWT_PRIVATE_KEY`
 - `JWT_PUBLIC_JWKS`
 - `JWT_KEY_ID`
-- `GOOGLE_CLIENT_SECRET`
 - `TURNSTILE_SECRET_KEY`
 - `EMAIL_PROVIDER_TOKEN` (only when an external email adapter is enabled)
 - `R2_ACCESS_KEY_ID`
@@ -23,10 +22,8 @@ data are never stored in this file or in Git.
 
 ## Jobs Worker
 
-- `HIVE_API_KEY`
-- `R2_ACCESS_KEY_ID`
-- `R2_SECRET_ACCESS_KEY`
-- `EXTERNAL_BACKUP_HEALTHCHECK_TOKEN`
+The jobs Worker uses existing R2 bindings and does not require an object-store
+credential or external backup healthcheck token.
 
 ## Protected CI and migration environment
 

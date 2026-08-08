@@ -140,7 +140,7 @@ void main() {
         'postId': 'post-123',
         'riskBand': 'HIGH',
         'decision': 'BLOCK',
-        'reasonCodes': ['HIVE_SCORE_OVER_THRESHOLD'],
+        'reasonCodes': ['AUTHENTICITY_SCORE_OVER_THRESHOLD'],
         'configVersion': 42,
         'decidedAt': '2025-12-28T10:00:00.000Z',
         'appeal': {
@@ -154,7 +154,7 @@ void main() {
       expect(insights.postId, 'post-123');
       expect(insights.riskBand, RiskBand.high);
       expect(insights.decision, InsightDecision.block);
-      expect(insights.reasonCodes, contains('HIVE_SCORE_OVER_THRESHOLD'));
+      expect(insights.reasonCodes, contains('AUTHENTICITY_SCORE_OVER_THRESHOLD'));
       expect(insights.configVersion, 42);
       expect(insights.decidedAt.year, 2025);
       expect(insights.appeal.status, InsightAppealStatus.pending);
@@ -193,7 +193,7 @@ void main() {
         postId: 'post-abc',
         riskBand: RiskBand.low,
         decision: InsightDecision.allow,
-        reasonCodes: ['HIVE_SCORE_UNDER_THRESHOLD'],
+        reasonCodes: ['AUTHENTICITY_SCORE_UNDER_THRESHOLD'],
         configVersion: 5,
         decidedAt: DateTime.utc(2025, 12, 28, 10, 0),
         appeal: const InsightAppeal(status: InsightAppealStatus.none),
@@ -204,7 +204,7 @@ void main() {
       expect(json['postId'], 'post-abc');
       expect(json['riskBand'], 'LOW');
       expect(json['decision'], 'ALLOW');
-      expect(json['reasonCodes'], contains('HIVE_SCORE_UNDER_THRESHOLD'));
+      expect(json['reasonCodes'], contains('AUTHENTICITY_SCORE_UNDER_THRESHOLD'));
       expect(json['configVersion'], 5);
       expect(json['decidedAt'], '2025-12-28T10:00:00.000Z');
       expect(json['appeal']['status'], 'NONE');

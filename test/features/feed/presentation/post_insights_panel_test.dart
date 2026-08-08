@@ -19,7 +19,7 @@ void main() {
         postId: 'post-123',
         riskBand: RiskBand.low,
         decision: InsightDecision.allow,
-        reasonCodes: ['HIVE_SCORE_UNDER_THRESHOLD'],
+        reasonCodes: ['AUTHENTICITY_SCORE_UNDER_THRESHOLD'],
         configVersion: 5,
         decidedAt: DateTime(2025, 12, 28, 10, 0),
         appeal: const InsightAppeal(status: InsightAppealStatus.none),
@@ -55,7 +55,7 @@ void main() {
         postId: 'post-123',
         riskBand: RiskBand.high,
         decision: InsightDecision.block,
-        reasonCodes: ['HIVE_SCORE_OVER_THRESHOLD'],
+        reasonCodes: ['AUTHENTICITY_SCORE_OVER_THRESHOLD'],
         configVersion: 10,
         decidedAt: DateTime(2025, 12, 28, 10, 0),
         appeal: const InsightAppeal(status: InsightAppealStatus.none),
@@ -88,7 +88,7 @@ void main() {
         riskBand: RiskBand.medium,
         decision:
             InsightDecision.block, // Binary: BLOCK with pending appeal = MEDIUM
-        reasonCodes: ['HIVE_SCORE_OVER_FLAG_THRESHOLD'],
+        reasonCodes: ['AUTHENTICITY_SCORE_OVER_FLAG_THRESHOLD'],
         configVersion: 7,
         decidedAt: DateTime(2025, 12, 28, 10, 0),
         appeal: const InsightAppeal(status: InsightAppealStatus.pending),
