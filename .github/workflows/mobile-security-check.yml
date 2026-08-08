@@ -16,7 +16,7 @@ jobs:
     name: Validate mobile security contracts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Check for SPKI pin placeholders
         shell: bash

@@ -11,6 +11,6 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Validate SQL files exist
         run: test -f database/migrate_to_target_schema.sql
