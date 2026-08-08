@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Lythaus</title>
+  <g fill="none" stroke="#fff" stroke-width="76" stroke-linecap="square" stroke-linejoin="round">
+    <circle cx="512" cy="512" r="452" />
+    <path d="M246 206v470c0 35 18 53 53 53h304" />
+    <path d="M382 273v383" />
+    <path d="M382 486h350" />
+    <path d="M732 329v491" />
+  </g>
+</svg>

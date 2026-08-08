@@ -49,7 +49,7 @@ jobs:
     environment: ${{ inputs.target_environment }}
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 1

@@ -1,7 +1,7 @@
 ---
 const {
   title = 'Lythaus',
-  description = 'Invite-only beta for human-first publishing.',
+  description = 'A calm, human-first publishing network.',
   canonicalPath = '',
 } = Astro.props;
 const pageTitle = title ? `${title} | Lythaus` : 'Lythaus';
@@ -15,17 +15,16 @@ import '../styles/global.css';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <meta name="theme-color" content="#090a0b" />
     <title>{pageTitle}</title>
     <link rel="canonical" href={canonicalUrl} />
 
-    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:site_name" content="Lythaus" />
 
-    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
@@ -33,36 +32,39 @@ import '../styles/global.css';
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Manrope:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
-    <div class="orb orb--one" aria-hidden="true"></div>
-    <div class="orb orb--two" aria-hidden="true"></div>
     <header class="site-header">
-      <a class="logo" href="/">Lythaus</a>
-      <nav class="site-nav">
+      <a class="brand" href="/" aria-label="Lythaus home">
+        <img src="/brand/lythaus-mark.svg" alt="" width="34" height="34" />
+        <span>Lythaus</span>
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
         <a href="/features">Features</a>
         <a href="/about">About</a>
         <a href="/pricing">Pricing</a>
-        <a href="/#waitlist">Waitlist</a>
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
       </nav>
+      <a class="header-cta" href="/#waitlist">Request invite</a>
     </header>
+
     <main class="page">
       <slot />
     </main>
+
     <footer class="site-footer">
+      <a class="brand footer-brand" href="/" aria-label="Lythaus home">
+        <img src="/brand/lythaus-mark.svg" alt="" width="28" height="28" />
+        <span>Lythaus</span>
+      </a>
+      <p>A calmer place for human ideas.</p>
       <div class="footer-links">
         <a href="/terms">Terms</a>
         <a href="/privacy">Privacy</a>
         <a href="/invite">Redeem invite</a>
       </div>
-      <p class="footer-note">
-        Lythaus is an invite-only beta focused on authentic human content.
-      </p>
     </footer>
   </body>
 </html>

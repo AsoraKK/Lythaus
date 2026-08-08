@@ -11,7 +11,7 @@ jobs:
     name: Validate launch blocker evidence
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Validate observability alert routing config
         run: bash scripts/validate-alert-routing-config.sh

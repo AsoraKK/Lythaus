@@ -111,7 +111,10 @@
       "minimatch": "5.1.9"
     },
     "typescript": "5.5.4",
-    "undici": "7.29.0"
+    "undici": "7.29.0",
+    "miniflare": {
+      "undici": "7.29.0"
+    }
   },
   "workspaces": [
     "apps/lythaus-admin-api",
