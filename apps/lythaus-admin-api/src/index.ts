@@ -1,12 +1,19 @@
-import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
-import { hmacLookup, uuidv7 } from '@lythaus/security';
+import { constantTimeEqual, hmacLookup, uuidv7 } from '@lythaus/security';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface Env extends EnvBindings {
   DB_ADMIN_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
+}
+
+function hasReadinessAuthorization(request: Request, env: Env): boolean {
+  const configured = env.DATABASE_READINESS_TOKEN;
+  const supplied = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!configured || !supplied) return false;
+  return constantTimeEqual(new TextEncoder().encode(configured), new TextEncoder().encode(supplied));
 }
 
 async function accessSubject(request: Request, env: Env): Promise<string> {
@@ -110,6 +117,24 @@ export default {
       const url = new URL(request.url);
       if (request.method === 'OPTIONS') return json(null, { status: 204 });
       if (request.method === 'GET' && url.pathname === '/health') return json({ status: 'ok', service: 'lythaus-admin-api' });
+      if (request.method === 'GET' && url.pathname === '/internal/readiness/database-identity') {
+        if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+        const [admin, privacy] = await Promise.all([
+          inspectDatabaseIdentity(env.DB_ADMIN_FRESH, databaseExpectationsFromEnv(env)),
+          inspectDatabaseIdentity(env.DB_PRIVACY_FRESH, databaseExpectationsFromEnv(env)),
+        ]);
+        const readiness = admin.readiness === 'pass' && privacy.readiness === 'pass' ? 'pass' : 'fail';
+        return json({
+          service: 'lythaus-admin-api',
+          databases: {
+            admin: databaseReadinessResponse(admin, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
+            privacy: databaseReadinessResponse(privacy, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
+          },
+          branchFingerprint: 'unknown',
+          readiness,
+          readyForAuthentication: env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true' && readiness === 'pass' && admin.budgetLedgerApplied && privacy.budgetLedgerApplied,
+        }, { headers: { 'cache-control': 'private, no-store' } });
+      }
       const actor = await requireAdmin(request, env);
       if (request.method === 'GET' && url.pathname === '/api/admin/health') {
         const result = await query(env.DB_ADMIN_FRESH, `SELECT current_timestamp AS database_time`);

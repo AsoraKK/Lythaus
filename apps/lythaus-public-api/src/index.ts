@@ -1,9 +1,9 @@
-import { transaction, query, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, transaction, query, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import type { CreatePostInput, EmailDeliveryReference, TransactionalEmailProvider } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
-import { decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
+import { constantTimeEqual, decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface Env extends EnvBindings {
@@ -12,6 +12,13 @@ interface Env extends EnvBindings {
   MODERATION_QUEUE: NonNullable<EnvBindings['MODERATION_QUEUE']>;
   R2_ACCOUNT_ID: string;
   LYTHAUS_CONFIG?: NonNullable<EnvBindings['LYTHAUS_CONFIG']>;
+}
+
+function hasReadinessAuthorization(request: Request, env: Env): boolean {
+  const configured = env.DATABASE_READINESS_TOKEN;
+  const supplied = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!configured || !supplied) return false;
+  return constantTimeEqual(new TextEncoder().encode(configured), new TextEncoder().encode(supplied));
 }
 
 interface EmailAuthInput {
@@ -989,6 +996,14 @@ export default {
       const url = new URL(request.url);
       if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode' } });
       if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) return response(request, env, { status: 'ok', service: 'lythaus-public-api', environment: env.ENVIRONMENT ?? 'unknown' });
+      if (request.method === 'GET' && url.pathname === '/internal/readiness/database-identity') {
+        if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+        const identity = await inspectDatabaseIdentity(env.DB_APP_FRESH, databaseExpectationsFromEnv(env));
+        return privateResponse(request, env, {
+          service: 'lythaus-public-api',
+          ...databaseReadinessResponse(identity, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
+        });
+      }
       if (request.method === 'GET' && (url.pathname === '/ready' || url.pathname === '/api/ready')) {
         await query(env.DB_APP_FRESH, 'SELECT 1 AS ready');
         return response(request, env, { status: 'ready', service: 'lythaus-public-api' });

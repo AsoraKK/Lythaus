@@ -1,0 +1,74 @@
+name: Native ADR-003 authenticated acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: Production public API base URL
+        required: true
+        default: https://api.lythaus.co
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Verify Hyperdrive origins and PlanetScale main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_ORGANIZATION: lythaus
+          PLANETSCALE_DATABASE: lythaus-core
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+        run: npm run validate:cloudflare-hyperdrive-targets
+      - name: Verify current read-only schema baseline
+        env:
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+          REQUIRE_BUDGET_MIGRATION: 'false'
+        run: node scripts/ci/verify-planetscale-production-schema.mjs
+      - name: Mark external routing proof for the harness
+        run: echo "HYPERDRIVE_VERIFIED_MAIN=true" >> "$GITHUB_ENV"
+      - name: Run sanitized ADR-003 acceptance
+        env:
+          ADR003_API_BASE_URL: ${{ inputs.api_base_url }}
+          ADR003_WEB_HEALTH_URL: ${{ vars.ADR003_WEB_HEALTH_URL }}
+          ADR003_WEB_ORIGIN: ${{ vars.ADR003_WEB_ORIGIN }}
+          ADR003_EVIDENCE_PATH: ${{ runner.temp }}/adr003-acceptance.json
+          ADR003_WORKER_VERSIONS_JSON: ${{ vars.ADR003_WORKER_VERSIONS_JSON }}
+          ADR003_HYPERDRIVE_IDS_JSON: ${{ vars.ADR003_HYPERDRIVE_IDS_JSON }}
+          ADR003_GOOGLE_ACCEPTED: ${{ vars.ADR003_GOOGLE_ACCEPTED }}
+          ADR003_NEW_USER_ACCEPTED: ${{ vars.ADR003_NEW_USER_ACCEPTED }}
+          ADR003_PROVIDER_LINK_VERIFIED: ${{ vars.ADR003_PROVIDER_LINK_VERIFIED }}
+          ADR003_DUPLICATE_CALLBACK_VERIFIED: ${{ vars.ADR003_DUPLICATE_CALLBACK_VERIFIED }}
+          ADR003_WEB_CALLBACK_VERIFIED: ${{ vars.ADR003_WEB_CALLBACK_VERIFIED }}
+          ADR003_MOBILE_ACCEPTED: ${{ vars.ADR003_MOBILE_ACCEPTED }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          EXPECTED_DATABASE_RELATION_COUNT: '78'
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: 86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0008_legacy_relink_status.sql
+          EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'false'
+          HYPERDRIVE_VERIFIED_MAIN: 'true'
+          ADR003_TEST_EMAIL: ${{ secrets.ADR003_TEST_EMAIL }}
+          ADR003_TEST_PASSWORD: ${{ secrets.ADR003_TEST_PASSWORD }}
+        run: npm run acceptance:adr003
+      - name: Upload sanitized ADR-003 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adr003-acceptance-${{ github.run_id }}
+          path: ${{ runner.temp }}/adr003-acceptance.json
+          if-no-files-found: ignore

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -8,6 +9,8 @@ const root = process.cwd();
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
 const databaseUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
 const manifestOnly = process.argv.includes('--manifest-only');
+const committedOnly = process.argv.includes('--committed') || process.env.CI === 'true';
+const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
 const migrationsPath = 'database/planetscale/migrations';
 const expectedMigrations = [
   { name: '0000_preflight.sql', repositorySha256: '813a3bc7d2ff3c5f332ceefac17791b3916e62ade69f5e377fbe31f48b8cfc87', lfOnlyBreaks: [], appliedBytes: 195, appliedSha256: '8d4466de2ffa8c1fb3f6cb46464045e5ef199a64fcba312682623945636eaf33' },
@@ -19,20 +22,25 @@ const expectedMigrations = [
   { name: '0006_admin_role_expansion.sql', repositorySha256: '235acb9b66c5a7803bd50cb3309dda12dfaeb0ea05ef9069809ead9dda94b989', lfOnlyBreaks: [], appliedBytes: 295, appliedSha256: 'aa3ba8a9aa252ff250dd5ea9e4c7c975c23b04ff8eef40ee30c2137b98d917a7' },
   { name: '0007_contact_emails.sql', repositorySha256: 'b6bb0a30b7cc42de61c89fee153d99ab662ccb7271d98ac63b6376f9153c6fa9', lfOnlyBreaks: [[1, 77]], appliedBytes: 3_071, appliedSha256: 'b6bb0a30b7cc42de61c89fee153d99ab662ccb7271d98ac63b6376f9153c6fa9' },
   { name: '0008_legacy_relink_status.sql', repositorySha256: 'ae74550e61dcd93aebaae29ed4ec91587284524a0f6b6ef3e35b36467dec891a', lfOnlyBreaks: [[1, 9]], appliedBytes: 389, appliedSha256: 'ae74550e61dcd93aebaae29ed4ec91587284524a0f6b6ef3e35b36467dec891a' },
+  { name: '0009_cost_budget_enforcement.sql', repositorySha256: 'b7e0c47f38e1169c4c07558229137f739687133566478474ca6b174dd4bdee2b', lfOnlyBreaks: [[1, 50]], appliedBytes: 2_544, appliedSha256: 'f01612bd36151317d08c3dc7d9903e1c46e62ec076876fc3e4890ad794c7602b' },
 ];
-const expectedMigrationBytes = 45_647;
-const expectedMigrationSetSha256 = '5cae370456c8b6083dc7342130f6214444d0452c494660e52c175b18f5da4110';
+const expectedMigrationBytes = 48_192;
+const expectedMigrationSetSha256 = 'c8b14a6f418dfa1150cd6933733f2811cae8576246a88662463f712b0a64bf6a';
 
 function gitOutput(args) {
   return execFileSync('git', args, { cwd: root, encoding: null, maxBuffer: 4 * 1024 * 1024 });
 }
 
-const trackedMigrationNames = gitOutput(['ls-tree', '-r', '--name-only', 'HEAD', '--', migrationsPath])
-  .toString('utf8')
-  .split(/\r?\n/)
-  .filter((file) => file.endsWith('.sql'))
-  .map((file) => path.posix.basename(file))
-  .sort();
+const trackedMigrationNames = committedOnly
+  ? gitOutput(['ls-tree', '-r', '--name-only', 'HEAD', '--', migrationsPath])
+    .toString('utf8')
+    .split(/\r?\n/)
+    .filter((file) => file.endsWith('.sql'))
+    .map((file) => path.posix.basename(file))
+    .sort()
+  : fs.readdirSync(path.join(root, migrationsPath))
+    .filter((file) => file.endsWith('.sql'))
+    .sort();
 const expectedMigrationNames = expectedMigrations.map(({ name }) => name);
 
 if (JSON.stringify(trackedMigrationNames) !== JSON.stringify(expectedMigrationNames)) {
@@ -40,14 +48,17 @@ if (JSON.stringify(trackedMigrationNames) !== JSON.stringify(expectedMigrationNa
 }
 
 const migrations = expectedMigrations.map((expected) => {
-  const repositoryContents = gitOutput(['show', `HEAD:${migrationsPath}/${expected.name}`]);
+  const rawContents = committedOnly
+    ? gitOutput(['show', `HEAD:${migrationsPath}/${expected.name}`])
+    : fs.readFileSync(path.join(root, migrationsPath, expected.name));
+  const repositoryText = rawContents.toString('utf8').replace(/\r\n/g, '\n');
+  const repositoryContents = Buffer.from(repositoryText, 'utf8');
   const repositorySha256 = createHash('sha256').update(repositoryContents).digest('hex');
   if (repositorySha256 !== expected.repositorySha256) {
-    throw new Error(`committed migration SHA-256 mismatch: ${expected.name}`);
+    throw new Error(`${committedOnly ? 'committed' : 'working-tree'} migration SHA-256 mismatch: ${expected.name}`);
   }
-  const repositoryText = repositoryContents.toString('utf8');
   if (repositoryText.includes('\r')) {
-    throw new Error(`committed migration contains unexpected carriage returns: ${expected.name}`);
+    throw new Error(`migration contains unexpected carriage returns: ${expected.name}`);
   }
   const lfOnlyBreaks = new Set(expected.lfOnlyBreaks.flatMap(([start, end]) => (
     Array.from({ length: end - start + 1 }, (_, offset) => start + offset)
@@ -105,18 +116,19 @@ try {
     'SELECT version, checksum FROM system.schema_migrations ORDER BY version'
   );
   const recorded = new Map(registry.rows.map((row) => [row.version, row.checksum]));
+  const expectedAppliedMigrations = requireBudgetMigration ? migrations : migrations.slice(0, -1);
 
-  for (const migration of migrations) {
+  for (const migration of expectedAppliedMigrations) {
     if (recorded.get(migration.name) !== migration.checksum) {
       throw new Error(`production migration registry mismatch: ${migration.name}`);
     }
   }
-  if (recorded.size !== migrations.length) {
-    throw new Error(`production migration registry contains ${recorded.size} entries; repository contains ${migrations.length}`);
+  if (recorded.size !== expectedAppliedMigrations.length) {
+    throw new Error(`production migration registry contains ${recorded.size} entries; expected ${expectedAppliedMigrations.length} for ${requireBudgetMigration ? 'post-budget' : 'current-baseline'} state`);
   }
 
   await client.query('ROLLBACK');
-  console.log(`Verified read-only PlanetScale migration registry on ${branch}.`);
+  console.log(`Verified read-only PlanetScale migration registry on ${branch} (${requireBudgetMigration ? 'post-budget' : 'current-baseline'} state).`);
   console.log(`Approved migration-set SHA-256: ${migrationSetSha256}`);
 } catch (error) {
   await client.query('ROLLBACK').catch(() => undefined);

@@ -28,6 +28,8 @@ GRANT SELECT, INSERT ON media.upload_sessions, media.objects, media.storage_ledg
 GRANT SELECT, INSERT ON moderation.content_flags, moderation.cases, moderation.appeals TO lythaus_runtime;
 GRANT SELECT, INSERT ON privacy.requests TO lythaus_runtime;
 GRANT SELECT, INSERT ON system.outbox_events, system.idempotency_keys TO lythaus_runtime;
+GRANT SELECT ON system.cost_budget_periods, system.cost_kill_switches TO lythaus_runtime;
+GRANT SELECT, INSERT, UPDATE ON system.cost_budget_reservations, system.cost_usage_events TO lythaus_runtime;
 GRANT EXECUTE ON FUNCTION privacy.set_retention_rule(uuid, uuid, text, interval, text) TO lythaus_runtime;
 
 GRANT USAGE ON SCHEMA identity, content, moderation, trust, editorial, system TO lythaus_admin;
@@ -46,6 +48,8 @@ GRANT SELECT, INSERT ON trust.provenance_events, trust.human_contribution_events
 GRANT SELECT ON trust.reputation_events TO lythaus_jobs;
 GRANT SELECT, DELETE ON social.follows, social.reactions, social.blocks, social.mutes, social.bookmarks TO lythaus_jobs;
 GRANT SELECT, INSERT ON system.audit_events TO lythaus_jobs;
+GRANT SELECT ON system.cost_budget_periods, system.cost_kill_switches TO lythaus_jobs;
+GRANT SELECT, INSERT, UPDATE ON system.cost_budget_reservations, system.cost_usage_events TO lythaus_jobs;
 
 GRANT USAGE ON SCHEMA privacy, media, identity, social, editorial, system TO lythaus_privacy;
 GRANT SELECT, INSERT, UPDATE ON privacy.requests, privacy.request_events, privacy.legal_holds, privacy.retention_rules, privacy.subject_data_locations, privacy.deletion_tombstones, privacy.export_manifests, media.objects, media.storage_ledger, media.ownership, media.deletion_events, identity.users, identity.account_events, identity.auth_sessions, identity.refresh_token_families TO lythaus_privacy;

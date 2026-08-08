@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
-const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql'];
+const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql', '0009_cost_budget_enforcement.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
 const requiredRecoveryFiles = ['restore-verify.sql'];
 const requiredSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system'];
@@ -27,7 +27,7 @@ const requiredTables = [
   'editorial.memberships', 'editorial.membership_events', 'editorial.applications', 'editorial.portfolio_items',
   'editorial.peer_reviews', 'editorial.publications',
   'system.outbox_events', 'system.consumer_inbox', 'system.idempotency_keys', 'system.audit_events', 'system.feature_flags',
-  'system.schema_migrations',
+  'system.schema_migrations', 'system.cost_budget_periods', 'system.cost_budget_reservations', 'system.cost_usage_events', 'system.cost_kill_switches',
 ];
 const requiredViews = ['media.storage_ledgers'];
 const requiredFunctions = ['privacy.set_retention_rule', 'privacy.reconcile_subject_data_locations'];

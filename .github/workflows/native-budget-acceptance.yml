@@ -1,0 +1,70 @@
+name: Native budget and AI gateway acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      jobs_api_base_url:
+        description: Production jobs API base URL
+        required: true
+        default: https://jobs-api.lythaus.co
+        type: string
+      schema_fingerprint:
+        description: Approved post-0009 schema fingerprint
+        required: true
+        type: string
+      schema_version:
+        description: Approved schema migration version
+        required: true
+        default: 0009_cost_budget_enforcement.sql
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Verify Hyperdrive origins and PlanetScale main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_ORGANIZATION: lythaus
+          PLANETSCALE_DATABASE: lythaus-core
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+        run: npm run validate:cloudflare-hyperdrive-targets
+      - name: Verify approved post-budget schema read-only
+        env:
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+          REQUIRE_BUDGET_MIGRATION: 'true'
+        run: node scripts/ci/verify-planetscale-production-schema.mjs
+      - name: Probe jobs structural readiness
+        env:
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ inputs.schema_fingerprint }}
+          EXPECTED_DATABASE_SCHEMA_VERSION: ${{ inputs.schema_version }}
+          EXPECTED_DATABASE_RELATION_COUNT: '82'
+          EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
+          REQUIRE_BUDGET_MIGRATION: 'true'
+          HYPERDRIVE_VERIFIED_MAIN: 'true'
+          PRODUCTION_WORKER_SCOPE: lythaus-jobs-development
+          PRODUCTION_JOBS_API_BASE_URL: ${{ inputs.jobs_api_base_url }}
+        run: npm run validate:production-workers
+      - name: Simulate deployed budget hard stop
+        env:
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          PRODUCTION_JOBS_API_BASE_URL: ${{ inputs.jobs_api_base_url }}
+        run: npm run validate:budget-hard-stop
+      - name: Verify compatible AI source paths
+        run: npm run validate:ai-gateway-paths

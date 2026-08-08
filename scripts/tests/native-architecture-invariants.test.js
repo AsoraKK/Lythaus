@@ -259,6 +259,35 @@ test('public API CORS preflight uses a bodyless 204 response', () => {
   assert.match(source, /'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS'/);
 });
 
+test('production database identity and budget controls are explicit', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/native-hyperdrive-production.json'), 'utf8'));
+  const verifier = fs.readFileSync(path.join(root, 'scripts/ci/verify-cloudflare-hyperdrive-targets.mjs'), 'utf8');
+  const identity = fs.readFileSync(path.join(root, 'packages/db/src/identity.ts'), 'utf8');
+  const budget = fs.readFileSync(path.join(root, 'packages/db/src/budget.ts'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0009_cost_budget_enforcement.sql'), 'utf8');
+  const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  const budgetProbe = fs.readFileSync(path.join(root, 'scripts/ci/probe-budget-hard-stop.mjs'), 'utf8');
+  assert.equal(manifest.bindings.length, 5);
+  assert.match(manifest.expectedMainOriginFingerprint, /^[a-f0-9]{64}$/);
+  assert.match(verifier, /PSCALE_BRANCH_NAME.*main/);
+  assert.match(verifier, /originFingerprint/);
+  assert.match(verifier, /developmentOriginFingerprint/);
+  assert.match(verifier, /caching\?\.disabled === true/);
+  assert.match(identity, /information_schema\.tables/);
+  assert.match(identity, /identity.*contact_emails/);
+  assert.match(budget, /SERIALIZABLE/);
+  assert.match(budget, /cost_budget_reservations/);
+  assert.match(budget, /cost_kill_switches/);
+  assert.match(migration, /CREATE TABLE system\.cost_budget_periods/);
+  assert.match(migration, /status IN \('reserved', 'committed', 'released', 'expired', 'rejected', 'reconciled'\)/);
+  assert.match(migration, /CREATE TABLE system\.cost_usage_events/);
+  assert.match(migration, /CREATE TABLE system\.cost_kill_switches/);
+  assert.match(jobs, /budget_operation_rejected/);
+  assert.match(jobs, /budget-hard-stop/);
+  assert.match(budgetProbe, /providerCallPermitted/);
+  assert.match(jobs, /lythaus-ai/);
+});
+
 test('PlanetScale CI uses a disposable local PostgreSQL 17 service', () => {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-planetscale-ci.yml'), 'utf8');
   assert.match(workflow, /image: postgres:17/);
@@ -280,9 +309,9 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(script, /migration checksum mismatch/);
   assert.doesNotMatch(script, /0001_feature_flags/);
   assert.match(verifier, /system\.schema_migrations/);
-  assert.match(verifier, /expectedMigrationBytes = 45_647/);
-  assert.match(verifier, /5cae370456c8b6083dc7342130f6214444d0452c494660e52c175b18f5da4110/);
-  assert.match(verifier, /committed migration SHA-256 mismatch/);
+  assert.match(verifier, /expectedMigrationBytes = 48_192/);
+  assert.match(verifier, /c8b14a6f418dfa1150cd6933733f2811cae8576246a88662463f712b0a64bf6a/);
+  assert.match(verifier, /migration SHA-256 mismatch/);
   assert.match(verifier, /approved applied migration payload mismatch/);
   assert.match(verifier, /searchParams\.get\('sslrootcert'\) === 'system'/);
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);

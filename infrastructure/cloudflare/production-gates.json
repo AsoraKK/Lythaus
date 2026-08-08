@@ -48,6 +48,14 @@
         "status": "COMPLETED",
         "evidence": ["docs/architecture/lythaus-domain-architecture.md", "apps/lythaus-public-api/src/index.ts", "docs/evidence/azure-exit/2026-08-02/azure-independence-closure.md"]
       },
+      "hyperdriveTargetProof": {
+        "status": "BLOCKED",
+        "evidence": ["infrastructure/cloudflare/native-hyperdrive-production.json", "docs/evidence/production-cutover/2026-08-05-hyperdrive-inventory.json", "scripts/ci/verify-cloudflare-hyperdrive-targets.mjs"]
+      },
+      "databaseIdentityProbe": {
+        "status": "BLOCKED",
+        "evidence": ["packages/db/src/identity.ts", "apps/lythaus-public-api/src/index.ts", "docs/evidence/production-cutover/2026-08-05-hyperdrive-inventory.md"]
+      },
       "googleOAuthAcceptance": {
         "status": "DEFERRED TO ADR 003",
         "ownerApproved": true,
@@ -55,7 +63,7 @@
         "scope": "Google OAuth end-to-end session acceptance only",
         "decisionDate": "2026-08-02",
         "expiresWhen": "ADR 003 authentication acceptance completes",
-        "evidence": ["docs/evidence/azure-exit/2026-08-02/azure-independence-closure.md"]
+        "evidence": ["docs/runbooks/adr-003-authenticated-acceptance.md", "docs/evidence/production-cutover/2026-08-05-adr003-acceptance.json"]
       },
       "runtimeCutover": {
         "status": "COMPLETED",
@@ -67,7 +75,19 @@
       },
       "azureDeletionInventory": {
         "status": "COMPLETED",
-        "evidence": ["docs/runbooks/lythaus-azure-exit.md", "docs/runbooks/native-deployment-and-rollback.md", "docs/evidence/azure-exit/2026-08-02/azure-independence-closure.md"]
+        "evidence": ["docs/evidence/production-cutover/2026-08-05-azure-deletion-preflight.json", "docs/architecture/lythaus-domain-architecture.md"]
+      },
+      "budgetEnforcement": {
+        "status": "IN PROGRESS",
+        "evidence": ["database/planetscale/migrations/0009_cost_budget_enforcement.sql", "packages/db/src/budget.ts", "apps/lythaus-jobs/src/index.ts"]
+      },
+      "tunnelCredentialRotation": {
+        "status": "IN PROGRESS",
+        "evidence": ["docs/runbooks/cloudflared-tunnel-credential-rotation.md", "docs/evidence/production-cutover/2026-08-05-tunnel-rotation.json"]
+      },
+      "architectureSourceOfTruth": {
+        "status": "COMPLETED",
+        "evidence": ["docs/architecture/lythaus-domain-architecture.md", "docs/adr/ADR-007-cloudflare-planetscale-runtime.md"]
       }
     }
   }

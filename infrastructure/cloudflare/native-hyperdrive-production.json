@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "lythaus-native-hyperdrive-v1",
+  "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+  "planetScaleOrganization": "lythaus",
+  "planetScaleDatabase": "lythaus-core",
+  "productionTargetBranch": "main",
+  "originFingerprintSource": "PLANETSCALE_SCHEMA_READ_DATABASE_URL",
+  "expectedMainOriginFingerprint": "1a6d36f2356945f571c13ad979e60bcd4b5203cd371f0d6e3e293da74c088f3a",
+  "requirements": {
+    "cacheDisabled": true,
+    "tlsMode": "verify-full",
+    "scheme": "postgres",
+    "hostSuffix": ".psdb.cloud"
+  },
+  "bindings": [
+    { "worker": "lythaus-public-api-development", "configPath": "apps/lythaus-public-api/wrangler.jsonc", "binding": "DB_APP_FRESH", "hyperdriveId": "3e59f07db51345aa896333ca861d1adf", "expectedConfigName": "lythaus-db-app-dev", "targetBranch": "main" },
+    { "worker": "lythaus-admin-api-development", "configPath": "apps/lythaus-admin-api/wrangler.jsonc", "binding": "DB_ADMIN_FRESH", "hyperdriveId": "6bfbb0eab42642e8ad294dbf59294ed3", "expectedConfigName": "lythaus-db-admin-dev", "targetBranch": "main" },
+    { "worker": "lythaus-admin-api-development", "configPath": "apps/lythaus-admin-api/wrangler.jsonc", "binding": "DB_PRIVACY_FRESH", "hyperdriveId": "bae909aa72e244bfa9b8ca8a948053b6", "expectedConfigName": "lythaus-db-privacy-dev", "targetBranch": "main" },
+    { "worker": "lythaus-jobs-development", "configPath": "apps/lythaus-jobs/wrangler.jsonc", "binding": "DB_JOBS_FRESH", "hyperdriveId": "442bb04b99004cb38c6974ec031d65ee", "expectedConfigName": "lythaus-db-jobs-dev", "targetBranch": "main" },
+    { "worker": "lythaus-jobs-development", "configPath": "apps/lythaus-jobs/wrangler.jsonc", "binding": "DB_PRIVACY_FRESH", "hyperdriveId": "bae909aa72e244bfa9b8ca8a948053b6", "expectedConfigName": "lythaus-db-privacy-dev", "targetBranch": "main" }
+  ]
+}

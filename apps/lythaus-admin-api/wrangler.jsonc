@@ -12,7 +12,14 @@
     "ENVIRONMENT": "production",
     "EXPECTED_HOSTNAMES": "admin-api.lythaus.co",
     "CORS_ALLOWED_ORIGINS": "https://admin.lythaus.co",
-    "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
+    "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
+    "EXPECTED_DATABASE_TARGET": "main",
+    "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625",
+    "EXPECTED_DATABASE_RELATION_COUNT": "78",
+    "EXPECTED_DATABASE_SCHEMA_VERSION": "0008_legacy_relink_status.sql",
+    "EXPECTED_DATABASE_ROLE_CLASS": "login_non_superuser",
+    "EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED": "false",
+    "AUTHENTICATED_ACCEPTANCE_PROVEN": "false"
   },
   "hyperdrive": [
     { "binding": "DB_ADMIN_FRESH", "id": "6bfbb0eab42642e8ad294dbf59294ed3" },
@@ -39,7 +46,12 @@
         "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
         "ACCESS_TEAM_DOMAIN": "REPLACE_WITH_ACCESS_TEAM_DOMAIN",
         "ACCESS_AUDIENCE": "REPLACE_WITH_ACCESS_AUDIENCE",
-        "ACCESS_JWKS_URL": "REPLACE_WITH_ACCESS_JWKS_URL"
+        "ACCESS_JWKS_URL": "REPLACE_WITH_ACCESS_JWKS_URL",
+        "EXPECTED_DATABASE_TARGET": "development",
+        "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "8922ea383a1a9ff32b9b695e3b04bf5f56648d6a7371d8a35b49db7fae394ad8",
+        "EXPECTED_DATABASE_RELATION_COUNT": "77",
+        "EXPECTED_DATABASE_SCHEMA_VERSION": "unknown",
+        "EXPECTED_DATABASE_ROLE_CLASS": "login_non_superuser"
       },
       "r2_buckets": [
         { "binding": "PRIVATE_EXPORTS", "bucket_name": "lythaus-private-exports-dev" },

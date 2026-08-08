@@ -1,0 +1,22 @@
+{
+  "date": "2026-08-05",
+  "tunnelName": "asora-control",
+  "tunnelId": "dec1161f-8cc0-4c57-8d5a-1286ab45f633",
+  "secretRotation": "completed",
+  "connectionsCleared": true,
+  "cloudflareStatus": "down",
+  "remoteConfiguration": true,
+  "ingress": [
+    { "service": "http_status:404" }
+  ],
+  "localService": {
+    "name": "Cloudflared",
+    "state": "running",
+    "startMode": "automatic",
+    "runAs": "LocalSystem",
+    "controlStatus": "blocked_by_local_service_permissions"
+  },
+  "ownershipConfirmed": false,
+  "status": "partial",
+  "sensitiveValuesRecorded": false
+}

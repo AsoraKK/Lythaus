@@ -26,7 +26,14 @@
     "GOOGLE_REDIRECT_URI": "https://api.lythaus.co/api/auth/google/callback",
     "GOOGLE_JWKS_URL": "https://www.googleapis.com/oauth2/v3/certs",
     "TURNSTILE_REQUIRED": "false",
-    "PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK": "false"
+    "PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK": "false",
+    "EXPECTED_DATABASE_TARGET": "main",
+    "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625",
+    "EXPECTED_DATABASE_RELATION_COUNT": "78",
+    "EXPECTED_DATABASE_SCHEMA_VERSION": "0008_legacy_relink_status.sql",
+    "EXPECTED_DATABASE_ROLE_CLASS": "login_non_superuser",
+    "EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED": "false",
+    "AUTHENTICATED_ACCEPTANCE_PROVEN": "false"
   },
   "hyperdrive": [
     { "binding": "DB_APP_FRESH", "id": "3e59f07db51345aa896333ca861d1adf" }
@@ -71,7 +78,12 @@
         "TURNSTILE_REQUIRED": "false",
         "PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK": "true",
         "CORS_ALLOWED_ORIGINS": "http://localhost:3000",
-        "HYPERDRIVE_QUERY_CACHE_MODE": "disabled"
+        "HYPERDRIVE_QUERY_CACHE_MODE": "disabled",
+        "EXPECTED_DATABASE_TARGET": "development",
+        "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "8922ea383a1a9ff32b9b695e3b04bf5f56648d6a7371d8a35b49db7fae394ad8",
+        "EXPECTED_DATABASE_RELATION_COUNT": "77",
+        "EXPECTED_DATABASE_SCHEMA_VERSION": "unknown",
+        "EXPECTED_DATABASE_ROLE_CLASS": "login_non_superuser"
       },
       "kv_namespaces": [{ "binding": "LYTHAUS_CONFIG", "id": "b02289a521bd40bd9112335a3e763b11" }],
       "r2_buckets": [

@@ -17,6 +17,16 @@ on:
       - 'scripts/validate-planetscale-extensions.mjs'
       - 'database/planetscale/extensions/**'
       - 'infrastructure/cloudflare/native-scope.json'
+      - 'infrastructure/cloudflare/native-hyperdrive-production.json'
+      - 'infrastructure/legacy-reference-policy.json'
+      - 'scripts/ci/verify-cloudflare-hyperdrive-targets.mjs'
+      - 'scripts/ci/verify-ai-gateway-paths.mjs'
+      - 'scripts/ci/probe-production-workers.mjs'
+      - 'scripts/ci/run-adr003-authenticated-acceptance.mjs'
+      - 'scripts/ci/probe-budget-hard-stop.mjs'
+      - 'scripts/ci/validate-active-legacy-references.mjs'
+      - 'scripts/tests/budget-contract.test.mjs'
+      - 'scripts/tests/db-identity-contract.test.mjs'
       - 'scripts/tests/native-architecture-invariants.test.js'
       - 'tsconfig.native.json'
       - 'package.json'
@@ -36,6 +46,16 @@ on:
       - 'infrastructure/cloudflare/production-gates.json'
       - 'scripts/validate-planetscale-extensions.mjs'
       - 'database/planetscale/extensions/**'
+      - 'infrastructure/cloudflare/native-hyperdrive-production.json'
+      - 'infrastructure/legacy-reference-policy.json'
+      - 'scripts/ci/verify-cloudflare-hyperdrive-targets.mjs'
+      - 'scripts/ci/verify-ai-gateway-paths.mjs'
+      - 'scripts/ci/probe-production-workers.mjs'
+      - 'scripts/ci/run-adr003-authenticated-acceptance.mjs'
+      - 'scripts/ci/probe-budget-hard-stop.mjs'
+      - 'scripts/ci/validate-active-legacy-references.mjs'
+      - 'scripts/tests/budget-contract.test.mjs'
+      - 'scripts/tests/db-identity-contract.test.mjs'
       - 'scripts/tests/native-architecture-invariants.test.js'
       - 'tsconfig.native.json'
       - 'package.json'
@@ -55,6 +75,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
+      - run: npm run validate:cloudflare-hyperdrive-targets:manifest
+      - run: npm run validate:ai-gateway-paths
+      - run: npm run validate:active-legacy-references
       - run: npm run typecheck:native
       - run: npm run validate:native-workers
       - run: npm run validate:native-scope
@@ -62,3 +85,5 @@ jobs:
       - run: npm run validate:planetscale-migrations
       - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
+      - run: npm run test:database-identity
+      - run: npm run test:budget

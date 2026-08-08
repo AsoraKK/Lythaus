@@ -71,31 +71,107 @@ jobs:
           npm run validate:planetscale-migrations
           npm run validate:planetscale-extensions
           npm run validate:native-azure-dependencies
+          npm run validate:ai-gateway-paths
           npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
           npx wrangler types --check apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc
           npx wrangler types --check apps/lythaus-jobs/src/worker-configuration.d.ts --config apps/lythaus-jobs/wrangler.jsonc
+      - name: Prove production Hyperdrive origins target PlanetScale main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_ORGANIZATION: lythaus
+          PLANETSCALE_DATABASE: lythaus-core
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/production-cutover"
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs | tee "$RUNNER_TEMP/production-cutover/hyperdrive-targets.json"
+      - name: Record verified main routing assertion
+        run: echo "HYPERDRIVE_VERIFIED_MAIN=true" >> "$GITHUB_ENV"
       - name: Verify production schema read-only
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main
+          REQUIRE_BUDGET_MIGRATION: 'false'
         run: node scripts/ci/verify-planetscale-production-schema.mjs
       - name: Deploy public API
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config apps/lythaus-public-api/wrangler.jsonc
+      - name: Capture public Worker version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/production-cutover"
+          npx wrangler versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
+      - name: Probe public Worker after deployment
+        env:
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: 86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0008_legacy_relink_status.sql
+          EXPECTED_DATABASE_RELATION_COUNT: 78
+          HYPERDRIVE_VERIFIED_MAIN: true
+          PRODUCTION_WORKER_SCOPE: lythaus-public-api-development
+          PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
+          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/public-probe.json
+        run: node scripts/ci/probe-production-workers.mjs
       - name: Deploy admin API
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config apps/lythaus-admin-api/wrangler.jsonc
+      - name: Capture admin Worker version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
+      - name: Probe admin Worker after deployment
+        env:
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: 86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0008_legacy_relink_status.sql
+          EXPECTED_DATABASE_RELATION_COUNT: 78
+          HYPERDRIVE_VERIFIED_MAIN: true
+          PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
+          PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
+          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/admin-probe.json
+        run: node scripts/ci/probe-production-workers.mjs
       - name: Deploy jobs Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config apps/lythaus-jobs/wrangler.jsonc
+      - name: Capture jobs Worker version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
+      - name: Probe jobs Worker after deployment
+        env:
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: 86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0008_legacy_relink_status.sql
+          EXPECTED_DATABASE_RELATION_COUNT: 78
+          HYPERDRIVE_VERIFIED_MAIN: true
+          PRODUCTION_WORKER_SCOPE: lythaus-jobs-development
+          PRODUCTION_JOBS_API_BASE_URL: ${{ vars.PRODUCTION_JOBS_API_BASE_URL }}
+          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/jobs-probe.json
+        run: node scripts/ci/probe-production-workers.mjs
       - name: Reverify production schema after Worker deployment
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main
+          REQUIRE_BUDGET_MIGRATION: 'false'
         run: node scripts/ci/verify-planetscale-production-schema.mjs
+      - name: Upload sanitized production cutover evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-cutover-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/production-cutover
+          if-no-files-found: ignore

@@ -1,8 +1,14 @@
 # Lythaus
 
+## Current runtime status
+
+The authoritative native runtime target is Cloudflare Workers, PlanetScale Postgres through Hyperdrive, R2, Queues/Workflows, Workers AI, and GitHub Actions. The production database target is PlanetScale `main`; branch identity is accepted only after the redacted Hyperdrive origin fingerprint and structural readiness probe agree. See [ADR-007](docs/adr/ADR-007-cloudflare-planetscale-runtime.md) and the [authoritative architecture](docs/architecture/lythaus-domain-architecture.md).
+
+Authenticated launch is currently `NO-GO` pending production routing proof, ADR 003 acceptance, budget enforcement, and the remaining local tunnel service handoff. Current implementation evidence is in [production cutover evidence](docs/evidence/production-cutover/).
+
 Lythaus (formerly Asora) is an invite-only social publishing platform focused on transparent authorship, trustworthy feeds, moderation appeals, and privacy rights. User-facing product copy uses **Lythaus**. Internal packages, Azure resources, Terraform identifiers, and legacy namespaces may retain **Asora** where renaming would create operational risk.
 
-## Alpha scope
+## Historical Alpha scope
 
 The controlled Alpha covers the Flutter web application, Azure Functions APIs, the moderation/control panel, and required operational tooling. It is limited to 25–250 invited users across explicitly approved stages. Android, iOS, store distribution, signing, payments, and mobile certificate-pin launch readiness are Beta work and are not Alpha gates.
 
@@ -14,6 +20,7 @@ Current release status and evidence: [Controlled Alpha packet](docs/evidence/alp
 | --- | --- |
 | `lib/`, `web/` | Flutter web application and shared client code |
 | `functions/` | Node 22 Azure Functions backend |
+| `apps/lythaus-*/` | Native Cloudflare Worker services for public API, administration, and jobs |
 | `api/openapi/` | Public API source, bundle, and generated-client contract |
 | `apps/control-panel/` | Administrative and moderation interface |
 | `apps/marketing-site/` | Public Lythaus site |
@@ -67,7 +74,11 @@ Build the backend artifact:
 npm --prefix functions run build
 ```
 
-## Deployment
+## Native deployment
+
+Native deployment is approval-gated and immutable. The native validation workflow must pass on the exact release SHA; the native deployment workflow proves the redacted Hyperdrive origin fingerprint before deploying a Worker; and production readiness requires the structural database probe, authenticated acceptance, budget hard-stop simulation, and sanitized evidence packet. Azure deletion remains a separate irreversible operation requiring Kyle's explicit approval after the deletion preflight passes.
+
+## Historical Azure deployment
 
 Deployment is approval-gated and immutable:
 
@@ -92,3 +103,6 @@ Production deploy, rollback, cohort expansion, access-policy changes, secret rot
 - [Brand transition](docs/branding/lythaus-transition.md)
 - [Public-domain cutover ADR](docs/adr/ADR-005-lythaus-public-domain-cutover.md)
 - [Public-domain cutover runbook](docs/runbooks/lythaus-domain-cutover.md)
+- [Native runtime ADR](docs/adr/ADR-007-cloudflare-planetscale-runtime.md)
+- [Production cutover architecture](docs/architecture/lythaus-domain-architecture.md)
+- [Tunnel credential handoff](docs/runbooks/cloudflared-tunnel-credential-rotation.md)

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "lythaus-legacy-reference-policy-v1",
+  "historicalPrefixes": ["docs/archive/", "docs/evidence/"],
+  "plannedPrefixes": ["docs/plans/", "docs/roadmap/"],
+  "deprecatedPrefixes": ["functions/", "infra/", "terraform/", "cloudflare/", "workers/", "scripts/azure-exit/", "infrastructure/alerts/", "infrastructure/function-app/"],
+  "activePrefixes": ["apps/lythaus-", "packages/", ".github/workflows/", "infrastructure/cloudflare/", "scripts/ci/", "scripts/validate-", "scripts/tests/"],
+  "activeFiles": ["docs/architecture/lythaus-domain-architecture.md", "docs/adr/ADR-007-cloudflare-planetscale-runtime.md", "docs/runbooks/adr-003-authenticated-acceptance.md", "docs/runbooks/cloudflared-tunnel-credential-rotation.md", "docs/runbooks/monthly-cost-reconciliation.md"],
+  "historicalFiles": ["docs/adr/ADR-006-lean-shared-mvp-infrastructure.md", "docs/runbooks/asora-domain-retirement.md"],
+  "plannedFiles": [],
+  "deprecatedFiles": [],
+  "policyFiles": ["infrastructure/legacy-reference-policy.json", "infrastructure/cloudflare/native-scope.json", "infrastructure/lythaus-resource-registry.json", "scripts/ci/validate-active-legacy-references.mjs", "scripts/tests/fixtures/route-guards/sample-routes.ts", "scripts/tests/github-azure-disconnection.test.mjs"],
+  "guardLinePatterns": ["endsWith\\(.*azurewebsites\\.net", "forbidden", "must not", "not allowed", "prohibited", "not a production origin", "reject", "disconnection", "legacy reference", "historical", "deprecated"]
+}

@@ -1,10 +1,12 @@
-# ADR-006: Lean shared-MVP infrastructure
+# ADR-006: Lean shared-MVP infrastructure (superseded)
 
-- Status: Accepted
+- Status: Superseded by [ADR-007](ADR-007-cloudflare-planetscale-runtime.md)
 - Date: 2026-07-17
 - Scope: Lythaus shared-MVP Azure environment and repository delivery controls
 
-## Context
+> This document is retained as historical Azure decision evidence. It is not an operational source of truth and must not be used to restore or extend Azure runtime dependencies.
+
+## Historical context
 
 Lythaus (formerly Asora) runs on one shared MVP Azure environment whose internal resource names retain the Asora codename. The repository contains multiple generations of Terraform and deployment workflows. Some describe resources that are not live, while some live resources are not safely reconciled to readable canonical Terraform state.
 

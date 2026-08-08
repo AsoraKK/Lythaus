@@ -50,15 +50,23 @@ try {
       to_regclass('identity.contact_emails') AS contact_emails,
       to_regprocedure('privacy.reconcile_subject_data_locations(uuid)') AS locator_function,
       to_regprocedure('privacy.set_retention_rule(uuid,uuid,text,interval,text)') AS retention_function,
+      to_regclass('system.cost_budget_periods') AS budget_periods,
+      to_regclass('system.cost_budget_reservations') AS budget_reservations,
+      to_regclass('system.cost_usage_events') AS usage_events,
+      to_regclass('system.cost_kill_switches') AS kill_switches,
       (SELECT count(*) FROM pg_extension WHERE extname IN ('pgcrypto', 'pg_trgm', 'unaccent')) AS extension_count,
+      (SELECT count(*) FROM information_schema.tables
+        WHERE table_schema IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system')) AS relation_count,
       (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system')
           AND c.relkind IN ('r', 'p')) AS table_count
   `);
   const row = checks.rows[0];
-  for (const field of ['users', 'posts', 'subject_locations', 'idempotency', 'contact_emails', 'locator_function', 'retention_function']) if (!row[field]) throw new Error(`PostgreSQL 17 compatibility check missing ${field}`);
+  for (const field of ['users', 'posts', 'subject_locations', 'idempotency', 'contact_emails', 'locator_function', 'retention_function', 'budget_periods', 'budget_reservations', 'usage_events', 'kill_switches']) if (!row[field]) throw new Error(`PostgreSQL 17 compatibility check missing ${field}`);
   if (Number(row.extension_count) !== 3) throw new Error(`PostgreSQL 17 compatibility check expected 3 required extensions, found ${row.extension_count}`);
-  if (Number(row.table_count) !== 75) throw new Error(`PostgreSQL 17 compatibility check expected 75 launch tables, found ${row.table_count}`);
+  if (Number(row.relation_count) !== 80) throw new Error(`PostgreSQL 17 compatibility check expected 80 local application relations after migration 0009, found ${row.relation_count}`);
+  if (Number(row.relation_count) + 2 !== 82) throw new Error(`PostgreSQL 17 compatibility check expected 82 PlanetScale relations including two provider extension views, found ${Number(row.relation_count) + 2}`);
+  if (Number(row.table_count) !== 79) throw new Error(`PostgreSQL 17 compatibility check expected 79 launch tables after migration 0009, found ${row.table_count}`);
 
   const privileges = await client.query(`
     SELECT

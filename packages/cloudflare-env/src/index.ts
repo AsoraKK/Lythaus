@@ -62,6 +62,24 @@ export interface EnvBindings {
   TURNSTILE_REQUIRED?: string;
   EXTERNAL_BACKUP_HEALTHCHECK_URL?: string;
   EXTERNAL_BACKUP_HEALTHCHECK_TOKEN?: string;
+  DATABASE_READINESS_TOKEN?: string;
+  EXPECTED_DATABASE_TARGET?: string;
+  EXPECTED_DATABASE_SCHEMA_FINGERPRINT?: string;
+  EXPECTED_DATABASE_RELATION_COUNT?: string;
+  EXPECTED_DATABASE_SCHEMA_VERSION?: string;
+  EXPECTED_DATABASE_ROLE_CLASS?: string;
+  EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED?: string;
+  AUTHENTICATED_ACCEPTANCE_PROVEN?: string;
+  COST_BUDGET_ENABLED?: string;
+  COST_BUDGET_LIMIT_USD?: string;
+  COST_BUDGET_WARNING_USD?: string;
+  COST_BUDGET_OPTIONAL_ANALYSIS_USD?: string;
+  COST_BUDGET_ESSENTIAL_ONLY_USD?: string;
+  COST_BUDGET_DEEP_SCAN_STOP_USD?: string;
+  COST_HIVE_TEXT_ESTIMATE_USD?: string;
+  COST_HIVE_IMAGE_ESTIMATE_USD?: string;
+  AI?: WorkersAiBinding;
+  AI_GATEWAY_ID?: string;
 }
 
 export interface SendEmailLike {
@@ -105,4 +123,12 @@ export interface KVNamespaceLike {
   get(key: string, type?: 'text' | 'json' | 'arrayBuffer' | 'stream'): Promise<unknown>;
   put(key: string, value: string, options?: { expiration?: number; expirationTtl?: number }): Promise<void>;
   delete(key: string): Promise<void>;
+}
+
+export interface WorkersAiBinding {
+  run(model: string, input: unknown, options?: {
+    gateway?: { id: string; skipCache?: boolean; cacheTtl?: number };
+    collectLog?: boolean;
+    metadata?: Record<string, string>;
+  }): Promise<unknown>;
 }

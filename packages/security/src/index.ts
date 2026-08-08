@@ -26,7 +26,7 @@ export function randomToken(size = 32): string {
   return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
 }
 
-function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
+export function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
   if (left.length !== right.length) return false;
   let difference = 0;
   for (let index = 0; index < left.length; index += 1) difference |= left[index] ^ right[index];
@@ -85,7 +85,7 @@ export function verifyPassword(password: string, stored: PasswordHash, pepper: s
   const derived = stored.algorithm === 'argon2id'
     ? argon2id(password, salt, { ...ARGON2ID_PROFILE, dkLen: 32 })
     : scrypt(password, salt, { ...SCRYPT_PROFILE, dkLen: 32 });
-  return equalBytes(pepperDigest(derived, pepper), decode(stored.digest));
+  return constantTimeEqual(pepperDigest(derived, pepper), decode(stored.digest));
 }
 
 export function hashResetToken(token: string): string {

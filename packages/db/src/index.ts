@@ -89,3 +89,20 @@ export function verifyFullConnectionString(connectionString: string): string {
   assertVerifyFull(verifiedConnectionString);
   return verifiedConnectionString;
 }
+
+export { buildSchemaFingerprint, classifyRole, databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, isDatabaseIdentityReady, type DatabaseIdentityExpectations, type DatabaseIdentityReport, type DatabaseReadinessResponse } from './identity.ts';
+export {
+  BUDGET_RESERVATION_STATUSES,
+  expireBudgetReservations,
+  reconcileBudgetReservation,
+  releaseBudgetReservation,
+  reserveBudget,
+  settleBudgetReservation,
+  type BudgetConfig,
+  type BudgetOperationClass,
+  type BudgetReservation,
+  type BudgetReservationStatus,
+  type ReconcileBudgetInput,
+  type ReserveBudgetInput,
+  type SettleBudgetInput,
+} from './budget.ts';

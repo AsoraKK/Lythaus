@@ -4,7 +4,7 @@ Authoritative, concise instructions for agents working in this repository via Co
 ## Branding (Read First)
 
 - **User-facing product = Lythaus** (UI labels, store text, marketing copy)
-- **Internal/infra = Asora** (repo name, Azure resources, Terraform, package IDs)
+- **Internal/legacy infra = Asora** (repo name, historical Azure resources, Terraform, package IDs)
 - When introducing the product in docs, use "Lythaus (formerly Asora)".
 - When generating code, use "Lythaus" for user-visible strings.
 - Do **not** rename Azure resources, package identifiers, or internal imports without explicit instruction.
@@ -27,11 +27,12 @@ do not create automatic `ci-*` branches.
 Initial verification prompt: use PlanetScale MCP to confirm access to
 `lythaus/lythaus-core`, list all branches, and inspect the schema. Do not
 execute writes or DDL.
-Verified 2026-07-28 through PlanetScale CLI and MCP: `main` and the synthetic
-`development` branch exist. `main` is an empty Frankfurt PS-5 ARM PostgreSQL
-17.10 branch. `development` is a Frankfurt PS-DEV ARM PostgreSQL 18.4 branch
-with 74 application tables, one media view, 11 feature flags, and five
-provisioned login roles. `pgcrypto`, `pg_trgm`, and `unaccent` are installed;
+Verified 2026-08-05 through PlanetScale MCP: `main` and `development` exist.
+`main` currently exposes 78 relations including `identity.contact_emails` and
+`development` exposes 77 relations without that table. The approved budget
+migration adds four system relations, so the post-migration production contract
+is 82 relations with schema version `0009_cost_budget_enforcement.sql`.
+`pgcrypto`, `pg_trgm`, and `unaccent` are installed;
 PostGIS is unavailable and is not a launch dependency. Do not apply writes or
 DDL to `main` until the PostgreSQL 17 compatibility test, exact baseline, data
 classification, migration reconciliation, and explicit migration gates pass.
@@ -40,14 +41,14 @@ Use application-generated UUIDv7 identifiers for new records. Store them in
 native PostgreSQL `uuid` columns; do not add a database UUIDv7 function or
 default to `main`.
 
-The native implementation branch is `codex/cloudflare-planetscale-provisioning`.
+The current implementation branch is `codex/production-cutover-hardening`.
 
 ## Cloudflare Architecture
 
 Use only the existing shared Cloudflare account `e5b7ae46e04698f507b7e4b3d4ef1af0`
-and active zone `lythaus.co`. Approved resources are prefixed `lythaus-`, with
-the temporary legacy exception `asora-azure-compat`. Never mutate Nite Owl,
-`asora.co.za`, unrelated zones, or unrelated resources.
+and active zone `lythaus.co`. Approved resources are prefixed `lythaus-`.
+Historical `asora-*` resources are not Lythaus runtime dependencies. Never
+mutate Nite Owl, `asora.co.za`, unrelated zones, or unrelated resources.
 
 Use only the existing Lythaus Workers, Hyperdrives, R2 buckets, Queues/DLQs,
 Workflows, KV namespace, and Access applications listed in
@@ -61,7 +62,7 @@ registry, inspect live provider state, search for an equivalent, prefer reuse
 or rebinding, check possible cost, and stop if a duplicate or new cost may be
 required. No automatic create-if-missing behavior is permitted.
 
-Azure extraction is read-only. The approved Cosmos Built-in Data Reader and
+Azure extraction is read-only and historical. The approved Cosmos Built-in Data Reader and
 container-scoped Storage Blob Data Reader assignments are active. PostgreSQL
 remains `BLOCKED — ACCESS REQUIRED` unless Cosmos classification proves that
 recovering it is required.

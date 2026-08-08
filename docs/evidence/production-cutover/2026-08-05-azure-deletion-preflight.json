@@ -1,0 +1,19 @@
+{
+  "status": "NOT READY FOR AZURE SHUTDOWN",
+  "azureDeletionAuthorized": false,
+  "azureDeletionExecution": "NOT STARTED",
+  "checks": {
+    "planetscaleMainRouting": "BLOCKED",
+    "authenticatedAcceptance": "BLOCKED",
+    "dsrAndModerationIntegrity": "UNVERIFIED",
+    "r2EvidenceRetention": "UNVERIFIED",
+    "functionAppStopped": "UNVERIFIED",
+    "azureQueuesEmpty": "UNVERIFIED",
+    "githubAzureCredentialsRemoved": "UNVERIFIED",
+    "azureCallbacksAbsent": "UNVERIFIED",
+    "resourceOwnership": "UNVERIFIED",
+    "billingExport": "UNVERIFIED",
+    "irreversibleDeletionApproval": "NOT AUTHORIZED"
+  },
+  "rule": "No Azure resource deletion is performed by this implementation until every check passes and Kyle explicitly authorizes the named deletion set immediately before execution."
+}

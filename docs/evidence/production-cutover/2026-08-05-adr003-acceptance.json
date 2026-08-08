@@ -1,0 +1,32 @@
+{
+  "status": "BLOCKED",
+  "reason": "Authenticated web and mobile acceptance has not been executed against a proven PlanetScale main route",
+  "commitSha": "4be8bb90b064bcd90c367c8815c95d35e33b692f",
+  "githubActionsRunId": "30795126367",
+  "githubActionsRun": "https://github.com/AsoraKK/Asora/actions/runs/30795126367",
+  "planetScaleBranch": "unproven",
+  "workerVersions": [],
+  "hyperdriveIds": ["3e59f07db51345aa896333ca861d1adf", "6bfbb0eab42642e8ad294dbf59294ed3", "442bb04b99004cb38c6974ec031d65ee", "bae909aa72e244bfa9b8ca8a948053b6"],
+  "tests": {
+    "googleSignIn": "NOT RUN",
+    "newUserCreation": "NOT RUN",
+    "existingUserSignIn": "NOT RUN",
+    "providerLinkLookup": "NOT RUN",
+    "contactEmailWriteLookup": "NOT RUN",
+    "sessionIssuance": "NOT RUN",
+    "refreshRotation": "NOT RUN",
+    "refreshReplayRejection": "NOT RUN",
+    "logout": "NOT RUN",
+    "sessionRevocation": "NOT RUN",
+    "profileReadWrite": "NOT RUN",
+    "authenticatedPost": "NOT RUN",
+    "moderationSubmission": "NOT RUN",
+    "privacySubmission": "NOT RUN",
+    "accountDeletionRequest": "NOT RUN",
+    "invalidOAuthState": "NOT RUN",
+    "expiredCode": "NOT RUN",
+    "duplicateCallback": "NOT RUN",
+    "corsValidation": "NOT RUN",
+    "mobileAndWebCallbacks": "NOT RUN"
+  }
+}

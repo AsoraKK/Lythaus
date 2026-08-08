@@ -1,8 +1,8 @@
-import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, reserveBudget, settleBudgetReservation, transaction, type BudgetConfig, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { createPresignedGetUrl } from '@lythaus/media';
 import { json, logEvent } from '@lythaus/observability';
-import { uuidv7 } from '@lythaus/security';
+import { constantTimeEqual, uuidv7 } from '@lythaus/security';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -24,6 +24,155 @@ interface Env extends EnvBindings {
   RETENTION_CLEANUP?: WorkflowBinding<{ runId: string }>;
   APPEAL_LIFECYCLE?: WorkflowBinding<{ appealId: string }>;
   BACKUP_VALIDATION?: WorkflowBinding<{ runId: string }>;
+}
+
+function hasReadinessAuthorization(request: Request, env: Env): boolean {
+  const configured = env.DATABASE_READINESS_TOKEN;
+  const supplied = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!configured || !supplied) return false;
+  return constantTimeEqual(new TextEncoder().encode(configured), new TextEncoder().encode(supplied));
+}
+
+function budgetConfig(env: Env): BudgetConfig {
+  if (env.COST_BUDGET_ENABLED !== 'true') throw new Error('budget_not_configured');
+  const value = (candidate: string | undefined, fallback: number): number => {
+    const parsed = Number(candidate ?? fallback);
+    if (!Number.isFinite(parsed)) throw new Error('budget_config_invalid');
+    return parsed;
+  };
+  return {
+    limitUsd: value(env.COST_BUDGET_LIMIT_USD, 100),
+    warningUsd: value(env.COST_BUDGET_WARNING_USD, 70),
+    optionalAnalysisUsd: value(env.COST_BUDGET_OPTIONAL_ANALYSIS_USD, 80),
+    essentialOnlyUsd: value(env.COST_BUDGET_ESSENTIAL_ONLY_USD, 90),
+    deepScanStopUsd: value(env.COST_BUDGET_DEEP_SCAN_STOP_USD, 95),
+  };
+}
+
+async function withBudgetAdmission<T>(env: Env, input: { operation: string; operationClass: 'essential' | 'optional' | 'experiment'; estimatedCostUsd: number; idempotencyKey: string; provider?: string; correlationId?: string }, work: () => Promise<T>): Promise<T> {
+  const provider = input.provider ?? 'hive';
+  const reservation = await reserveBudget(env.DB_JOBS_FRESH, {
+    ...input,
+    provider,
+    period: new Date().toISOString().slice(0, 7),
+    config: budgetConfig(env),
+  });
+  logEvent({ service: 'lythaus-jobs', event: 'budget_reservation', operation: input.operation, provider, status: reservation.status, estimatedCostUsd: input.estimatedCostUsd, projectedSpendUsd: reservation.projectedSpendUsd, reused: reservation.reused });
+  if (reservation.status !== 'reserved') throw new Error('budget_operation_rejected');
+  let result: T;
+  try {
+    result = await work();
+  } catch (error) {
+    await reconcileBudgetReservation(env.DB_JOBS_FRESH, {
+      reservationId: reservation.id,
+      actualCostUsd: input.estimatedCostUsd,
+      provider,
+      externalReference: input.idempotencyKey,
+      reason: 'provider_error',
+    });
+    logEvent({ service: 'lythaus-jobs', event: 'budget_reconciliation', operation: input.operation, provider, status: 'reconciled', actualCostUsd: input.estimatedCostUsd });
+    throw error;
+  }
+  try {
+    await settleBudgetReservation(env.DB_JOBS_FRESH, {
+      reservationId: reservation.id,
+      actualCostUsd: input.estimatedCostUsd,
+      provider,
+      externalReference: input.idempotencyKey,
+    });
+    logEvent({ service: 'lythaus-jobs', event: 'budget_settlement', operation: input.operation, provider, status: 'committed', actualCostUsd: input.estimatedCostUsd });
+  } catch {
+    await reconcileBudgetReservation(env.DB_JOBS_FRESH, {
+      reservationId: reservation.id,
+      actualCostUsd: input.estimatedCostUsd,
+      provider,
+      externalReference: input.idempotencyKey,
+      reason: 'settlement_error',
+    });
+    logEvent({ service: 'lythaus-jobs', event: 'budget_reconciliation', operation: input.operation, provider, status: 'reconciled', actualCostUsd: input.estimatedCostUsd });
+  }
+  return result;
+}
+
+async function simulateBudgetHardStop(env: Env): Promise<Record<string, unknown>> {
+  const config = budgetConfig(env);
+  const reservation = await reserveBudget(env.DB_JOBS_FRESH, {
+    period: new Date().toISOString().slice(0, 7),
+    operation: 'budget_hard_stop_simulation',
+    operationClass: 'optional',
+    estimatedCostUsd: config.limitUsd,
+    idempotencyKey: `budget-simulation:${uuidv7()}`,
+    provider: 'simulation',
+    config,
+  });
+  return {
+    simulation: 'budget_hard_stop',
+    reservationStatus: reservation.status,
+    providerCallPermitted: false,
+    ledgerAvailable: true,
+    readiness: reservation.status === 'rejected' ? 'pass' : 'fail',
+  };
+}
+
+async function runWorkersAiWithBudget(env: Env, model: string, input: unknown, idempotencyKey: string): Promise<unknown> {
+  if (!env.AI) throw new Error('workers_ai_not_configured');
+  const gatewayId = env.AI_GATEWAY_ID;
+  if (gatewayId !== 'lythaus-ai') throw new Error('workers_ai_gateway_not_configured');
+  return withBudgetAdmission(env, {
+    operation: `workers_ai:${model}`,
+    operationClass: 'optional',
+    estimatedCostUsd: Number(env.COST_HIVE_TEXT_ESTIMATE_USD ?? 0.004),
+    idempotencyKey,
+    provider: 'workers-ai',
+  }, () => env.AI!.run(model, input, {
+    gateway: { id: env.AI_GATEWAY_ID as 'lythaus-ai', skipCache: true },
+    collectLog: false,
+    metadata: { application: 'lythaus', environment: env.ENVIRONMENT ?? 'unknown' },
+  }));
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function recordAiEvidence(env: Env, input: {
+  caseId: string;
+  correlationId: string;
+  inputHash: string;
+  evidenceBundleHash: string;
+  provider: string;
+  modelId: string;
+  gatewayId: string | null;
+  promptTemplateVersion: string;
+  reasoningSchemaVersion: string;
+  toolVersions: Record<string, string>;
+  policyVersion: string;
+  responseHash: string;
+  latencyMs: number;
+  estimatedUsageUsd: number;
+  actualUsageUsd: number;
+}): Promise<void> {
+  await query(env.DB_JOBS_FRESH,
+    `INSERT INTO system.audit_events
+       (id, action, target_type, target_id, reason_code, correlation_id, metadata)
+     VALUES ($1, 'ai.reasoning.completed', 'content', $2, 'STRUCTURED_AI_EVIDENCE', $3, $4::jsonb)`,
+    [uuidv7(), input.caseId, input.correlationId, JSON.stringify({
+      inputHash: input.inputHash,
+      evidenceBundleHash: input.evidenceBundleHash,
+      provider: input.provider,
+      modelId: input.modelId,
+      gatewayId: input.gatewayId,
+      promptTemplateVersion: input.promptTemplateVersion,
+      reasoningSchemaVersion: input.reasoningSchemaVersion,
+      toolVersions: input.toolVersions,
+      policyVersion: input.policyVersion,
+      responseHash: input.responseHash,
+      latencyMs: input.latencyMs,
+      estimatedUsageUsd: input.estimatedUsageUsd,
+      actualUsageUsd: input.actualUsageUsd,
+    })]
+  );
 }
 
 interface Queue { send(body: unknown, options?: { contentType?: string }): Promise<void>; }
@@ -144,8 +293,33 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     });
     return;
   }
-  const result = await moderateTextWithHive(post.body, post.author_id, postId, env);
+  const startedAt = Date.now();
+  const result = await withBudgetAdmission(env, {
+    operation: 'moderation_text_scan',
+    operationClass: 'essential',
+    estimatedCostUsd: Number(env.COST_HIVE_TEXT_ESTIMATE_USD ?? 0.004),
+    idempotencyKey: `hive:text:${postId}`,
+  }, () => moderateTextWithHive(post.body, post.author_id, postId, env));
   const modelVersion = env.HIVE_MODEL_VERSION ?? HIVE_DEFAULT_MODELS.join('+');
+  const inputHash = await sha256Hex(post.body);
+  const responseHash = await sha256Hex(JSON.stringify({ action: result.action, highestScore: result.highestScore, classes: result.classes }));
+  await recordAiEvidence(env, {
+    caseId: postId,
+    correlationId: postId,
+    inputHash,
+    evidenceBundleHash: await sha256Hex(`${inputHash}:${modelVersion}:manual-v1`),
+    provider: 'hive',
+    modelId: modelVersion,
+    gatewayId: null,
+    promptTemplateVersion: 'hive-task-v1',
+    reasoningSchemaVersion: 'moderation-result-v1',
+    toolVersions: { hive: modelVersion },
+    policyVersion: 'manual-v1',
+    responseHash,
+    latencyMs: Date.now() - startedAt,
+    estimatedUsageUsd: Number(env.COST_HIVE_TEXT_ESTIMATE_USD ?? 0.004),
+    actualUsageUsd: Number(env.COST_HIVE_TEXT_ESTIMATE_USD ?? 0.004),
+  }).catch((error) => logEvent({ service: 'lythaus-jobs', event: 'ai_evidence_record_failed', operation: 'moderation_text_scan', error: error instanceof Error ? error.message : 'audit_write_failed' }));
   const detectedContentClass = result.classes[0]?.class ?? null;
   const declarationConflict = post.declared_creation_mode === 'human'
     && result.classes.some((item) => typeof item.class === 'string' && /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.class));
@@ -260,6 +434,7 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
     throw new Error('media_signing_not_configured');
   }
   let moderation: HiveResult;
+  const startedAt = Date.now();
   try {
     const signed = await createPresignedGetUrl({
       accountId: env.R2_ACCOUNT_ID,
@@ -269,11 +444,35 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
       secretAccessKey: env.R2_SECRET_ACCESS_KEY,
       expiresInSeconds: 300,
     });
-    moderation = await moderateImageWithHive(signed.url, row.user_id, sessionId, env);
+    moderation = await withBudgetAdmission(env, {
+      operation: 'moderation_image_scan',
+      operationClass: 'essential',
+      estimatedCostUsd: Number(env.COST_HIVE_IMAGE_ESTIMATE_USD ?? 0.01),
+      idempotencyKey: `hive:image:${sessionId}`,
+    }, () => moderateImageWithHive(signed.url, row.user_id, sessionId, env));
   } catch (error) {
     await env.MEDIA_APPROVED.delete(approvedKey);
     throw error;
   }
+  const modelVersion = env.HIVE_MODEL_VERSION ?? 'general_image_classification+nudity_image_detection+violence_image_detection';
+  const responseHash = await sha256Hex(JSON.stringify({ action: moderation.action, highestScore: moderation.highestScore, classes: moderation.classes }));
+  await recordAiEvidence(env, {
+    caseId: sessionId,
+    correlationId: sessionId,
+    inputHash: sha256,
+    evidenceBundleHash: await sha256Hex(`${sha256}:${modelVersion}:media-v1`),
+    provider: 'hive',
+    modelId: modelVersion,
+    gatewayId: null,
+    promptTemplateVersion: 'hive-image-task-v1',
+    reasoningSchemaVersion: 'moderation-result-v1',
+    toolVersions: { hive: modelVersion },
+    policyVersion: 'media-v1',
+    responseHash,
+    latencyMs: Date.now() - startedAt,
+    estimatedUsageUsd: Number(env.COST_HIVE_IMAGE_ESTIMATE_USD ?? 0.01),
+    actualUsageUsd: Number(env.COST_HIVE_IMAGE_ESTIMATE_USD ?? 0.01),
+  }).catch((error) => logEvent({ service: 'lythaus-jobs', event: 'ai_evidence_record_failed', operation: 'moderation_image_scan', error: error instanceof Error ? error.message : 'audit_write_failed' }));
   if (moderation.action === 'block') {
     await env.MEDIA_APPROVED.delete(approvedKey);
     await transaction(env.DB_JOBS_FRESH, async (client) => {
@@ -425,7 +624,30 @@ async function relayOutbox(env: Env): Promise<void> {
 }
 
 export default {
-  async fetch(): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const pathname = new URL(request.url).pathname;
+    if (request.method === 'GET' && pathname === '/internal/readiness/database-identity') {
+      if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+      const [jobs, privacy] = await Promise.all([
+        inspectDatabaseIdentity(env.DB_JOBS_FRESH, databaseExpectationsFromEnv(env)),
+        inspectDatabaseIdentity(env.DB_PRIVACY_FRESH, databaseExpectationsFromEnv(env)),
+      ]);
+      const readiness = jobs.readiness === 'pass' && privacy.readiness === 'pass' ? 'pass' : 'fail';
+      return json({
+        service: 'lythaus-jobs',
+        databases: {
+          jobs: databaseReadinessResponse(jobs, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
+          privacy: databaseReadinessResponse(privacy, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
+        },
+        branchFingerprint: 'unknown',
+        readiness,
+        readyForAuthentication: env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true' && readiness === 'pass' && jobs.budgetLedgerApplied && privacy.budgetLedgerApplied,
+        }, { headers: { 'cache-control': 'private, no-store' } });
+    }
+    if (request.method === 'GET' && pathname === '/internal/readiness/budget-hard-stop') {
+      if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+      return json(await simulateBudgetHardStop(env), { headers: { 'cache-control': 'private, no-store' } });
+    }
     return json({ status: 'ok', service: 'lythaus-jobs' });
   },
 

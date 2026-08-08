@@ -4,6 +4,8 @@ Lythaus (formerly Asora) repository index of README files for quick navigation.
 
 ## Root
 - `README.md`: Lythaus overview, controlled Alpha scope, setup, validation, and immutable deployment flow.
+- `docs/architecture/lythaus-domain-architecture.md`: authoritative Cloudflare/PlanetScale runtime and cutover gates.
+- `docs/adr/ADR-007-cloudflare-planetscale-runtime.md`: proposed native runtime decision.
 
 ## Apps
 - `apps/control-panel/README.md`: Lythaus control panel build steps and API proxy configuration.
@@ -33,6 +35,7 @@ Lythaus (formerly Asora) repository index of README files for quick navigation.
 
 ## Infrastructure
 - `infrastructure/README.md`: Terraform root, workspaces, CI policy, and Cosmos validation module notes.
+- `infrastructure/cloudflare/native-hyperdrive-production.json`: production Hyperdrive binding and PlanetScale `main` proof contract.
 - `infrastructure/alerts/README.md`: Application Insights alerting module overview.
 - `infrastructure/function-app/README.md`: Function app settings enforcement module.
 
@@ -47,6 +50,11 @@ Lythaus (formerly Asora) repository index of README files for quick navigation.
 
 ## Scripts
 - `scripts/dsr-drills/README.md`: DSR drill scripts and expected outcomes.
+
+## Production cutover
+- `docs/runbooks/adr-003-authenticated-acceptance.md`: authenticated launch acceptance suite.
+- `docs/runbooks/cloudflared-tunnel-credential-rotation.md`: tunnel credential rotation and local service handoff.
+- `docs/runbooks/monthly-cost-reconciliation.md`: provisioned floor and monthly usage reconciliation.
 
 ## Workers
 - `workers/feed-cache/README.md`: Cloudflare worker for feed caching behavior and setup.

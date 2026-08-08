@@ -9,6 +9,8 @@ on:
       - 'scripts/validate-planetscale-extensions.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'scripts/ci/verify-planetscale-production-schema.mjs'
+      - 'scripts/ci/verify-cloudflare-hyperdrive-targets.mjs'
+      - 'scripts/ci/verify-ai-gateway-paths.mjs'
       - 'scripts/validate-production-gates.mjs'
       - 'infrastructure/cloudflare/production-gates.json'
       - 'database/planetscale/extensions/**'
@@ -22,6 +24,8 @@ on:
       - 'scripts/validate-planetscale-extensions.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'scripts/ci/verify-planetscale-production-schema.mjs'
+      - 'scripts/ci/verify-cloudflare-hyperdrive-targets.mjs'
+      - 'scripts/ci/verify-ai-gateway-paths.mjs'
       - 'scripts/validate-production-gates.mjs'
       - 'infrastructure/cloudflare/production-gates.json'
       - 'database/planetscale/extensions/**'
@@ -40,5 +44,6 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run validate:planetscale-migrations
+      - run: node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
       - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
