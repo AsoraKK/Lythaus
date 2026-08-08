@@ -1,1 +1,1 @@
-export 'api_client/lib/asora_api_client.dart';
+export 'api_client/lib/lythaus_api_client.dart';

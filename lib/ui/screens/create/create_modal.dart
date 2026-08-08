@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 
 class CreateModalScreen extends StatelessWidget {
   const CreateModalScreen({super.key});

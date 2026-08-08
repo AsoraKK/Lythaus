@@ -35,9 +35,6 @@ cd "${ROOT_DIR}"
 
 : "${API_BASE_URL:?API_BASE_URL is required}"
 : "${AUTH_URL:?AUTH_URL is required}"
-: "${OAUTH2_AUTHORIZATION_ENDPOINT:?OAUTH2_AUTHORIZATION_ENDPOINT is required}"
-: "${OAUTH2_TOKEN_ENDPOINT:?OAUTH2_TOKEN_ENDPOINT is required}"
-: "${OAUTH2_USERINFO_ENDPOINT:?OAUTH2_USERINFO_ENDPOINT is required}"
 : "${ENVIRONMENT:=production}"
 
 python3 - <<'PY'
@@ -67,9 +64,6 @@ def is_private_or_local(host: str) -> bool:
 for name in (
     "API_BASE_URL",
     "AUTH_URL",
-    "OAUTH2_AUTHORIZATION_ENDPOINT",
-    "OAUTH2_TOKEN_ENDPOINT",
-    "OAUTH2_USERINFO_ENDPOINT",
 ):
     value = os.environ.get(name, "").strip()
     if not value:
@@ -109,10 +103,7 @@ echo "==> Building web release"
 flutter build web --release --no-tree-shake-icons \
   --dart-define=ENVIRONMENT="${ENVIRONMENT}" \
   --dart-define=API_BASE_URL="${API_BASE_URL}" \
-  --dart-define=AUTH_URL="${AUTH_URL}" \
-  --dart-define=OAUTH2_AUTHORIZATION_ENDPOINT="${OAUTH2_AUTHORIZATION_ENDPOINT}" \
-  --dart-define=OAUTH2_TOKEN_ENDPOINT="${OAUTH2_TOKEN_ENDPOINT}" \
-  --dart-define=OAUTH2_USERINFO_ENDPOINT="${OAUTH2_USERINFO_ENDPOINT}"
+  --dart-define=AUTH_URL="${AUTH_URL}"
 
 echo "==> Copying _redirects for SPA routing"
 cp web/_redirects build/web/_redirects

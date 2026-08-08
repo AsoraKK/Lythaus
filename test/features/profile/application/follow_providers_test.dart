@@ -1,6 +1,6 @@
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/profile/application/follow_providers.dart';
-import 'package:asora/features/profile/application/follow_service.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/profile/application/follow_providers.dart';
+import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

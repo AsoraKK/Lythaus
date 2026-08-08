@@ -7,8 +7,8 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/subscription_status.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/subscription_status.dart';
 
 class SubscriptionApi {
 

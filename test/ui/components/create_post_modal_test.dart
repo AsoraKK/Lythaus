@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
-import 'package:asora/ui/components/create_post_modal.dart';
-import 'package:asora/ui/screens/create/create_modal.dart';
-import 'package:asora/ui/screens/create/create_screen.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/ui/components/create_post_modal.dart';
+import 'package:lythaus/ui/screens/create/create_modal.dart';
+import 'package:lythaus/ui/screens/create/create_screen.dart';
 
 class _FakePostCreationNotifier extends PostCreationNotifier {
   _FakePostCreationNotifier({required this.submitFn, required Ref ref})

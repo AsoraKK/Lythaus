@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/screens/lock_screen.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/screens/lock_screen.dart';
 
 /// User profile returned by /api/me — used to gate content access
 /// (e.g. locked accounts see FirstPostLockScreen).

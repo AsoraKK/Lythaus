@@ -1,5 +1,5 @@
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/network/dio_client_adapter_io.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/network/dio_client_adapter_io.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter_test/flutter_test.dart';

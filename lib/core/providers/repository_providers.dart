@@ -1,4 +1,4 @@
-/// ASORA REPOSITORY PROVIDERS
+/// LYTHAUS REPOSITORY PROVIDERS
 ///
 /// 🎯 Purpose: Centralized repository providers following Dependency Inversion Principle
 /// 🏗️ Architecture: Core layer - provides shared repository abstractions
@@ -9,12 +9,12 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/features/moderation/application/moderation_service.dart';
-import 'package:asora/features/feed/domain/feed_repository.dart';
-import 'package:asora/features/feed/application/feed_service.dart';
-import 'package:asora/core/security/cert_pinning.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/moderation/application/moderation_service.dart';
+import 'package:lythaus/features/feed/domain/feed_repository.dart';
+import 'package:lythaus/features/feed/application/feed_service.dart';
+import 'package:lythaus/core/security/cert_pinning.dart';
 
 /// **Core HTTP Client Provider**
 ///

@@ -2,7 +2,7 @@
 
 library social_feed_service;
 
-/// ASORA SOCIAL FEED SERVICE
+/// LYTHAUS SOCIAL FEED SERVICE
 ///
 /// 🎯 Purpose: Implementation of social feed repository interface
 /// 🏗️ Architecture: Application layer - implements domain contracts
@@ -10,10 +10,10 @@ library social_feed_service;
 /// 📱 Platform: Flutter with Dio HTTP client
 
 import 'package:dio/dio.dart';
-import 'package:asora/features/feed/domain/social_feed_repository.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/core/error/error_codes.dart';
-import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/observability/lythaus_tracer.dart';
 
 /// Concrete implementation of [SocialFeedRepository]
 ///
@@ -37,7 +37,7 @@ class SocialFeedService implements SocialFeedRepository {
     String? token,
     Map<String, dynamic>? extraQuery,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.$operation',
       () async {
         final queryParameters = <String, dynamic>{
@@ -78,7 +78,7 @@ class SocialFeedService implements SocialFeedRepository {
       },
       attributes: () {
         final attrs =
-            AsoraTracer.httpRequestAttributes(
+            LythausTracer.httpRequestAttributes(
               method: 'GET',
               url: '/api$urlPath',
             )..addAll({
@@ -149,7 +149,7 @@ class SocialFeedService implements SocialFeedRepository {
     required FeedParams params,
     String? token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.getFeed',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
@@ -186,7 +186,7 @@ class SocialFeedService implements SocialFeedRepository {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(method: 'GET', url: '/api/feed')
+          LythausTracer.httpRequestAttributes(method: 'GET', url: '/api/feed')
             ..addAll({
               'request.page': params.page,
               'request.page_size': params.pageSize,
@@ -203,7 +203,7 @@ class SocialFeedService implements SocialFeedRepository {
     int pageSize = 20,
     String? token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.getTrendingFeed',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
@@ -216,7 +216,7 @@ class SocialFeedService implements SocialFeedRepository {
 
         return _handleFeedResponse(response);
       },
-      attributes: AsoraTracer.httpRequestAttributes(
+      attributes: LythausTracer.httpRequestAttributes(
         method: 'GET',
         url: '/api/feed/trending',
       )..addAll({'request.page': page, 'request.page_size': pageSize}),
@@ -232,7 +232,7 @@ class SocialFeedService implements SocialFeedRepository {
     int pageSize = 20,
     String? token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.getLocalFeed',
       () async {
         final queryParams = <String, Object>{
@@ -253,7 +253,7 @@ class SocialFeedService implements SocialFeedRepository {
         return _handleFeedResponse(response);
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'GET',
             url: '/api/feed/local',
           )..addAll({
@@ -272,7 +272,7 @@ class SocialFeedService implements SocialFeedRepository {
     int pageSize = 20,
     String? token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.getNewCreatorsFeed',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
@@ -285,7 +285,7 @@ class SocialFeedService implements SocialFeedRepository {
 
         return _handleFeedResponse(response);
       },
-      attributes: AsoraTracer.httpRequestAttributes(
+      attributes: LythausTracer.httpRequestAttributes(
         method: 'GET',
         url: '/api/feed/new-creators',
       )..addAll({'request.page': page, 'request.page_size': pageSize}),
@@ -299,7 +299,7 @@ class SocialFeedService implements SocialFeedRepository {
     int pageSize = 20,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.getFollowingFeed',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
@@ -310,7 +310,7 @@ class SocialFeedService implements SocialFeedRepository {
 
         return _handleFeedResponse(response);
       },
-      attributes: AsoraTracer.httpRequestAttributes(
+      attributes: LythausTracer.httpRequestAttributes(
         method: 'GET',
         url: '/api/feed/following',
       )..addAll({'request.page': page, 'request.page_size': pageSize}),
@@ -320,7 +320,7 @@ class SocialFeedService implements SocialFeedRepository {
 
   @override
   Future<Post> getPost({required String postId, String? token}) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.getPost',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
@@ -356,7 +356,7 @@ class SocialFeedService implements SocialFeedRepository {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'GET',
             url: '/api/posts/$postId',
           )..addAll({
@@ -373,7 +373,7 @@ class SocialFeedService implements SocialFeedRepository {
     required bool isLike,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.likePost',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
@@ -408,7 +408,7 @@ class SocialFeedService implements SocialFeedRepository {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'POST',
             url: '/api/posts/$postId/like',
           )..addAll({
@@ -425,7 +425,7 @@ class SocialFeedService implements SocialFeedRepository {
     required bool isDislike,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.dislikePost',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
@@ -460,7 +460,7 @@ class SocialFeedService implements SocialFeedRepository {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'POST',
             url: '/api/posts/$postId/dislike',
           )..addAll({
@@ -478,7 +478,7 @@ class SocialFeedService implements SocialFeedRepository {
     int pageSize = 50,
     String? token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.getComments',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
@@ -518,7 +518,7 @@ class SocialFeedService implements SocialFeedRepository {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'GET',
             url: '/api/posts/$postId/comments',
           )..addAll({
@@ -537,7 +537,7 @@ class SocialFeedService implements SocialFeedRepository {
     String? details,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'SocialFeedService.flagPost',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
@@ -563,7 +563,7 @@ class SocialFeedService implements SocialFeedRepository {
         }
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'POST',
             url: '/api/posts/$postId/flag',
           )..addAll({

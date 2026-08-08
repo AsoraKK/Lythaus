@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA POST SERVICE
+/// LYTHAUS POST SERVICE
 ///
 /// 🎯 Purpose: HTTP client for post management API calls
 /// 📡 Endpoints: create, delete, and feed reads through the native Lythaus API
@@ -10,9 +10,9 @@ library;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:asora/core/observability/asora_tracer.dart';
-import 'package:asora/features/auth/domain/user_models.dart';
-import 'package:asora/core/network/response_models.dart';
+import 'package:lythaus/core/observability/lythaus_tracer.dart';
+import 'package:lythaus/features/auth/domain/user_models.dart';
+import 'package:lythaus/core/network/response_models.dart';
 
 /// Post management service for the native Lythaus API
 class PostService {
@@ -26,7 +26,7 @@ class PostService {
     String? mediaUrl,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostService.createPost',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
@@ -47,7 +47,7 @@ class PostService {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(method: 'POST', url: '/api/posts')
+          LythausTracer.httpRequestAttributes(method: 'POST', url: '/api/posts')
             ..addAll({
               'request.text_length': text.length,
               'request.has_media': mediaUrl != null,
@@ -60,7 +60,7 @@ class PostService {
     required String postId,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostService.deletePost',
       () async {
         final response = await _dio.delete<Map<String, dynamic>>(
@@ -84,7 +84,7 @@ class PostService {
           message: 'Failed to delete post: ${response.data}',
         );
       },
-      attributes: AsoraTracer.httpRequestAttributes(
+      attributes: LythausTracer.httpRequestAttributes(
         method: 'DELETE',
         url: '/api/posts/$postId',
       )..addAll({'request.post_id': postId}),
@@ -97,7 +97,7 @@ class PostService {
     String? cursor,
     String? token, // Optional for public feed
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostService.getFeed',
       () async {
         final queryParams = <String, dynamic>{
@@ -127,7 +127,7 @@ class PostService {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(method: 'GET', url: '/api/feed')
+          LythausTracer.httpRequestAttributes(method: 'GET', url: '/api/feed')
             ..addAll({
               'request.limit': limit,
               'request.has_cursor': cursor != null,
@@ -141,7 +141,7 @@ class PostService {
     String? userId, // If null, gets own profile
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostService.getUserProfile',
       () async {
         final url = userId != null ? '/api/user/$userId' : '/api/user';
@@ -165,7 +165,7 @@ class PostService {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'GET',
             url: userId != null ? '/api/user/$userId' : '/api/user',
           )..addAll({
@@ -177,7 +177,7 @@ class PostService {
 
   /// Check health of the native Lythaus API.
   Future<Map<String, dynamic>> checkHealth() async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostService.checkHealth',
       () async {
         final response = await _dio.get<Map<String, dynamic>>('/api/health');
@@ -193,7 +193,7 @@ class PostService {
           message: 'Health check failed: ${response.data}',
         );
       },
-      attributes: AsoraTracer.httpRequestAttributes(
+      attributes: LythausTracer.httpRequestAttributes(
         method: 'GET',
         url: '/api/health',
       ),

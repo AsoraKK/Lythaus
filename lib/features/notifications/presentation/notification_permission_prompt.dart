@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA NOTIFICATIONS - PERMISSION PRE-PROMPT
+/// LYTHAUS NOTIFICATIONS - PERMISSION PRE-PROMPT
 ///
 /// Pre-prompt UI following iOS best practices:
 /// - Shows before requesting OS permission
@@ -10,10 +10,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/notifications/application/notification_permission_service.dart';
-import 'package:asora/features/notifications/domain/notification_models.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/notifications/application/notification_permission_service.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class NotificationPermissionPrompt extends ConsumerStatefulWidget {
   final VoidCallback? onPermissionGranted;

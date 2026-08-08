@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA DEVICE INTEGRITY DETECTION
+/// LYTHAUS DEVICE INTEGRITY DETECTION
 ///
 /// 🎯 Purpose: Detect compromised devices (root/jailbreak)
 /// 🔐 Security: Block posting on compromised devices, allow read-only

@@ -3,8 +3,8 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/admin_appeal_queue_item.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_queue_item.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 

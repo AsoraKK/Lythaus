@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/auth/domain/user_models.dart';
+import 'package:lythaus/features/auth/domain/user_models.dart';
 
 void main() {
   test('UserStats fromJson applies defaults and toJson', () {

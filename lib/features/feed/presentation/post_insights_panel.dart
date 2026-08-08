@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA POST INSIGHTS PANEL WIDGET
+/// LYTHAUS POST INSIGHTS PANEL WIDGET
 ///
 /// 🎯 Purpose: Display sanitized moderation insights for post authors/admins
 /// 🏗️ Architecture: Presentation layer - pure UI widget
@@ -13,9 +13,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/feed/application/post_insights_providers.dart';
-import 'package:asora/features/feed/domain/post_insights.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/feed/application/post_insights_providers.dart';
+import 'package:lythaus/features/feed/domain/post_insights.dart';
 
 /// Insights panel for post details screen
 ///

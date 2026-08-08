@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
 
 class OnboardingIntroScreen extends StatelessWidget {
   const OnboardingIntroScreen({super.key, this.onContinue});

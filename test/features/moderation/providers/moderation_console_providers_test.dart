@@ -2,8 +2,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/moderation/presentation/providers/moderation_console_providers.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
 
 class MockModerationRepository extends Mock implements ModerationRepository {}
 

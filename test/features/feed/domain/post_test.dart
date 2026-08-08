@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-// ASORA FEED POST MODEL TESTS
+// LYTHAUS FEED POST MODEL TESTS
 //
 // 🎯 Purpose: Test feed post domain models and serialization
 // ✅ Coverage: Post model validation, JSON serialization, edge cases

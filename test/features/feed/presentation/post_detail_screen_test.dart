@@ -11,11 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/models.dart' as domain;
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/presentation/post_detail_screen.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 
 class _MockPostRepository extends Mock implements PostRepository {}
 

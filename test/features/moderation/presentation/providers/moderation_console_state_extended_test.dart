@@ -1,8 +1,8 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/presentation/providers/moderation_console_providers.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
 
 void main() {
   // ── ModerationQueueState ──────────────────────────────────────────────

@@ -1,11 +1,11 @@
 // ignore_for_file: public_member_api_docs
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/security_overrides.dart';
-import 'package:asora/core/error/error_codes.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/security_overrides.dart';
+import 'package:lythaus/core/error/error_codes.dart';
 
 class _FakeDeviceSecurityService implements DeviceSecurityService {
   DeviceSecurityState _state;

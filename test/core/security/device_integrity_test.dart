@@ -2,7 +2,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/security/device_integrity.dart';
+import 'package:lythaus/core/security/device_integrity.dart';
 
 void main() {
   // Ensure Flutter binding is initialized for services & platform channels

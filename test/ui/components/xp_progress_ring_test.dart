@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/ui/components/xp_progress_ring.dart';
+import 'package:lythaus/ui/components/xp_progress_ring.dart';
 
 void main() {
   Widget buildWidget({

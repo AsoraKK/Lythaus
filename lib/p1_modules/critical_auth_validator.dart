@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-// ASORA P1 CRITICAL AUTH VALIDATION
+// LYTHAUS P1 CRITICAL AUTH VALIDATION
 //
 // 🔒 Priority 1 Module: Critical authentication logic
 // ✅ Requires 80% test coverage for deployment
@@ -9,7 +9,7 @@
 // This module contains critical business logic for user authentication
 // and must maintain high test coverage to ensure security.
 
-import 'package:asora/features/auth/application/auth_state.dart';
+import 'package:lythaus/features/auth/application/auth_state.dart';
 
 /// Critical authentication validation functions
 class CriticalAuthValidator {

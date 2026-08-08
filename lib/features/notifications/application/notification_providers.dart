@@ -9,9 +9,9 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/notifications/domain/notification_models.dart';
-import 'package:asora/features/notifications/application/notification_api_service.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/features/notifications/application/notification_api_service.dart';
 
 // ============================================================================
 // SERVICE PROVIDERS

@@ -1,4 +1,4 @@
-// Use same-origin proxy by default (/api/* routes to Functions App)
+// Use the same-origin Cloudflare proxy by default.
 // Falls back to direct API URL if explicitly configured
 const DEFAULT_ADMIN_API_URL =
   import.meta.env.VITE_ADMIN_API_URL || '/api/admin';
@@ -199,7 +199,7 @@ export function setAdminToken(value) {
 /**
  * Build a full URL from a path and optional query parameters.
  * Properly handles both relative and absolute base URLs.
- * @param {string} path - The API endpoint path (e.g., "/moderation/test/upload")
+ * @param {string} path - The API endpoint path (e.g., "_admin/flags")
  * @param {Object} query - Optional query parameters
  * @returns {string} - The full absolute URL
  */
@@ -209,8 +209,8 @@ function buildUrl(path, query) {
   
   // Ensure proper path joining:
   // - baseUrl: "https://admin-api.lythaus.co/api"
-  // - path: "/moderation/test/upload"
-  // - result: "https://admin-api.lythaus.co/api/moderation/test/upload"
+  // - path: "_admin/flags"
+  // - result: "https://admin-api.lythaus.co/api/_admin/flags"
   
   // Normalize: remove trailing slash from base, ensure path starts with /
   const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;

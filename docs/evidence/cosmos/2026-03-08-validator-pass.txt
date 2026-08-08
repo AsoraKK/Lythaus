@@ -1,3 +1,0 @@
-PENDING: run and paste output
-node scripts/validate-cosmos-contract.js --policy infra/cosmos-container-policy.json
-

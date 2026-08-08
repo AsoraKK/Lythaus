@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/security/cert_pinning.dart';
+import 'package:lythaus/core/security/cert_pinning.dart';
 
 void main() {
   test('kPinnedDomains matches mobile-expected-pins.json', () {

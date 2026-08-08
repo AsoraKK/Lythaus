@@ -1,93 +1,48 @@
 {
-  "schemaVersion": "lythaus-production-gates-v2",
+  "schemaVersion": "lythaus-production-gates-v3",
   "releaseSha": null,
   "releaseShaPolicy": "workflow input must equal the checked-out merged main SHA",
   "cutoverAuthorized": true,
-  "migrationUsageAuthorized": false,
-  "migrationUsageMaxUsd": 0,
   "estimatedIncrementalCostUsd": 0,
-  "azureDeletionAuthorized": false,
-  "azureDeletionExecution": "NOT STARTED",
   "requiredOwnerActions": [
-    "Approve migration usage only if a future measured estimate exceeds US$0",
-    "AUTHORISE FINAL AZURE DELETION only after every final gate is completed"
+    "Approve any provider resource creation or incremental cost before execution",
+    "Approve every production database migration after exact baseline validation"
   ],
   "gates": {
     "predeploy": {
       "repositoryReleaseControls": {
         "status": "COMPLETED",
-        "evidence": [".github/workflows/native-workers-deploy.yml", "docs/runbooks/native-deployment-and-rollback.md"]
-      },
-      "architectureSkeleton": {
-        "status": "COMPLETED",
-        "evidence": ["infrastructure/lythaus-resource-registry.json", "infrastructure/cloudflare/native-scope.json"]
-      },
-      "azureDataAccess": {
-        "status": "COMPLETED",
-        "evidence": ["docs/evidence/azure-exit/2026-07-29/cosmos-disposition.md", "docs/evidence/azure-exit/2026-07-29/cutover-progress.md"]
-      },
-      "postgres17Compatibility": {
-        "status": "COMPLETED",
-        "evidence": ["scripts/ci/validate-planetscale-postgres17.mjs", "docs/evidence/2026-07-28-planetscale-provisioning.md"]
-      },
-      "migrationReconciliation": {
-        "status": "COMPLETED",
-        "evidence": ["infrastructure/azure-exit/migration-mappings.json", "docs/evidence/azure-exit/2026-07-29/cutover-progress.md"]
-      },
-      "rollbackPrepared": {
-        "status": "COMPLETED",
-        "evidence": ["docs/runbooks/native-deployment-and-rollback.md", "infrastructure/lythaus-resource-registry.json"]
-      }
-    },
-    "final": {
-      "cloudflarePromotion": {
-        "status": "COMPLETED",
-        "evidence": ["infrastructure/lythaus-resource-registry.json", "docs/runbooks/native-deployment-and-rollback.md", "docs/evidence/azure-exit/2026-08-02/azure-independence-closure.md"]
-      },
-      "domainCutover": {
-        "status": "COMPLETED",
-        "evidence": ["docs/architecture/lythaus-domain-architecture.md", "apps/lythaus-public-api/src/index.ts", "docs/evidence/azure-exit/2026-08-02/azure-independence-closure.md"]
-      },
-      "hyperdriveTargetProof": {
-        "status": "BLOCKED",
-        "evidence": ["infrastructure/cloudflare/native-hyperdrive-production.json", "docs/evidence/production-cutover/2026-08-05-hyperdrive-inventory.json", "scripts/ci/verify-cloudflare-hyperdrive-targets.mjs"]
-      },
-      "databaseIdentityProbe": {
-        "status": "BLOCKED",
-        "evidence": ["packages/db/src/identity.ts", "apps/lythaus-public-api/src/index.ts", "docs/evidence/production-cutover/2026-08-05-hyperdrive-inventory.md"]
-      },
-      "googleOAuthAcceptance": {
-        "status": "DEFERRED TO ADR 003",
-        "ownerApproved": true,
-        "launchBlocking": true,
-        "scope": "Google OAuth end-to-end session acceptance only",
-        "decisionDate": "2026-08-02",
-        "expiresWhen": "ADR 003 authentication acceptance completes",
-        "evidence": ["docs/runbooks/adr-003-authenticated-acceptance.md", "docs/evidence/production-cutover/2026-08-05-adr003-acceptance.json"]
-      },
-      "runtimeCutover": {
-        "status": "COMPLETED",
-        "evidence": ["scripts/tests/native-architecture-invariants.test.js", "docs/evidence/azure-exit/2026-07-29/cutover-progress.md", "docs/evidence/azure-exit/2026-08-02/azure-independence-closure.md"]
-      },
-      "githubToAzureDisconnection": {
-        "status": "COMPLETED",
-        "evidence": ["scripts/validate-github-azure-disconnection.mjs", "docs/evidence/azure-exit/2026-07-30/github-to-azure-disconnection.md", "docs/evidence/azure-exit/2026-08-02/azure-independence-closure.md"]
-      },
-      "azureDeletionInventory": {
-        "status": "COMPLETED",
-        "evidence": ["docs/evidence/production-cutover/2026-08-05-azure-deletion-preflight.json", "docs/architecture/lythaus-domain-architecture.md"]
-      },
-      "budgetEnforcement": {
-        "status": "IN PROGRESS",
-        "evidence": ["database/planetscale/migrations/0009_cost_budget_enforcement.sql", "packages/db/src/budget.ts", "apps/lythaus-jobs/src/index.ts"]
-      },
-      "tunnelCredentialRotation": {
-        "status": "IN PROGRESS",
-        "evidence": ["docs/runbooks/cloudflared-tunnel-credential-rotation.md", "docs/evidence/production-cutover/2026-08-05-tunnel-rotation.json"]
+        "evidence": [".github/workflows/native-workers-deploy.yml", "docs/PRODUCTION_DEPLOYMENT_CHECKLIST.md"]
       },
       "architectureSourceOfTruth": {
         "status": "COMPLETED",
-        "evidence": ["docs/architecture/lythaus-domain-architecture.md", "docs/adr/ADR-007-cloudflare-planetscale-runtime.md"]
+        "evidence": ["README.md", "docs/architecture/runtime.md", "infrastructure/lythaus-resource-registry.json"]
+      },
+      "postgres17Compatibility": {
+        "status": "REQUIRED",
+        "evidence": ["scripts/ci/validate-planetscale-postgres17.mjs", "database/planetscale/README.md"]
+      },
+      "rollbackPrepared": {
+        "status": "COMPLETED",
+        "evidence": ["docs/PRODUCTION_DEPLOYMENT_CHECKLIST.md", "infrastructure/lythaus-resource-registry.json"]
+      }
+    },
+    "final": {
+      "hyperdriveTargetProof": {
+        "status": "REQUIRED",
+        "evidence": ["infrastructure/cloudflare/native-hyperdrive-production.json", "scripts/ci/verify-cloudflare-hyperdrive-targets.mjs"]
+      },
+      "databaseIdentityProbe": {
+        "status": "REQUIRED",
+        "evidence": ["packages/db/src/identity.ts", "apps/lythaus-public-api/src/index.ts"]
+      },
+      "emailAndGuestAcceptance": {
+        "status": "REQUIRED",
+        "evidence": ["apps/lythaus-public-api/src/index.ts", "test/features/auth"]
+      },
+      "budgetEnforcement": {
+        "status": "REQUIRED",
+        "evidence": ["database/planetscale/migrations/0009_cost_budget_enforcement.sql", "packages/db/src/budget.ts"]
       }
     }
   }

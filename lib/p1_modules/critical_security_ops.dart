@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-// ASORA P1 CRITICAL SECURITY OPERATIONS
+// LYTHAUS P1 CRITICAL SECURITY OPERATIONS
 //
 // 🛡️ Priority 1 Module: Essential security functions
 // ✅ Requires 80% test coverage for deployment
@@ -12,7 +12,7 @@
 import 'dart:convert';
 import 'dart:math';
 
-/// Critical security operations for the Asora platform
+/// Critical security operations for the Lythaus platform
 class CriticalSecurityOps {
   /// Sanitizes user input to prevent XSS attacks
   /// Returns cleaned string safe for display

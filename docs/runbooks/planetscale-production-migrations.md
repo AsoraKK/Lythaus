@@ -44,6 +44,5 @@ The runner:
 Each migration runs in a transaction. A failed migration rolls back and stops
 the deployment before any Worker is deployed. Do not edit an applied
 migration; create a new numbered migration after reviewing the failed release.
-Restore into a temporary PlanetScale branch for recovery validation, then use
-the normal release rollback procedure. Azure remains an isolated compatibility
-path and is not modified by this workflow.
+Restore into an approved temporary recovery environment for validation, then
+use the normal release rollback procedure. No retired-provider fallback exists.

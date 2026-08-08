@@ -2,8 +2,8 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/data/mock/mock_settings.dart';
-import 'package:asora/state/models/settings.dart';
+import 'package:lythaus/data/mock/mock_settings.dart';
+import 'package:lythaus/state/models/settings.dart';
 
 class SettingsController extends StateNotifier<SettingsState> {
   SettingsController() : super(defaultSettings);

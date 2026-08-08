@@ -1,4 +1,4 @@
-import 'package:asora/features/profile/application/follow_service.dart';
+import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

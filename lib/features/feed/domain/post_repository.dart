@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA POST REPOSITORY
+/// LYTHAUS POST REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for post CRUD operations
 /// 🏗️ Architecture: Domain layer - defines business contracts
@@ -8,7 +8,7 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
-import 'package:asora/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
 
 /// Result of a post creation attempt
 sealed class CreatePostResult {
@@ -83,12 +83,13 @@ class CreatePostRequest {
   });
 
   Map<String, dynamic> toJson() => {
-    'content': text,
-    if (mediaUrl != null) 'mediaUrls': [mediaUrl],
-    'isNews': isNews,
-    'contentType': contentType,
-    'aiLabel': aiLabel,
-    if (proofSignals.hasAny) 'proofSignals': proofSignals.toJson(),
+    'body': text,
+    'declaredCreationMode': switch (aiLabel) {
+      'assisted' => 'ai_assisted',
+      'generated' => 'ai_generated',
+      _ => 'human',
+    },
+    'geoScope': 'none',
   };
 }
 

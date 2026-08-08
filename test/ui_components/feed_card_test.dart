@@ -1,5 +1,5 @@
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/components/feed_card.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

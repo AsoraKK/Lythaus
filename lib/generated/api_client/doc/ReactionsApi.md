@@ -1,8 +1,8 @@
-# asora_api_client.api.ReactionsApi
+# lythaus_api_client.api.ReactionsApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -20,9 +20,9 @@ Delete my reaction
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getReactionsApi();
+final api = LythausApiClient().getReactionsApi();
 final String id = id_example; // String |
 
 try {
@@ -62,9 +62,9 @@ Records a structured reaction and applies anti-gaming controls before deciding w
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getReactionsApi();
+final api = LythausApiClient().getReactionsApi();
 final SubmitReactionRequest submitReactionRequest = ; // SubmitReactionRequest |
 
 try {

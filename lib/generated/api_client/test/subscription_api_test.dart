@@ -1,10 +1,10 @@
 import 'package:test/test.dart';
-import 'package:asora_api_client/asora_api_client.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
 
 
 /// tests for SubscriptionApi
 void main() {
-  final instance = AsoraApiClient().getSubscriptionApi();
+  final instance = LythausApiClient().getSubscriptionApi();
 
   group(SubscriptionApi, () {
     // Get current user subscription status

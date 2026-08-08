@@ -4,9 +4,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/privacy/widgets/cooldown_row.dart';
-import 'package:asora/features/privacy/widgets/privacy_error_banner.dart';
-import 'package:asora/features/privacy/widgets/privacy_blocking_overlay.dart';
+import 'package:lythaus/features/privacy/widgets/cooldown_row.dart';
+import 'package:lythaus/features/privacy/widgets/privacy_error_banner.dart';
+import 'package:lythaus/features/privacy/widgets/privacy_blocking_overlay.dart';
 
 void main() {
   Widget wrap(Widget child) => MaterialApp(

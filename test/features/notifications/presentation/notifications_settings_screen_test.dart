@@ -1,7 +1,7 @@
-import 'package:asora/features/notifications/application/notification_api_service.dart';
-import 'package:asora/features/notifications/application/notification_providers.dart';
-import 'package:asora/features/notifications/domain/notification_models.dart';
-import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
+import 'package:lythaus/features/notifications/application/notification_api_service.dart';
+import 'package:lythaus/features/notifications/application/notification_providers.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

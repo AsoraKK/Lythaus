@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/logging/app_logger.dart';
+import 'package:lythaus/core/logging/app_logger.dart';
 
 void main() {
   group('AppLogger', () {

@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ANALYTICS EVENT TRACKER
+/// LYTHAUS ANALYTICS EVENT TRACKER
 ///
 /// 🎯 Purpose: Ensure one-time analytics events per install or user
 /// 🔐 Privacy: Stores minimal event flags in secure storage
@@ -8,7 +8,7 @@ library;
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
 
 class AnalyticsEventTracker {
   AnalyticsEventTracker({FlutterSecureStorage? storage})

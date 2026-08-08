@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
-import 'package:asora/core/security/cert_pinning.dart';
+import 'package:lythaus/core/security/cert_pinning.dart';
 
 void main() {
   group('Certificate Pinning Additional Coverage Tests', () {
@@ -40,7 +40,7 @@ void main() {
 
     test('isPinValidationError handles all DioException types', () {
       final pinnedOptions = RequestOptions(
-        path: 'https://asora-function-dev.azurewebsites.net/api',
+        path: 'https://api.lythaus.co/api',
       );
       final unpinnedOptions = RequestOptions(path: 'https://example.com/api');
 

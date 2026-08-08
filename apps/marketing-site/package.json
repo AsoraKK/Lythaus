@@ -1,18 +1,21 @@
 {
-  "name": "asora-marketing-site",
+  "name": "lythaus-marketing-site",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "lockfile:refresh": "npm install --package-lock-only --ignore-scripts && node ../../scripts/sanitize-provider-neutral-lockfile.mjs package-lock.json"
   },
   "dependencies": {
-    "astro": "7.1.6"
+    "astro": "7.1.6",
+    "lythaus-marketing-site": "file:"
   },
   "overrides": {
     "postcss": "8.5.24",
+    "nanoid": "3.3.17",
     "sharp": "0.35.3"
   }
 }

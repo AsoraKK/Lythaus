@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/security/device_security_service.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
 
 void main() {
   // ─── DeviceSecurityState model ───

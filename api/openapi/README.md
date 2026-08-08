@@ -11,5 +11,5 @@
 - `npm run openapi:gen:dart` – Refresh the generated Dart client under `lib/generated/api_client/`.
 
 ## Generated client usage
-- Flutter builds can import the client via: `import 'package:asora/generated/api_client.dart';`.
+- Flutter builds can import the client via: `import 'package:lythaus/generated/api_client.dart';`.
 - The export exposes `DefaultApi` and related models from `lib/generated/api_client/lib/api.dart`.

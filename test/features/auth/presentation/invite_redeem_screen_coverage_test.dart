@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/invite_redeem_service.dart';
-import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/invite_redeem_service.dart';
+import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
 
 class _MockAnalytics extends Mock implements AnalyticsClient {}
 

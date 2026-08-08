@@ -3,12 +3,12 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/admin_flag_queue_flags.dart';
-import 'package:asora_api_client/src/model/admin_content_state.dart';
-import 'package:asora_api_client/src/model/admin_flag_queue_author.dart';
-import 'package:asora_api_client/src/model/admin_flag_queue_content.dart';
-import 'package:asora_api_client/src/model/admin_moderation_summary.dart';
-import 'package:asora_api_client/src/model/admin_queue_status.dart';
+import 'package:lythaus_api_client/src/model/admin_moderation_summary.dart';
+import 'package:lythaus_api_client/src/model/admin_flag_queue_content.dart';
+import 'package:lythaus_api_client/src/model/admin_content_state.dart';
+import 'package:lythaus_api_client/src/model/admin_flag_queue_author.dart';
+import 'package:lythaus_api_client/src/model/admin_flag_queue_flags.dart';
+import 'package:lythaus_api_client/src/model/admin_queue_status.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 
 void main() {
   // ─── LocalFeedParams ───

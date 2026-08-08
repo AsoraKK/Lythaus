@@ -5,24 +5,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/ui/components/asora_top_bar.dart';
-import 'package:asora/ui/components/feed_control_panel.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/design_system/tokens/motion.dart';
-import 'package:asora/features/feed/presentation/post_detail_screen.dart';
-import 'package:asora/ui/screens/home/custom_feed.dart';
-import 'package:asora/ui/screens/home/custom_feed_creation_flow.dart';
-import 'package:asora/ui/screens/home/discover_feed.dart';
-import 'package:asora/ui/screens/home/news_feed.dart';
-import 'package:asora/ui/screens/home/feed_search_screen.dart';
-import 'package:asora/ui/screens/home/trending_feed_screen.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/ui/components/lythaus_top_bar.dart';
+import 'package:lythaus/ui/components/feed_control_panel.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/tokens/motion.dart';
+import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
+import 'package:lythaus/ui/screens/home/custom_feed.dart';
+import 'package:lythaus/ui/screens/home/custom_feed_creation_flow.dart';
+import 'package:lythaus/ui/screens/home/discover_feed.dart';
+import 'package:lythaus/ui/screens/home/news_feed.dart';
+import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
+import 'package:lythaus/ui/screens/home/trending_feed_screen.dart';
 
 enum AlphaFeedSection { discover, myFeeds, newsBoard }
 
@@ -70,7 +70,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       body: SafeArea(
         child: Column(
           children: [
-            AsoraTopBar(
+            LythausTopBar(
               title: activeFeed.name,
               onLogoTap: _openFeedControl,
               onTitleTap: _openFeedControl,
@@ -153,7 +153,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       body: SafeArea(
         child: Column(
           children: [
-            AsoraTopBar(
+            LythausTopBar(
               title: title,
               onLogoTap: _openFeedControl,
               onTitleTap: _openFeedControl,

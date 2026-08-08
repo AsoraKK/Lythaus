@@ -1,4 +1,4 @@
-import 'package:asora/core/network/response_models.dart';
+import 'package:lythaus/core/network/response_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/screens/home/discover_feed.dart';
-import 'package:asora/ui/screens/home/news_feed.dart';
-import 'package:asora/ui/screens/home/custom_feed.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/ui/screens/home/discover_feed.dart';
+import 'package:lythaus/ui/screens/home/news_feed.dart';
+import 'package:lythaus/ui/screens/home/custom_feed.dart';
 
 void main() {
   const feed = FeedModel(

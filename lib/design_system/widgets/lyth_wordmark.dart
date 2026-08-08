@@ -8,8 +8,8 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/design_system/tokens/motion.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/tokens/motion.dart';
 
 /// Displays the Lythaus wordmark with a pulsing glow effect.
 ///

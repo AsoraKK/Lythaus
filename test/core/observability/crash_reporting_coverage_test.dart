@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/observability/crash_reporting.dart';
-import 'package:asora/core/logging/app_logger.dart';
+import 'package:lythaus/core/observability/crash_reporting.dart';
+import 'package:lythaus/core/logging/app_logger.dart';
 import 'package:flutter/foundation.dart';
 
 /// A mock CrashSink that records calls.

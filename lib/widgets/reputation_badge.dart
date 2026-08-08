@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/state/models/reputation.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/state/models/reputation.dart';
 
 /// Size variants for the reputation badge
 enum ReputationBadgeSize {

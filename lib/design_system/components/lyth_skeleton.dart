@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 /// Semantic skeleton (loading placeholder) component
 ///

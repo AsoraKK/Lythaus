@@ -3,19 +3,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/feed/presentation/post_insights_panel.dart';
-import 'package:asora/features/feed/application/social_feed_providers.dart';
-import 'package:asora/widgets/post_actions.dart';
-import 'package:asora/widgets/moderation_badges.dart';
-import 'package:asora/widgets/appeal_dialog.dart';
-import 'package:asora/widgets/reputation_badge.dart';
-import 'package:asora/features/feed/presentation/comment_thread_screen.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/feed/presentation/post_insights_panel.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/widgets/post_actions.dart';
+import 'package:lythaus/widgets/moderation_badges.dart';
+import 'package:lythaus/widgets/appeal_dialog.dart';
+import 'package:lythaus/widgets/reputation_badge.dart';
+import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 
-/// ASORA POST CARD WITH MODERATION INTEGRATION
+/// LYTHAUS POST CARD WITH MODERATION INTEGRATION
 ///
 /// 🎯 Purpose: Example post card showing complete moderation integration
 /// ✅ Features: Post content, actions, moderation badges, appeal functionality

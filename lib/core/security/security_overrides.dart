@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA SECURITY OVERRIDES
+/// LYTHAUS SECURITY OVERRIDES
 ///
 /// 🎯 Purpose: Break-glass mechanism for emergency security relaxation
 /// ⚠️  WARNING: Use only for legitimate QA/support scenarios

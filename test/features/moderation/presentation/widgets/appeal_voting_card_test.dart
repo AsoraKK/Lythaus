@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/features/moderation/presentation/widgets/appeal_voting_card.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/core/providers/repository_providers.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/core/config/environment_config.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/appeal_voting_card.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/core/providers/repository_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/core/config/environment_config.dart';
 
-// ASORA APPEAL VOTING CARD WIDGET TESTS
+// LYTHAUS APPEAL VOTING CARD WIDGET TESTS
 //
 // 🎯 Purpose: Comprehensive test coverage for AppealVotingCard widget
 // ✅ Coverage: All visual states, interactions, helper methods, error handling

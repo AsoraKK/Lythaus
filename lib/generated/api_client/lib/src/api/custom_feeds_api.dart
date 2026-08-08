@@ -7,14 +7,14 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/create_custom_feed_request.dart';
-import 'package:asora_api_client/src/model/cursor_paginated_post_view.dart';
-import 'package:asora_api_client/src/model/custom_feed_definition.dart';
-import 'package:asora_api_client/src/model/custom_feed_list_response.dart';
-import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/error_response.dart';
-import 'package:asora_api_client/src/model/update_custom_feed_request.dart';
+import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/create_custom_feed_request.dart';
+import 'package:lythaus_api_client/src/model/cursor_paginated_post_view.dart';
+import 'package:lythaus_api_client/src/model/custom_feed_definition.dart';
+import 'package:lythaus_api_client/src/model/custom_feed_list_response.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/error_response.dart';
+import 'package:lythaus_api_client/src/model/update_custom_feed_request.dart';
 
 class CustomFeedsApi {
 

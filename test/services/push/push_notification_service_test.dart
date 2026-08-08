@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:asora/services/push/push_notification_service.dart';
+import 'package:lythaus/services/push/push_notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -103,10 +103,10 @@ void main() {
       service.onNotificationTapped,
       emitsInOrder([
         predicate<Map<String, dynamic>>(
-          (data) => data['deeplink'] == 'asora://test',
+          (data) => data['deeplink'] == 'lythaus://test',
         ),
         predicate<Map<String, dynamic>>(
-          (data) => data['deeplink'] == 'asora://local',
+          (data) => data['deeplink'] == 'lythaus://local',
         ),
       ]),
     );
@@ -114,12 +114,12 @@ void main() {
     await service.initialize();
 
     onMessageOpenedController.add(
-      const RemoteMessage(data: {'deeplink': 'asora://test'}),
+      const RemoteMessage(data: {'deeplink': 'lythaus://test'}),
     );
 
     onMessageController.add(
       const RemoteMessage(
-        data: {'deeplink': 'asora://notice'},
+        data: {'deeplink': 'lythaus://notice'},
         notification: RemoteNotification(title: 'Hello', body: 'World'),
       ),
     );
@@ -131,7 +131,7 @@ void main() {
         'Hello',
         'World',
         any(),
-        payload: 'asora://notice',
+        payload: 'lythaus://notice',
       ),
     ).called(1);
 
@@ -144,7 +144,7 @@ void main() {
     responseCallback?.call(
       const NotificationResponse(
         notificationResponseType: NotificationResponseType.selectedNotification,
-        payload: 'asora://local',
+        payload: 'lythaus://local',
       ),
     );
     await tapFuture;

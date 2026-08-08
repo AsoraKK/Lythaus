@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/components/lyth_text_input.dart';
+import 'package:lythaus/design_system/components/lyth_text_input.dart';
 
 /// Semantic text field component for user input with validation and theming support.
 class LythTextField extends FormField<String> {

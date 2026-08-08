@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_consent.dart';
-import 'package:asora/core/analytics/analytics_consent_storage.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/core/analytics/consent_aware_analytics_client.dart';
-import 'package:asora/core/providers/repository_providers.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_consent.dart';
+import 'package:lythaus/core/analytics/analytics_consent_storage.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/analytics/consent_aware_analytics_client.dart';
+import 'package:lythaus/core/providers/repository_providers.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

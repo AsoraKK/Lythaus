@@ -2,8 +2,8 @@
 
 import 'package:flutter/foundation.dart';
 
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
 
 /// Structured telemetry events for moderation workflows
 class ModerationTelemetry {

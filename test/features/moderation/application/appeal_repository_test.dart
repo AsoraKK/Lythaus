@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-/// ASORA APPEAL REPOSITORY TESTS
+/// LYTHAUS APPEAL REPOSITORY TESTS
 ///
 /// 🎯 Purpose: Test appeal repository data handling and error cases
 /// ✅ Coverage: Success cases, error handling, data validation

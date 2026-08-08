@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
 
 class ModerationDecisionPanel extends StatefulWidget {
   const ModerationDecisionPanel({

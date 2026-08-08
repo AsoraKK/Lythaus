@@ -3,8 +3,8 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/legacy_create_post_response_post_stats.dart';
-import 'package:asora_api_client/src/model/public_authorship.dart';
+import 'package:lythaus_api_client/src/model/legacy_create_post_response_post_stats.dart';
+import 'package:lythaus_api_client/src/model/public_authorship.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 

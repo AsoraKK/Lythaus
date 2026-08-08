@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/analytics/analytics_consent.dart';
+import 'package:lythaus/core/analytics/analytics_consent.dart';
 
 void main() {
   group('AnalyticsConsent', () {

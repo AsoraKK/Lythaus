@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/rewards/application/reward_providers.dart';
-import 'package:asora/features/rewards/domain/reward_models.dart';
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:lythaus/features/rewards/application/reward_providers.dart';
+import 'package:lythaus/features/rewards/domain/reward_models.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
 
 class RewardsDashboardScreen extends ConsumerStatefulWidget {
   const RewardsDashboardScreen({super.key});

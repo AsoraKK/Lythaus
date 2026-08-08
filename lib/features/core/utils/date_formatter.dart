@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA DATE FORMATTER UTILITY
+/// LYTHAUS DATE FORMATTER UTILITY
 ///
 /// 🎯 Purpose: Format dates for display in UI components
 /// ✅ Features: Relative time formatting, human-readable dates

@@ -1,94 +1,37 @@
-# asora_api_client.api.AuthApi
+# lythaus_api_client.api.AuthApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**authAuthorize**](AuthApi.md#authauthorize) | **GET** /auth/authorize | OAuth2 authorization endpoint
 [**authEmailLogin**](AuthApi.md#authemaillogin) | **POST** /auth/email | Sign in with a verified email identity
 [**authInviteValidate**](AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [**authPing**](AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [**authRedeemInvite**](AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
 [**authRefresh**](AuthApi.md#authrefresh) | **POST** /auth/refresh | Rotate a refresh token
 [**authSessionsRevoke**](AuthApi.md#authsessionsrevoke) | **POST** /auth/sessions/revoke | Revoke an active session
-[**authToken**](AuthApi.md#authtoken) | **POST** /auth/token | Issue OAuth2 tokens
-[**authUserInfo**](AuthApi.md#authuserinfo) | **GET** /auth/userinfo | OIDC UserInfo endpoint
+[**authUserInfo**](AuthApi.md#authuserinfo) | **GET** /auth/userinfo | Return the current email-authenticated user
 [**authUserInfoPost**](AuthApi.md#authuserinfopost) | **POST** /auth/userinfo | OIDC UserInfo endpoint (POST)
 
 
-# **authAuthorize**
-> String authAuthorize(responseType, clientId, redirectUri, state, codeChallenge, codeChallengeMethod, scope)
-
-OAuth2 authorization endpoint
-
-Initiates the OAuth 2.0 Authorization Code flow. On success, issues a 302 redirect to the `redirect_uri` with an authorization `code` and the `state` parameter echoed back.
-
-### Example
-```dart
-import 'package:asora_api_client/api.dart';
-
-final api = AsoraApiClient().getAuthApi();
-final String responseType = responseType_example; // String |
-final String clientId = clientId_example; // String |
-final String redirectUri = redirectUri_example; // String |
-final String state = state_example; // String |
-final String codeChallenge = codeChallenge_example; // String | PKCE code challenge (S256 method required)
-final String codeChallengeMethod = codeChallengeMethod_example; // String |
-final String scope = openid profile email; // String |
-
-try {
-    final response = api.authAuthorize(responseType, clientId, redirectUri, state, codeChallenge, codeChallengeMethod, scope);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AuthApi->authAuthorize: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **responseType** | **String**|  |
- **clientId** | **String**|  |
- **redirectUri** | **String**|  |
- **state** | **String**|  | [optional]
- **codeChallenge** | **String**| PKCE code challenge (S256 method required) | [optional]
- **codeChallengeMethod** | **String**|  | [optional]
- **scope** | **String**|  | [optional]
-
-### Return type
-
-**String**
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: text/html, application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **authEmailLogin**
-> OAuthTokenResponse authEmailLogin(emailLoginRequest)
+> EmailSessionResponse authEmailLogin(emailLoginRequest)
 
 Sign in with a verified email identity
 
-Legacy email/password login contract retained for compatibility during the Cloudflare-native migration. New clients should use the native authentication flow.
+Creates a Lythaus access and refresh session for a verified email account.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
-final EmailLoginRequest emailLoginRequest = ; // EmailLoginRequest |
+final api = LythausApiClient().getAuthApi();
+final EmailLoginRequest emailLoginRequest = {"mode":"login","email":"alice@example.com","password":"correct-horse-battery-staple"}; // EmailLoginRequest |
 
 try {
     final response = api.authEmailLogin(emailLoginRequest);
@@ -106,7 +49,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**OAuthTokenResponse**](OAuthTokenResponse.md)
+[**EmailSessionResponse**](EmailSessionResponse.md)
 
 ### Authorization
 
@@ -128,9 +71,9 @@ Validates an invite code without revealing status details.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final String code = code_example; // String | Invite code (format XXXX-XXXX)
 
 try {
@@ -169,9 +112,9 @@ Verify authentication token is valid
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 
 try {
     final response = api.authPing();
@@ -208,9 +151,9 @@ Allows an authenticated but inactive user to redeem a valid invite code. On succ
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final RedeemInviteRequest redeemInviteRequest = {"inviteCode":"ABCD-1234"}; // RedeemInviteRequest |
 
 try {
@@ -249,9 +192,9 @@ Rotate a refresh token
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -290,9 +233,9 @@ Revoke an active session
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -324,61 +267,18 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **authToken**
-> OAuthTokenResponse authToken(authTokenRequest)
-
-Issue OAuth2 tokens
-
-Exchange an authorization code or refresh token for an access token and refresh token. Implements OAuth 2.0 Authorization Code with PKCE (RFC 7636) and Refresh Token grants.
-
-### Example
-```dart
-import 'package:asora_api_client/api.dart';
-
-final api = AsoraApiClient().getAuthApi();
-final AuthTokenRequest authTokenRequest = {"grant_type":"authorization_code","client_id":"asora-mobile","code":"SplxlOBeZQQYbYS6WxSbIA","redirect_uri":"com.asora.app://callback","code_verifier":"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"}; // AuthTokenRequest |
-
-try {
-    final response = api.authToken(authTokenRequest);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AuthApi->authToken: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **authTokenRequest** | [**AuthTokenRequest**](AuthTokenRequest.md)|  |
-
-### Return type
-
-[**OAuthTokenResponse**](OAuthTokenResponse.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **authUserInfo**
 > UserInfoResponse authUserInfo()
 
-OIDC UserInfo endpoint
+Return the current email-authenticated user
 
-Returns claims about the authenticated user per OpenID Connect Core 1.0.
+Returns the active Lythaus account associated with the bearer session.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 
 try {
     final response = api.authUserInfo();
@@ -415,9 +315,9 @@ POST variant of the UserInfo endpoint for clients that cannot use query strings.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAuthApi();
+final api = LythausApiClient().getAuthApi();
 
 try {
     final response = api.authUserInfoPost();

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/presentation/widgets/voting_status_badge.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/voting_status_badge.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
 void main() {
   group('VotingStatusBadge', () {

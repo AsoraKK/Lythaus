@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:dio/dio.dart';
-import 'package:asora/features/feed/application/feed_service.dart';
-import 'package:asora/features/feed/domain/feed_repository.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/feed/application/feed_service.dart';
+import 'package:lythaus/features/feed/domain/feed_repository.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
 class _MockDio extends Mock implements Dio {}
 

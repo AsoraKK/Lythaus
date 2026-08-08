@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ENVIRONMENT CONFIGURATION
+/// LYTHAUS ENVIRONMENT CONFIGURATION
 ///
 /// 🎯 Purpose: Environment-specific configuration (local/preview/MVP live)
 /// 🔐 Security: Embeds TLS pins and device integrity policies per environment
@@ -8,7 +8,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
-import 'package:asora/core/config/web_release_guard.dart';
+import 'package:lythaus/core/config/web_release_guard.dart';
 
 /// Environment enumeration
 enum Environment {
@@ -176,13 +176,13 @@ const _devMobileSecurity = MobileSecurityConfig(
 const _devConfig = EnvironmentConfig(
   environment: Environment.development,
   apiBaseUrl: kIsWeb
-      ? 'http://localhost:7072/api' // Local Functions on web
-      : 'http://10.0.2.2:7072/api', // Android emulator loopback
+      ? 'http://localhost:8787/api' // Local public Worker on web
+      : 'http://10.0.2.2:8787/api', // Android emulator loopback
   security: _devMobileSecurity,
 );
 
 // Preview security posture. Cloudflare preview builds must supply API_BASE_URL
-// explicitly; there is no permanent preview API or separate Azure backend.
+// explicitly; there is no permanent preview API or secondary backend.
 const _previewMobileSecurity = MobileSecurityConfig(
   tlsPins: TlsPinConfig(
     enabled: false,

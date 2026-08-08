@@ -7,13 +7,13 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/accepted_response.dart';
-import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/ledger_page.dart';
-import 'package:asora_api_client/src/model/public_reputation_view.dart';
-import 'package:asora_api_client/src/model/reputation_summary.dart';
-import 'package:asora_api_client/src/model/unauthorized_error.dart';
+import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/accepted_response.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/ledger_page.dart';
+import 'package:lythaus_api_client/src/model/public_reputation_view.dart';
+import 'package:lythaus_api_client/src/model/reputation_summary.dart';
+import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
 
 class ReputationApi {
 
@@ -105,7 +105,7 @@ class ReputationApi {
   }
 
   /// Get my reputation ledger
-  /// Returns user-visible reputation events. Internal reason codes, raw deltas, Hive scores, and anti-abuse scores are excluded.
+  /// Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.
   ///
   /// Parameters:
   /// * [filter]

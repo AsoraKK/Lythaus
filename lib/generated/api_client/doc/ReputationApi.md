@@ -1,8 +1,8 @@
-# asora_api_client.api.ReputationApi
+# lythaus_api_client.api.ReputationApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -25,9 +25,9 @@ Marks an appealable moderation-related ledger entry as under appeal for the auth
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getReputationApi();
+final api = LythausApiClient().getReputationApi();
 final String entryId = entryId_example; // String |
 
 try {
@@ -64,13 +64,13 @@ Name | Type | Description  | Notes
 
 Get my reputation ledger
 
-Returns user-visible reputation events. Internal reason codes, raw deltas, Hive scores, and anti-abuse scores are excluded.
+Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getReputationApi();
+final api = LythausApiClient().getReputationApi();
 final String filter = filter_example; // String |
 final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
 final int limit = 25; // int | Maximum number of items to return per page
@@ -115,9 +115,9 @@ Returns the authenticated user's reputation level, band, pillar scores, and elig
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getReputationApi();
+final api = LythausApiClient().getReputationApi();
 
 try {
     final response = api.reputationMeGet();
@@ -152,9 +152,9 @@ Get public reputation view
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getReputationApi();
+final api = LythausApiClient().getReputationApi();
 final String id = id_example; // String |
 
 try {
@@ -193,9 +193,9 @@ Get public reputation view
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getReputationApi();
+final api = LythausApiClient().getReputationApi();
 final String id = id_example; // String |
 
 try {

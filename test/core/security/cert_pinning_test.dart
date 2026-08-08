@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/security/cert_pinning.dart';
+import 'package:lythaus/core/security/cert_pinning.dart';
 
 class _FakeAdapter implements HttpClientAdapter {
   ResponseBody? response;
@@ -62,7 +62,7 @@ void main() {
     final pinned = PinnedCertHttpClientAdapter(fake);
     final opts = RequestOptions(path: '/test', method: 'GET');
     // Base URL influences host parsing
-    opts.baseUrl = 'https://asora-function-flex.azurewebsites.net';
+    opts.baseUrl = 'https://api.lythaus.co';
 
     final res = await pinned.fetch(opts, null, null);
     expect(res.statusCode, 200);
@@ -71,7 +71,7 @@ void main() {
   test('PinnedCertHttpClientAdapter logs and rethrows on error', () async {
     final fake = _FakeAdapter();
     final opts = RequestOptions(path: '/x', method: 'GET');
-    opts.baseUrl = 'https://asora-function-flex.azurewebsites.net';
+    opts.baseUrl = 'https://api.lythaus.co';
     fake.errorToThrow = Exception('tls fail');
 
     final pinned = PinnedCertHttpClientAdapter(fake);
@@ -81,7 +81,7 @@ void main() {
 
   test('isPinValidationError does not claim pin failures while disabled', () {
     final ro = RequestOptions(path: '/x', method: 'GET');
-    ro.baseUrl = 'https://asora-function-dev.azurewebsites.net';
+    ro.baseUrl = 'https://api.lythaus.co';
     final err = DioException(
       requestOptions: ro,
       type: DioExceptionType.connectionError,
@@ -107,7 +107,7 @@ void main() {
 
   test('interceptor maps connectionError for pinned host', () async {
     final dio = createPinnedDio(
-      baseUrl: 'https://asora-function-dev.azurewebsites.net',
+      baseUrl: 'https://api.lythaus.co',
     );
     final fake = _FakeAdapter();
     dio.httpClientAdapter = PinnedCertHttpClientAdapter(fake);

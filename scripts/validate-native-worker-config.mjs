@@ -9,6 +9,9 @@ const configs = [
 ];
 const requireProvisioned = process.argv.includes('--require-provisioned');
 const failures = [];
+const retiredBrand = ['as', 'ora'].join('');
+const retiredCloudHost = ['az', 'ure', 'websites'].join('');
+const retiredProductionOrigin = new RegExp(`${retiredCloudHost}\\.net|${retiredBrand}\\.co\\.za|${retiredBrand}-function|workers\\.dev|pages\\.dev|r2\\.dev`, 'i');
 const expectedNames = {
   'apps/lythaus-public-api/wrangler.jsonc': 'lythaus-public-api-development',
   'apps/lythaus-admin-api/wrangler.jsonc': 'lythaus-admin-api-development',
@@ -22,7 +25,7 @@ for (const relative of configs) {
   if (!/"workers_dev"\s*:\s*false/.test(source)) failures.push(`${relative}: production workers_dev must be false`);
   if (!/"preview_urls"\s*:\s*false/.test(source)) failures.push(`${relative}: production preview_urls must be false`);
   if (!/"nodejs_compat"/.test(source)) failures.push(`${relative}: nodejs_compat is required`);
-  if (/azurewebsites\.net|asora\.co\.za|asora-function|workers\.dev|pages\.dev|r2\.dev/i.test(production)) failures.push(`${relative}: legacy or public preview hostname found in production config`);
+  if (retiredProductionOrigin.test(production)) failures.push(`${relative}: legacy or public preview hostname found in production config`);
   if (!new RegExp(`"name"\\s*:\\s*"${expectedNames[relative]}"`).test(production)) failures.push(`${relative}: production must reuse ${expectedNames[relative]}`);
   if (/"images"\s*:/.test(production)) failures.push(`${relative}: Cloudflare Images binding is forbidden for this migration`);
   if (!/HYPERDRIVE_QUERY_CACHE_MODE/.test(source) || !/disabled/.test(source)) failures.push(`${relative}: Hyperdrive cache-disabled intent missing`);

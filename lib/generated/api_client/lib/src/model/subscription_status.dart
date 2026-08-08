@@ -3,8 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:lythaus_api_client/src/model/subscription_status_entitlements.dart';
 import 'package:built_collection/built_collection.dart';
-import 'package:asora_api_client/src/model/subscription_status_entitlements.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 

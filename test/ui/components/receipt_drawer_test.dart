@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/ui/components/receipt_drawer.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/ui/components/receipt_drawer.dart';
 
 class _MockAdapter implements HttpClientAdapter {
   _MockAdapter(this._fetcher);

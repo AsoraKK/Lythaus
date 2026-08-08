@@ -1,10 +1,10 @@
 import 'package:test/test.dart';
-import 'package:asora_api_client/asora_api_client.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
 
 
 /// tests for NotificationsApi
 void main() {
-  final instance = AsoraApiClient().getNotificationsApi();
+  final instance = LythausApiClient().getNotificationsApi();
 
   group(NotificationsApi, () {
     // Register a push device token

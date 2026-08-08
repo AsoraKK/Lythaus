@@ -2,10 +2,10 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/observability/asora_tracer.dart';
-import 'package:asora/core/config/environment_config.dart';
+import 'package:lythaus/core/observability/lythaus_tracer.dart';
+import 'package:lythaus/core/config/environment_config.dart';
 
-/// ASORA MODERATION CLIENT
+/// LYTHAUS MODERATION CLIENT
 ///
 /// 🎯 Purpose: HTTP client for moderation API calls
 /// 📡 Endpoints: flag, appeal, vote, getMyAppeals, reviewAppealedContent
@@ -25,7 +25,7 @@ class ModerationClient {
     String? additionalDetails,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'ModerationService.flagContent',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
@@ -46,7 +46,7 @@ class ModerationClient {
         return data;
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(method: 'POST', url: '/api/flag')
+          LythausTracer.httpRequestAttributes(method: 'POST', url: '/api/flag')
             ..addAll({
               'request.content_id': contentId,
               'request.content_type': contentType,
@@ -65,7 +65,7 @@ class ModerationClient {
     required String userStatement,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'ModerationService.appealContent',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
@@ -87,7 +87,7 @@ class ModerationClient {
         return data;
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'POST',
             url: '/api/appealContent',
           )..addAll({
@@ -109,7 +109,7 @@ class ModerationClient {
     String? contentType,
     String? reviewQueue,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'ModerationService.getMyAppeals',
       () async {
         final queryParams = <String, dynamic>{
@@ -133,7 +133,7 @@ class ModerationClient {
         return data;
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'GET',
             url: '/api/getMyAppeals',
           )..addAll({
@@ -154,7 +154,7 @@ class ModerationClient {
     String? contentType,
     String sortBy = 'urgency',
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'ModerationService.getAppealedContent',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
@@ -175,7 +175,7 @@ class ModerationClient {
         return data;
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'GET',
             url: '/api/reviewAppealedContent',
           )..addAll({
@@ -194,7 +194,7 @@ class ModerationClient {
     String? comment,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'ModerationService.voteOnAppeal',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
@@ -214,7 +214,7 @@ class ModerationClient {
         return data;
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'POST',
             url: '/api/voteOnAppeal',
           )..addAll({

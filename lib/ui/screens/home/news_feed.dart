@@ -3,12 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/design_system/components/lyth_empty_state.dart';
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/components/news_card.dart';
-import 'package:asora/ui/theme/spacing.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/subscription_tier.dart';
+import 'package:lythaus/design_system/components/lyth_empty_state.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/ui/components/news_card.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/subscription_tier.dart';
 
 class NewsFeed extends ConsumerWidget {
   const NewsFeed({

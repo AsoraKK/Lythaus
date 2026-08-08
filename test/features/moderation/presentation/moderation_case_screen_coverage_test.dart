@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/core/providers/repository_providers.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/moderation/domain/moderation_case.dart';
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/moderation_case_screen.dart';
+import 'package:lythaus/core/providers/repository_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_case.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_case_screen.dart';
 
 class _MockRepo extends Mock implements ModerationRepository {}
 

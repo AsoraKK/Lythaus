@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA POST SERVICE IMPLEMENTATION
+/// LYTHAUS POST SERVICE IMPLEMENTATION
 ///
 /// 🎯 Purpose: HTTP client implementation for post repository
 /// 🏗️ Architecture: Application layer - implements domain contracts
@@ -11,10 +11,10 @@ library;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:asora/core/observability/asora_tracer.dart';
-import 'package:asora/core/error/error_codes.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/domain/models.dart';
+import 'package:lythaus/core/observability/lythaus_tracer.dart';
+import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
 
 /// Post repository implementation using Dio HTTP client
 class PostRepositoryImpl implements PostRepository {
@@ -27,7 +27,7 @@ class PostRepositoryImpl implements PostRepository {
     required CreatePostRequest request,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostRepository.createPost',
       () async {
         try {
@@ -59,7 +59,7 @@ class PostRepositoryImpl implements PostRepository {
         }
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(method: 'POST', url: '/api/posts')
+          LythausTracer.httpRequestAttributes(method: 'POST', url: '/api/posts')
             ..addAll({
               'request.text_length': request.text.length,
               'request.has_media': request.mediaUrl != null,
@@ -82,7 +82,7 @@ class PostRepositoryImpl implements PostRepository {
       );
     }
 
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostRepository.updatePost',
       () async {
         try {
@@ -112,7 +112,7 @@ class PostRepositoryImpl implements PostRepository {
         }
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'PATCH',
             url: '/api/posts/$postId',
           )..addAll({
@@ -127,7 +127,7 @@ class PostRepositoryImpl implements PostRepository {
     required String postId,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostRepository.deletePost',
       () async {
         try {
@@ -157,7 +157,7 @@ class PostRepositoryImpl implements PostRepository {
           throw PostException(message, code: 'network_error', originalError: e);
         }
       },
-      attributes: AsoraTracer.httpRequestAttributes(
+      attributes: LythausTracer.httpRequestAttributes(
         method: 'DELETE',
         url: '/api/posts/$postId',
       )..addAll({'request.post_id': postId}),
@@ -166,7 +166,7 @@ class PostRepositoryImpl implements PostRepository {
 
   @override
   Future<Post> getPost({required String postId, String? token}) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'PostRepository.getPost',
       () async {
         try {
@@ -196,7 +196,7 @@ class PostRepositoryImpl implements PostRepository {
         }
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'GET',
             url: '/api/posts/$postId',
           )..addAll({

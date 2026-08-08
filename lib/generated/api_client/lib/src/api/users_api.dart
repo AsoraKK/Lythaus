@@ -7,9 +7,9 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/error.dart';
 import 'package:built_value/json_object.dart';
+import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
 
 class UsersApi {
 

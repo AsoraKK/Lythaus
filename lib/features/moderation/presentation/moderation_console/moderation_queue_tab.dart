@@ -3,10 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
-import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/moderation_case_screen.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/widgets/moderation_queue_item_tile.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/presentation/providers/moderation_console_providers.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_case_screen.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/widgets/moderation_queue_item_tile.dart';
 
 class ModerationQueueTab extends ConsumerStatefulWidget {
   const ModerationQueueTab({super.key});

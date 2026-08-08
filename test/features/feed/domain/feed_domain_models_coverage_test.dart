@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
 
 void main() {
   final now = DateTime(2025, 6, 1, 12, 0, 0);
@@ -70,7 +70,7 @@ void main() {
         score: 0.95,
         flags: ['safe'],
         analyzedAt: now,
-        provider: 'hive_ai',
+        provider: 'lythaus_authenticity_ai',
       );
       const meta = PostMetadata(
         location: 'NYC',
@@ -241,7 +241,7 @@ void main() {
           'score': 0.9,
           'flags': ['safe'],
           'analyzedAt': now.toIso8601String(),
-          'provider': 'hive_ai',
+          'provider': 'lythaus_authenticity_ai',
         },
       };
       final post = Post.fromJson(json);
@@ -387,13 +387,13 @@ void main() {
         'score': 0.95,
         'flags': ['safe', 'verified'],
         'analyzedAt': '2025-06-01T12:00:00.000',
-        'provider': 'hive_ai',
+        'provider': 'lythaus-authenticity-ai',
       };
       final mod = PostModerationData.fromJson(json);
       expect(mod.confidence, 'high');
       expect(mod.score, 0.95);
       expect(mod.flags, ['safe', 'verified']);
-      expect(mod.provider, 'hive_ai');
+      expect(mod.provider, 'lythaus-authenticity-ai');
     });
 
     test('fromJson handles empty flags list', () {
@@ -402,7 +402,7 @@ void main() {
         'score': 0.1,
         'flags': null,
         'analyzedAt': '2025-01-01T00:00:00.000',
-        'provider': 'openai',
+        'provider': 'lythaus-authenticity-ai',
       };
       final mod = PostModerationData.fromJson(json);
       expect(mod.flags, isEmpty);
@@ -414,13 +414,13 @@ void main() {
         score: 0.5,
         flags: ['review'],
         analyzedAt: DateTime(2025, 6, 1),
-        provider: 'azure',
+        provider: 'lythaus-authenticity-ai',
       );
       final json = data.toJson();
       expect(json['confidence'], 'medium');
       expect(json['score'], 0.5);
       expect(json['flags'], ['review']);
-      expect(json['provider'], 'azure');
+      expect(json['provider'], 'lythaus-authenticity-ai');
       expect(json.containsKey('analyzedAt'), isTrue);
     });
   });

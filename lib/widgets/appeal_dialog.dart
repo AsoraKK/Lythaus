@@ -3,12 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
 
-/// ASORA APPEAL DIALOG
+/// LYTHAUS APPEAL DIALOG
 ///
 /// 🎯 Purpose: Allow users to appeal flagged/hidden content
 /// ✅ Features: Appeal type selection, detailed reasoning, progress tracking

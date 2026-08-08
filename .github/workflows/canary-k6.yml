@@ -27,7 +27,7 @@ jobs:
         run: |
           [ "$ALLOW_SHARED_MVP_LOAD_TESTS" = "true" ] || { echo "Shared MVP load tests require ALLOW_SHARED_MVP_LOAD_TESTS=true"; exit 1; }
           test -n "$K6_BASE_URL" || { echo "MVP_PUBLIC_API_BASE_URL is required"; exit 1; }
-          node -e "const u=new URL(process.env.K6_BASE_URL); if (u.protocol !== 'https:' || u.hostname.endsWith('.azurewebsites.net') || !u.pathname.endsWith('/api')) throw new Error('MVP_PUBLIC_API_BASE_URL must be an HTTPS gateway ending in /api');"
+          node -e "const u=new URL(process.env.K6_BASE_URL); if (u.protocol !== 'https:' || u.hostname !== 'api.lythaus.co' || !u.pathname.endsWith('/api')) throw new Error('MVP_PUBLIC_API_BASE_URL must be the canonical HTTPS API ending in /api');"
           sudo apt-get update -y && sudo apt-get install -y dnsutils curl
           H=$(node -e "console.log(new URL(process.env.K6_BASE_URL).hostname)")
           echo "Resolving configured public gateway..."
@@ -99,54 +99,3 @@ jobs:
             ${{ steps.read_feed.outputs.text || 'Not run (add run-load label to PR)' }}
             ```
             </details>
-
-  canary-k6-chaos:
-    if: ${{ vars.ALLOW_SHARED_MVP_LOAD_TESTS == 'true' && vars.ALLOW_SHARED_MVP_CHAOS_TESTS == 'true' }}
-    needs: [canary-k6]
-    name: Run k6 chaos scenarios
-    runs-on: ubuntu-latest
-    env:
-      CHAOS_ENABLED: "true"
-      ALLOW_SHARED_MVP_LOAD_TESTS: ${{ vars.ALLOW_SHARED_MVP_LOAD_TESTS }}
-      K6_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
-      K6_SMOKE_TOKEN: ${{ secrets.K6_SMOKE_TOKEN }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install k6
-        uses: grafana/setup-k6-action@v1
-
-      - name: Verify environment and connectivity
-        run: |
-          [ "$ALLOW_SHARED_MVP_LOAD_TESTS" = "true" ] || { echo "Shared MVP load tests require ALLOW_SHARED_MVP_LOAD_TESTS=true"; exit 1; }
-          test -n "$K6_BASE_URL" || { echo "MVP_PUBLIC_API_BASE_URL is required"; exit 1; }
-          node -e "const u=new URL(process.env.K6_BASE_URL); if (u.protocol !== 'https:' || u.hostname.endsWith('.azurewebsites.net') || !u.pathname.endsWith('/api')) throw new Error('MVP_PUBLIC_API_BASE_URL must be an HTTPS gateway ending in /api');"
-          sudo apt-get update -y && sudo apt-get install -y dnsutils curl
-          H=$(node -e "console.log(new URL(process.env.K6_BASE_URL).hostname)")
-          echo "Resolving configured public gateway..."
-          dig +short "$H" || { echo "DNS resolution failed for $H"; exit 1; }
-          echo "Testing public gateway health..."
-          curl -f --max-time 10 "$K6_BASE_URL/health" || { echo "Health endpoint unreachable"; exit 1; }
-
-      - name: Run chaos scenarios
-        run: |
-          k6 run load/k6/chaos.js \
-            --summary-export=load/k6/chaos-raw.json
-
-      - name: Upload chaos artifacts
-        uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: k6-chaos-${{ github.run_id }}
-          path: |
-            load/k6/chaos-summary.json
-            load/k6/chaos-raw.json
-
-      - name: Read chaos summary
-        if: always()
-        run: |
-          {
-            echo "text<<EOF"
-            cat load/k6/chaos-summary.json
-            echo "EOF"
-          } >> $GITHUB_OUTPUT

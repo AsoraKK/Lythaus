@@ -3,7 +3,7 @@
 /// Import from this file to access all design system components and tokens:
 ///
 /// ```dart
-/// import 'package:asora/design_system/index.dart';
+/// import 'package:lythaus/design_system/index.dart';
 /// ```
 library design_system;
 

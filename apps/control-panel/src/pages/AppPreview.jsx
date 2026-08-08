@@ -73,11 +73,13 @@ const FlowContent = ({ flow, liveMode, onNavigate, appState, setAppState }) => {
               Create Account
             </button>
           </div>
-          <div className="mock-divider">or continue with</div>
-          <div className="mock-social">
-            <button className="social-btn" onClick={() => handleAction('Apple Sign In', 'homeFeed')}>🍎</button>
-            <button className="social-btn" onClick={() => handleAction('Google Sign In', 'homeFeed')}>G</button>
-          </div>
+          <div className="mock-divider">or continue as a guest</div>
+          <button
+            className="mock-btn secondary"
+            onClick={() => handleAction('Continue as guest', 'homeFeed')}
+          >
+            Continue as guest
+          </button>
         </div>
       )}
 

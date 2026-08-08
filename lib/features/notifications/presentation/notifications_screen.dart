@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA NOTIFICATIONS - NOTIFICATION CENTRE
+/// LYTHAUS NOTIFICATIONS - NOTIFICATION CENTRE
 ///
 /// Main notifications screen:
 /// - Paginated list with continuationToken support
@@ -12,12 +12,12 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/notifications/domain/notification_models.dart'
+import 'package:lythaus/features/notifications/domain/notification_models.dart'
     as models;
-import 'package:asora/features/notifications/application/notification_providers.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/notifications/application/notification_providers.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});

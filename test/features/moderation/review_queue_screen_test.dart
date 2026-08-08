@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/review_queue_screen.dart';
-import 'package:asora/features/moderation/moderation_service.dart';
+import 'package:lythaus/features/moderation/review_queue_screen.dart';
+import 'package:lythaus/features/moderation/moderation_service.dart';
 
 class MockModerationService implements ModerationService {
   final Map<String, dynamic> reviewQueueResponses = {};

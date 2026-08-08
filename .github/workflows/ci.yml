@@ -1,975 +1,182 @@
 name: CI
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 on:
   push:
-    branches: [main, develop]
+    branches: [main, development]
   pull_request:
-    branches: [main, develop]
+    branches: [main, development]
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  docs_placement:
-    name: Check new markdown file placement
+  repository_hygiene:
+    name: Repository hygiene
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Check new markdown files are in docs/ directory
-        run: |
-          set -euo pipefail
-          # Only check ADDED markdown files (not modified)
-          ADDED_MD=$(git diff --name-only --diff-filter=A origin/${{ github.base_ref }}...HEAD -- '*.md' || true)
-          ALLOWED_ROOT="^(README\.md|CONTRIBUTING\.md|CHANGELOG\.md|LICENSE\.md|CODE_OF_CONDUCT\.md|SECURITY\.md|AGENTS\.md)$"
-          VIOLATIONS=""
-          for file in $ADDED_MD; do
-            # Allow docs tree
-            if [[ "$file" =~ ^docs/ ]]; then
-              continue
-            fi
-            # Allow generated OpenAPI client docs
-            if [[ "$file" =~ ^lib/generated/api_client/ ]]; then
-              continue
-            fi
-            # Allow README.md anywhere (module docs)
-            if [[ "$(basename "$file")" == "README.md" ]]; then
-              continue
-            fi
-            # Allow root-level standard files
-            if [[ "$(basename "$file")" =~ $ALLOWED_ROOT ]]; then
-              continue
-            fi
-            VIOLATIONS="$VIOLATIONS $file"
-          done
-          if [[ -n "$VIOLATIONS" ]]; then
-            echo "❌ New markdown files must be in docs/ directory:$VIOLATIONS"
-            echo "📁 Use: docs/specs/, docs/guides/, docs/runbooks/, docs/adr/"
-            exit 1
-          fi
-          echo "✅ New markdown file placement OK"
-
-  legal_register_validation:
-    name: Validate legal operation registers
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Validate legal register files
-        run: bash scripts/check_legal_registers.sh
+      - name: Install ripgrep and ShellCheck
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep shellcheck
+      - name: Check active Lythaus naming
+        run: bash scripts/check-branding.sh
+      - name: Check documentation secret hygiene
+        run: bash scripts/scan-doc-secrets.sh
+      - name: Run repository secret scan
+        run: scripts/secret-scan.sh
+      - name: Reject retired provider dependencies
+        run: node scripts/validate-no-retired-provider-dependencies.mjs
 
   workflow_lint:
-    name: Lint workflows (actionlint + shellcheck)
+    name: Workflow lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install dependencies (jq, shellcheck)
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y jq shellcheck
-
       - name: Download actionlint
         run: |
           set -euo pipefail
           mkdir -p ./bin
-          # use a pinned version for reproducibility; or replace with 'latest'
-          curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
-          | bash -s -- 1.7.7 ./bin
-          ./bin/actionlint -version
-
+          curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- 1.7.7 ./bin
       - name: Run actionlint
         env:
-          # Allow known benign ShellCheck classes used in scripts.
-          SHELLCHECK_OPTS: "-e SC2086 -e SC2126"
-        run: |
-          set -euo pipefail
-          ./bin/actionlint -color
+          SHELLCHECK_OPTS: -e SC2086 -e SC2126
+        run: ./bin/actionlint -color
 
-  flutter_toolchain_contract:
-    name: Validate Flutter toolchain pinning
+  native_runtime:
+    name: Native Workers and PlanetScale
     runs-on: ubuntu-latest
-    needs: [workflow_lint]
     steps:
       - uses: actions/checkout@v7
-
-      - name: Validate pinned Flutter version source-of-truth
-        run: bash scripts/validate-flutter-toolchain-pinning.sh
-
-  observability_alert_contract:
-    name: Validate observability alert routing config
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Validate staging/prod alert recipients
-        run: bash scripts/validate-alert-routing-config.sh
-
-  cosmos_contract_guard:
-    name: Validate Cosmos container contract
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck:native
+      - run: npm run test:native-architecture
+      - run: npm run test:database-identity
+      - run: npm run test:budget
+      - run: npm run validate:native-workers
+      - run: npm run validate:native-scope
+      - run: npm run validate:no-retired-provider-dependencies
+      - run: npm run validate:planetscale-migrations
+      - run: npm run validate:planetscale-extensions
 
-      - name: Run validator unit tests (node:test)
-        run: node --test scripts/tests/validate-cosmos-contract.test.js
-
-      - name: Validate canonical Cosmos contract
-        run: |
-          set -euo pipefail
-          node scripts/validate-cosmos-contract.js --policy infra/cosmos-container-policy.json
-          node scripts/validate-cosmos-contract.js --policy infra/cosmos-container-policy.json --json > cosmos-container-diff.json
-
-      - name: Upload Cosmos contract diff artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: cosmos-container-diff
-          path: cosmos-container-diff.json
-
-  route_guard_inventory:
-    name: Validate route auth/rate-limit inventory
+  openapi:
+    name: OpenAPI contract
     runs-on: ubuntu-latest
-    needs: [workflow_lint]
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-
-      - name: Run route guard unit tests
-        run: node --test scripts/tests/validate-functions-route-guards.test.js
-
-      - name: Validate route guard inventory
-        run: |
-          set -euo pipefail
-          node scripts/validate-functions-route-guards.js --out route-inventory.json --allowlist scripts/route-guard-allowlist.json
-
-      - name: Check route / OpenAPI spec drift
-        run: |
-          set -euo pipefail
-          node scripts/check-route-drift.js route-inventory.json api/openapi/openapi.yaml
-
-      - name: Upload route inventory artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: functions-route-inventory
-          path: route-inventory.json
-
-  docs_secret_hygiene:
-    name: Docs secret hygiene
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install ripgrep
-        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
-
-      - name: Scan docs/markdown for embedded secrets
-        run: bash scripts/scan-doc-secrets.sh
-
-  branding_guard:
-    name: Lythaus / Asora naming guard
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install ripgrep
-        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
-
-      - name: Check no 'Asora' in user-facing UI strings
-        run: bash scripts/check-branding.sh
-
-  todo_triage_report:
-    name: Generate TODO triage report
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-
-      - name: Regenerate TODO triage markdown
-        run: node scripts/generate-todo-triage.js
-
-      - name: Upload TODO triage artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: todo-triage-report
-          path: docs/runbooks/todo-triage.md
-
-  validate_extension_bundle:
-    name: Validate Azure Functions extension bundle v4
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Validate extension bundle version
-        run: |
-          set -euo pipefail
-          # Check host.json contains [4.*, 5.0.0)
-          BUNDLE_VERSION=$(jq -r '.extensionBundle.version' host.json)
-          if [[ "$BUNDLE_VERSION" != "[4.*, 5.0.0)" ]]; then
-            echo "❌ Extension bundle must be [4.*, 5.0.0), found: $BUNDLE_VERSION"
-            exit 1
-          fi
-          echo "✅ Extension bundle version is correct: $BUNDLE_VERSION"
-
-  openapi_validation:
-    name: Validate OpenAPI contract
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'npm'
-
+          cache: npm
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - uses: subosito/flutter-action@v2
         with:
           flutter-version-file: .fvmrc
           channel: stable
           cache: true
+      - run: npm ci --ignore-scripts
+      - run: flutter pub get
+      - run: npm run openapi:lint
+      - run: npm run openapi:bundle
+      - run: npm run openapi:check:bundle
+      - run: npm run openapi:check:dart
 
-      - name: npm ci
-        run: npm ci
-
-      - name: Lint OpenAPI spec
-        run: npm run openapi:lint
-
-      - name: Spectral lint
-        run: npx spectral lint api/openapi/openapi.yaml
-
-      - name: Bundle OpenAPI spec
-        run: npm run openapi:bundle
-
-      - name: Fail if bundled spec drifted
-        run: npm run openapi:check:bundle
-
-      - name: Validate OpenAPI examples
-        run: npm run openapi:validate:examples
-
-      - name: Pin OpenAPI generator version
-        run: npx openapi-generator-cli version-manager set 7.7.0
-
-      - name: Generate Dart client
-        run: npm run openapi:gen:dart
-
-      - name: Fail if generated Dart client drifted
-        run: npm run openapi:check:dart
-
-      - name: Compile and test generated Dart client
-        run: npm run openapi:test:dart
-
-      - name: Contract tests
-        run: npm run openapi:test:contract
-
-      - name: Validate bundled OpenAPI artifact structure
-        run: |
-          set -euo pipefail
-          BUNDLE="api/openapi/dist/openapi.json"
-          [[ -f "$BUNDLE" ]] || { echo "❌ Bundled spec not found at $BUNDLE"; exit 1; }
-          node -e "
-            const s = JSON.parse(require('fs').readFileSync('$BUNDLE', 'utf8'));
-            if (!s.openapi && !s.swagger) { console.error('Missing openapi/swagger field'); process.exit(1); }
-            if (!s.info || !s.info.version) { console.error('Missing info.version'); process.exit(1); }
-            if (!s.paths || Object.keys(s.paths).length === 0) { console.error('Empty paths object'); process.exit(1); }
-            console.log('✅ Bundle valid: openapi=' + (s.openapi||s.swagger) + ' version=' + s.info.version + ' paths=' + Object.keys(s.paths).length);
-          "
-
-      - name: Upload bundled spec
-        uses: actions/upload-artifact@v6
-        with:
-          name: openapi-spec
-          path: api/openapi/dist/openapi.json
-
-      - name: Scan bundled OpenAPI artifact for secrets
-        working-directory: ${{ github.workspace }}
-        run: scripts/secret-scan.sh --artifact api/openapi/dist
-
-  control_panel_build:
-    name: Build Control Panel
+  flutter:
+    name: Flutter analyze and test
     runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    defaults:
-      run:
-        working-directory: apps/control-panel
     steps:
       - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .fvmrc
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
 
+  frontends:
+    name: Web frontends
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: apps/control-panel/package-lock.json
-
-      - name: npm ci
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Verify dist exists
-        run: test -d "$GITHUB_WORKSPACE/apps/control-panel/dist" || { echo "apps/control-panel/dist missing"; exit 1; }
-
-  marketing_site_build:
-    name: Build Marketing Site
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    defaults:
-      run:
-        working-directory: apps/marketing-site
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: apps/marketing-site/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          # Retry npm ci up to 3 times to handle esbuild ETXTBSY race condition
-          attempt=0
-          until npm ci; do
-            attempt=$((attempt + 1))
-            if [ "$attempt" -ge 3 ]; then
-              echo "npm ci failed after 3 attempts"
-              exit 1
-            fi
-            echo "Retry $attempt: clearing cache and node_modules..."
-            rm -rf node_modules
-            npm cache clean --force
-            sleep 5
-          done
-
-      - name: Build
-        env:
-          PUBLIC_API_BASE_URL: ${{ secrets.PUBLIC_API_BASE_URL }}
-        run: npm run build
-
-      - name: Verify dist exists
-        run: test -d "$GITHUB_WORKSPACE/apps/marketing-site/dist" || { echo "apps/marketing-site/dist missing"; exit 1; }
-
-  secret-scan:
-    name: Secret scan (gitleaks)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Run gitleaks
-        run: scripts/secret-scan.sh
-
-  github-azure-disconnection:
-    name: GitHub-to-Azure disconnection
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Test disconnection scanner
-        run: node --test scripts/tests/github-azure-disconnection.test.mjs
-      - name: Reject executable Azure paths
-        run: npm run validate:github-azure-disconnection
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm ci --ignore-scripts --prefix apps/control-panel
+      - run: npm ci --ignore-scripts --prefix apps/marketing-site
+      - run: npm --prefix apps/control-panel run build
+      - run: npm --prefix apps/marketing-site run build
 
   dependency_audit:
-    name: Dependency audit (high/critical)
+    name: Dependency audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-          cache: 'npm'
-      - name: Audit root and Functions dependencies
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm ci --ignore-scripts --prefix apps/control-panel
+      - run: npm ci --ignore-scripts --prefix apps/marketing-site
+      - name: Audit root dependencies
         run: node scripts/check-npm-audit.js
-      - name: Audit Functions probe dependencies
-        run: node scripts/check-npm-audit.js functions/probe
-      - name: Audit Control Panel dependencies
+      - name: Audit control panel dependencies
         run: node scripts/check-npm-audit.js apps/control-panel
-      - name: Audit Marketing Site dependencies
+      - name: Audit marketing site dependencies
         run: node scripts/check-npm-audit.js apps/marketing-site
-
-  pin_verification:
-    name: Validate MVP TLS pinning guard
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Reject strict pinning without validated pins
-        run: bash scripts/validate-mvp-tls-pinning.sh
-
-  flutter_tests:
-    name: Flutter tests + coverage
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - uses: actions/cache@v6
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version-file: .fvmrc
-
-      - name: Install ripgrep for design-system gate
-        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
-
-      - name: Pub get
-        run: flutter pub get
-
-      - name: Enforce design system gate
-        env:
-          DESIGN_SYSTEM_GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: bash scripts/design_system_gate.sh
-
-      - name: Regenerate golden files for CI environment
-        run: |
-          flutter test --update-goldens test/design_system/
-          flutter test --update-goldens test/ui/screens/onboarding/
-
-      - name: Test with coverage
-        run: flutter test --coverage
-
-      - name: Enforce coverage gates (P1, P2, Total baseline)
-        id: coverage_gates
-        run: |
-          set -euo pipefail
-          chmod +x scripts/check_coverage_gates.sh
-          bash scripts/check_coverage_gates.sh 2>&1 | tee coverage_gates_output.txt
-
-      - name: Prepare coverage summary
-        run: |
-          set -euo pipefail
-          {
-            echo "### Coverage Gates Report"
-            echo
-            echo '```'
-            cat coverage_gates_output.txt 2>/dev/null || echo "Coverage summary unavailable"
-            echo '```'
-          } > code-coverage-results.md
-
-      - name: Comment coverage on PR
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-            const p = path.join(process.env.GITHUB_WORKSPACE || '.', 'code-coverage-results.md');
-            const body = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : 'Coverage summary unavailable';
-            const issue_number = context.payload.pull_request.number;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number,
-              body
-            });
-
-      - name: Coverage summary (job summary)
-        run: |
-          set -euo pipefail
-          echo "## Coverage" >> "$GITHUB_STEP_SUMMARY"
-          if test -f code-coverage-results.md; then
-            cat code-coverage-results.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Coverage summary unavailable" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-  web_release_build:
-    name: Flutter web release build
-    runs-on: ubuntu-latest
-    needs: [flutter_tests, secret-scan]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version-file: .fvmrc
-      - name: Validate canonical MVP API URL
-        env:
-          MVP_API_BASE_URL: https://api.lythaus.co/api
-        run: |
-          set -euo pipefail
-          [[ "$MVP_API_BASE_URL" == "https://api.lythaus.co/api" ]] || {
-            echo "MVP_API_BASE_URL must be the canonical Lythaus /api URL" >&2
-            exit 1
-          }
-      - name: Build immutable web release
-        env:
-          MVP_API_BASE_URL: https://api.lythaus.co/api
-        run: |
-          flutter pub get
-          flutter build web --release \
-            --dart-define="ENVIRONMENT=production" \
-            --dart-define="API_BASE_URL=$MVP_API_BASE_URL" \
-            --dart-define="AUTH_URL=$MVP_API_BASE_URL" \
-            --dart-define="ENABLE_CERT_PINNING=false"
-      - name: Scan generated web bundle for secrets
-        run: scripts/secret-scan.sh --artifact build/web
-      - uses: actions/upload-artifact@v6
-        with:
-          name: flutter-web-release
-          path: build/web
-          if-no-files-found: error
-
-  android_manifest_contract:
-    name: Android merged manifest contract
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version-file: .fvmrc
-
-      - uses: gradle/actions/setup-gradle@v6.2.0
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Ensure google-services.json for release manifest task
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          set -euo pipefail
-          mkdir -p android/app
-          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
-            echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
-          else
-            printf '{"project_info":{"project_number":"1234567890","project_id":"lythaus-ci-placeholder","storage_bucket":"lythaus-ci-placeholder.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:1234567890:android:ci-placeholder","android_client_info":{"package_name":"com.asora.app"}},"oauth_client":[],"api_key":[{"current_key":"ci-placeholder-key"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}\n' \
-              > android/app/google-services.json
-          fi
-          test -s android/app/google-services.json
-
-      - name: Generate release merged manifest
-        working-directory: android
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3; do
-            if ./gradlew --no-daemon :app:processReleaseMainManifest; then
-              exit 0
-            fi
-            if [ "$attempt" -eq 3 ]; then
-              exit 1
-            fi
-            echo "Gradle manifest task failed on attempt $attempt; retrying after backoff..."
-            sleep $((attempt * 15))
-          done
-
-      - name: Validate required permissions in merged manifest
-        run: |
-          set -euo pipefail
-          # AGP 8.9 uses singular 'merged_manifest'; scoped to build/app/ to
-          # avoid picking up plugin manifests.
-          MANIFEST="$(find "$GITHUB_WORKSPACE/build/app/intermediates/merged_manifest" \
-            -name 'AndroidManifest.xml' -path '*release*' \
-            2>/dev/null | head -n 1)"
-          if [ -z "$MANIFEST" ]; then
-            echo "Merged release manifest not found. Available manifests:"
-            find "$GITHUB_WORKSPACE/build/app/intermediates" -name 'AndroidManifest.xml' 2>/dev/null | head -20 || true
-            exit 1
-          fi
-          echo "Using merged manifest: $MANIFEST"
-          sed -n '1,140p' "$MANIFEST"
-
-          grep -q 'android.permission.INTERNET' "$MANIFEST" || { echo "Missing INTERNET permission"; exit 1; }
-          grep -q 'android.permission.POST_NOTIFICATIONS' "$MANIFEST" || { echo "Missing POST_NOTIFICATIONS permission"; exit 1; }
-
-          if ! grep -q 'android.permission.CAMERA' "$MANIFEST"; then
-            echo "Missing CAMERA permission required for in-app camera capture"
-            exit 1
-          fi
-
-      - name: Clean temporary google-services file
-        if: always()
-        run: rm -f android/app/google-services.json
-
-  ios_archive_validation:
-    name: iOS archive validation
-    runs-on: macos-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version-file: .fvmrc
-
-      - name: Verify privacy manifest exists
-        run: test -f ios/Runner/PrivacyInfo.xcprivacy
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Build iOS (no codesign)
-        run: |
-          flutter build ios --release --no-codesign \
-            --dart-define=ENVIRONMENT=production \
-            --dart-define=API_BASE_URL=https://api.lythaus.co/api \
-            --dart-define=AUTH_URL=https://api.lythaus.co/api \
-            --dart-define=ENABLE_CERT_PINNING=false
-
-      - name: Reject legacy origins in iOS release artifact
-        run: |
-          set -euo pipefail
-          artifact="build/ios/iphoneos/Runner.app"
-          test -d "$artifact"
-          if grep -R -a -Eiq 'azurewebsites\.net|asora-function-(dev|prod)|api\.asora\.co\.za|admin-api\.asora\.co\.za' "$artifact"; then
-            echo "iOS release artifact contains a forbidden direct-origin reference." >&2
-            exit 1
-          fi
-          echo "iOS release artifact contains no direct Azure or obsolete public API origin."
-
-      - name: Archive iOS app (no codesign)
-        run: |
-          set -euo pipefail
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath "$GITHUB_WORKSPACE/build/ios/archive/Runner.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO \
-            archive
-
-      - name: Upload iOS archive artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: ios-release-archive
-          path: build/ios/archive/Runner.xcarchive
-
-  functions_build:
-    name: Build Functions and package artifact
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    defaults:
-      run:
-        working-directory: functions
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install jq for guards
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-      - name: Guard host.json version (root + functions/**)
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euo pipefail
-          FILES=$(git ls-files -- 'host.json' 'functions/**/host.json' ':!:**/node_modules/**' ':!:**/*.md')
-          [ -n "$FILES" ] || { echo "No host.json found"; exit 1; }
-          for f in $FILES; do
-            jq -e '(."version" == "2.0") or (has("version") == false)' "$f" >/dev/null \
-              || { echo "Invalid host.json version in $f"; exit 1; }
-          done
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Verify functions build script exists
-        run: |
-          set -euo pipefail
-          jq -e '.scripts.build|length>0' package.json >/dev/null
-
-      - name: npm ci (strict)
-        run: npm ci
-
-      - name: TypeScript type-check (fail fast)
-        run: npm run typecheck
-
-      - name: Run tests with coverage (enforces thresholds in jest.config.ts)
-        id: functions_test
-        run: |
-          set -euo pipefail
-          if jq -e '(.scripts["test:coverage"] // .scripts.test) | length > 0' package.json >/dev/null 2>&1; then
-            npm run test:coverage 2>&1 | tee ../functions-test-output.txt
-          else
-            echo "No test script; skipping"
-          fi
-
-      - name: Functions coverage summary
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-/dev/null}"
-          echo "## Functions Test Coverage" >> "$SUMMARY_FILE"
-          # Jest --coverage writes coverage/coverage-summary.json
-          SUMMARY_JSON="coverage/coverage-summary.json"
-          if [[ -f "$SUMMARY_JSON" ]]; then
-            node -e "
-              const s = require('./$SUMMARY_JSON').total;
-              const row = (k) => '| ' + k + ' | ' + s[k].pct + '% (' + s[k].covered + '/' + s[k].total + ') |';
-              console.log('| Metric | Coverage |');
-              console.log('|--------|----------|');
-              ['statements','branches','functions','lines'].forEach(row => {
-                const v = s[row];
-                const icon = v.pct >= 85 ? ':white_check_mark:' : ':x:';
-                console.log('| ' + icon + ' ' + row + ' | ' + v.pct + '% (' + v.covered + '/' + v.total + ') |');
-              });
-            " >> "$SUMMARY_FILE" 2>/dev/null || echo "_Coverage summary unavailable_" >> "$SUMMARY_FILE"
-          else
-            echo "_No coverage/coverage-summary.json found_" >> "$SUMMARY_FILE"
-          fi
-
-      - name: Build (TS -> dist)
-        run: npm run build
-
-      - name: Verify dist exists
-        run: test -d "$GITHUB_WORKSPACE/functions/dist" || { echo "functions/dist missing"; exit 1; }
-
-      - name: Package Azure Functions v4 zip
-        shell: bash
-        working-directory: ${{ github.workspace }}
-        run: |
-          set -euo pipefail
-          ROOT="$GITHUB_WORKSPACE"
-          echo "Packing v4 artifact..."
-          rm -rf -- "$ROOT/deploy" "$ROOT/dist-v4-final.zip"
-          mkdir -p "$ROOT/deploy"
-
-          # Root host.json at zip root
-          cp -- "$ROOT/host.json" "$ROOT/deploy/host.json"
-
-          # functions package.json (for metadata)
-          cp -- "$ROOT/functions/package.json" "$ROOT/deploy/"
-
-          # compiled output: copy entire dist to preserve paths
-          test -d "$ROOT/functions/dist" || { echo "functions/dist missing"; exit 1; }
-          cp -R -- "$ROOT/functions/dist/." "$ROOT/deploy/"
-
-          # function.json directories
-          echo "Copying function.json directories..."
-          for d in "$ROOT/functions"/*; do
-            if [ -f "$d/function.json" ]; then
-              bn=$(basename "$d")
-              mkdir -p "$ROOT/deploy/$bn"
-              cp -- "$d/function.json" "$ROOT/deploy/$bn/"
-            fi
-          done
-
-          # production node_modules
-          pushd "$ROOT/functions" >/dev/null
-          npm ci --omit=dev
-          popd >/dev/null
-          cp -R -- "$ROOT/functions/node_modules" "$ROOT/deploy/node_modules"
-
-          echo "Package contents:"
-          find "$ROOT/deploy" -maxdepth 2 -type f -name "*.json" | sort
-
-          (cd "$ROOT/deploy" && zip -r ../dist-v4-final.zip . -x "*.DS_Store" "*.git*" "Thumbs.db")
-
-          echo "Created $ROOT/dist-v4-final.zip"
-
-          ZIP="$ROOT/dist-v4-final.zip" bash "$ROOT/.github/scripts/preflight.sh"
-          node "$ROOT/functions/scripts/verify-dist-structure.cjs" "$ROOT/dist-v4-final.zip"
-
-      - name: Scan Functions package and archive for secrets
-        working-directory: ${{ github.workspace }}
-        run: |
-          scripts/secret-scan.sh --artifact deploy
-          scripts/secret-scan.sh --artifact dist-v4-final.zip
-
-      - name: Upload feed workbook artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: feed-workbook
-          path: observability/workbooks/feed-latency.json
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: functions-v4-artifact
-          path: dist-v4-final.zip
-          if-no-files-found: error
-
-  azure-retirement-validation:
-    name: Azure Retirement Hardening Checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Run Azure retirement validation
-        run: bash scripts/validate-azure-retirement.sh
-
-  dependency_review:
-    name: Dependency CVE review
-    runs-on: ubuntu-latest
-    # Only meaningful on pull_request events (compares base vs head manifests)
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Dependency Review (block high/critical CVEs)
-        uses: actions/dependency-review-action@v5
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: always
-          # Allow runtime advisories for scoped packages used only in tests
-          allow-dependencies-licenses: ''
-
-  dsr_runbook_guard:
-    name: DSR runbook ↔ deploy consistency
-    runs-on: ubuntu-latest
-    needs: [workflow_lint]
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Check DSR required keys match deploy workflow
-        run: bash scripts/check-dsr-runbook-consistency.sh
-
-      - name: Test DSR storage verifier CLI contract
-        run: node --test scripts/tests/verify-dsr-storage.test.js
-
-      - name: Test Cosmos network verifier CLI contract
-        run: node --test scripts/tests/verify-cosmos-network.test.js
-
-      - name: Test live DSR drill success criteria
-        run: node --test scripts/tests/live-dsr-queue-drill.test.js
-
-      - name: Test release manifest workflow contract
-        run: node --test scripts/tests/release-manifest-workflow.test.js
-
-      - name: Test performance fixture isolation wiring
-        run: node --test scripts/tests/performance-test-mode-wiring.test.js
 
   launch_blockers_summary:
     name: Launch blockers summary
     runs-on: ubuntu-latest
     if: always()
-    needs:
-      - docs_placement
-      - legal_register_validation
-      - workflow_lint
-      - flutter_toolchain_contract
-      - observability_alert_contract
-      - cosmos_contract_guard
-      - route_guard_inventory
-      - docs_secret_hygiene
-      - branding_guard
-      - validate_extension_bundle
-      - openapi_validation
-      - secret-scan
-      - github-azure-disconnection
-      - dependency_audit
-      - pin_verification
-      - flutter_tests
-      - web_release_build
-      - functions_build
-      - azure-retirement-validation
-      - dsr_runbook_guard
+    needs: [repository_hygiene, workflow_lint, native_runtime, openapi, flutter, frontends, dependency_audit]
     steps:
       - name: Write launch blockers summary
         shell: bash
         env:
-          DOCS_PLACEMENT:            ${{ needs.docs_placement.result }}
-          LEGAL_REGISTER:            ${{ needs.legal_register_validation.result }}
-          WORKFLOW_LINT:             ${{ needs.workflow_lint.result }}
-          FLUTTER_TOOLCHAIN:         ${{ needs.flutter_toolchain_contract.result }}
-          OBSERVABILITY_ALERTS:      ${{ needs.observability_alert_contract.result }}
-          COSMOS_CONTRACT:           ${{ needs.cosmos_contract_guard.result }}
-          ROUTE_GUARD:               ${{ needs.route_guard_inventory.result }}
-          DOCS_SECRET_HYGIENE:       ${{ needs.docs_secret_hygiene.result }}
-          BRANDING_GUARD:            ${{ needs.branding_guard.result }}
-          EXTENSION_BUNDLE:          ${{ needs.validate_extension_bundle.result }}
-          OPENAPI_VALIDATION:        ${{ needs.openapi_validation.result }}
-          SECRET_SCAN:               ${{ needs.secret-scan.result }}
-          GITHUB_AZURE_DISCONNECTION: ${{ needs.github-azure-disconnection.result }}
-          DEPENDENCY_AUDIT:           ${{ needs.dependency_audit.result }}
-          PIN_VERIFICATION:          ${{ needs.pin_verification.result }}
-          FLUTTER_TESTS:             ${{ needs.flutter_tests.result }}
-          WEB_RELEASE_BUILD:         ${{ needs.web_release_build.result }}
-          FUNCTIONS_BUILD:           ${{ needs.functions_build.result }}
-          AZURE_RETIREMENT:          ${{ needs.azure-retirement-validation.result }}
-          DSR_RUNBOOK_GUARD:         ${{ needs.dsr_runbook_guard.result }}
+          REPOSITORY_HYGIENE: ${{ needs.repository_hygiene.result }}
+          WORKFLOW_LINT: ${{ needs.workflow_lint.result }}
+          NATIVE_RUNTIME: ${{ needs.native_runtime.result }}
+          OPENAPI: ${{ needs.openapi.result }}
+          FLUTTER: ${{ needs.flutter.result }}
+          FRONTENDS: ${{ needs.frontends.result }}
+          DEPENDENCY_AUDIT: ${{ needs.dependency_audit.result }}
         run: |
-          icon() { [[ "$1" == "success" ]] && echo ":white_check_mark:" || [[ "$1" == "skipped" ]] && echo ":next_track_button:" || echo ":x:"; }
+          set -euo pipefail
           blockers=0
           {
-            echo "## :rocket: Launch Blockers CI Summary"
-            echo ""
-            echo "| Gate | Status |"
-            echo "|------|--------|"
-            declare -A GATES=(
-              ["Docs placement"]="$DOCS_PLACEMENT"
-              ["Legal registers"]="$LEGAL_REGISTER"
-              ["Workflow lint"]="$WORKFLOW_LINT"
-              ["Flutter toolchain contract"]="$FLUTTER_TOOLCHAIN"
-              ["Observability alerts contract"]="$OBSERVABILITY_ALERTS"
-              ["Cosmos contract guard"]="$COSMOS_CONTRACT"
-              ["Route guard / spec drift"]="$ROUTE_GUARD"
-              ["Docs & config secret hygiene"]="$DOCS_SECRET_HYGIENE"
-              ["Branding guard (Lythaus/Asora)"]="$BRANDING_GUARD"
-              ["Extension bundle version"]="$EXTENSION_BUNDLE"
-              ["OpenAPI validation"]="$OPENAPI_VALIDATION"
-              ["Secret scan (gitleaks)"]="$SECRET_SCAN"
-              ["GitHub-to-Azure disconnection"]="$GITHUB_AZURE_DISCONNECTION"
-              ["Dependency audit (high/critical)"]="$DEPENDENCY_AUDIT"
-              ["Dependency pin verification"]="$PIN_VERIFICATION"
-              ["Flutter tests + coverage"]="$FLUTTER_TESTS"
-              ["Flutter web release build"]="$WEB_RELEASE_BUILD"
-              ["Functions build + coverage"]="$FUNCTIONS_BUILD"
-              ["Azure retirement hardening"]="$AZURE_RETIREMENT"
-              ["DSR runbook consistency"]="$DSR_RUNBOOK_GUARD"
-            )
-            for gate in "${!GATES[@]}"; do
-              result="${GATES[$gate]}"
-              echo "| $(icon "$result") $gate | $result |"
-              [[ "$result" != "success" && "$result" != "skipped" ]] && blockers=$((blockers+1))
+            echo '## Launch blockers CI summary'
+            echo
+            echo '| Gate | Status |'
+            echo '| --- | --- |'
+            for pair in \
+              "Repository hygiene:$REPOSITORY_HYGIENE" \
+              "Workflow lint:$WORKFLOW_LINT" \
+              "Native runtime:$NATIVE_RUNTIME" \
+              "OpenAPI:$OPENAPI" \
+              "Flutter:$FLUTTER" \
+              "Web frontends:$FRONTENDS" \
+              "Dependency audit:$DEPENDENCY_AUDIT"; do
+              gate="${pair%%:*}"
+              result="${pair#*:}"
+              echo "| $gate | $result |"
+              [[ "$result" == success ]] || blockers=$((blockers + 1))
             done
-            echo ""
-            if [[ $blockers -gt 0 ]]; then
-              echo "> :warning: **$blockers gate(s) failed** — resolve before merging to main."
-            else
-              echo "> :white_check_mark: **All gates passed.** Ready for merge."
-            fi
           } >> "$GITHUB_STEP_SUMMARY"
           [[ $blockers -eq 0 ]]
-

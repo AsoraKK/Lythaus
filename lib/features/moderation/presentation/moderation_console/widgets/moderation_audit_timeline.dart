@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
 
 class ModerationAuditTimeline extends StatelessWidget {
   const ModerationAuditTimeline({super.key, required this.entries});

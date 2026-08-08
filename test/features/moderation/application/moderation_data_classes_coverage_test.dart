@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
 
 /// Coverage tests for data class constructors in moderation_providers.dart
 /// Targets uncovered lines: 140 (VotingFeedParams), 162 (AppealSubmission),

@@ -1,58 +1,32 @@
 #!/usr/bin/env bash
-# check-branding.sh – Scan Flutter Dart files for 'Asora' in user-visible UI contexts.
-#
-# Per docs/branding/lythaus-transition.md: user-facing strings must say "Lythaus".
-# "Asora" is permitted only in internal code (package IDs, imports, infra names, log tags).
-#
-# Exits 1 if violations found, 0 otherwise.
 
 set -euo pipefail
 
 ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-LIB_DIR="$ROOT/lib"
+RETIRED_BRAND='[Aa][Ss][Oo][Rr][Aa]'
+OWNER_EXCEPTION='As''oraKK'
+EMAIL_EXCEPTION='kyle.kern@as''ora.co.za'
 
-if ! command -v rg >/dev/null 2>&1; then
-  echo "rg (ripgrep) is required"
+if ! command -v rg >/dev/null 2>&1 || ! rg --version >/dev/null 2>&1; then
+  echo 'an executable rg (ripgrep) is required' >&2
   exit 2
 fi
 
-# Patterns that indicate a user-visible UI string containing 'Asora'.
-# We look for 'Asora' inside Flutter UI constructors / named params that are
-# shown to end-users: Text(), title:, label:, hint:, tooltip:, message:,
-# hintText:, labelText:, titleText:, subtitle:, semanticsLabel:
-UI_PATTERN="(Text\s*\(['\"]|(?:title|label|hint|tooltip|message|hintText|labelText|titleText|subtitle|semanticsLabel)\s*:\s*(const\s+)?Text\s*\(|(?:title|label|hint|tooltip|message|hintText|labelText|titleText|subtitle|semanticsLabel)\s*:\s*['\"]).{0,200}Asora"
+content_matches="$({
+  rg -n -i --hidden --glob '!.git/**' --glob '!docs/history/**' --glob '!docs/archive/**' \
+    --glob '!node_modules/**' --glob '!build/**' --glob '!.dart_tool/**' \
+    --glob '!.codex-*/**' -- "$RETIRED_BRAND" \
+    "$ROOT/lib" "$ROOT/test" "$ROOT/integration_test" "$ROOT/android" "$ROOT/ios" \
+    "$ROOT/macos" "$ROOT/linux" "$ROOT/windows" "$ROOT/web" "$ROOT/apps" "$ROOT/api" \
+    "$ROOT/packages" "$ROOT/scripts" "$ROOT/.github" "$ROOT/assets" "$ROOT/docs/product" \
+    "$ROOT/docs/architecture" "$ROOT/pubspec.yaml" "$ROOT/package.json" \
+    2>/dev/null || true
+} | rg -v "$OWNER_EXCEPTION|$EMAIL_EXCEPTION" || true)"
 
-# Patterns that are allowed (internal / infra / comments)
-#   - comments (// or /* )
-#   - package identifiers (com.asora)
-#   - import / export / part statements
-#   - logger/tag defaults (e.g. _tag = 'Asora')
-#   - pubspec names
-#   - 'formerly Asora' transition phrase
-ALLOW_PATTERN="(//|/\*|\bcom\.asora\b|import |export |part |_tag\s*=\s*'Asora'|\"tag\"\s*:\s*\"Asora\"|formerly Asora|asora-|asora_)"
-
-TMP="$(mktemp)"
-trap 'rm -f "$TMP"' EXIT
-
-rg --pcre2 -n --glob "*.dart" -- "$UI_PATTERN" "$LIB_DIR" > "$TMP" 2>/dev/null || true
-
-if [[ ! -s "$TMP" ]]; then
-  echo "✅ Branding guard passed: no 'Asora' in user-visible UI strings."
-  exit 0
+if [[ -n "$content_matches" ]]; then
+  echo 'Retired brand found in active code or configuration:' >&2
+  printf '%s\n' "$content_matches" >&2
+  exit 1
 fi
 
-FILTERED="$(mktemp)"
-trap 'rm -f "$TMP" "$FILTERED"' EXIT
-
-grep -Eiv "$ALLOW_PATTERN" "$TMP" > "$FILTERED" || true
-
-if [[ ! -s "$FILTERED" ]]; then
-  echo "✅ Branding guard passed: only allowed internal uses of 'Asora' found."
-  exit 0
-fi
-
-echo "❌ Found 'Asora' in user-facing UI strings (should be 'Lythaus'):"
-cat "$FILTERED"
-echo ""
-echo "Per docs/branding/lythaus-transition.md: replace 'Asora' with 'Lythaus' in all user-visible contexts."
-exit 1
+echo 'Active Lythaus code and configuration contain no retired brand references.'

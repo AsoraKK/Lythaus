@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/services/service_providers.dart';
-import 'package:asora/services/subscription/subscription_service.dart';
-import 'package:asora/state/providers/reputation_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/services/service_providers.dart';
+import 'package:lythaus/services/subscription/subscription_service.dart';
+import 'package:lythaus/state/providers/reputation_providers.dart';
 
 void main() {
   group('reputationTiersProvider', () {

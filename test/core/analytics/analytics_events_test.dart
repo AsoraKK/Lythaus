@@ -1,4 +1,4 @@
-import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

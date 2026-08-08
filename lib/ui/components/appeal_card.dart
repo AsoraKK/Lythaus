@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/state/models/moderation.dart';
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:lythaus/state/models/moderation.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
 
 class AppealCard extends StatelessWidget {
   const AppealCard({

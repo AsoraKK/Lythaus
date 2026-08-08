@@ -1,16 +1,16 @@
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_event_tracker.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/auth/presentation/auth_gate.dart';
-import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
-import 'package:asora/features/profile/application/profile_providers.dart';
-import 'package:asora/features/profile/domain/public_user.dart';
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/ui/screens/app_shell.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_event_tracker.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/presentation/auth_gate.dart';
+import 'package:lythaus/features/auth/presentation/auth_choice_screen.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/ui/screens/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -197,7 +197,7 @@ void main() {
     notifier.state = AsyncValue.data(user);
     await tester.pumpAndSettle();
 
-    expect(find.byType(AsoraAppShell), findsOneWidget);
+    expect(find.byType(LythausAppShell), findsOneWidget);
     expect(analytics.userIds.isEmpty ? null : analytics.userIds.last, user.id);
   });
 }

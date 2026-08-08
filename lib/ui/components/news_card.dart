@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/theme/spacing.dart';
-import 'package:asora/ui/components/feed_card.dart';
-import 'package:asora/ui/components/tier_badge.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
+import 'package:lythaus/ui/components/feed_card.dart';
+import 'package:lythaus/ui/components/tier_badge.dart';
 
 class NewsCard extends StatelessWidget {
   const NewsCard({

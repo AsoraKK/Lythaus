@@ -1,10 +1,10 @@
 import 'package:test/test.dart';
-import 'package:asora_api_client/asora_api_client.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
 
 
 /// tests for PostsApi
 void main() {
-  final instance = AsoraApiClient().getPostsApi();
+  final instance = LythausApiClient().getPostsApi();
 
   group(PostsApi, () {
     // Create a new post

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/ui/screens/home/custom_feed_creation_flow.dart';
+import 'package:lythaus/ui/screens/home/custom_feed_creation_flow.dart';
 
 void main() {
   group('CustomFeedCreationFlow step navigation', () {

@@ -4,13 +4,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/profile/application/profile_providers.dart';
-import 'package:asora/state/providers/settings_providers.dart';
-import 'package:asora/ui/theme/spacing.dart';
-import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
-import 'package:asora/features/privacy/privacy_settings_screen.dart';
-import 'package:asora/ui/screens/profile/account_security_screen.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
+import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
+import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
+import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/state/models/reputation.dart';
+import 'package:lythaus/state/models/reputation.dart';
 
 void main() {
   group('ReputationTier', () {

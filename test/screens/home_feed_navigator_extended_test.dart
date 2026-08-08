@@ -1,13 +1,12 @@
 /// Extended tests for HomeFeedNavigator — targeting uncovered widget code paths
 library;
 
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/ui/screens/home/home_feed_navigator.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,10 +29,6 @@ class MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
   Future<void> refreshToken() async {}
   @override
   Future<void> signInWithEmail(String e, String p) async {}
-  @override
-  Future<void> signInWithOAuth2() async {}
-  @override
-  Future<void> signInWithProvider(OAuth2Provider provider) async {}
   @override
   Future<void> signOut() async => state = const AsyncValue.data(null);
   @override

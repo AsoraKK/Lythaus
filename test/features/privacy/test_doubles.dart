@@ -1,4 +1,4 @@
-import 'package:asora/features/privacy/services/privacy_api.dart';
+import 'package:lythaus/features/privacy/services/privacy_api.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TestPrivacyApi implements PrivacyApi {

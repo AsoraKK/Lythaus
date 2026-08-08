@@ -3,11 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
 
-/// ASORA POST ACTIONS WIDGET
+/// LYTHAUS POST ACTIONS WIDGET
 ///
 /// 🎯 Purpose: Action buttons for posts/comments including flag reporting
 /// ✅ Features: Like, Share, Comment, Flag/Report functionality

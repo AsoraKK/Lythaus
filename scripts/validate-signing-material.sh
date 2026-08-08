@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-SECRETS_URL="https://github.com/AsoraKK/Asora/settings/secrets/actions"
+SECRETS_URL="https://github.com/LythausHQ/Lythaus/settings/secrets/actions"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -68,7 +68,7 @@ validate_android() {
       -keysize 2048 \\
       -validity 10000 \\
       -alias upload \\
-      -dname 'CN=Lythaus Upload Key, OU=Mobile, O=Asora, C=ZA'
+      -dname 'CN=Lythaus Upload Key, OU=Mobile, O=Lythaus, C=ZA'
 
     # 2. Base64-encode it:
     base64 -w0 upload-keystore.jks   # Linux

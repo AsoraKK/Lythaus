@@ -1,4 +1,4 @@
-import 'package:asora/features/profile/domain/public_user.dart';
+import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

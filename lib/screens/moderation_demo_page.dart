@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/widgets/post_card.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/widgets/post_card.dart';
 
-/// ASORA MODERATION DEMO PAGE
+/// LYTHAUS MODERATION DEMO PAGE
 ///
 /// 🎯 Purpose: Demonstrate all Phase 5 moderation features
 /// ✅ Features: Flag reporting, moderation badges, appeal system

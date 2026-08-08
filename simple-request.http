@@ -1,4 +1,0 @@
-@baseUrl = https://asora-function-dev-c3fyhqcfctdddfa2.northeurope-01.azurewebsites.net/api
-
-GET {{baseUrl}}/
-Content-Type: application/json

@@ -2,7 +2,7 @@
 
 library appeal_models;
 
-/// ASORA APPEAL MODELS
+/// LYTHAUS APPEAL MODELS
 ///
 /// 🎯 Purpose: Data models for community voting and appeal system
 /// 📊 Models: Appeal, Vote, VotingCard, AppealDetails

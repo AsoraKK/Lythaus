@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.asora.app" "\0"
-            VALUE "FileDescription", "asora" "\0"
+            VALUE "CompanyName", "co.lythaus.app" "\0"
+            VALUE "FileDescription", "lythaus" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "asora" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.asora.app. All rights reserved." "\0"
-            VALUE "OriginalFilename", "asora.exe" "\0"
-            VALUE "ProductName", "asora" "\0"
+            VALUE "InternalName", "lythaus" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 co.lythaus.app. All rights reserved." "\0"
+            VALUE "OriginalFilename", "lythaus.exe" "\0"
+            VALUE "ProductName", "lythaus" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -12,7 +12,7 @@ Note: Single-page app routing requires Pages redirect rules.
 
 By default, the control-panel uses same-origin proxy routing:
 - `GET /api/admin/config` → proxied to `https://admin-api.lythaus.co/api/config`
-- `POST /api/admin/moderation/test` → proxied to `https://admin-api.lythaus.co/api/moderation/test` (URL-based tests)
+- `/api/admin/*` → proxied to the native Lythaus admin Worker
 
 Note: Live file uploads are not supported yet; use URL inputs or mock mode.
 

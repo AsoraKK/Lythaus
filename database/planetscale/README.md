@@ -1,7 +1,7 @@
 # Lythaus PlanetScale baseline
 
 This directory is the authoritative migration source for the Cloudflare-native
-Lythaus runtime. The legacy Azure SQL files are reference material only.
+Lythaus runtime. Retired provider files are not part of this baseline.
 
 Execution rules:
 

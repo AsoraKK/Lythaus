@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/features/feed/domain/models.dart' as domain;
-import 'package:asora/features/feed/domain/social_feed_repository.dart';
-import 'package:asora/features/feed/application/social_feed_providers.dart';
-import 'package:asora/features/feed/application/custom_feed_service.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/state/providers/feed_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/application/custom_feed_service.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
 
 // ─── Mocks ───
 class _MockSocialFeedRepo extends Mock implements SocialFeedRepository {}

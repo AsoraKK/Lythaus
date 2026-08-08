@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
 
 void main() {
   group('AuthFailure', () {

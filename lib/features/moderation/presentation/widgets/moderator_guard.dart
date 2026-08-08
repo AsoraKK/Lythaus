@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 const bool _kEnableModerationConsole = bool.fromEnvironment(
   'ENABLE_MODERATION_CONSOLE',

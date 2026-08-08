@@ -2,12 +2,12 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/services/service_providers.dart';
-import 'package:asora/services/subscription/subscription_service.dart';
-import 'package:asora/state/models/reputation.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/services/service_providers.dart';
+import 'package:lythaus/services/subscription/subscription_service.dart';
+import 'package:lythaus/state/models/reputation.dart';
 
 const List<SubscriptionEntitlementTier> _lythausSubscriptionEntitlementTiers = [
   SubscriptionEntitlementTier(

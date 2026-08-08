@@ -6,23 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/services/appeal_provider.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/state/models/moderation.dart';
-import 'package:asora/state/providers/moderation_providers.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/services/appeal_provider.dart';
+import 'package:lythaus/state/models/moderation.dart';
+import 'package:lythaus/state/providers/moderation_providers.dart';
 
 class _MockDio extends Mock implements Dio {}
-
-class _FakeOAuth2Service extends OAuth2Service {
-  _FakeOAuth2Service(this._fakeToken);
-
-  final String? _fakeToken;
-
-  @override
-  Future<String?> getAccessToken() async => _fakeToken;
-}
 
 void main() {
   setUpAll(() {
@@ -83,10 +73,8 @@ void main() {
   // ── AppealService ──────────────────────────────────────────────────────────
   group('AppealService', () {
     test('submit returns false when access token is null', () async {
-      final fakeOAuth2 = _FakeOAuth2Service(null);
-
       final container = ProviderContainer(
-        overrides: [oauth2ServiceProvider.overrideWithValue(fakeOAuth2)],
+        overrides: [jwtProvider.overrideWith((ref) async => null)],
       );
       addTearDown(container.dispose);
 
@@ -96,7 +84,6 @@ void main() {
     });
 
     test('submit returns true on successful POST', () async {
-      final fakeOAuth2 = _FakeOAuth2Service('tok');
       final mockDio = _MockDio();
 
       when(
@@ -114,7 +101,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          oauth2ServiceProvider.overrideWithValue(fakeOAuth2),
+          jwtProvider.overrideWith((ref) async => 'tok'),
           secureDioProvider.overrideWithValue(mockDio),
         ],
       );
@@ -126,7 +113,6 @@ void main() {
     });
 
     test('submit returns false on Dio exception', () async {
-      final fakeOAuth2 = _FakeOAuth2Service('tok');
       final mockDio = _MockDio();
 
       when(
@@ -144,7 +130,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          oauth2ServiceProvider.overrideWithValue(fakeOAuth2),
+          jwtProvider.overrideWith((ref) async => 'tok'),
           secureDioProvider.overrideWithValue(mockDio),
         ],
       );

@@ -1,8 +1,8 @@
-# asora_api_client.api.PaymentsApi
+# lythaus_api_client.api.PaymentsApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -19,9 +19,9 @@ Handle payment provider webhook
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPaymentsApi();
+final api = LythausApiClient().getPaymentsApi();
 final JsonObject body = Object; // JsonObject |
 
 try {

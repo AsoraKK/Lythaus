@@ -5,12 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 class MockPostRepository extends Mock implements PostRepository {}
 
@@ -21,10 +20,6 @@ class MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
   Future<void> refreshToken() async {}
   @override
   Future<void> signInWithEmail(String email, String password) async {}
-  @override
-  Future<void> signInWithOAuth2() async {}
-  @override
-  Future<void> signInWithProvider(OAuth2Provider provider) async {}
   @override
   Future<void> signOut() async => state = const AsyncValue.data(null);
   @override
@@ -144,22 +139,21 @@ void main() {
     });
   });
 
-  group('Media handling', () {
-    testWidgets('add media button is present', (tester) async {
+  group('Deferred media handling', () {
+    testWidgets('media attachments are absent for signed-in users', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildWidget(user: _testUser()));
       await tester.pumpAndSettle();
 
-      // Should have media button in bottom toolbar
-      expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.image_outlined), findsNothing);
     });
 
-    testWidgets('media button disabled when not signed in', (tester) async {
+    testWidgets('media attachments are absent for guests', (tester) async {
       await tester.pumpWidget(buildWidget(user: null));
       await tester.pumpAndSettle();
 
-      final iconButton = find.widgetWithIcon(IconButton, Icons.image_outlined);
-      final btn = tester.widget<IconButton>(iconButton);
-      expect(btn.onPressed, isNull);
+      expect(find.byIcon(Icons.image_outlined), findsNothing);
     });
   });
 

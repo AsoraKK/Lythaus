@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA SECURITY DEBUG SCREEN
+/// LYTHAUS SECURITY DEBUG SCREEN
 ///
 /// 🎯 Purpose: Dev-only screen showing security state, configs, and test controls
 /// 🔐 Security: Only accessible in debug builds (kDebugMode guard)
@@ -10,13 +10,13 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/security/security_overrides.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/security/security_overrides.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_snackbar.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 /// Security debug screen (dev-only)
 class SecurityDebugScreen extends ConsumerStatefulWidget {

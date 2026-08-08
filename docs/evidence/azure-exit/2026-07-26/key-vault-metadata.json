@@ -1,9 +1,0 @@
-{
-  "vaults":[
-    {"name":"kv-asora-dev","region":"northeurope","sku":"Standard","rbac":true,"softDelete":true,"retentionDays":90,"purgeProtection":"NOT RETURNED","publicNetworkAccess":"Enabled","secretNamesObserved":22,"keys":"FORBIDDEN","certificates":"FORBIDDEN"},
-    {"name":"kv-asora-flex-dev","region":"northeurope","sku":"Standard","rbac":true,"softDelete":true,"retentionDays":90,"purgeProtection":"NOT RETURNED","publicNetworkAccess":"Enabled","secretNamesObserved":18,"keys":"FORBIDDEN","certificates":"FORBIDDEN"}
-  ],
-  "secretValues":"never retrieved",
-  "permissionGap":"Caller lacks Microsoft.KeyVault/vaults/keys/read and Microsoft.KeyVault/vaults/certificates/read; secret names only were retained",
-  "rbacObservation":"40 subscription role assignments include vault- and secret-scoped assignments; no secret values retrieved"
-}

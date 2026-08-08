@@ -3,21 +3,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/state/providers/settings_providers.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/ui/components/asora_bottom_nav.dart';
-import 'package:asora/ui/screens/create/create_screen.dart';
-import 'package:asora/ui/screens/home/home_feed_navigator.dart';
-import 'package:asora/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/ui/components/lythaus_bottom_nav.dart';
+import 'package:lythaus/ui/screens/create/create_screen.dart';
+import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
+import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
-class AsoraAppShell extends ConsumerStatefulWidget {
-  const AsoraAppShell({super.key});
+class LythausAppShell extends ConsumerStatefulWidget {
+  const LythausAppShell({super.key});
 
   @override
-  ConsumerState<AsoraAppShell> createState() => _AsoraAppShellState();
+  ConsumerState<LythausAppShell> createState() => _LythausAppShellState();
 }
 
-class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
+class _LythausAppShellState extends ConsumerState<LythausAppShell> {
   int _currentIndex = 0;
 
   @override
@@ -40,7 +40,7 @@ class _AsoraAppShellState extends ConsumerState<AsoraAppShell> {
             TickerMode(enabled: _currentIndex == i, child: tabs[i]),
         ],
       ),
-      bottomNavigationBar: AsoraBottomNav(
+      bottomNavigationBar: LythausBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
           if (isGuest && index == 1) {

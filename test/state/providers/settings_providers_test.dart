@@ -1,5 +1,5 @@
-import 'package:asora/state/models/settings.dart';
-import 'package:asora/state/providers/settings_providers.dart';
+import 'package:lythaus/state/models/settings.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

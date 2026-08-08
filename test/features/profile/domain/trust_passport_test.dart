@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/profile/domain/trust_passport.dart';
+import 'package:lythaus/features/profile/domain/trust_passport.dart';
 
 void main() {
   group('TrustPassport', () {

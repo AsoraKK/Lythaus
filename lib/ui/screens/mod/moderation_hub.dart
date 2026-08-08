@@ -3,10 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/state/providers/moderation_providers.dart';
-import 'package:asora/ui/components/appeal_card.dart';
-import 'package:asora/ui/components/moderation_card.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/state/providers/moderation_providers.dart';
+import 'package:lythaus/ui/components/appeal_card.dart';
+import 'package:lythaus/ui/components/moderation_card.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class ModerationHubScreen extends ConsumerWidget {
   const ModerationHubScreen({super.key});

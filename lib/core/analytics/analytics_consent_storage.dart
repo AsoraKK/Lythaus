@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ANALYTICS CONSENT STORAGE
+/// LYTHAUS ANALYTICS CONSENT STORAGE
 ///
 /// 🎯 Purpose: Persist and retrieve analytics consent state
 /// 🔐 Privacy: Local storage only, no remote sync
@@ -10,7 +10,7 @@ library;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:asora/core/analytics/analytics_consent.dart';
+import 'package:lythaus/core/analytics/analytics_consent.dart';
 
 /// Storage key for analytics consent
 const String _consentStorageKey = 'analytics_consent';

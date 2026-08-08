@@ -1,8 +1,8 @@
-# asora_api_client.api.RewardsApi
+# lythaus_api_client.api.RewardsApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -22,9 +22,9 @@ Returns rewards available under the caller's subscription tier, reputation level
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getRewardsApi();
+final api = LythausApiClient().getRewardsApi();
 
 try {
     final response = api.rewardsMeGet();
@@ -59,9 +59,9 @@ Redeem a reward
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getRewardsApi();
+final api = LythausApiClient().getRewardsApi();
 final String id = id_example; // String |
 
 try {

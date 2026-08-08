@@ -5,7 +5,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:asora_api_client/src/auth/auth.dart';
+import 'package:lythaus_api_client/src/auth/auth.dart';
 
 class BasicAuthInfo {
   final String username;

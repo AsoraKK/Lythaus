@@ -1,6 +1,6 @@
-import 'package:asora/features/notifications/domain/notification_models.dart';
-import 'package:asora/services/push/device_token_service.dart';
-import 'package:asora/services/push/push_notification_service.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/services/push/device_token_service.dart';
+import 'package:lythaus/services/push/push_notification_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';

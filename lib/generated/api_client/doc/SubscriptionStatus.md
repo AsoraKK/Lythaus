@@ -1,8 +1,8 @@
-# asora_api_client.model.SubscriptionStatus
+# lythaus_api_client.model.SubscriptionStatus
 
 ## Load the model package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 ## Properties

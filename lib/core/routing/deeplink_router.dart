@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
-import 'package:asora/features/feed/presentation/post_detail_screen.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
-import 'package:asora/features/moderation/presentation/screens/appeal_history_screen.dart';
-import 'package:asora/ui/screens/profile/profile_screen.dart';
-import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
+import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
+import 'package:lythaus/features/moderation/presentation/screens/appeal_history_screen.dart';
+import 'package:lythaus/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 
 /// Deep-link router for handling notification navigation
 /// Parses deep-link URIs and navigates to appropriate screens
@@ -176,7 +176,7 @@ class _NormalizedDeepLink {
 }
 
 _NormalizedDeepLink? _normalize(Uri uri) {
-  if (uri.scheme == 'lythaus' || uri.scheme == 'asora') {
+  if (uri.scheme == 'lythaus' || uri.scheme == 'lythaus') {
     final type = uri.host.trim();
     if (type.isEmpty) {
       return null;

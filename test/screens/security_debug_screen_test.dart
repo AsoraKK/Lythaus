@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/screens/security_debug_screen.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/screens/security_debug_screen.dart';
 
 class _FakeDeviceSecurityService implements DeviceSecurityService {
   @override

@@ -70,7 +70,7 @@ jobs:
         run: |
           npm run validate:planetscale-migrations
           npm run validate:planetscale-extensions
-          npm run validate:native-azure-dependencies
+          npm run validate:no-retired-provider-dependencies
           npm run validate:ai-gateway-paths
           npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
           npx wrangler types --check apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc

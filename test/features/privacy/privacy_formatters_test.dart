@@ -1,4 +1,4 @@
-import 'package:asora/features/privacy/utils/privacy_formatters.dart';
+import 'package:lythaus/features/privacy/utils/privacy_formatters.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
 
 void main() {
   // ── ModerationFilters ─────────────────────────────────────────────────

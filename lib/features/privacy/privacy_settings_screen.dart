@@ -3,21 +3,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
 
-import 'package:asora/features/privacy/state/privacy_controller.dart';
-import 'package:asora/features/privacy/state/privacy_state.dart';
-import 'package:asora/features/privacy/utils/privacy_formatters.dart';
-import 'package:asora/features/privacy/widgets/analytics_settings_card.dart';
-import 'package:asora/features/privacy/widgets/cooldown_row.dart';
-import 'package:asora/features/privacy/widgets/delete_confirmation_dialog.dart';
-import 'package:asora/features/privacy/widgets/delete_section.dart';
-import 'package:asora/features/privacy/widgets/export_section.dart';
-import 'package:asora/features/privacy/widgets/privacy_blocking_overlay.dart';
-import 'package:asora/features/privacy/widgets/privacy_error_banner.dart';
-import 'package:asora/features/privacy/widgets/privacy_info_card.dart';
+import 'package:lythaus/features/privacy/state/privacy_controller.dart';
+import 'package:lythaus/features/privacy/state/privacy_state.dart';
+import 'package:lythaus/features/privacy/utils/privacy_formatters.dart';
+import 'package:lythaus/features/privacy/widgets/analytics_settings_card.dart';
+import 'package:lythaus/features/privacy/widgets/cooldown_row.dart';
+import 'package:lythaus/features/privacy/widgets/delete_confirmation_dialog.dart';
+import 'package:lythaus/features/privacy/widgets/delete_section.dart';
+import 'package:lythaus/features/privacy/widgets/export_section.dart';
+import 'package:lythaus/features/privacy/widgets/privacy_blocking_overlay.dart';
+import 'package:lythaus/features/privacy/widgets/privacy_error_banner.dart';
+import 'package:lythaus/features/privacy/widgets/privacy_info_card.dart';
 
 class PrivacySettingsScreen extends ConsumerStatefulWidget {
   const PrivacySettingsScreen({super.key});

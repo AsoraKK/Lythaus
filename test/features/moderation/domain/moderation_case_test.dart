@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/domain/moderation_case.dart';
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/features/moderation/domain/moderation_case.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
 
 void main() {
   group('ModerationCase', () {

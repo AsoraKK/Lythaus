@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/config/environment_config.dart';
+import 'package:lythaus/core/config/environment_config.dart';
 
 void main() {
   group('Environment', () {

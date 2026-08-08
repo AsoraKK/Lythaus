@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/features/moderation/application/moderation_service.dart';
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/moderation/application/moderation_service.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
 
 class MockDio extends Mock implements Dio {}
 

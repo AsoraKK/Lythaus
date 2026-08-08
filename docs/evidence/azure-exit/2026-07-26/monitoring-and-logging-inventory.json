@@ -1,8 +1,0 @@
-{
-  "applicationInsights":["asora-function-dev","asora-function-flex","asora-function-consumption","appi-asora-function-dev-dsr"],
-  "logAnalytics":["law-asora-dsr-dev-neu"],
-  "alerts":["alert-asora-function-dev-dsr-stuck-queued","alert-asora-function-dev-dsr-queue-depth","alert-asora-function-dev-dsr-failures","alert-asora-function-dev-dsr-poison-queue","alert-asora-function-dev-dsr-missing-completion"],
-  "dashboard":["dash-lythaus-health"],
-  "retention":"Historical evidence states 30-day App Insights retention; live retention not re-queried",
-  "evidenceToRetain":["deployment proof","DSR execution proof","error/reliability evidence","security incidents","authentication failures","performance baselines","Azure cost history"]
-}

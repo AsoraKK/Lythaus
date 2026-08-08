@@ -7,12 +7,12 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/model/bad_gateway_error.dart';
-import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/get_health200_response.dart';
-import 'package:asora_api_client/src/model/rate_limit_error.dart';
-import 'package:asora_api_client/src/model/service_unavailable_error.dart';
 import 'package:built_value/json_object.dart';
+import 'package:lythaus_api_client/src/model/bad_gateway_error.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/get_health200_response.dart';
+import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
+import 'package:lythaus_api_client/src/model/service_unavailable_error.dart';
 
 class HealthApi {
 

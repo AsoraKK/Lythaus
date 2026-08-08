@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/widgets/reputation_badge.dart';
+import 'package:lythaus/widgets/reputation_badge.dart';
 
 void main() {
   group('ReputationBadge.getTierName', () {

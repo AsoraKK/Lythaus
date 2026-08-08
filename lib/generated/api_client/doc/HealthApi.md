@@ -1,8 +1,8 @@
-# asora_api_client.api.HealthApi
+# lythaus_api_client.api.HealthApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -22,9 +22,9 @@ Liveness/readiness check. No auth.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getHealthApi();
+final api = LythausApiClient().getHealthApi();
 
 try {
     final response = api.getHealth();
@@ -59,9 +59,9 @@ Readiness probe
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getHealthApi();
+final api = LythausApiClient().getHealthApi();
 
 try {
     final response = api.ready();

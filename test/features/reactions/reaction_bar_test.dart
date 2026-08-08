@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/reactions/domain/reaction.dart';
-import 'package:asora/features/reactions/presentation/reaction_bar.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/reactions/domain/reaction.dart';
+import 'package:lythaus/features/reactions/presentation/reaction_bar.dart';
 
 class _ReactionSuccessAdapter implements HttpClientAdapter {
   @override

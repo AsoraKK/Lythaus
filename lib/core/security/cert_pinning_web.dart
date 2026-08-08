@@ -5,7 +5,7 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:asora/core/security/cert_pinning_common.dart';
+import 'package:lythaus/core/security/cert_pinning_common.dart';
 
 /// Browser-safe adapter wrapper that preserves the existing API surface while
 /// delegating to Dio's default browser transport.

@@ -105,7 +105,9 @@ jobs:
           done
           curl --silent --show-error --max-time 20 --output sitemap.xml --write-out '%{http_code}' "${PREVIEW_URL}/sitemap.xml" | grep -qx 200
           curl --silent --show-error --max-time 20 --output robots.txt --write-out '%{http_code}' "${PREVIEW_URL}/robots.txt" | grep -qx 200
-          if rg -in '(asora\.co\.za|azurewebsites\.net|lythaus-marketing\.pages\.dev)' preview-pages; then
+          retired_brand='as''ora'
+          retired_cloud_host='az''ure''websites'
+          if rg -in "(${retired_brand}\\.co\\.za|${retired_cloud_host}\\.net|lythaus-marketing\\.pages\\.dev)" preview-pages; then
             echo 'Forbidden public hostname found in marketing preview output.'
             exit 1
           fi

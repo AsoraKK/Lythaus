@@ -1,4 +1,4 @@
-import 'package:asora/core/security/device_integrity.dart';
+import 'package:lythaus/core/security/device_integrity.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

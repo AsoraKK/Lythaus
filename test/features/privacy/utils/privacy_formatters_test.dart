@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/privacy/utils/privacy_formatters.dart';
+import 'package:lythaus/features/privacy/utils/privacy_formatters.dart';
 
 void main() {
   group('formatPrivacyCountdown', () {

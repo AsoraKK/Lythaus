@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class FirstPostLockScreen extends ConsumerWidget {
   const FirstPostLockScreen({super.key});

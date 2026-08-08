@@ -120,7 +120,7 @@ function getParameterSchema(
 
 describe('critical request examples', () => {
   const cases: Array<{ label: string; pathKey: string; method: HttpMethod; exampleKey: string }> = [
-    { label: 'auth token', pathKey: '/auth/token', method: 'post', exampleKey: 'authCode' },
+    { label: 'email auth', pathKey: '/auth/email', method: 'post', exampleKey: 'login' },
     { label: 'auth redeem invite', pathKey: '/auth/redeem-invite', method: 'post', exampleKey: 'redeem' },
     { label: 'post create', pathKey: '/post', method: 'post', exampleKey: 'basicPost' },
     { label: 'moderation flag', pathKey: '/moderation/flag', method: 'post', exampleKey: 'spamFlag' },
@@ -149,7 +149,7 @@ describe('critical response examples', () => {
     status: string;
     exampleKey: string;
   }> = [
-    { label: 'auth token', pathKey: '/auth/token', method: 'post', status: '200', exampleKey: 'success' },
+    { label: 'email auth', pathKey: '/auth/email', method: 'post', status: '200', exampleKey: 'success' },
     { label: 'auth userinfo', pathKey: '/auth/userinfo', method: 'get', status: '200', exampleKey: 'authenticated' },
     {
       label: 'auth redeem invite',

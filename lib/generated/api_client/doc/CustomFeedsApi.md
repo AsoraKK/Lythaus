@@ -1,8 +1,8 @@
-# asora_api_client.api.CustomFeedsApi
+# lythaus_api_client.api.CustomFeedsApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -26,9 +26,9 @@ Create a custom feed definition. The service enforces tier limits: Free users ma
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getCustomFeedsApi();
+final api = LythausApiClient().getCustomFeedsApi();
 final CreateCustomFeedRequest createCustomFeedRequest = ; // CreateCustomFeedRequest |
 
 try {
@@ -69,9 +69,9 @@ Delete an owned custom feed definition.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getCustomFeedsApi();
+final api = LythausApiClient().getCustomFeedsApi();
 final String id = id_example; // String |
 
 try {
@@ -111,9 +111,9 @@ Fetch a custom feed definition owned by the authenticated user.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getCustomFeedsApi();
+final api = LythausApiClient().getCustomFeedsApi();
 final String id = id_example; // String |
 
 try {
@@ -154,9 +154,9 @@ Return posts matching a custom feed's filters.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getCustomFeedsApi();
+final api = LythausApiClient().getCustomFeedsApi();
 final String id = id_example; // String |
 final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
 final int limit = 25; // int | Maximum number of items to return per page
@@ -201,9 +201,9 @@ List custom feed definitions owned by the authenticated user.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getCustomFeedsApi();
+final api = LythausApiClient().getCustomFeedsApi();
 final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
 final int limit = 25; // int | Maximum number of items to return per page
 
@@ -246,9 +246,9 @@ Update an owned custom feed's name, filters, sorting, or home flag.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getCustomFeedsApi();
+final api = LythausApiClient().getCustomFeedsApi();
 final String id = id_example; // String |
 final UpdateCustomFeedRequest updateCustomFeedRequest = ; // UpdateCustomFeedRequest |
 

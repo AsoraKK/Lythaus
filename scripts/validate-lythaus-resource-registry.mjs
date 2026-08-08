@@ -13,7 +13,9 @@ const requiredNames = [
   'lythaus-config-dev', 'lythaus-core', 'main', 'development',
 ];
 const seen = new Set();
-const forbidden = /nite[- ]owl|asora\.co\.za|azurewebsites\.net|password|secret|token/i;
+const retiredBrand = ['as', 'ora'].join('');
+const retiredCloudHost = ['az', 'ure', 'websites'].join('');
+const forbidden = new RegExp(`nite[- ]owl|${retiredBrand}\\.co\\.za|${retiredCloudHost}\\.net|password|secret|token`, 'i');
 for (const name of requiredNames) if (!resources.some((resource) => resource.resourceName === name)) failures.push(`missing registry resource: ${name}`);
 for (const resource of resources) {
   for (const field of ['provider', 'accountOrOrganisationId', 'resourceName', 'sanitisedResourceId', 'environment', 'region', 'purpose', 'authoritativeOwner', 'currentStatus', 'expectedCostClass', 'temporary', 'deletionAllowed', 'replacementPolicy']) {

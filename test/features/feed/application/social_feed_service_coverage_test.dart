@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/feed/application/social_feed_service.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/feed/domain/social_feed_repository.dart';
-import 'package:asora/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/application/social_feed_service.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 
 /// Adapter returning scripted JSON.
 class _ScriptedAdapter implements HttpClientAdapter {

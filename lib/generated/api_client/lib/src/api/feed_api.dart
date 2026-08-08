@@ -7,16 +7,16 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/feed_page_envelope.dart';
-import 'package:asora_api_client/src/model/feed_page_response.dart';
-import 'package:asora_api_client/src/model/forbidden_error.dart';
-import 'package:asora_api_client/src/model/news_board_feed_response.dart';
-import 'package:asora_api_client/src/model/rate_limit_error.dart';
-import 'package:asora_api_client/src/model/simple_error.dart';
-import 'package:asora_api_client/src/model/unauthorized_error.dart';
 import 'package:built_value/json_object.dart';
+import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/feed_page_envelope.dart';
+import 'package:lythaus_api_client/src/model/feed_page_response.dart';
+import 'package:lythaus_api_client/src/model/forbidden_error.dart';
+import 'package:lythaus_api_client/src/model/news_board_feed_response.dart';
+import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
+import 'package:lythaus_api_client/src/model/simple_error.dart';
+import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
 
 class FeedApi {
 

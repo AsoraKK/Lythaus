@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/core/error/error_codes.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/core/error/error_codes.dart';
 
 void main() {
   // ─── ModerationFilters ───

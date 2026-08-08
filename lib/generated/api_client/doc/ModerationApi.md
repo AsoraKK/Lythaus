@@ -1,8 +1,8 @@
-# asora_api_client.api.ModerationApi
+# lythaus_api_client.api.ModerationApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -34,9 +34,9 @@ Flag content for review.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final FlagContentRequest flagContentRequest = {"contentId":"018b27d4-6e1e-7bd3-bb5a-98f24bb968c2","contentType":"post","reason":"spam","additionalDetails":"Repeated duplicate promotion across multiple threads."}; // FlagContentRequest |
 
 try {
@@ -77,9 +77,9 @@ Alias of `/moderation/flag` — legacy v1 route used by the function runtime.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final FlagContentV1Request flagContentV1Request = ; // FlagContentV1Request |
 
 try {
@@ -120,9 +120,9 @@ Returns all appeals filed by the calling user, ordered by creation date descendi
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final String status = status_example; // String | Filter by appeal status
 final String cursor = cursor_example; // String | Pagination cursor
 
@@ -163,9 +163,9 @@ Record a decision on a moderation case
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -206,9 +206,9 @@ Get moderation case detail
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final String id = id_example; // String |
 
 try {
@@ -249,9 +249,9 @@ Marks an appealable moderation-related ledger entry as under appeal for the auth
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final String entryId = entryId_example; // String |
 
 try {
@@ -290,9 +290,9 @@ List moderation queue items
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 
 try {
     final response = api.moderationQueueList();
@@ -327,9 +327,9 @@ List items in the review queue
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 
 try {
     final response = api.moderationReviewQueueList();
@@ -364,9 +364,9 @@ Submit content to moderation pipeline for testing
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -407,9 +407,9 @@ Submit a moderator review decision for an appealed content case. Requires modera
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final String appealId = appealId_example; // String | Appeal identifier
 final ReviewAppealedContentRequest reviewAppealedContentRequest = ; // ReviewAppealedContentRequest |
 
@@ -452,9 +452,9 @@ Alias of `/moderation/appeals` — legacy v1 route used by the function runtime.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final ModerationAppealRequest moderationAppealRequest = ; // ModerationAppealRequest |
 
 try {
@@ -495,9 +495,9 @@ File an appeal against a moderation decision. Authenticated users with active ac
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final ModerationAppealRequest moderationAppealRequest = {"caseId":"case_01HZPQ2B3C4D5E6F7G8H9JABCD","statement":"I believe this was flagged in error because...","evidenceUrls":["https://example.com/evidence/screenshot.png"]}; // ModerationAppealRequest |
 
 try {
@@ -538,9 +538,9 @@ Alias of `/moderation/appeals/{appealId}/vote` — accepts appealId in the reque
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final VoteOnAppealV1Request voteOnAppealV1Request = ; // VoteOnAppealV1Request |
 
 try {
@@ -581,9 +581,9 @@ Authenticated community members may cast a weighted vote (`uphold` or `deny`) on
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getModerationApi();
+final api = LythausApiClient().getModerationApi();
 final String appealId = appealId_example; // String | Appeal identifier
 final AppealVoteRequest appealVoteRequest = {"vote":"uphold"}; // AppealVoteRequest |
 

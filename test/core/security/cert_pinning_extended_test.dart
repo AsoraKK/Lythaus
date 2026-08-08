@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/security/cert_pinning.dart';
+import 'package:lythaus/core/security/cert_pinning.dart';
 
 void main() {
   // ────── CertPinningInfo ──────
@@ -101,7 +101,7 @@ void main() {
     test('returns false for connectionError while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.connectionError,
       );
@@ -111,7 +111,7 @@ void main() {
     test('returns false for unknown error while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.unknown,
       );
@@ -121,7 +121,7 @@ void main() {
     test('returns false for badCertificate while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.badCertificate,
       );
@@ -139,7 +139,7 @@ void main() {
     test('returns false for timeout error', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.receiveTimeout,
       );
@@ -149,7 +149,7 @@ void main() {
     test('returns false for badResponse', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.badResponse,
       );
@@ -159,7 +159,7 @@ void main() {
     test('returns false for cancel', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.cancel,
       );

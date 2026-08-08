@@ -2,9 +2,9 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/profile/application/follow_service.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/profile/application/follow_service.dart';
 
 final followServiceProvider = Provider<FollowService>((ref) {
   return FollowService(ref.watch(secureDioProvider));

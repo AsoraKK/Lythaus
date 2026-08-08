@@ -3,10 +3,10 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/design_system/theme/lyth_theme_extensions.dart';
-import 'package:asora/design_system/tokens/motion.dart';
-import 'package:asora/design_system/tokens/radius.dart';
-import 'package:asora/design_system/tokens/spacing.dart';
+import 'package:lythaus/design_system/theme/lyth_theme_extensions.dart';
+import 'package:lythaus/design_system/tokens/motion.dart';
+import 'package:lythaus/design_system/tokens/radius.dart';
+import 'package:lythaus/design_system/tokens/spacing.dart';
 
 void main() {
   // ── LythThemeExtension ─────────────────────────────────────────────────────

@@ -3,8 +3,8 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/validation_error_response_error_fields_inner.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:lythaus_api_client/src/model/validation_error_response_error_fields_inner.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 

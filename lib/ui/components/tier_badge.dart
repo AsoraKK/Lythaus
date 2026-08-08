@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
 
 class TierBadge extends StatelessWidget {
   const TierBadge({super.key, required this.label, this.highlight = false});

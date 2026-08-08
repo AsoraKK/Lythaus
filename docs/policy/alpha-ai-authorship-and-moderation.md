@@ -1,7 +1,7 @@
 # Alpha AI Authorship and Moderation Policy
 
 Status: Approved amendment for controlled Alpha
-Classifier: Hive only
+Classifier: Lythaus Authenticity AI
 
 ## Public labels
 
@@ -21,7 +21,7 @@ Users must declare `human`, `assisted`, or `generated`. Direct API calls without
 - Human-authored content is allowed unless it violates another content rule.
 - AI-assisted content is allowed when disclosed and labeled.
 - AI-generated content is allowed when disclosed and otherwise policy-compliant, but it cannot receive positive reputation awards.
-- Undisclosed or deceptively declared AI content enters review when Hive conflicts with a human declaration.
+- Undisclosed or deceptively declared AI content enters review when Lythaus Authenticity AI conflicts with a human declaration.
 - Classifier unavailability follows the audited Alpha configuration: `under_review` or `fail_closed`.
 - Sexual exploitation, credible threats, illegal content, malicious impersonation, fraud, prohibited manipulation, and other safety/legal violations remain blocked regardless of declaration.
 

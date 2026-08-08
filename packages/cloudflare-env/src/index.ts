@@ -21,10 +21,9 @@ export interface EnvBindings {
   PRIVACY_DLQ?: Queue;
   AUDIT_DLQ?: Queue;
   LYTHAUS_CONFIG?: KVNamespaceLike;
-  HIVE_API_KEY?: string;
-  HIVE_API_URL?: string;
-  HIVE_MODEL_VERSION?: string;
-  PAID_AI_DETECTION_ENABLED?: string;
+  AUTHENTICITY_AI_ENABLED?: string;
+  AUTHENTICITY_TEXT_MODEL?: string;
+  AUTHENTICITY_IMAGE_MODEL?: string;
   R2_ACCESS_KEY_ID?: string;
   R2_SECRET_ACCESS_KEY?: string;
   R2_ACCOUNT_ID?: string;
@@ -46,11 +45,7 @@ export interface EnvBindings {
   EMAIL_FROM?: string;
   EMAIL_VERIFICATION_BASE_URL?: string;
   EMAIL_PASSWORD_RESET_BASE_URL?: string;
-  EMAIL?: SendEmailLike;
-  GOOGLE_CLIENT_ID?: string;
-  GOOGLE_CLIENT_SECRET?: string;
-  GOOGLE_REDIRECT_URI?: string;
-  GOOGLE_JWKS_URL?: string;
+  EMAIL?: SendEmail;
   ACCESS_SUBJECT_HMAC_KEY?: string;
   ENVIRONMENT?: string;
   CORS_ALLOWED_ORIGINS?: string;
@@ -60,8 +55,6 @@ export interface EnvBindings {
   ACCESS_JWKS_URL?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_REQUIRED?: string;
-  EXTERNAL_BACKUP_HEALTHCHECK_URL?: string;
-  EXTERNAL_BACKUP_HEALTHCHECK_TOKEN?: string;
   DATABASE_READINESS_TOKEN?: string;
   EXPECTED_DATABASE_TARGET?: string;
   EXPECTED_DATABASE_SCHEMA_FINGERPRINT?: string;
@@ -76,14 +69,10 @@ export interface EnvBindings {
   COST_BUDGET_OPTIONAL_ANALYSIS_USD?: string;
   COST_BUDGET_ESSENTIAL_ONLY_USD?: string;
   COST_BUDGET_DEEP_SCAN_STOP_USD?: string;
-  COST_HIVE_TEXT_ESTIMATE_USD?: string;
-  COST_HIVE_IMAGE_ESTIMATE_USD?: string;
+  COST_AUTHENTICITY_TEXT_ESTIMATE_USD?: string;
+  COST_AUTHENTICITY_IMAGE_ESTIMATE_USD?: string;
   AI?: WorkersAiBinding;
   AI_GATEWAY_ID?: string;
-}
-
-export interface SendEmailLike {
-  send(message: { to: string; from: string; subject: string; html: string }): Promise<void>;
 }
 
 export interface R2ObjectLike {

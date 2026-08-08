@@ -24,21 +24,6 @@ fi
 
 cp coverage/lcov.info coverage-artifacts/coverage-flutter/lcov.info
 
-echo "Running Functions tests..."
-pushd functions >/dev/null
-if [ ! -d node_modules ]; then
-  npm ci >/dev/null
-fi
-npm test >/dev/null
-popd >/dev/null
-
-if [ -f functions/coverage/lcov.info ]; then
-  cp functions/coverage/lcov.info coverage-artifacts/coverage-functions/lcov.info
-else
-  echo "functions/coverage/lcov.info was not generated" >&2
-  exit 1
-fi
-
 python3 - "$ROOT_DIR" <<'PY'
 import pathlib
 import sys

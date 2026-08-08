@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-// ASORA APP LOGGER
+// LYTHAUS APP LOGGER
 //
 // 🎯 Purpose: Centralized logging for debugging and telemetry
 // 📊 Telemetry: Structured logging with levels and context
@@ -16,7 +16,7 @@ enum LogLevel { debug, info, warning, error }
 class AppLogger {
   final String _tag;
 
-  AppLogger([this._tag = 'Asora']);
+  AppLogger([this._tag = 'Lythaus']);
 
   /// Log debug message (only in debug mode)
   void debug(String message, [Object? error, StackTrace? stackTrace]) {

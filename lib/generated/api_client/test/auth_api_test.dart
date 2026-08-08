@@ -1,26 +1,17 @@
 import 'package:test/test.dart';
-import 'package:asora_api_client/asora_api_client.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
 
 
 /// tests for AuthApi
 void main() {
-  final instance = AsoraApiClient().getAuthApi();
+  final instance = LythausApiClient().getAuthApi();
 
   group(AuthApi, () {
-    // OAuth2 authorization endpoint
-    //
-    // Initiates the OAuth 2.0 Authorization Code flow. On success, issues a 302 redirect to the `redirect_uri` with an authorization `code` and the `state` parameter echoed back.
-    //
-    //Future<String> authAuthorize(String responseType, String clientId, String redirectUri, { String state, String codeChallenge, String codeChallengeMethod, String scope }) async
-    test('test authAuthorize', () async {
-      // TODO
-    });
-
     // Sign in with a verified email identity
     //
-    // Legacy email/password login contract retained for compatibility during the Cloudflare-native migration. New clients should use the native authentication flow.
+    // Creates a Lythaus access and refresh session for a verified email account.
     //
-    //Future<OAuthTokenResponse> authEmailLogin(EmailLoginRequest emailLoginRequest) async
+    //Future<EmailSessionResponse> authEmailLogin(EmailLoginRequest emailLoginRequest) async
     test('test authEmailLogin', () async {
       // TODO
     });
@@ -64,18 +55,9 @@ void main() {
       // TODO
     });
 
-    // Issue OAuth2 tokens
+    // Return the current email-authenticated user
     //
-    // Exchange an authorization code or refresh token for an access token and refresh token. Implements OAuth 2.0 Authorization Code with PKCE (RFC 7636) and Refresh Token grants.
-    //
-    //Future<OAuthTokenResponse> authToken(AuthTokenRequest authTokenRequest) async
-    test('test authToken', () async {
-      // TODO
-    });
-
-    // OIDC UserInfo endpoint
-    //
-    // Returns claims about the authenticated user per OpenID Connect Core 1.0.
+    // Returns the active Lythaus account associated with the bearer session.
     //
     //Future<UserInfoResponse> authUserInfo() async
     test('test authUserInfo', () async {

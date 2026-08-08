@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA NOTIFICATIONS - SETTINGS SCREEN
+/// LYTHAUS NOTIFICATIONS - SETTINGS SCREEN
 ///
 /// Notification preferences management:
 /// - Category toggles (social, news, marketing)
@@ -11,12 +11,12 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/notifications/domain/notification_models.dart';
-import 'package:asora/features/notifications/application/notification_providers.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/features/notifications/application/notification_providers.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/components/lyth_snackbar.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class NotificationsSettingsScreen extends ConsumerWidget {
   const NotificationsSettingsScreen({super.key});

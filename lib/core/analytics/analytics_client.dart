@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ANALYTICS CLIENT
+/// LYTHAUS ANALYTICS CLIENT
 ///
 /// 🎯 Purpose: Privacy-safe analytics abstraction layer
 /// 🔐 Privacy: Explicit opt-in, no PII, pseudonymous IDs only
@@ -30,7 +30,7 @@ abstract class AnalyticsClient {
   ///
   /// MUST be internal user ID (UUIDv7), never:
   /// - Email addresses
-  /// - Provider-specific IDs (Google, Apple)
+  /// - External provider-specific IDs
   /// - Device identifiers
   ///
   /// Pass null to clear user context (e.g., on sign-out).

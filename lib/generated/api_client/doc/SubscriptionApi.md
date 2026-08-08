@@ -1,8 +1,8 @@
-# asora_api_client.api.SubscriptionApi
+# lythaus_api_client.api.SubscriptionApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -21,9 +21,9 @@ Return the authenticated user's subscription tier and alpha entitlements, includ
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getSubscriptionApi();
+final api = LythausApiClient().getSubscriptionApi();
 
 try {
     final response = api.subscriptionStatus();

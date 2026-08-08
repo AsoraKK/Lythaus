@@ -58,7 +58,7 @@ jobs:
           ALPHA_FEED_RATE: '1'
         run: |
           set -euo pipefail
-          node -e 'const url = new URL(process.env.ALPHA_API_BASE_URL); if (url.protocol !== "https:" || url.hostname.endsWith(".azurewebsites.net") || !url.pathname.endsWith("/api")) throw new Error("alpha_api_base_url must be an HTTPS API gateway ending in /api");'
+          node -e 'const url = new URL(process.env.ALPHA_API_BASE_URL); if (url.protocol !== "https:" || url.hostname !== "api.lythaus.co" || !url.pathname.endsWith("/api")) throw new Error("alpha_api_base_url must be the canonical HTTPS API ending in /api");'
           node scripts/release/runtime-authenticated-command.mjs \
             --token-env ALPHA_SMOKE_TOKEN -- docker run --rm \
             -e ALPHA_API_BASE_URL \

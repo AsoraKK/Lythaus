@@ -5,8 +5,8 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/security/tls_pinning.dart';
-import 'package:asora/core/config/environment_config.dart';
+import 'package:lythaus/core/security/tls_pinning.dart';
+import 'package:lythaus/core/config/environment_config.dart';
 
 void main() {
   group('TlsPinConfig', () {
@@ -58,7 +58,7 @@ void main() {
     test('should create client from environment config', () {
       const envConfig = EnvironmentConfig(
         environment: Environment.development,
-        apiBaseUrl: 'https://asora-function-dev.azurewebsites.net/api',
+        apiBaseUrl: 'https://api.lythaus.co/api',
         security: MobileSecurityConfig(
           tlsPins: TlsPinConfig(
             enabled: true,
@@ -81,7 +81,7 @@ void main() {
     test('should extract hostname from API base URL', () {
       const envConfig = EnvironmentConfig(
         environment: Environment.preview,
-        apiBaseUrl: 'https://asora-function-dev.azurewebsites.net/api',
+        apiBaseUrl: 'https://api.lythaus.co/api',
         security: MobileSecurityConfig(
           tlsPins: TlsPinConfig(
             enabled: true,
@@ -96,7 +96,7 @@ void main() {
 
       // Test URI parsing
       final uri = Uri.parse(envConfig.apiBaseUrl);
-      expect(uri.host, equals('asora-function-dev.azurewebsites.net'));
+      expect(uri.host, equals('api.lythaus.co'));
     });
   });
 }

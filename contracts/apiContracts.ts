@@ -1,4 +1,4 @@
-/** Shared primitives used across Asora backend contracts. */
+/** Shared primitives used across Lythaus backend contracts. */
 export type Cursor = string;
 
 export interface CursorPaginationParams {
@@ -22,7 +22,7 @@ export interface ApiErrorResponse {
   error: ApiError;
 }
 
-export type AuthProvider = 'google' | 'apple' | 'microsoft' | 'email';
+export type AuthProvider = 'email' | 'guest';
 export type Role = 'user' | 'moderator' | 'journalist' | 'contributor' | 'admin';
 export type Tier = 'free' | 'creator' | 'premium' | 'enterprise';
 export type Visibility = 'public' | 'followers' | 'private';
@@ -59,7 +59,7 @@ export interface UserProfile {
   badges: string[];
 }
 
-export interface CosmosUserDocument {
+export interface UserDocument {
   id: string;
   profile: UserProfile;
   settings: Record<string, unknown>;
@@ -101,7 +101,7 @@ export type AuthRefreshResponse = AuthTokenResponse;
 export interface CurrentUserResponse {
   identity: UserIdentity;
   profile: UserProfile;
-  settings: CosmosUserDocument['settings'];
+  settings: UserDocument['settings'];
 }
 
 export interface UpdateUserRequest {
@@ -139,7 +139,7 @@ export interface Post {
   clusterId?: string;
 }
 
-/** The PostView is what feed readers consume; it mixes Cosmos storage with author metadata. */
+/** The PostView is what feed readers consume, including author metadata. */
 export interface PostView extends Post {
   author: PublicUser;
   isNews: boolean;

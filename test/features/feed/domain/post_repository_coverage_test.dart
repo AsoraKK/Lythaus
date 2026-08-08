@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
 
 void main() {
   group('UpdatePostRequest', () {
@@ -132,15 +132,12 @@ void main() {
     test('toJson with defaults', () {
       const req = CreatePostRequest(text: 'Hello world');
       final json = req.toJson();
-      expect(json['content'], 'Hello world');
-      expect(json['isNews'], false);
-      expect(json['contentType'], 'text');
-      expect(json['aiLabel'], 'human');
-      expect(json.containsKey('mediaUrls'), isFalse);
-      expect(json.containsKey('proofSignals'), isFalse);
+      expect(json['body'], 'Hello world');
+      expect(json['declaredCreationMode'], 'human');
+      expect(json['geoScope'], 'none');
     });
 
-    test('toJson includes mediaUrls and proofSignals when provided', () {
+    test('toJson excludes deferred media and proof fields', () {
       const req = CreatePostRequest(
         text: 'Post',
         mediaUrl: 'img.png',
@@ -148,9 +145,9 @@ void main() {
         proofSignals: ProofSignals(captureMetadataHash: 'hash'),
       );
       final json = req.toJson();
-      expect(json['mediaUrls'], ['img.png']);
-      expect(json['isNews'], true);
-      expect(json['proofSignals'], isA<Map<String, dynamic>>());
+      expect(json.containsKey('mediaUrls'), isFalse);
+      expect(json.containsKey('isNews'), isFalse);
+      expect(json.containsKey('proofSignals'), isFalse);
     });
   });
 

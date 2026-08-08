@@ -31,13 +31,11 @@ P1_PATTERNS=(
   "lib/services/appeal_provider.dart"
   "lib/services/auth_service.dart"
   "lib/services/moderation_service.dart"
-  "lib/services/oauth2_service.dart"
   "lib/services/post_service.dart"
   "lib/services/service_providers.dart"
 )
 
 P2_PATTERNS=(
-  "lib/features/admin/"
   "lib/features/notifications/"
   "lib/core/analytics/"
   "lib/core/logging/"

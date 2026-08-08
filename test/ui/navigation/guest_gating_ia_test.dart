@@ -1,9 +1,9 @@
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/ui/screens/app_shell.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/ui/screens/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -117,7 +117,7 @@ void main() {
             data: MediaQuery.of(context).copyWith(disableAnimations: true),
             child: child!,
           ),
-          home: const AsoraAppShell(),
+          home: const LythausAppShell(),
         ),
       ),
     );

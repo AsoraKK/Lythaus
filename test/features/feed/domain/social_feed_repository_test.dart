@@ -1,4 +1,4 @@
-import 'package:asora/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

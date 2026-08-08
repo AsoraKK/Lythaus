@@ -1,10 +1,10 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/presentation/widgets/voting_status_badge.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/voting_status_badge.dart';
 
-/// ASORA VOTING STATUS BREAKDOWN WIDGET
+/// LYTHAUS VOTING STATUS BREAKDOWN WIDGET
 ///
 /// 🎯 Purpose: Display breakdown of appeals by voting status
 /// 🔍 Single Responsibility: Status analytics only

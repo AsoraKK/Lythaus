@@ -2,8 +2,8 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/rewards/domain/reward_models.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/rewards/domain/reward_models.dart';
 
 final rewardsSnapshotProvider = FutureProvider<RewardsSnapshot>((ref) async {
   final dio = ref.read(secureDioProvider);

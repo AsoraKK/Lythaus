@@ -1,8 +1,8 @@
-# asora_api_client.api.AppealsApi
+# lythaus_api_client.api.AppealsApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -21,9 +21,9 @@ Submit a new appeal
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAppealsApi();
+final api = LythausApiClient().getAppealsApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -62,9 +62,9 @@ Get appeal detail
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAppealsApi();
+final api = LythausApiClient().getAppealsApi();
 final String id = id_example; // String |
 
 try {
@@ -103,9 +103,9 @@ Cast a community vote on an appeal
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAppealsApi();
+final api = LythausApiClient().getAppealsApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 

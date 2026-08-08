@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/moderation/presentation/widgets/urgency_indicator.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/urgency_indicator.dart';
 
 void main() {
   group('UrgencyIndicator', () {

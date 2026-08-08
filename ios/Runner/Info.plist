@@ -51,20 +51,6 @@
 	<string>Lythaus uses your photo library so you can select images to attach to posts.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Lythaus uses Face ID to protect access to your account on this device.</string>
-		<key>CFBundleURLTypes</key>
-		<array>
-			<dict>
-				<key>CFBundleTypeRole</key>
-				<string>Editor</string>
-				<key>CFBundleURLName</key>
-				<string>com.asora.app</string>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<string>asora</string>
-					<string>msalc07bb257-aaf0-4179-be95-fce516f92e8c</string>
-				</array>
-			</dict>
-		</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

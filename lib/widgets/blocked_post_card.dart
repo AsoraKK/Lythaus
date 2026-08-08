@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/widgets/appeal_sheet.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/widgets/appeal_sheet.dart';
 
 class BlockedPostCard extends StatelessWidget {
   final String postId;

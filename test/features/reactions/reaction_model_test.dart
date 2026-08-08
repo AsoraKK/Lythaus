@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/reactions/domain/reaction.dart';
+import 'package:lythaus/features/reactions/domain/reaction.dart';
 
 void main() {
   // ─────────────────────────────────────────────────────────────────────────

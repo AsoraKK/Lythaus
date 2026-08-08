@@ -3,13 +3,13 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/user_info_response_data.dart';
+import 'package:lythaus_api_client/src/model/user_info_response_data.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
 part 'user_info_response.g.dart';
 
-/// OIDC UserInfo claims envelope.
+/// Authenticated Lythaus user envelope.
 ///
 /// Properties:
 /// * [success]

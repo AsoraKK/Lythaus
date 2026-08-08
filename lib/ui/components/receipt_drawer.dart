@@ -5,9 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/widgets/appeal_dialog.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/widgets/appeal_dialog.dart';
 
 class ReceiptDrawer {
   static Future<void> show(BuildContext context, String postId) {

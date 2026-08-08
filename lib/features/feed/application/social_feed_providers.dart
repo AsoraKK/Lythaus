@@ -7,13 +7,13 @@
 library social_feed_providers;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/feed/domain/social_feed_repository.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/feed/application/social_feed_service.dart';
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/error/error_codes.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/application/social_feed_service.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/error/error_codes.dart';
 
 /// Provider for the social feed service implementation
 final socialFeedServiceProvider = Provider<SocialFeedRepository>((ref) {
@@ -80,8 +80,7 @@ final commentsProvider =
 
 /// Provider for the current user's access token
 final authTokenProvider = FutureProvider<String?>((ref) async {
-  final oauth2Service = ref.read(oauth2ServiceProvider);
-  return await oauth2Service.getAccessToken();
+  return ref.read(jwtProvider.future);
 });
 
 Future<void> _enforceWriteIntegrity(Ref ref, IntegrityUseCase useCase) async {
@@ -278,7 +277,7 @@ class LocalFeedNotifier
       page: arg.page,
       pageSize: arg.pageSize,
       token:
-          null, // NOTE(asora-auth): inject access token once auth wiring lands
+          null, // NOTE(lythaus-auth): inject access token once auth wiring lands
     );
   }
 
@@ -299,7 +298,7 @@ class LocalFeedNotifier
         page: _currentPage + 1,
         pageSize: arg.pageSize,
         token:
-            null, // NOTE(asora-auth): inject access token once auth wiring lands
+            null, // NOTE(lythaus-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;
@@ -335,7 +334,7 @@ class NewCreatorsFeedNotifier extends AsyncNotifier<FeedResponse> {
       page: _currentPage,
       pageSize: _pageSize,
       token:
-          null, // NOTE(asora-auth): inject access token once auth wiring lands
+          null, // NOTE(lythaus-auth): inject access token once auth wiring lands
     );
   }
 
@@ -354,7 +353,7 @@ class NewCreatorsFeedNotifier extends AsyncNotifier<FeedResponse> {
         page: _currentPage + 1,
         pageSize: _pageSize,
         token:
-            null, // NOTE(asora-auth): inject access token once auth wiring lands
+            null, // NOTE(lythaus-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;
@@ -385,7 +384,7 @@ class PostNotifier extends FamilyAsyncNotifier<Post, String> {
     return feedService.getPost(
       postId: arg,
       token:
-          null, // NOTE(asora-auth): inject access token once auth wiring lands
+          null, // NOTE(lythaus-auth): inject access token once auth wiring lands
     );
   }
 
@@ -486,7 +485,7 @@ class CommentsNotifier
       page: arg.page,
       pageSize: arg.pageSize,
       token:
-          null, // NOTE(asora-auth): inject access token once auth wiring lands
+          null, // NOTE(lythaus-auth): inject access token once auth wiring lands
     );
   }
 
@@ -506,7 +505,7 @@ class CommentsNotifier
         page: _currentPage + 1,
         pageSize: arg.pageSize,
         token:
-            null, // NOTE(asora-auth): inject access token once auth wiring lands
+            null, // NOTE(lythaus-auth): inject access token once auth wiring lands
       );
 
       _currentPage++;

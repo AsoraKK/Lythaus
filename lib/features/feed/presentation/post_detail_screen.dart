@@ -3,14 +3,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/models.dart' as domain;
-import 'package:asora/features/reactions/presentation/reaction_bar.dart';
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/components/receipt_drawer.dart';
-import 'package:asora/ui/components/trust_strip_row.dart';
-import 'package:asora/features/feed/presentation/comment_thread_screen.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/features/reactions/presentation/reaction_bar.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/ui/components/receipt_drawer.dart';
+import 'package:lythaus/ui/components/trust_strip_row.dart';
+import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
   const PostDetailScreen({

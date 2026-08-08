@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/presentation/widgets/appeal_card.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/appeal_card.dart';
 
-// ASORA APPEAL SCREEN INTEGRATION TESTS
+// LYTHAUS APPEAL SCREEN INTEGRATION TESTS
 //
 // 🎯 Purpose: Test complete screen behavior with different states
 // ✅ Coverage: Loading, error, data states, user interactions

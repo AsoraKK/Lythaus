@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/utils/daily_limit_message.dart';
+import 'package:lythaus/core/utils/daily_limit_message.dart';
 
 void main() {
   group('dailyLimitMessage', () {

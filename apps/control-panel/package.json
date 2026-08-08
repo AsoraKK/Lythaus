@@ -1,5 +1,5 @@
 {
-  "name": "asora-control-panel",
+  "name": "lythaus-control-panel",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -25,6 +25,7 @@
     "vitest": "^4.1.10"
   },
   "overrides": {
-    "postcss": "8.5.24"
+    "postcss": "8.5.24",
+    "nanoid": "3.3.17"
   }
 }

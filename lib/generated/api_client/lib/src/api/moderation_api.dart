@@ -7,26 +7,26 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/accepted_response.dart';
-import 'package:asora_api_client/src/model/appeal_created_response.dart';
-import 'package:asora_api_client/src/model/appeal_vote_request.dart';
-import 'package:asora_api_client/src/model/appeal_vote_response.dart';
-import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/flag_content202_response.dart';
-import 'package:asora_api_client/src/model/flag_content_request.dart';
-import 'package:asora_api_client/src/model/flag_content_v1202_response.dart';
-import 'package:asora_api_client/src/model/flag_content_v1_request.dart';
-import 'package:asora_api_client/src/model/forbidden_error.dart';
-import 'package:asora_api_client/src/model/get_my_appeals200_response.dart';
-import 'package:asora_api_client/src/model/moderation_appeal_request.dart';
-import 'package:asora_api_client/src/model/moderation_flag_validation_error.dart';
-import 'package:asora_api_client/src/model/rate_limit_error.dart';
-import 'package:asora_api_client/src/model/review_appealed_content_request.dart';
-import 'package:asora_api_client/src/model/unauthorized_error.dart';
-import 'package:asora_api_client/src/model/validation_error_response.dart';
-import 'package:asora_api_client/src/model/vote_on_appeal_v1_request.dart';
 import 'package:built_value/json_object.dart';
+import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/accepted_response.dart';
+import 'package:lythaus_api_client/src/model/appeal_created_response.dart';
+import 'package:lythaus_api_client/src/model/appeal_vote_request.dart';
+import 'package:lythaus_api_client/src/model/appeal_vote_response.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/flag_content202_response.dart';
+import 'package:lythaus_api_client/src/model/flag_content_request.dart';
+import 'package:lythaus_api_client/src/model/flag_content_v1202_response.dart';
+import 'package:lythaus_api_client/src/model/flag_content_v1_request.dart';
+import 'package:lythaus_api_client/src/model/forbidden_error.dart';
+import 'package:lythaus_api_client/src/model/get_my_appeals200_response.dart';
+import 'package:lythaus_api_client/src/model/moderation_appeal_request.dart';
+import 'package:lythaus_api_client/src/model/moderation_flag_validation_error.dart';
+import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
+import 'package:lythaus_api_client/src/model/review_appealed_content_request.dart';
+import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
+import 'package:lythaus_api_client/src/model/validation_error_response.dart';
+import 'package:lythaus_api_client/src/model/vote_on_appeal_v1_request.dart';
 
 class ModerationApi {
 

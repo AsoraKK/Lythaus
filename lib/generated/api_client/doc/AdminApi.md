@@ -1,8 +1,8 @@
-# asora_api_client.api.AdminApi
+# lythaus_api_client.api.AdminApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -44,11 +44,6 @@ Method | HTTP request | Description
 [**adminInvitesRevoke**](AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{inviteId}/revoke | Revoke an invite code
 [**adminModerationClassReset**](AdminApi.md#adminmoderationclassreset) | **POST** /admin/moderation-classes/{className}/reset | Reset a moderation class to defaults
 [**adminModerationClassesList**](AdminApi.md#adminmoderationclasseslist) | **GET** /admin/moderation-classes | List moderation label classes
-[**adminModerationTestDelete**](AdminApi.md#adminmoderationtestdelete) | **DELETE** /admin/moderation/test/{path} | Proxy DELETE to Hive AI test endpoint
-[**adminModerationTestGet**](AdminApi.md#adminmoderationtestget) | **GET** /admin/moderation/test/{path} | Proxy GET to Hive AI test endpoint
-[**adminModerationTestPatch**](AdminApi.md#adminmoderationtestpatch) | **PATCH** /admin/moderation/test/{path} | Proxy PATCH to Hive AI test endpoint
-[**adminModerationTestPost**](AdminApi.md#adminmoderationtestpost) | **POST** /admin/moderation/test/{path} | Proxy POST to Hive AI test endpoint
-[**adminModerationTestPut**](AdminApi.md#adminmoderationtestput) | **PUT** /admin/moderation/test/{path} | Proxy PUT to Hive AI test endpoint
 [**adminModerationWeightsUpdate**](AdminApi.md#adminmoderationweightsupdate) | **POST** /admin/moderation-classes/weights | Bulk-update moderation class weights
 [**adminNewsIngest**](AdminApi.md#adminnewsingest) | **POST** /_admin/news/ingest | Ingest news items into the news board
 [**adminOpsMetrics**](AdminApi.md#adminopsmetrics) | **GET** /_admin/ops/metrics | Get operational metrics
@@ -70,9 +65,9 @@ Approves an appeal and restores content to PUBLISHED. Overrides existing outcome
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
 final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
 
@@ -115,9 +110,9 @@ Fetch appeal detail with content and decision context.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
 
 try {
@@ -158,9 +153,9 @@ Returns appeals awaiting admin review.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String status = status_example; // String | Filter by appeal status
 final String cursor = cursor_example; // String | Cursor for pagination
 final int limit = 56; // int | Number of items to return (1-100)
@@ -205,9 +200,9 @@ Moderator override for appeal outcomes. Idempotent per appeal.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
 final AdminAppealOverrideRequest adminAppealOverrideRequest = ; // AdminAppealOverrideRequest |
 final String idempotencyKey = idempotencyKey_example; // String | Idempotency key for safe retries
@@ -252,9 +247,9 @@ Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String appealId = appealId_example; // String | Appeal identifier
 final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
 
@@ -297,9 +292,9 @@ Returns recent admin audit entries.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final int limit = 56; // int | Number of entries to return (1-200)
 
 try {
@@ -338,9 +333,9 @@ Get budget configuration
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 
 try {
     final response = api.adminBudgetGet();
@@ -375,9 +370,9 @@ Update budget configuration
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -416,9 +411,9 @@ Get admin runtime configuration
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 
 try {
     final response = api.adminConfigGet();
@@ -453,9 +448,9 @@ Get public admin configuration
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 
 try {
     final response = api.adminConfigPublicGet();
@@ -490,9 +485,9 @@ Update public admin configuration
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -531,9 +526,9 @@ Update admin runtime configuration
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -574,9 +569,9 @@ Sets content state to BLOCKED.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String contentId = contentId_example; // String | Content identifier
 final AdminContentActionRequest adminContentActionRequest = ; // AdminContentActionRequest |
 
@@ -619,9 +614,9 @@ Sets content state to PUBLISHED.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String contentId = contentId_example; // String | Content identifier
 final AdminContentActionRequest adminContentActionRequest = ; // AdminContentActionRequest |
 
@@ -662,9 +657,9 @@ Cancel a data subject request
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -705,9 +700,9 @@ Download data subject request export
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String id = id_example; // String |
 
 try {
@@ -746,9 +741,9 @@ Get data subject request detail
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String id = id_example; // String |
 
 try {
@@ -787,9 +782,9 @@ Clear a legal hold
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -830,9 +825,9 @@ Place a legal hold
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -871,9 +866,9 @@ List data subject requests
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 
 try {
     final response = api.adminDsrList();
@@ -908,9 +903,9 @@ Release a data subject request
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -951,9 +946,9 @@ Retry a failed data subject request
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -994,9 +989,9 @@ First-reviewer decision on DSR
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -1037,9 +1032,9 @@ Second-reviewer decision on DSR
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -1082,9 +1077,9 @@ Fetch details for a flagged content item.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String flagId = flagId_example; // String | Flag identifier
 
 try {
@@ -1125,9 +1120,9 @@ Returns grouped flagged content for admin triage.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String status = status_example; // String | Filter by queue status
 final String cursor = cursor_example; // String | Cursor for pagination
 final int limit = 56; // int | Number of items to return (1-100)
@@ -1172,9 +1167,9 @@ Marks a flag as resolved with a reason code.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String flagId = flagId_example; // String | Flag identifier
 final AdminFlagResolveRequest adminFlagResolveRequest = ; // AdminFlagResolveRequest |
 
@@ -1217,9 +1212,9 @@ Creates multiple invite codes in a single request.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final AdminInviteBatchRequest adminInviteBatchRequest = ; // AdminInviteBatchRequest |
 
 try {
@@ -1260,9 +1255,9 @@ Creates a single admin invite code.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final AdminInviteCreateRequest adminInviteCreateRequest = {"email":"alpha.user@example.com","expiresInDays":14,"maxUses":1,"label":"technical-alpha"}; // AdminInviteCreateRequest |
 
 try {
@@ -1303,9 +1298,9 @@ Revokes the invite without deleting its audit record.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String inviteId = inviteId_example; // String | Opaque invite identifier
 
 try {
@@ -1346,9 +1341,9 @@ Fetch a single invite by opaque administrative identifier.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String inviteId = inviteId_example; // String | Opaque invite identifier
 
 try {
@@ -1389,9 +1384,9 @@ Returns opaque invite identifiers and usage metadata. Plaintext codes are never 
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String createdBy = createdBy_example; // String | Filter by creator id
 final bool unused = true; // bool | Filter for unused invites only
 final String cursor = cursor_example; // String | Cursor for pagination
@@ -1438,9 +1433,9 @@ Revokes an invite code immediately.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String inviteId = inviteId_example; // String | Opaque invite identifier
 final AdminInviteRevokeRequest adminInviteRevokeRequest = ; // AdminInviteRevokeRequest |
 
@@ -1481,9 +1476,9 @@ Reset a moderation class to defaults
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String className = className_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -1524,9 +1519,9 @@ List moderation label classes
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 
 try {
     final response = api.adminModerationClassesList();
@@ -1554,217 +1549,6 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **adminModerationTestDelete**
-> JsonObject adminModerationTestDelete(path)
-
-Proxy DELETE to Hive AI test endpoint
-
-### Example
-```dart
-import 'package:asora_api_client/api.dart';
-
-final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String |
-
-try {
-    final response = api.adminModerationTestDelete(path);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->adminModerationTestDelete: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **path** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **adminModerationTestGet**
-> JsonObject adminModerationTestGet(path)
-
-Proxy GET to Hive AI test endpoint
-
-### Example
-```dart
-import 'package:asora_api_client/api.dart';
-
-final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String |
-
-try {
-    final response = api.adminModerationTestGet(path);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->adminModerationTestGet: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **path** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **adminModerationTestPatch**
-> JsonObject adminModerationTestPatch(path, body)
-
-Proxy PATCH to Hive AI test endpoint
-
-### Example
-```dart
-import 'package:asora_api_client/api.dart';
-
-final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String |
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.adminModerationTestPatch(path, body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->adminModerationTestPatch: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **path** | **String**|  |
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **adminModerationTestPost**
-> JsonObject adminModerationTestPost(path, body)
-
-Proxy POST to Hive AI test endpoint
-
-### Example
-```dart
-import 'package:asora_api_client/api.dart';
-
-final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String |
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.adminModerationTestPost(path, body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->adminModerationTestPost: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **path** | **String**|  |
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **adminModerationTestPut**
-> JsonObject adminModerationTestPut(path, body)
-
-Proxy PUT to Hive AI test endpoint
-
-### Example
-```dart
-import 'package:asora_api_client/api.dart';
-
-final api = AsoraApiClient().getAdminApi();
-final String path = path_example; // String |
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.adminModerationTestPut(path, body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->adminModerationTestPut: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **path** | **String**|  |
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **adminModerationWeightsUpdate**
 > JsonObject adminModerationWeightsUpdate(body)
 
@@ -1772,9 +1556,9 @@ Bulk-update moderation class weights
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -1813,9 +1597,9 @@ Ingest news items into the news board
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -1854,9 +1638,9 @@ Get operational metrics
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 
 try {
     final response = api.adminOpsMetrics();
@@ -1891,9 +1675,9 @@ Get operational state flags
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 
 try {
     final response = api.adminOpsStateGet();
@@ -1928,9 +1712,9 @@ Update operational state flags
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -1971,9 +1755,9 @@ Update the subscription tier of a specific user. Requires active admin privilege
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String userId = userId_example; // String | User identifier
 final AdminSetUserTierRequest adminSetUserTierRequest = ; // AdminSetUserTierRequest |
 
@@ -2014,9 +1798,9 @@ Purge test data outside production
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final AdminTestDataPurgeRequest adminTestDataPurgeRequest = ; // AdminTestDataPurgeRequest |
 
 try {
@@ -2057,9 +1841,9 @@ Disables a user account immediately.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String userId = userId_example; // String | User identifier
 final AdminUserDisableRequest adminUserDisableRequest = ; // AdminUserDisableRequest |
 
@@ -2102,9 +1886,9 @@ Re-enables a previously disabled user.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String userId = userId_example; // String | User identifier
 final AdminUserEnableRequest adminUserEnableRequest = ; // AdminUserEnableRequest |
 
@@ -2147,9 +1931,9 @@ Search by user id, handle, display name, or email.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAdminApi();
+final api = LythausApiClient().getAdminApi();
 final String q = q_example; // String | Search query
 final int limit = 56; // int | Number of items to return (1-100)
 

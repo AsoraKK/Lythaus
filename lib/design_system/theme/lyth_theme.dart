@@ -2,15 +2,15 @@
 
 /// Lythaus Theme
 ///
-/// Material 3 theme for Lythaus (formerly Asora) using grayscale with warm ivory accents.
+/// Material 3 theme for Lythaus using grayscale with warm ivory accents.
 /// Implements semantic theming with role-based colors and extensible tokens.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:asora/design_system/theme/lyth_color_schemes.dart';
-import 'package:asora/design_system/theme/lyth_theme_extensions.dart';
+import 'package:lythaus/design_system/theme/lyth_color_schemes.dart';
+import 'package:lythaus/design_system/theme/lyth_theme_extensions.dart';
 
 class LythausTheme {
   /// Create light theme

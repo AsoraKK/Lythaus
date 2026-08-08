@@ -1,10 +1,10 @@
 import 'package:test/test.dart';
-import 'package:asora_api_client/asora_api_client.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
 
 
 /// tests for ReputationApi
 void main() {
-  final instance = AsoraApiClient().getReputationApi();
+  final instance = LythausApiClient().getReputationApi();
 
   group(ReputationApi, () {
     // Appeal a reputation ledger entry
@@ -18,7 +18,7 @@ void main() {
 
     // Get my reputation ledger
     //
-    // Returns user-visible reputation events. Internal reason codes, raw deltas, Hive scores, and anti-abuse scores are excluded.
+    // Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.
     //
     //Future<LedgerPage> reputationLedgerGet({ String filter, String cursor, int limit }) async
     test('test reputationLedgerGet', () async {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/network/dio_client.dart';
+import 'package:lythaus/core/network/dio_client.dart';
 
 void main() {
   group('HttpClientConfig', () {

@@ -3,15 +3,15 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:asora_api_client/src/model/admin_appeal_original_decision.dart';
-import 'package:asora_api_client/src/model/admin_appeal_final_decision.dart';
-import 'package:asora_api_client/src/model/admin_appeal_quorum_summary.dart';
-import 'package:asora_api_client/src/model/admin_appeal_status_detail.dart';
-import 'package:asora_api_client/src/model/admin_appeal_detail.dart';
-import 'package:asora_api_client/src/model/admin_appeal_content.dart';
-import 'package:asora_api_client/src/model/admin_appeal_target_type.dart';
-import 'package:asora_api_client/src/model/admin_appeal_audit_summary.dart';
-import 'package:asora_api_client/src/model/admin_appeal_vote_summary.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_detail.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_status_detail.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_vote_summary.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_original_decision.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_content.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_target_type.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_final_decision.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_quorum_summary.dart';
+import 'package:lythaus_api_client/src/model/admin_appeal_audit_summary.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 

@@ -1,9 +1,0 @@
-// Failure rate for CANARY Function App over last 10 minutes
-let app = 'asora-function-dev-canary';
-let minRequests = 50;
-requests
-| where timestamp > ago(10m)
-| where cloud_RoleName == app
-| summarize total = count(), failed = countif(tolong(resultCode) >= 500)
-| extend failureRate = iff(total == 0, 0.0, todouble(failed)/todouble(total)*100.0)
-| extend hasMinRequests = total >= minRequests

@@ -1,8 +1,8 @@
-# asora_api_client.api.UsersApi
+# lythaus_api_client.api.UsersApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -24,9 +24,9 @@ Follow a user
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getUsersApi();
+final api = LythausApiClient().getUsersApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -67,9 +67,9 @@ Unfollow a user
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getUsersApi();
+final api = LythausApiClient().getUsersApi();
 final String id = id_example; // String |
 
 try {
@@ -108,9 +108,9 @@ Get follow status for a user
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getUsersApi();
+final api = LythausApiClient().getUsersApi();
 final String id = id_example; // String |
 
 try {
@@ -149,9 +149,9 @@ Get a public user profile
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getUsersApi();
+final api = LythausApiClient().getUsersApi();
 final String id = id_example; // String |
 
 try {
@@ -190,9 +190,9 @@ List posts by a user
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getUsersApi();
+final api = LythausApiClient().getUsersApi();
 final String userId = userId_example; // String |
 
 try {
@@ -231,9 +231,9 @@ Get trust passport for a user
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getUsersApi();
+final api = LythausApiClient().getUsersApi();
 final String id = id_example; // String |
 
 try {

@@ -9,8 +9,8 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:asora/core/security/cert_pinning_common.dart';
-import 'package:asora/core/security/spki_utils.dart';
+import 'package:lythaus/core/security/cert_pinning_common.dart';
+import 'package:lythaus/core/security/spki_utils.dart';
 
 String _normalizePin(String pin) {
   if (pin.startsWith('sha256/')) {
@@ -174,7 +174,7 @@ void _logCertPinViolation(String host, String reason) {
     '🚨 SECURITY: Certificate pinning violation: ${jsonEncode(event)}',
   );
 
-  // NOTE(asora-telemetry): Route to the central telemetry pipeline once the
+  // NOTE(lythaus-telemetry): Route to the central telemetry pipeline once the
   // dedicated security event service is available.
   // TelemetryService.reportSecurityEvent(event);
 }

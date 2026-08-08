@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA DEVICE SECURITY SERVICE (Enhanced)
+/// LYTHAUS DEVICE SECURITY SERVICE (Enhanced)
 ///
 /// 🎯 Purpose: Detect compromised devices (root/jailbreak/emulator)
 /// 🔐 Security: Heuristic-based detection with telemetry
@@ -11,8 +11,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart'
     as jailbreak;
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/security_telemetry.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/security_telemetry.dart';
 
 /// Device security state
 class DeviceSecurityState {

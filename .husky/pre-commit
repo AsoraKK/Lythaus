@@ -25,7 +25,7 @@ echo "✅ Dart formatting applied and staged"
 echo "🔒 Scanning for plaintext secrets in code..."
 # Use ripgrep with a conservative pattern set, skipping docs and generated artifacts to reduce false positives
 if command -v rg >/dev/null 2>&1; then
-  if rg --hidden -n --no-ignore-vcs --line-number --multiline --pcre2 "(?:AKIA|AIza|-----BEGIN PRIVATE KEY-----|GITHUB_TOKEN|client_secret|azure_client_secret|DB_PASS|PASSWORD|TOKEN|SECRET)" functions src lib tools .github --glob '!**/dist/**' --glob '!**/node_modules/**' --glob '!**/*.map' --glob '!**/*.lock' > /tmp/secret_hits.txt 2>/dev/null; then
+  if rg --hidden -n --no-ignore-vcs --line-number --multiline --pcre2 "(?:AKIA|AIza|-----BEGIN PRIVATE KEY-----|GITHUB_TOKEN|CLIENT_SECRET|DB_PASS|PASSWORD|TOKEN|SECRET)" apps packages lib tools .github --glob '!**/dist/**' --glob '!**/node_modules/**' --glob '!**/*.map' --glob '!**/*.lock' > /tmp/secret_hits.txt 2>/dev/null; then
     echo "❌ Potential plaintext secrets detected in code paths. Failing commit."
     echo "First 50 hits shown (full report at /tmp/secret_hits.txt):"
     head -n 50 /tmp/secret_hits.txt || true

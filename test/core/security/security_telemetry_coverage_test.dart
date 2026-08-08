@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/security/security_telemetry.dart';
-import 'package:asora/core/config/environment_config.dart';
+import 'package:lythaus/core/security/security_telemetry.dart';
+import 'package:lythaus/core/config/environment_config.dart';
 
 void main() {
   group('SecurityEvent', () {
     test('tlsPinning factory creates event with correct fields', () {
       final event = SecurityEvent.tlsPinning(
-        host: 'api.asora.com',
+        host: 'api.lythaus.com',
         environment: 'production',
         result: 'pin_match',
         strictMode: true,
@@ -14,12 +14,12 @@ void main() {
       );
       expect(event.type, SecurityEventType.tlsPinning);
       expect(event.result, 'pin_match');
-      expect(event.host, 'api.asora.com');
+      expect(event.host, 'api.lythaus.com');
       expect(event.strictMode, isTrue);
       final json = event.toJson();
       expect(json['event_type'], 'tlsPinning');
       expect(json['result'], 'pin_match');
-      expect(json['host'], 'api.asora.com');
+      expect(json['host'], 'api.lythaus.com');
       expect(json['strict_mode'], true);
       expect(json['extra'], 'data');
       expect(json['environment'], 'production');

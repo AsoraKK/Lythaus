@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
+    "@lythaus/authenticity": "file:../../packages/authenticity",
     "@lythaus/cloudflare-env": "file:../../packages/cloudflare-env",
     "@lythaus/db": "file:../../packages/db",
     "@lythaus/observability": "file:../../packages/observability"

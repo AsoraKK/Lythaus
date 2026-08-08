@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
-import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/presentation/providers/moderation_console_providers.dart';
 
 class ModerationAuditTab extends ConsumerStatefulWidget {
   const ModerationAuditTab({super.key});

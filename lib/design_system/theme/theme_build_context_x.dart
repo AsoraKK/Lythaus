@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/theme/lyth_theme_extensions.dart';
+import 'package:lythaus/design_system/theme/lyth_theme_extensions.dart';
 
 /// Extension methods for accessing Lythaus theme tokens
 extension LythBuildContextX on BuildContext {

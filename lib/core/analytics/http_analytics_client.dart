@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA HTTP ANALYTICS CLIENT
+/// LYTHAUS HTTP ANALYTICS CLIENT
 ///
 /// 🎯 Purpose: Transport layer for analytics events to backend
 /// 🔐 Privacy: Batches events, sends to /api/analytics/events
@@ -12,7 +12,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:asora/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
 
 /// Analytics event model for batching
 class _AnalyticsEvent {

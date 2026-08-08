@@ -1,0 +1,6 @@
+{
+  "kind": "text",
+  "content": "A neutral synthetic example used to verify evaluation parsing.",
+  "declaredCreationMode": "human",
+  "expectedRecommendation": "review"
+}

@@ -3,15 +3,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
-import 'package:asora/features/moderation/presentation/widgets/moderator_guard.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/moderation_audit_tab.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/moderation_queue_tab.dart';
-import 'package:asora/features/moderation/presentation/providers/moderation_console_providers.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/moderator_guard.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_audit_tab.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_queue_tab.dart';
+import 'package:lythaus/features/moderation/presentation/providers/moderation_console_providers.dart';
 
 class ModerationConsoleScreen extends ConsumerStatefulWidget {
   const ModerationConsoleScreen({super.key});

@@ -7,12 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 class MockPostRepository extends Mock implements PostRepository {}
 
@@ -29,10 +28,6 @@ class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
   Future<void> refreshToken() async {}
   @override
   Future<void> signInWithEmail(String email, String password) async {}
-  @override
-  Future<void> signInWithOAuth2() async {}
-  @override
-  Future<void> signInWithProvider(OAuth2Provider provider) async {}
   @override
   Future<void> signOut() async => state = const AsyncValue.data(null);
   @override
@@ -205,8 +200,10 @@ void main() {
     });
   });
 
-  group('Media URL chip', () {
-    testWidgets('shows media URL chip when mediaUrl is set', (tester) async {
+  group('Deferred media UI', () {
+    testWidgets('does not expose media attachments in the launch UI', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 3000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -226,13 +223,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.image_outlined), findsAtLeastNWidgets(1));
-      // The text may be ellipsized in a SizedBox, so check by widget type
+      expect(find.byIcon(Icons.image_outlined), findsNothing);
       expect(
         find.byWidgetPredicate(
           (w) => w is Text && (w.data ?? '').contains('example.com'),
         ),
-        findsAtLeastNWidgets(1),
+        findsNothing,
       );
     });
   });

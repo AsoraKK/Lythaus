@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-// ASORA APPEAL MODEL TESTS
+// LYTHAUS APPEAL MODEL TESTS
 //
 // 🎯 Purpose: Test domain model serialization and validation
 // ✅ Coverage: JSON parsing, edge cases, validation, enum handling

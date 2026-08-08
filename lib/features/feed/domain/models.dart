@@ -2,7 +2,7 @@
 
 library feed_models;
 
-/// ASORA FEED DOMAIN MODELS
+/// LYTHAUS FEED DOMAIN MODELS
 ///
 /// 🎯 Purpose: Core domain models for social media feed features
 /// 🏗️ Architecture: Domain layer - defines business entities
@@ -322,7 +322,7 @@ class PostModerationData {
   final double score; // 0.0 - 1.0 confidence score
   final List<String> flags; // Content flags from AI analysis
   final DateTime analyzedAt;
-  final String provider; // 'hive_ai', 'openai_moderation', etc.
+  final String provider; // 'lythaus_authenticity_ai', 'openai_moderation', etc.
 
   const PostModerationData({
     required this.confidence,

@@ -1,13 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/error/error_codes.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/feed/application/social_feed_providers.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 
 class _FakeDeviceSecurityService implements DeviceSecurityService {
   _FakeDeviceSecurityService(this._state);

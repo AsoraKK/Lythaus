@@ -1,5 +1,5 @@
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/widgets/moderation_badges.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/widgets/moderation_badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

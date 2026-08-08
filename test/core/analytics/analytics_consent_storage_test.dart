@@ -1,5 +1,5 @@
-import 'package:asora/core/analytics/analytics_consent.dart';
-import 'package:asora/core/analytics/analytics_consent_storage.dart';
+import 'package:lythaus/core/analytics/analytics_consent.dart';
+import 'package:lythaus/core/analytics/analytics_consent_storage.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 

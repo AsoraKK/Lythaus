@@ -10,12 +10,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/profile/application/profile_providers.dart';
-import 'package:asora/features/profile/application/follow_providers.dart';
-import 'package:asora/features/profile/application/follow_service.dart';
-import 'package:asora/features/profile/domain/public_user.dart';
-import 'package:asora/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/features/profile/application/follow_providers.dart';
+import 'package:lythaus/features/profile/application/follow_service.dart';
+import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 PublicUser _fakeUser({
   String id = 'user-1',

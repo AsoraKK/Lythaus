@@ -1,9 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA USER MODELS
+/// LYTHAUS USER MODELS
 ///
 /// 🎯 Purpose: User data models for authentication and profiles
-/// 🔄 Sync: Matches Azure Functions backend response structure
+/// Matches the native public API response structure.
 /// 📊 Features: User profiles, authentication, statistics
 /// 🏗️ Architecture: Immutable data classes with JSON serialization
 library;
@@ -22,7 +22,7 @@ enum EditorialStatus {
   };
 }
 
-/// User profile model matching Azure Functions userProfile endpoint
+/// User profile model returned by the native user profile endpoint.
 class UserProfile {
   final String id;
   final String displayName;
@@ -55,7 +55,7 @@ class UserProfile {
   DateTime? get lastLoginDateTime =>
       lastLogin != null ? DateTime.parse(lastLogin!) : null;
 
-  /// Create UserProfile from Azure Functions JSON response
+  /// Create a user profile from the native API JSON response.
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'] as String,
@@ -89,13 +89,13 @@ class UserProfile {
   }
 }
 
-/// User statistics from Azure Functions
+/// User statistics returned by the native API.
 class UserStats {
   final int postsCount;
   final int
-  followersCount; // NOTE(asora-backlog): populate from social graph service once ready
+  followersCount; // NOTE(lythaus-backlog): populate from social graph service once ready
   final int
-  followingCount; // NOTE(asora-backlog): populate from social graph service once ready
+  followingCount; // NOTE(lythaus-backlog): populate from social graph service once ready
 
   const UserStats({
     required this.postsCount,
@@ -120,7 +120,7 @@ class UserStats {
   }
 }
 
-/// User profile response from Azure Functions
+/// User profile response from the native API.
 class UserProfileResponse {
   final bool success;
   final UserProfile user;
@@ -135,7 +135,7 @@ class UserProfileResponse {
   }
 }
 
-/// Authentication response from Azure Functions /auth endpoint
+/// Authentication response from the native email endpoint.
 class AuthResponse {
   final bool success;
   final String token;

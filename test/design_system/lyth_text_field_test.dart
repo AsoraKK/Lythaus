@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/design_system/index.dart';
+import 'package:lythaus/design_system/index.dart';
 
 void main() {
   testWidgets('LythTextField validates and reports changes', (tester) async {

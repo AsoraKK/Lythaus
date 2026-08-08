@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
 
 class AccountSecurityScreen extends ConsumerWidget {
   const AccountSecurityScreen({super.key});

@@ -7,7 +7,7 @@
 library;
 
 import 'package:dio/dio.dart';
-import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
 
 /// Response from GET /notifications
 class NotificationsListResponse {

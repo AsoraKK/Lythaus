@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/widgets/post_card.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/widgets/post_card.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
 void main() {
   testWidgets('PostCard does not render AI score badges', (tester) async {

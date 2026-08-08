@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA NOTIFICATIONS - DOMAIN MODELS
+/// LYTHAUS NOTIFICATIONS - DOMAIN MODELS
 ///
 /// Core models for notifications subsystem aligned with backend types
 library;

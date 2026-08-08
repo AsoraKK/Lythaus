@@ -4,8 +4,8 @@ library custom_feed_service;
 
 import 'package:dio/dio.dart';
 
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as domain;
 
 class CustomFeedService {
   const CustomFeedService(this._dio);

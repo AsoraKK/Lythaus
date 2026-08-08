@@ -1,14 +1,14 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/presentation/widgets/voting_status_badge.dart';
-import 'package:asora/features/moderation/presentation/widgets/urgency_indicator.dart';
-import 'package:asora/features/moderation/presentation/widgets/voting_progress_indicator.dart';
-import 'package:asora/features/core/utils/date_formatter.dart';
-import 'package:asora/features/core/utils/content_type_helper.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/voting_status_badge.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/urgency_indicator.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/voting_progress_indicator.dart';
+import 'package:lythaus/features/core/utils/date_formatter.dart';
+import 'package:lythaus/features/core/utils/content_type_helper.dart';
 
-/// ASORA APPEAL CARD WIDGET
+/// LYTHAUS APPEAL CARD WIDGET
 ///
 /// 🎯 Purpose: Display individual appeal in a card format
 /// ✅ Features: Status badge, urgency indicator, progress tracking

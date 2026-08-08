@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/security/cert_pinning.dart' as cp;
+import 'package:lythaus/core/security/cert_pinning.dart' as cp;
 
 void main() {
   group('Certificate pinning pins', () {

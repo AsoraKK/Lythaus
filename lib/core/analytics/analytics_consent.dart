@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ANALYTICS CONSENT MODEL
+/// LYTHAUS ANALYTICS CONSENT MODEL
 ///
 /// 🎯 Purpose: User consent tracking for analytics
 /// 🔐 Privacy: Default opt-out, explicit opt-in required

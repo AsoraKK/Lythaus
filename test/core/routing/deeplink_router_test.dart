@@ -1,11 +1,11 @@
-import 'package:asora/core/routing/deeplink_router.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/presentation/post_detail_screen.dart';
-import 'package:asora/features/notifications/presentation/notifications_settings_screen.dart';
+import 'package:lythaus/core/routing/deeplink_router.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
+import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,7 +71,7 @@ void main() {
     expect(find.byType(NotificationsSettingsScreen), findsOneWidget);
   });
 
-  testWidgets('navigates to post detail for asora post deep-link', (
+  testWidgets('navigates to post detail for lythaus post deep-link', (
     tester,
   ) async {
     await pumpRouterHost(
@@ -83,7 +83,7 @@ void main() {
     );
 
     final context = tester.element(find.text('Home host'));
-    DeeplinkRouter.navigate(context, 'asora://post/post-123');
+    DeeplinkRouter.navigate(context, 'lythaus://post/post-123');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
@@ -104,7 +104,7 @@ void main() {
     final context = tester.element(find.text('Home host'));
     DeeplinkRouter.navigate(
       context,
-      'asora://comment/comment-789?postId=post-123',
+      'lythaus://comment/comment-789?postId=post-123',
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));

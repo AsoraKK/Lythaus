@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_consent.dart';
-import 'package:asora/core/analytics/consent_aware_analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_consent.dart';
+import 'package:lythaus/core/analytics/consent_aware_analytics_client.dart';
 
 /// Simple mock analytics client for testing
 /// Note: Mocks are inherently mutable for tracking calls, so we use a wrapper

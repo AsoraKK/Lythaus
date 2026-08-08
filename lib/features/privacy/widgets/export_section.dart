@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/privacy/widgets/cooldown_row.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/privacy/widgets/cooldown_row.dart';
 
 /// Card widget for the privacy export flow.
 class PrivacyExportSection extends StatelessWidget {

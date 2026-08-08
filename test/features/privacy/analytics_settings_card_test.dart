@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_consent.dart';
-import 'package:asora/core/analytics/analytics_consent_storage.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/features/privacy/widgets/analytics_settings_card.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_consent.dart';
+import 'package:lythaus/core/analytics/analytics_consent_storage.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/features/privacy/widgets/analytics_settings_card.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

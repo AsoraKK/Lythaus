@@ -5,14 +5,14 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/core/logging/app_logger.dart';
-import 'package:asora/features/privacy/services/privacy_api.dart';
-import 'package:asora/features/privacy/services/privacy_repository.dart';
-import 'package:asora/features/privacy/state/privacy_state.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/logging/app_logger.dart';
+import 'package:lythaus/features/privacy/services/privacy_api.dart';
+import 'package:lythaus/features/privacy/services/privacy_repository.dart';
+import 'package:lythaus/features/privacy/state/privacy_state.dart';
 
 /// Riverpod controller orchestrating privacy flows.
 class PrivacyController extends StateNotifier<PrivacyState> {

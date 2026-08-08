@@ -1,43 +1,23 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA SERVICE PROVIDERS
+/// LYTHAUS SERVICE PROVIDERS
 ///
 /// Purpose: Riverpod providers for dependency injection.
 /// Architecture: Clean service layer architecture.
 library;
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/services/auth_service.dart';
-import 'package:asora/services/media/media_upload_service.dart';
-import 'package:asora/services/moderation_service.dart';
-import 'package:asora/services/oauth2_service.dart';
-import 'package:asora/services/post_service.dart';
-import 'package:asora/services/push/device_token_service.dart';
-import 'package:asora/services/push/push_notification_service.dart';
-import 'package:asora/services/subscription/subscription_service.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/services/moderation_service.dart';
+import 'package:lythaus/services/post_service.dart';
+import 'package:lythaus/services/push/device_token_service.dart';
+import 'package:lythaus/services/push/push_notification_service.dart';
+import 'package:lythaus/services/subscription/subscription_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:opentelemetry/api.dart';
 
 /// Flutter secure storage provider.
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage();
-});
-
-/// OAuth2 service provider.
-final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
-  final dio = ref.watch(secureDioProvider);
-  final storage = ref.watch(secureStorageProvider);
-  return OAuth2Service(
-    dio: dio,
-    secureStorage: storage,
-    tracer: globalTracerProvider.getTracer('oauth2_service'),
-  );
-});
-
-/// Authentication service provider.
-final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(); // No constructor parameters
 });
 
 /// Post service provider.
@@ -70,12 +50,6 @@ final deviceTokenServiceProvider = Provider<DeviceTokenService>((ref) {
     pushService: pushService,
     storage: storage,
   );
-});
-
-/// Media upload service provider.
-final mediaUploadServiceProvider = Provider<MediaUploadService>((ref) {
-  final dio = ref.watch(secureDioProvider);
-  return MediaUploadService(apiDio: dio);
 });
 
 /// Subscription service provider (backend-only until IAP is wired).

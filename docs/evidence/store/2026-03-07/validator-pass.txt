@@ -1,3 +1,0 @@
-PENDING: populate docs/runbooks/store-submission-evidence.md and rerun:
-bash scripts/validate-store-submission-evidence.sh
-

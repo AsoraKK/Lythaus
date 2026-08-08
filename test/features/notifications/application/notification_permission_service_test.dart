@@ -1,5 +1,5 @@
-import 'package:asora/features/notifications/application/notification_permission_service.dart';
-import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/features/notifications/application/notification_permission_service.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart';
 

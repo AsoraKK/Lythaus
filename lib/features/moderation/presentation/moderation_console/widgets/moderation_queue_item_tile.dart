@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
 
 /// Represents a single moderation queue row.
 class ModerationQueueItemTile extends StatelessWidget {

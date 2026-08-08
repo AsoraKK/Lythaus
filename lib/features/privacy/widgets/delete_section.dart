@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 /// Destructive action card for account deletion.
 class PrivacyDeleteSection extends StatelessWidget {

@@ -1,8 +1,8 @@
-# asora_api_client.model.ModerationFlagValidationError
+# lythaus_api_client.model.ModerationFlagValidationError
 
 ## Load the model package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 ## Properties

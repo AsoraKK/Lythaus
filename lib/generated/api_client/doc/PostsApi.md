@@ -1,8 +1,8 @@
-# asora_api_client.api.PostsApi
+# lythaus_api_client.api.PostsApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -35,9 +35,9 @@ Create a new post.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final CreatePostRequest createPostRequest = {"text":"Launch checklist is locked and ready for review.","aiLabel":"human"}; // CreatePostRequest |
 
 try {
@@ -76,9 +76,9 @@ Bookmark a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -119,9 +119,9 @@ Remove a bookmark
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 
 try {
@@ -160,9 +160,9 @@ Get bookmark status for a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 
 try {
@@ -201,9 +201,9 @@ Create a comment on a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String postId = postId_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -244,9 +244,9 @@ List comments on a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String postId = postId_example; // String |
 
 try {
@@ -287,9 +287,9 @@ Create a post for the authenticated user. An authorship disclosure is required. 
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final CreatePostRequest createPostRequest = ; // CreatePostRequest |
 
 try {
@@ -328,9 +328,9 @@ Get a post by ID
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 
 try {
@@ -369,9 +369,9 @@ Get engagement insights for a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 
 try {
@@ -410,9 +410,9 @@ Like a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -453,9 +453,9 @@ Unlike a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 
 try {
@@ -494,9 +494,9 @@ Get like status for a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 
 try {
@@ -535,9 +535,9 @@ Get read receipt for a post
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 
 try {
@@ -578,9 +578,9 @@ Update a post owned by the caller. Content or media changes require a new author
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 final UpdatePostRequest updatePostRequest = ; // UpdatePostRequest |
 
@@ -621,9 +621,9 @@ Record a post view event
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPostsApi();
+final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 

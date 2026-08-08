@@ -5,12 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/core/analytics/analytics_consent.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/analytics/analytics_consent.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 /// Analytics settings card for privacy settings screen.
 ///

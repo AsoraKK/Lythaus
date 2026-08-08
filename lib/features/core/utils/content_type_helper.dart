@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// ASORA CONTENT TYPE HELPER UTILITY
+/// LYTHAUS CONTENT TYPE HELPER UTILITY
 ///
 /// 🎯 Purpose: Helper functions for different content types
 /// ✅ Features: Icons, labels, and metadata for content types

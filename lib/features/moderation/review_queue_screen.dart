@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:asora/features/moderation/moderation_service.dart';
+import 'package:lythaus/features/moderation/moderation_service.dart';
 
 class ReviewQueueScreen extends StatefulWidget {
   final String baseUrl;

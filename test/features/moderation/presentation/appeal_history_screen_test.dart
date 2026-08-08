@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/moderation/application/moderation_providers.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/presentation/screens/appeal_history_screen.dart';
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/presentation/screens/appeal_history_screen.dart';
 
 Appeal _appeal({
   required String id,

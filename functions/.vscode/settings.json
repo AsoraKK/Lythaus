@@ -1,5 +1,0 @@
-{
-  "typescript.preferences.tsconfig": {
-    "functions/tests/**/*.test.ts": "functions/tsconfig.tests.json"
-  }
-}

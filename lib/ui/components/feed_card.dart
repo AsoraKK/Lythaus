@@ -2,13 +2,13 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/components/lyth_chip.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/components/tier_badge.dart';
-import 'package:asora/ui/components/trust_strip_row.dart';
-import 'package:asora/ui/components/receipt_drawer.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/components/lyth_chip.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/ui/components/tier_badge.dart';
+import 'package:lythaus/ui/components/trust_strip_row.dart';
+import 'package:lythaus/ui/components/receipt_drawer.dart';
 
 class FeedCard extends StatelessWidget {
   const FeedCard({

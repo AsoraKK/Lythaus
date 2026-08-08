@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA SECURE DIO CLIENT
+/// LYTHAUS SECURE DIO CLIENT
 ///
 /// 🎯 Purpose: Secure HTTP client with certificate pinning and integrity checks
 /// 🔐 Security: SPKI pinning, device integrity validation, secure headers
@@ -12,14 +12,13 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/core/security/device_integrity.dart';
-import 'package:asora/core/security/security_overrides.dart';
-import 'package:asora/core/security/security_telemetry.dart';
-import 'package:asora/core/error/error_codes.dart';
-import 'package:asora/features/admin/application/test_mode_interceptor.dart';
-import 'package:asora/core/network/dio_client_adapter_stub.dart'
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/core/security/device_integrity.dart';
+import 'package:lythaus/core/security/security_overrides.dart';
+import 'package:lythaus/core/security/security_telemetry.dart';
+import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/network/dio_client_adapter_stub.dart'
     if (dart.library.io) 'dio_client_adapter_io.dart'
     if (dart.library.html) 'dio_client_adapter_web.dart';
 
@@ -47,10 +46,6 @@ final secureDioProvider = Provider<Dio>((ref) {
 
   // Add device integrity interceptor
   dio.interceptors.add(_DeviceIntegrityInterceptor(ref));
-
-  // Add test mode interceptor for Live Test Mode header injection
-  // This MUST be added AFTER auth interceptors but BEFORE logging
-  dio.interceptors.add(TestModeInterceptor(ref));
 
   // Add logging in debug mode
   if (kDebugMode) {

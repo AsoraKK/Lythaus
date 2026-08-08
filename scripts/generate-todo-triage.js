@@ -8,7 +8,6 @@ const repoRoot = process.cwd();
 const outputPath = process.argv[2] || 'docs/runbooks/todo-triage.md';
 
 const targetRoots = [
-  'functions/src',
   'lib',
   'apps/control-panel/src',
   'apps/marketing-site/src',
@@ -62,7 +61,7 @@ function normalize(p) {
 
 function classify(record) {
   if (p1Pattern.test(record.text)) return 'P1';
-  if (record.file.startsWith('functions/src/') || record.file.startsWith('lib/core/') || record.file.startsWith('lib/features/')) return 'P2';
+  if (record.file.startsWith('lib/core/') || record.file.startsWith('lib/features/')) return 'P2';
   return 'P3';
 }
 
@@ -116,7 +115,7 @@ const md = [
   '',
   `Generated: ${generatedAt}`,
   '',
-  'Scope: `functions/src`, `lib`, `apps/control-panel/src`, `apps/marketing-site/src`, `scripts` (generated/mobile platform folders excluded).',
+  'Scope: `lib`, `apps`, `packages`, and `scripts` (generated/mobile platform folders excluded).',
   '',
   '## Summary',
   '',

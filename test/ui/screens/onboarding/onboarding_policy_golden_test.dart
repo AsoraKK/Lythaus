@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/design_system/index.dart';
-import 'package:asora/screens/lock_screen.dart';
-import 'package:asora/ui/screens/onboarding/onboarding_intro.dart';
+import 'package:lythaus/design_system/index.dart';
+import 'package:lythaus/screens/lock_screen.dart';
+import 'package:lythaus/ui/screens/onboarding/onboarding_intro.dart';
 import '../../../golden_test_utils.dart';
 
 const Size _kOnboardingGoldenSize = Size(420, 760);

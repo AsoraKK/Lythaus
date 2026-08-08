@@ -1,7 +1,7 @@
 -- Synthetic development seed only. Never apply to production `main`.
 INSERT INTO system.feature_flags (flag_key, enabled, policy_version) VALUES
-  ('auth.apple', false, 'v1'),
-  ('auth.world_id', false, 'v1'),
+  ('auth.email', true, 'v2'),
+  ('auth.guest', true, 'v2'),
   ('media.video', false, 'v1'),
   ('billing.paid_tiers', false, 'v1'),
   ('affiliate.program', false, 'v1'),

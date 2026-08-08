@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
-import 'package:asora/state/models/feed_models.dart';
+import 'package:lythaus/state/models/feed_models.dart';
 
 class TrustStripRow extends StatelessWidget {
   const TrustStripRow({super.key, required this.summary, required this.onTap});

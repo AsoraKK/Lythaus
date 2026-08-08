@@ -1,10 +1,10 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/core/utils/content_type_helper.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/core/utils/content_type_helper.dart';
 
-/// ASORA CONTENT TYPE BREAKDOWN WIDGET
+/// LYTHAUS CONTENT TYPE BREAKDOWN WIDGET
 ///
 /// 🎯 Purpose: Display breakdown of appeals by content type
 /// 🔍 Single Responsibility: Content type analytics only

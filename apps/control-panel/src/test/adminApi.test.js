@@ -90,9 +90,9 @@ describe('adminApi URL construction', () => {
         };
       });
 
-      await adminRequest('/moderation/test', { method: 'POST' });
+      await adminRequest('_admin/flags', { method: 'POST' });
 
-      expect(capturedUrl).toBe(`${mockOrigin}/api/admin/moderation/test`);
+      expect(capturedUrl).toBe(`${mockOrigin}/api/admin/_admin/flags`);
     });
 
     it('handles paths without leading slash', async () => {
@@ -106,9 +106,9 @@ describe('adminApi URL construction', () => {
       });
 
       const { adminRequest } = await import('../api/adminApi.js');
-      await adminRequest('moderation/test', { method: 'GET' });
+      await adminRequest('_admin/flags', { method: 'GET' });
 
-      expect(capturedUrl).toBe(`${mockOrigin}/api/admin/moderation/test`);
+      expect(capturedUrl).toBe(`${mockOrigin}/api/admin/_admin/flags`);
     });
 
     it('handles a base URL with trailing slash', async () => {
@@ -165,9 +165,9 @@ describe('adminApi URL construction', () => {
       });
 
       const { adminRequest } = await import('../api/adminApi.js');
-      await adminRequest('/moderation/test', { method: 'POST' });
+      await adminRequest('_admin/flags', { method: 'POST' });
 
-      expect(capturedUrl).toBe(`${directApiUrl}/moderation/test`);
+      expect(capturedUrl).toBe(`${directApiUrl}/_admin/flags`);
     });
   });
 

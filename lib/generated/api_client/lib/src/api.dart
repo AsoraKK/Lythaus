@@ -4,37 +4,36 @@
 
 import 'package:dio/dio.dart';
 import 'package:built_value/serializer.dart';
-import 'package:asora_api_client/src/serializers.dart';
-import 'package:asora_api_client/src/auth/api_key_auth.dart';
-import 'package:asora_api_client/src/auth/basic_auth.dart';
-import 'package:asora_api_client/src/auth/bearer_auth.dart';
-import 'package:asora_api_client/src/auth/oauth.dart';
-import 'package:asora_api_client/src/api/admin_api.dart';
-import 'package:asora_api_client/src/api/analytics_api.dart';
-import 'package:asora_api_client/src/api/appeals_api.dart';
-import 'package:asora_api_client/src/api/auth_api.dart';
-import 'package:asora_api_client/src/api/custom_feeds_api.dart';
-import 'package:asora_api_client/src/api/feed_api.dart';
-import 'package:asora_api_client/src/api/health_api.dart';
-import 'package:asora_api_client/src/api/moderation_api.dart';
-import 'package:asora_api_client/src/api/notifications_api.dart';
-import 'package:asora_api_client/src/api/payments_api.dart';
-import 'package:asora_api_client/src/api/posts_api.dart';
-import 'package:asora_api_client/src/api/privacy_api.dart';
-import 'package:asora_api_client/src/api/privacy_admin_api.dart';
-import 'package:asora_api_client/src/api/reactions_api.dart';
-import 'package:asora_api_client/src/api/reputation_api.dart';
-import 'package:asora_api_client/src/api/rewards_api.dart';
-import 'package:asora_api_client/src/api/subscription_api.dart';
-import 'package:asora_api_client/src/api/users_api.dart';
+import 'package:lythaus_api_client/src/serializers.dart';
+import 'package:lythaus_api_client/src/auth/api_key_auth.dart';
+import 'package:lythaus_api_client/src/auth/basic_auth.dart';
+import 'package:lythaus_api_client/src/auth/bearer_auth.dart';
+import 'package:lythaus_api_client/src/api/admin_api.dart';
+import 'package:lythaus_api_client/src/api/analytics_api.dart';
+import 'package:lythaus_api_client/src/api/appeals_api.dart';
+import 'package:lythaus_api_client/src/api/auth_api.dart';
+import 'package:lythaus_api_client/src/api/custom_feeds_api.dart';
+import 'package:lythaus_api_client/src/api/feed_api.dart';
+import 'package:lythaus_api_client/src/api/health_api.dart';
+import 'package:lythaus_api_client/src/api/moderation_api.dart';
+import 'package:lythaus_api_client/src/api/notifications_api.dart';
+import 'package:lythaus_api_client/src/api/payments_api.dart';
+import 'package:lythaus_api_client/src/api/posts_api.dart';
+import 'package:lythaus_api_client/src/api/privacy_api.dart';
+import 'package:lythaus_api_client/src/api/privacy_admin_api.dart';
+import 'package:lythaus_api_client/src/api/reactions_api.dart';
+import 'package:lythaus_api_client/src/api/reputation_api.dart';
+import 'package:lythaus_api_client/src/api/rewards_api.dart';
+import 'package:lythaus_api_client/src/api/subscription_api.dart';
+import 'package:lythaus_api_client/src/api/users_api.dart';
 
-class AsoraApiClient {
+class LythausApiClient {
   static const String basePath = r'https://api.lythaus.co/api';
 
   final Dio dio;
   final Serializers serializers;
 
-  AsoraApiClient({
+  LythausApiClient({
     Dio? dio,
     Serializers? serializers,
     String? basePathOverride,
@@ -48,7 +47,6 @@ class AsoraApiClient {
             )) {
     if (interceptors == null) {
       this.dio.interceptors.addAll([
-        OAuthInterceptor(),
         BasicAuthInterceptor(),
         BearerAuthInterceptor(),
         ApiKeyAuthInterceptor(),
@@ -58,11 +56,6 @@ class AsoraApiClient {
     }
   }
 
-  void setOAuthToken(String name, String token) {
-    if (this.dio.interceptors.any((i) => i is OAuthInterceptor)) {
-      (this.dio.interceptors.firstWhere((i) => i is OAuthInterceptor) as OAuthInterceptor).tokens[name] = token;
-    }
-  }
 
   void setBearerAuth(String name, String token) {
     if (this.dio.interceptors.any((i) => i is BearerAuthInterceptor)) {

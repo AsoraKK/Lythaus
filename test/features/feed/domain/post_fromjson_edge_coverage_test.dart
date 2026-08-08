@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
 
 /// Coverage tests for Post.fromJson edge-case branches in models.dart.
 /// Targets uncovered lines:

@@ -1,8 +1,8 @@
-# asora_api_client.api.AnalyticsApi
+# lythaus_api_client.api.AnalyticsApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -19,9 +19,9 @@ Ingest client-side analytics events
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getAnalyticsApi();
+final api = LythausApiClient().getAnalyticsApi();
 final JsonObject body = Object; // JsonObject |
 
 try {

@@ -11,6 +11,7 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
+      "@lythaus/authenticity": ["packages/authenticity/src/index.ts"],
       "@lythaus/contracts": ["packages/contracts/src/index.ts"],
       "@lythaus/db": ["packages/db/src/index.ts"],
       "@lythaus/security": ["packages/security/src/index.ts"],

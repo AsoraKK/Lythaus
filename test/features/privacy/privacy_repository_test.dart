@@ -1,6 +1,6 @@
-import 'package:asora/core/logging/app_logger.dart';
-import 'package:asora/features/privacy/services/privacy_api.dart';
-import 'package:asora/features/privacy/services/privacy_repository.dart';
+import 'package:lythaus/core/logging/app_logger.dart';
+import 'package:lythaus/features/privacy/services/privacy_api.dart';
+import 'package:lythaus/features/privacy/services/privacy_repository.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

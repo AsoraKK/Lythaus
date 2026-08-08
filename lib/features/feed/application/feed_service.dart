@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA FEED SERVICE
+/// LYTHAUS FEED SERVICE
 ///
 /// 🎯 Purpose: Implementation of feed repository interface
 /// 🏗️ Architecture: Application layer - implements domain contracts
@@ -9,9 +9,9 @@
 library;
 
 import 'package:dio/dio.dart';
-import 'package:asora/features/feed/domain/feed_repository.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/core/observability/asora_tracer.dart';
+import 'package:lythaus/features/feed/domain/feed_repository.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/core/observability/lythaus_tracer.dart';
 
 /// Concrete implementation of [FeedRepository]
 ///
@@ -32,7 +32,7 @@ class FeedService implements FeedRepository {
     AppealFilters? filters,
     required String token,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'FeedService.getVotingFeed',
       () async {
         final queryParams = <String, dynamic>{
@@ -58,7 +58,7 @@ class FeedService implements FeedRepository {
         );
       },
       attributes:
-          AsoraTracer.httpRequestAttributes(
+          LythausTracer.httpRequestAttributes(
             method: 'GET',
             url: '/api/reviewAppealedContent',
           )..addAll({
@@ -91,7 +91,7 @@ class FeedService implements FeedRepository {
     int page = 1,
     int pageSize = 20,
   }) async {
-    return AsoraTracer.traceOperation(
+    return LythausTracer.traceOperation(
       'FeedService.getVotingHistory',
       () async {
         final response = await _dio.get<Map<String, dynamic>>(
@@ -114,7 +114,7 @@ class FeedService implements FeedRepository {
           code: 'LOAD_HISTORY_FAILED',
         );
       },
-      attributes: AsoraTracer.httpRequestAttributes(
+      attributes: LythausTracer.httpRequestAttributes(
         method: 'GET',
         url: '/api/getMyVotes',
       )..addAll({'request.page': page, 'request.page_size': pageSize}),

@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/ui/screens/onboarding/onboarding_custom_feed_prompt.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/ui/screens/onboarding/onboarding_custom_feed_prompt.dart';
 
 Widget _buildApp() {
   return ProviderScope(

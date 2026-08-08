@@ -49,7 +49,7 @@ subprojects {
             // Fallback when manifest has no `package` attribute.
             if (android.namespace.isNullOrBlank()) {
                 val safeName = project.name.replace(Regex("[^A-Za-z0-9_]"), "_")
-                android.namespace = "com.asora.thirdparty.$safeName"
+                android.namespace = "co.lythaus.thirdparty.$safeName"
             }
         }
     }

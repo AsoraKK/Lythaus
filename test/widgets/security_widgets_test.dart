@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/core/security/device_integrity.dart';
-import 'package:asora/widgets/security_widgets.dart';
+import 'package:lythaus/core/security/device_integrity.dart';
+import 'package:lythaus/widgets/security_widgets.dart';
 
 class _MockDeviceIntegrityService extends Mock
     implements DeviceIntegrityService {}

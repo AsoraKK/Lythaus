@@ -9,10 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:asora/design_system/index.dart';
-import 'package:asora/design_system/components/lyth_empty_state.dart';
-import 'package:asora/design_system/components/lyth_confirm_dialog.dart';
-import 'package:asora/design_system/components/lyth_skeleton.dart';
+import 'package:lythaus/design_system/index.dart';
+import 'package:lythaus/design_system/components/lyth_empty_state.dart';
+import 'package:lythaus/design_system/components/lyth_confirm_dialog.dart';
+import 'package:lythaus/design_system/components/lyth_skeleton.dart';
 
 void main() {
   setUpAll(() {

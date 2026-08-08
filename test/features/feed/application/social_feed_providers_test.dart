@@ -1,21 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/feed/application/social_feed_providers.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/feed/domain/social_feed_repository.dart';
-import 'package:asora/state/models/feed_models.dart' as state;
-import 'package:asora/state/providers/feed_providers.dart';
-
-class FakeOAuth2Service extends OAuth2Service {
-  FakeOAuth2Service(this.token) : super();
-
-  final String? token;
-
-  @override
-  Future<String?> getAccessToken() async => token;
-}
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/state/models/feed_models.dart' as state;
+import 'package:lythaus/state/providers/feed_providers.dart';
 
 class FakeSocialFeedRepository implements SocialFeedRepository {
   int trendingCalls = 0;
@@ -318,7 +308,6 @@ void main() {
       overrides: [
         socialFeedServiceProvider.overrideWithValue(repo),
         jwtProvider.overrideWith((ref) async => 'token'),
-        oauth2ServiceProvider.overrideWithValue(FakeOAuth2Service('oauth')),
       ],
     );
     addTearDown(container.dispose);
@@ -327,7 +316,7 @@ void main() {
     expect(search.posts, hasLength(1));
 
     final token = await container.read(authTokenProvider.future);
-    expect(token, 'oauth');
+    expect(token, 'token');
   });
 
   test('live feed provider maps posts and home feed index', () async {

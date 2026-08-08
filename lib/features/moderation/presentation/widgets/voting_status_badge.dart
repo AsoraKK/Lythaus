@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-/// ASORA VOTING STATUS BADGE
+/// LYTHAUS VOTING STATUS BADGE
 ///
 /// 🎯 Purpose: Display voting status with color-coded badge
 /// 🔍 Single Responsibility: Status visualization only

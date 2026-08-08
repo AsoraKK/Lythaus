@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/presentation/widgets/appeal_voting_card.dart'
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/appeal_voting_card.dart'
     as moderation_widgets;
 
 class AppealVotingCard extends ConsumerWidget {

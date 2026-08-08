@@ -2,9 +2,9 @@
 
 // lib/features/auth/domain/user.dart
 
-import 'package:asora/features/auth/domain/subscription_tier.dart';
+import 'package:lythaus/features/auth/domain/subscription_tier.dart';
 
-/// User model representing an authenticated user in the Asora system
+/// User model representing an authenticated user in the Lythaus system
 class User {
   const User({
     required this.id,
@@ -143,7 +143,7 @@ class User {
   }
 }
 
-/// User roles in the Asora system
+/// User roles in the Lythaus system
 enum UserRole {
   user('user'),
   moderator('moderator'),

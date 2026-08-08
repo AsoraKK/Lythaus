@@ -5,19 +5,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_chip.dart';
-import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/components/lyth_text_field.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/error/error_codes.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/state/models/feed_models.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_chip.dart';
+import 'package:lythaus/design_system/components/lyth_snackbar.dart';
+import 'package:lythaus/design_system/components/lyth_text_field.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/state/models/feed_models.dart';
 
 class CreatePostModal extends ConsumerStatefulWidget {
   const CreatePostModal({super.key, this.canMarkNews = true});

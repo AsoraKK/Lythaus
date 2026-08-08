@@ -2,12 +2,12 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_icon_button.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_icon_button.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-/// ASORA MODERATION BADGES
+/// LYTHAUS MODERATION BADGES
 ///
 /// 🎯 Purpose: Display moderation status and appeal state on content
 /// ✅ Features: Flagged warnings, appeal status

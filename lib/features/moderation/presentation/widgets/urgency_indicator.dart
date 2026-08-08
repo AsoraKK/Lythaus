@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
-/// ASORA URGENCY INDICATOR
+/// LYTHAUS URGENCY INDICATOR
 ///
 /// 🎯 Purpose: Display urgency score with color-coded indicator
 /// 🔍 Single Responsibility: Urgency visualization only

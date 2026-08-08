@@ -12,11 +12,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/error/error_codes.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/core/security/security_overrides.dart';
-import 'package:asora/core/security/security_telemetry.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/core/security/security_overrides.dart';
+import 'package:lythaus/core/security/security_telemetry.dart';
 
 /// Use cases for integrity checks
 ///

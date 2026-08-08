@@ -5,17 +5,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/design_system/components/lyth_chip.dart';
-import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/design_system/components/lyth_chip.dart';
+import 'package:lythaus/design_system/components/lyth_snackbar.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
 
-/// ASORA APPEAL VOTING CARD
+/// LYTHAUS APPEAL VOTING CARD
 ///
 /// 🎯 Purpose: Interactive card for community voting on appealed content
 /// ✅ Features: Content preview, voting buttons, progress display

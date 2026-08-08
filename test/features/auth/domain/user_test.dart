@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 void main() {
   group('User model', () {
@@ -48,7 +48,7 @@ void main() {
     });
 
     test('fromJson handles snake_case API response', () {
-      // This is the format returned by the Azure Functions UserInfo endpoint
+      // This is the format returned by the native user-info endpoint.
       final apiResponse = {
         'sub': 'user-uuid-123',
         'email': 'api@example.com',

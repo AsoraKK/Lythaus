@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 
 Post _testPost({String id = 'p1'}) => Post(
   id: id,
@@ -276,32 +276,29 @@ void main() {
     test('toJson basic fields', () {
       const req = CreatePostRequest(text: 'Hello');
       final json = req.toJson();
-      expect(json['content'], 'Hello');
-      expect(json['isNews'], false);
-      expect(json['contentType'], 'text');
-      expect(json['aiLabel'], 'human');
-      expect(json.containsKey('mediaUrls'), isFalse);
-      expect(json.containsKey('proofSignals'), isFalse);
+      expect(json['body'], 'Hello');
+      expect(json['declaredCreationMode'], 'human');
+      expect(json['geoScope'], 'none');
     });
 
-    test('toJson with mediaUrl', () {
+    test('toJson excludes deferred media', () {
       const req = CreatePostRequest(text: 'X', mediaUrl: 'http://img.png');
       final json = req.toJson();
-      expect(json['mediaUrls'], ['http://img.png']);
+      expect(json.containsKey('mediaUrls'), isFalse);
     });
 
-    test('toJson with proof signals', () {
+    test('toJson excludes deferred proof signals', () {
       const req = CreatePostRequest(
         text: 'X',
         proofSignals: ProofSignals(captureMetadataHash: 'abc'),
       );
       final json = req.toJson();
-      expect(json.containsKey('proofSignals'), isTrue);
+      expect(json.containsKey('proofSignals'), isFalse);
     });
 
-    test('toJson with isNews true', () {
+    test('toJson excludes deferred news flag', () {
       const req = CreatePostRequest(text: 'News', isNews: true);
-      expect(req.toJson()['isNews'], true);
+      expect(req.toJson().containsKey('isNews'), isFalse);
     });
   });
 

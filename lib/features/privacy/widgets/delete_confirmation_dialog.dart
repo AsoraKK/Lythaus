@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_text_field.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_text_field.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 /// Dialog that requires users to type DELETE before confirming.
 class DeleteConfirmationDialog extends StatefulWidget {

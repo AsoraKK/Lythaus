@@ -1,9 +1,9 @@
 // ignore_for_file: public_member_api_docs, avoid_redundant_argument_values
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 
 void main() {
   // ── PostCreationState ─────────────────────────────────────────────────
@@ -228,16 +228,15 @@ void main() {
     test('toJson includes required fields', () {
       const r = CreatePostRequest(text: 'Hello');
       final json = r.toJson();
-      expect(json['content'], 'Hello');
-      expect(json['isNews'], isFalse);
-      expect(json['contentType'], 'text');
-      expect(json['aiLabel'], 'human');
+      expect(json['body'], 'Hello');
+      expect(json['declaredCreationMode'], 'human');
+      expect(json['geoScope'], 'none');
     });
 
-    test('toJson includes mediaUrl as array', () {
+    test('toJson excludes deferred media', () {
       const r = CreatePostRequest(text: 'x', mediaUrl: 'http://img');
       final json = r.toJson();
-      expect(json['mediaUrls'], ['http://img']);
+      expect(json.containsKey('mediaUrls'), isFalse);
     });
 
     test('toJson excludes null mediaUrl', () {
@@ -245,12 +244,12 @@ void main() {
       expect(r.toJson().containsKey('mediaUrls'), isFalse);
     });
 
-    test('toJson includes proofSignals when hasAny', () {
+    test('toJson excludes deferred proof signals', () {
       const r = CreatePostRequest(
         text: 'x',
         proofSignals: ProofSignals(captureMetadataHash: 'h'),
       );
-      expect(r.toJson().containsKey('proofSignals'), isTrue);
+      expect(r.toJson().containsKey('proofSignals'), isFalse);
     });
 
     test('toJson excludes empty proofSignals', () {

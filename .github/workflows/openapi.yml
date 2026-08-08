@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - 'api/openapi/**'
-      - 'functions/**'
       - 'lib/**'
       - '.github/workflows/**'
 
@@ -74,10 +73,6 @@ jobs:
           PREV=$(node -pe 'JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")).info?.version ?? ""' "$BASE_SPEC")
           echo "Breaking changes detected. Prev=$PREV Curr=$CURR"
           node -e "const parse=(value)=>{const match=String(value).trim().match(/^v?(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?$/i);if(!match)return null;return [Number(match[1]),Number(match[2]||0),Number(match[3]||0)];};const prevRaw=process.argv[1];const currRaw=process.argv[2];const prev=parse(prevRaw);const curr=parse(currRaw);if(!prev||!curr){console.error(\`Unable to compare versions: Prev=\${prevRaw} Curr=\${currRaw}\`);process.exit(1);}const greater=curr[0]>prev[0]||(curr[0]===prev[0]&&(curr[1]>prev[1]||(curr[1]===prev[1]&&curr[2]>prev[2])));process.exit(greater ? 0 : 1);" "$PREV" "$CURR"
-      - name: Validate route guard inventory
-        run: node scripts/validate-functions-route-guards.js --out route-inventory.json --allowlist scripts/route-guard-allowlist.json
-      - name: Check route / OpenAPI drift
-        run: node scripts/check-route-drift.js route-inventory.json api/openapi/openapi.yaml
       - name: Validate OpenAPI examples
         run: npm run openapi:validate:examples
       - run: npx openapi-generator-cli version-manager set 7.7.0
@@ -95,11 +90,6 @@ jobs:
         with:
           name: openapi.json
           path: api/openapi/dist/openapi.json
-      - name: Upload route inventory
-        uses: actions/upload-artifact@v6
-        with:
-          name: openapi-route-inventory
-          path: route-inventory.json
       - name: Upload OpenAPI docs
         uses: actions/upload-artifact@v6
         with:

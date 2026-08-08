@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/security/cert_pinning.dart';
+import 'package:lythaus/core/security/cert_pinning.dart';
 
 void main() {
   // ─── CertPinningInfo ───
@@ -43,7 +43,7 @@ void main() {
     test('returns false for connectionError while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.connectionError,
       );
@@ -53,7 +53,7 @@ void main() {
     test('returns false for badCertificate while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.badCertificate,
       );
@@ -63,7 +63,7 @@ void main() {
     test('returns false for unknown errors while pinning is disabled', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.unknown,
       );
@@ -81,7 +81,7 @@ void main() {
     test('false for non-connection error types', () {
       final err = DioException(
         requestOptions: RequestOptions(
-          path: 'https://asora-function-dev.azurewebsites.net/api/test',
+          path: 'https://api.lythaus.co/api/test',
         ),
         type: DioExceptionType.badResponse,
       );

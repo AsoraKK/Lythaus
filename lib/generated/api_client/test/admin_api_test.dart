@@ -1,10 +1,10 @@
 import 'package:test/test.dart';
-import 'package:asora_api_client/asora_api_client.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
 
 
 /// tests for AdminApi
 void main() {
-  final instance = AsoraApiClient().getAdminApi();
+  final instance = LythausApiClient().getAdminApi();
 
   group(AdminApi, () {
     // Approve an appeal
@@ -283,41 +283,6 @@ void main() {
     //
     //Future<JsonObject> adminModerationClassesList() async
     test('test adminModerationClassesList', () async {
-      // TODO
-    });
-
-    // Proxy DELETE to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestDelete(String path) async
-    test('test adminModerationTestDelete', () async {
-      // TODO
-    });
-
-    // Proxy GET to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestGet(String path) async
-    test('test adminModerationTestGet', () async {
-      // TODO
-    });
-
-    // Proxy PATCH to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestPatch(String path, JsonObject body) async
-    test('test adminModerationTestPatch', () async {
-      // TODO
-    });
-
-    // Proxy POST to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestPost(String path, JsonObject body) async
-    test('test adminModerationTestPost', () async {
-      // TODO
-    });
-
-    // Proxy PUT to Hive AI test endpoint
-    //
-    //Future<JsonObject> adminModerationTestPut(String path, JsonObject body) async
-    test('test adminModerationTestPut', () async {
       // TODO
     });
 

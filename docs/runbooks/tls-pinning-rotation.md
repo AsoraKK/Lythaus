@@ -4,7 +4,7 @@
 
 MVP release traffic uses platform TLS validation for the public gateway hostname `api.lythaus.co`. Strict SPKI pinning is deliberately disabled until the Cloudflare certificate rotation and rollback lifecycle is proven with an exact mobile artifact.
 
-There is no staging or separate production Azure hostname. Cloudflare preview hostnames are ephemeral and are not pinned into a shipped mobile build.
+There is no secondary backend hostname. Cloudflare preview hostnames are ephemeral and are not pinned into a shipped mobile build.
 
 ## Current MVP deviation
 
@@ -13,7 +13,7 @@ There is no staging or separate production Azure hostname. Cloudflare preview ho
 - The release gate rejects strict pinning without at least a current and backup pin.
 - Previous development builds are unsupported; no installed-client compatibility window exists.
 
-This deviation preserves availability while the gateway certificate lifecycle is unproven. It does not authorize a direct Azure fallback.
+This deviation preserves availability while the gateway certificate lifecycle is unproven. It does not authorize a direct provider fallback.
 
 ## Future pinning enablement
 
@@ -54,13 +54,13 @@ If certificate rotation causes pin failures:
 
 1. Confirm the failure is limited to pin validation and not DNS/Worker routing.
 2. Restore the previous Worker/certificate configuration when possible.
-3. Do not bypass the gateway by shipping the Azure hostname.
+3. Do not bypass the gateway by shipping a retired or preview hostname.
 4. Prepare an emergency mobile build containing the valid overlapping pin set.
 5. Record certificate chain, affected versions, timestamps, and rollback outcome.
 
 ## Validation
 
-- Production Flutter/web artifacts contain no Azure hostname.
+- Production Flutter/web artifacts contain no retired-provider hostname.
 - `api.lythaus.co` resolves to the reviewed Cloudflare gateway.
 - At least two valid pins exist before lifecycle state `live`.
 - Placeholder strings are absent.

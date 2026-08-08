@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/widgets/moderation_audit_timeline.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/widgets/moderation_audit_timeline.dart';
 
 void main() {
   Widget wrap(Widget child) => MaterialApp(

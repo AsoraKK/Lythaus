@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/screens/feed_screen.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/screens/feed_screen.dart';
 
 // Mock classes
 class MockUser extends Mock implements User {}
@@ -26,7 +26,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -44,7 +44,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -61,7 +61,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -82,7 +82,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -113,7 +113,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -137,7 +137,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -157,7 +157,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -175,7 +175,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -200,7 +200,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -220,7 +220,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -236,7 +236,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -272,7 +272,7 @@ void main() {
         ProviderScope(
           overrides: [authStateProvider.overrideWith((ref) => mockNotifier)],
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -305,7 +305,7 @@ void main() {
         ProviderScope(
           overrides: [authStateProvider.overrideWith((ref) => mockNotifier)],
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -338,7 +338,7 @@ void main() {
         ProviderScope(
           overrides: [authStateProvider.overrideWith((ref) => mockNotifier)],
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -379,7 +379,7 @@ void main() {
             ),
           ],
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),
@@ -411,7 +411,7 @@ void main() {
             ),
           ],
           child: MaterialApp(
-            theme: AsoraTheme.dark(),
+            theme: LythausTheme.dark(),
             home: const FeedScreen(),
           ),
         ),

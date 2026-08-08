@@ -2,14 +2,14 @@
 
 library social_feed_repository;
 
-/// ASORA SOCIAL FEED REPOSITORY
+/// LYTHAUS SOCIAL FEED REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for social media feed operations
 /// 🏗️ Architecture: Domain layer - defines business contracts for posts and feeds
 /// 🔐 Dependency Rule: Application layer implements this interface
 /// 📱 Platform: Flutter with Clean Architecture compliance
 
-import 'package:asora/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
 
 /// Abstract repository defining social feed operations
 ///

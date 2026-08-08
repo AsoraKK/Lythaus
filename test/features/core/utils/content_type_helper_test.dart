@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:asora/features/core/utils/content_type_helper.dart';
+import 'package:lythaus/features/core/utils/content_type_helper.dart';
 
 void main() {
   group('ContentTypeHelper', () {

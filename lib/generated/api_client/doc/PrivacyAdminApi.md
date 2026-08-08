@@ -1,8 +1,8 @@
-# asora_api_client.api.PrivacyAdminApi
+# lythaus_api_client.api.PrivacyAdminApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -24,9 +24,9 @@ Removes a previously placed legal hold, allowing normal data lifecycle operation
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPrivacyAdminApi();
+final api = LythausApiClient().getPrivacyAdminApi();
 final LegalHoldClear legalHoldClear = ; // LegalHoldClear |
 
 try {
@@ -66,9 +66,9 @@ Queues a deletion job for a user's data as part of GDPR/CCPA right-to-erasure co
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPrivacyAdminApi();
+final api = LythausApiClient().getPrivacyAdminApi();
 final DsrRequestInput dsrRequestInput = ; // DsrRequestInput |
 
 try {
@@ -109,9 +109,9 @@ Queues an export job for a user's data as part of GDPR/CCPA compliance. Returns 
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPrivacyAdminApi();
+final api = LythausApiClient().getPrivacyAdminApi();
 final DsrRequestInput dsrRequestInput = {"userId":"018b27d4-5b3b-73e3-bf77-bf7bb9530f21","note":"User requested a copy of their account data."}; // DsrRequestInput |
 
 try {
@@ -152,9 +152,9 @@ Places a legal hold on a user's data, preventing deletion until the hold is clea
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getPrivacyAdminApi();
+final api = LythausApiClient().getPrivacyAdminApi();
 final LegalHoldInput legalHoldInput = ; // LegalHoldInput |
 
 try {

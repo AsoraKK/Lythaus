@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/reactions/application/reaction_providers.dart';
-import 'package:asora/features/reactions/domain/reaction.dart';
+import 'package:lythaus/features/reactions/application/reaction_providers.dart';
+import 'package:lythaus/features/reactions/domain/reaction.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ReactionBar

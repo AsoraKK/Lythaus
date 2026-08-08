@@ -2,13 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_card.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_card.dart';
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-/// ASORA APPEAL HISTORY SCREEN
+/// LYTHAUS APPEAL HISTORY SCREEN
 ///
 /// 🎯 Purpose: Personal dashboard for tracking user's appeal submissions
 /// ✅ Features: Appeal timeline, status tracking, outcome history

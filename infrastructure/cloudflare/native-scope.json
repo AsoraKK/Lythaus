@@ -16,9 +16,7 @@
     "nite-owl-",
     "preview-"
   ],
-  "approvedLegacyResourcePrefixes": [
-    "asora-azure-compat"
-  ],
+  "approvedLegacyResourcePrefixes": [],
   "sharedAccount": {
     "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
     "zoneId": "7bc572c8b7cd3c00be9c655176c29382",
@@ -30,8 +28,6 @@
     "admin-api.lythaus.co"
   ],
   "forbiddenHostFragments": [
-    "azurewebsites.net",
-    "asora.co.za",
     "workers.dev",
     "pages.dev",
     "r2.dev"

@@ -5,8 +5,8 @@ library;
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/tls_pinning.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/tls_pinning.dart';
 
 void configureSecureHttpClientAdapter(
   Dio dio,

@@ -1,4 +1,4 @@
-import 'package:asora/features/privacy/state/privacy_state.dart';
+import 'package:lythaus/features/privacy/state/privacy_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -16,7 +16,7 @@ set -euo pipefail
 EVIDENCE_FILE="docs/runbooks/store-submission-evidence.md"
 CONSOLE_URL="https://play.google.com/console"
 ASC_URL="https://appstoreconnect.apple.com"
-SECRETS_URL="https://github.com/AsoraKK/Asora/settings/secrets/actions"
+SECRETS_URL="https://github.com/LythausHQ/Lythaus/settings/secrets/actions"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,8 +73,8 @@ check "Play §1.2" "Data collected — account info (Name, Email Address) declar
 check "Play §1.2" "Data collected — user content (Photos or videos, Other user content) declared" \
   "Data Safety form → User content section"
 
-check "Play §1.2" "Data sharing — third-party sharing with Hive AI (content moderation) declared" \
-  "Data Safety form → Data sharing → add Hive AI as a third party for content moderation"
+check "Play §1.2" "Data sharing — no retired moderation vendor declared" \
+  "Data Safety form → confirm Lythaus Authenticity AI is an internal Lythaus capability, then declare only actual external recipients"
 
 check "Play §1.2" "Security practices — data encrypted in transit ✓ declared" \
   "Data Safety form → Security practices → tick 'Data is encrypted in transit'"
@@ -121,8 +121,8 @@ echo ""
 
 echo "§2  App Store Connect"
 
-check "ASC §2.1" "App Store Connect app record exists (bundle ID: com.asora.app)" \
-  "Go to ${ASC_URL} → My Apps → + → New App → iOS → bundle ID com.asora.app"
+check "ASC §2.1" "App Store Connect app record exists (bundle ID: co.lythaus.app)" \
+  "Go to ${ASC_URL} → My Apps → + → New App → iOS → bundle ID co.lythaus.app"
 
 check "ASC §2.1" "Age rating questionnaire completed (expected: 17+)" \
   "ASC → App record → App Information → Age Rating → complete questionnaire"
@@ -169,7 +169,7 @@ check "ASC §2.5" "TestFlight build uploaded and processed (status: \"Ready to S
 check "ASC §2.5" "Beta App Review information filled (beta description + feedback email + contact info)" \
   "ASC → TestFlight → your build → Test Information"
 
-check "ASC §2.6" "Review notes added explaining moderation/safety features (Hive AI, user reporting flow)" \
+check "ASC §2.6" "Review notes added explaining Lythaus Authenticity AI and the user reporting flow" \
   "ASC → App record → Version Information → Review Information → Notes"
 
 check "ASC §2.6" "Demo account credentials provided (non-production, non-PII test account)" \

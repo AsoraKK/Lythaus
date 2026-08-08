@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA FEED REPOSITORY
+/// LYTHAUS FEED REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for feed operations
 /// 🏗️ Architecture: Domain layer - defines business contracts
@@ -8,7 +8,7 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
 /// Abstract repository defining feed domain operations
 ///

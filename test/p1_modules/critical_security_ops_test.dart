@@ -6,7 +6,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:convert';
-import 'package:asora/p1_modules/critical_security_ops.dart';
+import 'package:lythaus/p1_modules/critical_security_ops.dart';
 
 void main() {
   group('CriticalSecurityOps', () {

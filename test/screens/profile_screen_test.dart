@@ -3,17 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_event_tracker.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/profile/application/follow_providers.dart';
-import 'package:asora/features/profile/application/follow_service.dart';
-import 'package:asora/features/profile/application/profile_providers.dart';
-import 'package:asora/features/profile/domain/public_user.dart';
-import 'package:asora/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_event_tracker.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/profile/application/follow_providers.dart';
+import 'package:lythaus/features/profile/application/follow_service.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 class _MockFollowService extends Mock implements FollowService {}
 

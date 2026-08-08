@@ -2,12 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
-import 'package:asora/features/moderation/domain/appeal.dart'
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart'
     show Appeal, VotingStatus;
-import 'package:asora/widgets/appeal_voting_card.dart';
+import 'package:lythaus/widgets/appeal_voting_card.dart';
 
-/// ASORA VOTE FEED PAGE
+/// LYTHAUS VOTE FEED PAGE
 ///
 /// 🎯 Purpose: Community voting dashboard for reviewing appealed content
 /// ✅ Features: Real-time appeals, filtering, voting interface

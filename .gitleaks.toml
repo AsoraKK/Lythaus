@@ -1,10 +1,8 @@
-title = "Asora gitleaks configuration"
+title = "Lythaus gitleaks configuration"
 
 [allowlist]
-  description = "Known test fixtures and documented endpoints"
+  description = "Known non-secret test placeholders"
   regexes = [
-    '''USE_AZURE_KEY_VAULT_OR_ENV_VAR''',
-    '''AccountEndpoint=https://asora-[a-z0-9-]+\.documents\.azure\.com:443/''',
     '''K6_SMOKE_TOKEN''',
     '''STAGING_SMOKE_TOKEN''',
     '''STAGING_DOMAIN'''

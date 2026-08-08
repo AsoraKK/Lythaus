@@ -1,4 +1,4 @@
-import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -50,7 +50,7 @@ void main() {
         eventType: NotificationEventType.postLiked,
         title: 'Title',
         body: 'Body',
-        deeplink: 'asora://post/123',
+        deeplink: 'lythaus://post/123',
         targetId: 'post-1',
         targetType: 'post',
         read: true,

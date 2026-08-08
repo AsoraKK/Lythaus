@@ -5,20 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_event_tracker.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
-import 'package:asora/features/feed/application/post_creation_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/domain/models.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_event_tracker.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
 // Mock classes
 class MockPostRepository extends Mock implements PostRepository {}
@@ -697,12 +696,6 @@ class MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
 
   @override
   Future<void> signInWithEmail(String email, String password) async {}
-
-  @override
-  Future<void> signInWithOAuth2() async {}
-
-  @override
-  Future<void> signInWithProvider(OAuth2Provider provider) async {}
 
   @override
   Future<void> signOut() async {

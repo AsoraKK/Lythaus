@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/security/tls_pinning.dart';
-import 'package:asora/core/config/environment_config.dart';
+import 'package:lythaus/core/security/tls_pinning.dart';
+import 'package:lythaus/core/config/environment_config.dart';
 
 /// Minimal X509Certificate stub for testing.
 class _FakeCert implements X509Certificate {

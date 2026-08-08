@@ -1,8 +1,8 @@
-# asora_api_client.api.NotificationsApi
+# lythaus_api_client.api.NotificationsApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -28,9 +28,9 @@ Register a push device token
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -69,9 +69,9 @@ List registered push devices
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 
 try {
     final response = api.notificationsDevicesList();
@@ -106,9 +106,9 @@ Revoke a push device registration
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -149,9 +149,9 @@ Dismiss a notification
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -192,9 +192,9 @@ List notifications for the current user
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 
 try {
     final response = api.notificationsList();
@@ -229,9 +229,9 @@ Get notification preferences
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 
 try {
     final response = api.notificationsPreferencesGet();
@@ -266,9 +266,9 @@ Update notification preferences
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -307,9 +307,9 @@ Mark a notification as read
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 final String id = id_example; // String |
 final JsonObject body = Object; // JsonObject |
 
@@ -350,9 +350,9 @@ Send an admin-triggered notification
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 final JsonObject body = Object; // JsonObject |
 
 try {
@@ -391,9 +391,9 @@ Get unread notification count
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getNotificationsApi();
+final api = LythausApiClient().getNotificationsApi();
 
 try {
     final response = api.notificationsUnreadCount();

@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-/// ASORA EMPTY STATE WIDGET
+/// LYTHAUS EMPTY STATE WIDGET
 ///
 /// 🎯 Purpose: Display empty state with customizable message and action
 /// 🔍 Single Responsibility: Empty state presentation only

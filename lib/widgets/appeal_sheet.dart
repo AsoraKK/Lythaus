@@ -2,11 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/components/lyth_text_field.dart';
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/services/appeal_provider.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_snackbar.dart';
+import 'package:lythaus/design_system/components/lyth_text_field.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/services/appeal_provider.dart';
 
 class AppealSheet extends ConsumerStatefulWidget {
   final String postId;

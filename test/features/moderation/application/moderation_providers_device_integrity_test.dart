@@ -1,19 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/error/error_codes.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/moderation/application/moderation_providers.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/moderation/domain/moderation_case.dart';
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
-import 'package:asora/core/providers/repository_providers.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/moderation/application/moderation_providers.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_case.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/core/providers/repository_providers.dart';
 
 class _FakeDeviceSecurityService implements DeviceSecurityService {
   _FakeDeviceSecurityService(this._state);

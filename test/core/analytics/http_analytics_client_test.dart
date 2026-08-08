@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
-import 'package:asora/core/analytics/http_analytics_client.dart';
+import 'package:lythaus/core/analytics/http_analytics_client.dart';
 
 import 'http_analytics_client_test.mocks.dart';
 

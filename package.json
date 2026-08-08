@@ -1,59 +1,42 @@
 {
-  "name": "asora-monorepo",
+  "name": "lythaus-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Asora platform - Flutter mobile app with Azure Functions backend",
+  "description": "Lythaus platform - Flutter clients with Cloudflare Workers and PlanetScale PostgreSQL",
   "scripts": {
     "prepare": "if [ \"$CI\" = \"true\" ]; then exit 0; fi; command -v npx >/dev/null 2>&1 && npx husky install || true",
     "format-dart": "node scripts/check-dart-format.mjs",
-    "format-functions": "cd functions && npm run format",
-    "lint-functions": "cd functions && npm run lint",
-    "format-check": "npm run format-dart && npm run format-functions",
-    "lint-check": "npm run lint-functions",
-    "install-functions": "cd functions && npm install",
-    "build-functions": "cd functions && npm run build",
+    "format-check": "npm run format-dart",
     "audit:production": "node scripts/check-npm-audit.js",
-    "test-functions": "cd functions && npm run test",
-    "verify:routes": "node functions/dev/verify-routes.js",
     "openapi:lint": "redocly lint api/openapi/openapi.yaml",
     "openapi:bundle": "redocly bundle api/openapi/openapi.yaml -o api/openapi/dist/openapi.json --config=api/openapi/redocly.yaml",
     "openapi:validate:examples": "ts-node tools/openapi/validate-examples.ts",
     "openapi:check:bundle": "node scripts/check-git-diff-clean.js api/openapi/dist/openapi.json",
-    "openapi:gen:dart": "node scripts/clean-openapi-dart-generated.mjs && openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=asora_api_client,nullableFields=true,repositoryUrl=https://github.com/AsoraKK/Asora,hideGenerationTimestamp=true && node scripts/trim-trailing-whitespace.js lib/generated/api_client",
+    "openapi:gen:dart": "node scripts/clean-openapi-dart-generated.mjs && openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=lythaus_api_client,nullableFields=true,repositoryUrl=https://github.com/LythausHQ/Lythaus,hideGenerationTimestamp=true && node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client && node scripts/trim-trailing-whitespace.js lib/generated/api_client",
     "openapi:test:dart": "node scripts/validate-openapi-dart-client.mjs",
     "openapi:check:dart": "node scripts/check-git-diff-clean.js lib/generated/api_client --ignore lib/generated/api_client/.openapi-generator/FILES",
     "openapi:test:contract": "jest -c jest.contract.config.cjs --runInBand",
     "openapi:docs": "npx @redocly/cli build-docs api/openapi/dist/openapi.json -o api/openapi/dist/index.html",
     "marketing:validate": "node scripts/cloudflare/validate-marketing-output.mjs",
     "k6:diagnose": "bash scripts/diagnose-k6-failures.sh",
-    "cosmos:contract": "node scripts/validate-cosmos-contract.js --policy infra/cosmos-container-policy.json",
-    "test:cosmos-contract": "node --test scripts/tests/validate-cosmos-contract.test.js",
-    "routes:guard": "node scripts/validate-functions-route-guards.js --out route-inventory.json --allowlist scripts/route-guard-allowlist.json",
-    "test:route-guards": "node --test scripts/tests/validate-functions-route-guards.test.js",
-    "test:terraform-safety": "node --test scripts/tests/validate-terraform-plan-safety.test.mjs",
     "todo:triage": "node scripts/generate-todo-triage.js",
     "k6:smoke": "node scripts/run-shared-mvp-k6.mjs load/k6/smoke.js",
     "k6:feed": "node scripts/run-shared-mvp-k6.mjs load/k6/feed-read.js",
     "k6:smoke:docker": "node scripts/run-shared-mvp-k6.mjs --docker load/k6/smoke.js",
     "k6:feed:docker": "node scripts/run-shared-mvp-k6.mjs --docker load/k6/feed-read.js",
-    "apply:schema": "node tools/apply_sql_to_pg.js database/migrate_to_target_schema.sql",
-    "migrate:profiles": "node tools/migrate_profiles_to_postgres.js",
-    "reconcile:profiles": "node tools/reconcile_profiles.js",
     "vuln:scan": "bash tools/run_vuln_scan.sh",
     "lint:api": "npm run openapi:lint",
     "validate:native-workers": "node scripts/validate-native-worker-config.mjs",
     "validate:native-workers:provisioned": "node scripts/validate-native-worker-config.mjs --require-provisioned",
     "validate:native-scope": "node scripts/validate-native-scope.mjs",
     "validate:native-scope:production": "node scripts/validate-native-scope.mjs --production",
-    "validate:native-azure-dependencies": "node scripts/validate-native-azure-dependencies.mjs",
-    "validate:github-azure-disconnection": "node scripts/validate-github-azure-disconnection.mjs",
+    "validate:no-retired-provider-dependencies": "node scripts/validate-no-retired-provider-dependencies.mjs",
     "validate:cloudflare-hyperdrive-targets": "node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs",
     "validate:cloudflare-hyperdrive-targets:manifest": "node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs --manifest-only",
     "validate:production-workers": "node scripts/ci/probe-production-workers.mjs",
     "validate:ai-gateway-paths": "node scripts/ci/verify-ai-gateway-paths.mjs",
     "validate:budget-hard-stop": "node scripts/ci/probe-budget-hard-stop.mjs",
     "acceptance:adr003": "node scripts/ci/run-adr003-authenticated-acceptance.mjs",
-    "validate:active-legacy-references": "node scripts/ci/validate-active-legacy-references.mjs",
     "validate:lythaus-resource-registry": "node scripts/validate-lythaus-resource-registry.mjs",
     "validate:production-gates": "node scripts/validate-production-gates.mjs",
     "validate:production-gates:predeploy": "node scripts/validate-production-gates.mjs --phase predeploy",
@@ -63,23 +46,22 @@
     "test:native-db-connection": "node --experimental-strip-types --test scripts/tests/db-connection-contract.test.mjs",
     "test:database-identity": "node --experimental-strip-types --test scripts/tests/db-identity-contract.test.mjs",
     "test:budget": "node --experimental-strip-types --test scripts/tests/budget-contract.test.mjs",
+    "test:authenticity": "node --experimental-strip-types --test packages/authenticity/tests/evaluation.test.mjs",
     "validate:planetscale-migrations": "node scripts/validate-migration-baseline.mjs",
     "validate:planetscale-extensions": "node scripts/validate-planetscale-extensions.mjs",
     "validate:planetscale-extensions:live": "node scripts/validate-planetscale-extensions.mjs --require-catalog",
     "validate:planetscale-postgres17": "node scripts/ci/validate-planetscale-postgres17.mjs",
-    "calculate:migration-usage": "node scripts/azure-exit/calculate-migration-usage.mjs",
-    "test:azure-migration": "node --test scripts/tests/canonical-azure-hash.test.mjs scripts/tests/azure-source-disposition.test.mjs scripts/tests/prepare-canonical-import.test.mjs",
     "benchmark:native-endpoints": "node scripts/benchmarks/native-endpoint-benchmark.mjs",
     "validate:planetscale-ci-script": "node --check scripts/ci/apply-planetscale-migrations.mjs",
     "validate:planetscale-production-script": "node --check scripts/ci/apply-planetscale-production-migrations.mjs",
-    "apply:planetscale-production-migrations": "node scripts/ci/apply-planetscale-production-migrations.mjs",
-    "import:planetscale-dsr-evidence": "node scripts/azure-exit/import-dsr-evidence.mjs"
+    "apply:planetscale-production-migrations": "node scripts/ci/apply-planetscale-production-migrations.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.25.0",
     "@redocly/cli": "^2.5.0",
     "@stoplight/spectral-cli": "6.15.0",
     "@types/jest": "^30.0.0",
+    "@types/pg": "^8.15.5",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cross-fetch": "^4.1.0",
@@ -101,9 +83,6 @@
     "concurrently@10.0.3": {
       "shell-quote": "1.10.0"
     },
-    "@azure/core-xml": {
-      "fast-xml-parser": "5.10.1"
-    },
     "@stoplight/spectral-cli": {
       "@stoplight/spectral-core": "1.20.0",
       "@stoplight/spectral-formatters": "1.5.0",
@@ -123,25 +102,26 @@
       "minimatch": "10.2.6"
     },
     "brace-expansion": "5.0.9",
-    "fast-uri": "3.1.5",
     "fast-xml-parser": "5.10.1",
+    "fast-uri": "3.1.5",
     "form-data": "4.0.6",
     "lodash": "4.18.1",
-    "miniflare": {
-      "undici": "7.29.0"
-    },
     "minimatch": "10.2.6",
     "test-exclude": {
       "minimatch": "5.1.9"
     },
-    "typescript": "5.5.4"
+    "typescript": "5.5.4",
+    "undici": "7.29.0",
+    "miniflare": {
+      "undici": "7.29.0"
+    }
   },
   "workspaces": [
-    "functions",
     "apps/lythaus-admin-api",
     "apps/lythaus-jobs",
     "apps/lythaus-public-api",
     "packages/cloudflare-env",
+    "packages/authenticity",
     "packages/contracts",
     "packages/db",
     "packages/media",
@@ -151,10 +131,11 @@
   "keywords": [
     "flutter",
     "dart",
-    "azure-functions",
+    "cloudflare-workers",
+    "planetscale",
     "typescript",
     "monorepo"
   ],
-  "author": "Asora Team",
+  "author": "Lythaus",
   "license": "MIT"
 }

@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA ANALYTICS EVENT NAMES
+/// LYTHAUS ANALYTICS EVENT NAMES
 ///
 /// 🎯 Purpose: Centralized analytics event catalog
 /// 🔐 Privacy: All events are PII-free, categorical/numeric properties only
@@ -34,7 +34,7 @@ class AnalyticsEvents {
   /// User initiated sign-in flow
   ///
   /// Properties:
-  /// - method: string (google, email, guest)
+  /// - method: string (email, guest)
   static const String authStarted = 'auth_started';
 
   /// User selected an auth path from entry screen.
@@ -46,7 +46,7 @@ class AnalyticsEvents {
   /// User completed sign-in successfully
   ///
   /// Properties:
-  /// - method: string (google, email, guest)
+  /// - method: string (email, guest)
   /// - is_new_user: bool
   static const String authCompleted = 'auth_completed';
 

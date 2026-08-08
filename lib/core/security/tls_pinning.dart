@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA TLS CERTIFICATE PINNING (Enhanced)
+/// LYTHAUS TLS CERTIFICATE PINNING (Enhanced)
 ///
 /// 🎯 Purpose: Pin SHA-256 of server's SPKI, strict/warn modes, multi-pin support
 /// 🔐 Security: Prevents MITM attacks via public key pinning
@@ -10,9 +10,9 @@ library;
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/spki_utils.dart';
-import 'package:asora/core/security/security_telemetry.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/spki_utils.dart';
+import 'package:lythaus/core/security/security_telemetry.dart';
 
 /// TLS pinning implementation with SPKI verification
 class TlsPinningValidator {

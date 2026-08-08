@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/ui/components/filter_modal.dart';
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:lythaus/ui/components/filter_modal.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
 
 class OnboardingCustomFeedPrompt extends StatelessWidget {
   const OnboardingCustomFeedPrompt({super.key});

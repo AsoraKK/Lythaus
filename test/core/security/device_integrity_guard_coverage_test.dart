@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/core/security/security_overrides.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/core/security/security_overrides.dart';
 
 /// Fake device security service returning scripted state.
 class _FakeDeviceSecurityService implements DeviceSecurityService {

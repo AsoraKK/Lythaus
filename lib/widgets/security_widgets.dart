@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-// ASORA SECURITY WIDGETS
+// LYTHAUS SECURITY WIDGETS
 //
 // 🎯 Purpose: UI components for security warnings and device integrity
 // 🔐 Security: Non-dismissible banners, post blocking, user education
@@ -10,7 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:asora/core/security/device_integrity.dart';
+import 'package:lythaus/core/security/device_integrity.dart';
 
 /// Security banner for compromised devices
 class DeviceSecurityBanner extends ConsumerWidget {

@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA MODERATION SERVICE
+/// LYTHAUS MODERATION SERVICE
 ///
 /// 🎯 Purpose: Implementation of moderation repository interface
 /// 🏗️ Architecture: Application layer - implements domain contracts
@@ -9,15 +9,15 @@
 library;
 
 import 'package:dio/dio.dart';
-import 'package:asora/core/observability/asora_tracer.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/moderation/domain/moderation_case.dart';
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/core/error/error_codes.dart';
+import 'package:lythaus/core/observability/lythaus_tracer.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_case.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/core/error/error_codes.dart';
 
 /// Concrete implementation of [ModerationRepository]
 ///
@@ -378,7 +378,7 @@ class ModerationService implements ModerationRepository {
         attributes['request.filter.${entry.key}'] = entry.value.toString();
       }
 
-      return await AsoraTracer.traceOperation(
+      return await LythausTracer.traceOperation(
         'ModerationService.fetchModerationQueue',
         () async {
           final response = await _dio.get<Map<String, dynamic>>(
@@ -414,7 +414,7 @@ class ModerationService implements ModerationRepository {
     required String token,
   }) async {
     try {
-      return await AsoraTracer.traceOperation(
+      return await LythausTracer.traceOperation(
         'ModerationService.fetchModerationCase',
         () async {
           final response = await _dio.get<Map<String, dynamic>>(
@@ -450,7 +450,7 @@ class ModerationService implements ModerationRepository {
     required ModerationDecisionInput input,
   }) async {
     try {
-      return await AsoraTracer.traceOperation(
+      return await LythausTracer.traceOperation(
         'ModerationService.submitModerationDecision',
         () async {
           final response = await _dio.post<Map<String, dynamic>>(
@@ -491,7 +491,7 @@ class ModerationService implements ModerationRepository {
     required ModerationEscalationInput input,
   }) async {
     try {
-      await AsoraTracer.traceOperation<void>(
+      await LythausTracer.traceOperation<void>(
         'ModerationService.escalateModerationCase',
         () async {
           await _dio.post<Map<String, dynamic>>(
@@ -526,7 +526,7 @@ class ModerationService implements ModerationRepository {
     required String token,
   }) async {
     try {
-      return await AsoraTracer.traceOperation(
+      return await LythausTracer.traceOperation(
         'ModerationService.fetchCaseAudit',
         () async {
           final response = await _dio.get<Map<String, dynamic>>(
@@ -571,7 +571,7 @@ class ModerationService implements ModerationRepository {
             .toString();
       }
 
-      return await AsoraTracer.traceOperation(
+      return await LythausTracer.traceOperation(
         'ModerationService.searchAudit',
         () async {
           final response = await _dio.get<Map<String, dynamic>>(

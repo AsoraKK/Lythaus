@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA MODERATION REPOSITORY
+/// LYTHAUS MODERATION REPOSITORY
 ///
 /// 🎯 Purpose: Abstract interface for moderation operations
 /// 🏗️ Architecture: Domain layer - defines business contracts
@@ -8,12 +8,12 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/moderation/domain/moderation_case.dart';
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/domain/moderation_filters.dart';
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_case.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
 
 /// Abstract repository defining moderation domain operations
 ///

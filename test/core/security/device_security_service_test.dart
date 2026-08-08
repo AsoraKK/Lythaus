@@ -2,9 +2,9 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/security/device_security_service.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/security_telemetry.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/security_telemetry.dart';
 
 void main() {
   group('DeviceSecurityState', () {

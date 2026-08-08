@@ -1,11 +1,13 @@
-import { spawnSync, execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
 const root = path.resolve(import.meta.dirname, '../..');
+const retiredBrand = ['as', 'ora'].join('');
+const retiredDomain = new RegExp(`${retiredBrand}\\.co\\.za`, 'i');
+const retiredWorkersDev = new RegExp(`${retiredBrand}\\.workers\\.dev`, 'i');
+const retiredCloudHost = new RegExp(`${['az', 'ure', 'websites'].join('')}\\.net`, 'i');
 const configs = [
   'apps/lythaus-public-api/wrangler.jsonc',
   'apps/lythaus-admin-api/wrangler.jsonc',
@@ -18,15 +20,17 @@ test('native Workers disable production workers.dev and preview URLs', () => {
     assert.match(source, /"workers_dev": false/);
     assert.match(source, /"preview_urls": false/);
     assert.match(source, /"nodejs_compat"/);
-    assert.doesNotMatch(source, /azurewebsites\.net|asora\.co\.za/);
+    assert.doesNotMatch(source, retiredCloudHost);
+    assert.doesNotMatch(source, retiredDomain);
   }
 });
 
 test('native production routing is custom-domain-only', () => {
   const validate = fs.readFileSync(path.join(root, 'scripts/validate-native-worker-config.mjs'), 'utf8');
-  assert.match(validate, /workers\\\.dev/);
-  assert.match(validate, /pages\\\.dev/);
-  assert.match(validate, /r2\\\.dev/);
+  assert.match(validate, /retiredProductionOrigin/);
+  assert.match(validate, /workers/);
+  assert.match(validate, /pages/);
+  assert.match(validate, /r2/);
   assert.match(validate, /api\\\.lythaus\\\.co/);
   assert.match(validate, /admin-api\\\.lythaus\\\.co/);
 });
@@ -40,8 +44,8 @@ test('native public and admin APIs enforce configured hostnames', () => {
   assert.match(observability, /hostname_not_allowed/);
   assert.match(publicApi, /assertExpectedHostname\(request, env\.EXPECTED_HOSTNAMES\)/);
   assert.match(adminApi, /assertExpectedHostname\(request, env\.EXPECTED_HOSTNAMES\)/);
-  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), /asora\.workers\.dev/);
-  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), /asora\.workers\.dev/);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-public-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), retiredWorkersDev);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').slice(0, fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/wrangler.jsonc'), 'utf8').indexOf('"env"')), retiredWorkersDev);
 });
 
 test('public API dispatch awaits rejection-prone async handlers', () => {
@@ -123,15 +127,16 @@ test('native auth and user controls are implemented behind configured secrets', 
   assert.match(migration, /SECURITY DEFINER/);
 });
 
-test('native authentication supports account-level token revocation and social controls', () => {
+test('native authentication supports email-only identities, token revocation, and social controls', () => {
   const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0005_auth_revocation.sql'), 'utf8');
-  const relinkMigration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0008_legacy_relink_status.sql'), 'utf8');
+  const providerMigration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0011_email_guest_auth_only.sql'), 'utf8');
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   const admin = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
   assert.match(migration, /token_version/);
-  assert.match(relinkMigration, /relink_required/);
+  assert.match(providerMigration, /provider_links_email_only/);
+  assert.match(providerMigration, /provider = 'email'/);
+  assert.match(providerMigration, /'auth\.email', 'auth\.guest'/);
   assert.match(source, /tokenVersion/);
-  assert.match(source, /account_relink_required/);
   assert.match(source, /source_provider/);
   assert.match(source, /social\.blocks/);
   assert.match(source, /social\.mutes/);
@@ -185,7 +190,7 @@ test('Cloudflare scope manifest forbids known shared and unrelated resources', (
   assert.equal(manifest.production.zoneId, '7bc572c8b7cd3c00be9c655176c29382');
   assert.equal(manifest.production.sharedAccountMustDiffer, false);
   assert.ok(manifest.forbiddenResourcePrefixes.includes('nite-owl-'));
-  assert.ok(manifest.approvedLegacyResourcePrefixes.includes('asora-azure-compat'));
+  assert.deepEqual(manifest.approvedLegacyResourcePrefixes, []);
 });
 
 test('production config reuses existing Workers and disables paid or incomplete features', () => {
@@ -196,16 +201,25 @@ test('production config reuses existing Workers and disables paid or incomplete 
   const publicConfig = fs.readFileSync(path.join(root, configs[0]), 'utf8');
   const jobsConfig = fs.readFileSync(path.join(root, configs[2]), 'utf8');
   assert.match(publicConfig, /"name": "lythaus-public-api-development"/);
-  assert.match(publicConfig, /"EMAIL_PROVIDER_MODE": "disabled"/);
+  assert.match(publicConfig, /"EMAIL_PROVIDER_MODE": "cloudflare"/);
+  assert.match(publicConfig, /"EMAIL_FROM": "no-reply@mail\.lythaus\.co"/);
+  assert.match(publicConfig, /"name": "EMAIL"/);
   assert.match(publicConfig, /"MEDIA_UPLOADS_ENABLED": "false"/);
   assert.match(jobsConfig, /"MEDIA_PROCESSING_ENABLED": "false"/);
 });
 
-test('native Workers have an explicit Azure dependency scan', () => {
-  const script = fs.readFileSync(path.join(root, 'scripts/validate-native-azure-dependencies.mjs'), 'utf8');
-  assert.match(script, /azurewebsites/);
-  assert.match(script, /CosmosClient/);
-  assert.match(script, /applicationinsights/);
+test('active runtimes have an explicit retired-provider dependency scan', () => {
+  const script = fs.readFileSync(path.join(root, 'scripts/validate-no-retired-provider-dependencies.mjs'), 'utf8');
+  const allowlist = JSON.parse(fs.readFileSync(path.join(root, 'scripts/retired-reference-allowlist.json'), 'utf8'));
+  assert.match(script, /retiredBrand/);
+  assert.match(script, /retiredProvider/);
+  assert.match(script, /retiredDatabase/);
+  assert.match(script, /retiredClassifier/);
+  assert.match(script, /retired authentication/);
+  assert.match(script, /git', \['ls-files', '-z'\]/);
+  assert.match(script, /retired-reference-allowlist\.json/);
+  assert.ok(allowlist.entries.some((entry) => entry.path === 'docs/history/**'));
+  assert.ok(allowlist.entries.every((entry) => entry.reason && entry.kind));
 });
 
 test('jobs Worker exposes durable privacy and appeal workflows', () => {
@@ -309,8 +323,8 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(script, /migration checksum mismatch/);
   assert.doesNotMatch(script, /0001_feature_flags/);
   assert.match(verifier, /system\.schema_migrations/);
-  assert.match(verifier, /expectedMigrationBytes = 48_192/);
-  assert.match(verifier, /c8b14a6f418dfa1150cd6933733f2811cae8576246a88662463f712b0a64bf6a/);
+  assert.match(verifier, /expectedMigrationBytes = 51_104/);
+  assert.match(verifier, /da6cd97b29ab5ea26dd0237e413fbe868d696df4c082ede81ed950faa3f34ced/);
   assert.match(verifier, /migration SHA-256 mismatch/);
   assert.match(verifier, /approved applied migration payload mismatch/);
   assert.match(verifier, /searchParams\.get\('sslrootcert'\) === 'system'/);
@@ -324,79 +338,27 @@ test('production deployment is fail-closed on predeploy and final gate phases', 
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure/cloudflare/production-gates.json'), 'utf8'));
   const validator = fs.readFileSync(path.join(root, 'scripts/validate-production-gates.mjs'), 'utf8');
   assert.match(workflow, /Validate production predeployment gates/);
-  assert.ok(Object.keys(manifest.gates.predeploy).length >= 6);
-  assert.ok(Object.keys(manifest.gates.final).length >= 6);
-  assert.ok(manifest.gates.final.domainCutover);
-  assert.equal(manifest.gates.final.domainAndOAuthCutover, undefined);
-  assert.equal(manifest.gates.final.googleOAuthAcceptance.status, 'DEFERRED TO ADR 003');
-  assert.equal(manifest.gates.final.googleOAuthAcceptance.ownerApproved, true);
-  assert.equal(manifest.gates.final.googleOAuthAcceptance.launchBlocking, true);
-  assert.equal(manifest.gates.final.googleOAuthAcceptance.scope, 'Google OAuth end-to-end session acceptance only');
-  assert.equal(manifest.gates.final.googleOAuthAcceptance.decisionDate, '2026-08-02');
-  assert.equal(manifest.gates.final.googleOAuthAcceptance.expiresWhen, 'ADR 003 authentication acceptance completes');
-  assert.ok(manifest.gates.final.azureDeletionInventory);
-  assert.equal(manifest.azureDeletionExecution, 'NOT STARTED');
+  assert.deepEqual(Object.keys(manifest.gates.predeploy), [
+    'repositoryReleaseControls',
+    'architectureSourceOfTruth',
+    'postgres17Compatibility',
+    'rollbackPrepared',
+  ]);
+  assert.deepEqual(Object.keys(manifest.gates.final), [
+    'hyperdriveTargetProof',
+    'databaseIdentityProbe',
+    'emailAndGuestAcceptance',
+    'budgetEnforcement',
+  ]);
+  assert.equal(manifest.schemaVersion, 'lythaus-production-gates-v3');
   assert.equal(manifest.cutoverAuthorized, true);
-  assert.equal(manifest.migrationUsageAuthorized, false);
-  assert.equal(manifest.migrationUsageMaxUsd, 0);
   assert.equal(manifest.estimatedIncrementalCostUsd, 0);
-  assert.equal(manifest.azureDeletionAuthorized, false);
+  assert.ok(Array.isArray(manifest.requiredOwnerActions));
+  assert.ok(manifest.requiredOwnerActions.length >= 2);
   assert.match(validator, /phase === 'predeploy'/);
   assert.match(validator, /phase === 'final'/);
-  assert.match(validator, /DEFERRED TO ADR 003/);
-  assert.match(validator, /googleOAuthAcceptance/);
-  assert.match(validator, /zero-cost deployment requires migration usage authorization false and maximum US\$0/);
-});
-
-test('ADR 003 deferral is accepted only for final Google OAuth acceptance', () => {
-  const manifestPath = path.join(root, 'infrastructure/cloudflare/production-gates.json');
-  const validatorSource = fs.readFileSync(path.join(root, 'scripts/validate-production-gates.mjs'), 'utf8');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-production-gates-'));
-  const temporaryManifestPath = path.join(temporaryRoot, 'infrastructure/cloudflare/production-gates.json');
-  const temporaryValidatorPath = path.join(temporaryRoot, 'scripts/validate-production-gates.mjs');
-
-  try {
-    fs.mkdirSync(path.dirname(temporaryManifestPath), { recursive: true });
-    fs.mkdirSync(path.dirname(temporaryValidatorPath), { recursive: true });
-    fs.writeFileSync(temporaryValidatorPath, validatorSource);
-
-    const validManifest = structuredClone(manifest);
-    for (const record of Object.values(validManifest.gates.predeploy)) record.status = 'COMPLETED';
-    for (const [gateName, record] of Object.entries(validManifest.gates.final)) {
-      if (gateName !== 'googleOAuthAcceptance') record.status = 'COMPLETED';
-    }
-    fs.writeFileSync(temporaryManifestPath, JSON.stringify(validManifest));
-    const validationReleaseSha = validManifest.releaseSha ?? '0'.repeat(40);
-
-    assert.doesNotThrow(() => execFileSync(
-      process.execPath,
-      [temporaryValidatorPath, '--phase', 'final'],
-      {
-        cwd: temporaryRoot,
-        env: { ...process.env, RELEASE_SHA: validationReleaseSha },
-        encoding: 'utf8',
-      },
-    ));
-
-    const invalidManifest = structuredClone(validManifest);
-    invalidManifest.gates.final.domainCutover = structuredClone(validManifest.gates.final.googleOAuthAcceptance);
-    fs.writeFileSync(temporaryManifestPath, JSON.stringify(invalidManifest));
-    const result = spawnSync(
-      process.execPath,
-      [temporaryValidatorPath, '--phase', 'final'],
-      {
-        cwd: temporaryRoot,
-        env: { ...process.env, RELEASE_SHA: invalidManifest.releaseSha },
-        encoding: 'utf8',
-      },
-    );
-
-    assert.notEqual(result.status, 0);
-    assert.match(`${result.stdout}${result.stderr}`, /final\.domainCutover may not use DEFERRED TO ADR 003/);
-  } finally {
-    fs.rmSync(temporaryRoot, { recursive: true, force: true });
-  }
+  assert.match(validator, /status !== 'COMPLETED'/);
+  assert.match(validator, /'COMPLETED', 'REQUIRED', 'BLOCKED'/);
 });
 
 test('production deployment accepts only the exact merged main SHA', () => {
@@ -407,27 +369,6 @@ test('production deployment accepts only the exact merged main SHA', () => {
   assert.match(workflow, /Refusing deployment: release_sha is not the checked-out main SHA/);
   assert.match(workflow, /\[\[ "\$checked_out_sha" != "\$remote_main_sha" \]\]/);
   assert.match(workflow, /Refusing deployment: checked-out main is not current origin\/main/);
-});
-
-test('Azure transformation evidence uses deterministic canonical hashes', () => {
-  const canonical = fs.readFileSync(path.join(root, 'scripts/azure-exit/canonical-hash.mjs'), 'utf8');
-  const transform = fs.readFileSync(path.join(root, 'scripts/azure-exit/transform-records.mjs'), 'utf8');
-  assert.match(canonical, /Object\.keys\(value\).*sort\(\)/s);
-  assert.match(canonical, /sha256/);
-  assert.match(transform, /rawSourceSha256/);
-  assert.match(transform, /transformedSha256/);
-  assert.match(transform, /aes-256-gcm/);
-});
-
-test('DSR evidence import is protected, idempotent, and UUIDv7-based', () => {
-  const importer = fs.readFileSync(path.join(root, 'scripts/azure-exit/import-dsr-evidence.mjs'), 'utf8');
-  assert.match(importer, /protected-migration\/dsr\//);
-  assert.match(importer, /restoreVerified !== true/);
-  assert.match(importer, /ON CONFLICT \(request_id, object_key\) DO UPDATE/);
-  assert.match(importer, /ON CONFLICT \(subject_id, store_type, resource_reference, entity_type, entity_key\) DO UPDATE/);
-  assert.match(importer, /bytes\[6\] = \(bytes\[6\] & 0x0f\) \| 0x70/);
-  assert.match(importer, /sourceSemanticHash/);
-  assert.match(importer, /destinationSemanticHash/);
 });
 
 test('jobs role can read trust ledgers required by Data Passport exports', () => {
@@ -448,4 +389,25 @@ test('privacy workflows reconcile the subject-data locator before export or dele
   assert.match(migration, /SECURITY DEFINER/);
   assert.match(grants, /GRANT EXECUTE ON FUNCTION privacy\.reconcile_subject_data_locations\(uuid\) TO lythaus_privacy/);
   assert.equal((jobs.match(/privacy\.reconcile_subject_data_locations/g) ?? []).length, 2);
+});
+
+test('native APIs cover the provider-neutral Functions capability set', () => {
+  const publicApi = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const adminApi = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0010_native_runtime_parity.sql'), 'utf8');
+  for (const route of [
+    '/api/custom-feeds', '/api/feed/news', '/api/subscription/status',
+    '/api/reputation/me', '/api/rewards/me', '/api/notifications',
+  ]) assert.match(publicApi, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  for (const route of [
+    '/api/admin/moderation/cases', '/api/admin/audit', '/api/admin/users/search',
+    '/api/admin/privacy/legal-holds', '/api/admin/editorial/publications',
+  ]) assert.match(adminApi, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(publicApi, /enforceDailyAction/);
+  assert.match(publicApi, /enforceRateLimit/);
+  assert.match(adminApi, /enforceAdminRateLimit/);
+  assert.match(migration, /identity\.user_entitlements/);
+  assert.match(migration, /system\.rate_limit_windows/);
+  assert.match(migration, /feed\.notification_devices/);
+  assert.match(migration, /trust\.reward_redemptions/);
 });

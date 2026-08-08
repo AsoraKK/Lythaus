@@ -1,67 +1,42 @@
-# Lythaus domain cutover runbook
+# Lythaus domain and Pages cutover
 
-## Gate
+## Current state
 
-This pass is audit and repository preparation only. Do not perform provider writes without separate authorization after both Cloudflare zones, Pages, Workers, custom domains/routes, Access, rulesets, certificates, the Azure MVP origin, CORS, OAuth callbacks, secrets, and rollback snapshots are verified.
+- `api.lythaus.co` targets the native public API Worker.
+- `admin-api.lythaus.co` targets the native admin API Worker.
+- The jobs Worker has no public application route.
+- `admin.lythaus.co` is still attached to a Pages project with a retired project name.
+- The repository name is Lythaus, but transfer from the personal-owner namespace to the approved Lythaus organisation remains an external blocker.
 
-## Environment model
+## Change gate
 
-- **Local:** local Flutter and Functions where supported.
-- **Preview:** exact Cloudflare Pages preview plus temporary Worker preview; both use the existing Azure MVP origin.
-- **MVP live:** official Lythaus domains using the same Azure origin.
+Do not create a replacement Pages project or change DNS, Access, custom domains, build variables, or Git integration until the operator records:
 
-Do not create permanent staging hostnames, new Azure Function Apps, or new databases.
+- exact new project name and source branch;
+- build command and output directory;
+- current and replacement deployment identifiers;
+- fixed and usage-based cost impact;
+- Access application and policy mapping;
+- DNS/custom-domain change;
+- rollback owner and rollback steps.
 
-## Pre-change capture
+Stop if the provider requires a paid upgrade, creates a duplicate billable resource, or cannot preserve the existing protected preview and production deployment during verification.
 
-Store raw exports only under `.artifacts/cloudflare-audit/`; commit sanitized summaries. Capture DNS, Pages domains/deployments, Worker routes/custom domains/version, Access apps/policies, rulesets, Azure app-setting names/redacted state, platform CORS, OAuth callbacks, Function deployment SHA/package, and database backup posture.
+## Approved cutover sequence
 
-## Preview sequence
+1. Capture the current Pages project settings, latest production deployment, custom domain, Access policy, and DNS record.
+2. Create the approved `lythaus-` replacement project from the transferred `LythausHQ/Lythaus` repository.
+3. Deploy the exact control-panel commit and verify asset integrity, SPA routing, Access enforcement, admin API calls, logout, and error states on the replacement preview domain.
+4. Attach a temporary Lythaus test hostname only when explicitly approved.
+5. Move `admin.lythaus.co` to the replacement project.
+6. Reapply and verify the Access policy before considering the cutover successful.
+7. Confirm the old project receives no production requests.
+8. Delete the retired-name project only after the rollback window closes.
+9. Record sanitized deployment, DNS, Access, and deletion evidence under `docs/history/`.
 
-1. Re-run `scripts/cloudflare/audit-domains.ps1`; require both exact zones and all read permissions.
-2. Identify marketing, Flutter, and control-panel Pages projects by source, output, response content, and deployment SHA.
-3. Deploy the exact PR Flutter artifact to a Pages preview.
-4. Deploy the gateway temporarily through Wrangler preview/workers.dev with explicit preview hostname and CORS origin, the existing MVP `ORIGIN_BASE`, secret `ORIGIN_AUTH_TOKEN`, and rate-limit binding.
-5. Start Azure with `ORIGIN_GATEWAY_AUTH_MODE=observe` and all three distinct token settings installed through approved secret stores; do not change production DNS.
-6. Validate health, path forwarding, preflight, discovery, authenticated cache bypass, protected rejection, header stripping, correlation IDs, origin concealment, SPA refresh, login, and callback error handling.
-7. Add only the exact Pages preview origin to Azure CORS for the validation window, record it, and remove it afterward unless separately approved.
-8. Enable origin enforcement only after gateway and emergency paths are proven; repeat health/auth/deployment checks.
-9. Restore the prior Function package and Worker version, verify rollback, then restore the exact candidate SHA and repeat tests.
+## Rollback
 
-## Authorised provider-change plan
-
-After a separate approval:
-
-1. Attach `lythaus.co` to the identified marketing Pages project and verify canonical/sitemap output.
-2. Configure the path/query-preserving `www.lythaus.co` redirect.
-3. Attach `app.lythaus.co` to the identified Flutter Pages project and verify SPA/OAuth behavior.
-4. Attach `api.lythaus.co` to the verified gateway using the existing MVP origin.
-5. Set exact Lythaus Azure CORS and OAuth callback values.
-6. Attach administration domains only after Access policy, audience, service-token, and origin-role checks pass.
-7. Begin reviewed legacy redirects/API compatibility without deleting old bindings.
-8. Record DNS, TLS, Pages/Worker versions, Access, CORS, OAuth, monitoring, and exact deployment identifiers.
-
-## Rollback order
-
-1. Move Azure origin authentication from `enforce` to `observe` or a reviewed, unexpired `dual` configuration.
-2. Verify direct Azure health using only the health-scoped operational token.
-3. Restore the previous Worker version.
-4. Restore previous Worker custom-domain and route bindings.
-5. Verify both gateway and legacy-compatibility traffic.
-6. Restore the previous Pages deployment if required.
-7. Restore CORS and OAuth values only when they were changed.
-8. Check for split-brain routing before restoring the candidate.
-9. Restore the candidate Worker and Pages artifacts.
-10. Re-run health, auth, cache, Access, contract, and DSR checks.
-11. Re-enable `enforce` only after every path passes.
-
-Rollback uses exported, still-existing resources. Initial cutover does not delete old DNS, bindings, versions, Access applications, or compatibility routes.
-
-## Current execution
-
-PR 453 is draft and stacked on PR 452. Repository preparation is complete only
-where evidence is recorded in `docs/evidence/cloudflare/`; current Worker,
-Pages, Azure origin-authentication, browser-authentication, Access, and
-rollback rehearsals must be repeated against the exact candidate before
-cutover. Production DNS, custom domains, redirects, email DNS, certificates,
-and Access bindings remain unchanged.
+1. Reattach `admin.lythaus.co` to the captured prior Pages deployment.
+2. Restore the captured DNS record and Access application mapping.
+3. Verify authentication, SPA navigation, and admin API access.
+4. Leave the replacement project isolated for investigation; do not delete either project during an active incident.

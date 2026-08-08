@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const root = path.resolve(__dirname, '..', '..');
-const workflow = fs.readFileSync(path.join(root, '.github/workflows/deploy-asora-function-dev.yml'), 'utf8');
+const workflow = fs.readFileSync(path.join(root, '.github/workflows/deploy-lythaus-function-dev.yml'), 'utf8');
 const runner = fs.readFileSync(path.join(root, 'scripts/release/runtime-authenticated-command.mjs'), 'utf8');
 
 test('canonical deployment obtains fresh runtime tokens without static access-token secrets', () => {

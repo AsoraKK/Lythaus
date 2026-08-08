@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/config/web_release_guard.dart';
+import 'package:lythaus/core/config/web_release_guard.dart';
 
 void main() {
   group('web release guard', () {

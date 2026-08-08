@@ -2,7 +2,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/state/models/moderation.dart';
+import 'package:lythaus/state/models/moderation.dart';
 
 /// Moderation queue — starts empty; populate via API calls from
 /// the moderation console providers

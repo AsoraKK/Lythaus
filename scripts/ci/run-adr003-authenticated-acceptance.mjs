@@ -126,11 +126,11 @@ async function writeEvidence(databaseReport) {
     workerVersions: parseSanitizedJson(process.env.ADR003_WORKER_VERSIONS_JSON, 'workerVersions'),
     hyperdriveIds: parseSanitizedJson(process.env.ADR003_HYPERDRIVE_IDS_JSON, 'hyperdriveIds'),
     manualAcceptance: {
-      googleSignIn: process.env.ADR003_GOOGLE_ACCEPTED === 'true',
-      providerLinkLookup: process.env.ADR003_PROVIDER_LINK_VERIFIED === 'true',
-      duplicateCallback: process.env.ADR003_DUPLICATE_CALLBACK_VERIFIED === 'true',
-      webCallback: process.env.ADR003_WEB_CALLBACK_VERIFIED === 'true',
-      mobileCallbacks: process.env.ADR003_MOBILE_ACCEPTED === 'true',
+      guestBrowse: process.env.ADR003_GUEST_ACCEPTED === 'true',
+      emailDelivery: process.env.ADR003_EMAIL_DELIVERY_ACCEPTED === 'true',
+      emailLinkReplay: process.env.ADR003_EMAIL_LINK_REPLAY_VERIFIED === 'true',
+      webEmailFlow: process.env.ADR003_WEB_EMAIL_ACCEPTED === 'true',
+      mobileEmailFlow: process.env.ADR003_MOBILE_EMAIL_ACCEPTED === 'true',
     },
     cases: results,
   };
@@ -176,7 +176,7 @@ await runCase('GATE-ROUTING', async () => {
   return result;
 });
 
-await runCase('A01', async () => manualFlag('ADR003_GOOGLE_ACCEPTED', 'google_sign_in_kyle_owned'));
+await runCase('A01', async () => manualFlag('ADR003_GUEST_ACCEPTED', 'guest_browse_kyle_owned'));
 await runCase('A02', async () => manualFlag('ADR003_NEW_USER_ACCEPTED', 'new_user_creation_kyle_owned'));
 
 await runCase('A03', async () => {
@@ -192,7 +192,7 @@ await runCase('A03', async () => {
   return result;
 });
 
-await runCase('A04', async () => manualFlag('ADR003_PROVIDER_LINK_VERIFIED', 'provider_link_lookup_kyle_owned'));
+await runCase('A04', async () => manualFlag('ADR003_EMAIL_DELIVERY_ACCEPTED', 'email_delivery_kyle_owned'));
 
 await runCase('A05', () => runAuthenticatedCase(async () => {
   const result = await requestJson('/api/auth/userinfo', { headers: bearer() });
@@ -299,21 +299,24 @@ await runCase('A10', async () => {
 });
 
 await runCase('A16', async () => {
-  const result = await requestJson('/api/auth/google/callback?code=invalid&state=invalid');
-  expectStatus(result, [400], 'invalid_oauth_state');
+  const result = await requestJson('/api/auth/email/verify?token=invalid-email-verification-token-for-acceptance');
+  expectStatus(result, [400], 'invalid_email_verification_token');
   return result;
 });
 
 await runCase('A17', async () => {
-  const result = await requestJson('/api/auth/token', {
+  const result = await requestJson('/api/auth/password/reset/complete', {
     method: 'POST',
-    body: 'grant_type=authorization_code&code=expired&code_verifier=invalid',
+    body: {
+      token: 'invalid-password-reset-token-for-acceptance',
+      password: 'AcceptanceOnly-Reset-Password-2026!',
+    },
   });
-  expectStatus(result, [400], 'expired_oauth_code');
+  expectStatus(result, [400], 'invalid_password_reset_token');
   return result;
 });
 
-await runCase('A18', async () => manualFlag('ADR003_DUPLICATE_CALLBACK_VERIFIED', 'duplicate_callback_kyle_owned'));
+await runCase('A18', async () => manualFlag('ADR003_EMAIL_LINK_REPLAY_VERIFIED', 'email_link_replay_kyle_owned'));
 
 await runCase('A19', async () => {
   const origin = required('ADR003_WEB_ORIGIN');
@@ -332,8 +335,8 @@ await runCase('A19', async () => {
 
 await runCase('A20', async () => {
   await webSecurityCheck();
-  manualFlag('ADR003_WEB_CALLBACK_VERIFIED', 'web_callback_kyle_owned');
-  manualFlag('ADR003_MOBILE_ACCEPTED', 'mobile_callbacks_kyle_owned');
+  manualFlag('ADR003_WEB_EMAIL_ACCEPTED', 'web_email_flow_kyle_owned');
+  manualFlag('ADR003_MOBILE_EMAIL_ACCEPTED', 'mobile_email_flow_kyle_owned');
 });
 
 const evidence = await writeEvidence(readiness ?? { branchFingerprint: hyperdriveVerifiedMain ? 'main' : 'unknown', readiness: 'blocked' });

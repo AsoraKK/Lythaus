@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/presentation/widgets/appeal_card.dart';
-import 'package:asora/features/moderation/presentation/widgets/voting_progress_indicator.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/appeal_card.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/voting_progress_indicator.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-// ASORA APPEAL CARD WIDGET TESTS
+// LYTHAUS APPEAL CARD WIDGET TESTS
 //
 // 🎯 Purpose: Test AppealCard widget rendering and behavior
 // ✅ Coverage: showProgress parameter, content display, interaction

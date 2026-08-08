@@ -5,8 +5,8 @@
 // ✅ Testing: All critical security validation functions
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/p1_modules/critical_auth_validator.dart';
-import 'package:asora/features/auth/application/auth_state.dart';
+import 'package:lythaus/p1_modules/critical_auth_validator.dart';
+import 'package:lythaus/features/auth/application/auth_state.dart';
 
 void main() {
   group('CriticalAuthValidator', () {

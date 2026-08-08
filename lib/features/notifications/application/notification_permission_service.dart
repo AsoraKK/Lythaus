@@ -1,13 +1,13 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA NOTIFICATIONS - PERMISSION SERVICE
+/// LYTHAUS NOTIFICATIONS - PERMISSION SERVICE
 ///
 /// Manages notification permission requests and status checking
 library;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:asora/features/notifications/domain/notification_models.dart';
+import 'package:lythaus/features/notifications/domain/notification_models.dart';
 
 class NotificationPermissionService {
   /// Check current notification permission status

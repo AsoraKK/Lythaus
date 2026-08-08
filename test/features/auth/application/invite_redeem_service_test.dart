@@ -1,4 +1,4 @@
-import 'package:asora/features/auth/application/invite_redeem_service.dart';
+import 'package:lythaus/features/auth/application/invite_redeem_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

@@ -1,5 +1,5 @@
-import 'package:asora/core/logging/app_logger.dart';
-import 'package:asora/core/observability/crash_reporting.dart';
+import 'package:lythaus/core/logging/app_logger.dart';
+import 'package:lythaus/core/observability/crash_reporting.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1559,12 +1559,6 @@ textarea.lyth-input {
   color: #999;
 }
 
-.mock-social {
-  display: flex;
-  gap: 16px;
-  font-size: 1.5rem;
-}
-
 .mock-illustration {
   font-size: 4rem;
   margin-bottom: 16px;
@@ -1786,7 +1780,7 @@ textarea.lyth-input {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HIVE API TEST PAGE STYLES
+   AUTHENTICITY TEST PAGE STYLES
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .live-mode-toggle {
@@ -2134,27 +2128,6 @@ textarea.lyth-input {
 /* ═══════════════════════════════════════════════════════════════════════════
    INTERACTIVE EMULATOR ELEMENTS
    ═══════════════════════════════════════════════════════════════════════════ */
-
-/* Social buttons */
-.social-btn {
-  width: 48px;
-  height: 48px;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  background: #fff;
-  font-size: 1.5rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.social-btn:hover {
-  background: #f5f5f5;
-  transform: scale(1.05);
-}
-
-.social-btn:active {
-  transform: scale(0.95);
-}
 
 /* Ghost button */
 .mock-btn.ghost {

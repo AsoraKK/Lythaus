@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA MODERATION PROVIDERS
+/// LYTHAUS MODERATION PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for moderation feature
 /// 🏗️ Architecture: Application layer - manages state and dependencies
@@ -10,12 +10,12 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
-import 'package:asora/core/providers/repository_providers.dart';
-import 'package:asora/core/security/device_integrity_guard.dart';
-import 'package:asora/core/error/error_codes.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
+import 'package:lythaus/core/providers/repository_providers.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
+import 'package:lythaus/core/error/error_codes.dart';
 
 // Re-export the core repository provider for this feature
 // This maintains clean feature boundaries while using shared infrastructure

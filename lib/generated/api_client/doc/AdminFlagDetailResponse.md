@@ -1,8 +1,8 @@
-# asora_api_client.model.AdminFlagDetailResponse
+# lythaus_api_client.model.AdminFlagDetailResponse
 
 ## Load the model package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 ## Properties

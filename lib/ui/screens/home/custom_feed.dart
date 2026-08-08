@@ -3,10 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/design_system/components/lyth_empty_state.dart';
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/components/feed_card.dart';
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:lythaus/design_system/components/lyth_empty_state.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/ui/components/feed_card.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
 
 class CustomFeedView extends ConsumerWidget {
   const CustomFeedView({

@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/theme/theme_build_context_x.dart';
-import 'package:asora/features/moderation/domain/appeal.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-/// ASORA VOTING PROGRESS INDICATOR
+/// LYTHAUS VOTING PROGRESS INDICATOR
 ///
 /// 🎯 Purpose: Display voting progress with progress bar and statistics
 /// 🔍 Single Responsibility: Progress visualization only

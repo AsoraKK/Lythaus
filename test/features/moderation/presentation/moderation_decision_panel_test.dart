@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/domain/moderation_decision.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/widgets/moderation_decision_panel.dart';
+import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/widgets/moderation_decision_panel.dart';
 
 void main() {
   testWidgets('moderation decision panel validates and submits', (

@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,20 +12,20 @@ part 'email_login_request.g.dart';
 /// Verified email login request.
 ///
 /// Properties:
+/// * [mode]
 /// * [email]
 /// * [password]
-/// * [clientId] - Optional registered audience; defaults to the server's first configured JWT audience.
 @BuiltValue()
 abstract class EmailLoginRequest implements Built<EmailLoginRequest, EmailLoginRequestBuilder> {
+  @BuiltValueField(wireName: r'mode')
+  EmailLoginRequestModeEnum get mode;
+  // enum modeEnum {  login,  };
+
   @BuiltValueField(wireName: r'email')
   String get email;
 
   @BuiltValueField(wireName: r'password')
   String get password;
-
-  /// Optional registered audience; defaults to the server's first configured JWT audience.
-  @BuiltValueField(wireName: r'client_id')
-  String? get clientId;
 
   EmailLoginRequest._();
 
@@ -49,6 +50,11 @@ class _$EmailLoginRequestSerializer implements PrimitiveSerializer<EmailLoginReq
     EmailLoginRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    yield r'mode';
+    yield serializers.serialize(
+      object.mode,
+      specifiedType: const FullType(EmailLoginRequestModeEnum),
+    );
     yield r'email';
     yield serializers.serialize(
       object.email,
@@ -59,13 +65,6 @@ class _$EmailLoginRequestSerializer implements PrimitiveSerializer<EmailLoginReq
       object.password,
       specifiedType: const FullType(String),
     );
-    if (object.clientId != null) {
-      yield r'client_id';
-      yield serializers.serialize(
-        object.clientId,
-        specifiedType: const FullType(String),
-      );
-    }
   }
 
   @override
@@ -89,6 +88,13 @@ class _$EmailLoginRequestSerializer implements PrimitiveSerializer<EmailLoginReq
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'mode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(EmailLoginRequestModeEnum),
+          ) as EmailLoginRequestModeEnum;
+          result.mode = valueDes;
+          break;
         case r'email':
           final valueDes = serializers.deserialize(
             value,
@@ -102,13 +108,6 @@ class _$EmailLoginRequestSerializer implements PrimitiveSerializer<EmailLoginReq
             specifiedType: const FullType(String),
           ) as String;
           result.password = valueDes;
-          break;
-        case r'client_id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.clientId = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -137,4 +136,17 @@ class _$EmailLoginRequestSerializer implements PrimitiveSerializer<EmailLoginReq
     );
     return result.build();
   }
+}
+
+class EmailLoginRequestModeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'login')
+  static const EmailLoginRequestModeEnum login = _$emailLoginRequestModeEnum_login;
+
+  static Serializer<EmailLoginRequestModeEnum> get serializer => _$emailLoginRequestModeEnumSerializer;
+
+  const EmailLoginRequestModeEnum._(String name): super(name);
+
+  static BuiltSet<EmailLoginRequestModeEnum> get values => _$emailLoginRequestModeEnumValues;
+  static EmailLoginRequestModeEnum valueOf(String name) => _$emailLoginRequestModeEnumValueOf(name);
 }

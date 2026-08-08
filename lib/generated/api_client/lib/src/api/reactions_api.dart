@@ -7,11 +7,11 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:asora_api_client/src/api_util.dart';
-import 'package:asora_api_client/src/model/error.dart';
-import 'package:asora_api_client/src/model/submit_reaction_request.dart';
-import 'package:asora_api_client/src/model/submit_reaction_response.dart';
-import 'package:asora_api_client/src/model/unauthorized_error.dart';
+import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/submit_reaction_request.dart';
+import 'package:lythaus_api_client/src/model/submit_reaction_response.dart';
+import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
 
 class ReactionsApi {
 

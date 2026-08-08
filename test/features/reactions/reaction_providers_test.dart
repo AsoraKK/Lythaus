@@ -4,9 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/reactions/application/reaction_providers.dart';
-import 'package:asora/features/reactions/domain/reaction.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/reactions/application/reaction_providers.dart';
+import 'package:lythaus/features/reactions/domain/reaction.dart';
 
 class _JsonAdapter implements HttpClientAdapter {
   _JsonAdapter(this._handler);

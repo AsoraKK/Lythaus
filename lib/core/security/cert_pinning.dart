@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA CERTIFICATE PINNING
+/// LYTHAUS CERTIFICATE PINNING
 ///
 /// 🎯 Purpose: Pin SHA-256 of server's leaf SPKI on native platforms
 /// 🔐 Security: Prevents MITM attacks via certificate validation

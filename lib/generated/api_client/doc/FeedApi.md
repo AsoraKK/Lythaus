@@ -1,8 +1,8 @@
-# asora_api_client.api.FeedApi
+# lythaus_api_client.api.FeedApi
 
 ## Load the API package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 All URIs are relative to *https://api.lythaus.co/api*
@@ -23,9 +23,9 @@ Return discovery/explore feed
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getFeedApi();
+final api = LythausApiClient().getFeedApi();
 
 try {
     final response = api.feedDiscover();
@@ -62,9 +62,9 @@ Return authenticated News Board posts. Free receives a maximum three-item previe
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getFeedApi();
+final api = LythausApiClient().getFeedApi();
 final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
 final int limit = 25; // int | Maximum number of items to return per page
 final String region = region_example; // String |
@@ -109,9 +109,9 @@ Public feed surface using ranking safety filters and reputation-derived trust we
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getFeedApi();
+final api = LythausApiClient().getFeedApi();
 final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
 final int limit = 25; // int | Maximum number of items to return per page
 final String includeTopics = includeTopics_example; // String |
@@ -156,9 +156,9 @@ Return a public user's post feed
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getFeedApi();
+final api = LythausApiClient().getFeedApi();
 final String userId = userId_example; // String |
 
 try {
@@ -199,9 +199,9 @@ Return a page of feed items.
 
 ### Example
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 
-final api = AsoraApiClient().getFeedApi();
+final api = LythausApiClient().getFeedApi();
 final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
 final int limit = 25; // int | Maximum number of items to return per page
 

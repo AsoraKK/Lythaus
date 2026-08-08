@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
 
 /// Details for a single moderation case
 class ModerationCase {

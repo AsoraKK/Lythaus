@@ -18,11 +18,11 @@ This inventory defines state ownership, guest/authed behavior, analytics hooks, 
 ### Auth Sheet
 
 - Screen: Unified auth sheet (`/auth/sheet`)
-- States: idle, provider loading, provider error, cancelled
+- States: idle, email loading, email error, cancelled
 - Guest actions: dismiss, continue as guest
-- Auth actions: Google, Apple, World Auth, Email
-- Analytics: `auth_sheet_opened`, `auth_provider_selected`, `auth_completed`, `auth_failed`
-- Accessibility: clear provider labels and failure text
+- Auth actions: email
+- Analytics: `auth_sheet_opened`, `auth_method_selected`, `auth_completed`, `auth_failed`
+- Accessibility: clear email and guest labels and failure text
 
 ### Onboarding
 
@@ -89,7 +89,7 @@ This inventory defines state ownership, guest/authed behavior, analytics hooks, 
 
 ## Component Inventory
 
-- `AsoraBottomNav` (4-tab shell only)
+- `LythausBottomNav` (4-tab shell only)
 - `FeedRail` (discover and custom feed chips)
 - `FeedCard` and post action row
 - `TrustStripRow`

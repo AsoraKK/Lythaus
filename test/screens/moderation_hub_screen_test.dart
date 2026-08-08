@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/state/models/moderation.dart';
-import 'package:asora/state/providers/moderation_providers.dart';
-import 'package:asora/ui/screens/mod/moderation_hub.dart';
+import 'package:lythaus/state/models/moderation.dart';
+import 'package:lythaus/state/providers/moderation_providers.dart';
+import 'package:lythaus/ui/screens/mod/moderation_hub.dart';
 
 void main() {
   testWidgets('moderation hub renders queue, appeals, and stats', (

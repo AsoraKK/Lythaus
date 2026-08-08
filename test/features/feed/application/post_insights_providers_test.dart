@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/application/auth_service.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/feed/application/post_insights_providers.dart';
-import 'package:asora/features/feed/domain/post_insights.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/application/post_insights_providers.dart';
+import 'package:lythaus/features/feed/domain/post_insights.dart';
 
 class _MockDio extends Mock implements Dio {}
 

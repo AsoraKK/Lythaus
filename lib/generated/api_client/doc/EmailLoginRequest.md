@@ -1,15 +1,15 @@
-# asora_api_client.model.EmailLoginRequest
+# lythaus_api_client.model.EmailLoginRequest
 
 ## Load the model package
 ```dart
-import 'package:asora_api_client/api.dart';
+import 'package:lythaus_api_client/api.dart';
 ```
 
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**mode** | **String** |  |
 **email** | **String** |  |
 **password** | **String** |  |
-**clientId** | **String** | Optional registered audience; defaults to the server's first configured JWT audience. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

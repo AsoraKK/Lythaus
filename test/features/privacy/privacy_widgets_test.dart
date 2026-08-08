@@ -1,6 +1,6 @@
-import 'package:asora/features/privacy/widgets/privacy_blocking_overlay.dart';
-import 'package:asora/features/privacy/widgets/privacy_error_banner.dart';
-import 'package:asora/features/privacy/widgets/privacy_info_card.dart';
+import 'package:lythaus/features/privacy/widgets/privacy_blocking_overlay.dart';
+import 'package:lythaus/features/privacy/widgets/privacy_error_banner.dart';
+import 'package:lythaus/features/privacy/widgets/privacy_info_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

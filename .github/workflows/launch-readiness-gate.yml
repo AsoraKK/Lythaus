@@ -122,7 +122,7 @@ jobs:
         # To mark iOS push as implemented and clear this gate:
         #   Set the IOS_PUSH_IMPLEMENTED repository variable to 'true'.
         #   Also add APNS_KEY_BASE64, APNS_KEY_ID, APNS_TEAM_ID secrets and
-        #   implement functions/src/notifications/clients/apnsClient.ts.
+        #   implement APNs delivery in the native jobs Worker.
         env:
           IOS_PUSH_IMPLEMENTED: ${{ vars.IOS_PUSH_IMPLEMENTED || 'false' }}
           IOS_PUSH_REQUIRED: ${{ vars.IOS_PUSH_REQUIRED || 'false' }}
@@ -141,8 +141,8 @@ jobs:
           echo "  Android push delivery via FCM is unaffected."
           echo ""
           echo "  To implement APNS delivery:"
-          echo "    1. Create functions/src/notifications/clients/apnsClient.ts (APNs HTTP/2 provider API)"
-          echo "    2. Update sendToDevices() to route platform === 'ios' through apnsClient"
+          echo "    1. Add an APNs HTTP/2 client to apps/lythaus-jobs"
+          echo "    2. Route iOS notification events through that client"
           echo "    3. Add secrets: APNS_KEY_BASE64, APNS_KEY_ID, APNS_TEAM_ID"
           echo "    4. Set repository variable IOS_PUSH_IMPLEMENTED=true"
           echo "    5. Run integration tests with a real iOS device and APN sandbox"

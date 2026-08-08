@@ -3,8 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/security/tls_pinning.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/security/tls_pinning.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

@@ -8,9 +8,9 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:asora/design_system/tokens/motion.dart';
-import 'package:asora/design_system/tokens/radius.dart';
-import 'package:asora/design_system/tokens/spacing.dart';
+import 'package:lythaus/design_system/tokens/motion.dart';
+import 'package:lythaus/design_system/tokens/radius.dart';
+import 'package:lythaus/design_system/tokens/spacing.dart';
 
 /// ThemeExtension for Lythaus design tokens
 class LythThemeExtension extends ThemeExtension<LythThemeExtension> {

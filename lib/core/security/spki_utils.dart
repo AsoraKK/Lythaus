@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA SPKI UTILITIES
+/// LYTHAUS SPKI UTILITIES
 ///
 /// 🎯 Purpose: Extract and hash SPKI from X509 certificates
 /// 🔐 Security: Supports TLS pinning with SPKI SHA-256 hashes

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:asora/features/moderation/moderation_service.dart';
+import 'package:lythaus/features/moderation/moderation_service.dart';
 import 'dart:convert';
 
 // Mock HTTP client that captures requests

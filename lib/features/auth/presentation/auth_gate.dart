@@ -3,13 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/features/auth/presentation/invite_redeem_screen.dart';
-import 'package:asora/ui/screens/app_shell.dart';
-import 'package:asora/features/auth/presentation/auth_choice_screen.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
+import 'package:lythaus/ui/screens/app_shell.dart';
+import 'package:lythaus/features/auth/presentation/auth_choice_screen.dart';
 
 class AuthGate extends ConsumerStatefulWidget {
   const AuthGate({super.key});
@@ -76,12 +76,12 @@ class _AuthGateState extends ConsumerState<AuthGate> {
     return authState.when(
       data: (user) {
         return user != null || isGuest
-            ? const AsoraAppShell()
+            ? const LythausAppShell()
             : const AuthChoiceScreen();
       },
-      loading: () => isGuest ? const AsoraAppShell() : const AuthChoiceScreen(),
+      loading: () => isGuest ? const LythausAppShell() : const AuthChoiceScreen(),
       error: (error, stack) =>
-          isGuest ? const AsoraAppShell() : const AuthChoiceScreen(),
+          isGuest ? const LythausAppShell() : const AuthChoiceScreen(),
     );
   }
 }

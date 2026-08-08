@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/features/notifications/presentation/notification_permission_prompt.dart';
+import 'package:lythaus/features/notifications/presentation/notification_permission_prompt.dart';
 
 void main() {
   group('NotificationPermissionPrompt', () {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/design_system/components/lyth_icon_button.dart';
-import 'package:asora/design_system/components/lyth_slider.dart';
-import 'package:asora/design_system/index.dart';
+import 'package:lythaus/design_system/components/lyth_icon_button.dart';
+import 'package:lythaus/design_system/components/lyth_slider.dart';
+import 'package:lythaus/design_system/index.dart';
 
 void main() {
   Widget wrap(Widget child) {

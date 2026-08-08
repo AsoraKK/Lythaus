@@ -1,14 +1,14 @@
 # Codex Agent Guide (AGENTS.md)
 
 Authoritative, concise instructions for agents working in this repository via Codex CLI.
-## Branding (Read First)
+## Product and runtime (Read First)
 
-- **User-facing product = Lythaus** (UI labels, store text, marketing copy)
-- **Internal/legacy infra = Asora** (repo name, historical Azure resources, Terraform, package IDs)
-- When introducing the product in docs, use "Lythaus (formerly Asora)".
-- When generating code, use "Lythaus" for user-visible strings.
-- Do **not** rename Azure resources, package identifiers, or internal imports without explicit instruction.
-- Full guide: `docs/branding/lythaus-transition.md`
+- The product and internal name are **Lythaus**. Do not introduce the former brand in active files, paths, identifiers, packages, metadata, or provider resources.
+- Historical Git commits and files under `docs/history/` may accurately retain retired names. Do not rewrite Git history solely for branding.
+- Azure was fully deleted on 6 August 2026. Do not add Azure code, dependencies, configuration, deployment paths, credentials, or recovery fallbacks.
+- Cloudflare Workers are the only backend runtime. PlanetScale PostgreSQL is the canonical database.
+- Initial authentication is email plus guest access only. Do not add Google, Apple, World ID, Entra, B2C, or generic OAuth provider selection.
+- Hive is prohibited. Authenticity logic must be provider-neutral, Lythaus-owned, and located under `packages/authenticity/`.
 
 ## PlanetScale Database
 
@@ -41,14 +41,11 @@ Use application-generated UUIDv7 identifiers for new records. Store them in
 native PostgreSQL `uuid` columns; do not add a database UUIDv7 function or
 default to `main`.
 
-The current implementation branch is `codex/production-cutover-hardening`.
-
 ## Cloudflare Architecture
 
 Use only the existing shared Cloudflare account `e5b7ae46e04698f507b7e4b3d4ef1af0`
 and active zone `lythaus.co`. Approved resources are prefixed `lythaus-`.
-Historical `asora-*` resources are not Lythaus runtime dependencies. Never
-mutate Nite Owl, `asora.co.za`, unrelated zones, or unrelated resources.
+Never mutate Nite Owl, unrelated zones, unrelated resources, or the account login identity retained by the owner.
 
 Use only the existing Lythaus Workers, Hyperdrives, R2 buckets, Queues/DLQs,
 Workflows, KV namespace, and Access applications listed in
@@ -62,23 +59,7 @@ registry, inspect live provider state, search for an equivalent, prefer reuse
 or rebinding, check possible cost, and stop if a duplicate or new cost may be
 required. No automatic create-if-missing behavior is permitted.
 
-Azure extraction is read-only and historical. The approved Cosmos Built-in Data Reader and
-container-scoped Storage Blob Data Reader assignments are active. PostgreSQL
-remains `BLOCKED — ACCESS REQUIRED` unless Cosmos classification proves that
-recovering it is required.
-Never import access tokens, refresh tokens, secrets, or reversible passwords.
-Import password hashes only when their algorithm, parameters, association, and
-security policy are verified compatible; otherwise mark password login
-reset-required.
-
-Before any Azure data write to PlanetScale `main` or R2, produce the measured
-record/object/byte, operation, included-usage, and worst-case incremental-cost
-report. Proceed only when existing capacity and included allowances cover the
-operation with no indicated incremental charge. Otherwise stop for:
-`AUTHORISE MIGRATION USAGE: maximum additional cost US$___`.
-
-Do not delete PlanetScale `development`, Azure resources, or any other
-destructive target without the explicit gates defined in the migration runbook.
+Do not restore deleted provider paths from historical commits. Never import credentials or reversible passwords from historical evidence. Do not delete PlanetScale `development` or any live Cloudflare resource without the registry, live-state, cost, rollback, and explicit approval gates below.
 
 ## Quick Start
 

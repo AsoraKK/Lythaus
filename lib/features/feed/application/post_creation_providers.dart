@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA POST CREATION PROVIDERS
+/// LYTHAUS POST CREATION PROVIDERS
 ///
 /// 🎯 Purpose: Riverpod providers for post creation state management
 /// 🏗️ Architecture: Application layer - manages state and dependencies
@@ -9,11 +9,11 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/feed/domain/post_repository.dart';
-import 'package:asora/features/feed/application/post_repository_impl.dart';
-import 'package:asora/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/application/post_repository_impl.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 
 /// Provider for the post repository implementation
 final postRepositoryProvider = Provider<PostRepository>((ref) {

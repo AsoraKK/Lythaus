@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/feed/application/social_feed_providers.dart';
-import 'package:asora/features/feed/domain/models.dart' as domain;
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/ui/components/feed_card.dart';
-import 'package:asora/ui/screens/home/custom_feed.dart';
-import 'package:asora/ui/screens/home/feed_search_screen.dart';
-import 'package:asora/ui/screens/home/trending_feed_screen.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/ui/components/feed_card.dart';
+import 'package:lythaus/ui/screens/home/custom_feed.dart';
+import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
+import 'package:lythaus/ui/screens/home/trending_feed_screen.dart';
 
 class _TrendingSuccessNotifier extends TrendingFeedNotifier {
   _TrendingSuccessNotifier(this.feed);

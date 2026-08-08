@@ -1,4 +1,4 @@
-import 'package:asora/core/routing/url_strategy.dart';
+import 'package:lythaus/core/routing/url_strategy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

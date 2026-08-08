@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:asora/state/models/feed_models.dart';
-import 'package:asora/state/providers/feed_providers.dart';
-import 'package:asora/ui/theme/spacing.dart';
+import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/ui/theme/spacing.dart';
 
 class FeedControlPanel extends ConsumerWidget {
   const FeedControlPanel({

@@ -1,4 +1,4 @@
-import 'package:asora/features/moderation/domain/moderation_audit_entry.dart';
+import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

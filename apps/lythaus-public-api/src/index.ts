@@ -1,10 +1,9 @@
 import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, transaction, query, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
-import type { CreatePostInput, EmailDeliveryReference, TransactionalEmailProvider } from '@lythaus/contracts';
+import { REWARD_CATALOG, TIER_POLICIES, normalizeUserTier, type CreatePostInput, type EmailDeliveryReference, type TransactionalEmailProvider, type UserTier } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface Env extends EnvBindings {
   DB_APP_FRESH: HyperdriveBinding;
@@ -34,12 +33,52 @@ function normalizeEmail(value: string): string {
   return email;
 }
 
-function base64Url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function pkceChallenge(verifier: string): Promise<string> {
-  return base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
+async function enforceRateLimit(request: Request, env: Env, scope: string, limit: number): Promise<void> {
+  const subject = request.headers.get('cf-connecting-ip')
+    ?? request.headers.get('authorization')
+    ?? 'anonymous';
+  const subjectHash = await sha256Hex(`${scope}:${subject}`);
+  const windowStartedAt = new Date(Math.floor(Date.now() / 60_000) * 60_000).toISOString();
+  const result = await query(env.DB_APP_FRESH,
+    `INSERT INTO system.rate_limit_windows (scope, subject_hash, window_started_at, request_count, expires_at)
+     VALUES ($1, $2, $3, 1, $3::timestamptz + interval '2 minutes')
+     ON CONFLICT (scope, subject_hash, window_started_at)
+     DO UPDATE SET request_count = system.rate_limit_windows.request_count + 1
+     WHERE system.rate_limit_windows.request_count < $4
+     RETURNING request_count`,
+    [scope, subjectHash, windowStartedAt, limit]);
+  if (result.rowCount !== 1) throw new Error('rate_limit_exceeded');
+}
+
+async function tierForUser(env: Env, userId: string): Promise<UserTier> {
+  const result = await query<{ subscription_tier: string }>(env.DB_APP_FRESH,
+    `SELECT subscription_tier FROM identity.user_entitlements WHERE user_id = $1`, [userId]);
+  return normalizeUserTier(result.rows[0]?.subscription_tier);
+}
+
+async function enforceDailyAction(
+  env: Env,
+  userId: string,
+  action: 'post' | 'comment' | 'reaction' | 'appeal',
+): Promise<void> {
+  const tier = await tierForUser(env, userId);
+  const policy = TIER_POLICIES[tier];
+  const definitions = {
+    post: { table: 'content.posts', column: 'author_id', limit: policy.dailyPosts },
+    comment: { table: 'content.comments', column: 'author_id', limit: policy.dailyComments },
+    reaction: { table: 'social.reactions', column: 'user_id', limit: policy.dailyReactions },
+    appeal: { table: 'moderation.appeals', column: 'appellant_id', limit: policy.dailyAppeals },
+  } as const;
+  const definition = definitions[action];
+  const result = await query<{ count: string }>(env.DB_APP_FRESH,
+    `SELECT count(*)::text AS count FROM ${definition.table}
+     WHERE ${definition.column} = $1 AND created_at >= date_trunc('day', now())`, [userId]);
+  if (Number(result.rows[0]?.count ?? 0) >= definition.limit) throw new Error(`${action}_daily_limit_reached`);
 }
 
 function requireAuthSecrets(env: Env): { pepper: string; encryptionKey: string; hmacKey: string; privateKey: string; keyId: string } {
@@ -86,20 +125,26 @@ async function issueSession(env: Env, userId: string, roles: string[] = []): Pro
   return { accessToken, refreshToken, expiresIn: 900 };
 }
 
-async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string }): Promise<EmailDeliveryReference> {
+async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string; text: string }): Promise<EmailDeliveryReference> {
   const providerMode = env.EMAIL_PROVIDER_MODE ?? (env.ENVIRONMENT === 'production' ? 'cloudflare' : 'fallback');
   if (providerMode === 'disabled') throw new Error('provider_unavailable');
   if (providerMode === 'cloudflare') {
     if (!env.EMAIL || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
-    await env.EMAIL.send({ to: input.to, from: env.EMAIL_FROM, subject: input.subject, html: input.html });
-    return { provider: 'cloudflare-email', messageId: 'accepted', acceptedAt: new Date().toISOString() };
+    const delivery = await env.EMAIL.send({
+      to: input.to,
+      from: { email: env.EMAIL_FROM, name: 'Lythaus' },
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+    });
+    return { provider: 'cloudflare-email', messageId: delivery.messageId, acceptedAt: new Date().toISOString() };
   }
   if (providerMode !== 'fallback') throw new Error('email_provider_mode_invalid');
   if (!env.EMAIL_PROVIDER_URL || !env.EMAIL_PROVIDER_TOKEN || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
   const response = await fetch(env.EMAIL_PROVIDER_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: input.to, subject: input.subject, html: input.html }),
+    body: JSON.stringify({ from: env.EMAIL_FROM, to: input.to, subject: input.subject, html: input.html, text: input.text }),
   });
   if (!response.ok) throw new Error(`email_delivery_failed_${response.status}`);
   const payload = await response.json().catch(() => ({})) as { messageId?: string };
@@ -113,23 +158,26 @@ function createTransactionalEmailProvider(env: Env): TransactionalEmailProvider 
   return {
     async sendVerification(input) {
       const subject = 'Verify your Lythaus email';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}` });
+      const url = env.EMAIL_VERIFICATION_BASE_URL ? `${env.EMAIL_VERIFICATION_BASE_URL}${encodeURIComponent(input.token)}` : '';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
     },
     async sendPasswordReset(input) {
       const subject = 'Reset your Lythaus password';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_PASSWORD_RESET_BASE_URL, input.token)}` });
+      const url = env.EMAIL_PASSWORD_RESET_BASE_URL ? `${env.EMAIL_PASSWORD_RESET_BASE_URL}${encodeURIComponent(input.token)}` : '';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_PASSWORD_RESET_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
     },
     async sendSecurityNotice(input) {
       const subject = 'Lythaus security notice';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>${input.reason.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value))}</p>` });
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>${input.reason.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value))}</p>`, text: `${subject}. ${input.reason}` });
     },
     async sendEmailChangeNotice(input) {
       const subject = 'Confirm your Lythaus email change';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}` });
+      const url = env.EMAIL_VERIFICATION_BASE_URL ? `${env.EMAIL_VERIFICATION_BASE_URL}${encodeURIComponent(input.token)}` : '';
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
     },
     async sendAccountDeletionNotice(input) {
       const subject = 'Lythaus account deletion requested';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>Request reference: ${input.requestId}</p>` });
+      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>Request reference: ${input.requestId}</p>`, text: `${subject}. Request reference: ${input.requestId}` });
     },
   };
 }
@@ -172,6 +220,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     await transaction(env.DB_APP_FRESH, async (client) => {
       await client.query(`INSERT INTO identity.users (id) VALUES ($1)`, [userId]);
       await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
+      await client.query(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`, [userId, encrypted.ciphertext, lookup]);
       await client.query(`INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`, [uuidv7(), userId, hashResetToken(verificationToken)]);
       await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_registration_started', '{}'::jsonb)`, [uuidv7(), userId]);
     });
@@ -186,6 +235,9 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
       `UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`,
       [JSON.stringify(upgradedHash), account.id]);
   }
+  await query(env.DB_APP_FRESH,
+    `INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_login', '{}'::jsonb)`,
+    [uuidv7(), account.id]);
   const tokens = await issueSession(env, account.id);
   return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
@@ -199,6 +251,7 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
     if (!found.rows[0]) throw new Error('verification_token_invalid');
     await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
     await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
+    await client.query(`UPDATE identity.contact_emails SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
     await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_verified', '{}'::jsonb)`, [uuidv7(), found.rows[0].user_id]);
     return found.rows[0].user_id;
   });
@@ -243,172 +296,6 @@ async function logout(request: Request, env: Env): Promise<Response> {
     await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [user.userId]);
   });
   return privateResponse(request, env, { loggedOut: true });
-}
-
-interface OAuthStateRecord {
-  verifier: string;
-  appState: string;
-  redirectUri: string;
-  codeChallenge: string;
-  clientId: string;
-}
-
-interface OAuthExchangeRecord {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  redirectUri: string;
-  codeChallenge: string;
-  clientId: string;
-}
-
-function allowedOAuthRedirect(value: string, env: Env): boolean {
-  try {
-    const uri = new URL(value);
-    if (uri.protocol === 'https:' && uri.pathname === '/auth/callback') {
-      const origins = (env.CORS_ALLOWED_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
-      return origins.includes(uri.origin);
-    }
-    return (uri.protocol === 'asora:' || uri.protocol === 'lythaus:' || uri.protocol === 'com.asora.app:')
-      && uri.hostname === 'oauth'
-      && uri.pathname === '/callback';
-  } catch {
-    return false;
-  }
-}
-
-async function googleAuthStart(request: Request, env: Env): Promise<Response> {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_REDIRECT_URI || !env.LYTHAUS_CONFIG) throw new Error('google_not_configured');
-  const url = new URL(request.url);
-  const appState = url.searchParams.get('state') ?? '';
-  const redirectUri = url.searchParams.get('redirect_uri') ?? '';
-  const codeChallenge = url.searchParams.get('code_challenge') ?? '';
-  const clientId = url.searchParams.get('client_id') ?? '';
-  const provider = (url.searchParams.get('idp') ?? 'Google').toLowerCase();
-  if (provider !== 'google') throw new Error('provider_unavailable');
-  if (!appState || !redirectUri || !codeChallenge || !clientId || !allowedOAuthRedirect(redirectUri, env)) {
-    throw new Error('oauth_request_invalid');
-  }
-  if (!/^[A-Za-z0-9_-]{43,128}$/.test(codeChallenge)) throw new Error('oauth_challenge_invalid');
-  const state = randomToken(24);
-  const verifier = randomToken(32);
-  const stateRecord: OAuthStateRecord = { verifier, appState, redirectUri, codeChallenge, clientId };
-  await env.LYTHAUS_CONFIG.put(`oauth:google:${state}`, JSON.stringify(stateRecord), { expirationTtl: 600 });
-  const authorization = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  authorization.search = new URLSearchParams({
-    client_id: env.GOOGLE_CLIENT_ID,
-    redirect_uri: env.GOOGLE_REDIRECT_URI,
-    response_type: 'code',
-    scope: 'openid email profile',
-    state,
-    access_type: 'offline',
-    prompt: 'select_account',
-    code_challenge: await pkceChallenge(verifier),
-    code_challenge_method: 'S256',
-  }).toString();
-  return new Response(null, { status: 302, headers: { location: authorization.toString(), 'cache-control': 'no-store' } });
-}
-
-async function googleAuthCallback(request: Request, env: Env): Promise<Response> {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI || !env.GOOGLE_JWKS_URL || !env.LYTHAUS_CONFIG || !env.PII_HMAC_KEY_V1 || !env.PII_ENCRYPTION_KEY_V1 || !env.JWT_PRIVATE_KEY || !env.JWT_KEY_ID) throw new Error('google_not_configured');
-  const url = new URL(request.url);
-  const state = url.searchParams.get('state');
-  const code = url.searchParams.get('code');
-  if (!state || !code) throw new Error('google_callback_invalid');
-  const stateValue = await env.LYTHAUS_CONFIG.get(`oauth:google:${state}`);
-  if (!stateValue) throw new Error('google_state_invalid');
-  const stateRecord = typeof stateValue === 'string' ? JSON.parse(stateValue) as OAuthStateRecord : null;
-  if (!stateRecord?.verifier || !stateRecord.appState || !allowedOAuthRedirect(stateRecord.redirectUri, env)) throw new Error('google_state_invalid');
-  await env.LYTHAUS_CONFIG.delete(`oauth:google:${state}`);
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: env.GOOGLE_REDIRECT_URI, grant_type: 'authorization_code', code_verifier: stateRecord.verifier }),
-  });
-  if (!tokenResponse.ok) throw new Error('google_code_exchange_failed');
-  const tokenPayload = await tokenResponse.json() as { id_token?: string };
-  if (!tokenPayload.id_token) throw new Error('google_id_token_missing');
-  const verified = await jwtVerify(tokenPayload.id_token, createRemoteJWKSet(new URL(env.GOOGLE_JWKS_URL)), { issuer: ['https://accounts.google.com', 'accounts.google.com'], audience: env.GOOGLE_CLIENT_ID });
-  const claims = verified.payload as { sub?: string; email?: string; email_verified?: boolean; name?: string };
-  if (!claims.sub || !claims.email || claims.email_verified !== true) throw new Error('google_identity_unverified');
-  const email = normalizeEmail(claims.email);
-  const subjectHmac = hmacLookup(claims.sub, env.PII_HMAC_KEY_V1);
-  const emailHmac = hmacLookup(email, env.PII_HMAC_KEY_V1);
-  const existing = await query<{ id: string; status: string }>(env.DB_APP_FRESH,
-    `SELECT u.id, u.status FROM identity.provider_links p JOIN identity.users u ON u.id = p.user_id WHERE p.provider = 'google' AND p.provider_subject_hmac = decode($1, 'base64')`, [subjectHmac]);
-  let userId = existing.rows[0]?.id;
-  let accountStatus = existing.rows[0]?.status;
-  if (!userId) {
-    const byEmail = await query<{ id: string; status: string; source_provider: string | null; verified_at: string | null }>(env.DB_APP_FRESH,
-      `SELECT u.id, u.status, c.source_provider, c.verified_at
-         FROM identity.users u
-         LEFT JOIN identity.contact_emails c ON c.user_id = u.id AND c.email_lookup_hmac = decode($1, 'base64')
-        WHERE EXISTS (SELECT 1 FROM identity.email_credentials e WHERE e.user_id = u.id AND e.email_lookup_hmac = decode($1, 'base64'))
-           OR c.user_id IS NOT NULL
-        LIMIT 1`, [emailHmac]);
-    userId = byEmail.rows[0]?.id;
-    accountStatus = byEmail.rows[0]?.status;
-    if (userId && accountStatus === 'relink_required') throw new Error('account_relink_required');
-    const encryptedSubject = await encryptField(claims.sub, env.PII_ENCRYPTION_KEY_V1, 'v1');
-    await transaction(env.DB_APP_FRESH, async (client) => {
-      if (!userId) {
-        userId = uuidv7();
-        await client.query(`INSERT INTO identity.users (id, display_name) VALUES ($1, $2)`, [userId, claims.name?.trim().slice(0, 160) ?? '']);
-      }
-      await client.query(`INSERT INTO identity.provider_links (id, user_id, provider, provider_subject_ciphertext, provider_subject_hmac) VALUES ($1, $2, 'google', convert_to($3, 'utf8'), decode($4, 'base64')) ON CONFLICT (provider, provider_subject_hmac) DO NOTHING`, [uuidv7(), userId, encryptedSubject.ciphertext, subjectHmac]);
-    });
-  }
-  if (!userId || accountStatus === 'suspended' || accountStatus === 'deleted') throw new Error('account_unavailable');
-  const encryptedEmail = await encryptField(email, env.PII_ENCRYPTION_KEY_V1, 'v1');
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    await client.query(
-      `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider, verified_at)
-       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'google', now())
-       ON CONFLICT (user_id) DO UPDATE SET email_ciphertext = EXCLUDED.email_ciphertext,
-         email_lookup_hmac = EXCLUDED.email_lookup_hmac, encryption_key_version = EXCLUDED.encryption_key_version,
-         source_provider = EXCLUDED.source_provider, verified_at = EXCLUDED.verified_at, updated_at = now()`,
-      [userId, encryptedEmail.ciphertext, emailHmac]);
-    await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'google_login', '{}'::jsonb)`, [uuidv7(), userId]);
-  });
-  const tokens = await issueSession(env, userId);
-  const authorizationCode = randomToken(32);
-  const exchange: OAuthExchangeRecord = {
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    expiresIn: tokens.expiresIn,
-    redirectUri: stateRecord.redirectUri,
-    codeChallenge: stateRecord.codeChallenge,
-    clientId: stateRecord.clientId,
-  };
-  await env.LYTHAUS_CONFIG.put(`oauth:exchange:${authorizationCode}`, JSON.stringify(exchange), { expirationTtl: 120 });
-  const appCallback = new URL(stateRecord.redirectUri);
-  appCallback.searchParams.set('code', authorizationCode);
-  appCallback.searchParams.set('state', stateRecord.appState);
-  return new Response(null, { status: 302, headers: { location: appCallback.toString(), 'cache-control': 'no-store' } });
-}
-
-async function exchangeOAuthCode(request: Request, env: Env): Promise<Response> {
-  if (!env.LYTHAUS_CONFIG) throw new Error('google_not_configured');
-  const form = new URLSearchParams(await request.text());
-  const code = form.get('code') ?? '';
-  const verifier = form.get('code_verifier') ?? '';
-  const redirectUri = form.get('redirect_uri') ?? '';
-  const clientId = form.get('client_id') ?? '';
-  if (form.get('grant_type') !== 'authorization_code' || !code || !verifier) throw new Error('oauth_exchange_invalid');
-  const stored = await env.LYTHAUS_CONFIG.get(`oauth:exchange:${code}`);
-  if (typeof stored !== 'string') throw new Error('oauth_code_invalid');
-  const exchange = JSON.parse(stored) as OAuthExchangeRecord;
-  if (exchange.redirectUri !== redirectUri || exchange.clientId !== clientId || !allowedOAuthRedirect(redirectUri, env)) {
-    throw new Error('oauth_exchange_invalid');
-  }
-  if (await pkceChallenge(verifier) !== exchange.codeChallenge) throw new Error('oauth_verifier_invalid');
-  await env.LYTHAUS_CONFIG.delete(`oauth:exchange:${code}`);
-  return privateResponse(request, env, {
-    access_token: exchange.accessToken,
-    refresh_token: exchange.refreshToken,
-    expires_in: exchange.expiresIn,
-    token_type: 'Bearer',
-  });
 }
 
 async function requestPasswordReset(request: Request, env: Env): Promise<Response> {
@@ -539,6 +426,7 @@ async function idempotentMutation(
 }
 
 async function createPost(request: Request, env: Env, user: Principal): Promise<Response> {
+  await enforceDailyAction(env, user.userId, 'post');
   const input = await readJson<CreatePostInput>(request, 64 * 1024);
   if (!input.body?.trim() || !['human', 'ai_assisted', 'ai_generated'].includes(input.declaredCreationMode)) {
     throw new Error('invalid_post');
@@ -548,11 +436,12 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
   }
   const postId = uuidv7();
   const eventId = uuidv7();
+  const createdAt = new Date().toISOString();
   await transaction(env.DB_APP_FRESH, async (client) => {
     await client.query(
-      `INSERT INTO content.posts (id, author_id, body, declared_creation_mode, geo_scope, place_id, moderation_state)
-       VALUES ($1, $2, $3, $4, $5, $6, 'under_review')`,
-      [postId, user.userId, input.body.trim(), input.declaredCreationMode, input.geoScope, input.placeId ?? null]
+      `INSERT INTO content.posts (id, author_id, body, declared_creation_mode, geo_scope, place_id, moderation_state, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 'under_review', $7, $7)`,
+      [postId, user.userId, input.body.trim(), input.declaredCreationMode, input.geoScope, input.placeId ?? null, createdAt]
     );
     if (input.placeId && input.geoScope !== 'none' && input.geoScope !== 'global') {
       const precision = input.geoScope === 'country' ? 'country'
@@ -570,7 +459,29 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
       [eventId, postId, user.userId, JSON.stringify({ postId, declaredCreationMode: input.declaredCreationMode })]
     );
   });
-  return privateResponse(request, env, { postId, eventId }, { status: 201 });
+  const declaredAuthorship = input.declaredCreationMode === 'ai_assisted'
+    ? 'assisted'
+    : input.declaredCreationMode === 'ai_generated' ? 'generated' : 'human';
+  return privateResponse(request, env, {
+    id: postId,
+    authorId: user.userId,
+    content: input.body.trim(),
+    contentType: 'text',
+    visibility: 'public',
+    isNews: false,
+    authorship: {
+      authorshipLabel: 'Under review',
+      declaredAuthorship,
+      classificationSource: 'user_disclosure',
+      classificationState: 'unavailable',
+      reviewState: 'pending',
+      appealState: 'none',
+      labelVersion: 'lythaus-authenticity-v1',
+    },
+    createdAt,
+    updatedAt: createdAt,
+    eventId,
+  }, { status: 201 });
 }
 
 async function createUploadSession(request: Request, env: Env, user: Principal): Promise<Response> {
@@ -725,15 +636,16 @@ async function getUserInfo(request: Request, env: Env, userId: string): Promise<
     last_login_at: string;
   }>(env.DB_APP_FRESH,
     `SELECT u.id,
-            convert_from(e.email_ciphertext, 'utf8') AS email_ciphertext,
-            e.encryption_key_version,
-            a.role,
+            convert_from(COALESCE(c.email_ciphertext, e.email_ciphertext), 'utf8') AS email_ciphertext,
+            COALESCE(c.encryption_key_version, e.encryption_key_version) AS encryption_key_version,
+            m.role,
             COALESCE(r.points, 0)::integer AS reputation_score,
             u.created_at,
-            COALESCE((SELECT max(created_at) FROM identity.account_events x WHERE x.user_id = u.id AND x.event_type = 'google_login'), u.created_at) AS last_login_at
+            COALESCE((SELECT max(created_at) FROM identity.account_events x WHERE x.user_id = u.id AND x.event_type = 'email_login'), u.created_at) AS last_login_at
        FROM identity.users u
-       LEFT JOIN identity.contact_emails e ON e.user_id = u.id
-       LEFT JOIN identity.admin_memberships a ON a.user_id = u.id AND a.active = true
+       LEFT JOIN identity.contact_emails c ON c.user_id = u.id
+       LEFT JOIN identity.email_credentials e ON e.user_id = u.id
+       LEFT JOIN identity.admin_memberships m ON m.user_id = u.id AND m.active = true
        LEFT JOIN trust.reputation_balances r ON r.user_id = u.id
       WHERE u.id = $1 AND u.status = 'active'`, [userId]);
   const user = result.rows[0];
@@ -773,6 +685,12 @@ async function updateProfile(request: Request, env: Env, user: Principal): Promi
        ON CONFLICT (user_id) DO UPDATE SET public_visibility = EXCLUDED.public_visibility,
          trust_passport_visibility = EXCLUDED.trust_passport_visibility, updated_at = now()`,
       [user.userId, visibility !== 'private', visibility]);
+    if (displayName !== undefined || bio !== undefined) {
+      await client.query(
+        `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
+         VALUES ($1, 'content.profile.updated', 'profile', $2, $2, $3::jsonb)`,
+        [uuidv7(), user.userId, JSON.stringify({ userId: user.userId, displayName, bio })]);
+    }
   });
   return getUserProfile(request, env, user.userId, true);
 }
@@ -818,6 +736,7 @@ async function setBookmark(request: Request, env: Env, user: Principal, postId: 
 }
 
 async function createComment(request: Request, env: Env, user: Principal, postId: string): Promise<Response> {
+  await enforceDailyAction(env, user.userId, 'comment');
   const input = await readJson<{ body?: string; parentId?: string }>(request, 32 * 1024);
   const body = input.body?.trim();
   if (!body) throw new Error('invalid_comment');
@@ -830,6 +749,7 @@ async function createComment(request: Request, env: Env, user: Principal, postId
 }
 
 async function createReaction(request: Request, env: Env, user: Principal, postId: string): Promise<Response> {
+  await enforceDailyAction(env, user.userId, 'reaction');
   const input = await readJson<{ reactionType?: string }>(request, 8 * 1024);
   if (!input.reactionType || !/^[a-z0-9:_-]{1,32}$/i.test(input.reactionType)) throw new Error('invalid_reaction');
   await query(env.DB_APP_FRESH, `INSERT INTO social.reactions (user_id, post_id, reaction_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [user.userId, postId, input.reactionType]);
@@ -845,6 +765,7 @@ async function createFlag(request: Request, env: Env, user: Principal): Promise<
 }
 
 async function createAppeal(request: Request, env: Env, user: Principal): Promise<Response> {
+  await enforceDailyAction(env, user.userId, 'appeal');
   const input = await readJson<{ caseId?: string }>(request, 16 * 1024);
   if (!input.caseId) throw new Error('case_id_required');
   const eligible = await query<{ id: string }>(env.DB_APP_FRESH,
@@ -960,6 +881,245 @@ async function updateRetentionRule(request: Request, env: Env, user: Principal):
   return privateResponse(request, env, { contentType, retentionDays: input.retentionDays });
 }
 
+async function listCustomFeeds(request: Request, env: Env, user: Principal): Promise<Response> {
+  const result = await query(env.DB_APP_FRESH,
+    `SELECT f.id, f.name, f.created_at,
+            COALESCE(jsonb_agg(r.rule ORDER BY r.created_at) FILTER (WHERE r.id IS NOT NULL), '[]'::jsonb) AS rules
+     FROM social.custom_feeds f
+     LEFT JOIN social.custom_feed_rules r ON r.feed_id = f.id
+     WHERE f.user_id = $1
+     GROUP BY f.id, f.name, f.created_at
+     ORDER BY f.created_at DESC`, [user.userId]);
+  return privateResponse(request, env, { items: result.rows });
+}
+
+async function createCustomFeed(request: Request, env: Env, user: Principal): Promise<Response> {
+  const input = await readJson<{ name?: string; rules?: unknown[] }>(request, 32 * 1024);
+  const name = input.name?.trim() ?? '';
+  if (!name || name.length > 120 || !Array.isArray(input.rules)) throw new Error('invalid_custom_feed');
+  const rules = input.rules.slice(0, 20);
+  const tier = await tierForUser(env, user.userId);
+  const existing = await query<{ count: string }>(env.DB_APP_FRESH,
+    `SELECT count(*)::text AS count FROM social.custom_feeds WHERE user_id = $1`, [user.userId]);
+  if (Number(existing.rows[0]?.count ?? 0) >= TIER_POLICIES[tier].maxCustomFeeds) throw new Error('custom_feed_limit_reached');
+  const feedId = uuidv7();
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(`INSERT INTO social.custom_feeds (id, user_id, name) VALUES ($1, $2, $3)`, [feedId, user.userId, name]);
+    for (const rule of rules) {
+      await client.query(`INSERT INTO social.custom_feed_rules (id, feed_id, rule) VALUES ($1, $2, $3::jsonb)`, [uuidv7(), feedId, JSON.stringify(rule)]);
+    }
+  });
+  return privateResponse(request, env, { id: feedId, name, rules }, { status: 201 });
+}
+
+async function customFeed(request: Request, env: Env, user: Principal, feedId: string): Promise<Response> {
+  const owned = await query<{ id: string; name: string; rules: unknown[] }>(env.DB_APP_FRESH,
+    `SELECT f.id, f.name,
+            COALESCE(jsonb_agg(r.rule ORDER BY r.created_at) FILTER (WHERE r.id IS NOT NULL), '[]'::jsonb) AS rules
+     FROM social.custom_feeds f
+     LEFT JOIN social.custom_feed_rules r ON r.feed_id = f.id
+     WHERE f.id = $1 AND f.user_id = $2
+     GROUP BY f.id, f.name`, [feedId, user.userId]);
+  if (!owned.rows[0]) throw new Error('custom_feed_not_found');
+  if (request.method === 'GET') return privateResponse(request, env, owned.rows[0]);
+  if (request.method === 'DELETE') {
+    await query(env.DB_APP_FRESH, `DELETE FROM social.custom_feeds WHERE id = $1 AND user_id = $2`, [feedId, user.userId]);
+    return privateResponse(request, env, { id: feedId, deleted: true });
+  }
+  const input = await readJson<{ name?: string; rules?: unknown[] }>(request, 32 * 1024);
+  const name = input.name?.trim() ?? owned.rows[0].name;
+  const rules = Array.isArray(input.rules) ? input.rules.slice(0, 20) : owned.rows[0].rules;
+  if (!name || name.length > 120) throw new Error('invalid_custom_feed');
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(`UPDATE social.custom_feeds SET name = $1 WHERE id = $2 AND user_id = $3`, [name, feedId, user.userId]);
+    if (Array.isArray(input.rules)) {
+      await client.query(`DELETE FROM social.custom_feed_rules WHERE feed_id = $1`, [feedId]);
+      for (const rule of rules) {
+        await client.query(`INSERT INTO social.custom_feed_rules (id, feed_id, rule) VALUES ($1, $2, $3::jsonb)`, [uuidv7(), feedId, JSON.stringify(rule)]);
+      }
+    }
+  });
+  return privateResponse(request, env, { id: feedId, name, rules });
+}
+
+async function customFeedItems(request: Request, env: Env, user: Principal, feedId: string): Promise<Response> {
+  const owned = await query<{ rules: unknown[] }>(env.DB_APP_FRESH,
+    `SELECT COALESCE(jsonb_agg(r.rule) FILTER (WHERE r.id IS NOT NULL), '[]'::jsonb) AS rules
+     FROM social.custom_feeds f LEFT JOIN social.custom_feed_rules r ON r.feed_id = f.id
+     WHERE f.id = $1 AND f.user_id = $2 GROUP BY f.id`, [feedId, user.userId]);
+  if (!owned.rows[0]) throw new Error('custom_feed_not_found');
+  const result = await query<{ id: string; author_id: string; body: string; published_at: string; topic: string | null; region_code: string | null }>(env.DB_APP_FRESH,
+    `SELECT p.id, p.author_id, p.body, p.published_at, d.topic, d.region_code
+     FROM content.posts p LEFT JOIN feed.discovery_candidates d ON d.post_id = p.id
+     WHERE p.visibility = 'public' AND p.moderation_state = 'allowed'
+     ORDER BY p.published_at DESC NULLS LAST LIMIT 100`);
+  const rules = owned.rows[0].rules as Array<{ topic?: string; regionCode?: string }>;
+  const items = rules.length === 0 ? result.rows : result.rows.filter((item) =>
+    rules.some((rule) => (!rule.topic || item.topic === rule.topic) && (!rule.regionCode || item.region_code === rule.regionCode)));
+  return privateResponse(request, env, { items: items.slice(0, 50) });
+}
+
+async function getEntitlements(request: Request, env: Env, user: Principal): Promise<Response> {
+  const tier = await tierForUser(env, user.userId);
+  return privateResponse(request, env, { tier, entitlements: TIER_POLICIES[tier] });
+}
+
+async function getNewsBoard(request: Request, env: Env, user?: Principal): Promise<Response> {
+  const tier = user ? await tierForUser(env, user.userId) : 'free';
+  const access = TIER_POLICIES[tier].newsBoardAccess;
+  const result = await query(env.DB_APP_FRESH,
+    `SELECT publication.id, publication.title, publication.post_id, publication.published_at,
+            post.body, post.author_id
+     FROM editorial.publications publication
+     LEFT JOIN content.posts post ON post.id = publication.post_id
+     WHERE publication.published_at IS NOT NULL
+     ORDER BY publication.published_at DESC LIMIT $1`, [access === 'full' ? 50 : 5]);
+  return response(request, env, { access, items: result.rows });
+}
+
+async function notifications(request: Request, env: Env, user: Principal): Promise<Response> {
+  const result = await query(env.DB_APP_FRESH,
+    `SELECT id, notification_type, entity_id, read_at, created_at
+     FROM feed.notifications WHERE recipient_id = $1 AND dismissed_at IS NULL
+     ORDER BY created_at DESC LIMIT 100`, [user.userId]);
+  return privateResponse(request, env, { items: result.rows });
+}
+
+async function notificationAction(request: Request, env: Env, user: Principal, notificationId: string, action: 'read' | 'dismiss'): Promise<Response> {
+  const column = action === 'read' ? 'read_at' : 'dismissed_at';
+  const result = await query(env.DB_APP_FRESH,
+    `UPDATE feed.notifications SET ${column} = now() WHERE id = $1 AND recipient_id = $2 RETURNING id`, [notificationId, user.userId]);
+  if (result.rowCount !== 1) throw new Error('notification_not_found');
+  return privateResponse(request, env, { id: notificationId, action });
+}
+
+async function notificationPreferences(request: Request, env: Env, user: Principal): Promise<Response> {
+  if (request.method === 'GET') {
+    const result = await query(env.DB_APP_FRESH,
+      `SELECT email_enabled, push_enabled, replies_enabled, moderation_enabled, rewards_enabled, updated_at
+       FROM feed.notification_preferences WHERE user_id = $1`, [user.userId]);
+    return privateResponse(request, env, result.rows[0] ?? {
+      email_enabled: true, push_enabled: true, replies_enabled: true, moderation_enabled: true, rewards_enabled: true,
+    });
+  }
+  const input = await readJson<Record<string, unknown>>(request, 8 * 1024);
+  const values = ['emailEnabled', 'pushEnabled', 'repliesEnabled', 'moderationEnabled', 'rewardsEnabled']
+    .map((key) => typeof input[key] === 'boolean' ? input[key] : true);
+  const result = await query(env.DB_APP_FRESH,
+    `INSERT INTO feed.notification_preferences
+       (user_id, email_enabled, push_enabled, replies_enabled, moderation_enabled, rewards_enabled)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (user_id) DO UPDATE SET
+       email_enabled = EXCLUDED.email_enabled, push_enabled = EXCLUDED.push_enabled,
+       replies_enabled = EXCLUDED.replies_enabled, moderation_enabled = EXCLUDED.moderation_enabled,
+       rewards_enabled = EXCLUDED.rewards_enabled, updated_at = now()
+     RETURNING email_enabled, push_enabled, replies_enabled, moderation_enabled, rewards_enabled, updated_at`,
+    [user.userId, ...values]);
+  return privateResponse(request, env, result.rows[0]);
+}
+
+async function notificationDevices(request: Request, env: Env, user: Principal): Promise<Response> {
+  if (request.method === 'GET') {
+    const result = await query(env.DB_APP_FRESH,
+      `SELECT id, platform, active, created_at, revoked_at FROM feed.notification_devices
+       WHERE user_id = $1 ORDER BY created_at DESC`, [user.userId]);
+    return privateResponse(request, env, { items: result.rows });
+  }
+  const input = await readJson<{ platform?: string; token?: string }>(request, 8 * 1024);
+  if (!input.token || !input.platform || !['android', 'ios', 'web'].includes(input.platform)) throw new Error('invalid_notification_device');
+  const secrets = requireAuthSecrets(env);
+  const deviceId = uuidv7();
+  const encryptedToken = await encryptField(input.token, secrets.encryptionKey, 'v1');
+  await query(env.DB_APP_FRESH,
+    `INSERT INTO feed.notification_devices (id, user_id, platform, token_ciphertext, token_hmac)
+     VALUES ($1, $2, $3, decode($4, 'base64'), decode($5, 'base64'))
+     ON CONFLICT (token_hmac) DO UPDATE SET user_id = EXCLUDED.user_id, platform = EXCLUDED.platform, active = true, revoked_at = NULL`,
+    [deviceId, user.userId, input.platform, encryptedToken.ciphertext, hmacLookup(input.token, secrets.hmacKey)]);
+  return privateResponse(request, env, { id: deviceId, platform: input.platform }, { status: 201 });
+}
+
+async function reputationSummary(request: Request, env: Env, userId: string, privateView: boolean): Promise<Response> {
+  const result = await query<{ points: string }>(env.DB_APP_FRESH,
+    `SELECT points::text AS points FROM trust.reputation_balances WHERE user_id = $1`, [userId]);
+  const points = Number(result.rows[0]?.points ?? 0);
+  const reputationLevel = Math.max(1, Math.min(5, Math.floor(points / 100) + 1));
+  const payload: Record<string, unknown> = {
+    userId, reputationLevel, reputationStatus: 'active',
+    reputationBand: reputationLevel >= 4 ? 'high' : reputationLevel >= 2 ? 'established' : 'new',
+  };
+  if (privateView) Object.assign(payload, { points, rewardEligibilityStatus: 'eligible' });
+  return privateResponse(request, env, payload);
+}
+
+async function reputationLedger(request: Request, env: Env, user: Principal): Promise<Response> {
+  const result = await query(env.DB_APP_FRESH,
+    `SELECT id, content_id, event_type, policy_version, created_at
+     FROM trust.reputation_events WHERE subject_user_id = $1
+     ORDER BY created_at DESC LIMIT 100`, [user.userId]);
+  return privateResponse(request, env, { items: result.rows });
+}
+
+async function rewardsSnapshot(request: Request, env: Env, user: Principal): Promise<Response> {
+  const tier = await tierForUser(env, user.userId);
+  const policy = TIER_POLICIES[tier];
+  const [balance, account, history] = await Promise.all([
+    query<{ points: string }>(env.DB_APP_FRESH, `SELECT points::text AS points FROM trust.reputation_balances WHERE user_id = $1`, [user.userId]),
+    query<{ created_at: string }>(env.DB_APP_FRESH, `SELECT created_at FROM identity.users WHERE id = $1`, [user.userId]),
+    query<{ id: string; reward_id: string; reward_level: number; reward_title: string; redeemed_at: string; status: string }>(env.DB_APP_FRESH,
+      `SELECT id, reward_id, reward_level, reward_title, redeemed_at, status
+       FROM trust.reward_redemptions WHERE user_id = $1 ORDER BY redeemed_at DESC`, [user.userId]),
+  ]);
+  const points = Number(balance.rows[0]?.points ?? 0);
+  const reputationLevel = Math.max(1, Math.min(5, Math.floor(points / 100) + 1));
+  const accountAgeMs = Date.now() - new Date(account.rows[0]?.created_at ?? Date.now()).getTime();
+  const mature = accountAgeMs >= 7 * 24 * 60 * 60 * 1000;
+  const redeemed = new Set(history.rows.map((item) => item.reward_id));
+  const offers = REWARD_CATALOG.map((offer) => {
+    const locked = !mature || offer.rewardLevel > reputationLevel || offer.rewardLevel > policy.rewardLevelCap;
+    return {
+      ...offer,
+      locked,
+      lockReason: !mature ? 'Account maturity requirement not met.'
+        : offer.rewardLevel > reputationLevel ? 'Reputation level requirement not met.'
+          : offer.rewardLevel > policy.rewardLevelCap ? 'Subscription tier does not include this reward level.' : undefined,
+      redeemed: redeemed.has(offer.id),
+    };
+  });
+  return privateResponse(request, env, {
+    subscriptionTier: tier,
+    reputationLevel,
+    reputationBand: reputationLevel >= 4 ? 'high' : reputationLevel >= 2 ? 'established' : 'new',
+    availableRewardLevels: Array.from({ length: policy.rewardLevelCap }, (_, index) => index + 1),
+    maxOptionsPerLevel: policy.rewardOptionsPerLevel ?? REWARD_CATALOG.length,
+    redemptionStatus: mature ? 'active' : 'restricted',
+    fraudRiskStatus: 'normal',
+    offers,
+    redemptionHistory: history.rows,
+    affiliateDisclosure: 'Reward availability and partner relationships are disclosed before redemption.',
+  });
+}
+
+async function redeemReward(request: Request, env: Env, user: Principal, rewardId: string): Promise<Response> {
+  const offer = REWARD_CATALOG.find((candidate) => candidate.id === rewardId);
+  if (!offer) throw new Error('reward_not_found');
+  const tier = await tierForUser(env, user.userId);
+  const balance = await query<{ points: string; created_at: string }>(env.DB_APP_FRESH,
+    `SELECT COALESCE(b.points, 0)::text AS points, u.created_at
+     FROM identity.users u LEFT JOIN trust.reputation_balances b ON b.user_id = u.id WHERE u.id = $1`, [user.userId]);
+  const points = Number(balance.rows[0]?.points ?? 0);
+  const level = Math.max(1, Math.min(5, Math.floor(points / 100) + 1));
+  const mature = Date.now() - new Date(balance.rows[0]?.created_at ?? Date.now()).getTime() >= 7 * 24 * 60 * 60 * 1000;
+  if (!mature || offer.rewardLevel > level || offer.rewardLevel > TIER_POLICIES[tier].rewardLevelCap) throw new Error('reward_locked');
+  const redemptionId = uuidv7();
+  const result = await query(env.DB_APP_FRESH,
+    `INSERT INTO trust.reward_redemptions (id, user_id, reward_id, reward_level, reward_title)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (user_id, reward_id) DO NOTHING RETURNING redeemed_at`,
+    [redemptionId, user.userId, offer.id, offer.rewardLevel, offer.title]);
+  if (result.rowCount !== 1) throw new Error('reward_already_redeemed');
+  return privateResponse(request, env, { id: redemptionId, rewardId: offer.id, rewardLevel: offer.rewardLevel, rewardTitle: offer.title, status: 'redeemed' }, { status: 201 });
+}
+
 async function getPersonalFeed(request: Request, env: Env, user: Principal): Promise<Response> {
   const result = await query(env.DB_APP_FRESH,
     `SELECT p.id, p.author_id, p.body, p.declared_creation_mode, p.visibility, p.moderation_state,
@@ -1009,11 +1169,16 @@ export default {
         return response(request, env, { status: 'ready', service: 'lythaus-public-api' });
       }
       if (request.method === 'GET' && url.pathname === '/.well-known/jwks.json') return new Response(env.JWT_PUBLIC_JWKS ?? '{"keys":[]}', { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=300' } });
+      await enforceRateLimit(request, env, url.pathname.startsWith('/api/auth') ? 'auth' : 'public-api', url.pathname.startsWith('/api/auth') ? 10 : 120);
       if (request.method === 'GET' && url.pathname === '/api/feed/discover') {
         const result = await query(env.DB_APP_FRESH, `SELECT id, author_id, body, published_at FROM content.posts WHERE visibility = 'public' AND moderation_state = 'allowed' ORDER BY published_at DESC LIMIT 50`);
         const resultResponse = response(request, env, { items: result.rows });
         resultResponse.headers.set('cache-control', 'public, s-maxage=30, stale-while-revalidate=60');
         return resultResponse;
+      }
+      if (request.method === 'GET' && (url.pathname === '/api/feed/news' || url.pathname === '/api/news-board')) {
+        const user = request.headers.has('authorization') ? await principal(request, env) : undefined;
+        return await getNewsBoard(request, env, user);
       }
       if (request.method === 'GET' && url.pathname === '/api/feed') return await getPersonalFeed(request, env, await principal(request, env));
       const post = url.pathname.match(/^\/api\/posts\/([^/]+)$/);
@@ -1027,6 +1192,20 @@ export default {
       }
       const publicProfile = url.pathname.match(/^\/api\/users\/([^/]+)$/);
       if (request.method === 'GET' && publicProfile) return await getUserProfile(request, env, publicProfile[1]);
+      if (request.method === 'GET' && url.pathname === '/api/subscription/status') return await getEntitlements(request, env, await principal(request, env));
+      if (url.pathname === '/api/custom-feeds') {
+        const user = await principal(request, env);
+        if (request.method === 'GET') return await listCustomFeeds(request, env, user);
+        if (request.method === 'POST') return await idempotentMutation(request, env, user.userId, 'custom-feed.create', () => createCustomFeed(request, env, user));
+      }
+      const customFeedItemsRoute = url.pathname.match(/^\/api\/custom-feeds\/([^/]+)\/items$/);
+      if (request.method === 'GET' && customFeedItemsRoute) return await customFeedItems(request, env, await principal(request, env), customFeedItemsRoute[1]);
+      const customFeedRoute = url.pathname.match(/^\/api\/custom-feeds\/([^/]+)$/);
+      if (customFeedRoute && ['GET', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
+        const user = await principal(request, env);
+        if (request.method === 'GET') return await customFeed(request, env, user, customFeedRoute[1]);
+        return await idempotentMutation(request, env, user.userId, `custom-feed.${request.method.toLowerCase()}`, () => customFeed(request, env, user, customFeedRoute[1]));
+      }
       if (request.method === 'POST' && (url.pathname === '/api/follows' || url.pathname === '/api/users/follow')) {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'follow.create', () => createFollow(request, env, user));
@@ -1089,6 +1268,42 @@ export default {
       }
       const appeal = url.pathname.match(/^\/api\/appeals\/([^/]+)$/);
       if (request.method === 'GET' && appeal) return await getAppeal(request, env, await principal(request, env), appeal[1]);
+      if (request.method === 'GET' && url.pathname === '/api/reputation/me') {
+        const user = await principal(request, env);
+        return await reputationSummary(request, env, user.userId, true);
+      }
+      if (request.method === 'GET' && url.pathname === '/api/reputation/me/ledger') return await reputationLedger(request, env, await principal(request, env));
+      const reputationUser = url.pathname.match(/^\/api\/reputation\/(?:users|user)\/([^/]+)$/);
+      if (request.method === 'GET' && reputationUser) return await reputationSummary(request, env, reputationUser[1], false);
+      if (request.method === 'GET' && url.pathname === '/api/rewards/me') return await rewardsSnapshot(request, env, await principal(request, env));
+      const rewardRedeem = url.pathname.match(/^\/api\/rewards\/([^/]+)\/redeem$/);
+      if (request.method === 'POST' && rewardRedeem) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, 'reward.redeem', () => redeemReward(request, env, user, rewardRedeem[1]));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/notifications') return await notifications(request, env, await principal(request, env));
+      if (request.method === 'GET' && url.pathname === '/api/notifications/unread-count') {
+        const user = await principal(request, env);
+        const result = await query<{ count: string }>(env.DB_APP_FRESH,
+          `SELECT count(*)::text AS count FROM feed.notifications WHERE recipient_id = $1 AND read_at IS NULL AND dismissed_at IS NULL`, [user.userId]);
+        return privateResponse(request, env, { count: Number(result.rows[0]?.count ?? 0) });
+      }
+      const notificationRoute = url.pathname.match(/^\/api\/notifications\/([^/]+)\/(read|dismiss)$/);
+      if (request.method === 'POST' && notificationRoute) {
+        const user = await principal(request, env);
+        return await idempotentMutation(request, env, user.userId, `notification.${notificationRoute[2]}`, () => notificationAction(request, env, user, notificationRoute[1], notificationRoute[2] as 'read' | 'dismiss'));
+      }
+      if (url.pathname === '/api/notifications/preferences' && ['GET', 'PUT', 'PATCH'].includes(request.method)) return await notificationPreferences(request, env, await principal(request, env));
+      if (url.pathname === '/api/notifications/devices' && ['GET', 'POST'].includes(request.method)) return await notificationDevices(request, env, await principal(request, env));
+      const notificationDeviceRevoke = url.pathname.match(/^\/api\/notifications\/devices\/([^/]+)\/revoke$/);
+      if (request.method === 'POST' && notificationDeviceRevoke) {
+        const user = await principal(request, env);
+        const result = await query(env.DB_APP_FRESH,
+          `UPDATE feed.notification_devices SET active = false, revoked_at = now() WHERE id = $1 AND user_id = $2 RETURNING id`,
+          [notificationDeviceRevoke[1], user.userId]);
+        if (result.rowCount !== 1) throw new Error('notification_device_not_found');
+        return privateResponse(request, env, { id: notificationDeviceRevoke[1], revoked: true });
+      }
       if (request.method === 'GET' && url.pathname === '/api/privacy/requests') {
         return await getPrivacyRequestStatus(request, env, await principal(request, env));
       }
@@ -1115,9 +1330,6 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return await completePasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return await refreshSession(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') return await logout(request, env);
-      if (request.method === 'GET' && (url.pathname === '/api/auth/authorize' || url.pathname === '/api/auth/google')) return await googleAuthStart(request, env);
-      if (request.method === 'GET' && url.pathname === '/api/auth/google/callback') return await googleAuthCallback(request, env);
-      if (request.method === 'POST' && url.pathname === '/api/auth/token') return await exchangeOAuthCode(request, env);
       if (request.method === 'POST' && url.pathname === '/api/posts') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'post.create', () => createPost(request, env, user));
@@ -1132,9 +1344,6 @@ export default {
       if (request.method === 'POST' && finalise) {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'media.upload.finalise', () => finaliseUpload(request, env, user, finalise[1]));
-      }
-      if (url.pathname === '/api/auth/apple' || url.pathname === '/api/auth/world-id' || url.pathname === '/api/auth/world') {
-        return response(request, env, { error: 'provider_unavailable', provider: url.pathname.includes('apple') ? 'apple' : 'world_id', correlationId: id }, { status: 404 });
       }
       if (url.pathname.startsWith('/api/video') || url.pathname.startsWith('/api/payments') || url.pathname.startsWith('/api/federation')) {
         return response(request, env, { error: 'feature_disabled', correlationId: id }, { status: 404 });

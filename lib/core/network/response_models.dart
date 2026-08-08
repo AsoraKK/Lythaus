@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA API RESPONSE MODELS
+/// LYTHAUS API RESPONSE MODELS
 ///
 /// 🎯 Purpose: Response models for native Lythaus API integration
 /// 🏗️ Architecture: Domain layer models for API responses

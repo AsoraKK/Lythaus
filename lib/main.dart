@@ -4,16 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/scheduler.dart';
 
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/core/routing/app_router.dart';
-import 'package:asora/core/routing/url_strategy.dart';
-import 'package:asora/core/config/web_release_guard.dart';
-import 'package:asora/design_system/index.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/core/logging/app_logger.dart';
-import 'package:asora/core/observability/crash_reporting.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/routing/app_router.dart';
+import 'package:lythaus/core/routing/url_strategy.dart';
+import 'package:lythaus/core/config/web_release_guard.dart';
+import 'package:lythaus/design_system/index.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/core/logging/app_logger.dart';
+import 'package:lythaus/core/observability/crash_reporting.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,17 +33,17 @@ Future<void> main() async {
     logger: AppLogger('CrashReporting'),
   );
   await crashReporting.initialize();
-  runApp(const ProviderScope(child: AsoraApp()));
+  runApp(const ProviderScope(child: LythausApp()));
 }
 
-class AsoraApp extends ConsumerStatefulWidget {
-  const AsoraApp({super.key});
+class LythausApp extends ConsumerStatefulWidget {
+  const LythausApp({super.key});
 
   @override
-  ConsumerState<AsoraApp> createState() => _AsoraAppState();
+  ConsumerState<LythausApp> createState() => _LythausAppState();
 }
 
-class _AsoraAppState extends ConsumerState<AsoraApp> {
+class _LythausAppState extends ConsumerState<LythausApp> {
   bool _appStartedLogged = false;
   ProviderSubscription<AsyncValue<User?>>? _authStateSub;
 

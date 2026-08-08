@@ -2,8 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/core/security/device_integrity.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/core/security/device_integrity.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockDeviceIntegrityService extends Mock

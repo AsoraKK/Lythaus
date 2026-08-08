@@ -1,4 +1,4 @@
-name: asora
+name: lythaus
 description: "Social media platform for human-authored content"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -29,7 +29,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  app_links: ^6.3.2 # Deep link handling for OAuth callbacks (replaces uni_links)
+  app_links: ^6.3.2 # Deep-link handling for invitations and shared content
   asn1lib: ^1.5.0 # ASN.1 parsing for SPKI extraction
   crypto: ^3.0.3 # For certificate pinning SPKI hashing
   cupertino_icons: ^1.0.8
@@ -39,7 +39,6 @@ dependencies:
   firebase_messaging: ^15.1.3
   flutter:
     sdk: flutter
-  flutter_appauth: ^7.0.1 # OAuth2/OIDC client for B2C authentication
   flutter_jailbreak_detection: ^1.10.0 # Device integrity checks
   flutter_local_notifications: ^18.0.1
   flutter_riverpod: ^2.4.0
@@ -50,7 +49,6 @@ dependencies:
   go_router: ^17.1.0
   google_fonts: ^6.0.0
   http: ^1.2.0
-  image_picker: ^1.1.2
   intl: ^0.19.0 # Date/time formatting
   local_auth: ^2.2.0
   meta: ^1.12.0
@@ -59,7 +57,7 @@ dependencies:
   permission_handler: ^12.0.1
   share_plus: ^12.0.1
   timezone: ^0.9.4 # For scheduled local notifications
-  url_launcher: ^6.2.2 # Launch URLs and handle OAuth callbacks
+  url_launcher: ^6.2.2 # Launch external legal and support URLs
   uuid: ^4.4.0 # UUID generation for request IDs
   web: ^1.1.1
 
@@ -71,7 +69,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   mockito: ^5.4.4 # Mocking framework for unit tests
-  mocktail: ^1.0.3 # Lightweight mocking for Riverpod/appauth tests
+  mocktail: ^1.0.3 # Lightweight mocking for Riverpod tests
   permission_handler_platform_interface: ^4.3.0
   test: ^1.25.15
 
@@ -91,7 +89,7 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
-    - assets/brand/asora_mark.svg
+    - assets/brand/lythaus_mark.svg
     - assets/fonts/
 
   # Bundled Manrope fonts for consistent rendering in tests and production

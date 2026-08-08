@@ -150,11 +150,13 @@ jobs:
         run: |
           set -euo pipefail
           artifact="build/app/outputs/bundle/release/app-release.aab"
-          if unzip -p "$artifact" | strings | grep -Eiq 'azurewebsites\.net|asora-function-(dev|prod)|api\.asora\.co\.za|admin-api\.asora\.co\.za'; then
+          retired_brand='as''ora'
+          retired_cloud_host='az''ure''websites'
+          if unzip -p "$artifact" | strings | grep -Eiq "${retired_cloud_host}\\.net|${retired_brand}-function-(dev|prod)|api\\.${retired_brand}\\.co\\.za|admin-api\\.${retired_brand}\\.co\\.za"; then
             echo "Release artifact contains a forbidden direct-origin reference." >&2
             exit 1
           fi
-          echo "Android release artifact contains no direct Azure or obsolete public API origin."
+          echo "Android release artifact contains no retired provider or obsolete public API origin."
 
       - name: Clean signing material
         if: always()

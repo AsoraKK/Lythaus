@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/config/environment_config.dart';
-import 'package:asora/core/providers/repository_providers.dart';
-import 'package:asora/features/moderation/domain/moderation_repository.dart';
-import 'package:asora/features/feed/domain/feed_repository.dart';
+import 'package:lythaus/core/config/environment_config.dart';
+import 'package:lythaus/core/providers/repository_providers.dart';
+import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
+import 'package:lythaus/features/feed/domain/feed_repository.dart';
 
 void main() {
   group('Repository Providers', () {

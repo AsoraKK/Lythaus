@@ -1,6 +1,6 @@
 import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, reserveBudget, settleBudgetReservation, transaction, type BudgetConfig, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
-import { createPresignedGetUrl } from '@lythaus/media';
+import { evaluateAuthenticity, type AuthenticityEvaluation } from '@lythaus/authenticity';
 import { json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, uuidv7 } from '@lythaus/security';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
@@ -50,7 +50,7 @@ function budgetConfig(env: Env): BudgetConfig {
 }
 
 async function withBudgetAdmission<T>(env: Env, input: { operation: string; operationClass: 'essential' | 'optional' | 'experiment'; estimatedCostUsd: number; idempotencyKey: string; provider?: string; correlationId?: string }, work: () => Promise<T>): Promise<T> {
-  const provider = input.provider ?? 'hive';
+  const provider = input.provider ?? 'workers-ai';
   const reservation = await reserveBudget(env.DB_JOBS_FRESH, {
     ...input,
     provider,
@@ -114,14 +114,14 @@ async function simulateBudgetHardStop(env: Env): Promise<Record<string, unknown>
   };
 }
 
-async function runWorkersAiWithBudget(env: Env, model: string, input: unknown, idempotencyKey: string): Promise<unknown> {
+async function runWorkersAiWithBudget(env: Env, model: string, input: unknown, idempotencyKey: string, estimatedCostUsd = 0.004): Promise<unknown> {
   if (!env.AI) throw new Error('workers_ai_not_configured');
   const gatewayId = env.AI_GATEWAY_ID;
   if (gatewayId !== 'lythaus-ai') throw new Error('workers_ai_gateway_not_configured');
   return withBudgetAdmission(env, {
     operation: `workers_ai:${model}`,
     operationClass: 'optional',
-    estimatedCostUsd: Number(env.COST_HIVE_TEXT_ESTIMATE_USD ?? 0.004),
+    estimatedCostUsd,
     idempotencyKey,
     provider: 'workers-ai',
   }, () => env.AI!.run(model, input, {
@@ -191,10 +191,8 @@ interface QueueBatch {
 }
 
 const MAX_IMAGE_PIXELS = 40_000_000;
-const HIVE_DEFAULT_MODELS = ['general_text_classification', 'hate_speech_detection_text', 'violence_text_detection'];
-
-interface HiveClass { class?: string; score?: number; }
-interface HiveResult { highestScore: number; classes: HiveClass[]; action: 'allow' | 'block' | 'queue'; }
+const AUTHENTICITY_PROVIDER = 'lythaus-authenticity-ai';
+const AUTHENTICITY_POLICY = 'evaluation-only-v1';
 
 function hasMagicBytes(bytes: Uint8Array, contentType: string): boolean {
   if (contentType === 'image/jpeg') return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
@@ -204,47 +202,48 @@ function hasMagicBytes(bytes: Uint8Array, contentType: string): boolean {
   return false;
 }
 
-async function moderateTextWithHive(text: string, userId: string, contentId: string, env: Env): Promise<HiveResult> {
-  if (env.PAID_AI_DETECTION_ENABLED !== 'true' || !env.HIVE_API_KEY) throw new Error('hive_not_configured');
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
-  try {
-    const response = await fetch(env.HIVE_API_URL ?? 'https://api.thehive.ai/api/v2/task/sync', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Token ${env.HIVE_API_KEY}`, 'x-content-id': contentId },
-      body: JSON.stringify({ text_data: text, models: HIVE_DEFAULT_MODELS, user_id: userId }),
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(`hive_http_${response.status}`);
-    const payload = await response.json() as { code?: number; status?: Array<{ response?: { output?: Array<{ classes?: HiveClass[] }> } }> };
-    if (payload.code !== 200 || !Array.isArray(payload.status)) throw new Error('hive_response_invalid');
-    const classes = payload.status.flatMap((status) => status.response?.output?.flatMap((item) => item.classes ?? []) ?? []);
-    const highestScore = classes.reduce((highest, item) => Math.max(highest, typeof item.score === 'number' ? item.score : 0), 0);
-    return { highestScore, classes, action: highestScore >= 0.85 ? 'block' : highestScore >= 0.5 ? 'queue' : 'allow' };
-  } finally {
-    clearTimeout(timeout);
-  }
+function manualReviewEvaluation(kind: 'text' | 'image' | 'profile', modelId: string, reason: string): AuthenticityEvaluation {
+  return {
+    schemaVersion: 'lythaus-authenticity-v1',
+    recommendation: 'review',
+    reviewRequired: true,
+    riskScore: 1,
+    signals: [{ category: `${kind}_manual_review`, confidence: 1, rationale: reason }],
+    modelId,
+    policyVersion: AUTHENTICITY_POLICY,
+  };
 }
 
-async function moderateImageWithHive(imageUrl: string, userId: string, contentId: string, env: Env): Promise<HiveResult> {
-  if (env.PAID_AI_DETECTION_ENABLED !== 'true' || !env.HIVE_API_KEY) throw new Error('hive_not_configured');
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20_000);
+async function runAuthenticityEvaluation(env: Env, input: {
+  kind: 'text' | 'image' | 'profile';
+  content: string;
+  contentId: string;
+  declaredCreationMode?: string;
+}): Promise<{ evaluation: AuthenticityEvaluation; modelExecuted: boolean; latencyMs: number }> {
+  const modelId = input.kind === 'image'
+    ? env.AUTHENTICITY_IMAGE_MODEL ?? '@cf/meta/llama-3.1-8b-instruct-fast'
+    : env.AUTHENTICITY_TEXT_MODEL ?? '@cf/meta/llama-3.1-8b-instruct-fast';
+  if (env.AUTHENTICITY_AI_ENABLED !== 'true') {
+    return { evaluation: manualReviewEvaluation(input.kind, modelId, 'Authenticity evaluation is disabled; human review is required.'), modelExecuted: false, latencyMs: 0 };
+  }
+  const estimatedCost = input.kind === 'image'
+    ? Number(env.COST_AUTHENTICITY_IMAGE_ESTIMATE_USD ?? 0.01)
+    : Number(env.COST_AUTHENTICITY_TEXT_ESTIMATE_USD ?? 0.004);
+  const startedAt = Date.now();
   try {
-    const response = await fetch(env.HIVE_API_URL ?? 'https://api.thehive.ai/api/v2/task/sync', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Token ${env.HIVE_API_KEY}`, 'x-content-id': contentId },
-      body: JSON.stringify({ image_url: imageUrl, models: ['general_image_classification', 'nudity_image_detection', 'violence_image_detection'], user_id: userId }),
-      signal: controller.signal,
+    const evaluation = await evaluateAuthenticity({
+      ...input,
+      modelId,
+      runModel: (model, modelInput, idempotencyKey) => runWorkersAiWithBudget(env, model, modelInput, idempotencyKey, estimatedCost),
     });
-    if (!response.ok) throw new Error(`hive_http_${response.status}`);
-    const payload = await response.json() as { code?: number; status?: Array<{ response?: { output?: Array<{ classes?: HiveClass[] }> } }> };
-    if (payload.code !== 200 || !Array.isArray(payload.status)) throw new Error('hive_response_invalid');
-    const classes = payload.status.flatMap((status) => status.response?.output?.flatMap((item) => item.classes ?? []) ?? []);
-    const highestScore = classes.reduce((highest, item) => Math.max(highest, typeof item.score === 'number' ? item.score : 0), 0);
-    return { highestScore, classes, action: highestScore >= 0.85 ? 'block' : highestScore >= 0.5 ? 'queue' : 'allow' };
-  } finally {
-    clearTimeout(timeout);
+    return { evaluation, modelExecuted: true, latencyMs: Date.now() - startedAt };
+  } catch (error) {
+    logEvent({ service: 'lythaus-jobs', event: 'authenticity_evaluation_failed', operation: input.kind, error: error instanceof Error ? error.message : 'evaluation_failed' });
+    return {
+      evaluation: manualReviewEvaluation(input.kind, modelId, 'Automated evaluation was unavailable; human review is required.'),
+      modelExecuted: false,
+      latencyMs: Date.now() - startedAt,
+    };
   }
 }
 
@@ -259,124 +258,63 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   const post = postResult.rows[0];
   if (!post || post.moderation_state !== 'under_review') return;
   const prior = await query(env.DB_JOBS_FRESH,
-    `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = 'hive' LIMIT 1`, [postId]);
+    `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = $2 LIMIT 1`, [postId, AUTHENTICITY_PROVIDER]);
   if (prior.rowCount !== 0) return;
-  if (env.PAID_AI_DETECTION_ENABLED !== 'true' || !env.HIVE_API_KEY) {
-    await transaction(env.DB_JOBS_FRESH, async (client) => {
-      await client.query(
-        `INSERT INTO content.content_declarations (post_id, declared_creation_mode, public_label, declaration_conflict, review_required)
-         VALUES ($1, $2, 'Under review', false, true)
-         ON CONFLICT (post_id) DO UPDATE SET public_label = 'Under review',
-           detector_provider = NULL, detector_model_version = NULL, detector_signal = NULL,
-           declaration_conflict = false, review_required = true, updated_at = now()`,
-        [postId, post.declared_creation_mode]
-      );
-      await client.query(
-        `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version)
-         SELECT $1, 'post', $2, 'open', 'manual-v1'
-          WHERE NOT EXISTS (
-            SELECT 1 FROM moderation.cases
-             WHERE content_type = 'post' AND content_id = $2 AND state = 'open'
-          )`,
-        [uuidv7(), postId]
-      );
-      await client.query(
-        `INSERT INTO trust.provenance_events
-           (id, content_id, author_id, declared_creation_mode, policy_version, final_decision)
-         SELECT $1, $2, $3, $4, 'manual-v1', 'queue'
-          WHERE NOT EXISTS (
-            SELECT 1 FROM trust.provenance_events
-             WHERE content_id = $2 AND policy_version = 'manual-v1'
-          )`,
-        [uuidv7(), postId, post.author_id, post.declared_creation_mode]
-      );
-    });
-    return;
-  }
-  const startedAt = Date.now();
-  const result = await withBudgetAdmission(env, {
-    operation: 'moderation_text_scan',
-    operationClass: 'essential',
-    estimatedCostUsd: Number(env.COST_HIVE_TEXT_ESTIMATE_USD ?? 0.004),
-    idempotencyKey: `hive:text:${postId}`,
-  }, () => moderateTextWithHive(post.body, post.author_id, postId, env));
-  const modelVersion = env.HIVE_MODEL_VERSION ?? HIVE_DEFAULT_MODELS.join('+');
+  const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
+    kind: 'text', content: post.body, contentId: postId, declaredCreationMode: post.declared_creation_mode,
+  });
+  const modelVersion = evaluation.modelId;
   const inputHash = await sha256Hex(post.body);
-  const responseHash = await sha256Hex(JSON.stringify({ action: result.action, highestScore: result.highestScore, classes: result.classes }));
-  await recordAiEvidence(env, {
+  const responseHash = await sha256Hex(JSON.stringify(evaluation));
+  if (modelExecuted) await recordAiEvidence(env, {
     caseId: postId,
     correlationId: postId,
     inputHash,
-    evidenceBundleHash: await sha256Hex(`${inputHash}:${modelVersion}:manual-v1`),
-    provider: 'hive',
+    evidenceBundleHash: await sha256Hex(`${inputHash}:${modelVersion}:${AUTHENTICITY_POLICY}`),
+    provider: AUTHENTICITY_PROVIDER,
     modelId: modelVersion,
-    gatewayId: null,
-    promptTemplateVersion: 'hive-task-v1',
-    reasoningSchemaVersion: 'moderation-result-v1',
-    toolVersions: { hive: modelVersion },
-    policyVersion: 'manual-v1',
+    gatewayId: env.AI_GATEWAY_ID ?? null,
+    promptTemplateVersion: 'authenticity-evaluation-v1',
+    reasoningSchemaVersion: evaluation.schemaVersion,
+    toolVersions: { authenticity: 'lythaus-authenticity-v1' },
+    policyVersion: AUTHENTICITY_POLICY,
     responseHash,
-    latencyMs: Date.now() - startedAt,
-    estimatedUsageUsd: Number(env.COST_HIVE_TEXT_ESTIMATE_USD ?? 0.004),
-    actualUsageUsd: Number(env.COST_HIVE_TEXT_ESTIMATE_USD ?? 0.004),
+    latencyMs,
+    estimatedUsageUsd: Number(env.COST_AUTHENTICITY_TEXT_ESTIMATE_USD ?? 0.004),
+    actualUsageUsd: Number(env.COST_AUTHENTICITY_TEXT_ESTIMATE_USD ?? 0.004),
   }).catch((error) => logEvent({ service: 'lythaus-jobs', event: 'ai_evidence_record_failed', operation: 'moderation_text_scan', error: error instanceof Error ? error.message : 'audit_write_failed' }));
-  const detectedContentClass = result.classes[0]?.class ?? null;
+  const detectedContentClass = evaluation.signals[0]?.category ?? null;
   const declarationConflict = post.declared_creation_mode === 'human'
-    && result.classes.some((item) => typeof item.class === 'string' && /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.class));
-  const effectiveAction = declarationConflict && result.action === 'allow' ? 'queue' : result.action;
-  const publicLabel = effectiveAction === 'allow'
-    ? ({ human: 'Human-authored', ai_assisted: 'AI-assisted', ai_generated: 'AI-generated' } as const)[post.declared_creation_mode]
-    : 'Under review';
-  const signal = JSON.stringify({ highestScore: result.highestScore, classes: result.classes, action: result.action });
+    && evaluation.signals.some((item) => /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.category));
+  const signal = JSON.stringify(evaluation);
   await transaction(env.DB_JOBS_FRESH, async (client) => {
-    const existing = await client.query(`SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = 'hive' LIMIT 1`, [postId]);
+    const existing = await client.query(`SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = $2 LIMIT 1`, [postId, AUTHENTICITY_PROVIDER]);
     if (existing.rowCount !== 0) return;
     await client.query(
-      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal) VALUES ($1, 'post', $2, 'hive', $3, $4::jsonb)`,
-      [uuidv7(), postId, modelVersion, signal]
+      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal) VALUES ($1, 'post', $2, $3, $4, $5::jsonb)`,
+      [uuidv7(), postId, AUTHENTICITY_PROVIDER, modelVersion, signal]
     );
     await client.query(
       `INSERT INTO content.content_declarations (post_id, declared_creation_mode, public_label, detector_provider, detector_model_version, detector_signal, declaration_conflict, review_required)
-       VALUES ($1, $2, $3, 'hive', $4, $5::jsonb, $6, $7)
+       VALUES ($1, $2, 'Under review', $3, $4, $5::jsonb, $6, true)
        ON CONFLICT (post_id) DO UPDATE SET public_label = EXCLUDED.public_label, detector_provider = EXCLUDED.detector_provider,
          detector_model_version = EXCLUDED.detector_model_version, detector_signal = EXCLUDED.detector_signal,
          declaration_conflict = EXCLUDED.declaration_conflict, review_required = EXCLUDED.review_required, updated_at = now()`,
-      [postId, post.declared_creation_mode, publicLabel, modelVersion, signal, declarationConflict, effectiveAction !== 'allow']
+      [postId, post.declared_creation_mode, AUTHENTICITY_PROVIDER, modelVersion, signal, declarationConflict]
     );
     const caseResult = await client.query<{ id: string }>(
-      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version) VALUES ($1, 'post', $2, $3, 'hive-v1') RETURNING id`,
-      [uuidv7(), postId, result.action === 'allow' ? 'resolved' : 'open']
+      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version) VALUES ($1, 'post', $2, 'open', $3) RETURNING id`,
+      [uuidv7(), postId, AUTHENTICITY_POLICY]
     );
     await client.query(
-      `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version) VALUES ($1, $2, $3, $4, 'hive-v1')`,
-      [uuidv7(), caseResult.rows[0].id, result.action, publicLabel]
+      `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version) VALUES ($1, $2, 'queue', 'Under review', $3)`,
+      [uuidv7(), caseResult.rows[0].id, AUTHENTICITY_POLICY]
     );
     await client.query(
       `INSERT INTO trust.provenance_events (id, content_id, author_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, final_decision)
-       VALUES ($1, $2, $3, $4, $5, 'hive', $6, 'hive-v1', $7)`,
-      [uuidv7(), postId, post.author_id, post.declared_creation_mode, detectedContentClass, modelVersion, effectiveAction]
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'queue')`,
+      [uuidv7(), postId, post.author_id, post.declared_creation_mode, detectedContentClass, AUTHENTICITY_PROVIDER, modelVersion, AUTHENTICITY_POLICY]
     );
-    if (effectiveAction === 'allow') {
-      await client.query(`UPDATE content.posts SET moderation_state = 'allowed', published_at = COALESCE(published_at, now()), updated_at = now() WHERE id = $1`, [postId]);
-      await client.query(`INSERT INTO feed.author_outbox (post_id, author_id, published_at) VALUES ($1, $2, COALESCE((SELECT published_at FROM content.posts WHERE id = $1), now())) ON CONFLICT (post_id) DO NOTHING`, [postId, post.author_id]);
-      await client.query(
-        `INSERT INTO feed.user_inbox (user_id, post_id, source, explanation_basis)
-         SELECT follower_id, $1, 'follow', jsonb_build_object('source', 'follow', 'authorId', $2)
-           FROM social.follows
-          WHERE followed_id = $2
-            AND (SELECT count(*) FROM social.follows WHERE followed_id = $2) <= 10000
-         ON CONFLICT (user_id, post_id) DO NOTHING`,
-        [postId, post.author_id]
-      );
-      if (post.declared_creation_mode !== 'ai_generated') {
-        await client.query(
-          `INSERT INTO trust.human_contribution_events (id, subject_user_id, content_id, human_authorship_eligibility, policy_version, points_delta)
-           VALUES ($1, $2, $3, true, 'hive-v1', 0)`, [uuidv7(), post.author_id, postId]
-        );
-      }
-    } else if (effectiveAction === 'block') {
-      await client.query(`UPDATE content.posts SET moderation_state = 'blocked', updated_at = now() WHERE id = $1`, [postId]);
-    }
   });
 }
 
@@ -429,66 +367,36 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   const sha256 = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
   const approvedKey = `approved/${row.user_id}/${sessionId}.webp`;
   await env.MEDIA_APPROVED.put(approvedKey, approvedBytes, { httpMetadata: { contentType: 'image/webp' } });
-  if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
-    await env.MEDIA_APPROVED.delete(approvedKey);
-    throw new Error('media_signing_not_configured');
-  }
-  let moderation: HiveResult;
-  const startedAt = Date.now();
-  try {
-    const signed = await createPresignedGetUrl({
-      accountId: env.R2_ACCOUNT_ID,
-      bucket: env.MEDIA_APPROVED_BUCKET ?? 'lythaus-media-approved',
-      key: approvedKey,
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-      expiresInSeconds: 300,
-    });
-    moderation = await withBudgetAdmission(env, {
-      operation: 'moderation_image_scan',
-      operationClass: 'essential',
-      estimatedCostUsd: Number(env.COST_HIVE_IMAGE_ESTIMATE_USD ?? 0.01),
-      idempotencyKey: `hive:image:${sessionId}`,
-    }, () => moderateImageWithHive(signed.url, row.user_id, sessionId, env));
-  } catch (error) {
-    await env.MEDIA_APPROVED.delete(approvedKey);
-    throw error;
-  }
-  const modelVersion = env.HIVE_MODEL_VERSION ?? 'general_image_classification+nudity_image_detection+violence_image_detection';
-  const responseHash = await sha256Hex(JSON.stringify({ action: moderation.action, highestScore: moderation.highestScore, classes: moderation.classes }));
-  await recordAiEvidence(env, {
+  const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
+    kind: 'image',
+    content: JSON.stringify({ sha256, contentType: 'image/webp', byteSize: approvedBytes.byteLength, width: sourceInfo.width, height: sourceInfo.height }),
+    contentId: sessionId,
+  });
+  const responseHash = await sha256Hex(JSON.stringify(evaluation));
+  if (modelExecuted) await recordAiEvidence(env, {
     caseId: sessionId,
     correlationId: sessionId,
     inputHash: sha256,
-    evidenceBundleHash: await sha256Hex(`${sha256}:${modelVersion}:media-v1`),
-    provider: 'hive',
-    modelId: modelVersion,
-    gatewayId: null,
-    promptTemplateVersion: 'hive-image-task-v1',
-    reasoningSchemaVersion: 'moderation-result-v1',
-    toolVersions: { hive: modelVersion },
-    policyVersion: 'media-v1',
+    evidenceBundleHash: await sha256Hex(`${sha256}:${evaluation.modelId}:${AUTHENTICITY_POLICY}`),
+    provider: AUTHENTICITY_PROVIDER,
+    modelId: evaluation.modelId,
+    gatewayId: env.AI_GATEWAY_ID ?? null,
+    promptTemplateVersion: 'authenticity-evaluation-v1',
+    reasoningSchemaVersion: evaluation.schemaVersion,
+    toolVersions: { authenticity: 'lythaus-authenticity-v1' },
+    policyVersion: AUTHENTICITY_POLICY,
     responseHash,
-    latencyMs: Date.now() - startedAt,
-    estimatedUsageUsd: Number(env.COST_HIVE_IMAGE_ESTIMATE_USD ?? 0.01),
-    actualUsageUsd: Number(env.COST_HIVE_IMAGE_ESTIMATE_USD ?? 0.01),
+    latencyMs,
+    estimatedUsageUsd: Number(env.COST_AUTHENTICITY_IMAGE_ESTIMATE_USD ?? 0.01),
+    actualUsageUsd: Number(env.COST_AUTHENTICITY_IMAGE_ESTIMATE_USD ?? 0.01),
   }).catch((error) => logEvent({ service: 'lythaus-jobs', event: 'ai_evidence_record_failed', operation: 'moderation_image_scan', error: error instanceof Error ? error.message : 'audit_write_failed' }));
-  if (moderation.action === 'block') {
-    await env.MEDIA_APPROVED.delete(approvedKey);
-    await transaction(env.DB_JOBS_FRESH, async (client) => {
-      const updated = await client.query(`UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued'`, [sessionId]);
-      if (updated.rowCount !== 0) await client.query(`UPDATE media.storage_ledger SET bytes_reserved = greatest(bytes_reserved - $1, 0), bytes_rejected = bytes_rejected + $1, last_reconciled_at = now() WHERE user_id = $2`, [row.expected_bytes, row.user_id]);
-    });
-    return;
-  }
-  const moderationState = moderation.action === 'allow' ? 'approved' : 'review';
-  const moderationSignal = JSON.stringify({ highestScore: moderation.highestScore, classes: moderation.classes, action: moderation.action });
+  const moderationSignal = JSON.stringify(evaluation);
 
   await transaction(env.DB_JOBS_FRESH, async (client) => {
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO media.objects (id, owner_id, object_key, content_type, byte_size, sha256, state)
        VALUES ($1, $2, $3, 'image/webp', $4, $5, $6) ON CONFLICT (object_key) DO NOTHING RETURNING id`,
-      [uuidv7(), row.user_id, approvedKey, approvedBytes.byteLength, sha256, moderationState]
+      [uuidv7(), row.user_id, approvedKey, approvedBytes.byteLength, sha256, 'review']
     );
     if (inserted.rowCount !== 0) {
       const objectId = inserted.rows[0].id;
@@ -499,8 +407,8 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
         [uuidv7(), objectId, approvedKey, approvedBytes.byteLength, sourceInfo.width, sourceInfo.height]
       );
       await client.query(
-        `INSERT INTO media.moderation_results (id, object_id, provider, model_version, signal) VALUES ($1, $2, 'hive', $3, $4::jsonb)`,
-        [uuidv7(), objectId, env.HIVE_MODEL_VERSION ?? 'image_classification_v1', moderationSignal]
+        `INSERT INTO media.moderation_results (id, object_id, provider, model_version, signal) VALUES ($1, $2, $3, $4, $5::jsonb)`,
+        [uuidv7(), objectId, AUTHENTICITY_PROVIDER, evaluation.modelId, moderationSignal]
       );
       await client.query(
         `INSERT INTO media.storage_ledger (user_id, bytes_uploaded, bytes_approved, object_count)
@@ -516,6 +424,59 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
     await client.query(`UPDATE media.upload_sessions SET status = 'approved' WHERE id = $1 AND status = 'queued'`, [sessionId]);
   });
   await env.MEDIA_QUARANTINE.delete(objectKey);
+}
+
+async function processProfileModeration(message: QueueMessage, env: Env): Promise<void> {
+  const payload = (message.body.payload ?? message.body) as { userId?: unknown; displayName?: unknown; bio?: unknown };
+  const userId = typeof payload.userId === 'string' ? payload.userId : undefined;
+  if (!userId) throw new Error('profile_event_invalid');
+  const prior = await query(env.DB_JOBS_FRESH,
+    `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'profile' AND content_id = $1 AND provider = $2 LIMIT 1`,
+    [userId, AUTHENTICITY_PROVIDER]);
+  if (prior.rowCount !== 0) return;
+  const content = JSON.stringify({
+    displayName: typeof payload.displayName === 'string' ? payload.displayName : null,
+    bio: typeof payload.bio === 'string' ? payload.bio : null,
+  });
+  const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
+    kind: 'profile', content, contentId: userId,
+  });
+  const inputHash = await sha256Hex(content);
+  if (modelExecuted) await recordAiEvidence(env, {
+    caseId: userId,
+    correlationId: userId,
+    inputHash,
+    evidenceBundleHash: await sha256Hex(`${inputHash}:${evaluation.modelId}:${AUTHENTICITY_POLICY}`),
+    provider: AUTHENTICITY_PROVIDER,
+    modelId: evaluation.modelId,
+    gatewayId: env.AI_GATEWAY_ID ?? null,
+    promptTemplateVersion: 'authenticity-evaluation-v1',
+    reasoningSchemaVersion: evaluation.schemaVersion,
+    toolVersions: { authenticity: 'lythaus-authenticity-v1' },
+    policyVersion: AUTHENTICITY_POLICY,
+    responseHash: await sha256Hex(JSON.stringify(evaluation)),
+    latencyMs,
+    estimatedUsageUsd: Number(env.COST_AUTHENTICITY_TEXT_ESTIMATE_USD ?? 0.004),
+    actualUsageUsd: Number(env.COST_AUTHENTICITY_TEXT_ESTIMATE_USD ?? 0.004),
+  }).catch((error) => logEvent({ service: 'lythaus-jobs', event: 'ai_evidence_record_failed', operation: 'moderation_profile_scan', error: error instanceof Error ? error.message : 'audit_write_failed' }));
+  await transaction(env.DB_JOBS_FRESH, async (client) => {
+    const existing = await client.query(
+      `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'profile' AND content_id = $1 AND provider = $2 LIMIT 1`,
+      [userId, AUTHENTICITY_PROVIDER]);
+    if (existing.rowCount !== 0) return;
+    await client.query(
+      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal)
+       VALUES ($1, 'profile', $2, $3, $4, $5::jsonb)`,
+      [uuidv7(), userId, AUTHENTICITY_PROVIDER, evaluation.modelId, JSON.stringify(evaluation)]);
+    const caseResult = await client.query<{ id: string }>(
+      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version)
+       VALUES ($1, 'profile', $2, 'open', $3) RETURNING id`,
+      [uuidv7(), userId, AUTHENTICITY_POLICY]);
+    await client.query(
+      `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version)
+       VALUES ($1, $2, 'queue', 'Under review', $3)`,
+      [uuidv7(), caseResult.rows[0].id, AUTHENTICITY_POLICY]);
+  });
 }
 
 async function processMessage(message: QueueMessage, env: Env): Promise<void> {
@@ -547,6 +508,7 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   }
   try {
     if (eventType === 'content.post.created') await processPostModeration(message, env);
+    if (eventType === 'content.profile.updated') await processProfileModeration(message, env);
     if (eventType === 'media.upload.finalised') await processMediaUpload(message, env);
     if (eventType === 'privacy.request.created') {
       const payload = (message.body.payload ?? {}) as { requestId?: string; requestType?: string };

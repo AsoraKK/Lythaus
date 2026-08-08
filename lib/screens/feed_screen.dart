@@ -2,23 +2,24 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:asora/core/analytics/analytics_client.dart';
-import 'package:asora/core/analytics/analytics_events.dart';
-import 'package:asora/core/analytics/analytics_providers.dart';
-import 'package:asora/design_system/components/lyth_button.dart';
-import 'package:asora/design_system/components/lyth_snackbar.dart';
-import 'package:asora/design_system/theme/lyth_theme.dart';
-import 'package:asora/features/auth/application/auth_providers.dart';
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/feed/domain/models.dart' as domain;
-import 'package:asora/widgets/security_widgets.dart';
-import 'package:asora/widgets/reputation_badge.dart';
-import 'package:asora/features/privacy/privacy_settings_screen.dart';
-import 'package:asora/features/feed/presentation/create_post_screen.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
+import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_snackbar.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/widgets/security_widgets.dart';
+import 'package:lythaus/widgets/reputation_badge.dart';
+import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
+
+export 'package:lythaus/design_system/theme/lyth_theme.dart' show LythausTheme;
 
 /// ---------------------------------------------------------------------------
-///  Asora Feed – Perplexity‑inspired wireframe (dark‑mode default)
+///  Lythaus Feed – Perplexity‑inspired wireframe (dark‑mode default)
 /// ---------------------------------------------------------------------------
 ///  • Soft geometric background pattern (diagonal grid)
 ///  • Center‑aligned header with leading profile icon & trailing share
@@ -26,16 +27,6 @@ import 'package:asora/features/moderation/presentation/moderation_console/modera
 ///  • Bottom search field à la Perplexity + 4‑icon nav bar
 ///  • Sora font everywhere
 /// ---------------------------------------------------------------------------
-
-class AsoraTheme {
-  static ThemeData dark() {
-    return LythausTheme.dark();
-  }
-
-  static ThemeData light() {
-    return LythausTheme.light();
-  }
-}
 
 // ---- Main screen -----------------------------------------------------------
 class FeedScreen extends ConsumerWidget {
@@ -67,7 +58,7 @@ class FeedScreen extends ConsumerWidget {
           IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
         ],
       ),
-      drawer: _AsoraDrawer(authState: authState),
+      drawer: _LythausDrawer(authState: authState),
       floatingActionButton: const CreatePostFAB(),
       body: const Column(
         children: [
@@ -75,7 +66,7 @@ class FeedScreen extends ConsumerWidget {
           Expanded(child: Stack(children: [_BackgroundPattern(), _FeedList()])),
         ],
       ),
-      bottomNavigationBar: const _AsoraNavBar(),
+      bottomNavigationBar: const _LythausNavBar(),
     );
   }
 }
@@ -345,8 +336,8 @@ void _promptSignIn(BuildContext context) {
 }
 
 // ---- Bottom nav ------------------------------------------------------------
-class _AsoraNavBar extends StatelessWidget {
-  const _AsoraNavBar();
+class _LythausNavBar extends StatelessWidget {
+  const _LythausNavBar();
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -368,10 +359,10 @@ class _AsoraNavBar extends StatelessWidget {
 }
 
 // ---- Navigation Drawer ----------------------------------------------------
-class _AsoraDrawer extends ConsumerWidget {
+class _LythausDrawer extends ConsumerWidget {
   final AsyncValue<User?> authState;
 
-  const _AsoraDrawer({required this.authState});
+  const _LythausDrawer({required this.authState});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

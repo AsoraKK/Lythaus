@@ -10,6 +10,3 @@ set -euo pipefail
 
 export ENVIRONMENT=preview
 export WEB_BASE_URL API_BASE_URL AUTH_URL ADMIN_API_URL MARKETING_BASE_URL
-export OAUTH2_AUTHORIZATION_ENDPOINT="${AUTH_URL%/}/auth/authorize"
-export OAUTH2_TOKEN_ENDPOINT="${AUTH_URL%/}/auth/token"
-export OAUTH2_USERINFO_ENDPOINT="${AUTH_URL%/}/auth/userinfo"

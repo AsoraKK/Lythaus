@@ -1,67 +1,37 @@
 // ignore_for_file: public_member_api_docs
 
-/// ASORA OAUTH2 PROVIDERS
-///
-/// 🎯 Purpose: Riverpod providers for OAuth2 authentication state management
-/// 🏗️ Architecture: Reactive state management with Riverpod
-/// 🔐 Security: Secure token management and automatic refresh
-/// 📱 Platform: Multi-platform authentication support
-/// 🤖 OAuth2: Complete PKCE flow integration
 library;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:asora/features/auth/domain/user.dart';
-import 'package:asora/features/auth/domain/auth_failure.dart';
-import 'package:asora/features/auth/application/oauth2_service.dart';
-import 'package:asora/features/auth/application/auth_service.dart';
-import 'package:asora/features/auth/application/invite_redeem_service.dart';
-import 'package:asora/features/auth/application/web_auth_service.dart';
-import 'package:asora/core/network/dio_client.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/application/invite_redeem_service.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 
-/// OAuth2Service provider - manages OAuth2 PKCE flow
-final oauth2ServiceProvider = Provider<OAuth2Service>((ref) {
-  return OAuth2Service();
-});
-
-/// Enhanced AuthService provider with OAuth2 support
 final enhancedAuthServiceProvider = Provider<AuthService>((ref) {
-  final oauth2Service = ref.read(oauth2ServiceProvider);
-
   return AuthService(
-    oauth2Service: oauth2Service,
     secureStorage: const FlutterSecureStorage(),
     httpClient: http.Client(),
   );
 });
 
-/// Invite redemption service provider
 final inviteRedeemServiceProvider = Provider<InviteRedeemService>((ref) {
   return InviteRedeemService(ref.watch(secureDioProvider));
 });
 
-/// Token version provider used to invalidate cached JWT reads when the
-/// underlying authentication state changes (sign-in, refresh, logout).
 final tokenVersionProvider = StateProvider<int>((ref) => 0);
 final guestModeProvider = StateProvider<bool>((ref) => false);
-
-/// Stores an invite code pending redemption after the user signs in.
-/// Set by [InviteRedeemScreen] when a user tries to redeem without being
-/// authenticated; cleared by [AuthGate] once the user is logged in and
-/// the invite screen has been pushed.
 final pendingInviteCodeProvider = StateProvider<String?>((ref) => null);
 
-/// Current user authentication state provider
 final authStateProvider =
     StateNotifierProvider<AuthStateNotifier, AsyncValue<User?>>((ref) {
-      final authService = ref.read(enhancedAuthServiceProvider);
-      return AuthStateNotifier(ref, authService);
+      return AuthStateNotifier(ref, ref.read(enhancedAuthServiceProvider));
     });
 
-/// Authentication state notifier
 class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   AuthStateNotifier(this._ref, this._authService)
     : super(const AsyncValue.loading()) {
@@ -76,77 +46,20 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     notifier.state = notifier.state + 1;
   }
 
-  /// Directly set the authenticated user (used by web auth callback).
   void setUser(User user) {
     _ref.read(guestModeProvider.notifier).state = false;
     state = AsyncValue.data(user);
     _bumpTokenVersion();
   }
 
-  /// Load current authenticated user on app startup.
-  ///
-  /// On web the canonical token store is [sessionStorage] (managed by
-  /// [WebAuthService]).  [AuthService.getCurrentUser] reads
-  /// [FlutterSecureStorage] (IndexedDB on web) which is NOT where the
-  /// web callback stores tokens, so a page-reload would otherwise always
-  /// appear unauthenticated.  We therefore try [WebAuthService] first on
-  /// web before falling through to the platform path.
   Future<void> _loadCurrentUser() async {
     try {
-      if (kIsWeb) {
-        final webAuth = WebAuthService();
-        if (webAuth.isSignedIn()) {
-          final user = webAuth.getStoredUser();
-          if (user != null) {
-            state = AsyncValue.data(user);
-            return;
-          }
-        }
-      }
-
-      final user = await _authService.getCurrentUser();
-      state = AsyncValue.data(user);
+      state = AsyncValue.data(await _authService.getCurrentUser());
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }
   }
 
-  /// Sign in with OAuth2
-  Future<void> signInWithOAuth2() async {
-    try {
-      _ref.read(guestModeProvider.notifier).state = false;
-      state = const AsyncValue.loading();
-      final user = await _authService.signInWithOAuth2();
-      state = AsyncValue.data(user);
-      _bumpTokenVersion();
-    } on AuthFailure catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(
-        AuthFailure.serverError('OAuth2 sign-in failed: ${error.toString()}'),
-        stackTrace,
-      );
-    }
-  }
-
-  Future<void> signInWithProvider(OAuth2Provider provider) async {
-    try {
-      _ref.read(guestModeProvider.notifier).state = false;
-      state = const AsyncValue.loading();
-      final user = await _authService.signInWithOAuth2(provider: provider);
-      state = AsyncValue.data(user);
-      _bumpTokenVersion();
-    } on AuthFailure catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(
-        AuthFailure.serverError('OAuth2 sign-in failed: ${error.toString()}'),
-        stackTrace,
-      );
-    }
-  }
-
-  /// Sign in with email and password
   Future<void> signInWithEmail(String email, String password) async {
     try {
       _ref.read(guestModeProvider.notifier).state = false;
@@ -164,13 +77,13 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
-  /// Refresh authentication token
   Future<void> refreshToken() async {
     try {
-      await _authService.refreshOAuth2Token();
+      if (!await _authService.refreshSession()) {
+        throw AuthFailure.invalidCredentials('Session expired');
+      }
       _bumpTokenVersion();
     } on AuthFailure catch (error, stackTrace) {
-      // Token refresh failed, user needs to sign in again
       state = AsyncValue.error(error, stackTrace);
     } catch (error, stackTrace) {
       state = AsyncValue.error(
@@ -180,15 +93,11 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     }
   }
 
-  /// Sign out current user
   Future<void> signOut() async {
+    _ref.read(guestModeProvider.notifier).state = false;
     try {
-      _ref.read(guestModeProvider.notifier).state = false;
       await _authService.logout();
-      state = const AsyncValue.data(null);
-      _bumpTokenVersion();
-    } catch (error) {
-      _ref.read(guestModeProvider.notifier).state = false;
+    } finally {
       state = const AsyncValue.data(null);
       _bumpTokenVersion();
     }
@@ -198,89 +107,48 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     try {
       await _authService.logout();
     } catch (_) {
-      // Best effort: guest mode should still be enabled.
+      // Guest mode remains available when remote logout is unavailable.
     }
     _ref.read(guestModeProvider.notifier).state = true;
     state = const AsyncValue.data(null);
     _bumpTokenVersion();
   }
 
-  /// Validate current token and refresh if needed
   Future<void> validateToken() async {
     try {
-      final isValid = await _authService.validateAndRefreshToken();
-
-      if (!isValid) {
-        // Token invalid and refresh failed, sign out user
+      if (!await _authService.validateAndRefreshToken()) {
         state = const AsyncValue.data(null);
-        _bumpTokenVersion();
       } else {
-        // Token is valid, reload user data
-        final user = await _authService.getCurrentUser();
-        state = AsyncValue.data(user);
-        _bumpTokenVersion();
+        state = AsyncValue.data(await _authService.getCurrentUser());
       }
+      _bumpTokenVersion();
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }
   }
 }
 
-/// Convenience provider for checking if user is authenticated
 final isAuthenticatedProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authStateProvider);
-  return authState.maybeWhen(data: (user) => user != null, orElse: () => false);
+  return ref.watch(authStateProvider).valueOrNull != null;
 });
 
-/// Convenience provider for getting current user
 final currentUserProvider = Provider<User?>((ref) {
-  final authState = ref.watch(authStateProvider);
-  return authState.maybeWhen(data: (user) => user, orElse: () => null);
+  return ref.watch(authStateProvider).valueOrNull;
 });
 
-/// Provider for authentication loading state
 final isAuthLoadingProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authStateProvider);
-  return authState.maybeWhen(loading: () => true, orElse: () => false);
+  return ref.watch(authStateProvider).isLoading;
 });
 
-/// Provider for authentication error state
 final authErrorProvider = Provider<AuthFailure?>((ref) {
-  final authState = ref.watch(authStateProvider);
-  return authState.maybeWhen(
-    error: (error, _) => error is AuthFailure ? error : null,
-    orElse: () => null,
-  );
+  final state = ref.watch(authStateProvider);
+  return state.hasError && state.error is AuthFailure
+      ? state.error! as AuthFailure
+      : null;
 });
 
-/// Reactive JWT provider that refreshes whenever [tokenVersionProvider] is
-/// incremented. Returns `null` when the user is unauthenticated.
 final jwtProvider = FutureProvider<String?>((ref) async {
-  // Recompute whenever auth state bumps the token version counter.
   ref.watch(tokenVersionProvider);
-
-  // On web, tokens live in sessionStorage — read them directly.
-  if (kIsWeb) {
-    final token = WebAuthService().getAccessToken();
-    if (token != null && token.isNotEmpty) return token;
-    return null;
-  }
-
-  final oauth2 = ref.watch(oauth2ServiceProvider);
-  try {
-    final oauthToken = await oauth2.getAccessToken();
-    if (oauthToken != null && oauthToken.isNotEmpty) {
-      return oauthToken;
-    }
-  } catch (_) {
-    // Ignore and fall back to stored token.
-  }
-
-  final authService = ref.watch(enhancedAuthServiceProvider);
-  final stored = await authService.getJwtToken();
-  if (stored != null && stored.isNotEmpty) {
-    return stored;
-  }
-
-  return null;
+  final token = await ref.watch(enhancedAuthServiceProvider).getJwtToken();
+  return token == null || token.isEmpty ? null : token;
 });

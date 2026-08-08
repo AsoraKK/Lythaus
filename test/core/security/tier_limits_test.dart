@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/security/tier_limits.dart';
+import 'package:lythaus/core/security/tier_limits.dart';
 
 void main() {
   group('TierLimits constructor', () {

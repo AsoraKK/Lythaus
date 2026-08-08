@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/moderation/domain/moderation_queue_item.dart';
-import 'package:asora/features/moderation/presentation/moderation_console/widgets/moderation_queue_item_tile.dart';
+import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
+import 'package:lythaus/features/moderation/presentation/moderation_console/widgets/moderation_queue_item_tile.dart';
 
 void main() {
   Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));

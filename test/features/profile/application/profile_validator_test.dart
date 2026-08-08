@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/profile/application/profile_validator.dart';
+import 'package:lythaus/features/profile/application/profile_validator.dart';
 
 void main() {
   group('ProfileValidator.validateDisplayName', () {

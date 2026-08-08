@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/features/auth/domain/user_models.dart';
+import 'package:lythaus/features/auth/domain/user_models.dart';
 
 void main() {
   group('UserAuthData.toJson', () {

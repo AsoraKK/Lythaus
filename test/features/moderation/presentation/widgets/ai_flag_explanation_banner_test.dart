@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:asora/features/moderation/presentation/widgets/ai_flag_explanation_banner.dart';
+import 'package:lythaus/features/moderation/presentation/widgets/ai_flag_explanation_banner.dart';
 
 void main() {
   Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));

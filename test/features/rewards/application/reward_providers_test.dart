@@ -4,8 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asora/core/network/dio_client.dart';
-import 'package:asora/features/rewards/application/reward_providers.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/rewards/application/reward_providers.dart';
 
 class _Adapter implements HttpClientAdapter {
   _Adapter(this.handler);
