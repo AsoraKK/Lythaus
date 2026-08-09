@@ -39,6 +39,16 @@ No agent may change the Cloudflare subscription, enable unbounded pay-as-you-go
 inference, provision GPU infrastructure, accept custom-model pricing, or add a
 new paid provider under this work package.
 
+## WP002 bounded experiment gate
+
+The Container proof uses a published-rate calculation and a bounded worst-case
+estimate rather than an asserted exact bill. The estimate must specify the
+`lite` instance, maximum instance count, active seconds, queue operations,
+R2 operations/storage, Workers AI neurons if any, and any other attributable
+spend. The owner must approve the bound and the rollback/disable path before a
+future deployment. A measured result is evidence about that test only; it is
+not a realised monthly savings claim.
+
 ## Deployment gate
 
 Before any Container or model deployment, the owner must approve the exact

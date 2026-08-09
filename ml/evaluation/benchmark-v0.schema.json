@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lythaus.co/schemas/authenticity-benchmark-v0.json",
+  "title": "Lythaus Authenticity Benchmark v0 Manifest",
+  "type": "object",
+  "required": ["schemaVersion", "manifestId", "datasetRegistryVersion", "samples"],
+  "properties": {
+    "schemaVersion": { "const": "lythaus-authenticity-benchmark-v0" },
+    "manifestId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "datasetRegistryVersion": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "containsUserContent": { "const": false },
+    "samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sampleId", "groupId", "origin", "transformation", "sourceDatasetId", "contentSha256", "split"],
+        "properties": {
+          "sampleId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "groupId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "origin": { "enum": ["CAMERA_NATIVE", "AI_GENERATED", "AI_EDITED", "TRADITIONAL_DIGITAL_ART", "CGI", "SCAN", "COMPOSITE", "UNKNOWN"] },
+          "transformation": { "enum": ["ORIGINAL", "JPEG_COMPRESSED", "RESIZED", "CROPPED", "SCREENSHOT", "SCREEN_RECAPTURE", "BLURRED", "SHARPENED", "METADATA_STRIPPED", "INPAINTED"] },
+          "generatorFamily": { "type": ["string", "null"] },
+          "generatorVersion": { "type": ["string", "null"] },
+          "generatorSplit": { "enum": ["KNOWN", "UNSEEN", "NOT_APPLICABLE"] },
+          "sourceDatasetId": { "type": "string", "minLength": 1 },
+          "sourceUrl": { "type": "string", "format": "uri" },
+          "licenceClassification": { "enum": ["APPROVED_FOR_COMMERCIAL_TRAINING", "APPROVED_FOR_EVALUATION_ONLY", "APPROVED_WITH_CONDITIONS", "REQUIRES_PERMISSION", "PROHIBITED", "UNCLEAR"] },
+          "contentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "perceptualHash": { "type": "string", "minLength": 1 },
+          "parentSampleId": { "type": ["string", "null"], "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "width": { "type": "integer", "minimum": 1 },
+          "height": { "type": "integer", "minimum": 1 },
+          "mime": { "type": "string", "pattern": "^image/" },
+          "hasPii": { "type": "boolean" },
+          "hardNegative": { "type": "boolean" },
+          "consentStatus": { "type": "string" },
+          "truthSynthetic": { "type": ["boolean", "null"] },
+          "truthLocalManipulation": { "type": ["boolean", "null"] },
+          "split": { "enum": ["TRAIN", "CALIBRATION", "KNOWN_TEST", "UNSEEN_TEST"] },
+          "retentionClass": { "type": "string" }
+        }
+      }
+    }
+  }
+}

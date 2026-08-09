@@ -161,6 +161,10 @@ function variance(values: readonly number[]): number | null {
   return values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length;
 }
 
+function average(values: readonly number[]): number | null {
+  return values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
 export async function runTransformationLab(input: {
   caseId: UUIDv7;
   inputBundle: ForensicFeatureBundle;
@@ -168,10 +172,12 @@ export async function runTransformationLab(input: {
   transformations?: readonly TransformationKind[];
   execute?: TransformationExecutor;
   detectorScore?: DetectorScore;
+  detectorThreshold?: number;
   now?: string;
 }): Promise<readonly TransformationRun[]> {
   const execute = input.execute ?? defaultTransformationExecutor;
   const originalScore = input.detectorScore ? await input.detectorScore(input.inputBundle) : null;
+  const detectorThreshold = input.detectorThreshold ?? 0.5;
   const results: TransformationRun[] = [];
   for (const transformation of input.transformations ?? DEFAULT_TRANSFORMATIONS) {
     const transformed = await execute(transformation, input.original);
@@ -187,7 +193,13 @@ export async function runTransformationLab(input: {
       transformedFeatureVector: bundle.featureVector,
       featureDistance: distance(input.inputBundle.featureVector, bundle.featureVector),
       detectorScoreIfAvailable: transformedScore,
+      scoreMean: average(scores),
       scoreVariance: variance(scores),
+      embeddingMovement: null,
+      classificationFlip: originalScore === null || transformedScore === null
+        ? null
+        : (originalScore >= detectorThreshold) !== (transformedScore >= detectorThreshold),
+      evidenceFamilyStability: null,
       audit: createDecisionAudit({
         timestamp: input.now,
         reasonCodes: ['TRANSFORMATION_STABILITY_MEASUREMENT_ONLY', 'NOT_USED_FOR_ENFORCEMENT'],

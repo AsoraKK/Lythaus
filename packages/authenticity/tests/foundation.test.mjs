@@ -7,6 +7,9 @@ import {
   FOUNDATION_POLICY_VERSION,
   InMemoryCostCounterStore,
   MODEL_REGISTRY,
+  assertModelRegistryPolicy,
+  assertWp002CostCeiling,
+  calculateBoundedCostScenario,
   createAuthenticityCase,
   createAuthenticityEvidence,
   createDecisionAudit,
@@ -18,6 +21,7 @@ import {
   runEvaluation,
   runFoundationPipeline,
   runTransformationLab,
+  evaluateEvaluationQualityGates,
   validateDualAxisOrigin,
   unavailableModerationProvider,
   uuidv7,
@@ -60,11 +64,14 @@ test('evidence families and dual origin axes remain independent', () => {
 });
 
 test('model registry uses UUID v7 and no automatic artifacts', () => {
-  assert.equal(MODEL_REGISTRY.length, 7);
+  assert.equal(MODEL_REGISTRY.length, 11);
+  assertModelRegistryPolicy();
   for (const model of MODEL_REGISTRY) {
     assert.equal(isUuidV7(model.modelId), true);
     assert.equal(model.deploymentStatus === 'PRODUCTION_REVIEW_ONLY', false);
     assert.equal(model.artifactSha256, null);
+    assert.ok(model.researchRole);
+    assert.ok(model.sourceAccessedAt);
   }
 });
 
@@ -178,7 +185,20 @@ test('transformation lab records deterministic stability fields', async () => {
   assert.equal(runs.length, 3);
   assert.deepEqual(runs.map((run) => run.transformation), ['JPEG_QUALITY_95', 'JPEG_QUALITY_75', 'RESIZE_75']);
   assert.ok(runs.every((run) => Array.isArray(run.originalFeatureVector) && typeof run.featureDistance === 'number'));
+  assert.ok(runs.every((run) => run.scoreMean === null && run.classificationFlip === null && run.embeddingMovement === null));
   assert.ok(runs.every((run) => run.audit.reasonCodes.includes('NOT_USED_FOR_ENFORCEMENT')));
+  const scored = await runTransformationLab({
+    caseId,
+    inputBundle: bundle,
+    original,
+    transformations: ['JPEG_QUALITY_95'],
+    detectorScore: async (candidate) => (candidate.featureVector[0] ?? 0) / 100,
+    detectorThreshold: 0.5,
+  });
+  assert.equal(typeof scored[0].scoreMean, 'number');
+  assert.equal(typeof scored[0].scoreVariance, 'number');
+  assert.equal(typeof scored[0].detectorScoreIfAvailable, 'number');
+  assert.equal(typeof scored[0].classificationFlip, 'boolean');
 });
 
 test('evaluation harness calculates metrics without enforcement authority', async () => {
@@ -190,7 +210,41 @@ test('evaluation harness calculates metrics without enforcement authority', asyn
   const result = await runEvaluation({ dataset, modelId: MODEL_REGISTRY[4].modelId, samples, predict: async (sample) => ({ score: sample.truthSynthetic ? 0.9 : 0.1, classification: sample.truthSynthetic ? 'SYNTHETIC' : 'NOT_SYNTHETIC', latencyMs: 2, memoryMb: 12, costUsd: 0 }) });
   assert.equal(result.run.status, 'COMPLETED');
   assert.equal(result.run.metrics.precision, 1);
+  assert.equal(result.run.metrics.f1, 1);
+  assert.equal(result.run.metrics.auroc, 1);
+  assert.equal(result.run.metrics.auprc, 1);
+  assert.equal(result.run.qualityGate.overallStatus, 'PASS');
   assert.equal(result.run.audit.reasonCodes.includes('NO_ENFORCEMENT_AUTHORITY'), true);
+});
+
+test('evaluation metrics expose hard negatives, unseen generators, abstention, and grouped robustness', async () => {
+  const group = uuidv7();
+  const samples = [
+    { sampleId: uuidv7(), groupId: group, origin: 'CAMERA_NATIVE', transformation: 'ORIGINAL', truthSynthetic: false, generatorFamily: null, hardNegative: false },
+    { sampleId: uuidv7(), groupId: group, origin: 'CAMERA_NATIVE', transformation: 'JPEG_COMPRESSED', truthSynthetic: false, generatorFamily: null, hardNegative: false },
+    { sampleId: uuidv7(), groupId: uuidv7(), origin: 'CGI', transformation: 'ORIGINAL', truthSynthetic: false, generatorFamily: 'cgi', generatorSplit: 'KNOWN', hardNegative: true },
+    { sampleId: uuidv7(), groupId: uuidv7(), origin: 'AI_GENERATED', transformation: 'ORIGINAL', truthSynthetic: true, generatorFamily: 'unseen-family', generatorSplit: 'UNSEEN' },
+    { sampleId: uuidv7(), groupId: uuidv7(), origin: 'AI_GENERATED', transformation: 'ORIGINAL', truthSynthetic: true, generatorFamily: 'known-family', generatorSplit: 'KNOWN' },
+  ];
+  const predictions = samples.map((sample, index) => ({
+    sampleId: sample.sampleId,
+    score: index === 1 ? 0.7 : index === 2 ? 0.2 : index === 3 ? 0.8 : index === 4 ? null : 0.1,
+    classification: index === 1 ? 'SYNTHETIC' : index === 2 ? 'NOT_SYNTHETIC' : index === 3 ? 'SYNTHETIC' : index === 4 ? 'ABSTAIN' : 'NOT_SYNTHETIC',
+    latencyMs: 2,
+    cpuTimeMs: 1,
+    memoryMb: 10,
+    costUsd: 0,
+  }));
+  const dataset = createEvaluationDatasetManifest({ name: 'metrics-fixture', version: 'v0', storageReference: 'r2://fixture', contentHashes: ['b'.repeat(64)], approvedForEvaluation: true });
+  const result = await runEvaluation({ dataset, modelId: MODEL_REGISTRY[0].modelId, samples, predict: async (sample) => predictions.find((prediction) => prediction.sampleId === sample.sampleId) });
+  assert.equal(result.run.evaluationSchemaVersion, 'lythaus-authenticity-evaluation-v2');
+  assert.equal(result.run.metrics.hardNegativeFalsePositiveRate, 0);
+  assert.equal(result.run.metrics.unseenGeneratorFalsePositiveRate, null);
+  assert.equal(result.run.metrics.perGenerator.find((slice) => slice.key === 'unseen-family')?.recall, 1);
+  assert.equal(result.run.metrics.transformationRobustness?.classificationFlipRate, 1);
+  assert.equal(result.run.metrics.abstentionRate, 0.2);
+  assert.equal(result.run.qualityGate.overallStatus, 'REVIEW');
+  assert.equal(evaluateEvaluationQualityGates(result.run.metrics).enforcementAuthority, 'NONE');
 });
 
 test('cost controller hard-stops above the experimental ceiling', async () => {
@@ -200,6 +254,19 @@ test('cost controller hard-stops above the experimental ceiling', async () => {
   const stopped = await controller.admit({ period: '2026-08', operation: 'deep_image_scan', operationClass: 'optional', estimatedCostUsd: 0.1 });
   assert.equal(stopped.admitted, false);
   assert.equal(['DEEP_SCAN_STOP', 'HARD_STOP', 'ESSENTIAL_ONLY'].includes(stopped.reason), true);
+});
+
+test('bounded WP002 Container estimate remains under the approved ceiling', () => {
+  const estimate = calculateBoundedCostScenario({
+    container: { activeSeconds: 3600, instances: 1 },
+    queueOperations: 10_000,
+    r2: { storageGbMonth: 1, classAOperations: 100, classBOperations: 100 },
+    workersAi: { neurons: 10_000 },
+  });
+  assert.ok(estimate.totalUsd > 0);
+  assert.equal(estimate.ceilingCompatible, true);
+  assert.doesNotThrow(() => assertWp002CostCeiling(estimate));
+  assert.throws(() => assertWp002CostCeiling({ ...estimate, totalUsd: 10.01 }), /wp002_experimental_ceiling_exceeded/);
 });
 
 test('eco-train fails closed without valid CPU-package telemetry', async () => {

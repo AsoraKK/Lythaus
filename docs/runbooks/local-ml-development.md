@@ -39,6 +39,39 @@ AMD package sensor requires HWiNFO, Libre Hardware Monitor, a vendor utility,
 or elevated permissions, the owner must approve and install it separately,
 then provide a reviewed adapter that identifies the package sensor.
 
+## WP002 research policy
+
+WP002 permits short, attended CPU workloads for deterministic preprocessing,
+the transformation laboratory, benchmark metric calculations, classical ML,
+small neural networks, frozen embeddings, and student-fusion experiments over
+approved precomputed teacher outputs. It does not permit gpt-oss training,
+full SAFE training, major ViT/VLM training, large video-model training, or
+unbounded dataset processing.
+
+Teacher outputs must carry a model manifest ID, model version, artifact hash,
+licence classification, dataset manifest hash, and transformation provenance.
+No proprietary moderation output or ordinary Lythaus upload may become a
+commercial-model training target unless its terms explicitly allow that use.
+
+## Controlled LHM proof
+
+The 2026-08-09 non-elevated LibreHardwareMonitor proof identified the Ryzen
+7 7730U host but did not expose a trustworthy CPU-package sensor. The only
+candidate `Tctl/Tdie` reading was `0 C` and was rejected as implausible. The
+proof result is `UNAVAILABLE`; unattended training remains prohibited.
+
+The owner may separately run the bounded elevated proof using the official LHM
+release and review the generated JSON. Codex must not bypass UAC, install a
+driver, or silently install privileged monitoring software. A valid result
+must identify a CPU/package or Tctl/Tdie sensor, show dynamic values under
+load, include timestamps, and reject stale or duplicate thermal-zone readings.
+Until those conditions are met, `UNAVAILABLE`, `STALE`, or `IMPLAUSIBLE` all
+fail closed.
+
+The temporary proof directory is `%TEMP%\\lythaus-lhm-proof-20260809`. Preserve
+it until the owner has captured the diagnostic evidence; do not commit its
+binaries or logs to the repository.
+
 ## Host probe snapshot
 
 On 2026-08-09, the host exposed `\\_TZ.THRM` through
