@@ -12,6 +12,7 @@
     { "path": "apps/lythaus-public-api/src/worker-configuration.d.ts", "kind": "generated-sdk", "reason": "Wrangler-generated provider catalog types are not application integrations." },
     { "path": "apps/lythaus-admin-api/src/worker-configuration.d.ts", "kind": "generated-sdk", "reason": "Wrangler-generated provider catalog types are not application integrations." },
     { "path": "apps/lythaus-jobs/src/worker-configuration.d.ts", "kind": "generated-sdk", "reason": "Wrangler-generated provider catalog types are not application integrations." },
+    { "path": "apps/lythaus-authenticity-container-proof/src/worker-configuration.d.ts", "kind": "generated-sdk", "reason": "Wrangler-generated provider catalog types for the disabled proof configuration are not application integrations." },
     { "path": "database/planetscale/migrations/0002_core_tables.sql", "kind": "immutable-migration", "reason": "Applied historical migration; checksums and chronology must remain unchanged." },
     { "path": "database/planetscale/migrations/0007_contact_emails.sql", "kind": "immutable-migration", "reason": "Applied historical migration; checksums and chronology must remain unchanged." },
     { "path": "scripts/retired-reference-allowlist.json", "kind": "guard", "reason": "The allowlist necessarily describes its own permitted paths." },
