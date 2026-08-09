@@ -2,6 +2,7 @@ import type { AuthenticityContentKind } from './types.ts';
 import { assertUuidV7, uuidv7, type UUIDv7 } from './uuid.ts';
 
 export const EVIDENCE_SCHEMA_VERSION = 'lythaus-authenticity-evidence-v1' as const;
+export const EVALUATION_SCHEMA_VERSION = 'lythaus-authenticity-evaluation-v2' as const;
 export const FOUNDATION_POLICY_VERSION = 'lythaus-authenticity-policy-v1' as const;
 
 export const PROCESSING_MODES = [
@@ -215,7 +216,11 @@ export interface TransformationRun {
   transformedFeatureVector: readonly number[];
   featureDistance: number;
   detectorScoreIfAvailable: number | null;
+  scoreMean: number | null;
   scoreVariance: number | null;
+  embeddingMovement: number | null;
+  classificationFlip: boolean | null;
+  evidenceFamilyStability: number | null;
   audit: DecisionAudit;
 }
 
@@ -259,6 +264,10 @@ export interface AppealEvidencePacket {
   audit: DecisionAudit;
 }
 
+export type ModelResearchRole = 'BASELINE' | 'TEACHER' | 'CONTROL' | 'EXPERIMENTAL' | 'WATCHLIST' | 'NOT_COMMERCIALLY_USABLE';
+export type ModelDistillationSuitability = 'SUITABLE' | 'CONDITIONAL' | 'UNSUITABLE' | 'UNKNOWN';
+export type ModelCpuFeasibility = 'FEASIBLE' | 'LIMITED' | 'INFEASIBLE' | 'UNKNOWN';
+
 export interface ModelManifest {
   modelId: UUIDv7;
   registryKey: string;
@@ -266,12 +275,34 @@ export interface ModelManifest {
   version: string;
   modelType: 'CLASSIFIER' | 'EMBEDDING' | 'SPECTRAL' | 'RECONSTRUCTION' | 'FUSION' | 'REASONER' | 'SEMANTIC_VISION';
   role: 'SAFETY' | 'FORENSICS' | 'JUDGE';
+  researchRole: ModelResearchRole;
   source: string;
+  paperUrl: string | null;
+  codeRepositoryUrl: string | null;
   licence: string;
+  licenceEvidenceUrl: string | null;
   weightLicence: string | null;
+  weightLicenceEvidenceUrl: string | null;
   commercialUseStatus: 'NOT_REVIEWED' | 'APPROVED' | 'BLOCKED' | 'UNKNOWN';
+  distillationSuitability: ModelDistillationSuitability;
   inputContract: string;
   outputContract: string;
+  architecture: string;
+  parameterCount: number | null;
+  weightSizeMb: number | null;
+  runtimeRequirements: string;
+  gpuRequirement: string;
+  cpuFeasibility: ModelCpuFeasibility;
+  inputResolution: string;
+  strengths: readonly string[];
+  weaknesses: readonly string[];
+  transformationRobustness: string;
+  unseenGeneratorEvidence: string;
+  localisationCapability: string;
+  deploymentFeasibility: string;
+  teacherSuitability: string;
+  productionSuitability: string;
+  sourceAccessedAt: string | null;
   artifactSha256: string | null;
   evaluationStatus: 'NOT_STARTED' | 'SHADOW_ONLY' | 'PASSED' | 'FAILED';
   deploymentStatus: 'NOT_DEPLOYED' | 'SHADOW' | 'PRODUCTION_REVIEW_ONLY' | 'RETIRED';
@@ -279,26 +310,75 @@ export interface ModelManifest {
   approvalTimestamp: string | null;
 }
 
+export interface EvaluationSliceMetrics {
+  key: string;
+  sampleCount: number;
+  falsePositiveRate: number | null;
+  falseNegativeRate: number | null;
+  precision: number | null;
+  recall: number | null;
+  f1: number | null;
+  auroc: number | null;
+  auprc: number | null;
+  expectedCalibrationError: number | null;
+  abstentionRate: number | null;
+}
+
+export interface TransformationRobustnessMetrics {
+  groupCount: number;
+  scoreMean: number | null;
+  scoreVariance: number | null;
+  embeddingMovement: number | null;
+  classificationFlipRate: number | null;
+  evidenceFamilyStability: number | null;
+}
+
+export type EvaluationGateStatus = 'PASS' | 'REVIEW' | 'FAIL' | 'UNKNOWN';
+
+export interface EvaluationQualityGate {
+  humanContentFalsePositiveRateTarget: 0.01;
+  subgroupFalsePositiveReviewThreshold: 0.02;
+  humanContentFalsePositiveRate: number | null;
+  materialSubgroupsAboveThreshold: readonly string[];
+  overallStatus: EvaluationGateStatus;
+  enforcementAuthority: 'NONE';
+  rationale: string;
+}
+
 export interface EvaluationMetrics {
   falsePositiveRate: number | null;
   falseNegativeRate: number | null;
   precision: number | null;
   recall: number | null;
+  f1: number | null;
+  auroc: number | null;
+  auprc: number | null;
   calibrationBrierScore: number | null;
+  expectedCalibrationError: number | null;
   abstentionRate: number | null;
   latencyMs: number | null;
+  cpuTimeMs: number | null;
   memoryMb: number | null;
   costUsd: number | null;
   transformationStability: number | null;
+  humanContentFalsePositiveRate: number | null;
+  hardNegativeFalsePositiveRate: number | null;
+  unseenGeneratorFalsePositiveRate: number | null;
+  perGenerator: readonly EvaluationSliceMetrics[];
+  perTransformation: readonly EvaluationSliceMetrics[];
+  transformationRobustness: TransformationRobustnessMetrics | null;
 }
 
 export interface EvaluationRun {
   id: UUIDv7;
   datasetManifestId: UUIDv7;
   modelId: UUIDv7;
+  evaluationSchemaVersion: typeof EVALUATION_SCHEMA_VERSION;
   originLabels: readonly string[];
   transformations: readonly string[];
+  generatorFamilies: readonly string[];
   metrics: EvaluationMetrics;
+  qualityGate: EvaluationQualityGate;
   status: 'PLANNED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   audit: DecisionAudit;
 }

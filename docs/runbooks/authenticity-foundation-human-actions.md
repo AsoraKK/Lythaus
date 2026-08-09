@@ -24,3 +24,24 @@ following actions remain owner/provider-controlled:
    enforcement authority in Foundation 001.
 8. Approve any commercial API customer policy, billing, quotas, or provider
    access. None are implemented here.
+
+## WP002-only decisions
+
+9. Provide a read-only Cloudflare credential or review the resulting
+   `UNKNOWN` live-resource state. Approve no mutation merely by reviewing this
+   report.
+10. Review dataset/image rights, per-file provenance, privacy/consent status,
+    and whether any candidate may be used for commercial training,
+    distillation, or evaluation.
+11. Review separate code, checkpoint, upstream foundation-model, and dataset
+    licences for SAFE, GRIP CLIP, and any reconstruction candidate before
+    materialisation or teacher use.
+12. Approve the bounded Container proof only after reviewing the published-rate
+    calculation, worst-case test budget, exact existing bindings, routed event,
+    rollback, and emergency disable.
+13. Execute the elevated LibreHardwareMonitor proof, if desired, and review
+    the thermal qualification report. Unattended training remains disabled
+    unless telemetry is valid and the owner explicitly approves it.
+14. Decide whether WP003 may select a reconstruction candidate or acquire any
+    permission-gated dataset. WP002 makes no production model or enforcement
+    decision.

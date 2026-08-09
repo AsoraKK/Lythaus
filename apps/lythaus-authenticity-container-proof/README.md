@@ -1,9 +1,9 @@
 # Cloudflare Container proof skeleton
 
 This directory is intentionally not part of the active Worker deployment. It
-is a future proof configuration that reuses existing Lythaus quarantine R2,
-moderation Queue/DLQ, and jobs Hyperdrive names. The flag is `false` and the
-example Worker name is explicitly `not-deployed`.
+is a future proof configuration that reuses existing Lythaus quarantine R2 and
+Jobs Hyperdrive names. The flag is `false` and the example Worker name is
+explicitly `not-deployed`.
 
 The proof path is:
 
@@ -22,5 +22,6 @@ it is not an accuracy result or production cost measurement.
 
 Before a human-approved dry-run/deployment, install the package dependencies
 in this directory, inspect the live resource registry, confirm the existing
-bindings and queue, obtain an exact cost estimate, and approve rollback and
-emergency disable. Do not run `wrangler deploy` as part of Foundation 001.
+bindings, calculate a published-rate bounded worst-case estimate, and approve
+rollback and emergency disable. Exact spend is only known after a bounded
+runtime measurement. Do not run `wrangler deploy` in WP002.
