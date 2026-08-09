@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lythaus.co/schemas/authenticity-dataset-registry-v2.json",
+  "title": "Lythaus Authenticity Dataset Registry",
+  "type": "object",
+  "required": ["schemaVersion", "accessedAt", "policy", "datasets"],
+  "properties": {
+    "schemaVersion": { "const": "lythaus-authenticity-dataset-registry-v2" },
+    "accessedAt": { "type": "string", "format": "date" },
+    "policy": {
+      "type": "object",
+      "required": ["normalLythausUserContentTraining", "unclearRightsAction", "commercialUseRequiresOwnerAndLegalApproval"],
+      "properties": {
+        "normalLythausUserContentTraining": { "const": "PROHIBITED" },
+        "unclearRightsAction": { "const": "DO_NOT_TRAIN" },
+        "commercialUseRequiresOwnerAndLegalApproval": { "const": true }
+      },
+      "additionalProperties": true
+    },
+    "classificationValues": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "APPROVED_FOR_COMMERCIAL_TRAINING",
+          "APPROVED_FOR_EVALUATION_ONLY",
+          "APPROVED_WITH_CONDITIONS",
+          "REQUIRES_PERMISSION",
+          "PROHIBITED",
+          "UNCLEAR"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "rightsClassValues": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rightsClass" },
+      "uniqueItems": true
+    },
+    "datasets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/dataset" }
+    }
+  },
+  "$defs": {
+    "rightsClass": {
+      "enum": [
+        "CLASS_A_COMMERCIAL_TRAINING",
+        "CLASS_B_EVALUATION_ONLY",
+        "CLASS_C_LYTHAUS_OWNED"
+      ]
+    },
+    "gate": { "enum": ["ALLOW", "DENY", "CONDITIONAL", "DO_NOT_TRAIN", "UNKNOWN"] },
+    "dataset": {
+      "type": "object",
+      "required": [
+        "id", "name", "source", "maintainer", "licence", "rightsClass",
+        "trainingGate", "evaluationGate", "distillationGate", "recommendation"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "format": "uri" },
+        "maintainer": { "type": "string", "minLength": 1 },
+        "licence": { "type": "string", "minLength": 1 },
+        "licenceUrl": { "type": ["string", "null"], "format": "uri" },
+        "rightsClass": { "$ref": "#/$defs/rightsClass" },
+        "trainingGate": { "$ref": "#/$defs/gate" },
+        "evaluationGate": { "$ref": "#/$defs/gate" },
+        "distillationGate": { "$ref": "#/$defs/gate" },
+        "commercialUse": { "type": "string" },
+        "researchUse": { "type": "string" },
+        "redistributionAllowed": { "type": "string" },
+        "modificationAllowed": { "type": "string" },
+        "attributionRequirements": { "type": "string" },
+        "termsSnapshot": {
+          "type": ["object", "null"],
+          "properties": {
+            "retrievedAt": { "type": "string", "format": "date-time" },
+            "sourceUrl": { "type": "string", "format": "uri" },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "storageReference": { "type": "string" }
+          },
+          "required": ["retrievedAt", "sourceUrl", "sha256", "storageReference"],
+          "additionalProperties": false
+        },
+        "recommendation": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

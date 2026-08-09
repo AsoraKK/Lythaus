@@ -39,7 +39,7 @@ AMD package sensor requires HWiNFO, Libre Hardware Monitor, a vendor utility,
 or elevated permissions, the owner must approve and install it separately,
 then provide a reviewed adapter that identifies the package sensor.
 
-## WP002 research policy
+## WP003 research policy
 
 WP002 permits short, attended CPU workloads for deterministic preprocessing,
 the transformation laboratory, benchmark metric calculations, classical ML,
@@ -71,6 +71,28 @@ fail closed.
 The temporary proof directory is `%TEMP%\\lythaus-lhm-proof-20260809`. Preserve
 it until the owner has captured the diagnostic evidence; do not commit its
 binaries or logs to the repository.
+
+## Human-executed elevated proof
+
+The owner may open **PowerShell as Administrator** and run the following
+command against the already supplied official LHM library. This command does
+not bypass UAC, install a service, or change execution policy:
+
+```powershell
+$proofRoot = Join-Path $env:TEMP 'lythaus-lhm-proof-20260809'
+$library = Join-Path $proofRoot 'LibreHardwareMonitorLib.dll'
+$output = Join-Path $proofRoot 'telemetry-proof.json'
+Set-Location 'C:\Users\kylee\Projects\Lythaus-wp003'
+& .\ml\local\eco_train\lhm-telemetry-proof.ps1 `
+  -LibraryPath $library `
+  -SampleMilliseconds 5000 `
+  -OutputPath $output
+```
+
+Return the JSON file for review. `VALID` requires exactly one plausible
+`CPU Package` temperature sensor for the Ryzen 7 7730U with a dynamic,
+timestamped reading. `UNAVAILABLE`, `STALE`, or `IMPLAUSIBLE` keeps unattended
+training disabled. Do not copy the LHM binaries into Git.
 
 ## Host probe snapshot
 

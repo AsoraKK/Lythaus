@@ -1,6 +1,11 @@
 # Lythaus Authenticity Benchmark v0
 
-**Status:** design-only; no corpus downloaded or committed
+**Status:** WP003 materialisation; media remains external and uncommitted
+
+The reproducible composer is `ml/evaluation/compose-benchmark.mjs`. It accepts
+one or more external JSONL provenance manifests and emits the reviewable
+Benchmark v0 manifest. The source-family ID is the partition boundary; no
+transformed descendant may be assigned independently.
 **Purpose:** evaluate evidence quality before any model receives enforcement authority
 
 ## Design principles
@@ -11,13 +16,19 @@
 - Keep generator families and model versions explicit.
 - Hold out at least one generator family and one transformation combination.
 - Never use normal Lythaus user content.
-- Store manifests, hashes, rights evidence, and labels; keep media external or
-  in an approved quarantine/evaluation R2 prefix.
+- Store manifests, hashes, rights evidence, and labels; keep media in the
+  external WP003 cache unless a future owner-approved evaluation prefix is
+  proven reusable.
+- `CLASS_B_EVALUATION_ONLY` samples may benchmark models but cannot produce
+  teacher targets or distillation data.
+- All transformations inherit the source rights and remain in the source
+  family for partitioning.
 
 ## Initial target composition
 
 The first materialisation should target **320 source images** and no more than
-**2,880 derived variants**, subject to licence approval:
+**2,880 transformed descendants** (up to 3,200 records including originals),
+subject to licence and provenance approval:
 
 | Slice | Source count | Required coverage |
 |---|---:|---|
@@ -30,7 +41,8 @@ The first materialisation should target **320 source images** and no more than
 | Reserved unseen holdout | 30 | withheld generator/source family, never used for calibration |
 
 The counts are targets, not permission to acquire material. If a legally clean
-source cannot supply a slice, the slice is reported `UNKNOWN` or `BLOCKED`.
+source cannot supply a slice, the actual count is reported and the slice is
+`UNKNOWN` or `BLOCKED`; the corpus is not padded with unclear sources.
 
 ## Transformation matrix
 
@@ -52,8 +64,9 @@ parameters, decoder version, and deterministic seed where applicable.
 
 ## Required manifest fields
 
-`sampleId`, `groupId`, `origin`, `transformation`, `generatorFamily`,
+`sampleId`, `groupId`, `sourceFamilyId`, `origin`, `transformation`, `generatorFamily`,
 `generatorVersion`, `sourceDatasetId`, `sourceUrl`, `licenceClassification`,
+`rightsClass`, `trainingGate`, `evaluationGate`, `distillationGate`,
 `contentSha256`, `perceptualHash`, `width`, `height`, `mime`, `hasPii`,
 `consentStatus`, `split`, `truthSynthetic`, `truthLocalManipulation`, and
 `retentionClass`.

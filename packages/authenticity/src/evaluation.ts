@@ -8,6 +8,7 @@ import {
   type TransformationRobustnessMetrics,
 } from './contracts.ts';
 import { uuidv7, type UUIDv7 } from './uuid.ts';
+import type { DatasetRightsClass, DatasetSplit } from './dataset-provenance.ts';
 
 export const ORIGIN_LABELS = ['CAMERA_NATIVE', 'AI_GENERATED', 'AI_EDITED', 'TRADITIONAL_DIGITAL_ART', 'CGI', 'SCAN', 'COMPOSITE', 'UNKNOWN'] as const;
 export type OriginLabel = (typeof ORIGIN_LABELS)[number];
@@ -42,6 +43,9 @@ export interface EvaluationSample {
   generatorVersion?: string | null;
   generatorSplit?: GeneratorSplit;
   hardNegative?: boolean;
+  sourceFamilyId?: UUIDv7;
+  rightsClass?: DatasetRightsClass;
+  split?: DatasetSplit;
 }
 
 export interface EvaluationPrediction {
@@ -265,6 +269,7 @@ export function calculateEvaluationMetrics(samples: readonly EvaluationSample[],
   const matchedPredictions = samples.flatMap((sample) => byId.get(sample.sampleId) ? [byId.get(sample.sampleId) as EvaluationPrediction] : []);
   const perGenerator = [...new Set(samples.map((sample) => sample.generatorFamily).filter((value): value is string => Boolean(value)))].sort().map((key) => coreSliceMetrics(key, samples.filter((sample) => sample.generatorFamily === key), predictions));
   const perTransformation = [...new Set(samples.map((sample) => sample.transformation))].sort().map((key) => coreSliceMetrics(key, samples.filter((sample) => sample.transformation === key), predictions));
+  const perOrigin = [...new Set(samples.map((sample) => sample.origin))].sort().map((key) => coreSliceMetrics(key, samples.filter((sample) => sample.origin === key), predictions));
   const hardNegatives = samples.filter(isHardNegative);
   const unseen = samples.filter((sample) => sample.generatorSplit === 'UNSEEN');
   const latencyValues = matchedPredictions.map((prediction) => prediction.latencyMs).filter(Number.isFinite);
@@ -290,6 +295,7 @@ export function calculateEvaluationMetrics(samples: readonly EvaluationSample[],
     humanContentFalsePositiveRate: overall.falsePositiveRate,
     hardNegativeFalsePositiveRate: hardNegatives.length === 0 ? null : coreSliceMetrics('HARD_NEGATIVES', hardNegatives, predictions).falsePositiveRate,
     unseenGeneratorFalsePositiveRate: unseen.length === 0 ? null : coreSliceMetrics('UNSEEN_GENERATORS', unseen, predictions).falsePositiveRate,
+    perOrigin,
     perGenerator,
     perTransformation,
     transformationRobustness: transformationRobustness(samples, predictions),
@@ -300,6 +306,7 @@ export function evaluateEvaluationQualityGates(metrics: EvaluationMetrics): Eval
   const materialSubgroupsAboveThreshold = [
     ...metrics.perGenerator.filter((slice) => slice.falsePositiveRate !== null && slice.falsePositiveRate > LYTHAUS_SUBGROUP_FPR_REVIEW_THRESHOLD).map((slice) => `generator:${slice.key}`),
     ...metrics.perTransformation.filter((slice) => slice.falsePositiveRate !== null && slice.falsePositiveRate > LYTHAUS_SUBGROUP_FPR_REVIEW_THRESHOLD).map((slice) => `transformation:${slice.key}`),
+    ...metrics.perOrigin.filter((slice) => slice.falsePositiveRate !== null && slice.falsePositiveRate > LYTHAUS_SUBGROUP_FPR_REVIEW_THRESHOLD).map((slice) => `origin:${slice.key}`),
   ];
   if (metrics.humanContentFalsePositiveRate === null) {
     return {

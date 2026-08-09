@@ -16,6 +16,7 @@ import {
   createEvaluationDatasetManifest,
   createModerationDecision,
   generateForensicFeatureBundle,
+  generateForensicFeatureBundleV1,
   ingestMedia,
   isUuidV7,
   runEvaluation,
@@ -89,6 +90,17 @@ test('deterministic forensics produces reusable base features and dual axes', as
   assert.equal(first.imagePyramid.length, 4);
   assert.ok(first.spectralStability.fftMagnitude.length > 0);
   assert.equal(first.spectralStability.edgeStatistics.sampleCount > 0, true);
+});
+
+test('v1 deterministic forensics adds multi-scale spectral and camera evidence without a verdict', async () => {
+  const caseId = uuidv7();
+  const bundle = await generateForensicFeatureBundleV1({ caseId, mime: 'image/png', bytes: pngFixture(), decoded: { ...decodedFixture(), channels: 3, pixels: new Uint8Array(Array.from({ length: 48 }, (_, index) => index % 256)) } });
+  assert.equal(bundle.featureVersion, 'lythaus-forensics-v1');
+  assert.equal(bundle.spectralStability.multiScale?.length, 2);
+  assert.ok((bundle.spectralStability.featureLabels?.length ?? 0) > 0);
+  assert.ok(bundle.physicalAcquisition.evidenceDetails);
+  assert.equal(bundle.audit.reasonCodes.includes('NO_ENFORCEMENT'), true);
+  assert.equal(bundle.generativeForensics.syntheticEvidence, 'NO_POSITIVE_SYNTHETIC_EVIDENCE');
 });
 
 test('media intake quarantines, queues, and suppresses duplicate submissions', async () => {
@@ -241,6 +253,7 @@ test('evaluation metrics expose hard negatives, unseen generators, abstention, a
   assert.equal(result.run.metrics.hardNegativeFalsePositiveRate, 0);
   assert.equal(result.run.metrics.unseenGeneratorFalsePositiveRate, null);
   assert.equal(result.run.metrics.perGenerator.find((slice) => slice.key === 'unseen-family')?.recall, 1);
+  assert.ok(result.run.metrics.perOrigin.some((slice) => slice.key === 'AI_GENERATED'));
   assert.equal(result.run.metrics.transformationRobustness?.classificationFlipRate, 1);
   assert.equal(result.run.metrics.abstentionRate, 0.2);
   assert.equal(result.run.qualityGate.overallStatus, 'REVIEW');

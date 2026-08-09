@@ -24,4 +24,4 @@ Before a human-approved dry-run/deployment, install the package dependencies
 in this directory, inspect the live resource registry, confirm the existing
 bindings, calculate a published-rate bounded worst-case estimate, and approve
 rollback and emergency disable. Exact spend is only known after a bounded
-runtime measurement. Do not run `wrangler deploy` in WP002.
+runtime measurement. Do not run `wrangler deploy` in WP003.

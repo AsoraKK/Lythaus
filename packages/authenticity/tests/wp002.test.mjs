@@ -18,14 +18,24 @@ async function readJson(relativePath) {
 test('dataset registry has conservative machine-readable classifications', async () => {
   const registry = await readJson('ml/datasets/dataset-registry.json');
   const allowed = new Set(registry.classificationValues);
-  assert.equal(registry.schemaVersion, 'lythaus-authenticity-dataset-registry-v1');
+  assert.equal(registry.schemaVersion, 'lythaus-authenticity-dataset-registry-v2');
   assert.equal(registry.policy.normalLythausUserContentTraining, 'PROHIBITED');
+  assert.equal(registry.policy.unclearRightsAction, 'DO_NOT_TRAIN');
   assert.ok(registry.datasets.length >= 10);
+  assert.deepEqual(registry.rightsClassValues, [
+    'CLASS_A_COMMERCIAL_TRAINING',
+    'CLASS_B_EVALUATION_ONLY',
+    'CLASS_C_LYTHAUS_OWNED',
+  ]);
   for (const dataset of registry.datasets) {
     assert.ok(allowed.has(dataset.classification), dataset.id);
     assert.ok(dataset.source, dataset.id);
     assert.ok(dataset.licence, dataset.id);
     assert.ok(dataset.recommendation, dataset.id);
+    assert.ok(registry.rightsClassValues.includes(dataset.rightsClass), dataset.id);
+    assert.ok(dataset.trainingGate, dataset.id);
+    assert.ok(dataset.evaluationGate, dataset.id);
+    assert.ok(dataset.distillationGate, dataset.id);
     assert.notEqual(dataset.trainingAllowed, 'APPROVED_FOR_COMMERCIAL_TRAINING');
   }
 });
