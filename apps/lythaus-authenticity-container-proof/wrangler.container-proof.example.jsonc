@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "lythaus-authenticity-container-proof-not-deployed",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 },
+  "vars": {
+    "AUTHENTICITY_CONTAINER_PROOF_ENABLED": "false"
+  },
+  "containers": [
+    {
+      "class_name": "LythausForensicsContainer",
+      "image": "./container/Dockerfile",
+      "instance_type": "lite",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "FORENSICS_CONTAINER", "class_name": "LythausForensicsContainer" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "forensics-container-proof-v1",
+      "new_sqlite_classes": ["LythausForensicsContainer"]
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" }
+  ],
+  "hyperdrive": [
+    { "binding": "DB_JOBS_FRESH", "id": "442bb04b99004cb38c6974ec031d65ee" }
+  ],
+  // Queue consumer binding is intentionally omitted. Existing queues contain
+  // mixed application events; a second consumer could consume unrelated jobs.
+  // A human-approved routed proof event must bind the queue handler before use.
+}

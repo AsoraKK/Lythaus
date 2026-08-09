@@ -1,0 +1,11 @@
+{
+  "name": "@lythaus/authenticity-container-proof",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7",
+    "@lythaus/authenticity": "file:../../packages/authenticity",
+    "@lythaus/db": "file:../../packages/db"
+  }
+}

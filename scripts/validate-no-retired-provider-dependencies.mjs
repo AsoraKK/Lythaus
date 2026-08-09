@@ -32,6 +32,7 @@ const approvedAllowlistPaths = new Set([
   'apps/lythaus-public-api/src/worker-configuration.d.ts',
   'apps/lythaus-admin-api/src/worker-configuration.d.ts',
   'apps/lythaus-jobs/src/worker-configuration.d.ts',
+  'apps/lythaus-authenticity-container-proof/src/worker-configuration.d.ts',
   'database/planetscale/migrations/0002_core_tables.sql',
   'database/planetscale/migrations/0007_contact_emails.sql',
   'scripts/retired-reference-allowlist.json',
