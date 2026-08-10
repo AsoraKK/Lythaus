@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
+import {
+  assertExternalDataPath,
+  assertExternalOutputPath,
+  assertProvenanceAuthorization,
+  deterministicUuidV7,
+} from '../datasets/tools/provenance-authorization.mjs';
 
 const transformations = {
   ORIGINAL: 'ORIGINAL',
@@ -17,21 +22,20 @@ const transformations = {
   SCREENSHOT_STYLE_RESAMPLING: 'SCREENSHOT',
 };
 
-function uuidv7() {
-  const bytes = Buffer.from(createHash('sha256').update(`benchmark:${Date.now()}:${Math.random()}`).digest().subarray(0, 16));
-  const timestamp = BigInt(Date.now());
-  for (let index = 5; index >= 0; index -= 1) bytes[index] = Number(timestamp >> BigInt((5 - index) * 8)) & 0xff;
-  bytes[6] = (bytes[6] & 0x0f) | 0x70;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = bytes.toString('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+async function readJsonl(path) {
+  const manifestPath = assertExternalDataPath(path, 'benchmark_source_manifest');
+  return (await readFile(manifestPath, 'utf8')).split(/\r?\n/).filter(Boolean).map(JSON.parse);
 }
 
-function readJsonl(path) {
-  return readFile(resolve(path), 'utf8').then((text) => text.split(/\r?\n/).filter(Boolean).map(JSON.parse));
+function stableTimestamp(records) {
+  const timestamps = records.map((record) => Date.parse(record.retrievedAt)).filter(Number.isFinite);
+  if (timestamps.length !== records.length || timestamps.length === 0) throw new Error('benchmark_reproducible_retrievedAt_required');
+  return new Date(Math.max(...timestamps)).toISOString();
 }
 
 function normalize(record) {
+  assertProvenanceAuthorization(record, { operation: 'evaluation', requireModification: true });
+  if (!record.sampleId || !record.sourceFamilyId || !record.sha256) throw new Error('benchmark_provenance_identity_required');
   const isEvaluationOnly = record.rightsClass === 'CLASS_B_EVALUATION_ONLY';
   return {
     sampleId: record.sampleId,
@@ -47,7 +51,7 @@ function normalize(record) {
     generatorSplit: record.generator ? 'KNOWN' : 'NOT_APPLICABLE',
     sourceDatasetId: record.datasetId,
     sourceUrl: record.sourceUrl,
-    licenceClassification: record.licenceEvidenceStatus === 'VERIFIED' ? 'APPROVED_FOR_EVALUATION_ONLY' : 'UNCLEAR',
+    licenceClassification: record.licenceEvidenceStatus === 'VERIFIED' ? 'APPROVED_FOR_EVALUATION_ONLY' : 'APPROVED_BY_RECORDED_HUMAN_REVIEW',
     rightsClass: record.rightsClass,
     trainingGate: record.trainingGate,
     evaluationGate: record.evaluationAllowed,
@@ -71,18 +75,21 @@ function normalize(record) {
 
 const [outputPath, ...manifestPaths] = process.argv.slice(2);
 if (!outputPath || manifestPaths.length === 0) {
-  console.error('Usage: node ml/evaluation/compose-benchmark.mjs <output.json> <source-manifest.jsonl> [...]');
+  console.error('Usage: node ml/evaluation/compose-benchmark.mjs <external-output.json> <external-source-manifest.jsonl> [...]');
   process.exit(2);
 }
 
+const output = assertExternalOutputPath(outputPath, 'benchmark_output');
 const sources = (await Promise.all(manifestPaths.map(readJsonl))).flat();
-const samples = sources.map(normalize);
+const samples = sources.map(normalize).sort((left, right) => left.sampleId.localeCompare(right.sampleId) || left.contentSha256.localeCompare(right.contentSha256));
+const generatedAt = stableTimestamp(sources);
 const sourceCount = new Set(samples.map((sample) => sample.sourceFamilyId)).size;
+const manifestId = deterministicUuidV7(`benchmark-v0:${samples.map((sample) => `${sample.sampleId}:${sample.contentSha256}`).join('|')}`, generatedAt);
 const result = {
   schemaVersion: 'lythaus-authenticity-benchmark-v0',
-  manifestId: uuidv7(),
+  manifestId,
   datasetRegistryVersion: 'lythaus-authenticity-dataset-registry-v2',
-  generatedAt: new Date().toISOString(),
+  generatedAt,
   containsUserContent: false,
   sourceCount,
   sampleCount: samples.length,
@@ -98,6 +105,6 @@ const result = {
   materialisationStatus: sourceCount >= 320 ? 'TARGET_REACHED' : 'PARTIAL_PROVENANCE_FIRST',
   samples,
 };
-await mkdir(dirname(resolve(outputPath)), { recursive: true });
-await writeFile(resolve(outputPath), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
-console.log(JSON.stringify({ output: resolve(outputPath), sourceCount, sampleCount: samples.length, status: result.materialisationStatus }));
+await mkdir(dirname(output), { recursive: true });
+await writeFile(output, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+console.log(JSON.stringify({ output, sourceCount, sampleCount: samples.length, status: result.materialisationStatus, containsUserContent: false }));

@@ -20,4 +20,7 @@ node ml/evaluation/feature-store.mjs write <bundle.json> <external-store-root> <
 
 The store must be regenerated from the dataset manifest and extractor version.
 It must not contain raw image bytes, PII, public confidence values, or model
-outputs that were not separately rights-cleared.
+outputs that were not separately rights-cleared. Both the bundle and
+provenance file must be external to the repository; the provenance record must
+explicitly state `containsUserContent=false` and pass the shared source-rights,
+evaluation, and modification authorization gate.

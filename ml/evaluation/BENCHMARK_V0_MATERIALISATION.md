@@ -2,7 +2,8 @@
 
 **Status:** `PARTIAL_PROVENANCE_FIRST`
 **Contains normal Lythaus user content:** `false`
-**Media location:** outside Git at `C:\Users\kylee\Projects\Lythaus-data\authenticity-wp003`
+**Media location:** outside Git in the operator-configured
+`LYTHAUS_AUTHENTICITY_CACHE`
 
 ## Materialised source
 

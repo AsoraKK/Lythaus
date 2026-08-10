@@ -80,9 +80,10 @@ not bypass UAC, install a service, or change execution policy:
 
 ```powershell
 $proofRoot = Join-Path $env:TEMP 'lythaus-lhm-proof-20260809'
+$repositoryRoot = '<path-to-cloned-Lythaus-repository>'
 $library = Join-Path $proofRoot 'LibreHardwareMonitorLib.dll'
 $output = Join-Path $proofRoot 'telemetry-proof.json'
-Set-Location 'C:\Users\kylee\Projects\Lythaus-wp003'
+Set-Location $repositoryRoot
 & .\ml\local\eco_train\lhm-telemetry-proof.ps1 `
   -LibraryPath $library `
   -SampleMilliseconds 5000 `

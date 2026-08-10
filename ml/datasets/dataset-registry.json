@@ -113,7 +113,7 @@
         "retrievedAt": "2026-08-09T21:00:00.000Z",
         "sourceUrl": "https://raw.githubusercontent.com/unsplash/datasets/master/TERMS.md",
         "sha256": "79bec96fe07431e1c40efcdf9f9753da24338a3cb97d7d22ac29dc830e3e2437",
-        "storageReference": "external:C:/Users/kylee/Projects/Lythaus-data/authenticity-wp003/terms/unsplash-dataset-terms.md"
+        "storageReference": "external:terms/unsplash-dataset-terms.md"
       },
       "commercialUse": "CONDITIONAL; do not infer commercial model deployment rights",
       "researchUse": "ALLOW",

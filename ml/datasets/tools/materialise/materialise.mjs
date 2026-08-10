@@ -1,11 +1,24 @@
 #!/usr/bin/env node
 
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Writable } from 'node:stream';
+import {
+  MAX_ACQUISITION_BYTES,
+  MAX_ACQUISITION_COUNT,
+  MAX_ACQUISITION_ITEM_BYTES,
+  assertAcquisitionApproval,
+  assertAcquisitionBounds,
+  assertAllowedAcquisitionUrl,
+  assertExternalChildPath,
+  assertExternalDataPath,
+  assertExternalOutputPath,
+  assertProvenanceAuthorization,
+  deterministicUuidV7,
+} from '../provenance-authorization.mjs';
 
 const RIGHTS_CLASSES = new Set([
   'CLASS_A_COMMERCIAL_TRAINING',
@@ -29,23 +42,11 @@ const TRANSFORMATIONS = [
 ];
 
 function usage() {
-  console.log(`Lythaus dataset materialiser\n\nCommands:\n  validate <record.json>\n  hash <file>\n  provenance <record.json>\n  manifest <directory> <output.jsonl>\n  transform-plan <manifest.jsonl> <output.json>\n  unsplash-lite-sample <photos.tsv> <output.jsonl> <image-directory> [count]\n  transform-images <manifest.jsonl> <image-directory> <output-directory> <output.jsonl>\n\nAll binaries are written to an external, task-scoped cache. Never point this tool at normal Lythaus user uploads.`);
+  console.log(`Lythaus dataset materialiser\n\nCommands:\n  validate <record.json>\n  hash <external-file>\n  provenance <record.json>\n  manifest <external-directory> <external-output.jsonl> <approval.json>\n  transform-plan <external-manifest.jsonl> <external-output.json>\n  unsplash-lite-sample <photos.tsv> <external-output.jsonl> <external-image-directory> <approval.json> [count]\n  transform-images <external-manifest.jsonl> <external-image-directory> <external-output-directory> <external-output.jsonl>\n\nEvery materialisation path is evaluation-only, requires containsUserContent=false, and rejects repository paths. Conditional or unknown rights need a recorded human approval with the matching scope. This tool never trains, distils, or writes raw media into the repository.`);
 }
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
-}
-
-function uuidv7() {
-  const bytes = randomBytes(16);
-  const timestamp = BigInt(Date.parse('2026-08-09T00:00:00.000Z'));
-  for (let index = 5; index >= 0; index -= 1) {
-    bytes[index] = Number(timestamp >> BigInt((5 - index) * 8)) & 0xff;
-  }
-  bytes[6] = (bytes[6] & 0x0f) | 0x70;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = bytes.toString('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 function assertGate(value, field) {
@@ -57,7 +58,7 @@ function validateRecord(record) {
     'datasetId', 'sampleId', 'sourceUrl', 'originalFilename', 'retrievedAt',
     'sha256', 'licence', 'rightsClass', 'trainingGate', 'originClass', 'privacyFlags',
     'commercialTrainingAllowed', 'evaluationAllowed', 'distillationAllowed',
-    'redistributionAllowed', 'modificationAllowed',
+    'redistributionAllowed', 'modificationAllowed', 'licenceEvidenceStatus', 'containsUserContent',
   ];
   for (const field of required) {
     if (!(field in record)) throw new Error(`missing required provenance field: ${field}`);
@@ -75,13 +76,18 @@ function validateRecord(record) {
   if (record.trainingGate === 'ALLOW' && record.licenceEvidenceStatus !== 'VERIFIED') {
     throw new Error('trainingGate ALLOW requires verified licence evidence');
   }
+  assertProvenanceAuthorization(record, { operation: 'evaluation', requireModification: true });
+  if (record.distillationAllowed === 'ALLOW') {
+    assertProvenanceAuthorization(record, { operation: 'distillation', requireModification: true });
+  }
   return record;
 }
 
 async function hashFile(path) {
+  const sourcePath = assertExternalDataPath(path, 'hash_input');
   const hash = createHash('sha256');
   await pipeline(
-    createReadStream(path),
+    createReadStream(sourcePath),
     async function* (source) {
       for await (const chunk of source) {
         hash.update(chunk);
@@ -94,12 +100,45 @@ async function hashFile(path) {
 }
 
 async function writeJson(path, value) {
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const outputPath = assertExternalOutputPath(path, 'json_output');
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-async function manifestForDirectory(directory) {
-  const root = resolve(directory);
+async function writeJsonl(path, records) {
+  const outputPath = assertExternalOutputPath(path, 'jsonl_output');
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, records.map((record) => JSON.stringify(record)).join('\n') + (records.length ? '\n' : ''), 'utf8');
+}
+
+async function readApproval(path) {
+  const approvalPath = assertExternalDataPath(path, 'approval_record');
+  return JSON.parse(await readFile(approvalPath, 'utf8'));
+}
+
+function approvalTimestamp(approval) {
+  const timestamp = approval?.retrievedAt ?? approval?.approvedAt;
+  if (typeof timestamp !== 'string' || !Number.isFinite(Date.parse(timestamp))) {
+    throw new Error('recorded_human_approval_requires_retrievedAt_or_approvedAt');
+  }
+  return new Date(timestamp).toISOString();
+}
+
+async function manifestForDirectory(directory, approval) {
+  const root = assertExternalDataPath(directory, 'manifest_source_directory');
+  const retrievedAt = approvalTimestamp(approval);
+  const authorizationTemplate = {
+    containsUserContent: false,
+    humanApproval: approval,
+    licenceEvidenceStatus: 'CONDITIONAL',
+    rightsClass: 'CLASS_B_EVALUATION_ONLY',
+    evaluationAllowed: 'CONDITIONAL',
+    modificationAllowed: 'CONDITIONAL',
+    trainingGate: 'DO_NOT_TRAIN',
+    commercialTrainingAllowed: 'DO_NOT_TRAIN',
+    distillationAllowed: 'DO_NOT_TRAIN',
+  };
+  assertAcquisitionApproval(authorizationTemplate);
   const entries = [];
   async function visit(current) {
     for (const entry of await readdir(current, { withFileTypes: true })) {
@@ -110,26 +149,28 @@ async function manifestForDirectory(directory) {
         const bytes = await readFile(path);
         entries.push({
           datasetId: 'UNASSIGNED_REVIEW_REQUIRED',
-          sampleId: uuidv7(),
+          sampleId: deterministicUuidV7(`manifest:${sha256(bytes)}:${path.slice(root.length + 1)}`, retrievedAt),
           sourceUrl: null,
           originalFilename: entry.name,
-          retrievedAt: new Date().toISOString(),
+          retrievedAt,
           sha256: sha256(bytes),
           perceptualHash: null,
           licence: 'UNKNOWN',
           licenceUrl: null,
-          licenceEvidenceStatus: 'UNKNOWN',
+          licenceEvidenceStatus: 'CONDITIONAL',
           rightsClass: 'CLASS_B_EVALUATION_ONLY',
           trainingGate: 'DO_NOT_TRAIN',
           commercialTrainingAllowed: 'DO_NOT_TRAIN',
-          evaluationAllowed: 'UNKNOWN',
+          evaluationAllowed: 'CONDITIONAL',
           distillationAllowed: 'DO_NOT_TRAIN',
           redistributionAllowed: 'DO_NOT_TRAIN',
-          modificationAllowed: 'UNKNOWN',
+          modificationAllowed: 'CONDITIONAL',
           originClass: 'UNKNOWN',
           generator: null,
           device: null,
           privacyFlags: ['UNREVIEWED_SOURCE'],
+          containsUserContent: false,
+          humanApproval: approval,
           byteLength: info.size,
           relativePath: path.slice(root.length + 1),
         });
@@ -138,11 +179,6 @@ async function manifestForDirectory(directory) {
   }
   await visit(root);
   return entries.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
-}
-
-async function writeJsonl(path, records) {
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, records.map((record) => JSON.stringify(record)).join('\n') + (records.length ? '\n' : ''), 'utf8');
 }
 
 function parseTsvLine(line) {
@@ -181,57 +217,80 @@ async function perceptualHash(sharp, bytes) {
   return lowFrequency.map((value) => value >= median ? '1' : '0').join('');
 }
 
-function uuidv7FromSeed(seed) {
-  const digest = createHash('sha256').update(seed).digest();
-  const bytes = Buffer.from(digest.subarray(0, 16));
-  const timestamp = BigInt(Date.parse('2026-08-09T00:00:00.000Z'));
-  for (let index = 5; index >= 0; index -= 1) bytes[index] = Number(timestamp >> BigInt((5 - index) * 8)) & 0xff;
-  bytes[6] = (bytes[6] & 0x0f) | 0x70;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = bytes.toString('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
-
-async function downloadBytes(url) {
+async function downloadBytes(url, { usedBytes, maxBytes }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 60_000);
   try {
-    const response = await fetch(url, { signal: controller.signal, redirect: 'follow' });
-    if (!response.ok) throw new Error(`image_download_failed:${response.status}:${url}`);
-    const length = Number(response.headers.get('content-length') ?? 0);
-    if (length > 20 * 1024 * 1024) throw new Error(`image_too_large:${length}:${url}`);
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > 20 * 1024 * 1024) throw new Error(`image_too_large:${bytes.byteLength}:${url}`);
-    return bytes;
+    let current = assertAllowedAcquisitionUrl(url);
+    for (let redirects = 0; redirects <= 3; redirects += 1) {
+      const response = await fetch(current, { signal: controller.signal, redirect: 'manual' });
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location || redirects === 3) throw new Error('acquisition_redirect_rejected');
+        current = assertAllowedAcquisitionUrl(new URL(location, current).toString());
+        continue;
+      }
+      if (!response.ok) throw new Error(`image_download_failed:${response.status}:${current}`);
+      const length = Number(response.headers.get('content-length') ?? 0);
+      if (length > MAX_ACQUISITION_ITEM_BYTES) throw new Error(`image_too_large:${length}:${current}`);
+      if (length > 0) assertAcquisitionBounds({ count: 1, usedBytes, nextBytes: length, maxBytes });
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      assertAcquisitionBounds({ count: 1, usedBytes, nextBytes: bytes.byteLength, maxBytes });
+      return bytes;
+    }
+    throw new Error('acquisition_redirect_rejected');
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function unsplashLiteSample(tsvPath, outputPath, imageDirectory, count = 80) {
+async function unsplashLiteSample(tsvPath, outputPath, imageDirectory, approvalPath, count = 80) {
+  const approval = await readApproval(approvalPath);
+  const retrievedAt = approvalTimestamp(approval);
+  const acquisitionRecord = {
+    datasetId: 'unsplash-dataset-lite',
+    containsUserContent: false,
+    humanApproval: approval,
+    licenceEvidenceStatus: 'VERIFIED',
+    rightsClass: 'CLASS_B_EVALUATION_ONLY',
+    evaluationAllowed: 'ALLOW',
+    modificationAllowed: 'CONDITIONAL',
+    trainingGate: 'DO_NOT_TRAIN',
+    commercialTrainingAllowed: 'DO_NOT_TRAIN',
+    distillationAllowed: 'DO_NOT_TRAIN',
+  };
+  assertAcquisitionApproval(acquisitionRecord);
+  const manifestPath = assertExternalOutputPath(outputPath, 'acquisition_manifest');
+  const imageRoot = assertExternalOutputPath(imageDirectory, 'acquisition_image_directory');
+  const sourceTsv = assertExternalDataPath(tsvPath, 'acquisition_metadata');
+  const requestedCount = Number(count);
+  assertAcquisitionBounds({ count: requestedCount, maxCount: MAX_ACQUISITION_COUNT, maxBytes: MAX_ACQUISITION_BYTES });
   const sharp = await loadSharp();
-  const rows = parseTsv(await readFile(resolve(tsvPath), 'utf8'))
+  const rows = parseTsv(await readFile(sourceTsv, 'utf8'))
     .filter((row) => row.photo_image_url && (row.exif_camera_make || row.exif_camera_model))
     .sort((left, right) => left.photo_id.localeCompare(right.photo_id))
-    .slice(0, Number(count));
-  await mkdir(resolve(imageDirectory), { recursive: true });
+    .slice(0, requestedCount);
+  await mkdir(imageRoot, { recursive: true });
   const records = [];
+  let acquiredBytes = 0;
   for (const row of rows) {
-    const sourceFamilyId = uuidv7FromSeed(`unsplash-family:${row.photo_id}`);
-    const sampleId = uuidv7FromSeed(`unsplash-sample:${row.photo_id}`);
-    const retrievalUrl = `${row.photo_image_url}${row.photo_image_url.includes('?') ? '&' : '?'}auto=format&fit=max&w=2048`;
-    const bytes = await downloadBytes(retrievalUrl);
+    const sourceUrl = assertAllowedAcquisitionUrl(row.photo_image_url);
+    const sourceFamilyId = deterministicUuidV7(`unsplash-family:${row.photo_id}`, retrievedAt);
+    const sampleId = deterministicUuidV7(`unsplash-sample:${row.photo_id}`, retrievedAt);
+    const retrievalUrl = `${sourceUrl}${sourceUrl.search ? '&' : '?'}auto=format&fit=max&w=2048`;
+    const bytes = await downloadBytes(retrievalUrl, { usedBytes: acquiredBytes, maxBytes: MAX_ACQUISITION_BYTES });
+    acquiredBytes += bytes.byteLength;
     const info = await sharp(bytes).metadata();
     const fileName = `${sampleId}${extname(new URL(row.photo_image_url).pathname) || '.jpg'}`;
-    await writeFile(join(resolve(imageDirectory), fileName), bytes);
+    await writeFile(join(imageRoot, fileName), bytes);
     records.push({
       datasetId: 'unsplash-dataset-lite',
       sampleId,
       sourceFamilyId,
-      sourceUrl: row.photo_url,
+      sourceUrl: row.photo_url ?? sourceUrl.toString(),
       retrievalUrl,
       originalFilename: fileName,
-      retrievedAt: new Date().toISOString(),
+      retrievedAt,
       sha256: sha256(bytes),
       perceptualHash: await perceptualHash(sharp, bytes),
       licence: 'Unsplash Dataset Lite Terms 1.4.0',
@@ -244,6 +303,8 @@ async function unsplashLiteSample(tsvPath, outputPath, imageDirectory, count = 8
       distillationAllowed: 'DO_NOT_TRAIN',
       redistributionAllowed: 'DO_NOT_TRAIN',
       modificationAllowed: 'CONDITIONAL',
+      containsUserContent: false,
+      humanApproval: approval,
       authorOrCreator: [row.photographer_first_name, row.photographer_last_name].filter(Boolean).join(' ') || row.photographer_username || null,
       attribution: row.photographer_username ? `Photo by ${row.photographer_username} via Unsplash Dataset Lite` : 'Unsplash Dataset Lite attribution',
       originClass: 'CAMERA_NATIVE',
@@ -261,7 +322,7 @@ async function unsplashLiteSample(tsvPath, outputPath, imageDirectory, count = 8
       width: info.width ?? null,
       height: info.height ?? null,
       byteLength: bytes.byteLength,
-      imagePath: join(resolve(imageDirectory), fileName),
+      imagePath: join(imageRoot, fileName),
       sourceMetadata: {
         unsplashPhotoId: row.photo_id,
         cameraMake: row.exif_camera_make || null,
@@ -270,25 +331,39 @@ async function unsplashLiteSample(tsvPath, outputPath, imageDirectory, count = 8
       },
     });
   }
-  await writeJsonl(resolve(outputPath), records);
-  await writeJson(`${resolve(outputPath)}.summary.json`, {
+  await writeJsonl(manifestPath, records);
+  await writeJson(`${manifestPath}.summary.json`, {
     schemaVersion: 'lythaus-authenticity-materialisation-v1',
     datasetId: 'unsplash-dataset-lite',
     rightsClass: 'CLASS_B_EVALUATION_ONLY',
     count: records.length,
     sourceArchive: 'unsplash-research-dataset-lite-latest.zip',
-    termsReference: 'C:\\Users\\kylee\\Projects\\Lythaus-data\\authenticity-wp003\\terms\\unsplash-dataset-terms.md',
+    termsReference: 'external:terms/unsplash-dataset-terms.md',
     trainingGate: 'DO_NOT_TRAIN',
+    containsUserContent: false,
+    approvalId: approval.approvalId,
+    acquiredBytes,
   });
 }
 
 async function transformImages(manifestPath, imageDirectory, outputDirectory, outputPath) {
+  const sourceManifest = assertExternalDataPath(manifestPath, 'transform_manifest');
+  const sourceRoot = assertExternalDataPath(imageDirectory, 'transform_image_directory');
+  const outputRoot = assertExternalOutputPath(outputDirectory, 'transform_output_directory');
+  const manifestOutput = assertExternalOutputPath(outputPath, 'transform_output_manifest');
+  const sourceRecords = (await readFile(sourceManifest, 'utf8')).split(/\r?\n/).filter(Boolean).map(JSON.parse);
+  const authorisedSources = sourceRecords.map((source) => {
+    validateRecord(source);
+    assertProvenanceAuthorization(source, { operation: 'evaluation', requireModification: true });
+    const sourcePath = source.imagePath
+      ? assertExternalChildPath(sourceRoot, source.imagePath, 'transform_source_image')
+      : assertExternalChildPath(sourceRoot, join(sourceRoot, source.originalFilename), 'transform_source_image');
+    return { source, sourcePath };
+  });
   const sharp = await loadSharp();
-  const sourceRecords = (await readFile(resolve(manifestPath), 'utf8')).split(/\r?\n/).filter(Boolean).map(JSON.parse);
   const records = [];
-  await mkdir(resolve(outputDirectory), { recursive: true });
-  for (const source of sourceRecords) {
-    const sourcePath = source.imagePath ?? join(resolve(imageDirectory), source.originalFilename);
+  await mkdir(outputRoot, { recursive: true });
+  for (const { source, sourcePath } of authorisedSources) {
     const metadata = await sharp(sourcePath).metadata();
     const transformations = [
       ['JPEG_QUALITY_95', (image) => image.jpeg({ quality: 95 })],
@@ -302,9 +377,9 @@ async function transformImages(manifestPath, imageDirectory, outputDirectory, ou
       ['SCREENSHOT_STYLE_RESAMPLING', (image) => image.resize(Math.max(1, Math.round((metadata.width ?? 1) * 0.5)), Math.max(1, Math.round((metadata.height ?? 1) * 0.5))).resize(metadata.width ?? 1, metadata.height ?? 1, { kernel: 'nearest' }).jpeg({ quality: 85 })],
     ];
     for (const [transformation, apply] of transformations) {
-      const sampleId = uuidv7FromSeed(`${source.sampleId}:${transformation}`);
+      const sampleId = deterministicUuidV7(`${source.sampleId}:${transformation}`, source.retrievedAt);
       const outputName = `${sampleId}.jpg`;
-      const outputFile = join(resolve(outputDirectory), outputName);
+      const outputFile = join(outputRoot, outputName);
       const bytes = await apply(sharp(sourcePath)).toBuffer();
       const outputMetadata = await sharp(bytes).metadata();
       await writeFile(outputFile, bytes);
@@ -325,19 +400,23 @@ async function transformImages(manifestPath, imageDirectory, outputDirectory, ou
       });
     }
   }
-  await writeJsonl(resolve(outputPath), records);
+  await writeJsonl(manifestOutput, records);
 }
 
 async function transformPlan(manifestPath, outputPath) {
-  const lines = (await readFile(manifestPath, 'utf8')).split(/\r?\n/).filter(Boolean).map(JSON.parse);
+  const sourceManifest = assertExternalDataPath(manifestPath, 'transform_plan_manifest');
+  const planOutput = assertExternalOutputPath(outputPath, 'transform_plan_output');
+  const lines = (await readFile(sourceManifest, 'utf8')).split(/\r?\n/).filter(Boolean).map(JSON.parse);
   const records = [];
   for (const source of lines) {
+    validateRecord(source);
+    assertProvenanceAuthorization(source, { operation: 'evaluation', requireModification: true });
     const familyId = source.sourceFamilyId ?? source.sampleId;
     for (const transformation of TRANSFORMATIONS) {
       const isOriginal = transformation === 'ORIGINAL';
       records.push({
         ...source,
-        sampleId: isOriginal ? source.sampleId : uuidv7FromSeed(`${source.sampleId}:${transformation}`),
+        sampleId: isOriginal ? source.sampleId : deterministicUuidV7(`${source.sampleId}:${transformation}`, source.retrievedAt),
         sourceFamilyId: familyId,
         parentSampleId: isOriginal ? null : source.sampleId,
         transformation,
@@ -346,7 +425,7 @@ async function transformPlan(manifestPath, outputPath) {
       });
     }
   }
-  await writeJson(outputPath, { schemaVersion: 'lythaus-authenticity-transformation-plan-v1', transformations: TRANSFORMATIONS, records });
+  await writeJson(planOutput, { schemaVersion: 'lythaus-authenticity-transformation-plan-v1', transformations: TRANSFORMATIONS, records });
 }
 
 const [command, ...args] = process.argv.slice(2);
@@ -362,15 +441,16 @@ try {
     const record = JSON.parse(await readFile(resolve(args[0]), 'utf8'));
     console.log(JSON.stringify(validateRecord(record), null, 2));
   } else if (command === 'manifest') {
-    const records = await manifestForDirectory(args[0]);
-    await writeJsonl(resolve(args[1]), records);
-    console.log(JSON.stringify({ count: records.length, output: resolve(args[1]) }));
+    const approval = await readApproval(args[2]);
+    const records = await manifestForDirectory(args[0], approval);
+    await writeJsonl(args[1], records);
+    console.log(JSON.stringify({ count: records.length, output: assertExternalOutputPath(args[1], 'manifest_output') }));
   } else if (command === 'transform-plan') {
     await transformPlan(args[0], resolve(args[1]));
     console.log(JSON.stringify({ status: 'written', output: resolve(args[1]), transformations: TRANSFORMATIONS }));
   } else if (command === 'unsplash-lite-sample') {
-    await unsplashLiteSample(args[0], args[1], args[2], args[3] ?? 80);
-    console.log(JSON.stringify({ status: 'materialised', datasetId: 'unsplash-dataset-lite', output: resolve(args[1]) }));
+    await unsplashLiteSample(args[0], args[1], args[2], args[3], args[4] ?? 80);
+    console.log(JSON.stringify({ status: 'materialised', datasetId: 'unsplash-dataset-lite', output: assertExternalOutputPath(args[1], 'acquisition_manifest') }));
   } else if (command === 'transform-images') {
     await transformImages(args[0], args[1], args[2], args[3]);
     console.log(JSON.stringify({ status: 'transformed', output: resolve(args[3]) }));
