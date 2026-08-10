@@ -18,6 +18,8 @@ export interface AuthenticityEvaluation {
 
 export type AuthenticityModelRunner = (model: string, input: unknown, idempotencyKey: string) => Promise<unknown>;
 
+export { assertUuidV7, isUuidV7, uuidv7, type UUIDv7 } from './uuid.ts';
+
 const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 
 function modelText(value: unknown): string {

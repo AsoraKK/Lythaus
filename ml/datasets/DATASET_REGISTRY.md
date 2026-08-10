@@ -1,17 +1,29 @@
 # Dataset and Licence Registry
 
 This register is a legal-research index, not a permission grant. The machine-
-readable source is `dataset-registry.json`. Rights are recorded separately for
+readable source is `dataset-registry.json`. Version 2 adds explicit
+`CLASS_A_COMMERCIAL_TRAINING`, `CLASS_B_EVALUATION_ONLY`, and
+`CLASS_C_LYTHAUS_OWNED` rights classes. Rights are recorded separately for
 code, images, labels, weights, training, distillation, modification, and
-redistribution. `UNCLEAR` means no commercial permission is inferred.
+redistribution. `UNCLEAR` always maps to `DO_NOT_TRAIN`.
 
 ## Approved policy
 
 - Ordinary Lythaus user uploads are never training or distillation data.
-- WP002 commits metadata only; it does not download or vendor large datasets.
+- Binaries are materialised only in the external task cache; they are never
+  committed or uploaded to R2 by this work package.
+- Unsplash Dataset Lite is a bounded evaluation source until downstream model
+  and API rights are explicitly verified. Ordinary Unsplash website downloads
+  are not a substitute.
+- Open Images is evaluated per image. URLs, annotations, and dataset landing
+  pages do not by themselves prove image redistribution or commercial training
+  rights.
 - Every materialised sample needs a content hash, source URL, licence evidence,
   provenance, privacy review, and retention decision.
 - Per-file or per-image terms override a dataset landing page.
+- Evaluation-only records cannot generate teacher targets or distillation data.
+- Lythaus-owned records require a capture or generator release identifier for
+  every sample before training or distillation can be enabled.
 - Public availability, a GitHub repository, or a paper does not establish
   commercial training rights.
 

@@ -144,6 +144,14 @@ export interface PhysicalAcquisitionFeatures {
   moireScore: number | null;
   cameraEvidenceApplicability: Applicability;
   cameraOrigin: CameraEvidenceLevel;
+  evidenceDetails?: {
+    metadataEvidence: readonly string[];
+    cfaProxy: number | null;
+    noiseVariance: number | null;
+    edgeGradientCoherence: number | null;
+    chromaticAberrationProxy: number | null;
+    screenRecaptureIndicators: readonly string[];
+  };
 }
 
 export interface GenerativeForensicsFeatures {
@@ -168,6 +176,15 @@ export interface SpectralStabilityFeatures {
   variance: number | null;
   edgeStatistics: { meanMagnitude: number | null; variance: number | null; sampleCount: number };
   robustnessGrade: UncertaintyGrade;
+  multiScale?: readonly {
+    scale: number;
+    fftMagnitude: readonly number[];
+    fftPhase: readonly number[];
+    dct: readonly number[];
+    wavelets: readonly number[];
+    residuals: readonly number[];
+  }[];
+  featureLabels?: readonly string[];
 }
 
 export interface ReconstructionFeatures {
@@ -182,7 +199,7 @@ export interface ReconstructionFeatures {
 export interface ForensicFeatureBundle {
   id: UUIDv7;
   caseId: UUIDv7;
-  featureVersion: 'lythaus-forensics-v0';
+  featureVersion: 'lythaus-forensics-v0' | 'lythaus-forensics-v1';
   fileProvenance: FileProvenanceFeatures;
   physicalAcquisition: PhysicalAcquisitionFeatures;
   generativeForensics: GenerativeForensicsFeatures;
@@ -364,6 +381,7 @@ export interface EvaluationMetrics {
   humanContentFalsePositiveRate: number | null;
   hardNegativeFalsePositiveRate: number | null;
   unseenGeneratorFalsePositiveRate: number | null;
+  perOrigin: readonly EvaluationSliceMetrics[];
   perGenerator: readonly EvaluationSliceMetrics[];
   perTransformation: readonly EvaluationSliceMetrics[];
   transformationRobustness: TransformationRobustnessMetrics | null;
