@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/models/moderation.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/state/providers/moderation_providers.dart';
 import 'package:lythaus/ui/screens/home/discover_feed.dart';
 import 'package:lythaus/ui/screens/home/news_feed.dart';
@@ -50,6 +51,15 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          feedEntitlementsProvider.overrideWith(
+            (ref) async => const FeedEntitlements(
+              tier: 'black',
+              maxCustomFeeds: 3,
+              newsBoardAccess: 'full',
+            ),
+          ),
+        ],
         child: MaterialApp(
           home: Scaffold(
             body: DiscoverFeed(feed: feed, items: items),
@@ -57,6 +67,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(
       find.text('Discover calm, trustworthy updates tailored to you.'),
@@ -74,6 +85,15 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          feedEntitlementsProvider.overrideWith(
+            (ref) async => const FeedEntitlements(
+              tier: 'black',
+              maxCustomFeeds: 3,
+              newsBoardAccess: 'full',
+            ),
+          ),
+        ],
         child: MaterialApp(
           home: Scaffold(
             body: NewsFeed(feed: feed, items: items),
@@ -81,9 +101,10 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(
-      find.text('Hybrid newsroom + high reputation contributors.'),
+      find.text('Editorial coverage from earned, revocable contributors.'),
       findsOneWidget,
     );
     expect(find.text('Pinned Story'), findsOneWidget);

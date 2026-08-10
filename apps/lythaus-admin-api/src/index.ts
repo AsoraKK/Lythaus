@@ -1,5 +1,6 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, transaction, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, recordUserActivity, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
+import { APPEAL_POLICY, enforceAdminAllowPublication, evaluateAppeal, type AppealAdjudication, type AppealRiskClass, type AppealVote } from '@lythaus/contracts';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, hmacLookup, uuidv7 } from '@lythaus/security';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
@@ -7,6 +8,39 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 interface Env extends EnvBindings {
   DB_ADMIN_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
+}
+
+const ADMIN_ERROR_CODES = new Set([
+  'access_assertion_invalid', 'access_required', 'access_subject_missing',
+  'access_verification_not_configured', 'admin_public_label_declaration_mismatch',
+  'admin_role_required', 'admin_subject_key_not_configured',
+  'ai_assisted_character_limit_exceeded', 'ai_generated_public_content_blocked',
+  'appeal_adjudication_decision_invalid', 'appeal_adjudication_locked',
+  'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
+  'appeal_adjudicator_required', 'appeal_adjudicator_role_invalid',
+  'appeal_adjudicator_training_required', 'appeal_already_resolved', 'appeal_not_found',
+  'appeal_policy_version_unsupported', 'appeal_risk_class_invalid',
+  'appeal_subject_not_found', 'appeal_vote_decision_invalid', 'appeal_vote_level_invalid',
+  'appeal_vote_qualification_invalid', 'appeal_vote_weight_invalid',
+  'invalid_account_status', 'invalid_editorial_publication', 'invalid_json',
+  'invalid_legal_hold', 'invalid_moderation_outcome', 'invalid_public_label',
+  'invalid_subscription_tier', 'invalid_user_search', 'legal_hold_not_found',
+  'moderation_case_not_found', 'rate_limit_exceeded', 'reason_code_required',
+  'request_too_large', 'reviewer_qualification_state_invalid', 'user_not_found',
+]);
+
+function adminError(error: unknown): { exposedCode: string; internalCode: string; status: number } {
+  const internalCode = error instanceof Error ? error.message : 'non_error_thrown';
+  const exposedCode = ADMIN_ERROR_CODES.has(internalCode) ? internalCode : 'admin_request_failed';
+  const status = exposedCode === 'admin_request_failed' || exposedCode === 'appeal_adjudication_not_recorded' ? 500
+    : ['access_verification_not_configured', 'admin_subject_key_not_configured'].includes(exposedCode) ? 503
+      : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
+        : exposedCode === 'admin_role_required' ? 403
+          : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
+            : ['appeal_adjudication_locked', 'appeal_already_resolved'].includes(exposedCode) ? 409
+              : exposedCode === 'request_too_large' ? 413
+                : exposedCode === 'rate_limit_exceeded' ? 429 : 400;
+  return { exposedCode, internalCode, status };
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -20,11 +54,22 @@ async function accessSubject(request: Request, env: Env): Promise<string> {
   const assertion = request.headers.get('cf-access-jwt-assertion');
   if (!assertion) throw new Error('access_required');
   if (!env.ACCESS_JWKS_URL || !env.ACCESS_AUDIENCE) throw new Error('access_verification_not_configured');
-  const jwks = createRemoteJWKSet(new URL(env.ACCESS_JWKS_URL));
-  const verified = await jwtVerify(assertion, jwks, {
-    audience: env.ACCESS_AUDIENCE,
-    issuer: env.ACCESS_TEAM_DOMAIN ? `https://${env.ACCESS_TEAM_DOMAIN}` : undefined,
-  });
+  let jwksUrl: URL;
+  try {
+    jwksUrl = new URL(env.ACCESS_JWKS_URL);
+  } catch {
+    throw new Error('access_verification_not_configured');
+  }
+  const jwks = createRemoteJWKSet(jwksUrl);
+  let verified;
+  try {
+    verified = await jwtVerify(assertion, jwks, {
+      audience: env.ACCESS_AUDIENCE,
+      issuer: env.ACCESS_TEAM_DOMAIN ? `https://${env.ACCESS_TEAM_DOMAIN}` : undefined,
+    });
+  } catch {
+    throw new Error('access_assertion_invalid');
+  }
   const payload = verified.payload as { sub?: string; email?: string };
   const subject = payload.sub ?? payload.email;
   if (!subject) throw new Error('access_subject_missing');
@@ -45,7 +90,11 @@ async function requireAdmin(request: Request, env: Env): Promise<{ userId: strin
 async function readJson<T>(request: Request): Promise<T> {
   const length = Number(request.headers.get('content-length') ?? 0);
   if (length > 16 * 1024) throw new Error('request_too_large');
-  return JSON.parse(new TextDecoder().decode(await request.arrayBuffer())) as T;
+  try {
+    return JSON.parse(new TextDecoder().decode(await request.arrayBuffer())) as T;
+  } catch {
+    throw new Error('invalid_json');
+  }
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -163,41 +212,589 @@ async function publishEditorial(request: Request, env: Env, actor: { userId: str
   return json({ id: publicationId, published: true }, { status: 201, headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
 
+interface ModerationCaseRecord {
+  content_type: string;
+  content_id: string;
+  policy_version: string;
+  subject_user_id: string | null;
+  body: string | null;
+  declared_creation_mode: string | null;
+  post_id: string | null;
+  parent_id: string | null;
+}
+
+function moderationState(outcome: 'allow' | 'block' | 'queue'): 'allowed' | 'blocked' | 'under_review' {
+  return outcome === 'allow' ? 'allowed' : outcome === 'block' ? 'blocked' : 'under_review';
+}
+
 async function decideModeration(request: Request, env: Env, actor: { userId: string; role: string }, caseId: string, correlation: string): Promise<Response> {
   const input = await readJson<{ outcome?: 'allow' | 'block' | 'queue'; reasonCode?: string; publicLabel?: string }>(request);
   if (!input.outcome || !['allow', 'block', 'queue'].includes(input.outcome)) throw new Error('invalid_moderation_outcome');
   if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
-  const existing = await query<{ content_type: string; content_id: string; policy_version: string }>(env.DB_ADMIN_FRESH,
-    `SELECT content_type, content_id, policy_version FROM moderation.cases WHERE id = $1`, [caseId]);
-  const moderationCase = existing.rows[0];
-  if (!moderationCase) throw new Error('moderation_case_not_found');
-  const publicLabel = input.publicLabel && ['Human-authored', 'AI-assisted', 'AI-generated', 'Under review'].includes(input.publicLabel)
-    ? input.publicLabel
-    : input.outcome === 'allow' ? undefined : 'Under review';
-  await transaction(env.DB_ADMIN_FRESH, async (client) => {
+  const outcome = input.outcome;
+  if (input.publicLabel !== undefined && !['Human-authored', 'AI-assisted', 'AI-generated', 'Under review'].includes(input.publicLabel)) {
+    throw new Error('invalid_public_label');
+  }
+  const recorded = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    const existing = await client.query<ModerationCaseRecord>(
+      `SELECT c.content_type, c.content_id, c.policy_version,
+              CASE c.content_type
+                WHEN 'post' THEN p.author_id
+                WHEN 'comment' THEN cm.author_id
+                WHEN 'profile' THEN c.content_id
+                ELSE NULL
+              END AS subject_user_id,
+              COALESCE(p.body, cm.body) AS body,
+              COALESCE(p.declared_creation_mode, cm.declared_creation_mode) AS declared_creation_mode,
+              cm.post_id,
+              cm.parent_id
+         FROM moderation.cases c
+         LEFT JOIN content.posts p ON c.content_type = 'post' AND p.id = c.content_id
+         LEFT JOIN content.comments cm ON c.content_type = 'comment' AND cm.id = c.content_id
+        WHERE c.id = $1
+        FOR UPDATE OF c`,
+      [caseId],
+    );
+    const moderationCase = existing.rows[0];
+    if (!moderationCase) throw new Error('moderation_case_not_found');
+    const publicLabel = outcome === 'allow' && (moderationCase.content_type === 'post' || moderationCase.content_type === 'comment')
+      ? enforceAdminAllowPublication({
+        body: moderationCase.body,
+        declaredCreationMode: moderationCase.declared_creation_mode,
+        publicLabel: input.publicLabel,
+      }).publicLabel
+      : input.publicLabel ?? 'Under review';
+    const decisionId = uuidv7();
     await client.query(
       `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version, decided_by) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [uuidv7(), caseId, input.outcome, publicLabel ?? null, moderationCase.policy_version, actor.userId]
+      [decisionId, caseId, outcome, publicLabel ?? null, moderationCase.policy_version, actor.userId],
     );
-    await client.query(`UPDATE moderation.cases SET state = $1, resolved_at = CASE WHEN $1 = 'open' THEN NULL ELSE now() END WHERE id = $2`, [input.outcome === 'queue' ? 'open' : 'resolved', caseId]);
-    await client.query(`UPDATE moderation.appeals SET state = $1, resolved_at = CASE WHEN $1 = 'resolved' THEN now() ELSE NULL END WHERE case_id = $2 AND state = 'open'`, [input.outcome === 'queue' ? 'open' : 'resolved', caseId]);
+    await client.query(
+      `UPDATE moderation.cases
+          SET state = $1, resolved_at = CASE WHEN $1 = 'open' THEN NULL ELSE now() END
+        WHERE id = $2`,
+      [outcome === 'queue' ? 'open' : 'resolved', caseId],
+    );
+    // Appeals remain open until the independently recorded review and adjudication policy resolves them.
     if (moderationCase.content_type === 'post') {
-      await client.query(`UPDATE content.posts SET moderation_state = $1, published_at = CASE WHEN $1 = 'allowed' THEN COALESCE(published_at, now()) ELSE NULL END, updated_at = now() WHERE id = $2`, [input.outcome === 'allow' ? 'allowed' : input.outcome === 'block' ? 'blocked' : 'under_review', moderationCase.content_id]);
-      if (publicLabel) await client.query(`UPDATE content.content_declarations SET public_label = $1, review_required = $2, updated_at = now() WHERE post_id = $3`, [publicLabel, input.outcome !== 'allow', moderationCase.content_id]);
+      await client.query(
+        `UPDATE content.posts
+            SET moderation_state = $1,
+                published_at = CASE WHEN $1 = 'allowed' THEN COALESCE(published_at, now()) ELSE NULL END,
+                updated_at = now()
+          WHERE id = $2`,
+        [moderationState(outcome), moderationCase.content_id],
+      );
+      if (publicLabel) await client.query(
+        `UPDATE content.content_declarations
+            SET public_label = $1, review_required = $2, updated_at = now()
+          WHERE post_id = $3`,
+        [publicLabel, outcome !== 'allow', moderationCase.content_id],
+      );
     } else if (moderationCase.content_type === 'comment') {
-      await client.query(`UPDATE content.comments SET moderation_state = $1 WHERE id = $2`, [input.outcome === 'allow' ? 'allowed' : input.outcome === 'block' ? 'blocked' : 'under_review', moderationCase.content_id]);
+      await client.query(
+        `UPDATE content.comments SET moderation_state = $1 WHERE id = $2`,
+        [moderationState(outcome), moderationCase.content_id],
+      );
     }
     await client.query(
-      `INSERT INTO moderation.enforcement_events (id, case_id, action, reason_code, policy_version, actor_id) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [uuidv7(), caseId, input.outcome, input.reasonCode, moderationCase.policy_version, actor.userId]
+      `INSERT INTO moderation.enforcement_events (id, case_id, subject_id, action, reason_code, policy_version, actor_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [uuidv7(), caseId, moderationCase.subject_user_id, outcome, input.reasonCode, moderationCase.policy_version, actor.userId],
     );
+    if (moderationCase.subject_user_id) {
+      await recordUserActivity(client, {
+        id: uuidv7(),
+        userId: moderationCase.subject_user_id,
+        actorUserId: actor.userId,
+        eventType: 'moderation.decision_applied',
+        category: 'moderation',
+        source: 'admin_api',
+        sourceEventId: decisionId,
+        correlationId: correlation,
+        title: 'Moderation decision recorded',
+        explanation: 'A moderation decision was recorded for your content.',
+        result: 'succeeded',
+        reasonCode: input.reasonCode,
+        policyVersion: moderationCase.policy_version,
+        objectType: 'moderation_case',
+        objectId: caseId,
+        reputationEffect: 'none',
+        appealable: outcome !== 'queue',
+        retentionClass: 'moderation',
+        metadata: { decisionType: outcome },
+        createdAt: new Date().toISOString(),
+      });
+    }
+    if (moderationCase.subject_user_id && outcome !== 'queue') {
+      const outcomeEventId = uuidv7();
+      const eventType = outcome === 'allow'
+        ? moderationCase.content_type === 'post' ? 'content.post.published' : 'content.comment.published'
+        : 'moderation.content.blocked';
+      await client.query(
+        `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+        [outcomeEventId, eventType, moderationCase.content_type, moderationCase.content_id, actor.userId,
+          JSON.stringify({
+            contentType: moderationCase.content_type,
+            contentId: moderationCase.content_id,
+            authorId: moderationCase.subject_user_id,
+            postId: moderationCase.post_id,
+            parentId: moderationCase.parent_id,
+            declaredCreationMode: moderationCase.declared_creation_mode,
+            reasonCode: input.reasonCode,
+          })],
+      );
+      if (outcome === 'allow' && (moderationCase.content_type === 'post' || moderationCase.content_type === 'comment')) {
+        await recordUserActivity(client, {
+          id: uuidv7(), userId: moderationCase.subject_user_id, actorUserId: actor.userId,
+          eventType: moderationCase.content_type === 'post'
+            ? 'content.post_published'
+            : moderationCase.parent_id ? 'content.reply_published' : 'content.comment_published',
+          category: 'content', source: 'admin_api', sourceEventId: outcomeEventId,
+          correlationId: correlation,
+          title: moderationCase.content_type === 'post'
+            ? 'Your post was published'
+            : moderationCase.parent_id ? 'Your reply was published' : 'Your comment was published',
+          explanation: 'The contribution passed publication review and is now available on its permitted surfaces.',
+          result: 'succeeded', policyVersion: moderationCase.policy_version,
+          objectType: moderationCase.content_type, objectId: moderationCase.content_id,
+          reputationEffect: moderationCase.declared_creation_mode === 'human' ? 'positive' : 'none',
+          appealable: false, retentionClass: 'ordinary',
+          metadata: { contentType: moderationCase.parent_id ? 'reply' : moderationCase.content_type, creationMode: moderationCase.declared_creation_mode ?? 'human', moderationState: 'allowed' },
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
     await client.query(
       `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'moderation.decision', 'moderation_case', $3, $4, $5, $6::jsonb)`,
-      [uuidv7(), actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome: input.outcome, role: actor.role })]
+      [uuidv7(), actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome, role: actor.role, decisionId })],
+    );
+    return { publicLabel };
+  });
+  return json({ caseId, outcome, publicLabel: recorded.publicLabel }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+}
+
+interface AppealCaseRecord extends ModerationCaseRecord {
+  appeal_id: string;
+  appeal_state: string;
+  appellant_id: string;
+  risk_class: string;
+  appeal_policy_version: string;
+}
+
+interface AppealVoteRecord {
+  reviewer_id: string;
+  decision: string;
+  qualification_snapshot: string;
+  level_snapshot: number;
+  vote_weight_snapshot: number;
+  assignment_state: string;
+  conflict_checked: boolean;
+  current_qualification_state: string | null;
+}
+
+interface AppealAdjudicationRecord {
+  adjudicator_id: string;
+  adjudicator_role: string;
+  trained_snapshot: boolean;
+  decision: string;
+}
+
+function asAppealRiskClass(value: string): AppealRiskClass {
+  if (value === 'standard' || value === 'high') return value;
+  throw new Error('appeal_risk_class_invalid');
+}
+
+function asAppealVote(row: AppealVoteRecord): AppealVote {
+  if (row.decision !== 'overturn' && row.decision !== 'uphold') throw new Error('appeal_vote_decision_invalid');
+  if (row.qualification_snapshot !== 'trained') throw new Error('appeal_vote_qualification_invalid');
+  if (!Number.isInteger(row.level_snapshot) || row.level_snapshot < 0 || row.level_snapshot > 5) throw new Error('appeal_vote_level_invalid');
+  if (row.vote_weight_snapshot !== 1 && row.vote_weight_snapshot !== 2) throw new Error('appeal_vote_weight_invalid');
+  return {
+    reviewerId: row.reviewer_id,
+    decision: row.decision,
+    qualificationSnapshot: row.qualification_snapshot,
+    levelSnapshot: row.level_snapshot as AppealVote['levelSnapshot'],
+    voteWeightSnapshot: row.vote_weight_snapshot,
+    locked: true,
+    recused: row.assignment_state !== 'voted' || !row.conflict_checked || row.current_qualification_state !== 'trained',
+  };
+}
+
+function asAppealAdjudication(row: AppealAdjudicationRecord): AppealAdjudication {
+  if (row.adjudicator_role !== 'editorial' && row.adjudicator_role !== 'journalist') throw new Error('appeal_adjudicator_role_invalid');
+  if (row.decision !== 'overturn' && row.decision !== 'uphold') throw new Error('appeal_adjudication_decision_invalid');
+  return {
+    adjudicatorId: row.adjudicator_id,
+    role: row.adjudicator_role,
+    trained: row.trained_snapshot,
+    decision: row.decision,
+  };
+}
+
+async function adjudicateAppeal(request: Request, env: Env, actor: { userId: string; role: string }, appealId: string, correlation: string): Promise<Response> {
+  if (actor.role !== 'editorial') throw new Error('appeal_adjudicator_required');
+  const input = await readJson<{ decision?: 'overturn' | 'uphold'; reasonCode?: string }>(request);
+  if (!input.decision || !['overturn', 'uphold'].includes(input.decision)) throw new Error('appeal_adjudication_decision_invalid');
+  if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
+
+  const outcome = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    const appealResult = await client.query<AppealCaseRecord>(
+      `SELECT a.id AS appeal_id, a.state AS appeal_state, a.appellant_id, a.risk_class,
+              a.policy_version AS appeal_policy_version, c.content_type, c.content_id, c.policy_version,
+              CASE c.content_type
+                WHEN 'post' THEN p.author_id
+                WHEN 'comment' THEN cm.author_id
+                WHEN 'profile' THEN c.content_id
+                ELSE NULL
+              END AS subject_user_id
+         FROM moderation.appeals a
+         JOIN moderation.cases c ON c.id = a.case_id
+         LEFT JOIN content.posts p ON c.content_type = 'post' AND p.id = c.content_id
+         LEFT JOIN content.comments cm ON c.content_type = 'comment' AND cm.id = c.content_id
+        WHERE a.id = $1
+        FOR UPDATE OF a`,
+      [appealId],
+    );
+    const appeal = appealResult.rows[0];
+    if (!appeal) throw new Error('appeal_not_found');
+    if (appeal.appeal_state !== 'open') throw new Error('appeal_already_resolved');
+    if (appeal.appeal_policy_version !== APPEAL_POLICY.version) throw new Error('appeal_policy_version_unsupported');
+    if (!appeal.subject_user_id) throw new Error('appeal_subject_not_found');
+    if (appeal.appellant_id === actor.userId || appeal.subject_user_id === actor.userId) throw new Error('appeal_adjudicator_conflict');
+    const qualification = await client.query<{ user_id: string }>(
+      `SELECT user_id FROM moderation.reviewer_qualifications WHERE user_id = $1 AND state = 'trained'`,
+      [actor.userId],
+    );
+    if (qualification.rowCount !== 1) throw new Error('appeal_adjudicator_training_required');
+    const reviewerConflict = await client.query(
+      `SELECT 1 FROM moderation.appeal_assignments
+        WHERE appeal_id = $1 AND reviewer_id = $2 AND state NOT IN ('recused', 'replaced', 'expired')`,
+      [appealId, actor.userId],
+    );
+    if (reviewerConflict.rowCount !== 0) throw new Error('appeal_adjudicator_conflict');
+
+    const adjudicationId = uuidv7();
+    const submitted = await client.query<{ id: string; decision: string }>(
+      `INSERT INTO moderation.appeal_adjudications
+         (id, appeal_id, adjudicator_id, adjudicator_role, trained_snapshot, decision, reason_code, policy_version)
+       VALUES ($1, $2, $3, 'editorial', true, $4, $5, $6)
+       ON CONFLICT (appeal_id, adjudicator_id) DO NOTHING
+       RETURNING id, decision`,
+      [adjudicationId, appealId, actor.userId, input.decision, input.reasonCode, APPEAL_POLICY.version],
+    );
+    const storedAdjudication = submitted.rows[0] ?? (await client.query<{ id: string; decision: string }>(
+      `SELECT id, decision FROM moderation.appeal_adjudications WHERE appeal_id = $1 AND adjudicator_id = $2`,
+      [appealId, actor.userId],
+    )).rows[0];
+    if (!storedAdjudication) throw new Error('appeal_adjudication_not_recorded');
+    if (storedAdjudication.decision !== input.decision) throw new Error('appeal_adjudication_locked');
+
+    const [voteResult, adjudicationResult, existingOutcome] = await Promise.all([
+      client.query<AppealVoteRecord>(
+        `SELECT v.reviewer_id, v.decision, v.qualification_snapshot, v.level_snapshot,
+                v.vote_weight_snapshot, a.state AS assignment_state, a.conflict_checked,
+                qualification.state AS current_qualification_state
+           FROM moderation.appeal_review_votes v
+           JOIN moderation.appeal_assignments a ON a.id = v.assignment_id
+           LEFT JOIN moderation.reviewer_qualifications qualification ON qualification.user_id = v.reviewer_id
+          WHERE v.appeal_id = $1 AND a.appeal_id = $1`,
+        [appealId],
+      ),
+      client.query<AppealAdjudicationRecord>(
+        `SELECT adjudicator_id, adjudicator_role, trained_snapshot, decision
+           FROM moderation.appeal_adjudications WHERE appeal_id = $1`,
+        [appealId],
+      ),
+      client.query<{ state: string }>(`SELECT state FROM moderation.appeal_outcomes WHERE appeal_id = $1 FOR UPDATE`, [appealId]),
+    ]);
+    if (existingOutcome.rows[0]?.state === 'resolved') throw new Error('appeal_already_resolved');
+    const riskClass = asAppealRiskClass(appeal.risk_class);
+    const evaluation = evaluateAppeal(voteResult.rows.map(asAppealVote), adjudicationResult.rows.map(asAppealAdjudication), riskClass);
+    await client.query(
+      `INSERT INTO moderation.appeal_outcomes
+         (appeal_id, risk_class, community_decision, final_decision, completed_reviewers, total_weight,
+          overturn_weight, uphold_weight, winning_share, required_adjudicators, state, policy_version,
+          evaluated_at, resolved_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(),
+               CASE WHEN $11 = 'resolved' THEN now() ELSE NULL END)
+       ON CONFLICT (appeal_id) DO UPDATE SET
+         risk_class = EXCLUDED.risk_class,
+         community_decision = EXCLUDED.community_decision,
+         final_decision = EXCLUDED.final_decision,
+         completed_reviewers = EXCLUDED.completed_reviewers,
+         total_weight = EXCLUDED.total_weight,
+         overturn_weight = EXCLUDED.overturn_weight,
+         uphold_weight = EXCLUDED.uphold_weight,
+         winning_share = EXCLUDED.winning_share,
+         required_adjudicators = EXCLUDED.required_adjudicators,
+         state = EXCLUDED.state,
+         policy_version = EXCLUDED.policy_version,
+         evaluated_at = EXCLUDED.evaluated_at,
+         resolved_at = EXCLUDED.resolved_at`,
+      [
+        appealId, riskClass, evaluation.communityDecision, evaluation.finalDecision,
+        evaluation.completedReviewers, evaluation.totalWeight, evaluation.overturnWeight, evaluation.upholdWeight,
+        evaluation.winningShare, evaluation.requiredAdjudicators, evaluation.status, evaluation.policyVersion,
+      ],
+    );
+
+    await recordUserActivity(client, {
+      id: uuidv7(),
+      userId: appeal.appellant_id,
+      actorUserId: actor.userId,
+      eventType: 'appeals.adjudicator_result_recorded',
+      category: 'appeals',
+      source: 'admin_api',
+      sourceEventId: storedAdjudication.id,
+      correlationId: correlation,
+      title: 'Appeal adjudication recorded',
+      explanation: 'A trained editorial adjudicator recorded an appeal result.',
+      result: evaluation.status === 'resolved' ? 'succeeded' : 'pending',
+      reasonCode: input.reasonCode,
+      policyVersion: evaluation.policyVersion,
+      objectType: 'appeal',
+      objectId: appealId,
+      reputationEffect: 'none',
+      appealable: false,
+      retentionClass: 'moderation',
+      metadata: { appealState: evaluation.status, riskClass, outcome: input.decision },
+      createdAt: new Date().toISOString(),
+    });
+    if (evaluation.communityDecision) {
+      await recordUserActivity(client, {
+        id: uuidv7(),
+        userId: appeal.appellant_id,
+        actorUserId: actor.userId,
+        eventType: 'appeals.community_result_reached',
+        category: 'appeals',
+        source: 'admin_api',
+        sourceEventId: appealId,
+        correlationId: correlation,
+        title: 'Appeal community review completed',
+        explanation: 'The independently assigned reviewer quorum reached a policy result.',
+        result: evaluation.status === 'resolved' ? 'succeeded' : 'pending',
+        policyVersion: evaluation.policyVersion,
+        objectType: 'appeal',
+        objectId: appealId,
+        reputationEffect: 'none',
+        appealable: false,
+        retentionClass: 'moderation',
+        metadata: { appealState: evaluation.status, riskClass, outcome: evaluation.communityDecision },
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    if (evaluation.status === 'resolved' && evaluation.finalDecision) {
+      const resolved = await client.query(
+        `UPDATE moderation.appeals
+            SET state = 'resolved', resolved_at = COALESCE(resolved_at, now()),
+                community_result_at = COALESCE(community_result_at, now()), adjudicated_at = now()
+          WHERE id = $1 AND state = 'open'`,
+        [appealId],
+      );
+      if (resolved.rowCount !== 1) throw new Error('appeal_already_resolved');
+      if (evaluation.finalDecision === 'overturn') {
+        if (appeal.content_type === 'post') {
+          await client.query(
+            `UPDATE content.posts
+                SET moderation_state = 'allowed', published_at = COALESCE(published_at, now()), updated_at = now()
+              WHERE id = $1`,
+            [appeal.content_id],
+          );
+        } else if (appeal.content_type === 'comment') {
+          await client.query(`UPDATE content.comments SET moderation_state = 'allowed' WHERE id = $1`, [appeal.content_id]);
+        }
+        await client.query(
+          `INSERT INTO moderation.appeal_outcome_effects
+             (id, appeal_id, effect_type, target_type, target_id, source_event_id)
+           VALUES ($1, $2, 'content_reversal', $3, $4, $2)
+           ON CONFLICT (appeal_id, effect_type, target_type, target_id) DO NOTHING`,
+          [uuidv7(), appealId, appeal.content_type, appeal.content_id],
+        );
+      }
+      await client.query(
+        `UPDATE trust.provenance_events SET appeal_state = 'resolved', final_decision = $1 WHERE content_id = $2`,
+        [evaluation.finalDecision, appeal.content_id],
+      );
+      await client.query(
+        `INSERT INTO moderation.enforcement_events (id, case_id, subject_id, action, reason_code, policy_version, actor_id)
+         SELECT $1, a.case_id, $2, $3, $4, $5, $6 FROM moderation.appeals a WHERE a.id = $7`,
+        [uuidv7(), appeal.subject_user_id, `appeal_${evaluation.finalDecision}`, input.reasonCode, evaluation.policyVersion, actor.userId, appealId],
+      );
+      const finalActivity = await recordUserActivity(client, {
+        id: uuidv7(),
+        userId: appeal.appellant_id,
+        actorUserId: actor.userId,
+        eventType: evaluation.finalDecision === 'overturn' ? 'appeals.decision_reversed' : 'appeals.decision_upheld',
+        category: 'appeals',
+        source: 'admin_api',
+        sourceEventId: appealId,
+        correlationId: correlation,
+        title: evaluation.finalDecision === 'overturn' ? 'Appeal decision reversed' : 'Appeal decision upheld',
+        explanation: evaluation.finalDecision === 'overturn'
+          ? 'Your appeal outcome reversed the prior moderation decision.'
+          : 'Your appeal outcome upheld the prior moderation decision.',
+        result: evaluation.finalDecision === 'overturn' ? 'reversed' : 'succeeded',
+        reasonCode: input.reasonCode,
+        policyVersion: evaluation.policyVersion,
+        objectType: 'appeal',
+        objectId: appealId,
+        reputationEffect: 'none',
+        appealable: false,
+        retentionClass: 'moderation',
+        metadata: { appealState: 'resolved', riskClass, outcome: evaluation.finalDecision },
+        createdAt: new Date().toISOString(),
+      });
+      await client.query(
+        `INSERT INTO moderation.appeal_outcome_effects
+           (id, appeal_id, effect_type, target_type, target_id, source_event_id)
+         VALUES ($1, $2, 'activity_event', 'user_activity_event', $3, $2)
+         ON CONFLICT (appeal_id, effect_type, target_type, target_id) DO NOTHING`,
+        [uuidv7(), appealId, finalActivity.id],
+      );
+      await client.query(
+        `INSERT INTO moderation.appeal_outcome_effects
+           (id, appeal_id, effect_type, target_type, target_id, source_event_id)
+         VALUES ($1, $2, 'notification', 'appeal', $2, $2)
+         ON CONFLICT (appeal_id, effect_type, target_type, target_id) DO NOTHING`,
+        [uuidv7(), appealId],
+      );
+      await client.query(
+        `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+         VALUES ($1, $2, 'moderation.appeal.outcome_applied', 'appeal', $3, $4, $5, $6::jsonb)`,
+        [uuidv7(), actor.userId, appealId, input.reasonCode, correlation, JSON.stringify({ outcome: evaluation.finalDecision, riskClass, policyVersion: evaluation.policyVersion })],
+      );
+      await client.query(
+        `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
+         VALUES ($1, 'moderation.appeal.resolved', 'appeal', $2, $3, $4::jsonb)`,
+        [uuidv7(), appealId, actor.userId, JSON.stringify({
+          appealId,
+          subjectUserId: appeal.subject_user_id,
+          contentId: appeal.content_id,
+          contentType: appeal.content_type,
+          finalDecision: evaluation.finalDecision,
+          riskClass,
+        })],
+      );
+    }
+    return evaluation;
+  });
+  return json({ appealId, ...outcome }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+}
+
+async function listPendingAppealAdjudications(
+  env: Env,
+  actor: { userId: string; role: string },
+): Promise<Response> {
+  if (!['editorial', 'administrator', 'owner'].includes(actor.role)) throw new Error('appeal_adjudicator_required');
+  const result = await query(env.DB_ADMIN_FRESH,
+    `SELECT appeal.id AS appeal_id, appeal.case_id, appeal.risk_class, appeal.policy_version,
+            appeal.created_at, appeal.expires_at, outcome.community_decision,
+            outcome.completed_reviewers, outcome.total_weight, outcome.winning_share,
+            outcome.required_adjudicators, outcome.state AS outcome_state,
+            count(adjudication.id)::integer AS completed_adjudicators
+       FROM moderation.appeals appeal
+       JOIN moderation.appeal_outcomes outcome ON outcome.appeal_id = appeal.id
+       LEFT JOIN moderation.appeal_adjudications adjudication ON adjudication.appeal_id = appeal.id
+      WHERE appeal.state = 'open'
+        AND outcome.state IN ('pending_adjudication', 'adjudication_disagreement')
+        AND appeal.appellant_id <> $1
+        AND NOT EXISTS (
+          SELECT 1 FROM moderation.appeal_assignments assignment
+           WHERE assignment.appeal_id = appeal.id AND assignment.reviewer_id = $1
+             AND assignment.state NOT IN ('recused', 'replaced', 'expired')
+        )
+      GROUP BY appeal.id, appeal.case_id, appeal.risk_class, appeal.policy_version,
+               appeal.created_at, appeal.expires_at, outcome.community_decision,
+               outcome.completed_reviewers, outcome.total_weight, outcome.winning_share,
+               outcome.required_adjudicators, outcome.state
+      ORDER BY appeal.created_at
+      LIMIT 100`,
+    [actor.userId],
+  );
+  return json({ items: result.rows }, { headers: { 'cache-control': 'private, no-store' } });
+}
+
+async function updateReviewerQualification(
+  request: Request,
+  env: Env,
+  actor: { userId: string; role: string },
+  reviewerId: string,
+  correlation: string,
+): Promise<Response> {
+  if (!['administrator', 'owner'].includes(actor.role)) throw new Error('admin_role_required');
+  const input = await readJson<{ state?: 'none' | 'eligible' | 'trained' | 'suspended'; reasonCode?: string }>(request);
+  if (!input.state || !['none', 'eligible', 'trained', 'suspended'].includes(input.state)) {
+    throw new Error('reviewer_qualification_state_invalid');
+  }
+  if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
+  const sourceEventId = uuidv7();
+  await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    const user = await client.query<{ id: string }>(
+      `SELECT id FROM identity.users WHERE id = $1 AND status <> 'deleted' FOR UPDATE`,
+      [reviewerId],
+    );
+    if (!user.rows[0]) throw new Error('user_not_found');
+    await client.query(
+      `INSERT INTO moderation.reviewer_qualifications
+         (user_id, state, policy_version, trained_at, suspended_at, reason_code)
+       VALUES ($1, $2, $3,
+         CASE WHEN $2 = 'trained' THEN now() ELSE NULL END,
+         CASE WHEN $2 = 'suspended' THEN now() ELSE NULL END,
+         $4)
+       ON CONFLICT (user_id) DO UPDATE SET
+         state = EXCLUDED.state,
+         policy_version = EXCLUDED.policy_version,
+         trained_at = CASE
+           WHEN EXCLUDED.state = 'trained' THEN COALESCE(moderation.reviewer_qualifications.trained_at, now())
+           ELSE NULL
+         END,
+         suspended_at = CASE WHEN EXCLUDED.state = 'suspended' THEN now() ELSE NULL END,
+         reason_code = EXCLUDED.reason_code,
+         updated_at = now()`,
+      [reviewerId, input.state, APPEAL_POLICY.version, input.reasonCode],
+    );
+    await recordUserActivity(client, {
+      id: uuidv7(),
+      userId: reviewerId,
+      actorUserId: actor.userId,
+      eventType: 'reputation.reviewer_eligibility_changed',
+      category: 'reputation',
+      source: 'admin_api',
+      sourceEventId,
+      correlationId: correlation,
+      title: 'Appeal reviewer eligibility changed',
+      explanation: input.state === 'trained'
+        ? 'You are now recorded as trained and eligible for independent appeal assignment when all conflict checks pass.'
+        : 'Your appeal reviewer qualification state changed. Reputation level alone never grants reviewer training.',
+      result: 'succeeded',
+      reasonCode: input.reasonCode,
+      policyVersion: APPEAL_POLICY.version,
+      objectType: 'reviewer_qualification',
+      objectId: reviewerId,
+      reputationEffect: 'none',
+      appealable: input.state === 'suspended',
+      retentionClass: 'moderation',
+      metadata: { pillar: 'reviewReliability', explanationCode: `reviewer_qualification_${input.state}` },
+      createdAt: new Date().toISOString(),
+    });
+    await client.query(
+      `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
+       VALUES ($1, 'moderation.reviewer.qualification_changed', 'user', $2, $3, $4::jsonb)`,
+      [sourceEventId, reviewerId, actor.userId, JSON.stringify({ reviewerId, state: input.state })],
+    );
+    await client.query(
+      `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+       VALUES ($1, $2, 'moderation.reviewer.qualification_changed', 'user', $3, $4, $5, $6::jsonb)`,
+      [uuidv7(), actor.userId, reviewerId, input.reasonCode, correlation, JSON.stringify({ state: input.state, policyVersion: APPEAL_POLICY.version })],
     );
   });
-  return json({ caseId, outcome: input.outcome, publicLabel: publicLabel ?? null }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+  return json({ reviewerId, state: input.state, policyVersion: APPEAL_POLICY.version }, {
+    headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' },
+  });
 }
 
 async function updateAccountStatus(request: Request, env: Env, actor: { userId: string; role: string }, targetUserId: string, correlation: string): Promise<Response> {
@@ -205,6 +802,7 @@ async function updateAccountStatus(request: Request, env: Env, actor: { userId: 
   const input = await readJson<{ status?: 'active' | 'suspended' | 'locked'; reasonCode?: string }>(request);
   if (!input.status || !['active', 'suspended', 'locked'].includes(input.status)) throw new Error('invalid_account_status');
   if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
+  const sourceEventId = uuidv7();
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const updated = await client.query<{ id: string }>(
       `UPDATE identity.users SET status = $1, token_version = token_version + 1, updated_at = now() WHERE id = $2 AND status <> 'deleted' RETURNING id`,
@@ -214,6 +812,26 @@ async function updateAccountStatus(request: Request, env: Env, actor: { userId: 
     await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetUserId]);
     await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetUserId]);
     await client.query(`INSERT INTO identity.account_events (id, user_id, actor_id, event_type, metadata) VALUES ($1, $2, $3, 'account_status_changed', $4::jsonb)`, [uuidv7(), targetUserId, actor.userId, JSON.stringify({ status: input.status, reasonCode: input.reasonCode })]);
+    await recordUserActivity(client, {
+      id: uuidv7(), userId: targetUserId, actorUserId: actor.userId,
+      eventType: input.status === 'active' ? 'moderation.decision_reversed' : input.status === 'suspended' ? 'moderation.suspension_applied' : 'moderation.feature_restricted',
+      category: 'moderation', source: 'admin_api', sourceEventId,
+      correlationId: correlation,
+      title: input.status === 'active' ? 'Account restriction cleared' : input.status === 'suspended' ? 'Account suspended' : 'Account locked',
+      explanation: input.status === 'active'
+        ? 'The previous account restriction was cleared by an authorised administrator.'
+        : 'An authorised administrator changed your account access state under the recorded policy reason.',
+      result: input.status === 'active' ? 'reversed' : 'succeeded', reasonCode: input.reasonCode,
+      policyVersion: APPEAL_POLICY.version, objectType: 'user', objectId: targetUserId,
+      reputationEffect: input.status === 'active' ? 'none' : 'withheld', appealable: input.status !== 'active',
+      retentionClass: 'moderation', metadata: { restrictionType: input.status, durationBand: 'until_reviewed' },
+      createdAt: new Date().toISOString(),
+    });
+    await client.query(
+      `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
+       VALUES ($1, 'identity.account.status_changed', 'user', $2, $3, $4::jsonb)`,
+      [sourceEventId, targetUserId, actor.userId, JSON.stringify({ userId: targetUserId, status: input.status })],
+    );
     await client.query(
       `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'account.status_changed', 'user', $3, $4, $5, $6::jsonb)`,
@@ -276,16 +894,33 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/admin/editorial/publications') return await publishEditorial(request, env, actor, id);
       const moderation = url.pathname.match(/^\/api\/admin\/moderation\/cases\/([^/]+)\/decision$/);
       if (request.method === 'POST' && moderation) return await decideModeration(request, env, actor, moderation[1], id);
+      const appealAdjudication = url.pathname.match(/^\/api\/admin\/appeals\/([^/]+)\/adjudications$/);
+      if (request.method === 'POST' && appealAdjudication) return await adjudicateAppeal(request, env, actor, appealAdjudication[1], id);
+      if (request.method === 'GET' && url.pathname === '/api/admin/appeals/pending-adjudication') {
+        return await listPendingAppealAdjudications(env, actor);
+      }
+      const reviewerQualification = url.pathname.match(/^\/api\/admin\/reviewers\/([^/]+)\/qualification$/);
+      if ((request.method === 'PUT' || request.method === 'POST') && reviewerQualification) {
+        return await updateReviewerQualification(request, env, actor, reviewerQualification[1], id);
+      }
       const accountStatus = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/status$/);
       if (request.method === 'POST' && accountStatus) return await updateAccountStatus(request, env, actor, accountStatus[1], id);
       const accountTier = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/tier$/);
       if (request.method === 'POST' && accountTier) return await setUserTier(request, env, actor, accountTier[1], id);
       return json({ error: 'not_found', correlationId: id }, { status: 404 });
     } catch (error) {
-      const code = error instanceof Error ? error.message : 'admin_request_failed';
-      logEvent({ service: 'lythaus-admin-api', correlationId: id, errorCode: code, route: new URL(request.url).pathname });
-      const unauthorized = ['access_required', 'access_assertion_invalid', 'access_subject_missing', 'access_verification_not_configured', 'admin_role_required', 'admin_subject_key_not_configured'].includes(code);
-      return json({ error: code, correlationId: id }, { status: unauthorized ? 401 : 400 });
+      const classified = adminError(error);
+      logEvent({
+        service: 'lythaus-admin-api',
+        correlationId: id,
+        errorCode: classified.exposedCode,
+        internalErrorCode: classified.internalCode,
+        route: new URL(request.url).pathname,
+      });
+      return json(
+        { error: classified.exposedCode, correlationId: id },
+        { status: classified.status, headers: { 'cache-control': 'private, no-store', 'x-correlation-id': id } },
+      );
     }
   },
 };

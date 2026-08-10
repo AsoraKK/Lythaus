@@ -152,10 +152,10 @@ void main() {
       expect(copy.contentType, 'image');
     });
 
-    test('overrides aiLabel', () {
+    test('overrides aiLabel with an allowed public disclosure', () {
       const s = PostCreationState();
-      final copy = s.copyWith(aiLabel: 'generated');
-      expect(copy.aiLabel, 'generated');
+      final copy = s.copyWith(aiLabel: 'assisted');
+      expect(copy.aiLabel, 'assisted');
     });
 
     test('overrides proofSignals', () {

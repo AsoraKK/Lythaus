@@ -104,6 +104,18 @@ void main() {
   });
 
   group('Subscription models', () {
+    test('parses the current server-issued feed entitlement payload', () {
+      final status = SubscriptionStatus.fromJson({
+        'tier': 'black',
+        'entitlements': {'maxCustomFeeds': 3, 'newsBoardAccess': 'full'},
+      });
+
+      expect(status.tier, 'black');
+      expect(status.entitlements.maxCustomFeeds, 3);
+      expect(status.entitlements.newsBoardAccessLevel, 'full');
+      expect(status.entitlements.newsBoardPreview, isFalse);
+    });
+
     test('SubscriptionStatus.fromJson parses and identifies expiry', () {
       final status = SubscriptionStatus.fromJson({
         'userId': 'u1',

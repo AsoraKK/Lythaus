@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "lythaus-critical-production-coverage-v1",
+  "minimums": {
+    "lines": 80,
+    "branches": 80
+  },
+  "modules": [
+    {
+      "id": "worker-security-primitives",
+      "priority": "P1",
+      "sources": [
+        "packages/security/src/index.ts"
+      ],
+      "tests": [
+        "packages/security/tests/critical-security-policy.test.mjs"
+      ],
+      "rationale": "Password, PII encryption, lookup, and token utility code imported by the public Worker."
+    },
+    {
+      "id": "worker-access-token-policy",
+      "priority": "P1",
+      "sources": [
+        "packages/security/src/jwt.ts"
+      ],
+      "tests": [
+        "packages/security/tests/critical-security-policy.test.mjs"
+      ],
+      "rationale": "Access-token signing and verification code imported by the public Worker."
+    },
+    {
+      "id": "content-declaration-publication-policy",
+      "priority": "P1",
+      "sources": [
+        "packages/contracts/src/content-policy.ts"
+      ],
+      "tests": [
+        "packages/contracts/tests/critical-content-policy.test.mjs"
+      ],
+      "rationale": "Shared public and admin declaration enforcement blocks AI-generated publication and caps AI-assisted public text."
+    },
+    {
+      "id": "content-social-feed-policy",
+      "priority": "P1",
+      "sources": [
+        "apps/lythaus-public-api/src/product-policy.ts"
+      ],
+      "tests": [
+        "apps/lythaus-public-api/tests/critical-product-policy.test.mjs"
+      ],
+      "rationale": "Public Worker feed pagination, custom-feed rules, cursor integrity, and reputation-band disclosure policy."
+    },
+    {
+      "id": "moderation-appeal-policy",
+      "priority": "P1",
+      "sources": [
+        "packages/contracts/src/appeal-policy.ts"
+      ],
+      "tests": [
+        "packages/contracts/tests/critical-domain-policy.test.mjs"
+      ],
+      "rationale": "Reviewer independence, quorum, vote validity, and appeal resolution safeguards."
+    },
+    {
+      "id": "reputation-impact-policy",
+      "priority": "P1",
+      "sources": [
+        "packages/contracts/src/reputation-policy.ts"
+      ],
+      "tests": [
+        "packages/contracts/tests/critical-domain-policy.test.mjs"
+      ],
+      "rationale": "Machine-readable reputation event rules, diminishing returns, misconduct penalties, suspension withholding, and reversals."
+    },
+    {
+      "id": "reputation-persistence-policy",
+      "priority": "P1",
+      "sources": [
+        "packages/db/src/reputation.ts"
+      ],
+      "tests": [
+        "packages/db/tests/reputation-persistence.test.mjs"
+      ],
+      "rationale": "Transactional immutable reputation event persistence, idempotency, reversal, derived balance compatibility, and deterministic profile recomputation."
+    },
+    {
+      "id": "privacy-activity-policy",
+      "priority": "P1",
+      "sources": [
+        "packages/contracts/src/activity-policy.ts"
+      ],
+      "tests": [
+        "packages/contracts/tests/critical-domain-policy.test.mjs"
+      ],
+      "rationale": "Privacy-safe audit activity construction, metadata filtering, retention, and actor visibility policy."
+    },
+    {
+      "id": "tier-entitlement-policy",
+      "priority": "P1",
+      "sources": [
+        "packages/contracts/src/tier-policy.ts"
+      ],
+      "tests": [
+        "packages/contracts/tests/critical-domain-policy.test.mjs"
+      ],
+      "rationale": "Free, Premium, and Black custom-feed and News Board entitlements plus neutral safety limits."
+    },
+    {
+      "id": "notification-input-policy",
+      "priority": "P2",
+      "sources": [
+        "apps/lythaus-public-api/src/notification-policy.ts"
+      ],
+      "tests": [
+        "apps/lythaus-public-api/tests/critical-notification-policy.test.mjs"
+      ],
+      "rationale": "Public Worker notification preference and device-registration input validation."
+    },
+    {
+      "id": "authenticity-cost-admission-policy",
+      "priority": "P2",
+      "sources": [
+        "packages/authenticity/src/cost-control.ts"
+      ],
+      "tests": [
+        "packages/authenticity/tests/critical-cost-control.test.mjs"
+      ],
+      "rationale": "Fail-closed cost admission and emergency-stop policy for authenticity processing."
+    }
+  ]
+}

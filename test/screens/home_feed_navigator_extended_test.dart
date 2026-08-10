@@ -140,7 +140,7 @@ void main() {
 
       await tester.pumpWidget(buildEmpty(AlphaFeedSection.newsBoard));
       await tester.pumpAndSettle();
-      expect(find.text('News unavailable'), findsOneWidget);
+      expect(find.text('News Board is Black-only'), findsOneWidget);
       expect(find.text('No custom feeds yet'), findsNothing);
     });
 
@@ -248,7 +248,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Discover unavailable'), findsOneWidget);
-      expect(find.text('News unavailable'), findsNothing);
+      expect(find.text('News Board is Black-only'), findsNothing);
     });
 
     testWidgets('shows and clears New posts pill on restore fallback', (

@@ -7,9 +7,17 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:built_value/json_object.dart';
 import 'package:lythaus_api_client/src/api_util.dart';
-import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/api_error.dart';
+import 'package:lythaus_api_client/src/model/notification_action_response.dart';
+import 'package:lythaus_api_client/src/model/notification_device_create.dart';
+import 'package:lythaus_api_client/src/model/notification_device_created.dart';
+import 'package:lythaus_api_client/src/model/notification_device_list.dart';
+import 'package:lythaus_api_client/src/model/notification_device_revoked.dart';
+import 'package:lythaus_api_client/src/model/notification_page.dart';
+import 'package:lythaus_api_client/src/model/notification_preference_update.dart';
+import 'package:lythaus_api_client/src/model/notification_preferences.dart';
+import 'package:lythaus_api_client/src/model/notification_unread_count.dart';
 
 class NotificationsApi {
 
@@ -19,11 +27,11 @@ class NotificationsApi {
 
   const NotificationsApi(this._dio, this._serializers);
 
-  /// Register a push device token
+  /// Register or reactivate a push device
   ///
   ///
   /// Parameters:
-  /// * [body]
+  /// * [notificationDeviceCreate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -31,10 +39,10 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationDeviceCreated] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsDevicesCreate({
-    required JsonObject body,
+  Future<Response<NotificationDeviceCreated>> notificationsDevicesCreate({
+    required NotificationDeviceCreate notificationDeviceCreate,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -65,7 +73,8 @@ class NotificationsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = body;
+      const _type = FullType(NotificationDeviceCreate);
+      _bodyData = _serializers.serialize(notificationDeviceCreate, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -88,14 +97,14 @@ class NotificationsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationDeviceCreated? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationDeviceCreated),
+      ) as NotificationDeviceCreated;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -107,7 +116,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationDeviceCreated>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -119,7 +128,7 @@ class NotificationsApi {
     );
   }
 
-  /// List registered push devices
+  /// List my push devices
   ///
   ///
   /// Parameters:
@@ -130,9 +139,9 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationDeviceList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsDevicesList({
+  Future<Response<NotificationDeviceList>> notificationsDevicesList({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -167,14 +176,14 @@ class NotificationsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationDeviceList? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationDeviceList),
+      ) as NotificationDeviceList;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -186,7 +195,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationDeviceList>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -198,12 +207,11 @@ class NotificationsApi {
     );
   }
 
-  /// Revoke a push device registration
+  /// Revoke a push device
   ///
   ///
   /// Parameters:
   /// * [id]
-  /// * [body]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -211,11 +219,10 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationDeviceRevoked] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsDevicesRevoke({
+  Future<Response<NotificationDeviceRevoked>> notificationsDevicesRevoke({
     required String id,
-    required JsonObject body,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -239,44 +246,25 @@ class NotificationsApi {
         ],
         ...?extra,
       },
-      contentType: 'application/json',
       validateStatus: validateStatus,
     );
 
-    dynamic _bodyData;
-
-    try {
-      _bodyData = body;
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
     final _response = await _dio.request<Object>(
       _path,
-      data: _bodyData,
       options: _options,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationDeviceRevoked? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationDeviceRevoked),
+      ) as NotificationDeviceRevoked;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -288,7 +276,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationDeviceRevoked>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -305,7 +293,7 @@ class NotificationsApi {
   ///
   /// Parameters:
   /// * [id]
-  /// * [body]
+  /// * [idempotencyKey] - Caller-generated replay key. Completed retries return the stored response.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -313,11 +301,11 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationActionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsDismiss({
+  Future<Response<NotificationActionResponse>> notificationsDismiss({
     required String id,
-    required JsonObject body,
+    String? idempotencyKey,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -329,6 +317,7 @@ class NotificationsApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -341,44 +330,25 @@ class NotificationsApi {
         ],
         ...?extra,
       },
-      contentType: 'application/json',
       validateStatus: validateStatus,
     );
 
-    dynamic _bodyData;
-
-    try {
-      _bodyData = body;
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
     final _response = await _dio.request<Object>(
       _path,
-      data: _bodyData,
       options: _options,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationActionResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationActionResponse),
+      ) as NotificationActionResponse;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -390,7 +360,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationActionResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -402,10 +372,12 @@ class NotificationsApi {
     );
   }
 
-  /// List notifications for the current user
+  /// List my notifications
   ///
   ///
   /// Parameters:
+  /// * [cursor] - Opaque keyset cursor returned by the preceding page.
+  /// * [limit]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -413,9 +385,11 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationPage] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsList({
+  Future<Response<NotificationPage>> notificationsList({
+    String? cursor,
+    int? limit = 25,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -442,22 +416,28 @@ class NotificationsApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationPage? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationPage),
+      ) as NotificationPage;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -469,7 +449,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationPage>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -492,9 +472,9 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationPreferences] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsPreferencesGet({
+  Future<Response<NotificationPreferences>> notificationsPreferencesGet({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -529,14 +509,14 @@ class NotificationsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationPreferences? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationPreferences),
+      ) as NotificationPreferences;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -548,7 +528,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationPreferences>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -560,11 +540,12 @@ class NotificationsApi {
     );
   }
 
-  /// Update notification preferences
+  /// Replace notification preferences
   ///
   ///
   /// Parameters:
-  /// * [body]
+  /// * [notificationPreferenceUpdate]
+  /// * [idempotencyKey] - Caller-generated replay key. Completed retries return the stored response.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -572,10 +553,11 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationPreferences] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsPreferencesUpdate({
-    required JsonObject body,
+  Future<Response<NotificationPreferences>> notificationsPreferencesReplace({
+    required NotificationPreferenceUpdate notificationPreferenceUpdate,
+    String? idempotencyKey,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -587,6 +569,7 @@ class NotificationsApi {
     final _options = Options(
       method: r'PUT',
       headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -606,7 +589,8 @@ class NotificationsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = body;
+      const _type = FullType(NotificationPreferenceUpdate);
+      _bodyData = _serializers.serialize(notificationPreferenceUpdate, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -629,14 +613,14 @@ class NotificationsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationPreferences? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationPreferences),
+      ) as NotificationPreferences;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -648,7 +632,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationPreferences>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -660,12 +644,12 @@ class NotificationsApi {
     );
   }
 
-  /// Mark a notification as read
+  /// Partially update notification preferences
   ///
   ///
   /// Parameters:
-  /// * [id]
-  /// * [body]
+  /// * [notificationPreferenceUpdate]
+  /// * [idempotencyKey] - Caller-generated replay key. Completed retries return the stored response.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -673,11 +657,115 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationPreferences] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsRead({
+  Future<Response<NotificationPreferences>> notificationsPreferencesUpdate({
+    required NotificationPreferenceUpdate notificationPreferenceUpdate,
+    String? idempotencyKey,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/notifications/preferences';
+    final _options = Options(
+      method: r'PATCH',
+      headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(NotificationPreferenceUpdate);
+      _bodyData = _serializers.serialize(notificationPreferenceUpdate, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    NotificationPreferences? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(NotificationPreferences),
+      ) as NotificationPreferences;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<NotificationPreferences>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Mark a notification read
+  ///
+  ///
+  /// Parameters:
+  /// * [id]
+  /// * [idempotencyKey] - Caller-generated replay key. Completed retries return the stored response.
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [NotificationActionResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<NotificationActionResponse>> notificationsRead({
     required String id,
-    required JsonObject body,
+    String? idempotencyKey,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -689,6 +777,7 @@ class NotificationsApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -701,44 +790,25 @@ class NotificationsApi {
         ],
         ...?extra,
       },
-      contentType: 'application/json',
       validateStatus: validateStatus,
     );
 
-    dynamic _bodyData;
-
-    try {
-      _bodyData = body;
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
     final _response = await _dio.request<Object>(
       _path,
-      data: _bodyData,
       options: _options,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationActionResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationActionResponse),
+      ) as NotificationActionResponse;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -750,7 +820,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationActionResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -762,107 +832,7 @@ class NotificationsApi {
     );
   }
 
-  /// Send an admin-triggered notification
-  ///
-  ///
-  /// Parameters:
-  /// * [body]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsSend({
-    required JsonObject body,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/notifications/send';
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      _bodyData = body;
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    JsonObject? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<JsonObject>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// Get unread notification count
+  /// Get my unread notification count
   ///
   ///
   /// Parameters:
@@ -873,9 +843,9 @@ class NotificationsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [NotificationUnreadCount] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> notificationsUnreadCount({
+  Future<Response<NotificationUnreadCount>> notificationsUnreadCount({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -910,14 +880,14 @@ class NotificationsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    NotificationUnreadCount? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(NotificationUnreadCount),
+      ) as NotificationUnreadCount;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -929,7 +899,7 @@ class NotificationsApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<NotificationUnreadCount>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

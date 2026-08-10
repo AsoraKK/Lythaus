@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Lythaus API
-  version: v4
+  version: v5
   description: HTTP contract for the Lythaus API.
   license:
     name: MIT
@@ -18,6 +18,18 @@ tags:
     description: Authentication and invite access endpoints.
   - name: Posts
     description: Post authoring endpoints.
+  - name: Media
+    description: Quarantined image upload and review handoff endpoints.
+  - name: Activity
+    description: User-visible activity and audit timeline entries.
+  - name: Social
+    description: Follows, blocks, mutes, bookmarks, and reactions.
+  - name: CustomFeeds
+    description: Tier-limited personal feed configurations.
+  - name: Appeals
+    description: Independent reviewer appeal governance.
+  - name: Notifications
+    description: Notification delivery and preference controls.
   - name: Moderation
     description: Moderation workflows.
   - name: Admin
@@ -34,91 +46,15 @@ tags:
     description: Tier-gated rewards and redemptions.
 paths:
   /feed:
-    get:
-      operationId: getFeed
-      summary: Retrieve personalized feed items
-      description: Return a page of feed items.
-      tags:
-        - Feed
-      security:
-        - {}
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/cursorParam'
-        - $ref: '#/components/parameters/limitParam'
-      responses:
-        '200':
-          description: Feed items retrieved successfully
-          headers:
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationID'
-            Cache-Control:
-              description: Cache directive (private for authenticated, public for anonymous)
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedPageEnvelope'
-              examples:
-                authenticated:
-                  summary: Authenticated feed page
-                  value:
-                    success: true
-                    data:
-                      items:
-                        - id: 018b27d4-5b3b-73e3-bf77-bf7bb9530f21
-                          text: Hello Lythaus!
-                          authorId: usr_01HZPQ2B3C4D5E6F7G8H9JABCD
-                          createdAt: '2026-04-30T10:00:00Z'
-                      meta:
-                        count: 1
-                        nextCursor: eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0
-                    timestamp: '2026-04-30T10:00:00Z'
-        '400':
-          description: Invalid query parameters
-          headers:
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationID'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SimpleError'
-        '401':
-          description: Missing or invalid authentication
-          headers:
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationID'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-        '403':
-          description: Authenticated caller lacks required permissions
-          headers:
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationID'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForbiddenError'
-        '429':
-          description: Rate limit enforced
-          headers:
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-RateLimit-Limit:
-              $ref: '#/components/headers/XRateLimitLimit'
-            X-RateLimit-Remaining:
-              $ref: '#/components/headers/XRateLimitRemaining'
-            X-RateLimit-Reset:
-              $ref: '#/components/headers/XRateLimitReset'
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationID'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RateLimitError'
+    $ref: './product-integrity.yaml#/paths/~1feed'
+  /flags:
+    $ref: './product-integrity.yaml#/paths/~1flags'
+  /content/flags:
+    $ref: './product-integrity.yaml#/paths/~1content~1flags'
+  /media/uploads:
+    $ref: './product-integrity.yaml#/paths/~1media~1uploads'
+  /media/uploads/{uploadSessionId}/finalise:
+    $ref: './product-integrity.yaml#/paths/~1media~1uploads~1{uploadSessionId}~1finalise'
   /health:
     get:
       operationId: getHealth
@@ -875,267 +811,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /_admin/appeals:
-    get:
-      operationId: adminAppealsList
-      summary: List appeals queue
-      description: Returns appeals awaiting admin review.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: status
-          in: query
-          description: Filter by appeal status
-          required: false
-          schema:
-            type: string
-            enum:
-              - pending
-              - approved
-              - rejected
-              - overridden
-              - all
-        - name: cursor
-          in: query
-          description: Cursor for pagination
-          required: false
-          schema:
-            type: string
-        - name: limit
-          in: query
-          description: Number of items to return (1-100)
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-      responses:
-        '200':
-          description: Appeals queue response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminAppealQueueResponse'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Authenticated caller lacks required permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /_admin/appeals/{appealId}:
-    get:
-      operationId: adminAppealsGet
-      summary: Get appeal detail
-      description: Fetch appeal detail with content and decision context.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: appealId
-          in: path
-          description: Appeal identifier
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Appeal detail response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminAppealDetailResponse'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Authenticated caller lacks required permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Appeal not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /_admin/appeals/{appealId}/approve:
-    post:
-      operationId: adminAppealsApprove
-      summary: Approve an appeal
-      description: Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: appealId
-          in: path
-          description: Appeal identifier
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdminAppealDecisionRequest'
-      responses:
-        '200':
-          description: Appeal approved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminAppealDecisionResponse'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Authenticated caller lacks required permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Appeal or content not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /_admin/appeals/{appealId}/reject:
-    post:
-      operationId: adminAppealsReject
-      summary: Reject an appeal
-      description: Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: appealId
-          in: path
-          description: Appeal identifier
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdminAppealDecisionRequest'
-      responses:
-        '200':
-          description: Appeal rejected
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminAppealDecisionResponse'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Authenticated caller lacks required permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /_admin/appeals/{appealId}/override:
-    post:
-      operationId: adminAppealsOverride
-      summary: Override an appeal
-      description: Moderator override for appeal outcomes. Idempotent per appeal.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: appealId
-          in: path
-          description: Appeal identifier
-          required: true
-          schema:
-            type: string
-        - name: Idempotency-Key
-          in: header
-          description: Idempotency key for safe retries
-          required: false
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdminAppealOverrideRequest'
-      responses:
-        '200':
-          description: Appeal overridden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminAppealOverrideResponse'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Authenticated caller lacks required permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Appeal or content not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Override already processed or not allowed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
   /_admin/audit:
     get:
       operationId: adminAuditList
@@ -1826,97 +1501,7 @@ paths:
         '404':
           description: Hold not found
   /admin/users/{userId}/tier:
-    patch:
-      operationId: adminSetUserTier
-      summary: Set user subscription tier
-      description: Update the subscription tier of a specific user. Requires active admin privileges.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: userId
-          in: path
-          description: User identifier
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - tier
-                - reason
-              properties:
-                tier:
-                  type: string
-                  enum: [free, premium, black]
-                reason:
-                  type: string
-                  minLength: 5
-                  maxLength: 500
-                expiresAt:
-                  type: string
-                  format: date-time
-                  description: Required for Premium and Black Alpha grants; no more than 90 days ahead.
-                reviewAt:
-                  type: string
-                  format: date-time
-                  description: Required for Premium and Black Alpha grants; on or before expiresAt.
-      responses:
-        '200':
-          description: Tier updated
-          headers:
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationID'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminUserActionResponse'
-        '400':
-          description: Invalid tier value
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Authenticated caller lacks required permissions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '429':
-          description: Rate limit enforced
-          headers:
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
-            X-RateLimit-Limit:
-              $ref: '#/components/headers/XRateLimitLimit'
-            X-RateLimit-Remaining:
-              $ref: '#/components/headers/XRateLimitRemaining'
-            X-RateLimit-Reset:
-              $ref: '#/components/headers/XRateLimitReset'
-            X-Correlation-ID:
-              $ref: '#/components/headers/XCorrelationID'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RateLimitError'
+    $ref: './product-integrity.yaml#/paths/~1admin~1users~1{userId}~1tier'
   /auth/email:
     post:
       operationId: authEmailLogin
@@ -1986,6 +1571,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /auth/email/verify:
+    $ref: './product-integrity.yaml#/paths/~1auth~1email~1verify'
   /auth/userinfo:
     get:
       operationId: authUserInfo
@@ -2810,14 +2397,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/UnauthorizedError'
         '429':
-          description: Privacy request rate limit enforced
-          headers:
-            Retry-After:
-              $ref: '#/components/headers/RetryAfter'
+          description: 'export_cooldown_active: export requests are limited to one request per authenticated user in 30 days.'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RateLimitError'
+                $ref: './product-integrity.yaml#/components/schemas/SafetyLimitError'
+  /privacy/requests/{requestId}/export:
+    $ref: './product-integrity.yaml#/paths/~1privacy~1requests~1{requestId}~1export'
   /_admin/budget:
     get:
       operationId: adminBudgetGet
@@ -3839,131 +3425,15 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /appeals:
-    post:
-      operationId: appealsCreate
-      summary: Submit a new appeal
-      tags:
-        - Appeals
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1appeals'
   /appeals/{id}:
-    get:
-      operationId: appealsGet
-      summary: Get appeal detail
-      tags:
-        - Appeals
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /appeals/{id}/votes:
-    post:
-      operationId: appealsVote
-      summary: Cast a community vote on an appeal
-      tags:
-        - Appeals
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1appeals~1{id}'
+  /appeals/{appealId}/vote:
+    $ref: './product-integrity.yaml#/paths/~1appeals~1{appealId}~1vote'
+  /appeals/{appealId}/recuse:
+    $ref: './product-integrity.yaml#/paths/~1appeals~1{appealId}~1recuse'
+  /appeals/reviewer/assignments:
+    $ref: './product-integrity.yaml#/paths/~1appeals~1reviewer~1assignments'
   /auth/ping:
     get:
       operationId: authPing
@@ -4079,374 +3549,17 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /custom-feeds:
-    get:
-      operationId: customFeedsList
-      summary: List custom feeds for the current user
-      description: List custom feed definitions owned by the authenticated user.
-      tags:
-        - CustomFeeds
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/cursorParam'
-        - $ref: '#/components/parameters/limitParam'
-      responses:
-        '200':
-          description: Custom feed definitions.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CustomFeedListResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      operationId: customFeedsCreate
-      summary: Create a new custom feed
-      description: >
-        Create a custom feed definition. The service enforces tier limits:
-        Free users may create 1 custom feed, Premium users 2, Black users 3,
-        and Admin users 20.
-      tags:
-        - CustomFeeds
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCustomFeedRequest'
-      responses:
-        '201':
-          description: Created custom feed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CustomFeedDefinition'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden, including tier limit breach.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+    $ref: './product-integrity.yaml#/paths/~1custom-feeds'
   /custom-feeds/{id}:
-    get:
-      operationId: customFeedsGet
-      summary: Get a custom feed
-      description: Fetch a custom feed definition owned by the authenticated user.
-      tags:
-        - CustomFeeds
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Custom feed definition.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CustomFeedDefinition'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    patch:
-      operationId: customFeedsUpdate
-      summary: Update a custom feed
-      description: Update an owned custom feed's name, filters, sorting, or home flag.
-      tags:
-        - CustomFeeds
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateCustomFeedRequest'
-      responses:
-        '200':
-          description: Updated custom feed definition.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CustomFeedDefinition'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      operationId: customFeedsDelete
-      summary: Delete a custom feed
-      description: Delete an owned custom feed definition.
-      tags:
-        - CustomFeeds
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Custom feed deleted.
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1custom-feeds~1{id}'
   /custom-feeds/{id}/items:
-    get:
-      operationId: customFeedsItemsList
-      summary: List items in a custom feed
-      description: Return posts matching a custom feed's filters.
-      tags:
-        - CustomFeeds
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - $ref: '#/components/parameters/cursorParam'
-        - $ref: '#/components/parameters/limitParam'
-      responses:
-        '200':
-          description: Posts matching the custom feed definition.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CursorPaginatedPostView'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1custom-feeds~1{id}~1items'
   /feed/discover:
-    get:
-      operationId: feedDiscover
-      summary: Return discovery/explore feed
-      tags:
-        - Feed
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1feed~1discover'
   /feed/news:
-    get:
-      operationId: feedNews
-      summary: Return News Board feed
-      description: >
-        Return authenticated News Board posts. Free receives a maximum three-item
-        preview with no cursor; Premium and Black receive the full board. Admin is
-        an authorization role, not a commercial tier. Publishing remains restricted
-        to editorial contributors and approved ingestion paths.
-      tags:
-        - Feed
-      security:
-        - {}
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/cursorParam'
-        - $ref: '#/components/parameters/limitParam'
-        - name: region
-          in: query
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: News Board feed page.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NewsBoardFeedResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SimpleError'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /feed/user/{userId}:
-    get:
-      operationId: feedUser
-      summary: Return a public user's post feed
-      tags:
-        - Feed
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1feed~1news'
+  /news-board:
+    $ref: './product-integrity.yaml#/paths/~1news-board'
   /moderation/cases/{id}:
     get:
       operationId: moderationCasesGet
@@ -4642,397 +3755,19 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /notifications:
-    get:
-      operationId: notificationsList
-      summary: List notifications for the current user
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /notifications/{id}/dismiss:
-    post:
-      operationId: notificationsDismiss
-      summary: Dismiss a notification
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /notifications/{id}/read:
-    post:
-      operationId: notificationsRead
-      summary: Mark a notification as read
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /notifications/devices:
-    get:
-      operationId: notificationsDevicesList
-      summary: List registered push devices
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      operationId: notificationsDevicesCreate
-      summary: Register a push device token
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /notifications/devices/{id}/revoke:
-    post:
-      operationId: notificationsDevicesRevoke
-      summary: Revoke a push device registration
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /notifications/preferences:
-    get:
-      operationId: notificationsPreferencesGet
-      summary: Get notification preferences
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    put:
-      operationId: notificationsPreferencesUpdate
-      summary: Update notification preferences
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /notifications/send:
-    post:
-      operationId: notificationsSend
-      summary: Send an admin-triggered notification
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1notifications'
   /notifications/unread-count:
-    get:
-      operationId: notificationsUnreadCount
-      summary: Get unread notification count
-      tags:
-        - Notifications
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1notifications~1unread-count'
+  /notifications/{id}/read:
+    $ref: './product-integrity.yaml#/paths/~1notifications~1{id}~1read'
+  /notifications/{id}/dismiss:
+    $ref: './product-integrity.yaml#/paths/~1notifications~1{id}~1dismiss'
+  /notifications/preferences:
+    $ref: './product-integrity.yaml#/paths/~1notifications~1preferences'
+  /notifications/devices:
+    $ref: './product-integrity.yaml#/paths/~1notifications~1devices'
+  /notifications/devices/{id}/revoke:
+    $ref: './product-integrity.yaml#/paths/~1notifications~1devices~1{id}~1revoke'
   /payments/webhook:
     post:
       operationId: paymentsWebhook
@@ -5143,130 +3878,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Post'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /posts/{id}/bookmark:
-    get:
-      operationId: postsBookmarkGet
-      summary: Get bookmark status for a post
-      tags:
-        - Posts
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      operationId: postsBookmarkCreate
-      summary: Bookmark a post
-      tags:
-        - Posts
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      operationId: postsBookmarkDelete
-      summary: Remove a bookmark
-      tags:
-        - Posts
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
         '400':
           description: Bad request
           content:
@@ -5537,90 +4148,9 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /posts/{postId}/comments:
-    get:
-      operationId: postsCommentsList
-      summary: List comments on a post
-      tags:
-        - Posts
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      operationId: postsCommentsCreate
-      summary: Create a comment on a post
-      tags:
-        - Posts
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1posts~1{postId}~1comments'
+  /comments/{commentId}:
+    $ref: './product-integrity.yaml#/paths/~1comments~1{commentId}'
   /ready:
     get:
       operationId: ready
@@ -5693,6 +4223,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /users/me:
+    $ref: './product-integrity.yaml#/paths/~1users~1me'
   /users/{id}:
     get:
       operationId: usersGet
@@ -5733,130 +4265,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /follows:
+    $ref: './product-integrity.yaml#/paths/~1follows'
+  /follows/{followedId}:
+    $ref: './product-integrity.yaml#/paths/~1follows~1{followedId}'
+  /users/follow:
+    $ref: './product-integrity.yaml#/paths/~1users~1follow'
   /users/{id}/follow:
-    get:
-      operationId: usersFollowGet
-      summary: Get follow status for a user
-      tags:
-        - Users
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      operationId: usersFollowCreate
-      summary: Follow a user
-      tags:
-        - Users
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      operationId: usersFollowDelete
-      summary: Unfollow a user
-      tags:
-        - Users
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+    $ref: './product-integrity.yaml#/paths/~1users~1{id}~1follow'
+  /blocks:
+    $ref: './product-integrity.yaml#/paths/~1blocks'
+  /users/block:
+    $ref: './product-integrity.yaml#/paths/~1users~1block'
+  /blocks/{id}:
+    $ref: './product-integrity.yaml#/paths/~1blocks~1{id}'
+  /mutes:
+    $ref: './product-integrity.yaml#/paths/~1mutes'
+  /users/mute:
+    $ref: './product-integrity.yaml#/paths/~1users~1mute'
+  /mutes/{id}:
+    $ref: './product-integrity.yaml#/paths/~1mutes~1{id}'
+  /bookmarks:
+    $ref: './product-integrity.yaml#/paths/~1bookmarks'
+  /bookmarks/{postId}:
+    $ref: './product-integrity.yaml#/paths/~1bookmarks~1{postId}'
   /users/{id}/trust-passport:
     get:
       operationId: usersTrustPassport
@@ -5937,207 +4369,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
   /reputation/me:
-    get:
-      operationId: reputationMeGet
-      summary: Get my reputation summary
-      description: Returns the authenticated user's reputation level, band, pillar scores, and eligibility statuses. Raw formulas and internal risk scores are not returned.
-      tags: [Reputation]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Reputation summary
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReputationSummary'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedError'
+    $ref: './product-integrity.yaml#/paths/~1reputation~1me'
   /reputation/me/ledger:
-    get:
-      operationId: reputationLedgerGet
-      summary: Get my reputation ledger
-      description: Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.
-      tags: [Reputation]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: filter
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [all, positive, neutral, negative, appeal, expired]
-            default: all
-        - $ref: '#/components/parameters/cursorParam'
-        - $ref: '#/components/parameters/limitParam'
-      responses:
-        '200':
-          description: Reputation ledger page
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LedgerPage'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedError'
+    $ref: './product-integrity.yaml#/paths/~1reputation~1me~1ledger'
+  /activity:
+    $ref: './product-integrity.yaml#/paths/~1activity'
+  /users/me/activity:
+    $ref: './product-integrity.yaml#/paths/~1users~1me~1activity'
   /reputation/users/{id}:
-    get:
-      operationId: reputationUserGet
-      summary: Get public reputation view
-      tags: [Reputation]
-      security: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Public reputation view
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicReputationView'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+    $ref: './product-integrity.yaml#/paths/~1reputation~1users~1{id}'
   /reputation/user/{id}:
-    get:
-      operationId: reputationUserGetSingular
-      summary: Get public reputation view
-      tags: [Reputation]
-      security: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Public reputation view
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicReputationView'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /moderation/ledger/{entryId}/appeal:
-    post:
-      operationId: moderationLedgerAppealPost
-      summary: Appeal a reputation ledger entry
-      description: Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.
-      tags: [Reputation, Moderation]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: entryId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '202':
-          description: Appeal accepted for review
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AcceptedResponse'
-        '400':
-          description: Entry is not appealable or cannot be appealed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-        '404':
-          description: Ledger entry not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /reactions:
-    post:
-      operationId: reactionsPost
-      summary: Submit a structured reaction
-      description: Records a structured reaction and applies anti-gaming controls before deciding whether it contributes to reputation.
-      tags: [Reactions]
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubmitReactionRequest'
-      responses:
-        '201':
-          description: Reaction recorded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubmitReactionResponse'
-        '400':
-          description: Invalid reaction request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-  /reactions/{id}:
-    delete:
-      operationId: reactionsDelete
-      summary: Delete my reaction
-      tags: [Reactions]
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Reaction deleted
-        '401':
-          description: Missing or invalid authentication
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnauthorizedError'
-        '404':
-          description: Reaction not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+    $ref: './product-integrity.yaml#/paths/~1reputation~1user~1{id}'
+  /posts/{postId}/reactions:
+    $ref: './product-integrity.yaml#/paths/~1posts~1{postId}~1reactions'
   /rewards/me:
     get:
       operationId: rewardsMeGet
@@ -6197,46 +4441,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /feed/public:
-    get:
-      operationId: feedPublicGet
-      summary: Retrieve public discovery feed
-      description: Public feed surface using ranking safety filters and reputation-derived trust weighting without paid-tier boosting.
-      tags: [Feed]
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/cursorParam'
-        - $ref: '#/components/parameters/limitParam'
-        - name: includeTopics
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: excludeTopics
-          in: query
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Public feed page
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FeedPageResponse'
-        '429':
-          description: Rate limit enforced
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RateLimitError'
-
+  /admin/health:
+    $ref: './product-integrity.yaml#/paths/~1admin~1health'
+  /admin/privacy/requests:
+    $ref: './product-integrity.yaml#/paths/~1admin~1privacy~1requests'
+  /admin/moderation/cases:
+    $ref: './product-integrity.yaml#/paths/~1admin~1moderation~1cases'
+  /admin/audit:
+    $ref: './product-integrity.yaml#/paths/~1admin~1audit'
+  /admin/users/search:
+    $ref: './product-integrity.yaml#/paths/~1admin~1users~1search'
+  /admin/privacy/legal-holds:
+    $ref: './product-integrity.yaml#/paths/~1admin~1privacy~1legal-holds'
+  /admin/privacy/legal-holds/{holdId}/clear:
+    $ref: './product-integrity.yaml#/paths/~1admin~1privacy~1legal-holds~1{holdId}~1clear'
+  /admin/editorial/publications:
+    $ref: './product-integrity.yaml#/paths/~1admin~1editorial~1publications'
+  /admin/moderation/cases/{caseId}/decision:
+    $ref: './product-integrity.yaml#/paths/~1admin~1moderation~1cases~1{caseId}~1decision'
+  /admin/appeals/{appealId}/adjudications:
+    $ref: './product-integrity.yaml#/paths/~1admin~1appeals~1{appealId}~1adjudications'
+  /admin/appeals/pending-adjudication:
+    $ref: './product-integrity.yaml#/paths/~1admin~1appeals~1pending-adjudication'
+  /admin/reviewers/{reviewerId}/qualification:
+    $ref: './product-integrity.yaml#/paths/~1admin~1reviewers~1{reviewerId}~1qualification'
+  /admin/users/{userId}/status:
+    $ref: './product-integrity.yaml#/paths/~1admin~1users~1{userId}~1status'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    cloudflareAccess:
+      type: apiKey
+      in: header
+      name: CF-Access-Jwt-Assertion
+      description: Cloudflare Access JWT assertion required by the admin Worker.
   schemas:
     Error:
       type: object

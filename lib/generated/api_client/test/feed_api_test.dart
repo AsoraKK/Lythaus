@@ -7,44 +7,37 @@ void main() {
   final instance = LythausApiClient().getFeedApi();
 
   group(FeedApi, () {
-    // Return discovery/explore feed
+    // List the public discovery feed
     //
-    //Future<JsonObject> feedDiscover() async
+    // Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering.
+    //
+    //Future<DiscoveryFeedPage> feedDiscover({ String cursor, int limit }) async
     test('test feedDiscover', () async {
       // TODO
     });
 
-    // Return News Board feed
+    // List the authenticated personal feed
     //
-    // Return authenticated News Board posts. Free receives a maximum three-item preview with no cursor; Premium and Black receive the full board. Admin is an authorization role, not a commercial tier. Publishing remains restricted to editorial contributors and approved ingestion paths.
+    //Future<PersonalFeedPage> feedList({ String cursor, int limit }) async
+    test('test feedList', () async {
+      // TODO
+    });
+
+    // List the Black-tier News Board
     //
-    //Future<NewsBoardFeedResponse> feedNews({ String cursor, int limit, String region }) async
+    // This is an authenticated Black-only entitlement. Free and Premium callers receive a forbidden response; there is no preview contract.
+    //
+    //Future<NewsBoardFeedPage> feedNews({ String cursor, int limit }) async
     test('test feedNews', () async {
       // TODO
     });
 
-    // Retrieve public discovery feed
+    // List the Black-tier News Board
     //
-    // Public feed surface using ranking safety filters and reputation-derived trust weighting without paid-tier boosting.
+    // Compatibility alias for `/feed/news`. This is an authenticated Black-only entitlement.
     //
-    //Future<FeedPageResponse> feedPublicGet({ String cursor, int limit, String includeTopics, String excludeTopics }) async
-    test('test feedPublicGet', () async {
-      // TODO
-    });
-
-    // Return a public user's post feed
-    //
-    //Future<JsonObject> feedUser(String userId) async
-    test('test feedUser', () async {
-      // TODO
-    });
-
-    // Retrieve personalized feed items
-    //
-    // Return a page of feed items.
-    //
-    //Future<FeedPageEnvelope> getFeed({ String cursor, int limit }) async
-    test('test getFeed', () async {
+    //Future<NewsBoardFeedPage> newsBoardGetLegacy({ String cursor, int limit }) async
+    test('test newsBoardGetLegacy', () async {
       // TODO
     });
 

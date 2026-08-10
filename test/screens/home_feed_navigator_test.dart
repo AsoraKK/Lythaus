@@ -111,6 +111,13 @@ void main() {
         analyticsEventTrackerProvider.overrideWithValue(
           _RecordingEventTracker(),
         ),
+        feedEntitlementsProvider.overrideWith(
+          (ref) async => const FeedEntitlements(
+            tier: 'black',
+            maxCustomFeeds: 3,
+            newsBoardAccess: 'full',
+          ),
+        ),
         feedListProvider.overrideWith((ref) => feeds),
         liveFeedStateProvider.overrideWith(
           (ref, feed) => _StaticLiveFeedNotifier([
@@ -159,7 +166,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Hybrid newsroom + high reputation contributors.'),
+      find.text('Editorial coverage from earned, revocable contributors.'),
       findsOneWidget,
     );
 

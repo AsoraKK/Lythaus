@@ -8,7 +8,45 @@
 /// 📱 Platform: Flutter with Clean Architecture compliance
 library;
 
+import 'package:characters/characters.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
+
+/// The public authorship modes accepted by the current API policy.
+const Set<String> supportedPublicAuthorshipLabels = <String>{
+  'human',
+  'assisted',
+};
+
+/// The public-text limit for content disclosed as AI-assisted.
+const int aiAssistedPublicTextMaxGraphemes = 249;
+
+/// Counts user-perceived characters rather than UTF-16 code units.
+int userPerceivedCharacterCount(String value) => value.characters.length;
+
+bool isSupportedPublicAuthorshipLabel(String? value) =>
+    value != null &&
+    supportedPublicAuthorshipLabels.contains(value.trim().toLowerCase());
+
+/// Mirrors public-post policy for immediate feedback. The backend remains
+/// authoritative when the request is submitted.
+String? validatePublicPostAuthorship({
+  required String text,
+  required String? aiLabel,
+}) {
+  final normalizedLabel = aiLabel?.trim().toLowerCase();
+  if (normalizedLabel == null || normalizedLabel.isEmpty) {
+    return 'Choose an authorship disclosure before posting';
+  }
+  if (!isSupportedPublicAuthorshipLabel(normalizedLabel)) {
+    return 'AI-generated public content cannot be posted';
+  }
+  if (normalizedLabel == 'assisted' &&
+      userPerceivedCharacterCount(text) > aiAssistedPublicTextMaxGraphemes) {
+    return 'AI-assisted public text cannot exceed '
+        '$aiAssistedPublicTextMaxGraphemes user-perceived characters';
+  }
+  return null;
+}
 
 /// Result of a post creation attempt
 sealed class CreatePostResult {
@@ -82,15 +120,21 @@ class CreatePostRequest {
     this.proofSignals = const ProofSignals(),
   });
 
-  Map<String, dynamic> toJson() => {
-    'body': text,
-    'declaredCreationMode': switch (aiLabel) {
-      'assisted' => 'ai_assisted',
-      'generated' => 'ai_generated',
-      _ => 'human',
-    },
-    'geoScope': 'none',
-  };
+  Map<String, dynamic> toJson() {
+    final validationError = validatePublicPostAuthorship(
+      text: text,
+      aiLabel: aiLabel,
+    );
+    if (validationError != null) {
+      throw ArgumentError.value(aiLabel, 'aiLabel', validationError);
+    }
+
+    return {
+      'body': text,
+      'declaredCreationMode': aiLabel == 'assisted' ? 'ai_assisted' : 'human',
+      'geoScope': 'none',
+    };
+  }
 }
 
 /// Request model for editing an existing post

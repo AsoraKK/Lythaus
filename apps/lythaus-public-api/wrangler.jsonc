@@ -43,7 +43,8 @@
   ],
   "r2_buckets": [
     { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
-    { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" }
+    { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" },
+    { "binding": "PRIVATE_EXPORTS", "bucket_name": "lythaus-private-exports-dev" }
   ],
   "queues": {
     "producers": [
@@ -85,7 +86,8 @@
       "kv_namespaces": [{ "binding": "LYTHAUS_CONFIG", "id": "b02289a521bd40bd9112335a3e763b11" }],
       "r2_buckets": [
         { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
-        { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" }
+        { "binding": "MEDIA_APPROVED", "bucket_name": "lythaus-media-approved-dev" },
+        { "binding": "PRIVATE_EXPORTS", "bucket_name": "lythaus-private-exports-dev" }
       ],
       "queues": {
         "producers": [

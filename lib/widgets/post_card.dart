@@ -12,7 +12,6 @@ import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/widgets/post_actions.dart';
 import 'package:lythaus/widgets/moderation_badges.dart';
 import 'package:lythaus/widgets/appeal_dialog.dart';
-import 'package:lythaus/widgets/reputation_badge.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 
 /// LYTHAUS POST CARD WITH MODERATION INTEGRATION
@@ -86,12 +85,6 @@ class _PostCardState extends ConsumerState<PostCard> {
                               widget.post.author.displayName,
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(width: spacing.sm),
-                            // Author reputation badge
-                            ReputationBadge(
-                              score: widget.post.author.reputationScore,
-                              size: ReputationBadgeSize.small,
                             ),
                           ],
                         ),

@@ -93,10 +93,10 @@ void main() {
       expect(s2.contentType, 'video');
     });
 
-    test('sets aiLabel', () {
+    test('sets an allowed aiLabel', () {
       const s = PostCreationState();
-      final s2 = s.copyWith(aiLabel: 'generated');
-      expect(s2.aiLabel, 'generated');
+      final s2 = s.copyWith(aiLabel: 'assisted');
+      expect(s2.aiLabel, 'assisted');
     });
 
     test('sets proofSignals', () {

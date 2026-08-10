@@ -252,18 +252,26 @@ test('account deletion clears private and derived relationships while preserving
     'feed.user_inbox',
     'feed.feed_events',
     'feed.notifications',
+    'feed.notification_preferences',
+    'feed.notification_devices',
     'media.storage_ledger',
-  ]) assert.match(source, new RegExp(`DELETE FROM ${relation.replace('.', '\\\.')}`));
+    'privacy.retention_rules',
+  ]) assert.match(source, new RegExp(`DELETE FROM ${relation.replaceAll('.', '\\.')}`));
   assert.match(source, /privacy\.legal_holds WHERE subject_id = \$1 AND active/);
-  assert.doesNotMatch(source, /DELETE FROM privacy\.retention_rules/);
+  assert.match(source, /UPDATE moderation\.appeals SET statement = NULL/);
+  assert.match(source, /DELETE FROM privacy\.export_manifests/);
+  assert.match(source, /deletion_state = CASE[\s\S]*THEN 'retained'[\s\S]*ELSE 'deleted'/);
   assert.match(source, /privacy\.deletion_tombstones/);
   assert.doesNotMatch(source, /DELETE FROM privacy\.(?:requests|request_events|legal_holds|deletion_tombstones)/);
   assert.match(grants, /GRANT DELETE ON feed\.author_outbox/);
-  assert.match(grants, /GRANT SELECT \(user_id\), DELETE ON trust\.accountability_signals, trust\.reputation_balances TO lythaus_jobs/);
+  assert.match(grants, /GRANT SELECT, DELETE ON feed\.notification_preferences, feed\.notification_devices TO lythaus_jobs/);
+  assert.match(grants, /GRANT SELECT, DELETE ON trust\.accountability_signals TO lythaus_jobs/);
+  assert.match(grants, /GRANT SELECT, INSERT, UPDATE, DELETE ON trust\.reputation_balances TO lythaus_jobs/);
   assert.match(grants, /GRANT SELECT \(actor_id\), DELETE ON system\.idempotency_keys TO lythaus_jobs/);
   assert.match(grants, /social\.blocks, social\.mutes/);
   assert.match(grants, /GRANT SELECT \(user_id\), DELETE ON identity\.provider_links[\s\S]*identity\.user_region_preferences, identity\.admin_memberships TO lythaus_privacy/);
   assert.match(grants, /GRANT SELECT \(user_id\), DELETE ON editorial\.applications, editorial\.memberships TO lythaus_privacy/);
+  assert.match(grants, /GRANT DELETE ON privacy\.retention_rules, privacy\.export_manifests TO lythaus_privacy/);
 });
 
 test('public API CORS preflight uses a bodyless 204 response', () => {

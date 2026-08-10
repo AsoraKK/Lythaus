@@ -8,6 +8,7 @@ import 'package:lythaus_api_client/src/serializers.dart';
 import 'package:lythaus_api_client/src/auth/api_key_auth.dart';
 import 'package:lythaus_api_client/src/auth/basic_auth.dart';
 import 'package:lythaus_api_client/src/auth/bearer_auth.dart';
+import 'package:lythaus_api_client/src/api/activity_api.dart';
 import 'package:lythaus_api_client/src/api/admin_api.dart';
 import 'package:lythaus_api_client/src/api/analytics_api.dart';
 import 'package:lythaus_api_client/src/api/appeals_api.dart';
@@ -15,15 +16,16 @@ import 'package:lythaus_api_client/src/api/auth_api.dart';
 import 'package:lythaus_api_client/src/api/custom_feeds_api.dart';
 import 'package:lythaus_api_client/src/api/feed_api.dart';
 import 'package:lythaus_api_client/src/api/health_api.dart';
+import 'package:lythaus_api_client/src/api/media_api.dart';
 import 'package:lythaus_api_client/src/api/moderation_api.dart';
 import 'package:lythaus_api_client/src/api/notifications_api.dart';
 import 'package:lythaus_api_client/src/api/payments_api.dart';
 import 'package:lythaus_api_client/src/api/posts_api.dart';
 import 'package:lythaus_api_client/src/api/privacy_api.dart';
 import 'package:lythaus_api_client/src/api/privacy_admin_api.dart';
-import 'package:lythaus_api_client/src/api/reactions_api.dart';
 import 'package:lythaus_api_client/src/api/reputation_api.dart';
 import 'package:lythaus_api_client/src/api/rewards_api.dart';
+import 'package:lythaus_api_client/src/api/social_api.dart';
 import 'package:lythaus_api_client/src/api/subscription_api.dart';
 import 'package:lythaus_api_client/src/api/users_api.dart';
 
@@ -75,6 +77,12 @@ class LythausApiClient {
     }
   }
 
+  /// Get ActivityApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  ActivityApi getActivityApi() {
+    return ActivityApi(dio, serializers);
+  }
+
   /// Get AdminApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AdminApi getAdminApi() {
@@ -117,6 +125,12 @@ class LythausApiClient {
     return HealthApi(dio, serializers);
   }
 
+  /// Get MediaApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  MediaApi getMediaApi() {
+    return MediaApi(dio, serializers);
+  }
+
   /// Get ModerationApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   ModerationApi getModerationApi() {
@@ -153,12 +167,6 @@ class LythausApiClient {
     return PrivacyAdminApi(dio, serializers);
   }
 
-  /// Get ReactionsApi instance, base route and serializer can be overridden by a given but be careful,
-  /// by doing that all interceptors will not be executed
-  ReactionsApi getReactionsApi() {
-    return ReactionsApi(dio, serializers);
-  }
-
   /// Get ReputationApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   ReputationApi getReputationApi() {
@@ -169,6 +177,12 @@ class LythausApiClient {
   /// by doing that all interceptors will not be executed
   RewardsApi getRewardsApi() {
     return RewardsApi(dio, serializers);
+  }
+
+  /// Get SocialApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  SocialApi getSocialApi() {
+    return SocialApi(dio, serializers);
   }
 
   /// Get SubscriptionApi instance, base route and serializer can be overridden by a given but be careful,

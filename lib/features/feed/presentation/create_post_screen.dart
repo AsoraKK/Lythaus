@@ -31,10 +31,11 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   static const String _policyReminderMessage =
-      'Choose Human-authored, AI-assisted, or AI-generated before posting.\n'
-      'AI-generated posts are labeled and do not earn reputation.\n'
+      'Choose Human-authored or AI-assisted before posting.\n'
+      'AI-generated public content is not allowed.\n'
+      'AI-assisted public text is limited to 249 user-perceived characters.\n'
       'Disclosure conflicts may be placed Under review.\n'
-      'Community appeal votes are advisory; a moderator records the final decision.\n'
+      'Appeal outcomes are recorded by Lythaus.\n'
       'This is an invite-only Alpha.';
 
   final _textController = TextEditingController();
@@ -63,6 +64,17 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final state = ref.watch(postCreationProvider);
     final canCreate = ref.watch(canCreatePostProvider);
     final theme = Theme.of(context);
+    final isAssisted = state.aiLabel == 'assisted';
+    final characterCount = isAssisted
+        ? state.userPerceivedTextLength
+        : state.text.length;
+    final characterLimit = isAssisted
+        ? aiAssistedPublicTextMaxGraphemes
+        : postTextMaxLength;
+    final remainingCharacters = (characterLimit - characterCount).clamp(
+      0,
+      characterLimit,
+    );
 
     // Listen for successful post creation
     ref.listen<PostCreationState>(postCreationProvider, (previous, next) {
@@ -163,8 +175,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           hintStyle: GoogleFonts.sora(color: theme.hintColor),
                           border: InputBorder.none,
                           errorText: state.validationError,
-                          counterText:
-                              '${state.text.length}/$postTextMaxLength',
+                          counterText: isAssisted
+                              ? '$characterCount/$characterLimit '
+                                    'user-perceived characters'
+                              : '$characterCount/$characterLimit',
+                          semanticCounterText: isAssisted
+                              ? '$characterCount of $characterLimit '
+                                    'user-perceived characters used'
+                              : '$characterCount of $characterLimit '
+                                    'characters used',
                         ),
                         onChanged: (value) {
                           ref
@@ -182,7 +201,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Required. Disclosed AI-generated posts are labeled and do not earn reputation.',
+                        'Required. AI-generated public content is not allowed. '
+                        'AI-assisted public text is limited to '
+                        '$aiAssistedPublicTextMaxGraphemes user-perceived characters.',
                         style: GoogleFonts.sora(
                           fontSize: 12,
                           color: theme.colorScheme.onSurfaceVariant,
@@ -217,28 +238,22 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                       .setAiLabel('assisted')
                                 : null,
                           ),
-                          ChoiceChip(
-                            label: Text(
-                              'AI-generated',
-                              style: GoogleFonts.sora(fontSize: 12),
-                            ),
-                            selected: state.aiLabel == 'generated',
-                            onSelected: canCreate && !state.isSubmitting
-                                ? (_) => ref
-                                      .read(postCreationProvider.notifier)
-                                      .setAiLabel('generated')
-                                : null,
-                          ),
                         ],
                       ),
-                      if (state.aiLabel == 'generated')
+                      if (isAssisted)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            'This post will display AI-generated and will not earn reputation.',
+                            '$characterCount of '
+                            '$aiAssistedPublicTextMaxGraphemes user-perceived '
+                            'characters used for AI-assisted public text.',
                             style: GoogleFonts.sora(
                               fontSize: 12,
-                              color: theme.colorScheme.error,
+                              color:
+                                  characterCount >
+                                      aiAssistedPublicTextMaxGraphemes
+                                  ? theme.colorScheme.error
+                                  : theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -362,10 +377,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   children: [
                     const Spacer(),
                     Text(
-                      '${postTextMaxLength - state.text.length} characters remaining',
+                      '$remainingCharacters '
+                      '${isAssisted ? 'user-perceived characters' : 'characters'} '
+                      'remaining',
                       style: GoogleFonts.sora(
                         fontSize: 12,
-                        color: state.text.length > postTextMaxLength * 0.9
+                        color: characterCount > characterLimit * 0.9
                             ? theme.colorScheme.error
                             : theme.hintColor,
                       ),

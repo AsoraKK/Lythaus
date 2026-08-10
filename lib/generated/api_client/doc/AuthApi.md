@@ -10,6 +10,8 @@ All URIs are relative to *https://api.lythaus.co/api*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**authEmailLogin**](AuthApi.md#authemaillogin) | **POST** /auth/email | Sign in with a verified email identity
+[**authEmailVerifyGet**](AuthApi.md#authemailverifyget) | **GET** /auth/email/verify | Verify an email address with a query token
+[**authEmailVerifyPost**](AuthApi.md#authemailverifypost) | **POST** /auth/email/verify | Verify an email address with a JSON token
 [**authInviteValidate**](AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
 [**authPing**](AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
 [**authRedeemInvite**](AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
@@ -50,6 +52,92 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**EmailSessionResponse**](EmailSessionResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailVerifyGet**
+> EmailVerificationResponse authEmailVerifyGet(token)
+
+Verify an email address with a query token
+
+Consumes a single-use email-verification token and returns only a private verification state.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAuthApi();
+final String token = token_example; // String |
+
+try {
+    final response = api.authEmailVerifyGet(token);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailVerifyGet: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **token** | **String**|  |
+
+### Return type
+
+[**EmailVerificationResponse**](EmailVerificationResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authEmailVerifyPost**
+> EmailVerificationResponse authEmailVerifyPost(emailVerificationRequest)
+
+Verify an email address with a JSON token
+
+Consumes a single-use email-verification token and returns only a private verification state.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAuthApi();
+final EmailVerificationRequest emailVerificationRequest = ; // EmailVerificationRequest |
+
+try {
+    final response = api.authEmailVerifyPost(emailVerificationRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authEmailVerifyPost: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **emailVerificationRequest** | [**EmailVerificationRequest**](EmailVerificationRequest.md)|  |
+
+### Return type
+
+[**EmailVerificationResponse**](EmailVerificationResponse.md)
 
 ### Authorization
 

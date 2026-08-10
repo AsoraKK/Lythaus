@@ -12,6 +12,8 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/state/models/reputation.dart';
+import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 const _fakeUser = PublicUser(
@@ -38,6 +40,21 @@ const _otherUser = PublicUser(
   handle: '@private',
   tier: 'bronze',
   reputationScore: 12,
+);
+
+const _fakeReputationState = ReputationState(
+  userId: 'user-1',
+  level: 2,
+  levelName: 'Trusted contributor',
+  reputationStatus: 'active',
+  reputationBand: 'Constructive participation',
+  policyVersion: 'reputation-policy-v1',
+  pillars: <String, String>{
+    'constructiveParticipation': 'strong',
+    'accountability': 'strong',
+    'governance': 'developing',
+  },
+  promotionBlockers: <String>[],
 );
 
 final _fakeAuthUser = User(
@@ -145,6 +162,9 @@ void main() {
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             publicUserProvider('user-1').overrideWith((ref) async => _fakeUser),
             jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
           ],
           child: const MaterialApp(home: ProfileScreen()),
         ),
@@ -161,6 +181,9 @@ void main() {
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             publicUserProvider('user-1').overrideWith((ref) async => _fakeUser),
             jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
           ],
           child: const MaterialApp(home: ProfileScreen()),
         ),
@@ -181,6 +204,9 @@ void main() {
               'user-1',
             ).overrideWith((ref) async => _ownerVisibleUser),
             jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
           ],
           child: const MaterialApp(home: ProfileScreen()),
         ),
@@ -207,6 +233,9 @@ void main() {
               'user-1',
             ).overrideWith((ref) async => _ownerVisibleUser),
             jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
           ],
           child: const MaterialApp(home: ProfileScreen()),
         ),
@@ -230,6 +259,9 @@ void main() {
               'user-1',
             ).overrideWith((ref) async => _ownerVisibleUser),
             jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
           ],
           child: const MaterialApp(home: ProfileScreen()),
         ),
@@ -252,6 +284,9 @@ void main() {
               'user-1',
             ).overrideWith((ref) async => _ownerVisibleUser),
             jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
           ],
           child: const MaterialApp(home: ProfileScreen()),
         ),

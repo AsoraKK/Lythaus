@@ -16,6 +16,15 @@ void main() {
       // TODO
     });
 
+    // Download my completed privacy export
+    //
+    // Streams the authenticated subject's unexpired completed export as a private JSON attachment. The success payload is the export file itself, not an API envelope. Access is recorded as the `privacy.export_accessed` activity event.
+    //
+    //Future<BuiltMap<String, JsonObject>> privacyRequestExportDownload(String requestId) async
+    test('test privacyRequestExportDownload', () async {
+      // TODO
+    });
+
     // Get the latest privacy request status
     //
     // Returns the authenticated user's latest matching asynchronous privacy request.

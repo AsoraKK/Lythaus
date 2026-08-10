@@ -425,6 +425,15 @@ void main() {
       final result = await service.getTrendingFeed();
       expect(result.posts, isEmpty);
     });
+
+    test('throws when a successful payload is not a map', () async {
+      adapter.respondWith({'success': true, 'data': 'invalid'});
+
+      expect(
+        () => service.getTrendingFeed(),
+        throwsA(isA<SocialFeedException>()),
+      );
+    });
   });
 
   group('getLocalFeed', () {

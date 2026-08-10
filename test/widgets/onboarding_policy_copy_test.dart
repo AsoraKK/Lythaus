@@ -6,10 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const policyLines = [
-    'Choose an authorship disclosure before posting.',
-    'AI-generated posts are labeled and do not earn reputation.',
+    'Choose Human-authored or AI-assisted before posting.',
+    'AI-generated public content cannot be posted.',
+    'AI-assisted public text is limited to 249 user-perceived characters.',
     'Disclosure conflicts may enter Under review.',
-    'Community appeal votes are advisory; moderators make final decisions.',
+    'Appeal outcomes are recorded by Lythaus.',
     'This is an invite-only Alpha.',
   ];
 

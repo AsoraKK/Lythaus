@@ -7,27 +7,6 @@ void main() {
   final instance = LythausApiClient().getUsersApi();
 
   group(UsersApi, () {
-    // Follow a user
-    //
-    //Future<JsonObject> usersFollowCreate(String id, JsonObject body) async
-    test('test usersFollowCreate', () async {
-      // TODO
-    });
-
-    // Unfollow a user
-    //
-    //Future<JsonObject> usersFollowDelete(String id) async
-    test('test usersFollowDelete', () async {
-      // TODO
-    });
-
-    // Get follow status for a user
-    //
-    //Future<JsonObject> usersFollowGet(String id) async
-    test('test usersFollowGet', () async {
-      // TODO
-    });
-
     // Get a public user profile
     //
     //Future<JsonObject> usersGet(String id) async

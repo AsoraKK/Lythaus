@@ -16,6 +16,24 @@ void main() {
       // TODO
     });
 
+    // Verify an email address with a query token
+    //
+    // Consumes a single-use email-verification token and returns only a private verification state.
+    //
+    //Future<EmailVerificationResponse> authEmailVerifyGet(String token) async
+    test('test authEmailVerifyGet', () async {
+      // TODO
+    });
+
+    // Verify an email address with a JSON token
+    //
+    // Consumes a single-use email-verification token and returns only a private verification state.
+    //
+    //Future<EmailVerificationResponse> authEmailVerifyPost(EmailVerificationRequest emailVerificationRequest) async
+    test('test authEmailVerifyPost', () async {
+      // TODO
+    });
+
     // Validate an invite code
     //
     // Validates an invite code without revealing status details.

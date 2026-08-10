@@ -9,12 +9,12 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**commentsDelete**](PostsApi.md#commentsdelete) | **DELETE** /comments/{commentId} | Delete my comment
+[**commentsReplace**](PostsApi.md#commentsreplace) | **PUT** /comments/{commentId} | Replace my comment body
+[**commentsUpdate**](PostsApi.md#commentsupdate) | **PATCH** /comments/{commentId} | Partially update my comment body
 [**createPost**](PostsApi.md#createpost) | **POST** /post | Create a new post
-[**postsBookmarkCreate**](PostsApi.md#postsbookmarkcreate) | **POST** /posts/{id}/bookmark | Bookmark a post
-[**postsBookmarkDelete**](PostsApi.md#postsbookmarkdelete) | **DELETE** /posts/{id}/bookmark | Remove a bookmark
-[**postsBookmarkGet**](PostsApi.md#postsbookmarkget) | **GET** /posts/{id}/bookmark | Get bookmark status for a post
-[**postsCommentsCreate**](PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Create a comment on a post
-[**postsCommentsList**](PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List comments on a post
+[**postsCommentsCreate**](PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Submit a comment or one-level reply
+[**postsCommentsList**](PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List publicly visible comments
 [**postsCreate**](PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
 [**postsGet**](PostsApi.md#postsget) | **GET** /posts/{id} | Get a post by ID
 [**postsInsights**](PostsApi.md#postsinsights) | **GET** /posts/{id}/insights | Get engagement insights for a post
@@ -25,6 +25,139 @@ Method | HTTP request | Description
 [**postsUpdate**](PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
 [**postsView**](PostsApi.md#postsview) | **POST** /posts/{id}/view | Record a post view event
 
+
+# **commentsDelete**
+> CommentDeleteResponse commentsDelete(commentId, idempotencyKey)
+
+Delete my comment
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPostsApi();
+final String commentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+
+try {
+    final response = api.commentsDelete(commentId, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PostsApi->commentsDelete: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **commentId** | **String**|  |
+ **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+
+### Return type
+
+[**CommentDeleteResponse**](CommentDeleteResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **commentsReplace**
+> CommentUpdateResponse commentsReplace(commentId, commentUpdateRequest, idempotencyKey)
+
+Replace my comment body
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPostsApi();
+final String commentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommentUpdateRequest commentUpdateRequest = ; // CommentUpdateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+
+try {
+    final response = api.commentsReplace(commentId, commentUpdateRequest, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PostsApi->commentsReplace: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **commentId** | **String**|  |
+ **commentUpdateRequest** | [**CommentUpdateRequest**](CommentUpdateRequest.md)|  |
+ **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+
+### Return type
+
+[**CommentUpdateResponse**](CommentUpdateResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **commentsUpdate**
+> CommentUpdateResponse commentsUpdate(commentId, commentUpdateRequest, idempotencyKey)
+
+Partially update my comment body
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPostsApi();
+final String commentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommentUpdateRequest commentUpdateRequest = ; // CommentUpdateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+
+try {
+    final response = api.commentsUpdate(commentId, commentUpdateRequest, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PostsApi->commentsUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **commentId** | **String**|  |
+ **commentUpdateRequest** | [**CommentUpdateRequest**](CommentUpdateRequest.md)|  |
+ **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+
+### Return type
+
+[**CommentUpdateResponse**](CommentUpdateResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **createPost**
 > LegacyCreatePostResponse createPost(createPostRequest)
@@ -69,146 +202,24 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **postsBookmarkCreate**
-> JsonObject postsBookmarkCreate(id, body)
-
-Bookmark a post
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.postsBookmarkCreate(id, body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsBookmarkCreate: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **postsBookmarkDelete**
-> JsonObject postsBookmarkDelete(id)
-
-Remove a bookmark
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-
-try {
-    final response = api.postsBookmarkDelete(id);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsBookmarkDelete: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **postsBookmarkGet**
-> JsonObject postsBookmarkGet(id)
-
-Get bookmark status for a post
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-
-try {
-    final response = api.postsBookmarkGet(id);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsBookmarkGet: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **postsCommentsCreate**
-> JsonObject postsCommentsCreate(postId, body)
+> CommentSubmission postsCommentsCreate(postId, commentCreateRequest, idempotencyKey)
 
-Create a comment on a post
+Submit a comment or one-level reply
+
+A submission is recorded as under review; it is not immediately published to public comment listings.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final String postId = postId_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommentCreateRequest commentCreateRequest = ; // CommentCreateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
 
 try {
-    final response = api.postsCommentsCreate(postId, body);
+    final response = api.postsCommentsCreate(postId, commentCreateRequest, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsCommentsCreate: $e\n');
@@ -220,11 +231,12 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **String**|  |
- **body** | **JsonObject**|  |
+ **commentCreateRequest** | [**CommentCreateRequest**](CommentCreateRequest.md)|  |
+ **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CommentSubmission**](CommentSubmission.md)
 
 ### Authorization
 
@@ -238,19 +250,23 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **postsCommentsList**
-> JsonObject postsCommentsList(postId)
+> CommentPage postsCommentsList(postId, cursor, limit)
 
-List comments on a post
+List publicly visible comments
+
+Only allowed comments are returned. Anonymous callers may read public posts; authenticated callers additionally receive relationship filtering.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final String postId = postId_example; // String |
+final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
 
 try {
-    final response = api.postsCommentsList(postId);
+    final response = api.postsCommentsList(postId, cursor, limit);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsCommentsList: $e\n');
@@ -262,10 +278,12 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **String**|  |
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CommentPage**](CommentPage.md)
 
 ### Authorization
 

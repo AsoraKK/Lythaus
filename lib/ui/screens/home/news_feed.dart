@@ -5,10 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/design_system/components/lyth_empty_state.dart';
 import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/news_card.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
-import 'package:lythaus/features/auth/application/auth_providers.dart';
-import 'package:lythaus/features/auth/domain/subscription_tier.dart';
 
 class NewsFeed extends ConsumerWidget {
   const NewsFeed({
@@ -42,11 +41,39 @@ class NewsFeed extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tier = ref.watch(currentUserProvider)?.subscriptionTier;
-    final isPreview =
-        tier == null ||
-        tier == SubscriptionTier.guest ||
-        tier == SubscriptionTier.free;
+    final entitlements = ref.watch(feedEntitlementsProvider);
+    if (entitlements.isLoading) {
+      return Semantics(
+        liveRegion: true,
+        label: 'Checking News Board access',
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (entitlements.hasError ||
+        entitlements.valueOrNull == null ||
+        !entitlements.valueOrNull!.canAccessNewsBoard) {
+      return Semantics(
+        liveRegion: true,
+        label: 'News Board is available to Black accounts only',
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(Spacing.lg),
+            child: LythEmptyState(
+              icon: Icons.lock_outline,
+              title: 'News Board is Black-only',
+              subtitle:
+                  'News Board is available only to Black accounts. '
+                  'Your access is always confirmed by Lythaus.',
+              actionLabel: entitlements.hasError ? 'Retry' : null,
+              onAction: entitlements.hasError
+                  ? () => ref.invalidate(feedEntitlementsProvider)
+                  : null,
+            ),
+          ),
+        ),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: onRefresh ?? () async {},
       child: NotificationListener<ScrollNotification>(
@@ -73,29 +100,9 @@ class NewsFeed extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hybrid newsroom + high reputation contributors.',
+                      'Editorial coverage from earned, revocable contributors.',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
-                    if (isPreview) ...[
-                      const SizedBox(height: Spacing.sm),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(Spacing.md),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.lock_outline),
-                              const SizedBox(width: Spacing.sm),
-                              Expanded(
-                                child: Text(
-                                  'Free preview: the API limits this view to three items. Premium and Black have full News Board access. Paid billing is not connected during Alpha.',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),

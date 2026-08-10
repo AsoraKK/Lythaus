@@ -7,6 +7,7 @@ declare module 'cloudflare:workers' {
   export interface WorkflowStep {
     do<T>(name: string, callback: () => Promise<T>): Promise<T>;
     sleep(name: string, duration: string | number): Promise<void>;
+    sleepUntil(name: string, timestamp: Date | number): Promise<void>;
   }
 
   export abstract class WorkflowEntrypoint<Env, Params> {

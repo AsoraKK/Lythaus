@@ -448,7 +448,11 @@ void main() {
       );
       expect(
         ErrorMessages.forCode(ErrorCodes.aiLabelRequired),
-        contains('AI-generated'),
+        contains('AI-assisted'),
+      );
+      expect(
+        ErrorMessages.forCode(ErrorCodes.aiLabelRequired),
+        isNot(contains('AI-generated')),
       );
     });
   });

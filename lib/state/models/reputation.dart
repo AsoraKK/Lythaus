@@ -1,183 +1,179 @@
 // ignore_for_file: public_member_api_docs
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Phase 1: Reputation Level (0–5) — replaces XP-tier model
-// ─────────────────────────────────────────────────────────────────────────────
+/// Server-issued reputation and account activity models.
+///
+/// This client deliberately does not derive reputation levels, bands, or
+/// privileges from a local score or subscription tier.
+class ReputationState {
+  const ReputationState({
+    required this.userId,
+    required this.level,
+    required this.levelName,
+    required this.reputationStatus,
+    required this.reputationBand,
+    required this.policyVersion,
+    required this.pillars,
+    required this.promotionBlockers,
+    this.evaluatedAt,
+  });
 
-/// Numeric reputation level. Matches backend `ReputationLevel` enum (0–5).
-enum ReputationLevel {
-  newUser(0, 'New'),
-  verified(1, 'Verified'),
-  trusted(2, 'Trusted'),
-  established(3, 'Established'),
-  credible(4, 'Credible'),
-  highlyCredible(5, 'Highly Credible');
+  final String userId;
+  final int level;
+  final String levelName;
+  final String reputationStatus;
+  final String reputationBand;
+  final String policyVersion;
+  final Map<String, String> pillars;
+  final List<String> promotionBlockers;
+  final DateTime? evaluatedAt;
 
-  const ReputationLevel(this.value, this.displayName);
-  final int value;
-  final String displayName;
-}
-
-/// Compute a [ReputationLevel] from a raw score using default thresholds.
-/// Thresholds: [0, 10, 50, 200, 500, 1000]
-ReputationLevel computeLevelFromScore(int rawScore) {
-  const thresholds = [0, 10, 50, 200, 500, 1000];
-  var level = 0;
-  for (var i = 1; i < thresholds.length; i++) {
-    if (rawScore >= thresholds[i]) {
-      level = i;
-    }
+  factory ReputationState.fromJson(Map<String, dynamic> json) {
+    final level =
+        int.tryParse(
+          (json['level'] ?? json['reputationLevel'] ?? 0).toString(),
+        ) ??
+        0;
+    final rawPillars = json['pillars'];
+    return ReputationState(
+      userId: json['userId']?.toString() ?? '',
+      level: level,
+      levelName: json['levelName']?.toString() ?? 'Level $level',
+      reputationStatus: json['reputationStatus']?.toString() ?? 'active',
+      reputationBand: json['reputationBand']?.toString() ?? 'Unspecified',
+      policyVersion: json['policyVersion']?.toString() ?? 'unknown',
+      pillars: rawPillars is Map
+          ? Map<String, String>.fromEntries(
+              rawPillars.entries.map(
+                (entry) =>
+                    MapEntry(entry.key.toString(), entry.value.toString()),
+              ),
+            )
+          : const <String, String>{},
+      promotionBlockers: _stringList(json['promotionBlockers']),
+      evaluatedAt: _parseDate(json['evaluatedAt']),
+    );
   }
-  return ReputationLevel.values.firstWhere(
-    (l) => l.value == level,
-    orElse: () => ReputationLevel.newUser,
-  );
 }
 
-/// Display-friendly level name (same as [ReputationLevel.displayName]).
-String levelDisplayName(ReputationLevel level) => level.displayName;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Ledger Entry (user-visible, internal fields stripped)
-// ─────────────────────────────────────────────────────────────────────────────
-
+/// A reputation ledger record returned by `/api/reputation/me/ledger`.
 class LedgerEntry {
   const LedgerEntry({
     required this.id,
-    required this.userId,
     required this.eventType,
-    required this.eventCategory,
     required this.pillar,
-    required this.publicLabel,
-    required this.impactBand,
-    required this.visibility,
-    required this.appealable,
+    required this.impact,
     required this.status,
+    required this.explanationCode,
+    required this.policyVersion,
+    required this.effectiveAt,
     required this.createdAt,
-    this.relatedContentId,
-    this.relatedModerationDecisionId,
-    this.appealStatus,
-    this.decaysAt,
+    this.contentId,
+    this.appealId,
   });
 
   final String id;
-  final String userId;
   final String eventType;
-  final String eventCategory;
   final String pillar;
-  final String publicLabel;
-  final String impactBand;
-  final String visibility;
-  final bool appealable;
+  final String impact;
   final String status;
+  final String explanationCode;
+  final String policyVersion;
+  final DateTime? effectiveAt;
   final DateTime createdAt;
-  final String? relatedContentId;
-  final String? relatedModerationDecisionId;
-  final String? appealStatus;
-  final DateTime? decaysAt;
+  final String? contentId;
+  final String? appealId;
 
   factory LedgerEntry.fromJson(Map<String, dynamic> json) {
     return LedgerEntry(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      eventType: json['eventType'] as String,
-      eventCategory: json['eventCategory'] as String,
-      pillar: json['pillar'] as String,
-      publicLabel: json['publicLabel'] as String,
-      impactBand: json['impactBand'] as String,
-      visibility: json['visibility'] as String,
-      appealable: json['appealable'] as bool? ?? false,
-      status: json['status'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      relatedContentId: json['relatedContentId'] as String?,
-      relatedModerationDecisionId:
-          json['relatedModerationDecisionId'] as String?,
-      appealStatus: json['appealStatus'] as String?,
-      decaysAt: json['decaysAt'] != null
-          ? DateTime.parse(json['decaysAt'] as String)
-          : null,
+      id: json['id']?.toString() ?? '',
+      eventType: json['eventType']?.toString() ?? 'unknown_event',
+      pillar: json['pillar']?.toString() ?? 'unknown',
+      impact: json['impact']?.toString() ?? '0',
+      status: json['status']?.toString() ?? 'active',
+      explanationCode: json['explanationCode']?.toString() ?? 'unavailable',
+      policyVersion: json['policyVersion']?.toString() ?? 'unknown',
+      effectiveAt: _parseDate(json['effectiveAt']),
+      createdAt:
+          _parseDate(json['createdAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      contentId: json['contentId']?.toString(),
+      appealId: json['appealId']?.toString(),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UserReputation (updated to include level-based model alongside legacy fields)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class SubscriptionEntitlementTier {
-  final String id;
-  final String name;
-  final int minXP;
-  final List<String> privileges;
-
-  const SubscriptionEntitlementTier({
-    required this.id,
-    required this.name,
-    required this.minXP,
-    required this.privileges,
-  });
-}
-
-@Deprecated('Use SubscriptionEntitlementTier instead.')
-class ReputationTier extends SubscriptionEntitlementTier {
-  const ReputationTier({
-    required super.id,
-    required super.name,
-    required super.minXP,
-    required super.privileges,
-  });
-}
-
-class Mission {
-  final String id;
-  final String title;
-  final int xpReward;
-  final bool completed;
-
-  const Mission({
+/// A private activity record returned by `/api/activity`.
+class ActivityEntry {
+  const ActivityEntry({
     required this.id,
     required this.title,
-    required this.xpReward,
-    this.completed = false,
-  });
-}
-
-class UserReputation {
-  final int xp;
-  final SubscriptionEntitlementTier tier;
-  final List<Mission> missions;
-  final List<String> recentAchievements;
-
-  /// Phase 1: computed reputation level (0–5).
-  final ReputationLevel reputationLevel;
-
-  /// Phase 1: human-readable band / status string.
-  final String reputationBand;
-
-  const UserReputation({
-    required this.xp,
-    required this.tier,
-    this.missions = const [],
-    this.recentAchievements = const [],
-    this.reputationLevel = ReputationLevel.newUser,
-    this.reputationBand = 'New',
+    required this.explanation,
+    required this.result,
+    required this.reasonCode,
+    required this.policyVersion,
+    required this.objectType,
+    required this.appealable,
+    required this.createdAt,
+    this.objectId,
+    this.reputationEffect,
+    this.retentionClass,
+    this.metadata = const <String, dynamic>{},
   });
 
-  UserReputation copyWith({
-    int? xp,
-    SubscriptionEntitlementTier? tier,
-    List<Mission>? missions,
-    List<String>? recentAchievements,
-    ReputationLevel? reputationLevel,
-    String? reputationBand,
-  }) {
-    return UserReputation(
-      xp: xp ?? this.xp,
-      tier: tier ?? this.tier,
-      missions: missions ?? this.missions,
-      recentAchievements: recentAchievements ?? this.recentAchievements,
-      reputationLevel: reputationLevel ?? this.reputationLevel,
-      reputationBand: reputationBand ?? this.reputationBand,
+  final String id;
+  final String title;
+  final String explanation;
+  final String result;
+  final String reasonCode;
+  final String policyVersion;
+  final String objectType;
+  final bool appealable;
+  final DateTime createdAt;
+  final String? objectId;
+  final String? reputationEffect;
+  final String? retentionClass;
+  final Map<String, dynamic> metadata;
+
+  factory ActivityEntry.fromJson(Map<String, dynamic> json) {
+    final rawMetadata = json['metadata'];
+    return ActivityEntry(
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Account activity',
+      explanation: json['explanation']?.toString() ?? '',
+      result: json['result']?.toString() ?? 'recorded',
+      reasonCode: json['reasonCode']?.toString() ?? 'unavailable',
+      policyVersion: json['policyVersion']?.toString() ?? 'unknown',
+      objectType: json['objectType']?.toString() ?? 'account',
+      objectId: json['objectId']?.toString(),
+      reputationEffect: json['reputationEffect']?.toString(),
+      appealable: json['appealable'] as bool? ?? false,
+      retentionClass: json['retentionClass']?.toString(),
+      metadata: rawMetadata is Map
+          ? Map<String, dynamic>.from(rawMetadata)
+          : const <String, dynamic>{},
+      createdAt:
+          _parseDate(json['createdAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
     );
   }
 }
+
+/// A cursor page returned by a private activity endpoint.
+class CursorPage<T> {
+  const CursorPage({required this.items, this.nextCursor});
+
+  final List<T> items;
+  final String? nextCursor;
+
+  bool get hasMore => nextCursor != null && nextCursor!.isNotEmpty;
+}
+
+List<String> _stringList(Object? value) {
+  if (value is! List) {
+    return const <String>[];
+  }
+  return value.map((entry) => entry.toString()).toList();
+}
+
+DateTime? _parseDate(Object? value) =>
+    value == null ? null : DateTime.tryParse(value.toString());

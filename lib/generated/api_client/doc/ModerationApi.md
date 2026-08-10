@@ -9,12 +9,13 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**contentFlagsCreate**](ModerationApi.md#contentflagscreate) | **POST** /content/flags | Submit a moderation flag
 [**flagContent**](ModerationApi.md#flagcontent) | **POST** /moderation/flag | Flag content for moderation review
 [**flagContentV1**](ModerationApi.md#flagcontentv1) | **POST** /moderation/flag-content | Flag content for moderation review (v1 route)
+[**flagsCreate**](ModerationApi.md#flagscreate) | **POST** /flags | Submit a moderation flag
 [**getMyAppeals**](ModerationApi.md#getmyappeals) | **GET** /moderation/my-appeals | List the authenticated user&#39;s moderation appeals
 [**moderationCasesDecision**](ModerationApi.md#moderationcasesdecision) | **POST** /moderation/cases/{id}/decision | Record a decision on a moderation case
 [**moderationCasesGet**](ModerationApi.md#moderationcasesget) | **GET** /moderation/cases/{id} | Get moderation case detail
-[**moderationLedgerAppealPost**](ModerationApi.md#moderationledgerappealpost) | **POST** /moderation/ledger/{entryId}/appeal | Appeal a reputation ledger entry
 [**moderationQueueList**](ModerationApi.md#moderationqueuelist) | **GET** /moderation/queue | List moderation queue items
 [**moderationReviewQueueList**](ModerationApi.md#moderationreviewqueuelist) | **GET** /moderation/review-queue | List items in the review queue
 [**moderationTest**](ModerationApi.md#moderationtest) | **POST** /moderation/test | Submit content to moderation pipeline for testing
@@ -24,6 +25,51 @@ Method | HTTP request | Description
 [**voteOnAppealV1**](ModerationApi.md#voteonappealv1) | **POST** /moderation/vote-appeal | Cast a community vote on an appeal (v1 route)
 [**voteOnModerationAppeal**](ModerationApi.md#voteonmoderationappeal) | **POST** /moderation/appeals/{appealId}/vote | Cast a community vote on an appeal
 
+
+# **contentFlagsCreate**
+> FlagCreateResponse contentFlagsCreate(flagCreateRequest, idempotencyKey)
+
+Submit a moderation flag
+
+Equivalent flag submission route for content-focused clients.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getModerationApi();
+final FlagCreateRequest flagCreateRequest = ; // FlagCreateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+
+try {
+    final response = api.contentFlagsCreate(flagCreateRequest, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->contentFlagsCreate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **flagCreateRequest** | [**FlagCreateRequest**](FlagCreateRequest.md)|  |
+ **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+
+### Return type
+
+[**FlagCreateResponse**](FlagCreateResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **flagContent**
 > FlagContent202Response flagContent(flagContentRequest)
@@ -99,6 +145,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**FlagContentV1202Response**](FlagContentV1202Response.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **flagsCreate**
+> FlagCreateResponse flagsCreate(flagCreateRequest, idempotencyKey)
+
+Submit a moderation flag
+
+Records a neutral report for moderation review. Flags are evidence, not a public finding.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getModerationApi();
+final FlagCreateRequest flagCreateRequest = ; // FlagCreateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+
+try {
+    final response = api.flagsCreate(flagCreateRequest, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling ModerationApi->flagsCreate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **flagCreateRequest** | [**FlagCreateRequest**](FlagCreateRequest.md)|  |
+ **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+
+### Return type
+
+[**FlagCreateResponse**](FlagCreateResponse.md)
 
 ### Authorization
 
@@ -228,49 +319,6 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **moderationLedgerAppealPost**
-> AcceptedResponse moderationLedgerAppealPost(entryId)
-
-Appeal a reputation ledger entry
-
-Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getModerationApi();
-final String entryId = entryId_example; // String |
-
-try {
-    final response = api.moderationLedgerAppealPost(entryId);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling ModerationApi->moderationLedgerAppealPost: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **entryId** | **String**|  |
-
-### Return type
-
-[**AcceptedResponse**](AcceptedResponse.md)
 
 ### Authorization
 

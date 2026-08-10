@@ -86,7 +86,12 @@ export interface R2Bucket {
   head(key: string): Promise<R2ObjectLike | null>;
   get(key: string): Promise<R2ObjectBody | null>;
   put(key: string, value: ReadableStream | ArrayBuffer | Uint8Array, options?: Record<string, unknown>): Promise<R2ObjectLike>;
-  delete(key: string): Promise<void>;
+  delete(keys: string | string[]): Promise<void>;
+  list(options?: { prefix?: string; cursor?: string; limit?: number }): Promise<{
+    objects: R2ObjectLike[];
+    truncated: boolean;
+    cursor?: string;
+  }>;
 }
 
 export interface R2ObjectBody extends R2ObjectLike {

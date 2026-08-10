@@ -7,6 +7,15 @@ void main() {
   final instance = LythausApiClient().getModerationApi();
 
   group(ModerationApi, () {
+    // Submit a moderation flag
+    //
+    // Equivalent flag submission route for content-focused clients.
+    //
+    //Future<FlagCreateResponse> contentFlagsCreate(FlagCreateRequest flagCreateRequest, { String idempotencyKey }) async
+    test('test contentFlagsCreate', () async {
+      // TODO
+    });
+
     // Flag content for moderation review
     //
     // Flag content for review.
@@ -22,6 +31,15 @@ void main() {
     //
     //Future<FlagContentV1202Response> flagContentV1(FlagContentV1Request flagContentV1Request) async
     test('test flagContentV1', () async {
+      // TODO
+    });
+
+    // Submit a moderation flag
+    //
+    // Records a neutral report for moderation review. Flags are evidence, not a public finding.
+    //
+    //Future<FlagCreateResponse> flagsCreate(FlagCreateRequest flagCreateRequest, { String idempotencyKey }) async
+    test('test flagsCreate', () async {
       // TODO
     });
 
@@ -45,15 +63,6 @@ void main() {
     //
     //Future<JsonObject> moderationCasesGet(String id) async
     test('test moderationCasesGet', () async {
-      // TODO
-    });
-
-    // Appeal a reputation ledger entry
-    //
-    // Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.
-    //
-    //Future<AcceptedResponse> moderationLedgerAppealPost(String entryId) async
-    test('test moderationLedgerAppealPost', () async {
       // TODO
     });
 

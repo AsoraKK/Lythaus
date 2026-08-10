@@ -9,11 +9,8 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**adminAppealsApprove**](AdminApi.md#adminappealsapprove) | **POST** /_admin/appeals/{appealId}/approve | Approve an appeal
-[**adminAppealsGet**](AdminApi.md#adminappealsget) | **GET** /_admin/appeals/{appealId} | Get appeal detail
-[**adminAppealsList**](AdminApi.md#adminappealslist) | **GET** /_admin/appeals | List appeals queue
-[**adminAppealsOverride**](AdminApi.md#adminappealsoverride) | **POST** /_admin/appeals/{appealId}/override | Override an appeal
-[**adminAppealsReject**](AdminApi.md#adminappealsreject) | **POST** /_admin/appeals/{appealId}/reject | Reject an appeal
+[**adminAppealsAdjudicate**](AdminApi.md#adminappealsadjudicate) | **POST** /admin/appeals/{appealId}/adjudications | Record a trained editorial appeal adjudication
+[**adminAppealsPendingAdjudicationList**](AdminApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [**adminAuditList**](AdminApi.md#adminauditlist) | **GET** /_admin/audit | List admin audit log entries
 [**adminBudgetGet**](AdminApi.md#adminbudgetget) | **GET** /_admin/budget | Get budget configuration
 [**adminBudgetUpdate**](AdminApi.md#adminbudgetupdate) | **PUT** /_admin/budget | Update budget configuration
@@ -33,49 +30,66 @@ Method | HTTP request | Description
 [**adminDsrRetry**](AdminApi.md#admindsrretry) | **POST** /_admin/dsr/{id}/retry | Retry a failed data subject request
 [**adminDsrReviewA**](AdminApi.md#admindsrreviewa) | **POST** /_admin/dsr/{id}/reviewA | First-reviewer decision on DSR
 [**adminDsrReviewB**](AdminApi.md#admindsrreviewb) | **POST** /_admin/dsr/{id}/reviewB | Second-reviewer decision on DSR
+[**adminEditorialPublicationsCreate**](AdminApi.md#admineditorialpublicationscreate) | **POST** /admin/editorial/publications | Publish an editorial News Board entry
 [**adminFlagsGet**](AdminApi.md#adminflagsget) | **GET** /_admin/flags/{flagId} | Get a flagged content detail
 [**adminFlagsList**](AdminApi.md#adminflagslist) | **GET** /_admin/flags | List flagged content queue
 [**adminFlagsResolve**](AdminApi.md#adminflagsresolve) | **POST** /_admin/flags/{flagId}/resolve | Resolve a flagged content item
+[**adminHealth**](AdminApi.md#adminhealth) | **GET** /admin/health | Check admin Worker health
 [**adminInvitesBatch**](AdminApi.md#admininvitesbatch) | **POST** /_admin/invites/batch | Batch create invite codes
 [**adminInvitesCreate**](AdminApi.md#admininvitescreate) | **POST** /_admin/invites | Create an invite code
 [**adminInvitesDelete**](AdminApi.md#admininvitesdelete) | **DELETE** /_admin/invites/{inviteId} | Revoke an Alpha invite
 [**adminInvitesGet**](AdminApi.md#admininvitesget) | **GET** /_admin/invites/{inviteId} | Get an Alpha invite
 [**adminInvitesList**](AdminApi.md#admininviteslist) | **GET** /_admin/invites | List Alpha invites
 [**adminInvitesRevoke**](AdminApi.md#admininvitesrevoke) | **POST** /_admin/invites/{inviteId}/revoke | Revoke an invite code
+[**adminLegalHoldsClear**](AdminApi.md#adminlegalholdsclear) | **POST** /admin/privacy/legal-holds/{holdId}/clear | Clear a legal hold
+[**adminLegalHoldsCreate**](AdminApi.md#adminlegalholdscreate) | **POST** /admin/privacy/legal-holds | Place a legal hold
+[**adminLegalHoldsList**](AdminApi.md#adminlegalholdslist) | **GET** /admin/privacy/legal-holds | List active and released legal holds
+[**adminModerationCasesList**](AdminApi.md#adminmoderationcaseslist) | **GET** /admin/moderation/cases | List moderation cases
 [**adminModerationClassReset**](AdminApi.md#adminmoderationclassreset) | **POST** /admin/moderation-classes/{className}/reset | Reset a moderation class to defaults
 [**adminModerationClassesList**](AdminApi.md#adminmoderationclasseslist) | **GET** /admin/moderation-classes | List moderation label classes
+[**adminModerationDecision**](AdminApi.md#adminmoderationdecision) | **POST** /admin/moderation/cases/{caseId}/decision | Apply a moderation decision
 [**adminModerationWeightsUpdate**](AdminApi.md#adminmoderationweightsupdate) | **POST** /admin/moderation-classes/weights | Bulk-update moderation class weights
 [**adminNewsIngest**](AdminApi.md#adminnewsingest) | **POST** /_admin/news/ingest | Ingest news items into the news board
 [**adminOpsMetrics**](AdminApi.md#adminopsmetrics) | **GET** /_admin/ops/metrics | Get operational metrics
 [**adminOpsStateGet**](AdminApi.md#adminopsstateget) | **GET** /_admin/ops/state | Get operational state flags
 [**adminOpsStateUpdate**](AdminApi.md#adminopsstateupdate) | **PUT** /_admin/ops/state | Update operational state flags
-[**adminSetUserTier**](AdminApi.md#adminsetusertier) | **PATCH** /admin/users/{userId}/tier | Set user subscription tier
+[**adminPrivacyRequestsList**](AdminApi.md#adminprivacyrequestslist) | **GET** /admin/privacy/requests | List privacy requests
+[**adminReviewerQualificationCreate**](AdminApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
+[**adminReviewerQualificationUpdate**](AdminApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
 [**adminTestDataPurge**](AdminApi.md#admintestdatapurge) | **POST** /admin/test-data/purge | Purge test data outside production
 [**adminUsersDisable**](AdminApi.md#adminusersdisable) | **POST** /_admin/users/{userId}/disable | Disable a user
 [**adminUsersEnable**](AdminApi.md#adminusersenable) | **POST** /_admin/users/{userId}/enable | Enable a user
 [**adminUsersSearch**](AdminApi.md#adminuserssearch) | **GET** /_admin/users/search | Search users
+[**adminUsersStatusUpdate**](AdminApi.md#adminusersstatusupdate) | **POST** /admin/users/{userId}/status | Update account status
+[**adminUsersTierUpdate**](AdminApi.md#adminuserstierupdate) | **POST** /admin/users/{userId}/tier | Update subscription tier
+[**productIntegrityAdminAuditList**](AdminApi.md#productintegrityadminauditlist) | **GET** /admin/audit | List admin audit events
+[**productIntegrityAdminUsersSearch**](AdminApi.md#productintegrityadminuserssearch) | **GET** /admin/users/search | Search users
 
 
-# **adminAppealsApprove**
-> AdminAppealDecisionResponse adminAppealsApprove(appealId, adminAppealDecisionRequest)
+# **adminAppealsAdjudicate**
+> AppealAdjudicationResponse adminAppealsAdjudicate(appealId, appealAdjudicationRequest)
 
-Approve an appeal
+Record a trained editorial appeal adjudication
 
-Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.
+This never auto-resolves an appeal. The shared governance policy evaluates the independently assigned reviewer quorum and then requires one trained adjudicator for standard risk or two for high risk. The outcome is applied only when the returned status is resolved.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
-final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
+final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final AppealAdjudicationRequest appealAdjudicationRequest = ; // AppealAdjudicationRequest |
 
 try {
-    final response = api.adminAppealsApprove(appealId, adminAppealDecisionRequest);
+    final response = api.adminAppealsAdjudicate(appealId, appealAdjudicationRequest);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling AdminApi->adminAppealsApprove: $e\n');
+    print('Exception when calling AdminApi->adminAppealsAdjudicate: $e\n');
 }
 ```
 
@@ -83,16 +97,16 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier |
- **adminAppealDecisionRequest** | [**AdminAppealDecisionRequest**](AdminAppealDecisionRequest.md)|  |
+ **appealId** | **String**|  |
+ **appealAdjudicationRequest** | [**AppealAdjudicationRequest**](AppealAdjudicationRequest.md)|  |
 
 ### Return type
 
-[**AdminAppealDecisionResponse**](AdminAppealDecisionResponse.md)
+[**AppealAdjudicationResponse**](AppealAdjudicationResponse.md)
 
 ### Authorization
 
-[bearerAuth](../README.md#bearerAuth)
+[cloudflareAccess](../README.md#cloudflareAccess)
 
 ### HTTP request headers
 
@@ -101,184 +115,45 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **adminAppealsGet**
-> AdminAppealDetailResponse adminAppealsGet(appealId)
+# **adminAppealsPendingAdjudicationList**
+> PendingAppealAdjudicationList adminAppealsPendingAdjudicationList()
 
-Get appeal detail
+List pending appeal adjudications
 
-Fetch appeal detail with content and decision context.
+Editorial, administrator, and owner roles may list independent appeals awaiting adjudication. Only trained editorial adjudicators may record an adjudication.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
-final String appealId = appealId_example; // String | Appeal identifier
 
 try {
-    final response = api.adminAppealsGet(appealId);
+    final response = api.adminAppealsPendingAdjudicationList();
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling AdminApi->adminAppealsGet: $e\n');
+    print('Exception when calling AdminApi->adminAppealsPendingAdjudicationList: $e\n');
 }
 ```
 
 ### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier |
+This endpoint does not need any parameter.
 
 ### Return type
 
-[**AdminAppealDetailResponse**](AdminAppealDetailResponse.md)
+[**PendingAppealAdjudicationList**](PendingAppealAdjudicationList.md)
 
 ### Authorization
 
-[bearerAuth](../README.md#bearerAuth)
+[cloudflareAccess](../README.md#cloudflareAccess)
 
 ### HTTP request headers
 
  - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **adminAppealsList**
-> AdminAppealQueueResponse adminAppealsList(status, cursor, limit)
-
-List appeals queue
-
-Returns appeals awaiting admin review.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getAdminApi();
-final String status = status_example; // String | Filter by appeal status
-final String cursor = cursor_example; // String | Cursor for pagination
-final int limit = 56; // int | Number of items to return (1-100)
-
-try {
-    final response = api.adminAppealsList(status, cursor, limit);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->adminAppealsList: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **status** | **String**| Filter by appeal status | [optional]
- **cursor** | **String**| Cursor for pagination | [optional]
- **limit** | **int**| Number of items to return (1-100) | [optional]
-
-### Return type
-
-[**AdminAppealQueueResponse**](AdminAppealQueueResponse.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **adminAppealsOverride**
-> AdminAppealOverrideResponse adminAppealsOverride(appealId, adminAppealOverrideRequest, idempotencyKey)
-
-Override an appeal
-
-Moderator override for appeal outcomes. Idempotent per appeal.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getAdminApi();
-final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealOverrideRequest adminAppealOverrideRequest = ; // AdminAppealOverrideRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Idempotency key for safe retries
-
-try {
-    final response = api.adminAppealsOverride(appealId, adminAppealOverrideRequest, idempotencyKey);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->adminAppealsOverride: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier |
- **adminAppealOverrideRequest** | [**AdminAppealOverrideRequest**](AdminAppealOverrideRequest.md)|  |
- **idempotencyKey** | **String**| Idempotency key for safe retries | [optional]
-
-### Return type
-
-[**AdminAppealOverrideResponse**](AdminAppealOverrideResponse.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **adminAppealsReject**
-> AdminAppealDecisionResponse adminAppealsReject(appealId, adminAppealDecisionRequest)
-
-Reject an appeal
-
-Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getAdminApi();
-final String appealId = appealId_example; // String | Appeal identifier
-final AdminAppealDecisionRequest adminAppealDecisionRequest = ; // AdminAppealDecisionRequest |
-
-try {
-    final response = api.adminAppealsReject(appealId, adminAppealDecisionRequest);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->adminAppealsReject: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **appealId** | **String**| Appeal identifier |
- **adminAppealDecisionRequest** | [**AdminAppealDecisionRequest**](AdminAppealDecisionRequest.md)|  |
-
-### Return type
-
-[**AdminAppealDecisionResponse**](AdminAppealDecisionResponse.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -1068,6 +943,51 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **adminEditorialPublicationsCreate**
+> EditorialPublicationResponse adminEditorialPublicationsCreate(editorialPublicationCreate)
+
+Publish an editorial News Board entry
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final EditorialPublicationCreate editorialPublicationCreate = ; // EditorialPublicationCreate |
+
+try {
+    final response = api.adminEditorialPublicationsCreate(editorialPublicationCreate);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminEditorialPublicationsCreate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **editorialPublicationCreate** | [**EditorialPublicationCreate**](EditorialPublicationCreate.md)|  |
+
+### Return type
+
+[**EditorialPublicationResponse**](EditorialPublicationResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **adminFlagsGet**
 > AdminFlagDetailResponse adminFlagsGet(flagId)
 
@@ -1199,6 +1119,47 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminHealth**
+> AdminHealth adminHealth()
+
+Check admin Worker health
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.adminHealth();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminHealth: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AdminHealth**](AdminHealth.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -1469,6 +1430,178 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **adminLegalHoldsClear**
+> LegalHoldResponse adminLegalHoldsClear(holdId)
+
+Clear a legal hold
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String holdId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.adminLegalHoldsClear(holdId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminLegalHoldsClear: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **holdId** | **String**|  |
+
+### Return type
+
+[**LegalHoldResponse**](LegalHoldResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminLegalHoldsCreate**
+> LegalHoldResponse adminLegalHoldsCreate(legalHoldCreate)
+
+Place a legal hold
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final LegalHoldCreate legalHoldCreate = ; // LegalHoldCreate |
+
+try {
+    final response = api.adminLegalHoldsCreate(legalHoldCreate);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminLegalHoldsCreate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **legalHoldCreate** | [**LegalHoldCreate**](LegalHoldCreate.md)|  |
+
+### Return type
+
+[**LegalHoldResponse**](LegalHoldResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminLegalHoldsList**
+> AdminItems adminLegalHoldsList()
+
+List active and released legal holds
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.adminLegalHoldsList();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminLegalHoldsList: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AdminItems**](AdminItems.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationCasesList**
+> AdminItems adminModerationCasesList()
+
+List moderation cases
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.adminModerationCasesList();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationCasesList: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AdminItems**](AdminItems.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **adminModerationClassReset**
 > JsonObject adminModerationClassReset(className, body)
 
@@ -1545,6 +1678,53 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminModerationDecision**
+> ModerationDecisionResponse adminModerationDecision(caseId, moderationDecisionRequest)
+
+Apply a moderation decision
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ModerationDecisionRequest moderationDecisionRequest = ; // ModerationDecisionRequest |
+
+try {
+    final response = api.adminModerationDecision(caseId, moderationDecisionRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationDecision: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+ **moderationDecisionRequest** | [**ModerationDecisionRequest**](ModerationDecisionRequest.md)|  |
+
+### Return type
+
+[**ModerationDecisionResponse**](ModerationDecisionResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -1746,26 +1926,71 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **adminSetUserTier**
-> AdminUserActionResponse adminSetUserTier(userId, adminSetUserTierRequest)
+# **adminPrivacyRequestsList**
+> AdminItems adminPrivacyRequestsList()
 
-Set user subscription tier
-
-Update the subscription tier of a specific user. Requires active admin privileges.
+List privacy requests
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
-final String userId = userId_example; // String | User identifier
-final AdminSetUserTierRequest adminSetUserTierRequest = ; // AdminSetUserTierRequest |
 
 try {
-    final response = api.adminSetUserTier(userId, adminSetUserTierRequest);
+    final response = api.adminPrivacyRequestsList();
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling AdminApi->adminSetUserTier: $e\n');
+    print('Exception when calling AdminApi->adminPrivacyRequestsList: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AdminItems**](AdminItems.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminReviewerQualificationCreate**
+> ReviewerQualificationResponse adminReviewerQualificationCreate(reviewerId, reviewerQualificationUpdateRequest)
+
+Set reviewer qualification state
+
+Compatibility method for the idempotent qualification update. Reviewer training remains separate from reputation level.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String reviewerId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest = ; // ReviewerQualificationUpdateRequest |
+
+try {
+    final response = api.adminReviewerQualificationCreate(reviewerId, reviewerQualificationUpdateRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminReviewerQualificationCreate: $e\n');
 }
 ```
 
@@ -1773,16 +1998,63 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **String**| User identifier |
- **adminSetUserTierRequest** | [**AdminSetUserTierRequest**](AdminSetUserTierRequest.md)|  |
+ **reviewerId** | **String**|  |
+ **reviewerQualificationUpdateRequest** | [**ReviewerQualificationUpdateRequest**](ReviewerQualificationUpdateRequest.md)|  |
 
 ### Return type
 
-[**AdminUserActionResponse**](AdminUserActionResponse.md)
+[**ReviewerQualificationResponse**](ReviewerQualificationResponse.md)
 
 ### Authorization
 
-[bearerAuth](../README.md#bearerAuth)
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminReviewerQualificationUpdate**
+> ReviewerQualificationResponse adminReviewerQualificationUpdate(reviewerId, reviewerQualificationUpdateRequest)
+
+Idempotently set reviewer qualification state
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String reviewerId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest = ; // ReviewerQualificationUpdateRequest |
+
+try {
+    final response = api.adminReviewerQualificationUpdate(reviewerId, reviewerQualificationUpdateRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminReviewerQualificationUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **reviewerId** | **String**|  |
+ **reviewerQualificationUpdateRequest** | [**ReviewerQualificationUpdateRequest**](ReviewerQualificationUpdateRequest.md)|  |
+
+### Return type
+
+[**ReviewerQualificationResponse**](ReviewerQualificationResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
 
 ### HTTP request headers
 
@@ -1959,6 +2231,186 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminUsersStatusUpdate**
+> AccountStatusResponse adminUsersStatusUpdate(userId, accountStatusUpdate)
+
+Update account status
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String userId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final AccountStatusUpdate accountStatusUpdate = ; // AccountStatusUpdate |
+
+try {
+    final response = api.adminUsersStatusUpdate(userId, accountStatusUpdate);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminUsersStatusUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userId** | **String**|  |
+ **accountStatusUpdate** | [**AccountStatusUpdate**](AccountStatusUpdate.md)|  |
+
+### Return type
+
+[**AccountStatusResponse**](AccountStatusResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminUsersTierUpdate**
+> AccountTierResponse adminUsersTierUpdate(userId, accountTierUpdate)
+
+Update subscription tier
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String userId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final AccountTierUpdate accountTierUpdate = ; // AccountTierUpdate |
+
+try {
+    final response = api.adminUsersTierUpdate(userId, accountTierUpdate);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminUsersTierUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userId** | **String**|  |
+ **accountTierUpdate** | [**AccountTierUpdate**](AccountTierUpdate.md)|  |
+
+### Return type
+
+[**AccountTierResponse**](AccountTierResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **productIntegrityAdminAuditList**
+> AdminItems productIntegrityAdminAuditList()
+
+List admin audit events
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.productIntegrityAdminAuditList();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->productIntegrityAdminAuditList: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AdminItems**](AdminItems.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **productIntegrityAdminUsersSearch**
+> AdminItems productIntegrityAdminUsersSearch(q)
+
+Search users
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String q = q_example; // String |
+
+try {
+    final response = api.productIntegrityAdminUsersSearch(q);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->productIntegrityAdminUsersSearch: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **q** | **String**|  |
+
+### Return type
+
+[**AdminItems**](AdminItems.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
 
 ### HTTP request headers
 

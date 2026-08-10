@@ -7,6 +7,27 @@ void main() {
   final instance = LythausApiClient().getPostsApi();
 
   group(PostsApi, () {
+    // Delete my comment
+    //
+    //Future<CommentDeleteResponse> commentsDelete(String commentId, { String idempotencyKey }) async
+    test('test commentsDelete', () async {
+      // TODO
+    });
+
+    // Replace my comment body
+    //
+    //Future<CommentUpdateResponse> commentsReplace(String commentId, CommentUpdateRequest commentUpdateRequest, { String idempotencyKey }) async
+    test('test commentsReplace', () async {
+      // TODO
+    });
+
+    // Partially update my comment body
+    //
+    //Future<CommentUpdateResponse> commentsUpdate(String commentId, CommentUpdateRequest commentUpdateRequest, { String idempotencyKey }) async
+    test('test commentsUpdate', () async {
+      // TODO
+    });
+
     // Create a new post
     //
     // Create a new post.
@@ -16,37 +37,20 @@ void main() {
       // TODO
     });
 
-    // Bookmark a post
+    // Submit a comment or one-level reply
     //
-    //Future<JsonObject> postsBookmarkCreate(String id, JsonObject body) async
-    test('test postsBookmarkCreate', () async {
-      // TODO
-    });
-
-    // Remove a bookmark
+    // A submission is recorded as under review; it is not immediately published to public comment listings.
     //
-    //Future<JsonObject> postsBookmarkDelete(String id) async
-    test('test postsBookmarkDelete', () async {
-      // TODO
-    });
-
-    // Get bookmark status for a post
-    //
-    //Future<JsonObject> postsBookmarkGet(String id) async
-    test('test postsBookmarkGet', () async {
-      // TODO
-    });
-
-    // Create a comment on a post
-    //
-    //Future<JsonObject> postsCommentsCreate(String postId, JsonObject body) async
+    //Future<CommentSubmission> postsCommentsCreate(String postId, CommentCreateRequest commentCreateRequest, { String idempotencyKey }) async
     test('test postsCommentsCreate', () async {
       // TODO
     });
 
-    // List comments on a post
+    // List publicly visible comments
     //
-    //Future<JsonObject> postsCommentsList(String postId) async
+    // Only allowed comments are returned. Anonymous callers may read public posts; authenticated callers additionally receive relationship filtering.
+    //
+    //Future<CommentPage> postsCommentsList(String postId, { String cursor, int limit }) async
     test('test postsCommentsList', () async {
       // TODO
     });

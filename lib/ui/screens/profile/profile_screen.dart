@@ -20,6 +20,9 @@ import 'package:lythaus/ui/components/tier_badge.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:lythaus/ui/screens/profile/edit_profile_screen.dart';
+import 'package:lythaus/ui/screens/profile/reputation_ledger_screen.dart';
+import 'package:lythaus/state/providers/reputation_providers.dart';
+import 'package:lythaus/widgets/reputation_badge.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key, this.userId});
@@ -82,7 +85,12 @@ class ProfileScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.refresh(publicUserProvider(profile.id)),
+            onPressed: () {
+              ref.invalidate(publicUserProvider(profile.id));
+              if (isOwner) {
+                ref.invalidate(reputationProvider);
+              }
+            },
           ),
         ],
       ),
@@ -124,6 +132,10 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: Spacing.xs),
                     TierBadge(label: profile.tier, highlight: true),
+                    if (isOwner) ...[
+                      const SizedBox(height: Spacing.xs),
+                      _ReputationStateBadge(),
+                    ],
                   ],
                 ),
               ),
@@ -145,6 +157,18 @@ class ProfileScreen extends ConsumerWidget {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => EditProfileScreen(profile: profile),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.insights_outlined),
+              title: const Text('Reputation activity'),
+              subtitle: const Text(
+                'Server-recorded reputation and account activity',
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ReputationLedgerScreen(),
                 ),
               ),
             ),
@@ -195,6 +219,37 @@ class ProfileScreen extends ConsumerWidget {
 
   bool _isProfileComplete(PublicUser profile) {
     return profile.displayName.trim().isNotEmpty;
+  }
+}
+
+class _ReputationStateBadge extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reputation = ref.watch(reputationProvider);
+    return reputation.when(
+      data: (state) => ReputationBadge(
+        state: state,
+        size: ReputationBadgeSize.medium,
+        showLabel: true,
+      ),
+      loading: () => Semantics(
+        label: 'Loading reputation',
+        child: const SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (_, __) => Semantics(
+        liveRegion: true,
+        label: 'Unable to load reputation',
+        child: TextButton.icon(
+          onPressed: () => ref.invalidate(reputationProvider),
+          icon: const Icon(Icons.refresh, size: 16),
+          label: const Text('Retry reputation'),
+        ),
+      ),
+    );
   }
 }
 

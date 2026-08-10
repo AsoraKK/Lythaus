@@ -67,11 +67,14 @@ class Post {
     final media = json['mediaUrls'];
     final moderation = json['moderation'];
     final sourceJson = json['source'];
+    final authorId =
+        json['authorId']?.toString() ?? author?['id']?.toString() ?? '';
     final username =
         json['authorUsername'] as String? ??
         author?['username'] as String? ??
         author?['displayName'] as String? ??
-        json['authorId'] as String;
+        authorId;
+    final createdAtValue = json['createdAt'] ?? json['publishedAt'];
 
     String normalizeTrustStatus(Object? value) {
       const allowed = {
@@ -87,11 +90,13 @@ class Post {
     }
 
     return Post(
-      id: json['id'] as String,
-      authorId: json['authorId'] as String,
+      id: json['id']?.toString() ?? '',
+      authorId: authorId,
       authorUsername: username,
       text: textValue,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt:
+          DateTime.tryParse(createdAtValue?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
           : null,
@@ -108,7 +113,9 @@ class Post {
           : sourceJson is Map
           ? NewsSource.fromJson(Map<String, dynamic>.from(sourceJson))
           : null,
-      isNews: json['isNews'] as bool? ?? metadata?.category == 'news',
+      isNews:
+          (json['isNews'] as bool?) ??
+          (metadata?.category == 'news' || json['topic'] == 'news'),
       userLiked:
           json['userLiked'] as bool? ??
           json['viewerHasLiked'] as bool? ??
@@ -136,7 +143,8 @@ class Post {
             : json['authorship'] is Map
             ? Map<String, dynamic>.from(json['authorship'] as Map)
             : null,
-        legacyValue: json['aiLabel']?.toString(),
+        legacyValue:
+            json['publicLabel']?.toString() ?? json['aiLabel']?.toString(),
       ),
     );
   }
@@ -170,7 +178,7 @@ class Post {
   }
 
   static String _extractText(Map<String, dynamic> json) {
-    return (json['text'] ?? json['content'] ?? '') as String;
+    return (json['text'] ?? json['content'] ?? json['body'] ?? '') as String;
   }
 
   static PostMetadata? _extractMetadata(Map<String, dynamic> json) {
@@ -470,7 +478,7 @@ class FeedResponse {
     return FeedResponse(
       posts: posts,
       totalCount: posts.length,
-      hasMore: nextCursor != null,
+      hasMore: nextCursor != null && nextCursor.isNotEmpty,
       nextCursor: nextCursor,
       page: 1,
       pageSize: limit,
@@ -478,20 +486,46 @@ class FeedResponse {
   }
 
   factory FeedResponse.fromJson(Map<String, dynamic> json) {
-    final posts = json['posts'];
+    final wrappedData = json['data'];
+    final payload = wrappedData is Map<Object?, Object?>
+        ? Map<String, dynamic>.from(wrappedData)
+        : json;
+    final posts = payload['items'] ?? payload['posts'];
+    final nextCursor = _nextCursor(payload);
     return FeedResponse(
       posts: posts is List
           ? posts
-                .whereType<Map<String, dynamic>>()
+                .whereType<Map<Object?, Object?>>()
                 .map((post) => Post.fromJson(Map<String, dynamic>.from(post)))
                 .toList()
           : const <Post>[],
-      totalCount: json['totalCount'] as int? ?? 0,
-      hasMore: json['hasMore'] as bool? ?? false,
-      nextCursor: json['nextCursor'] as String?,
-      page: json['page'] as int? ?? 1,
-      pageSize: json['pageSize'] as int? ?? 20,
+      totalCount:
+          payload['totalCount'] as int? ?? (posts is List ? posts.length : 0),
+      hasMore:
+          payload['hasMore'] as bool? ??
+          (nextCursor != null && nextCursor.isNotEmpty),
+      nextCursor: nextCursor,
+      page: payload['page'] as int? ?? 1,
+      pageSize: payload['pageSize'] as int? ?? 20,
     );
+  }
+
+  static String? _nextCursor(Map<String, dynamic> payload) {
+    final direct =
+        payload['nextCursor'] ??
+        payload['continuationToken'] ??
+        payload['cursor'];
+    if (direct is String && direct.isNotEmpty) {
+      return direct;
+    }
+    final pageInfo = payload['pageInfo'];
+    if (pageInfo is Map) {
+      final cursor = pageInfo['nextCursor'] ?? pageInfo['endCursor'];
+      if (cursor is String && cursor.isNotEmpty) {
+        return cursor;
+      }
+    }
+    return null;
   }
 }
 

@@ -3,162 +3,93 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:lythaus/core/network/dio_client.dart';
-import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/state/models/reputation.dart';
+import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider (filter-aware, cursor-paginated)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Fetch one page of ledger entries for the given [filter].
-/// Returns `(entries, nextCursor)`.
-final _ledgerPageProvider =
-    FutureProvider.family<
-      ({List<LedgerEntry> entries, String? nextCursor}),
-      String
-    >((ref, filter) async {
-      final token = await ref.watch(jwtProvider.future);
-      if (token == null || token.isEmpty) {
-        return (entries: const <LedgerEntry>[], nextCursor: null);
-      }
-      try {
-        final dio = ref.read(secureDioProvider);
-        final response = await dio.get<Map<String, dynamic>>(
-          '/reputation/me/ledger',
-          queryParameters: {'filter': filter, 'limit': '20'},
-        );
-        final data = response.data ?? {};
-        final entriesJson = data['entries'] as List<dynamic>? ?? [];
-        final entries = entriesJson
-            .map((e) => LedgerEntry.fromJson(e as Map<String, dynamic>))
-            .toList();
-        return (entries: entries, nextCursor: data['nextCursor'] as String?);
-      } catch (_) {
-        return (entries: const <LedgerEntry>[], nextCursor: null);
-      }
-    });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Screen
-// ─────────────────────────────────────────────────────────────────────────────
-
-class ReputationLedgerScreen extends ConsumerStatefulWidget {
+/// Shows only the private, server-recorded reputation and activity history.
+class ReputationLedgerScreen extends StatelessWidget {
   const ReputationLedgerScreen({super.key});
 
   @override
-  ConsumerState<ReputationLedgerScreen> createState() =>
-      _ReputationLedgerScreenState();
-}
-
-class _ReputationLedgerScreenState extends ConsumerState<ReputationLedgerScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs;
-
-  static const _filters = [
-    'all',
-    'positive',
-    'neutral',
-    'negative',
-    'appeal',
-    'expired',
-  ];
-  static const _filterLabels = [
-    'All',
-    'Positive',
-    'Neutral',
-    'Negative',
-    'Appeals',
-    'Expired',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabs = TabController(length: _filters.length, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reputation Activity'),
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: _filterLabels.map((l) => Tab(text: l)).toList(),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Reputation activity'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Reputation'),
+              Tab(text: 'Account activity'),
+            ],
+          ),
         ),
-      ),
-      body: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
+        body: const Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
-                'Reputation Activity is read-only. Entries cannot be edited or removed.',
+                'These records come from Lythaus and cannot be edited here. '
+                'Appeals begin from an eligible resolved moderation case.',
               ),
             ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabs,
-              children: _filters
-                  .map((filter) => _LedgerList(filter: filter))
-                  .toList(),
+            Expanded(
+              child: TabBarView(children: [_LedgerPage(), _ActivityPage()]),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-tab list
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _LedgerList extends ConsumerWidget {
-  const _LedgerList({required this.filter});
-  final String filter;
+class _LedgerPage extends ConsumerStatefulWidget {
+  const _LedgerPage();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final asyncPage = ref.watch(_ledgerPageProvider(filter));
-    return asyncPage.when(
+  ConsumerState<_LedgerPage> createState() => _LedgerPageState();
+}
+
+class _LedgerPageState extends ConsumerState<_LedgerPage> {
+  String? _cursor;
+
+  @override
+  Widget build(BuildContext context) {
+    final page = ref.watch(reputationLedgerPageProvider(_cursor));
+    return page.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Could not load reputation history.'),
-            const SizedBox(height: Spacing.sm),
-            TextButton(
-              onPressed: () => ref.refresh(_ledgerPageProvider(filter)),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+      error: (_, __) => _RetryState(
+        message: 'Could not load reputation history.',
+        onRetry: () => ref.invalidate(reputationLedgerPageProvider(_cursor)),
       ),
-      data: (page) {
-        final entries = page.entries;
-        if (entries.isEmpty) {
-          return const Center(child: Text('No entries yet.'));
+      data: (value) {
+        if (value.items.isEmpty) {
+          return const _EmptyActivityState(
+            message: 'No reputation entries yet.',
+          );
         }
         return RefreshIndicator(
-          onRefresh: () async => ref.refresh(_ledgerPageProvider(filter)),
+          onRefresh: () async {
+            ref.invalidate(reputationLedgerPageProvider(_cursor));
+            await ref.read(reputationLedgerPageProvider(_cursor).future);
+          },
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
-            itemCount: entries.length,
+            itemCount: value.items.length + (value.hasMore ? 1 : 0),
             separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) =>
-                _LedgerEntryTile(filter: filter, entry: entries[i]),
+            itemBuilder: (context, index) {
+              if (index == value.items.length) {
+                return Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _cursor = value.nextCursor),
+                    icon: const Icon(Icons.navigate_next),
+                    label: const Text('Next page'),
+                  ),
+                );
+              }
+              return _LedgerEntryTile(entry: value.items[index]);
+            },
           ),
         );
       },
@@ -166,141 +97,164 @@ class _LedgerList extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Individual entry tile
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _LedgerEntryTile extends ConsumerStatefulWidget {
-  const _LedgerEntryTile({required this.filter, required this.entry});
-  final String filter;
-  final LedgerEntry entry;
+class _ActivityPage extends ConsumerStatefulWidget {
+  const _ActivityPage();
 
   @override
-  ConsumerState<_LedgerEntryTile> createState() => _LedgerEntryTileState();
+  ConsumerState<_ActivityPage> createState() => _ActivityPageState();
 }
 
-class _LedgerEntryTileState extends ConsumerState<_LedgerEntryTile> {
-  bool _appealing = false;
-
-  Future<void> _submitAppeal() async {
-    if (_appealing) {
-      return;
-    }
-
-    setState(() => _appealing = true);
-    try {
-      final dio = ref.read(secureDioProvider);
-      await dio.post<void>('/moderation/ledger/${widget.entry.id}/appeal');
-      if (!mounted) {
-        return;
-      }
-      ref.invalidate(_ledgerPageProvider(widget.filter));
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Appeal submitted.')));
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Could not submit appeal.')));
-    } finally {
-      if (mounted) {
-        setState(() => _appealing = false);
-      }
-    }
-  }
+class _ActivityPageState extends ConsumerState<_ActivityPage> {
+  String? _cursor;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final entry = widget.entry;
-    final isPositive = entry.eventCategory == 'positive';
-    final isNeutral = entry.eventCategory == 'neutral';
-    final isNegative = entry.eventCategory == 'negative';
-    final isExpired = entry.status == 'expired';
-
-    final bandColor = isPositive
-        ? Colors.green.shade600
-        : isNeutral
-        ? scheme.tertiary
-        : isNegative
-        ? scheme.error
-        : isExpired
-        ? scheme.outline
-        : scheme.onSurfaceVariant;
-
-    final bandIcon = isPositive
-        ? Icons.arrow_upward
-        : isNeutral
-        ? Icons.remove
-        : isNegative
-        ? Icons.arrow_downward
-        : isExpired
-        ? Icons.schedule
-        : Icons.remove;
-
-    final dateStr = _formatDate(entry.createdAt);
-
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor: bandColor.withValues(alpha: 0.12),
-        child: Icon(bandIcon, size: 16, color: bandColor),
+    final page = ref.watch(activityPageProvider(_cursor));
+    return page.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => _RetryState(
+        message: 'Could not load account activity.',
+        onRetry: () => ref.invalidate(activityPageProvider(_cursor)),
       ),
-      title: Text(
-        entry.publicLabel,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      subtitle: Text(
-        '$dateStr · ${_pillarLabel(entry.pillar)}',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-      trailing: entry.appealable && entry.appealStatus == null
-          ? TextButton.icon(
-              onPressed: _appealing ? null : _submitAppeal,
-              icon: _appealing
-                  ? SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: scheme.primary,
-                      ),
-                    )
-                  : Icon(Icons.gavel_outlined, size: 16, color: scheme.outline),
-              label: const Text('Appeal'),
-            )
-          : null,
+      data: (value) {
+        if (value.items.isEmpty) {
+          return const _EmptyActivityState(message: 'No account activity yet.');
+        }
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(activityPageProvider(_cursor));
+            await ref.read(activityPageProvider(_cursor).future);
+          },
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+            itemCount: value.items.length + (value.hasMore ? 1 : 0),
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              if (index == value.items.length) {
+                return Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _cursor = value.nextCursor),
+                    icon: const Icon(Icons.navigate_next),
+                    label: const Text('Next page'),
+                  ),
+                );
+              }
+              return _ActivityEntryTile(entry: value.items[index]);
+            },
+          ),
+        );
+      },
     );
   }
+}
 
-  static String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays > 30) {
-      return '${dt.day}/${dt.month}/${dt.year}';
-    }
-    if (diff.inDays >= 1) return '${diff.inDays}d ago';
-    if (diff.inHours >= 1) return '${diff.inHours}h ago';
-    return '${diff.inMinutes}m ago';
-  }
+class _RetryState extends StatelessWidget {
+  const _RetryState({required this.message, required this.onRetry});
 
-  static String _pillarLabel(String pillar) {
-    return switch (pillar) {
-      'human_contribution' => 'Human contribution',
-      'content_quality' => 'Content quality',
-      'behaviour_trust' => 'Behaviour',
-      'interaction_quality' => 'Interactions',
-      'verification_strength' => 'Verification',
-      'community_trust' => 'Community',
-      _ => pillar,
-    };
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Semantics(
+        liveRegion: true,
+        label: message,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message),
+            const SizedBox(height: Spacing.sm),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
+}
+
+class _EmptyActivityState extends StatelessWidget {
+  const _EmptyActivityState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Semantics(liveRegion: true, label: message, child: Text(message)),
+    );
+  }
+}
+
+class _LedgerEntryTile extends StatelessWidget {
+  const _LedgerEntryTile({required this.entry});
+
+  final LedgerEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label:
+          '${entry.eventType}, ${entry.impact} impact, ${entry.status}, '
+          'policy ${entry.policyVersion}',
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: scheme.primary.withValues(alpha: 0.12),
+          child: Icon(Icons.insights_outlined, color: scheme.primary),
+        ),
+        title: Text(entry.eventType),
+        subtitle: Text(
+          '${entry.explanationCode} • ${entry.pillar}\n'
+          'Policy ${entry.policyVersion} • ${_formatDate(entry.createdAt)}',
+        ),
+        isThreeLine: true,
+        trailing: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(entry.impact),
+            if (entry.appealId != null)
+              const Icon(Icons.gavel_outlined, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityEntryTile extends StatelessWidget {
+  const _ActivityEntryTile({required this.entry});
+
+  final ActivityEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final suffix = entry.appealable
+        ? ' Appeal availability is recorded by the moderation case.'
+        : '';
+    return Semantics(
+      label: '${entry.title}, ${entry.result}, policy ${entry.policyVersion}',
+      child: ListTile(
+        leading: const Icon(Icons.history_outlined),
+        title: Text(entry.title),
+        subtitle: Text(
+          '${entry.explanation}\n'
+          '${entry.result} • ${entry.reasonCode} • '
+          'Policy ${entry.policyVersion}$suffix',
+        ),
+        isThreeLine: true,
+        trailing: Text(_formatDate(entry.createdAt)),
+      ),
+    );
+  }
+}
+
+String _formatDate(DateTime value) {
+  final local = value.toLocal();
+  return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
+      '${local.day.toString().padLeft(2, '0')}';
 }

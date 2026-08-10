@@ -43,10 +43,11 @@ class SubscriptionStatus {
   });
 
   factory SubscriptionStatus.fromJson(Map<String, dynamic> json) {
+    final rawEntitlements = json['entitlements'];
     return SubscriptionStatus(
-      userId: json['userId'] as String,
-      tier: json['tier'] as String,
-      status: json['status'] as String,
+      userId: json['userId']?.toString() ?? '',
+      tier: json['tier']?.toString() ?? 'free',
+      status: json['status']?.toString() ?? 'active',
       provider: json['provider'] as String?,
       currentPeriodEnd: json['currentPeriodEnd'] != null
           ? DateTime.parse(json['currentPeriodEnd'] as String)
@@ -60,7 +61,9 @@ class SubscriptionStatus {
           ? DateTime.parse(json['manualGrantReviewAt'] as String)
           : null,
       entitlements: SubscriptionEntitlements.fromJson(
-        json['entitlements'] as Map<String, dynamic>,
+        rawEntitlements is Map
+            ? Map<String, dynamic>.from(rawEntitlements)
+            : const <String, dynamic>{},
       ),
     );
   }
@@ -111,20 +114,24 @@ class SubscriptionEntitlements {
 
   factory SubscriptionEntitlements.fromJson(Map<String, dynamic> json) {
     return SubscriptionEntitlements(
-      dailyPosts: json['dailyPosts'] as int,
-      dailyComments: json['dailyComments'] as int? ?? 0,
-      dailyReactions: json['dailyReactions'] as int? ?? 0,
-      dailyAppeals: json['dailyAppeals'] as int? ?? 0,
-      exportCooldownDays: json['exportCooldownDays'] as int? ?? 30,
-      maxMediaSizeMB: json['maxMediaSizeMB'] as int,
-      maxMediaPerPost: json['maxMediaPerPost'] as int,
-      maxCustomFeeds: json['maxCustomFeeds'] as int? ?? 1,
+      dailyPosts: _asInt(json['dailyPosts']),
+      dailyComments: _asInt(json['dailyComments']),
+      dailyReactions: _asInt(json['dailyReactions']),
+      dailyAppeals: _asInt(json['dailyAppeals']),
+      exportCooldownDays: _asInt(json['exportCooldownDays'], fallback: 30),
+      maxMediaSizeMB: _asInt(json['maxMediaSizeMB']),
+      maxMediaPerPost: _asInt(json['maxMediaPerPost']),
+      maxCustomFeeds: _asInt(json['maxCustomFeeds'], fallback: 1),
       newsBoardAccessLevel:
-          json['newsBoardAccessLevel'] as String? ?? 'preview',
-      newsBoardPreview: json['newsBoardPreview'] as bool? ?? true,
+          json['newsBoardAccess']?.toString() ??
+          json['newsBoardAccessLevel']?.toString() ??
+          'none',
+      newsBoardPreview: json['newsBoardPreview'] as bool? ?? false,
       postingRestricted: json['postingRestricted'] as bool? ?? false,
-      rewardLevelCap: json['rewardLevelCap'] as int? ?? 3,
-      rewardOptionsPerLevel: json['rewardOptionsPerLevel'] as int?,
+      rewardLevelCap: _asInt(json['rewardLevelCap']),
+      rewardOptionsPerLevel: json['rewardOptionsPerLevel'] == null
+          ? null
+          : _asInt(json['rewardOptionsPerLevel']),
       rewardChoiceBreadth: json['rewardChoiceBreadth'] as String? ?? 'limited',
     );
   }
@@ -214,7 +221,11 @@ class BackendSubscriptionService implements SubscriptionService {
       '/api/subscription/status',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-    return SubscriptionStatus.fromJson(response.data!);
+    final data = response.data!;
+    final wrapped = data['data'];
+    return SubscriptionStatus.fromJson(
+      wrapped is Map ? Map<String, dynamic>.from(wrapped) : data,
+    );
   }
 
   @override
@@ -244,4 +255,11 @@ class BackendSubscriptionService implements SubscriptionService {
       code: 'PROVIDER_NOT_CONFIGURED',
     );
   }
+}
+
+int _asInt(Object? value, {int fallback = 0}) {
+  if (value is num) {
+    return value.toInt();
+  }
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
 }

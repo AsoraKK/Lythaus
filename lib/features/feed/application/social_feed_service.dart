@@ -47,7 +47,7 @@ class SocialFeedService implements SocialFeedRepository {
         };
 
         final response = await _dio.get<Map<String, dynamic>>(
-          '$_baseUrl$urlPath',
+          urlPath,
           queryParameters: queryParameters,
           options: Options(
             headers: token != null ? {'Authorization': 'Bearer $token'} : null,
@@ -62,30 +62,29 @@ class SocialFeedService implements SocialFeedRepository {
           );
         }
 
-        final rawItems = data['items'];
+        final payload = _unwrapEnvelope(data);
+        final rawItems = payload['items'] ?? payload['posts'];
         final posts =
             (rawItems as List<dynamic>?)
-                ?.whereType<Map<String, dynamic>>()
-                .map(Post.fromJson)
+                ?.whereType<Map<Object?, Object?>>()
+                .map((item) => Post.fromJson(Map<String, dynamic>.from(item)))
                 .toList() ??
             [];
 
         return FeedResponse.fromCursor(
           posts: posts,
-          nextCursor: data['nextCursor'] as String?,
+          nextCursor: _nextCursor(payload),
           limit: limit,
         );
       },
       attributes: () {
         final attrs =
-            LythausTracer.httpRequestAttributes(
-              method: 'GET',
-              url: '/api$urlPath',
-            )..addAll({
-              'request.limit': limit,
-              'request.cursor_present': cursor != null,
-              'request.has_token': token != null,
-            });
+            LythausTracer.httpRequestAttributes(method: 'GET', url: urlPath)
+              ..addAll({
+                'request.limit': limit,
+                'request.cursor_present': cursor != null,
+                'request.has_token': token != null,
+              });
         if (extraQuery != null && extraQuery.isNotEmpty) {
           attrs['request.extra_params'] = extraQuery.keys.join(',');
         }
@@ -103,7 +102,7 @@ class SocialFeedService implements SocialFeedRepository {
   }) {
     return _fetchCursorFeed(
       operation: 'getDiscoverFeed',
-      urlPath: '/feed/discover',
+      urlPath: '/api/feed/discover',
       cursor: cursor,
       limit: limit,
       token: token,
@@ -118,7 +117,7 @@ class SocialFeedService implements SocialFeedRepository {
   }) {
     return _fetchCursorFeed(
       operation: 'getNewsFeed',
-      urlPath: '/feed/news',
+      urlPath: '/api/feed/news',
       cursor: cursor,
       limit: limit,
       token: token,
@@ -136,7 +135,7 @@ class SocialFeedService implements SocialFeedRepository {
     final extra = includeReplies ? {'includeReplies': 'true'} : null;
     return _fetchCursorFeed(
       operation: 'getUserFeed',
-      urlPath: '/feed/user/$userId',
+      urlPath: '/api/feed/user/$userId',
       cursor: cursor,
       limit: limit,
       token: token,
@@ -169,13 +168,11 @@ class SocialFeedService implements SocialFeedRepository {
         }
 
         if (data['success'] == true) {
-          final payload = data['data'];
-          if (payload is! Map<String, dynamic>) {
-            throw const SocialFeedException(
-              'Invalid feed response',
-              code: 'INVALID_RESPONSE',
-            );
-          }
+          return FeedResponse.fromJson(_requireSuccessfulPayload(data));
+        }
+
+        final payload = _unwrapEnvelope(data);
+        if (payload.containsKey('items') || payload.containsKey('posts')) {
           return FeedResponse.fromJson(payload);
         }
 
@@ -586,13 +583,11 @@ class SocialFeedService implements SocialFeedRepository {
     }
 
     if (data['success'] == true) {
-      final payload = data['data'];
-      if (payload is! Map<String, dynamic>) {
-        throw const SocialFeedException(
-          'Invalid feed response',
-          code: 'INVALID_RESPONSE',
-        );
-      }
+      return FeedResponse.fromJson(_requireSuccessfulPayload(data));
+    }
+
+    final payload = _unwrapEnvelope(data);
+    if (payload.containsKey('items') || payload.containsKey('posts')) {
       return FeedResponse.fromJson(payload);
     }
 
@@ -601,6 +596,42 @@ class SocialFeedService implements SocialFeedRepository {
       message is String ? message : 'Failed to load feed',
       code: 'LOAD_FEED_FAILED',
     );
+  }
+
+  static Map<String, dynamic> _unwrapEnvelope(Map<String, dynamic> value) {
+    final data = value['data'];
+    return data is Map ? Map<String, dynamic>.from(data) : value;
+  }
+
+  static Map<String, dynamic> _requireSuccessfulPayload(
+    Map<String, dynamic> value,
+  ) {
+    final payload = value['data'];
+    if (payload is! Map) {
+      throw const SocialFeedException(
+        'Invalid feed response',
+        code: 'INVALID_RESPONSE',
+      );
+    }
+    return Map<String, dynamic>.from(payload);
+  }
+
+  static String? _nextCursor(Map<String, dynamic> payload) {
+    final direct =
+        payload['nextCursor'] ??
+        payload['continuationToken'] ??
+        payload['cursor'];
+    if (direct is String && direct.isNotEmpty) {
+      return direct;
+    }
+    final pageInfo = payload['pageInfo'];
+    if (pageInfo is Map) {
+      final cursor = pageInfo['nextCursor'] ?? pageInfo['endCursor'];
+      if (cursor is String && cursor.isNotEmpty) {
+        return cursor;
+      }
+    }
+    return null;
   }
 
   /// Helper method to handle and convert errors

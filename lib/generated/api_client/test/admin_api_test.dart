@@ -7,48 +7,21 @@ void main() {
   final instance = LythausApiClient().getAdminApi();
 
   group(AdminApi, () {
-    // Approve an appeal
+    // Record a trained editorial appeal adjudication
     //
-    // Approves an appeal and restores content to PUBLISHED. Overrides existing outcomes.
+    // This never auto-resolves an appeal. The shared governance policy evaluates the independently assigned reviewer quorum and then requires one trained adjudicator for standard risk or two for high risk. The outcome is applied only when the returned status is resolved.
     //
-    //Future<AdminAppealDecisionResponse> adminAppealsApprove(String appealId, AdminAppealDecisionRequest adminAppealDecisionRequest) async
-    test('test adminAppealsApprove', () async {
+    //Future<AppealAdjudicationResponse> adminAppealsAdjudicate(String appealId, AppealAdjudicationRequest appealAdjudicationRequest) async
+    test('test adminAppealsAdjudicate', () async {
       // TODO
     });
 
-    // Get appeal detail
+    // List pending appeal adjudications
     //
-    // Fetch appeal detail with content and decision context.
+    // Editorial, administrator, and owner roles may list independent appeals awaiting adjudication. Only trained editorial adjudicators may record an adjudication.
     //
-    //Future<AdminAppealDetailResponse> adminAppealsGet(String appealId) async
-    test('test adminAppealsGet', () async {
-      // TODO
-    });
-
-    // List appeals queue
-    //
-    // Returns appeals awaiting admin review.
-    //
-    //Future<AdminAppealQueueResponse> adminAppealsList({ String status, String cursor, int limit }) async
-    test('test adminAppealsList', () async {
-      // TODO
-    });
-
-    // Override an appeal
-    //
-    // Moderator override for appeal outcomes. Idempotent per appeal.
-    //
-    //Future<AdminAppealOverrideResponse> adminAppealsOverride(String appealId, AdminAppealOverrideRequest adminAppealOverrideRequest, { String idempotencyKey }) async
-    test('test adminAppealsOverride', () async {
-      // TODO
-    });
-
-    // Reject an appeal
-    //
-    // Rejects an appeal and keeps content BLOCKED. Overrides existing outcomes.
-    //
-    //Future<AdminAppealDecisionResponse> adminAppealsReject(String appealId, AdminAppealDecisionRequest adminAppealDecisionRequest) async
-    test('test adminAppealsReject', () async {
+    //Future<PendingAppealAdjudicationList> adminAppealsPendingAdjudicationList() async
+    test('test adminAppealsPendingAdjudicationList', () async {
       // TODO
     });
 
@@ -191,6 +164,13 @@ void main() {
       // TODO
     });
 
+    // Publish an editorial News Board entry
+    //
+    //Future<EditorialPublicationResponse> adminEditorialPublicationsCreate(EditorialPublicationCreate editorialPublicationCreate) async
+    test('test adminEditorialPublicationsCreate', () async {
+      // TODO
+    });
+
     // Get a flagged content detail
     //
     // Fetch details for a flagged content item.
@@ -215,6 +195,13 @@ void main() {
     //
     //Future<AdminResolveResponse> adminFlagsResolve(String flagId, AdminFlagResolveRequest adminFlagResolveRequest) async
     test('test adminFlagsResolve', () async {
+      // TODO
+    });
+
+    // Check admin Worker health
+    //
+    //Future<AdminHealth> adminHealth() async
+    test('test adminHealth', () async {
       // TODO
     });
 
@@ -272,6 +259,34 @@ void main() {
       // TODO
     });
 
+    // Clear a legal hold
+    //
+    //Future<LegalHoldResponse> adminLegalHoldsClear(String holdId) async
+    test('test adminLegalHoldsClear', () async {
+      // TODO
+    });
+
+    // Place a legal hold
+    //
+    //Future<LegalHoldResponse> adminLegalHoldsCreate(LegalHoldCreate legalHoldCreate) async
+    test('test adminLegalHoldsCreate', () async {
+      // TODO
+    });
+
+    // List active and released legal holds
+    //
+    //Future<AdminItems> adminLegalHoldsList() async
+    test('test adminLegalHoldsList', () async {
+      // TODO
+    });
+
+    // List moderation cases
+    //
+    //Future<AdminItems> adminModerationCasesList() async
+    test('test adminModerationCasesList', () async {
+      // TODO
+    });
+
     // Reset a moderation class to defaults
     //
     //Future<JsonObject> adminModerationClassReset(String className, JsonObject body) async
@@ -283,6 +298,13 @@ void main() {
     //
     //Future<JsonObject> adminModerationClassesList() async
     test('test adminModerationClassesList', () async {
+      // TODO
+    });
+
+    // Apply a moderation decision
+    //
+    //Future<ModerationDecisionResponse> adminModerationDecision(String caseId, ModerationDecisionRequest moderationDecisionRequest) async
+    test('test adminModerationDecision', () async {
       // TODO
     });
 
@@ -321,12 +343,26 @@ void main() {
       // TODO
     });
 
-    // Set user subscription tier
+    // List privacy requests
     //
-    // Update the subscription tier of a specific user. Requires active admin privileges.
+    //Future<AdminItems> adminPrivacyRequestsList() async
+    test('test adminPrivacyRequestsList', () async {
+      // TODO
+    });
+
+    // Set reviewer qualification state
     //
-    //Future<AdminUserActionResponse> adminSetUserTier(String userId, AdminSetUserTierRequest adminSetUserTierRequest) async
-    test('test adminSetUserTier', () async {
+    // Compatibility method for the idempotent qualification update. Reviewer training remains separate from reputation level.
+    //
+    //Future<ReviewerQualificationResponse> adminReviewerQualificationCreate(String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
+    test('test adminReviewerQualificationCreate', () async {
+      // TODO
+    });
+
+    // Idempotently set reviewer qualification state
+    //
+    //Future<ReviewerQualificationResponse> adminReviewerQualificationUpdate(String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
+    test('test adminReviewerQualificationUpdate', () async {
       // TODO
     });
 
@@ -361,6 +397,34 @@ void main() {
     //
     //Future<AdminUserSearchResponse> adminUsersSearch(String q, { int limit }) async
     test('test adminUsersSearch', () async {
+      // TODO
+    });
+
+    // Update account status
+    //
+    //Future<AccountStatusResponse> adminUsersStatusUpdate(String userId, AccountStatusUpdate accountStatusUpdate) async
+    test('test adminUsersStatusUpdate', () async {
+      // TODO
+    });
+
+    // Update subscription tier
+    //
+    //Future<AccountTierResponse> adminUsersTierUpdate(String userId, AccountTierUpdate accountTierUpdate) async
+    test('test adminUsersTierUpdate', () async {
+      // TODO
+    });
+
+    // List admin audit events
+    //
+    //Future<AdminItems> productIntegrityAdminAuditList() async
+    test('test productIntegrityAdminAuditList', () async {
+      // TODO
+    });
+
+    // Search users
+    //
+    //Future<AdminItems> productIntegrityAdminUsersSearch(String q) async
+    test('test productIntegrityAdminUsersSearch', () async {
       // TODO
     });
 

@@ -9,74 +9,27 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**moderationLedgerAppealPost**](ReputationApi.md#moderationledgerappealpost) | **POST** /moderation/ledger/{entryId}/appeal | Appeal a reputation ledger entry
-[**reputationLedgerGet**](ReputationApi.md#reputationledgerget) | **GET** /reputation/me/ledger | Get my reputation ledger
-[**reputationMeGet**](ReputationApi.md#reputationmeget) | **GET** /reputation/me | Get my reputation summary
-[**reputationUserGet**](ReputationApi.md#reputationuserget) | **GET** /reputation/users/{id} | Get public reputation view
-[**reputationUserGetSingular**](ReputationApi.md#reputationusergetsingular) | **GET** /reputation/user/{id} | Get public reputation view
+[**reputationLedgerGet**](ReputationApi.md#reputationledgerget) | **GET** /reputation/me/ledger | List my Reputation V2 ledger
+[**reputationMeGet**](ReputationApi.md#reputationmeget) | **GET** /reputation/me | Get my private Reputation V2 summary
+[**reputationUserGet**](ReputationApi.md#reputationuserget) | **GET** /reputation/users/{id} | Get public Reputation V2 summary
+[**reputationUserGetSingular**](ReputationApi.md#reputationusergetsingular) | **GET** /reputation/user/{id} | Get public Reputation V2 summary (compatibility alias)
 
-
-# **moderationLedgerAppealPost**
-> AcceptedResponse moderationLedgerAppealPost(entryId)
-
-Appeal a reputation ledger entry
-
-Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getReputationApi();
-final String entryId = entryId_example; // String |
-
-try {
-    final response = api.moderationLedgerAppealPost(entryId);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling ReputationApi->moderationLedgerAppealPost: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **entryId** | **String**|  |
-
-### Return type
-
-[**AcceptedResponse**](AcceptedResponse.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **reputationLedgerGet**
-> LedgerPage reputationLedgerGet(filter, cursor, limit)
+> ReputationLedgerPage reputationLedgerGet(cursor, limit)
 
-Get my reputation ledger
-
-Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.
+List my Reputation V2 ledger
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getReputationApi();
-final String filter = filter_example; // String |
-final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
-final int limit = 25; // int | Maximum number of items to return per page
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
 
 try {
-    final response = api.reputationLedgerGet(filter, cursor, limit);
+    final response = api.reputationLedgerGet(cursor, limit);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling ReputationApi->reputationLedgerGet: $e\n');
@@ -87,13 +40,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **filter** | **String**|  | [optional] [default to 'all']
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
- **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
 
 ### Return type
 
-[**LedgerPage**](LedgerPage.md)
+[**ReputationLedgerPage**](ReputationLedgerPage.md)
 
 ### Authorization
 
@@ -107,11 +59,9 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **reputationMeGet**
-> ReputationSummary reputationMeGet()
+> ReputationPrivateV2 reputationMeGet()
 
-Get my reputation summary
-
-Returns the authenticated user's reputation level, band, pillar scores, and eligibility statuses. Raw formulas and internal risk scores are not returned.
+Get my private Reputation V2 summary
 
 ### Example
 ```dart
@@ -132,7 +82,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**ReputationSummary**](ReputationSummary.md)
+[**ReputationPrivateV2**](ReputationPrivateV2.md)
 
 ### Authorization
 
@@ -146,16 +96,16 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **reputationUserGet**
-> PublicReputationView reputationUserGet(id)
+> ReputationPublicV2 reputationUserGet(id)
 
-Get public reputation view
+Get public Reputation V2 summary
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getReputationApi();
-final String id = id_example; // String |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 
 try {
     final response = api.reputationUserGet(id);
@@ -173,7 +123,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**PublicReputationView**](PublicReputationView.md)
+[**ReputationPublicV2**](ReputationPublicV2.md)
 
 ### Authorization
 
@@ -187,16 +137,16 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **reputationUserGetSingular**
-> PublicReputationView reputationUserGetSingular(id)
+> ReputationPublicV2 reputationUserGetSingular(id)
 
-Get public reputation view
+Get public Reputation V2 summary (compatibility alias)
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getReputationApi();
-final String id = id_example; // String |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 
 try {
     final response = api.reputationUserGetSingular(id);
@@ -214,7 +164,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**PublicReputationView**](PublicReputationView.md)
+[**ReputationPublicV2**](ReputationPublicV2.md)
 
 ### Authorization
 

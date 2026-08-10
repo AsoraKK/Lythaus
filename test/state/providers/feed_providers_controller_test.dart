@@ -90,6 +90,11 @@ ProviderContainer _container({
   required _MockSocialFeedRepo feedRepo,
   _MockCustomFeedService? customService,
   String? token,
+  FeedEntitlements entitlements = const FeedEntitlements(
+    tier: 'black',
+    maxCustomFeeds: 3,
+    newsBoardAccess: 'full',
+  ),
 }) {
   return ProviderContainer(
     overrides: [
@@ -98,6 +103,7 @@ ProviderContainer _container({
         customFeedServiceProvider.overrideWithValue(customService),
       jwtProvider.overrideWith((_) async => token ?? 'test-token'),
       secureDioProvider.overrideWithValue(_FakeDio()),
+      feedEntitlementsProvider.overrideWith((ref) async => entitlements),
     ],
   );
 }
@@ -114,7 +120,7 @@ void main() {
   // ─── feedListProvider ───
 
   group('feedListProvider', () {
-    test('returns system feeds when no custom feeds', () {
+    test('returns News Board only for Black/full access', () async {
       final container = _container(
         feedRepo: feedRepo,
         customService: customService,
@@ -127,6 +133,7 @@ void main() {
         ),
       ).thenAnswer((_) async => const []);
 
+      await container.read(feedEntitlementsProvider.future);
       final feeds = container.read(feedListProvider);
       expect(feeds.length, greaterThanOrEqualTo(2));
       expect(feeds.first.isHome, isTrue);
@@ -189,7 +196,7 @@ void main() {
       expect(items, isEmpty);
     });
 
-    test('returns empty list when service throws', () async {
+    test('surfaces a discover-feed error to the UI', () async {
       when(
         () => feedRepo.getDiscoverFeed(
           limit: any(named: 'limit'),
@@ -198,11 +205,33 @@ void main() {
       ).thenThrow(Exception('network error'));
 
       final container = _container(feedRepo: feedRepo);
-      final items = await container.read(
-        liveFeedItemsProvider(_discoverFeed).future,
+      await expectLater(
+        container.read(liveFeedItemsProvider(_discoverFeed).future),
+        throwsA(isA<Exception>()),
       );
+    });
 
-      expect(items, isEmpty);
+    test('rejects News Board for a non-Black entitlement', () async {
+      final container = _container(
+        feedRepo: feedRepo,
+        entitlements: const FeedEntitlements(
+          tier: 'premium',
+          maxCustomFeeds: 2,
+          newsBoardAccess: 'none',
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(liveFeedItemsProvider(_newsFeed).future),
+        throwsA(isA<StateError>()),
+      );
+      verifyNever(
+        () => feedRepo.getNewsFeed(
+          limit: any(named: 'limit'),
+          token: any(named: 'token'),
+        ),
+      );
     });
 
     test('returns custom feed items when token present', () async {

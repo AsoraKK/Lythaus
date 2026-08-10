@@ -7,56 +7,53 @@ void main() {
   final instance = LythausApiClient().getCustomFeedsApi();
 
   group(CustomFeedsApi, () {
-    // Create a new custom feed
+    // Create a custom feed
     //
-    // Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20.
+    // Tier limits are Free 1, Premium 2, and Black 3 custom feeds.
     //
-    //Future<CustomFeedDefinition> customFeedsCreate(CreateCustomFeedRequest createCustomFeedRequest) async
+    //Future<CustomFeed> customFeedsCreate(CustomFeedCreateRequest customFeedCreateRequest, { String idempotencyKey }) async
     test('test customFeedsCreate', () async {
       // TODO
     });
 
-    // Delete a custom feed
+    // Delete an owned custom feed
     //
-    // Delete an owned custom feed definition.
-    //
-    //Future customFeedsDelete(String id) async
+    //Future<CustomFeedDeleteResponse> customFeedsDelete(String id, { String idempotencyKey }) async
     test('test customFeedsDelete', () async {
       // TODO
     });
 
-    // Get a custom feed
+    // Get an owned custom feed
     //
-    // Fetch a custom feed definition owned by the authenticated user.
-    //
-    //Future<CustomFeedDefinition> customFeedsGet(String id) async
+    //Future<CustomFeed> customFeedsGet(String id) async
     test('test customFeedsGet', () async {
       // TODO
     });
 
-    // List items in a custom feed
+    // List items from an owned custom feed
     //
-    // Return posts matching a custom feed's filters.
-    //
-    //Future<CursorPaginatedPostView> customFeedsItemsList(String id, { String cursor, int limit }) async
+    //Future<DiscoveryFeedPage> customFeedsItemsList(String id, { String cursor, int limit }) async
     test('test customFeedsItemsList', () async {
       // TODO
     });
 
-    // List custom feeds for the current user
+    // List my custom feeds
     //
-    // List custom feed definitions owned by the authenticated user.
-    //
-    //Future<CustomFeedListResponse> customFeedsList({ String cursor, int limit }) async
+    //Future<CustomFeedList> customFeedsList() async
     test('test customFeedsList', () async {
       // TODO
     });
 
-    // Update a custom feed
+    // Replace an owned custom feed
     //
-    // Update an owned custom feed's name, filters, sorting, or home flag.
+    //Future<CustomFeed> customFeedsReplace(String id, CustomFeedUpdateRequest customFeedUpdateRequest, { String idempotencyKey }) async
+    test('test customFeedsReplace', () async {
+      // TODO
+    });
+
+    // Partially update an owned custom feed
     //
-    //Future<CustomFeedDefinition> customFeedsUpdate(String id, UpdateCustomFeedRequest updateCustomFeedRequest) async
+    //Future<CustomFeed> customFeedsUpdate(String id, CustomFeedUpdateRequest customFeedUpdateRequest, { String idempotencyKey }) async
     test('test customFeedsUpdate', () async {
       // TODO
     });
