@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
@@ -182,6 +182,40 @@ test('acquisition and output safety controls reject unsafe hosts, paths, counts,
     );
   } finally {
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('external path boundaries reject junctions into the repository and physical child escapes', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'lythaus-path-boundary-'));
+  const externalTarget = await mkdtemp(path.join(os.tmpdir(), 'lythaus-path-target-'));
+  const repositoryScratch = await mkdtemp(path.join(repositoryRoot, '.wp003-path-boundary-'));
+  try {
+    const repositoryJunction = path.join(directory, 'repository-junction');
+    await symlink(repositoryRoot, repositoryJunction, 'junction');
+    assert.throws(
+      () => assertExternalOutputPath(path.join(repositoryJunction, 'would-write-inside-repository.json')),
+      /repository_path_rejected:output/,
+    );
+
+    const repositoryExternalJunction = path.join(repositoryScratch, 'external-junction');
+    await symlink(externalTarget, repositoryExternalJunction, 'junction');
+    assert.throws(
+      () => assertExternalOutputPath(path.join(repositoryExternalJunction, 'would-write-outside.json')),
+      /repository_path_rejected:output/,
+    );
+
+    const externalRoot = path.join(directory, 'external-root');
+    await mkdir(externalRoot);
+    const escapingJunction = path.join(externalRoot, 'escaping-junction');
+    await symlink(externalTarget, escapingJunction, 'junction');
+    assert.throws(
+      () => assertExternalChildPath(externalRoot, path.join(escapingJunction, 'escaped.json'), 'fixture'),
+      /path_outside_external_root:fixture/,
+    );
+  } finally {
+    await rm(repositoryScratch, { recursive: true, force: true });
+    await rm(directory, { recursive: true, force: true });
+    await rm(externalTarget, { recursive: true, force: true });
   }
 });
 

@@ -9,7 +9,7 @@ import 'package:lythaus_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **status** | **String** |  |
-**communityDecision** | **String** |  | [optional]
+**reviewerPanelDecision** | **String** |  | [optional]
 **finalDecision** | **String** |  | [optional]
 **completedReviewers** | **int** |  |
 **totalWeight** | **int** |  |

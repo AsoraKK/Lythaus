@@ -79,7 +79,8 @@ class _AuthGateState extends ConsumerState<AuthGate> {
             ? const LythausAppShell()
             : const AuthChoiceScreen();
       },
-      loading: () => isGuest ? const LythausAppShell() : const AuthChoiceScreen(),
+      loading: () =>
+          isGuest ? const LythausAppShell() : const AuthChoiceScreen(),
       error: (error, stack) =>
           isGuest ? const LythausAppShell() : const AuthChoiceScreen(),
     );

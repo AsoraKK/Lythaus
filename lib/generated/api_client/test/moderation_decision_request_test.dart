@@ -17,6 +17,7 @@ void main() {
       // TODO
     });
 
+    // Public categorical label. AI-generated content cannot be allowed for publication.
     // String publicLabel
     test('to test the property `publicLabel`', () async {
       // TODO

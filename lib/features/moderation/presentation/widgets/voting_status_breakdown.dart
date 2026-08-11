@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/features/moderation/domain/appeal.dart';
 import 'package:lythaus/features/moderation/presentation/widgets/voting_status_badge.dart';
 
-/// LYTHAUS VOTING STATUS BREAKDOWN WIDGET
+/// LYTHAUS REVIEWER PANEL STATUS BREAKDOWN WIDGET
 ///
-/// 🎯 Purpose: Display breakdown of appeals by voting status
+/// 🎯 Purpose: Display breakdown of appeals by reviewer-panel status
 /// 🔍 Single Responsibility: Status analytics only
 
 class VotingStatusBreakdown extends StatelessWidget {

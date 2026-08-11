@@ -2,12 +2,15 @@ import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabase
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { evaluateAuthenticity, type AuthenticityEvaluation } from '@lythaus/authenticity';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, evaluateAppeal, selectAppealReviewers, type ActivityEventInput, type AppealReviewerCandidate, type AppealRiskClass, type AppealVote, type ReputationSignalType } from '@lythaus/contracts';
+import { MAX_IMAGE_BYTES } from '@lythaus/media';
 import { json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
+import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
 interface Env extends EnvBindings {
+  WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
   DB_JOBS_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
   MODERATION_QUEUE?: Queue;
@@ -20,11 +23,11 @@ interface Env extends EnvBindings {
   MEDIA_APPROVED?: NonNullable<EnvBindings['MEDIA_APPROVED']>;
   IMAGES?: NonNullable<EnvBindings['IMAGES']>;
   PRIVATE_EXPORTS?: NonNullable<EnvBindings['PRIVATE_EXPORTS']>;
-  ACCOUNT_DELETE?: WorkflowBinding<{ subjectId: string; requestId: string }>;
-  ACCOUNT_EXPORT?: WorkflowBinding<{ subjectId: string; requestId: string }>;
-  RETENTION_CLEANUP?: WorkflowBinding<{ runId: string }>;
-  APPEAL_LIFECYCLE?: WorkflowBinding<{ appealId: string }>;
-  BACKUP_VALIDATION?: WorkflowBinding<{ runId: string }>;
+  ACCOUNT_DELETE?: WorkflowCreateBinding<{ subjectId: string; requestId: string }>;
+  ACCOUNT_EXPORT?: WorkflowCreateBinding<{ subjectId: string; requestId: string }>;
+  RETENTION_CLEANUP?: WorkflowCreateBinding<{ runId: string }>;
+  APPEAL_LIFECYCLE?: WorkflowCreateBinding<{ appealId: string }>;
+  BACKUP_VALIDATION?: WorkflowCreateBinding<{ runId: string }>;
   APPEAL_ASSIGNMENT_SECRET?: string;
 }
 
@@ -193,8 +196,6 @@ async function recordAiEvidence(env: Env, input: {
 }
 
 interface Queue { send(body: unknown, options?: { contentType?: string }): Promise<void>; }
-interface WorkflowBinding<T> { create(options: { id: string; params: T }): Promise<unknown>; }
-
 interface QueueMessage {
   id: string;
   body: { eventId?: string; eventType?: string; [key: string]: unknown };
@@ -249,52 +250,6 @@ function stringValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-function moderationReputationSignal(reasonCode: string | undefined): ReputationSignalType | null {
-  const normalized = reasonCode?.toUpperCase() ?? '';
-  if (normalized.includes('SPAM')) return 'confirmed_spam';
-  if (normalized.includes('HARASS') || normalized.includes('ABUSE') || normalized.includes('THREAT')) return 'confirmed_harassment';
-  if (normalized.includes('AUTHENTIC') || normalized.includes('MISLABEL') || normalized.includes('EVASION')) return 'authenticity_evasion';
-  if (normalized.includes('DUPLICATE')) return 'duplicate_content';
-  return null;
-}
-
-function reputationActivity(result: ReputationMutationResult): {
-  eventType: ActivityEventInput['eventType'];
-  title: string;
-  explanation: string;
-  result: ActivityEventInput['result'];
-  reputationEffect: ActivityEventInput['reputationEffect'];
-} {
-  if (result.disposition === 'reversed') return {
-    eventType: 'reputation.event_reversed',
-    title: 'Reputation event reversed',
-    explanation: 'A previously effective reputation event was reversed after the underlying outcome changed.',
-    result: 'reversed',
-    reputationEffect: 'reversed',
-  };
-  if (result.disposition === 'negative') return {
-    eventType: 'reputation.deduction_applied',
-    title: 'Reputation deduction applied',
-    explanation: 'A confirmed policy outcome reduced the relevant private reputation pillar under the current policy.',
-    result: 'succeeded',
-    reputationEffect: 'negative',
-  };
-  if (result.disposition === 'withheld') return {
-    eventType: 'reputation.event_withheld',
-    title: 'Reputation credit withheld',
-    explanation: 'This action did not qualify for reputation credit under the current eligibility and anti-gaming rules.',
-    result: 'withheld',
-    reputationEffect: 'withheld',
-  };
-  return {
-    eventType: 'reputation.event_awarded',
-    title: 'Constructive contribution recognised',
-    explanation: 'An eligible action contributed to the relevant private reputation pillar under the current policy.',
-    result: 'succeeded',
-    reputationEffect: 'positive',
-  };
-}
-
 async function recordReputationActivity(
   client: DatabaseClient,
   mutation: ReputationMutationResult,
@@ -302,7 +257,7 @@ async function recordReputationActivity(
   correlationId: string,
 ): Promise<void> {
   if (!mutation.created) return;
-  const details = reputationActivity(mutation);
+  const details = reputationActivity(mutation.disposition);
   await recordUserActivity(client, {
     id: uuidv7(),
     userId: mutation.profile.userId,
@@ -722,23 +677,8 @@ async function processAppealReputationResolution(message: QueueMessage, env: Env
   }
 }
 
-type PrivacyRequestType = 'export' | 'delete' | 'rectify';
-
-interface PrivacyRequestPayload {
-  requestId: string;
-  requestType: PrivacyRequestType;
-  subjectId: string;
-}
-
-function isPrivacyRequestType(value: unknown): value is PrivacyRequestType {
-  return value === 'export' || value === 'delete' || value === 'rectify';
-}
-
 async function resolvePrivacyRequestPayload(env: Env, message: QueueMessage, eventId: string): Promise<PrivacyRequestPayload> {
   const payload = (message.body.payload ?? message.body) as { requestId?: unknown; requestType?: unknown };
-  let requestId = typeof payload.requestId === 'string' ? payload.requestId : undefined;
-  let requestType = isPrivacyRequestType(payload.requestType) ? payload.requestType : undefined;
-  let subjectId = typeof message.body.actorId === 'string' ? message.body.actorId : undefined;
   const outbox = await query<{ aggregate_id: string; actor_id: string | null; request_type: string | null }>(
     env.DB_JOBS_FRESH,
     `SELECT aggregate_id, actor_id, payload ->> 'requestType' AS request_type
@@ -747,16 +687,16 @@ async function resolvePrivacyRequestPayload(env: Env, message: QueueMessage, eve
     [eventId],
   );
   const canonical = outbox.rows[0];
-  if (canonical) {
-    if (requestId && requestId !== canonical.aggregate_id) throw new Error('privacy_request_id_mismatch');
-    if (subjectId && canonical.actor_id && subjectId !== canonical.actor_id) throw new Error('privacy_subject_mismatch');
-    if (requestType && canonical.request_type && requestType !== canonical.request_type) throw new Error('privacy_request_type_mismatch');
-    requestId = canonical.aggregate_id;
-    subjectId ??= canonical.actor_id ?? undefined;
-    requestType ??= isPrivacyRequestType(canonical.request_type) ? canonical.request_type : undefined;
-  }
-  if (!requestId || !subjectId || !requestType) throw new Error('privacy_event_invalid');
-  return { requestId, subjectId, requestType };
+  return reconcilePrivacyRequestPayload({
+    messageRequestId: payload.requestId,
+    messageRequestType: payload.requestType,
+    actorId: message.body.actorId,
+    canonical: canonical ? {
+      aggregateId: canonical.aggregate_id,
+      actorId: canonical.actor_id,
+      requestType: canonical.request_type,
+    } : undefined,
+  });
 }
 
 const MAX_IMAGE_PIXELS = 40_000_000;
@@ -817,27 +757,142 @@ async function runAuthenticityEvaluation(env: Env, input: {
 }
 
 async function processPostModeration(message: QueueMessage, env: Env): Promise<void> {
-  const payload = (message.body.payload ?? message.body) as { postId?: unknown };
-  const postId = typeof payload.postId === 'string' ? payload.postId : undefined;
-  if (!postId) throw new Error('content_event_invalid');
-  const postResult = await query<{ id: string; author_id: string; body: string; declared_creation_mode: 'human' | 'ai_assisted' | 'ai_generated'; moderation_state: string }>(
+  const eventId = typeof message.body.eventId === 'string' ? message.body.eventId : message.id;
+  const revision = parseContentModerationRevision({
+    eventId,
+    payload: message.body.payload ?? message.body,
+    contentIdField: 'postId',
+  });
+  const postResult = await query<{
+    id: string;
+    author_id: string;
+    body: string;
+    declared_creation_mode: 'human' | 'ai_assisted' | 'ai_generated';
+    moderation_state: string;
+    deleted_at: string | null;
+    moderation_source_event_id: string | null;
+  }>(
     env.DB_JOBS_FRESH,
-    `SELECT id, author_id, body, declared_creation_mode, moderation_state FROM content.posts WHERE id = $1`, [postId]
+    `SELECT id, author_id, body, declared_creation_mode, moderation_state, deleted_at, moderation_source_event_id
+       FROM content.posts
+      WHERE id = $1 AND deleted_at IS NULL`, [revision.contentId]
   );
   const post = postResult.rows[0];
-  if (!post || post.moderation_state !== 'under_review') return;
+  if (!post) return;
+  const inputHash = await sha256Hex(post.body);
+  if (!isCurrentContentModerationRevision({
+    revision,
+    canonical: {
+      contentId: post.id,
+      sourceEventId: post.moderation_source_event_id,
+      declaredCreationMode: post.declared_creation_mode,
+      bodyHash: inputHash,
+      moderationState: post.moderation_state,
+      deletedAt: post.deleted_at,
+    },
+  })) return;
   const prior = await query(env.DB_JOBS_FRESH,
-    `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = $2 LIMIT 1`, [postId, AUTHENTICITY_PROVIDER]);
+    `SELECT 1 FROM moderation.detector_runs WHERE provider = $1 AND source_event_id = $2 LIMIT 1`,
+    [AUTHENTICITY_PROVIDER, revision.sourceEventId]);
   if (prior.rowCount !== 0) return;
   const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
-    kind: 'text', content: post.body, contentId: postId, declaredCreationMode: post.declared_creation_mode,
+    kind: 'text', content: post.body, contentId: revision.contentId, declaredCreationMode: post.declared_creation_mode,
   });
   const modelVersion = evaluation.modelId;
-  const inputHash = await sha256Hex(post.body);
   const responseHash = await sha256Hex(JSON.stringify(evaluation));
-  if (modelExecuted) await recordAiEvidence(env, {
-    caseId: postId,
-    correlationId: postId,
+  const detectedContentClass = evaluation.signals[0]?.category ?? null;
+  const declarationConflict = post.declared_creation_mode === 'human'
+    && evaluation.signals.some((item) => /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.category));
+  const signal = JSON.stringify(evaluation);
+  const applied = await transaction(env.DB_JOBS_FRESH, async (client) => {
+    const locked = await client.query<{
+      id: string;
+      author_id: string;
+      body: string;
+      declared_creation_mode: 'human' | 'ai_assisted' | 'ai_generated';
+      moderation_state: string;
+      deleted_at: string | null;
+      moderation_source_event_id: string | null;
+    }>(
+      `SELECT id, author_id, body, declared_creation_mode, moderation_state, deleted_at, moderation_source_event_id
+         FROM content.posts
+        WHERE id = $1 AND deleted_at IS NULL
+        FOR UPDATE`,
+      [revision.contentId],
+    );
+    const lockedPost = locked.rows[0];
+    if (!lockedPost) return false;
+    const lockedInputHash = await sha256Hex(lockedPost.body);
+    if (!isCurrentContentModerationRevision({
+      revision,
+      canonical: {
+        contentId: lockedPost.id,
+        sourceEventId: lockedPost.moderation_source_event_id,
+        declaredCreationMode: lockedPost.declared_creation_mode,
+        bodyHash: lockedInputHash,
+        moderationState: lockedPost.moderation_state,
+        deletedAt: lockedPost.deleted_at,
+      },
+    })) return false;
+    const detectorRun = await client.query<{ id: string }>(
+      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal, source_event_id)
+       VALUES ($1, 'post', $2, $3, $4, $5::jsonb, $6)
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [uuidv7(), revision.contentId, AUTHENTICITY_PROVIDER, modelVersion, signal, revision.sourceEventId],
+    );
+    if (detectorRun.rowCount !== 1) return false;
+    await client.query(
+      `UPDATE moderation.cases
+          SET state = 'superseded', resolved_at = COALESCE(resolved_at, now())
+        WHERE content_type = 'post' AND content_id = $1 AND state = 'open'
+          AND source_event_id IS DISTINCT FROM $2`,
+      [revision.contentId, revision.sourceEventId],
+    );
+    await client.query(
+      `INSERT INTO content.content_declarations (post_id, declared_creation_mode, public_label, detector_provider, detector_model_version, detector_signal, declaration_conflict, review_required)
+       VALUES ($1, $2, 'Under review', $3, $4, $5::jsonb, $6, true)
+       ON CONFLICT (post_id) DO UPDATE SET declared_creation_mode = EXCLUDED.declared_creation_mode,
+         public_label = EXCLUDED.public_label, detector_provider = EXCLUDED.detector_provider,
+         detector_model_version = EXCLUDED.detector_model_version, detector_signal = EXCLUDED.detector_signal,
+         declaration_conflict = EXCLUDED.declaration_conflict, review_required = EXCLUDED.review_required, updated_at = now()`,
+      [revision.contentId, lockedPost.declared_creation_mode, AUTHENTICITY_PROVIDER, modelVersion, signal, declarationConflict]
+    );
+    const caseResult = await client.query<{ id: string }>(
+      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version, source_event_id)
+       VALUES ($1, 'post', $2, 'open', $3, $4)
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [uuidv7(), revision.contentId, AUTHENTICITY_POLICY, revision.sourceEventId]
+    );
+    if (caseResult.rowCount !== 1) return false;
+    await client.query(
+      `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version) VALUES ($1, $2, 'queue', 'Under review', $3)`,
+      [uuidv7(), caseResult.rows[0].id, AUTHENTICITY_POLICY]
+    );
+    await client.query(
+      `INSERT INTO trust.provenance_events (id, content_id, author_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, final_decision, source_event_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'queue', $9)`,
+      [uuidv7(), revision.contentId, lockedPost.author_id, lockedPost.declared_creation_mode, detectedContentClass, AUTHENTICITY_PROVIDER, modelVersion, AUTHENTICITY_POLICY, revision.sourceEventId]
+    );
+    await recordUserActivity(client, {
+      id: uuidv7(), userId: lockedPost.author_id, actorUserId: lockedPost.author_id,
+      eventType: 'moderation.case_opened', category: 'moderation', source: 'jobs',
+      sourceEventId: revision.sourceEventId,
+      correlationId: typeof message.body.correlationId === 'string' ? message.body.correlationId : revision.sourceEventId,
+      title: 'Post review opened',
+      explanation: 'Your post entered the normal publication review process.',
+      result: 'pending', reasonCode: 'PUBLIC_POST_REVIEW', policyVersion: AUTHENTICITY_POLICY,
+      objectType: 'moderation_case', objectId: caseResult.rows[0].id, reputationEffect: 'withheld',
+      appealable: false, retentionClass: 'moderation', metadata: { decisionType: 'queue' },
+      createdAt: new Date().toISOString(),
+    });
+    return true;
+  });
+  if (!applied || !modelExecuted) return;
+  await recordAiEvidence(env, {
+    caseId: revision.contentId,
+    correlationId: revision.sourceEventId,
     inputHash,
     evidenceBundleHash: await sha256Hex(`${inputHash}:${modelVersion}:${AUTHENTICITY_POLICY}`),
     provider: AUTHENTICITY_PROVIDER,
@@ -852,57 +907,59 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     estimatedUsageUsd: Number(env.COST_AUTHENTICITY_TEXT_ESTIMATE_USD ?? 0.004),
     actualUsageUsd: Number(env.COST_AUTHENTICITY_TEXT_ESTIMATE_USD ?? 0.004),
   }).catch((error) => logEvent({ service: 'lythaus-jobs', event: 'ai_evidence_record_failed', operation: 'moderation_text_scan', error: error instanceof Error ? error.message : 'audit_write_failed' }));
-  const detectedContentClass = evaluation.signals[0]?.category ?? null;
-  const declarationConflict = post.declared_creation_mode === 'human'
-    && evaluation.signals.some((item) => /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.category));
-  const signal = JSON.stringify(evaluation);
-  await transaction(env.DB_JOBS_FRESH, async (client) => {
-    const existing = await client.query(`SELECT 1 FROM moderation.detector_runs WHERE content_type = 'post' AND content_id = $1 AND provider = $2 LIMIT 1`, [postId, AUTHENTICITY_PROVIDER]);
-    if (existing.rowCount !== 0) return;
-    await client.query(
-      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal) VALUES ($1, 'post', $2, $3, $4, $5::jsonb)`,
-      [uuidv7(), postId, AUTHENTICITY_PROVIDER, modelVersion, signal]
-    );
-    await client.query(
-      `INSERT INTO content.content_declarations (post_id, declared_creation_mode, public_label, detector_provider, detector_model_version, detector_signal, declaration_conflict, review_required)
-       VALUES ($1, $2, 'Under review', $3, $4, $5::jsonb, $6, true)
-       ON CONFLICT (post_id) DO UPDATE SET public_label = EXCLUDED.public_label, detector_provider = EXCLUDED.detector_provider,
-         detector_model_version = EXCLUDED.detector_model_version, detector_signal = EXCLUDED.detector_signal,
-         declaration_conflict = EXCLUDED.declaration_conflict, review_required = EXCLUDED.review_required, updated_at = now()`,
-      [postId, post.declared_creation_mode, AUTHENTICITY_PROVIDER, modelVersion, signal, declarationConflict]
-    );
-    const caseResult = await client.query<{ id: string }>(
-      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version) VALUES ($1, 'post', $2, 'open', $3) RETURNING id`,
-      [uuidv7(), postId, AUTHENTICITY_POLICY]
-    );
-    await client.query(
-      `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version) VALUES ($1, $2, 'queue', 'Under review', $3)`,
-      [uuidv7(), caseResult.rows[0].id, AUTHENTICITY_POLICY]
-    );
-    await client.query(
-      `INSERT INTO trust.provenance_events (id, content_id, author_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, final_decision)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'queue')`,
-      [uuidv7(), postId, post.author_id, post.declared_creation_mode, detectedContentClass, AUTHENTICITY_PROVIDER, modelVersion, AUTHENTICITY_POLICY]
-    );
-  });
 }
 
 async function processCommentModeration(message: QueueMessage, env: Env): Promise<void> {
-  const payload = (message.body.payload ?? message.body) as { commentId?: unknown };
-  const commentId = typeof payload.commentId === 'string' ? payload.commentId : undefined;
   const eventId = typeof message.body.eventId === 'string' ? message.body.eventId : message.id;
-  if (!commentId) throw new Error('comment_event_invalid');
+  const revision = parseContentModerationRevision({
+    eventId,
+    payload: message.body.payload ?? message.body,
+    contentIdField: 'commentId',
+  });
 
   await transaction(env.DB_JOBS_FRESH, async (client) => {
-    const comment = await client.query<{ author_id: string; moderation_state: string; deleted_at: string | null }>(
-      `SELECT author_id, moderation_state, deleted_at
+    const comment = await client.query<{
+      id: string;
+      author_id: string;
+      body: string;
+      declared_creation_mode: string;
+      moderation_state: string;
+      deleted_at: string | null;
+      moderation_source_event_id: string | null;
+    }>(
+      `SELECT id, author_id, body, declared_creation_mode, moderation_state, deleted_at, moderation_source_event_id
          FROM content.comments
-        WHERE id = $1
+        WHERE id = $1 AND deleted_at IS NULL
         FOR UPDATE`,
-      [commentId],
+      [revision.contentId],
     );
     const row = comment.rows[0];
-    if (!row || row.deleted_at || row.moderation_state !== 'under_review') return;
+    if (!row) return;
+    const bodyHash = await sha256Hex(row.body);
+    if (!isCurrentContentModerationRevision({
+      revision,
+      canonical: {
+        contentId: row.id,
+        sourceEventId: row.moderation_source_event_id,
+        declaredCreationMode: row.declared_creation_mode,
+        bodyHash,
+        moderationState: row.moderation_state,
+        deletedAt: row.deleted_at,
+      },
+    })) return;
+    const detectorRun = await client.query(
+      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal, source_event_id)
+       VALUES ($1, 'comment', $2, $3, 'manual-review-v1', $4::jsonb, $5)
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [uuidv7(), revision.contentId, AUTHENTICITY_PROVIDER, JSON.stringify({
+        schemaVersion: 'lythaus-authenticity-v1',
+        recommendation: 'review',
+        reviewRequired: true,
+        rationale: 'Comments enter human moderation review before publication.',
+      }), revision.sourceEventId],
+    );
+    if (detectorRun.rowCount !== 1) return;
     const claimed = await client.query(
       `INSERT INTO system.audit_events
          (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
@@ -910,15 +967,25 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
                'PUBLIC_COMMENT_REVIEW', $1::text, '{}'::jsonb)
        ON CONFLICT (id) DO NOTHING
        RETURNING id`,
-      [eventId, row.author_id, commentId],
+      [eventId, row.author_id, revision.contentId],
     );
     if (claimed.rowCount === 0) return;
-    const caseId = uuidv7();
     await client.query(
-      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version)
-       VALUES ($1, 'comment', $2, 'open', $3)`,
-      [caseId, commentId, AUTHENTICITY_POLICY],
+      `UPDATE moderation.cases
+          SET state = 'superseded', resolved_at = COALESCE(resolved_at, now())
+        WHERE content_type = 'comment' AND content_id = $1 AND state = 'open'
+          AND source_event_id IS DISTINCT FROM $2`,
+      [revision.contentId, revision.sourceEventId],
     );
+    const caseId = uuidv7();
+    const caseCreated = await client.query(
+      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version, source_event_id)
+       VALUES ($1, 'comment', $2, 'open', $3, $4)
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [caseId, revision.contentId, AUTHENTICITY_POLICY, revision.sourceEventId],
+    );
+    if (caseCreated.rowCount !== 1) return;
     await client.query(
       `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version)
        VALUES ($1, $2, 'queue', 'Under review', $3)`,
@@ -944,6 +1011,8 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   const payload = (message.body.payload ?? message.body) as { uploadSessionId?: unknown; objectKey?: unknown };
   const sessionId = typeof payload.uploadSessionId === 'string' ? payload.uploadSessionId : undefined;
   const objectKey = typeof payload.objectKey === 'string' ? payload.objectKey : undefined;
+  const eventId = typeof message.body.eventId === 'string' ? message.body.eventId : message.id;
+  const correlationId = typeof message.body.correlationId === 'string' ? message.body.correlationId : eventId;
   if (!sessionId || !objectKey || !env.MEDIA_QUARANTINE || !env.MEDIA_APPROVED || !env.IMAGES) throw new Error('media_processing_not_configured');
 
   const session = await query<{ user_id: string; content_type: string; expected_bytes: number; status: string }>(
@@ -953,30 +1022,50 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   );
   const row = session.rows[0];
   if (!row) throw new Error('upload_session_not_found');
-  if (row.status === 'approved') return;
+  if (row.status === 'approved' || row.status === 'rejected') {
+    await env.MEDIA_QUARANTINE.delete(objectKey);
+    return;
+  }
   if (row.status !== 'queued') throw new Error('upload_session_not_queued');
 
-  const settleRejected = async (): Promise<void> => {
+  const settleRejected = async (reasonCode: string): Promise<void> => {
     await transaction(env.DB_JOBS_FRESH, async (client) => {
-      const updated = await client.query(`UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued'`, [sessionId]);
-      if (updated.rowCount !== 0) await client.query(
+      const updated = await client.query(`UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued' RETURNING id`, [sessionId]);
+      if (updated.rowCount !== 0) {
+        await client.query(
         `UPDATE media.storage_ledger SET bytes_reserved = greatest(bytes_reserved - $1, 0), bytes_rejected = bytes_rejected + $1, last_reconciled_at = now() WHERE user_id = $2`,
         [row.expected_bytes, row.user_id]);
+        await recordUserActivity(client, {
+          id: uuidv7(), userId: row.user_id, eventType: 'content.media_upload_rejected',
+          category: 'content', source: 'jobs', sourceEventId: eventId, correlationId,
+          title: 'Media upload rejected',
+          explanation: 'The uploaded file did not pass required integrity and safety checks and was removed from quarantine.',
+          result: 'failed', reasonCode, policyVersion: AUTHENTICITY_POLICY,
+          objectType: 'upload_session', objectId: sessionId, reputationEffect: 'none', appealable: true,
+          retentionClass: 'moderation', metadata: { contentType: row.content_type, moderationState: 'rejected' },
+          createdAt: new Date().toISOString(),
+        });
+      }
     });
   };
 
   const source = await env.MEDIA_QUARANTINE.get(objectKey);
   if (!source) throw new Error('quarantine_object_missing');
+  if (source.size !== Number(row.expected_bytes) || source.size > MAX_IMAGE_BYTES) {
+    await settleRejected('MEDIA_SIZE_MISMATCH');
+    await env.MEDIA_QUARANTINE.delete(objectKey);
+    return;
+  }
   const bytes = new Uint8Array(await new Response(source.body).arrayBuffer());
   if (bytes.byteLength !== Number(row.expected_bytes) || !hasMagicBytes(bytes, row.content_type)) {
-    await settleRejected();
+    await settleRejected('MEDIA_SIGNATURE_INVALID');
     await env.MEDIA_QUARANTINE.delete(objectKey);
     return;
   }
 
   const sourceInfo = await env.IMAGES.info(new Response(bytes).body!);
   if (!sourceInfo.width || !sourceInfo.height || sourceInfo.width * sourceInfo.height > MAX_IMAGE_PIXELS) {
-    await settleRejected();
+    await settleRejected('MEDIA_DIMENSIONS_INVALID');
     await env.MEDIA_QUARANTINE.delete(objectKey);
     return;
   }
@@ -1042,30 +1131,65 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
         [row.user_id, approvedBytes.byteLength, approvedBytes.byteLength, row.expected_bytes]
       );
     }
-    await client.query(`UPDATE media.upload_sessions SET status = 'approved' WHERE id = $1 AND status = 'queued'`, [sessionId]);
+    const approved = await client.query(`UPDATE media.upload_sessions SET status = 'approved' WHERE id = $1 AND status = 'queued' RETURNING id`, [sessionId]);
+    if (approved.rowCount === 1) await recordUserActivity(client, {
+      id: uuidv7(), userId: row.user_id, eventType: 'content.media_upload_approved',
+      category: 'content', source: 'jobs', sourceEventId: eventId, correlationId,
+      title: 'Media upload approved',
+      explanation: 'The uploaded media passed integrity processing and entered the approved private media store.',
+      result: 'succeeded', policyVersion: AUTHENTICITY_POLICY,
+      objectType: 'upload_session', objectId: sessionId, reputationEffect: 'none', appealable: false,
+      retentionClass: 'ordinary', metadata: { contentType: 'image/webp', moderationState: 'approved' },
+      createdAt: new Date().toISOString(),
+    });
   });
   await env.MEDIA_QUARANTINE.delete(objectKey);
 }
 
 async function processProfileModeration(message: QueueMessage, env: Env): Promise<void> {
-  const payload = (message.body.payload ?? message.body) as { userId?: unknown; displayName?: unknown; bio?: unknown };
-  const userId = typeof payload.userId === 'string' ? payload.userId : undefined;
-  if (!userId) throw new Error('profile_event_invalid');
+  const eventId = typeof message.body.eventId === 'string' ? message.body.eventId : message.id;
+  const revision = parseProfileModerationRevision({ eventId, payload: message.body.payload ?? message.body });
+  const profile = await query<{
+    user_id: string;
+    display_name: string;
+    bio: string | null;
+    moderation_source_event_id: string | null;
+    moderation_state: string;
+    user_status: string;
+  }>(env.DB_JOBS_FRESH,
+    `SELECT profile.user_id, user_record.display_name, profile.bio,
+            profile.moderation_source_event_id, profile.moderation_state,
+            user_record.status AS user_status
+       FROM social.profiles profile
+       JOIN identity.users user_record ON user_record.id = profile.user_id
+      WHERE profile.user_id = $1`,
+    [revision.userId],
+  );
+  const current = profile.rows[0];
+  if (!isCurrentProfileModerationRevision({
+    revision,
+    canonical: current ? {
+      userId: current.user_id,
+      sourceEventId: current.moderation_source_event_id,
+      moderationState: current.moderation_state,
+      userStatus: current.user_status,
+    } : undefined,
+  })) return;
   const prior = await query(env.DB_JOBS_FRESH,
-    `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'profile' AND content_id = $1 AND provider = $2 LIMIT 1`,
-    [userId, AUTHENTICITY_PROVIDER]);
+    `SELECT 1 FROM moderation.detector_runs WHERE provider = $1 AND source_event_id = $2 LIMIT 1`,
+    [AUTHENTICITY_PROVIDER, revision.sourceEventId]);
   if (prior.rowCount !== 0) return;
   const content = JSON.stringify({
-    displayName: typeof payload.displayName === 'string' ? payload.displayName : null,
-    bio: typeof payload.bio === 'string' ? payload.bio : null,
+    displayName: current.display_name,
+    bio: current.bio,
   });
   const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
-    kind: 'profile', content, contentId: userId,
+    kind: 'profile', content, contentId: revision.userId,
   });
   const inputHash = await sha256Hex(content);
   if (modelExecuted) await recordAiEvidence(env, {
-    caseId: userId,
-    correlationId: userId,
+    caseId: revision.userId,
+    correlationId: revision.sourceEventId,
     inputHash,
     evidenceBundleHash: await sha256Hex(`${inputHash}:${evaluation.modelId}:${AUTHENTICITY_POLICY}`),
     provider: AUTHENTICITY_PROVIDER,
@@ -1081,23 +1205,90 @@ async function processProfileModeration(message: QueueMessage, env: Env): Promis
     actualUsageUsd: Number(env.COST_AUTHENTICITY_TEXT_ESTIMATE_USD ?? 0.004),
   }).catch((error) => logEvent({ service: 'lythaus-jobs', event: 'ai_evidence_record_failed', operation: 'moderation_profile_scan', error: error instanceof Error ? error.message : 'audit_write_failed' }));
   await transaction(env.DB_JOBS_FRESH, async (client) => {
-    const existing = await client.query(
-      `SELECT 1 FROM moderation.detector_runs WHERE content_type = 'profile' AND content_id = $1 AND provider = $2 LIMIT 1`,
-      [userId, AUTHENTICITY_PROVIDER]);
-    if (existing.rowCount !== 0) return;
+    const locked = await client.query<{
+      user_id: string;
+      display_name: string;
+      bio: string | null;
+      moderation_source_event_id: string | null;
+      moderation_state: string;
+      user_status: string;
+    }>(
+      `SELECT profile.user_id, user_record.display_name, profile.bio,
+              profile.moderation_source_event_id, profile.moderation_state,
+              user_record.status AS user_status
+         FROM social.profiles profile
+         JOIN identity.users user_record ON user_record.id = profile.user_id
+        WHERE profile.user_id = $1
+        FOR UPDATE`,
+      [revision.userId],
+    );
+    const lockedProfile = locked.rows[0];
+    if (!isCurrentProfileModerationRevision({
+      revision,
+      canonical: lockedProfile ? {
+        userId: lockedProfile.user_id,
+        sourceEventId: lockedProfile.moderation_source_event_id,
+        moderationState: lockedProfile.moderation_state,
+        userStatus: lockedProfile.user_status,
+      } : undefined,
+    })) return;
+    const lockedContent = JSON.stringify({ displayName: lockedProfile.display_name, bio: lockedProfile.bio });
+    if (lockedContent !== content) return;
+    const detectorRun = await client.query(
+      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal, source_event_id)
+       VALUES ($1, 'profile', $2, $3, $4, $5::jsonb, $6)
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [uuidv7(), revision.userId, AUTHENTICITY_PROVIDER, evaluation.modelId, JSON.stringify(evaluation), revision.sourceEventId],
+    );
+    if (detectorRun.rowCount !== 1) return;
     await client.query(
-      `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal)
-       VALUES ($1, 'profile', $2, $3, $4, $5::jsonb)`,
-      [uuidv7(), userId, AUTHENTICITY_PROVIDER, evaluation.modelId, JSON.stringify(evaluation)]);
+      `UPDATE moderation.cases
+          SET state = 'superseded', resolved_at = COALESCE(resolved_at, now())
+        WHERE content_type = 'profile' AND content_id = $1 AND state = 'open'
+          AND source_event_id IS DISTINCT FROM $2`,
+      [revision.userId, revision.sourceEventId],
+    );
     const caseResult = await client.query<{ id: string }>(
-      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version)
-       VALUES ($1, 'profile', $2, 'open', $3) RETURNING id`,
-      [uuidv7(), userId, AUTHENTICITY_POLICY]);
+      `INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version, source_event_id)
+       VALUES ($1, 'profile', $2, 'open', $3, $4)
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [uuidv7(), revision.userId, AUTHENTICITY_POLICY, revision.sourceEventId]);
+    if (caseResult.rowCount !== 1) return;
     await client.query(
       `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version)
        VALUES ($1, $2, 'queue', 'Under review', $3)`,
       [uuidv7(), caseResult.rows[0].id, AUTHENTICITY_POLICY]);
+    await recordUserActivity(client, {
+      id: uuidv7(), userId: revision.userId, actorUserId: revision.userId,
+      eventType: 'moderation.case_opened', category: 'moderation', source: 'jobs',
+      sourceEventId: revision.sourceEventId,
+      correlationId: typeof message.body.correlationId === 'string' ? message.body.correlationId : revision.sourceEventId,
+      title: 'Profile review opened',
+      explanation: 'Your updated public profile entered the normal publication review process.',
+      result: 'pending', reasonCode: 'PUBLIC_PROFILE_REVIEW', policyVersion: AUTHENTICITY_POLICY,
+      objectType: 'moderation_case', objectId: caseResult.rows[0].id, reputationEffect: 'withheld',
+      appealable: false, retentionClass: 'moderation', metadata: { decisionType: 'queue' },
+      createdAt: new Date().toISOString(),
+    });
   });
+}
+
+async function supersedeDeletedContentCases(message: QueueMessage, env: Env, contentType: 'post' | 'comment'): Promise<void> {
+  const payload = message.body.payload ?? message.body;
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return;
+  const contentId = (payload as Record<string, unknown>)[contentType === 'post' ? 'postId' : 'commentId'];
+  if (typeof contentId !== 'string' || !contentId) return;
+  const table = contentType === 'post' ? 'content.posts' : 'content.comments';
+  const current = await query<{ id: string }>(env.DB_JOBS_FRESH,
+    `SELECT id FROM ${table} WHERE id = $1 AND deleted_at IS NOT NULL`, [contentId]);
+  if (current.rowCount === 0) return;
+  await query(env.DB_JOBS_FRESH,
+    `UPDATE moderation.cases
+        SET state = 'superseded', resolved_at = COALESCE(resolved_at, now())
+      WHERE content_type = $1 AND content_id = $2 AND state = 'open'`,
+    [contentType, contentId]);
 }
 
 async function replaceRecusedAppealReviewer(message: QueueMessage, env: Env): Promise<void> {
@@ -1153,8 +1344,7 @@ async function replaceRecusedAppealReviewer(message: QueueMessage, env: Env): Pr
         WHERE appeal_id = $1 AND vote_weight_snapshot = 2 AND state IN ('assigned', 'voted') LIMIT 1`,
       [appealId],
     );
-    const level = Math.max(0, Math.min(5, Number(candidate.current_level)));
-    const voteWeight = level === 5 && weighted.rowCount === 0 ? 2 : 1;
+    const { level, voteWeight } = reviewerReplacementPlan(candidate.current_level, weighted.rowCount !== 0);
     const replacementId = uuidv7();
     await client.query(
       `INSERT INTO moderation.appeal_assignments
@@ -1218,38 +1408,31 @@ async function processAppealVoteLocked(message: QueueMessage, env: Env, eventId:
         WHERE vote.appeal_id = $1 AND assignment.appeal_id = $1`,
       [appealId],
     );
-    const votes: AppealVote[] = voteResult.rows.map((row) => {
-      if (row.decision !== 'overturn' && row.decision !== 'uphold') throw new Error('appeal_vote_decision_invalid');
-      if (row.qualification_snapshot !== 'trained') throw new Error('appeal_vote_qualification_invalid');
-      if (!Number.isInteger(row.level_snapshot) || row.level_snapshot < 0 || row.level_snapshot > 5) throw new Error('appeal_vote_level_invalid');
-      if (row.vote_weight_snapshot !== 1 && row.vote_weight_snapshot !== 2) throw new Error('appeal_vote_weight_invalid');
-      return {
-        reviewerId: row.reviewer_id,
-        decision: row.decision,
-        qualificationSnapshot: 'trained',
-        levelSnapshot: row.level_snapshot as AppealVote['levelSnapshot'],
-        voteWeightSnapshot: row.vote_weight_snapshot,
-        locked: true,
-        recused: row.assignment_state !== 'voted'
-          || !row.conflict_checked
-          || row.current_qualification_state !== 'trained',
-      };
-    });
+    const votes: AppealVote[] = voteResult.rows.map((row) => lockedAppealVote({
+      reviewerId: row.reviewer_id,
+      decision: row.decision,
+      qualificationSnapshot: row.qualification_snapshot,
+      levelSnapshot: row.level_snapshot,
+      voteWeightSnapshot: row.vote_weight_snapshot,
+      assignmentState: row.assignment_state,
+      conflictChecked: row.conflict_checked,
+      currentQualificationState: row.current_qualification_state,
+    }));
     const riskClass = appeal.risk_class as AppealRiskClass;
     const evaluation = evaluateAppeal(votes, [], riskClass);
-    const prior = await client.query<{ community_decision: string | null; state: string }>(
-      `SELECT community_decision, state FROM moderation.appeal_outcomes WHERE appeal_id = $1 FOR UPDATE`,
+    const prior = await client.query<{ reviewer_panel_decision: string | null; state: string }>(
+      `SELECT reviewer_panel_decision, state FROM moderation.appeal_outcomes WHERE appeal_id = $1 FOR UPDATE`,
       [appealId],
     );
     await client.query(
       `INSERT INTO moderation.appeal_outcomes
-         (appeal_id, risk_class, community_decision, final_decision, completed_reviewers,
+         (appeal_id, risk_class, reviewer_panel_decision, final_decision, completed_reviewers,
           total_weight, overturn_weight, uphold_weight, winning_share, required_adjudicators,
           state, policy_version, evaluated_at, resolved_at)
        VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8, $9, $10, $11, now(), NULL)
        ON CONFLICT (appeal_id) DO UPDATE SET
          risk_class = EXCLUDED.risk_class,
-         community_decision = EXCLUDED.community_decision,
+         reviewer_panel_decision = EXCLUDED.reviewer_panel_decision,
          final_decision = NULL,
          completed_reviewers = EXCLUDED.completed_reviewers,
          total_weight = EXCLUDED.total_weight,
@@ -1264,7 +1447,7 @@ async function processAppealVoteLocked(message: QueueMessage, env: Env, eventId:
       [
         appealId,
         riskClass,
-        evaluation.communityDecision,
+        evaluation.reviewerPanelDecision,
         evaluation.completedReviewers,
         evaluation.totalWeight,
         evaluation.overturnWeight,
@@ -1275,16 +1458,16 @@ async function processAppealVoteLocked(message: QueueMessage, env: Env, eventId:
         evaluation.policyVersion,
       ],
     );
-    if (!evaluation.communityDecision || prior.rows[0]?.community_decision === evaluation.communityDecision) return;
-    const communityActivity = await recordUserActivity(client, {
+    if (!evaluation.reviewerPanelDecision || prior.rows[0]?.reviewer_panel_decision === evaluation.reviewerPanelDecision) return;
+    const reviewerPanelActivity = await recordUserActivity(client, {
       id: uuidv7(),
       userId: appeal.appellant_id,
-      eventType: 'appeals.community_result_reached',
+      eventType: 'appeals.reviewer_panel_result_reached',
       category: 'appeals',
       source: 'jobs',
-      sourceEventId: eventId,
+      sourceEventId: appealId,
       correlationId: stringValue(message.body.correlationId) ?? appealId,
-      title: 'Appeal community review completed',
+      title: 'Appeal reviewer panel completed',
       explanation: 'The complete independent reviewer quorum reached the required weighted majority and awaits professional adjudication.',
       result: 'pending',
       policyVersion: evaluation.policyVersion,
@@ -1293,17 +1476,17 @@ async function processAppealVoteLocked(message: QueueMessage, env: Env, eventId:
       reputationEffect: 'none',
       appealable: false,
       retentionClass: 'moderation',
-      metadata: { appealState: evaluation.status, riskClass, outcome: evaluation.communityDecision },
+      metadata: { appealState: evaluation.status, riskClass, outcome: evaluation.reviewerPanelDecision },
       createdAt: new Date().toISOString(),
     });
     await insertPreferenceAwareNotification(client, {
       recipientId: appeal.appellant_id,
-      notificationType: 'appeals.community_result_reached',
+      notificationType: 'appeals.reviewer_panel_result_reached',
       entityId: appealId,
-      sourceEventId: eventId,
+      sourceEventId: appealId,
       policyVersion: evaluation.policyVersion,
       preferenceClass: 'moderation',
-      activityEventId: communityActivity.id,
+      activityEventId: reviewerPanelActivity.id,
     });
     const adjudicators = await client.query<{ user_id: string }>(
       `SELECT membership.user_id
@@ -1341,7 +1524,7 @@ async function processAppealVoteLocked(message: QueueMessage, env: Env, eventId:
         sourceEventId: eventId,
         correlationId: appealId,
         title: 'Appeal adjudication requested',
-        explanation: `A completed community appeal requires ${evaluation.requiredAdjudicators === 2 ? 'two independent adjudicator confirmations' : 'an adjudicator confirmation'}.`,
+        explanation: `A completed reviewer-panel appeal requires ${evaluation.requiredAdjudicators === 2 ? 'two independent adjudicator confirmations' : 'an adjudicator confirmation'}.`,
         result: 'pending',
         policyVersion: evaluation.policyVersion,
         objectType: 'appeal',
@@ -1349,7 +1532,7 @@ async function processAppealVoteLocked(message: QueueMessage, env: Env, eventId:
         reputationEffect: 'none',
         appealable: false,
         retentionClass: 'moderation',
-        metadata: { appealState: evaluation.status, riskClass, outcome: evaluation.communityDecision },
+        metadata: { appealState: evaluation.status, riskClass, outcome: evaluation.reviewerPanelDecision },
         createdAt: new Date().toISOString(),
       });
       await insertPreferenceAwareNotification(client, {
@@ -1393,11 +1576,13 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
     }
   }
   try {
-    if (eventType === 'content.post.created') await processPostModeration(message, env);
+    if (eventType === 'content.post.created' || eventType === 'content.post.updated') await processPostModeration(message, env);
     if (eventType === 'content.profile.updated') await processProfileModeration(message, env);
     if (eventType === 'content.comment.created' || eventType === 'content.comment.updated') {
       await processCommentModeration(message, env);
     }
+    if (eventType === 'content.post.deleted') await supersedeDeletedContentCases(message, env, 'post');
+    if (eventType === 'content.comment.deleted') await supersedeDeletedContentCases(message, env, 'comment');
     if (eventType === 'media.upload.finalised') await processMediaUpload(message, env);
     if (eventType === 'privacy.request.created') {
       const payload = await resolvePrivacyRequestPayload(env, message, eventId);
@@ -1413,39 +1598,18 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
         `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
          VALUES ($1, $2, 'received', $3::jsonb)
          ON CONFLICT (id) DO NOTHING`, [eventId, payload.requestId, JSON.stringify({ eventId })]);
-      if (payload.requestType === 'export' || payload.requestType === 'delete') {
-        await recordActivityAndNotification(env, {
-          userId: payload.subjectId,
-          eventType: payload.requestType === 'export' ? 'privacy.export_requested' : 'privacy.deletion_requested',
-          category: 'privacy',
-          source: 'jobs',
-          sourceEventId: payload.requestId,
-          correlationId: typeof message.body.correlationId === 'string' ? message.body.correlationId : eventId,
-          title: payload.requestType === 'export' ? 'Data export requested' : 'Account deletion requested',
-          explanation: payload.requestType === 'export'
-            ? 'Your data export request was received for processing.'
-            : 'Your account deletion request was received for processing.',
-          result: 'pending',
-          policyVersion: ACTIVITY_POLICY_VERSION,
-          objectType: 'privacy_request',
-          objectId: payload.requestId,
-          reputationEffect: 'none',
-          appealable: false,
-          retentionClass: 'security',
-          metadata: { requestType: payload.requestType, requestState: 'received' },
-        });
+      const lifecycle = privacyRequestLifecyclePlan(payload.requestType);
+      if (lifecycle.workflow === 'delete' && env.ACCOUNT_DELETE) {
+        await ensureWorkflowCreate(env.ACCOUNT_DELETE, `privacy-delete-${payload.requestId}`, { subjectId: payload.subjectId, requestId: payload.requestId });
       }
-      if (payload.requestType === 'delete' && env.ACCOUNT_DELETE) {
-        await env.ACCOUNT_DELETE.create({ id: `privacy-delete-${payload.requestId}`, params: { subjectId: payload.subjectId, requestId: payload.requestId } });
-      }
-      if (payload.requestType === 'export' && env.ACCOUNT_EXPORT) {
-        await env.ACCOUNT_EXPORT.create({ id: `privacy-export-${payload.requestId}`, params: { subjectId: payload.subjectId, requestId: payload.requestId } });
+      if (lifecycle.workflow === 'export' && env.ACCOUNT_EXPORT) {
+        await ensureWorkflowCreate(env.ACCOUNT_EXPORT, `privacy-export-${payload.requestId}`, { subjectId: payload.subjectId, requestId: payload.requestId });
       }
     }
     if (eventType === 'moderation.appeal.created' && env.APPEAL_LIFECYCLE) {
       const payload = (message.body.payload ?? {}) as { appealId?: string };
       if (typeof payload.appealId !== 'string') throw new Error('appeal_event_invalid');
-      await env.APPEAL_LIFECYCLE.create({ id: `appeal-${payload.appealId}`, params: { appealId: payload.appealId } });
+      await ensureWorkflowCreate(env.APPEAL_LIFECYCLE, `appeal-${payload.appealId}`, { appealId: payload.appealId });
     }
     if (eventType === 'moderation.appeal.reviewer_recused') {
       await replaceRecusedAppealReviewer(message, env);
@@ -1478,11 +1642,12 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
 }
 
 function queueForEvent(eventType: string, env: Env): Queue | undefined {
-  if (eventType.startsWith('content.') || eventType.startsWith('moderation.')) return env.MODERATION_QUEUE;
-  if (eventType.startsWith('feed.')) return env.FEED_QUEUE;
-  if (eventType.startsWith('notification.')) return env.NOTIFICATIONS_QUEUE;
-  if (eventType.startsWith('media.')) return env.MEDIA_QUEUE;
-  if (eventType.startsWith('privacy.')) return env.PRIVACY_QUEUE;
+  const route = queueRouteForEvent(eventType);
+  if (route === 'moderation') return env.MODERATION_QUEUE;
+  if (route === 'feed') return env.FEED_QUEUE;
+  if (route === 'notifications') return env.NOTIFICATIONS_QUEUE;
+  if (route === 'media') return env.MEDIA_QUEUE;
+  if (route === 'privacy') return env.PRIVACY_QUEUE;
   return env.AUDIT_QUEUE;
 }
 
@@ -1620,6 +1785,8 @@ export default {
       const readiness = jobs.readiness === 'pass' && privacy.readiness === 'pass' ? 'pass' : 'fail';
       return json({
         service: 'lythaus-jobs',
+        workerVersionId: env.WORKER_VERSION.id,
+        releaseTag: env.WORKER_VERSION.tag,
         databases: {
           jobs: databaseReadinessResponse(jobs, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
           privacy: databaseReadinessResponse(privacy, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
@@ -1653,11 +1820,11 @@ export default {
     const now = new Date();
     if (env.RETENTION_CLEANUP && now.getUTCHours() === 2 && now.getUTCMinutes() === 0) {
       const runId = new Date().toISOString().slice(0, 10);
-      await env.RETENTION_CLEANUP.create({ id: `retention-${runId}`, params: { runId } });
+      await ensureWorkflowCreate(env.RETENTION_CLEANUP, `retention-${runId}`, { runId });
     }
     if (env.BACKUP_VALIDATION && now.getUTCDate() === 1 && now.getUTCHours() === 3 && now.getUTCMinutes() === 0) {
       const runId = now.toISOString().slice(0, 10);
-      await env.BACKUP_VALIDATION.create({ id: `backup-validation-${runId}`, params: { runId } });
+      await ensureWorkflowCreate(env.BACKUP_VALIDATION, `backup-validation-${runId}`, { runId });
     }
   },
 };
@@ -1688,42 +1855,36 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       return true;
     });
 
-    const hold = await step.do('evaluate-legal-holds', async () => {
-      const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH, `SELECT id FROM privacy.legal_holds WHERE subject_id = $1 AND active`, [subjectId]);
-      if (result.rows[0]) {
-        await query(this.env.DB_PRIVACY_FRESH,
-          `UPDATE privacy.requests SET state = 'blocked' WHERE id = $1 AND state <> 'completed'`, [requestId]);
-        await query(this.env.DB_PRIVACY_FRESH,
-          `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
-           SELECT $1, $2, 'blocked_legal_hold', $3::jsonb
-            WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'blocked_legal_hold')`,
-          [uuidv7(), requestId, JSON.stringify({ legalHoldId: result.rows[0].id })]);
-        return true;
-      }
-      return false;
-    });
-    if (hold) {
+    const hold = await step.do('evaluate-legal-holds', async () => transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+      const result = await client.query<{ id: string }>(`SELECT id FROM privacy.legal_holds WHERE subject_id = $1 AND active`, [subjectId]);
+      const plan = legalHoldPlan(result.rows[0]?.id);
+      if (plan.state !== 'blocked') return { ...plan, activityEventId: null };
+      await client.query(
+        `UPDATE privacy.requests SET state = 'blocked' WHERE id = $1 AND state <> 'completed'`, [requestId]);
+      await client.query(
+        `INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
+         SELECT $1, $2, $3, $4::jsonb
+          WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = $3)`,
+        [uuidv7(), requestId, plan.requestEventType, JSON.stringify({ legalHoldId: plan.legalHoldId })]);
+      const activity = await recordUserActivity(client, {
+        id: uuidv7(), userId: subjectId,
+        eventType: plan.activity.eventType, category: 'privacy', source: 'workflow',
+        sourceEventId: requestId, correlationId: requestId,
+        title: plan.activity.title, explanation: plan.activity.explanation, result: plan.activity.result,
+        reasonCode: plan.activity.reasonCode, policyVersion: ACTIVITY_POLICY_VERSION,
+        objectType: 'privacy_request', objectId: requestId, reputationEffect: 'none', appealable: false,
+        retentionClass: 'security', metadata: { requestType: 'delete', requestState: 'blocked' },
+        createdAt: new Date().toISOString(),
+      });
+      return { ...plan, activityEventId: activity.id };
+    }));
+    if (hold.state === 'blocked') {
       await step.do('record-legal-hold-outcome', async () => {
-        await recordActivityAndNotification(this.env, {
-          userId: subjectId,
-          eventType: 'privacy.deletion_state_changed',
-          category: 'privacy',
-          source: 'workflow',
-          sourceEventId: requestId,
-          correlationId: requestId,
-          title: 'Account deletion is paused',
-          explanation: 'Your deletion request is paused while an active legal restriction applies.',
-          result: 'withheld',
-          reasonCode: 'LEGAL_HOLD',
-          policyVersion: ACTIVITY_POLICY_VERSION,
-          objectType: 'privacy_request',
-          objectId: requestId,
-          reputationEffect: 'none',
-          appealable: false,
-          retentionClass: 'security',
-          metadata: { requestType: 'delete', requestState: 'blocked' },
-          notification: { type: 'privacy.deletion_blocked', entityId: requestId },
-        });
+        await transaction(this.env.DB_JOBS_FRESH, (client) => insertPreferenceAwareNotification(client, {
+          recipientId: subjectId, notificationType: 'privacy.deletion_blocked', entityId: requestId,
+          sourceEventId: requestId, policyVersion: ACTIVITY_POLICY_VERSION,
+          preferenceClass: 'always', activityEventId: hold.activityEventId,
+        }));
         return true;
       });
       return { subjectId, state: 'blocked' };
@@ -1733,6 +1894,23 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       await transaction(this.env.DB_JOBS_FRESH, async (client) => {
         await client.query(`UPDATE content.comments SET body = '[deleted]', moderation_state = 'blocked' WHERE author_id = $1`, [subjectId]);
         await client.query(`UPDATE content.posts SET body = '[deleted]', visibility = 'private', moderation_state = 'blocked', published_at = NULL, updated_at = now() WHERE author_id = $1`, [subjectId]);
+        await client.query(
+          `UPDATE moderation.cases moderation_case
+              SET state = 'superseded', resolved_at = COALESCE(resolved_at, now())
+            WHERE moderation_case.state = 'open'
+              AND (
+                (moderation_case.content_type = 'profile' AND moderation_case.content_id = $1)
+                OR (moderation_case.content_type = 'post' AND EXISTS (
+                  SELECT 1 FROM content.posts post
+                   WHERE post.id = moderation_case.content_id AND post.author_id = $1
+                ))
+                OR (moderation_case.content_type = 'comment' AND EXISTS (
+                  SELECT 1 FROM content.comments comment
+                   WHERE comment.id = moderation_case.content_id AND comment.author_id = $1
+                ))
+              )`,
+          [subjectId],
+        );
         await client.query(`DELETE FROM feed.author_outbox WHERE author_id = $1`, [subjectId]);
         await client.query(`DELETE FROM feed.discovery_candidates WHERE post_id IN (SELECT id FROM content.posts WHERE author_id = $1)`, [subjectId]);
         await client.query(`DELETE FROM feed.user_inbox WHERE user_id = $1`, [subjectId]);
@@ -1748,9 +1926,38 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await client.query(`DELETE FROM trust.accountability_signals WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM trust.reputation_balances WHERE user_id = $1`, [subjectId]);
         await client.query(`UPDATE moderation.appeals SET statement = NULL WHERE appellant_id = $1`, [subjectId]);
-        await client.query(`DELETE FROM system.idempotency_keys WHERE actor_id = $1`, [subjectId]);
-        await client.query(`DELETE FROM system.consumer_inbox WHERE payload ->> 'subjectId' = $1 OR payload ->> 'subject_id' = $1`, [subjectId]);
-        await client.query(`UPDATE system.outbox_events SET actor_id = NULL, payload = '{}'::jsonb WHERE actor_id = $1`, [subjectId]);
+        await client.query(
+          `DELETE FROM system.idempotency_keys
+            WHERE actor_id = $1 AND response ->> 'state' = 'completed'`,
+          [subjectId],
+        );
+        await client.query(
+          `UPDATE system.idempotency_keys
+              SET actor_id = NULL
+            WHERE actor_id = $1`,
+          [subjectId],
+        );
+        await client.query(
+          `DELETE FROM system.consumer_inbox
+            WHERE jsonb_path_exists(
+              payload,
+              '$.** ? (@ == $subject)',
+              jsonb_build_object('subject', to_jsonb($1::text))
+            )`,
+          [subjectId],
+        );
+        await client.query(
+          `UPDATE system.outbox_events
+              SET actor_id = NULL, payload = '{}'::jsonb
+            WHERE actor_id = $1
+               OR aggregate_id = $1
+               OR jsonb_path_exists(
+                 payload,
+                 '$.** ? (@ == $subject)',
+                 jsonb_build_object('subject', to_jsonb($1::text))
+               )`,
+          [subjectId],
+        );
       });
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
         await client.query(`DELETE FROM identity.auth_sessions WHERE user_id = $1`, [subjectId]);
@@ -1758,6 +1965,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await client.query(`DELETE FROM identity.provider_links WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.email_credentials WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.contact_emails WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM identity.user_entitlements WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.email_verification_tokens WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.password_reset_tokens WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.handles WHERE user_id = $1`, [subjectId]);
@@ -1771,6 +1979,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await client.query(`DELETE FROM privacy.retention_rules WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM trust.user_activity_events WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM trust.reputation_profiles WHERE user_id = $1`, [subjectId]);
+        await client.query(`DELETE FROM trust.reward_redemptions WHERE user_id = $1`, [subjectId]);
         await client.query(`UPDATE identity.users SET status = 'deleted', display_name = '[deleted]', deleted_at = COALESCE(deleted_at, now()), updated_at = now() WHERE id = $1`, [subjectId]);
       });
       return true;
@@ -1852,6 +2061,17 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await client.query(`INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
           SELECT $1, $2, 'completed', $3::jsonb
            WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'completed')`, [uuidv7(), requestId, JSON.stringify({ evidenceHash })]);
+        await recordUserActivity(client, {
+          id: uuidv7(), userId: subjectId,
+          eventType: 'account.deletion_completed', category: 'account', source: 'workflow',
+          sourceEventId: requestId, correlationId: requestId,
+          title: 'Account deletion completed',
+          explanation: 'Your account deletion completed subject to the documented audit and legal-retention rules.',
+          result: 'succeeded', policyVersion: ACTIVITY_POLICY_VERSION,
+          objectType: 'privacy_request', objectId: requestId, reputationEffect: 'none', appealable: false,
+          retentionClass: 'security', metadata: { sessionAction: 'account_deleted' },
+          createdAt: new Date().toISOString(),
+        });
       });
       return evidenceHash;
     });
@@ -1879,7 +2099,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     });
 
     const passport = await step.do('build-data-passport', async () => {
-      const [identity, locations, privateProfileField] = await Promise.all([
+      const [identity, locations, privateProfileField, consentRecords, contactEmailField, entitlement, rewardRedemptions, accountEvents] = await Promise.all([
         query(this.env.DB_PRIVACY_FRESH, `SELECT id, display_name, status, created_at, deleted_at FROM identity.users WHERE id = $1`, [subjectId]),
         query(this.env.DB_PRIVACY_FRESH, `SELECT store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class, legal_hold_state, deletion_state, last_verified_at FROM privacy.subject_data_locations WHERE subject_id = $1`, [subjectId]),
         query<{ encrypted_payload: string; encryption_key_version: string }>(
@@ -1889,22 +2109,63 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
             WHERE user_id = $1`,
           [subjectId],
         ),
+        query(this.env.DB_PRIVACY_FRESH,
+          `SELECT id, purpose, policy_version, granted, created_at
+             FROM identity.consent_records
+            WHERE user_id = $1
+            ORDER BY created_at, id`,
+          [subjectId],
+        ),
+        query<{ ciphertext: string; encryptionKeyVersion: string }>(
+          this.env.DB_PRIVACY_FRESH,
+          `SELECT convert_from(email_ciphertext, 'utf8') AS ciphertext,
+                  encryption_key_version AS "encryptionKeyVersion"
+             FROM identity.contact_emails
+            WHERE user_id = $1`,
+          [subjectId],
+        ),
+        query(this.env.DB_PRIVACY_FRESH,
+          `SELECT user_id, subscription_tier, updated_by, updated_at
+             FROM identity.user_entitlements
+            WHERE user_id = $1`,
+          [subjectId],
+        ),
+        query(this.env.DB_PRIVACY_FRESH,
+          `SELECT id, reward_id, reward_level, reward_title, status, redeemed_at
+             FROM trust.reward_redemptions
+            WHERE user_id = $1
+            ORDER BY redeemed_at, id`,
+          [subjectId],
+        ),
+        query(this.env.DB_PRIVACY_FRESH,
+          `SELECT id, event_type, created_at
+             FROM identity.account_events
+            WHERE user_id = $1
+            ORDER BY created_at, id`,
+          [subjectId],
+        ),
       ]);
-      let privateProfile: { accountabilityName: string } | null = null;
-      if (privateProfileField.rows[0]) {
-        if (!this.env.PII_ENCRYPTION_KEY_V1) throw new Error('private_export_encryption_key_not_configured');
-        const plaintext = await decryptField({
-          ciphertext: privateProfileField.rows[0].encrypted_payload,
-          encryptionKeyVersion: privateProfileField.rows[0].encryption_key_version,
-        }, this.env.PII_ENCRYPTION_KEY_V1);
-        const parsed = JSON.parse(plaintext) as { accountabilityName?: unknown };
-        if (typeof parsed.accountabilityName !== 'string') throw new Error('private_profile_export_invalid');
-        privateProfile = { accountabilityName: parsed.accountabilityName };
-      }
+      const privateIdentity = await decryptPrivatePassportIdentity({
+        encryptionKey: this.env.PII_ENCRYPTION_KEY_V1,
+        privateProfile: privateProfileField.rows[0]
+          ? {
+            ciphertext: privateProfileField.rows[0].encrypted_payload,
+            encryptionKeyVersion: privateProfileField.rows[0].encryption_key_version,
+          }
+          : undefined,
+        contactEmail: contactEmailField.rows[0],
+        decrypt: decryptField,
+      });
       const [
         posts,
         comments,
         follows,
+        reactions,
+        blocks,
+        mutes,
+        bookmarks,
+        customFeeds,
+        submittedFlags,
         media,
         provenance,
         contributions,
@@ -1925,65 +2186,91 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         query(this.env.DB_JOBS_FRESH, `SELECT id, body, declared_creation_mode, visibility, moderation_state, geo_scope, place_id, published_at, created_at FROM content.posts WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, post_id, parent_id, body, moderation_state, created_at FROM content.comments WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT follower_id, followed_id, created_at FROM social.follows WHERE follower_id = $1 OR followed_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT user_id, post_id, reaction_type, created_at FROM social.reactions WHERE user_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT blocker_id, blocked_id, created_at FROM social.blocks WHERE blocker_id = $1 OR blocked_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT muter_id, muted_id, created_at FROM social.mutes WHERE muter_id = $1 OR muted_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT user_id, post_id, created_at FROM social.bookmarks WHERE user_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_PRIVACY_FRESH,
+          `SELECT feed.id, feed.name, feed.created_at,
+                  COALESCE((
+                    SELECT jsonb_agg(jsonb_build_object('id', feed_rule.id, 'rule', feed_rule.rule, 'createdAt', feed_rule.created_at)
+                                     ORDER BY feed_rule.created_at, feed_rule.id)
+                    FROM social.custom_feed_rules feed_rule
+                    WHERE feed_rule.feed_id = feed.id
+                  ), '[]'::jsonb) AS rules
+             FROM social.custom_feeds feed
+            WHERE feed.user_id = $1
+            ORDER BY feed.created_at, feed.id`,
+          [subjectId]),
+        query(this.env.DB_PRIVACY_FRESH,
+          `SELECT id, content_type, content_id, reason_code, created_at
+             FROM moderation.content_flags
+            WHERE reporter_id = $1
+            ORDER BY created_at, id`,
+          [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, object_key, content_type, byte_size, sha256, state, created_at, deleted_at FROM media.objects WHERE owner_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT content_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, appeal_state, final_decision, created_at FROM trust.provenance_events WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT content_id, human_authorship_eligibility, quality_signal, source_signal, behaviour_signal, policy_version, points_delta, reversal_reference, created_at FROM trust.human_contribution_events WHERE subject_user_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, content_id, event_type, pillar, impact, source_event_id, moderation_decision_id, appeal_id, status, effective_at, expires_at, explanation_code, visibility, policy_version, points_delta, reversal_reference, created_at FROM trust.reputation_events WHERE subject_user_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT user_id, policy_version, current_level, total_score, accountability_score, contribution_score, conduct_score, sourcing_score, authenticity_score, review_reliability_score, active_days, active_weeks, qualifying_human_contributions, promotion_blockers, status, evaluated_at, updated_at FROM trust.reputation_profiles WHERE user_id = $1`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, user_id, actor_user_id, event_type, category, source, source_event_id, correlation_id, title, explanation, result, reason_code, policy_version, object_type, object_id, reputation_effect, appealable, metadata, retention_class, retention_until, created_at FROM trust.user_activity_events WHERE user_id = $1 ORDER BY created_at, id`, [subjectId]),
-        query(this.env.DB_JOBS_FRESH, `SELECT id, case_id, state, risk_class, policy_version, expires_at, community_result_at, adjudicated_at, created_at, resolved_at FROM moderation.appeals WHERE appellant_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT id, case_id, state, risk_class, policy_version, expires_at, reviewer_panel_result_at, adjudicated_at, created_at, resolved_at FROM moderation.appeals WHERE appellant_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT user_id, state, policy_version, trained_at, suspended_at, reason_code, updated_at FROM moderation.reviewer_qualifications WHERE user_id = $1`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, appeal_id, assignment_ordinal, level_snapshot, qualification_snapshot, vote_weight_snapshot, state, conflict_checked, policy_version, assigned_at, recused_at FROM moderation.appeal_assignments WHERE reviewer_id = $1 ORDER BY assigned_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, appeal_id, reviewer_id, decision, level_snapshot, qualification_snapshot, vote_weight_snapshot, policy_version, locked_at FROM moderation.appeal_review_votes WHERE reviewer_id = $1 ORDER BY locked_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, appeal_id, adjudicator_id, adjudicator_role, trained_snapshot, decision, reason_code, policy_version, created_at FROM moderation.appeal_adjudications WHERE adjudicator_id = $1 ORDER BY created_at`, [subjectId]),
-        query(this.env.DB_JOBS_FRESH, `SELECT o.appeal_id, o.risk_class, o.community_decision, o.final_decision, o.completed_reviewers, o.total_weight, o.overturn_weight, o.uphold_weight, o.winning_share, o.required_adjudicators, o.state, o.policy_version, o.evaluated_at, o.resolved_at FROM moderation.appeal_outcomes o JOIN moderation.appeals a ON a.id = o.appeal_id WHERE a.appellant_id = $1 ORDER BY o.evaluated_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT o.appeal_id, o.risk_class, o.reviewer_panel_decision, o.final_decision, o.completed_reviewers, o.total_weight, o.overturn_weight, o.uphold_weight, o.winning_share, o.required_adjudicators, o.state, o.policy_version, o.evaluated_at, o.resolved_at FROM moderation.appeal_outcomes o JOIN moderation.appeals a ON a.id = o.appeal_id WHERE a.appellant_id = $1 ORDER BY o.evaluated_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT e.id, e.appeal_id, e.effect_type, e.target_type, e.target_id, e.source_event_id, e.applied_at FROM moderation.appeal_outcome_effects e JOIN moderation.appeals a ON a.id = e.appeal_id WHERE a.appellant_id = $1 ORDER BY e.applied_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, signal_type, signal_value, policy_version, created_at FROM trust.accountability_signals WHERE user_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT email_enabled, push_enabled, replies_enabled, moderation_enabled, rewards_enabled, updated_at FROM feed.notification_preferences WHERE user_id = $1`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, platform, active, created_at, revoked_at FROM feed.notification_devices WHERE user_id = $1 ORDER BY created_at`, [subjectId]),
       ]);
-      return {
-        schemaVersion: 'lythaus-data-passport-v3',
+      return buildPrivacyDataPassport({
         generatedAt: new Date().toISOString(),
         profile: identity.rows[0] ?? null,
-        privateProfile,
+        privateProfile: privateIdentity.privateProfile,
+        contactEmail: privateIdentity.contactEmail,
+        consentRecords: consentRecords.rows,
+        entitlement: entitlement.rows[0] ?? null,
+        rewardRedemptions: rewardRedemptions.rows,
+        accountEvents: accountEvents.rows,
         posts: posts.rows,
         comments: comments.rows,
         follows: follows.rows,
+        reactions: reactions.rows,
+        blocks: blocks.rows,
+        mutes: mutes.rows,
+        bookmarks: bookmarks.rows,
+        customFeeds: customFeeds.rows,
+        submittedFlags: submittedFlags.rows,
         media: media.rows,
         provenance: provenance.rows,
         humanContribution: contributions.rows,
-        reputation: {
-          profile: reputationProfile.rows[0] ?? null,
-          events: reputationEvents.rows,
-          accountabilitySignals: accountabilitySignals.rows,
-        },
-        notifications: {
-          preferences: notificationPreferences.rows[0] ?? null,
-          devices: notificationDevices.rows,
-        },
+        reputationProfile: reputationProfile.rows[0] ?? null,
+        reputationEvents: reputationEvents.rows,
+        accountabilitySignals: accountabilitySignals.rows,
+        notificationPreferences: notificationPreferences.rows[0] ?? null,
+        notificationDevices: notificationDevices.rows,
         activity: userActivity.rows,
-        appeals: {
-          submitted: submittedAppeals.rows,
-          reviewerQualification: reviewerQualification.rows[0] ?? null,
-          assignments: appealAssignments.rows,
-          votes: appealVotes.rows,
-          adjudications: appealAdjudications.rows,
-          outcomes: appealOutcomes.rows,
-          outcomeEffects: appealOutcomeEffects.rows,
-        },
+        submittedAppeals: submittedAppeals.rows,
+        reviewerQualification: reviewerQualification.rows[0] ?? null,
+        appealAssignments: appealAssignments.rows,
+        appealVotes: appealVotes.rows,
+        appealAdjudications: appealAdjudications.rows,
+        appealOutcomes: appealOutcomes.rows,
+        appealOutcomeEffects: appealOutcomeEffects.rows,
         subjectDataLocations: locations.rows,
-      };
+      });
     });
 
-    await step.do('store-export-and-complete-request', async () => {
+    const completion = await step.do('store-export-and-complete-request', async () => {
       const body = JSON.stringify(passport);
       const bytes = new TextEncoder().encode(body);
       const digest = await crypto.subtle.digest('SHA-256', bytes);
       const packageHash = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
       const objectKey = `exports/${subjectId}/${requestId}.json`;
       await exportsBucket.put(objectKey, bytes, { httpMetadata: { contentType: 'application/json' } });
-      await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+      const activityEventId = await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
         await client.query(
           `INSERT INTO privacy.export_manifests (id, request_id, object_key, package_hash, expires_at)
            VALUES ($1, $2, $3, $4, now() + interval '7 days')
@@ -1995,29 +2282,27 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await client.query(`INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
           SELECT $1, $2, 'completed', $3::jsonb
            WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'completed')`, [uuidv7(), requestId, JSON.stringify({ objectKey, packageHash })]);
+        const activity = await recordUserActivity(client, {
+          id: uuidv7(), userId: subjectId,
+          eventType: 'privacy.export_generated', category: 'privacy', source: 'workflow',
+          sourceEventId: requestId, correlationId: requestId,
+          title: 'Data export is ready',
+          explanation: 'Your requested data export has been generated and is available for the configured retention period.',
+          result: 'succeeded', policyVersion: ACTIVITY_POLICY_VERSION,
+          objectType: 'privacy_request', objectId: requestId, reputationEffect: 'none', appealable: false,
+          retentionClass: 'security', metadata: { requestType: 'export', requestState: 'completed' },
+          createdAt: new Date().toISOString(),
+        });
+        return activity.id;
       });
-      return packageHash;
+      return { packageHash, activityEventId };
     });
     await step.do('record-export-outcome', async () => {
-      await recordActivityAndNotification(this.env, {
-        userId: subjectId,
-        eventType: 'privacy.export_generated',
-        category: 'privacy',
-        source: 'workflow',
-        sourceEventId: requestId,
-        correlationId: requestId,
-        title: 'Data export is ready',
-        explanation: 'Your requested data export has been generated and is available for the configured retention period.',
-        result: 'succeeded',
-        policyVersion: ACTIVITY_POLICY_VERSION,
-        objectType: 'privacy_request',
-        objectId: requestId,
-        reputationEffect: 'none',
-        appealable: false,
-        retentionClass: 'security',
-        metadata: { requestType: 'export', requestState: 'completed' },
-        notification: { type: 'privacy.export_ready', entityId: requestId },
-      });
+      await transaction(this.env.DB_JOBS_FRESH, (client) => insertPreferenceAwareNotification(client, {
+        recipientId: subjectId, notificationType: 'privacy.export_ready', entityId: requestId,
+        sourceEventId: requestId, policyVersion: ACTIVITY_POLICY_VERSION,
+        preferenceClass: 'always', activityEventId: completion.activityEventId,
+      }));
       return true;
     });
     return { subjectId, state: 'completed' };
@@ -2025,7 +2310,9 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
 }
 
 export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: string }> {
-  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number }> {
+  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number }> {
+    const securityAuditRetention = securityAuditRetentionPlan();
+    const securityRetentionInterval = `${securityAuditRetention.retentionDays} days`;
     const expiredActivityEvents = await step.do('purge-expired-user-activity', async () => {
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `DELETE FROM trust.user_activity_events activity
@@ -2035,6 +2322,50 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
                WHERE hold.subject_id = activity.user_id AND hold.active
             )
           RETURNING activity.id`);
+      return result.rowCount ?? 0;
+    });
+    const expiredAccountEvents = await step.do('purge-expired-account-events', async () => {
+      const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
+        `DELETE FROM identity.account_events account_event
+          WHERE account_event.created_at < now() - $1::interval
+            AND NOT EXISTS (
+              SELECT 1 FROM privacy.legal_holds hold
+               WHERE hold.subject_id = account_event.user_id AND hold.active
+            )
+          RETURNING account_event.id`,
+        [securityRetentionInterval]);
+      return result.rowCount ?? 0;
+    });
+    const expiredSystemAuditEvents = await step.do('purge-expired-system-audit-events', async () => {
+      const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
+        `DELETE FROM system.audit_events audit_event
+          WHERE audit_event.created_at < now() - $1::interval
+            AND NOT EXISTS (
+              SELECT 1 FROM privacy.legal_holds hold
+               WHERE hold.active
+                 AND (
+                   hold.subject_id = audit_event.actor_id
+                   OR (audit_event.target_type = 'user' AND audit_event.target_id = hold.subject_id)
+                 )
+            )
+          RETURNING audit_event.id`,
+        [securityRetentionInterval]);
+      return result.rowCount ?? 0;
+    });
+    const expiredRateLimitWindows = await step.do('purge-expired-rate-limit-windows', async () => {
+      const result = await query<{ scope: string }>(this.env.DB_JOBS_FRESH,
+        `DELETE FROM system.rate_limit_windows
+          WHERE window_started_at < date_trunc('day', now()) - interval '2 days'
+          RETURNING scope`);
+      return result.rowCount ?? 0;
+    });
+    const expiredIdempotencyTombstones = await step.do('purge-anonymized-idempotency-tombstones', async () => {
+      const result = await query<{ scope: string }>(this.env.DB_JOBS_FRESH,
+        `DELETE FROM system.idempotency_keys
+          WHERE actor_id IS NULL
+            AND COALESCE(response ->> 'state', '') <> 'completed'
+            AND created_at < now() - interval '30 days'
+          RETURNING scope`);
       return result.rowCount ?? 0;
     });
     const candidates = await step.do('find-retention-candidates', async () => {
@@ -2047,38 +2378,57 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
     for (const [index, candidate] of candidates.entries()) {
       const result = await step.do(`apply-retention-${index}`, async () => {
         const hold = await query(this.env.DB_PRIVACY_FRESH, `SELECT 1 FROM privacy.legal_holds WHERE subject_id = $1 AND active LIMIT 1`, [candidate.user_id]);
-        if (hold.rowCount !== 0) return { posts: 0, media: 0 };
-        if (candidate.content_type === 'post' || candidate.content_type === 'posts') {
-          const updated = await query<{ id: string }>(this.env.DB_JOBS_FRESH,
-            `UPDATE content.posts SET body = '[retention policy]', visibility = 'private', moderation_state = 'blocked', published_at = NULL, updated_at = now()
-              WHERE author_id = $1 AND created_at < now() - $2::interval AND body <> '[retention policy]' RETURNING id`,
-            [candidate.user_id, candidate.retention_period]);
-          if (updated.rowCount !== 0) await query(this.env.DB_JOBS_FRESH,
-            `INSERT INTO system.audit_events (id, action, target_type, reason_code, correlation_id, metadata) VALUES ($1, 'retention.posts_redacted', 'user', 'RETENTION_POLICY', $2, $3::jsonb)`,
-            [uuidv7(), event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: updated.rowCount })]);
-          return { posts: updated.rowCount ?? 0, media: 0 };
+        const plan = retentionCleanupPlan(hold.rowCount !== 0, candidate.content_type);
+        if (plan === 'skip') return { posts: 0, media: 0 };
+        if (plan === 'redact_posts') {
+          const redactedPosts = await transaction(this.env.DB_JOBS_FRESH, async (client) => {
+            const updated = await client.query<{ id: string }>(
+              `UPDATE content.posts SET body = '[retention policy]', visibility = 'private', moderation_state = 'blocked', published_at = NULL, updated_at = now()
+                WHERE author_id = $1 AND created_at < now() - $2::interval AND body <> '[retention policy]' RETURNING id`,
+              [candidate.user_id, candidate.retention_period],
+            );
+            if (updated.rowCount !== 0) await client.query(
+              `INSERT INTO system.audit_events (id, action, target_type, reason_code, correlation_id, metadata) VALUES ($1, 'retention.posts_redacted', 'user', 'RETENTION_POLICY', $2, $3::jsonb)`,
+              [uuidv7(), event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: updated.rowCount })],
+            );
+            return updated.rowCount ?? 0;
+          });
+          return { posts: redactedPosts, media: 0 };
         }
-        if (candidate.content_type === 'media') {
+        if (plan === 'delete_media') {
           const objects = await query<{ id: string; object_key: string; byte_size: number }>(this.env.DB_JOBS_FRESH,
             `SELECT id, object_key, byte_size FROM media.objects WHERE owner_id = $1 AND created_at < now() - $2::interval AND deleted_at IS NULL`,
             [candidate.user_id, candidate.retention_period]);
           if (!this.env.MEDIA_APPROVED) throw new Error('media_purge_not_configured');
           for (const object of objects.rows) await this.env.MEDIA_APPROVED.delete(object.object_key);
-          for (const object of objects.rows) {
-            await query(this.env.DB_JOBS_FRESH, `UPDATE media.objects SET state = 'deleted', deleted_at = COALESCE(deleted_at, now()) WHERE id = $1 AND deleted_at IS NULL`, [object.id]);
-            await query(this.env.DB_JOBS_FRESH, `UPDATE media.storage_ledger SET bytes_approved = greatest(bytes_approved - $1, 0), object_count = greatest(object_count - 1, 0), last_reconciled_at = now() WHERE user_id = $2`, [object.byte_size, candidate.user_id]);
-          }
-          if (objects.rowCount !== 0) await query(this.env.DB_JOBS_FRESH,
-            `INSERT INTO system.audit_events (id, action, target_type, reason_code, correlation_id, metadata) VALUES ($1, 'retention.media_deleted', 'user', 'RETENTION_POLICY', $2, $3::jsonb)`,
-            [uuidv7(), event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: objects.rowCount })]);
-          return { posts: 0, media: objects.rowCount ?? 0 };
+          const deletedMedia = await transaction(this.env.DB_JOBS_FRESH, async (client) => {
+            let deletedCount = 0;
+            for (const object of objects.rows) {
+              const updated = await client.query(
+                `UPDATE media.objects SET state = 'deleted', deleted_at = COALESCE(deleted_at, now()) WHERE id = $1 AND deleted_at IS NULL`,
+                [object.id],
+              );
+              if (updated.rowCount === 0) continue;
+              deletedCount += 1;
+              await client.query(
+                `UPDATE media.storage_ledger SET bytes_approved = greatest(bytes_approved - $1, 0), object_count = greatest(object_count - 1, 0), last_reconciled_at = now() WHERE user_id = $2`,
+                [object.byte_size, candidate.user_id],
+              );
+            }
+            if (deletedCount !== 0) await client.query(
+              `INSERT INTO system.audit_events (id, action, target_type, reason_code, correlation_id, metadata) VALUES ($1, 'retention.media_deleted', 'user', 'RETENTION_POLICY', $2, $3::jsonb)`,
+              [uuidv7(), event.payload.runId, JSON.stringify({ subjectId: candidate.user_id, count: deletedCount })],
+            );
+            return deletedCount;
+          });
+          return { posts: 0, media: deletedMedia };
         }
         return { posts: 0, media: 0 };
       });
       redactedPosts += result.posts;
       deletedMedia += result.media;
     }
-    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents };
+    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones };
   }
 }
 
@@ -2203,7 +2553,7 @@ export class AppealLifecycleWorkflow extends WorkflowEntrypoint<Env, { appealId:
             eventType: 'appeals.reviewer_assignment_changed', category: 'appeals', source: 'workflow',
             sourceEventId: assignmentId, correlationId: appealId,
             title: 'Appeal review assigned',
-            explanation: 'You were independently selected for a time-limited community appeal review.',
+            explanation: 'You were independently selected for a time-limited trained reviewer-panel appeal.',
             result: 'pending', policyVersion: assignment.policyVersion,
             objectType: 'appeal', objectId: appealId, reputationEffect: 'none', appealable: false,
             retentionClass: 'moderation', metadata: { appealState: 'assigned', riskClass: row.risk_class },

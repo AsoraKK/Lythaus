@@ -25,11 +25,11 @@ part 'public_authorship.g.dart';
 abstract class PublicAuthorship implements Built<PublicAuthorship, PublicAuthorshipBuilder> {
   @BuiltValueField(wireName: r'authorshipLabel')
   PublicAuthorshipAuthorshipLabelEnum get authorshipLabel;
-  // enum authorshipLabelEnum {  Human-authored,  AI-assisted,  AI-generated,  Under review,  };
+  // enum authorshipLabelEnum {  Human-authored,  AI-assisted,  Under review,  };
 
   @BuiltValueField(wireName: r'declaredAuthorship')
   PublicAuthorshipDeclaredAuthorshipEnum get declaredAuthorship;
-  // enum declaredAuthorshipEnum {  human,  assisted,  generated,  };
+  // enum declaredAuthorshipEnum {  human,  assisted,  };
 
   @BuiltValueField(wireName: r'classificationSource')
   PublicAuthorshipClassificationSourceEnum get classificationSource;
@@ -249,8 +249,6 @@ class PublicAuthorshipAuthorshipLabelEnum extends EnumClass {
   static const PublicAuthorshipAuthorshipLabelEnum humanAuthored = _$publicAuthorshipAuthorshipLabelEnum_humanAuthored;
   @BuiltValueEnumConst(wireName: r'AI-assisted')
   static const PublicAuthorshipAuthorshipLabelEnum aIAssisted = _$publicAuthorshipAuthorshipLabelEnum_aIAssisted;
-  @BuiltValueEnumConst(wireName: r'AI-generated')
-  static const PublicAuthorshipAuthorshipLabelEnum aIGenerated = _$publicAuthorshipAuthorshipLabelEnum_aIGenerated;
   @BuiltValueEnumConst(wireName: r'Under review')
   static const PublicAuthorshipAuthorshipLabelEnum underReview = _$publicAuthorshipAuthorshipLabelEnum_underReview;
 
@@ -268,8 +266,6 @@ class PublicAuthorshipDeclaredAuthorshipEnum extends EnumClass {
   static const PublicAuthorshipDeclaredAuthorshipEnum human = _$publicAuthorshipDeclaredAuthorshipEnum_human;
   @BuiltValueEnumConst(wireName: r'assisted')
   static const PublicAuthorshipDeclaredAuthorshipEnum assisted = _$publicAuthorshipDeclaredAuthorshipEnum_assisted;
-  @BuiltValueEnumConst(wireName: r'generated')
-  static const PublicAuthorshipDeclaredAuthorshipEnum generated = _$publicAuthorshipDeclaredAuthorshipEnum_generated;
 
   static Serializer<PublicAuthorshipDeclaredAuthorshipEnum> get serializer => _$publicAuthorshipDeclaredAuthorshipEnumSerializer;
 

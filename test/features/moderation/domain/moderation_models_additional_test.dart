@@ -54,7 +54,7 @@ void main() {
       'status': 'open',
       'queue': 'default',
       'flags': 4,
-      'appealVotes': 2,
+      'reviewerPanel': {'completedReviewers': 2},
       'escalated': true,
       'aiLabel': 'high',
       'isPolicyTest': true,
@@ -64,7 +64,7 @@ void main() {
     expect(item.type, ModerationItemType.flag);
     expect(item.severity, ModerationSeverityLevel.unknown);
     expect(item.reportCount, 4);
-    expect(item.communityVotes, 2);
+    expect(item.reviewerDecisions, 2);
     expect(item.isEscalated, true);
     expect(item.isPolicyTest, true);
   });
@@ -83,7 +83,7 @@ void main() {
           'status': 'open',
           'queue': 'default',
           'reportCount': 1,
-          'communityVotes': 0,
+          'reviewerDecisions': 0,
           'isEscalated': false,
         },
       ],

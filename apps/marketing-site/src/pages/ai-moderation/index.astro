@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 <BaseLayout
   title="Content Transparency"
-  description="How Lythaus combines creator declarations, flags, and staff review."
+  description="How Lythaus combines creator declarations, flags, and trained moderation review."
   canonicalPath="/ai-moderation"
 >
   <section class="section">
@@ -16,16 +16,17 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     <h2>How it works</h2>
     <ol>
       <li>
-        <strong>Creator declaration</strong> — each post is labelled
-        Human-authored, AI-assisted, or AI-generated.
+        <strong>Creator declaration</strong> — each publishable post is labelled
+        Human-authored or AI-assisted. Fully AI-generated content cannot be
+        published; uncertain content remains Under review and non-public.
       </li>
       <li>
         <strong>Community flags</strong> — members can report content that may
         violate policy.
       </li>
       <li>
-        <strong>Staff review</strong> — flagged or uncertain content can be
-        marked Under review and assessed by an administrator.
+        <strong>Trained moderation review</strong> — flagged or uncertain
+        content can be marked Under review and assessed under recorded policy.
       </li>
     </ol>
 
@@ -38,8 +39,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     <h2>Appeals</h2>
     <p>
-      Appeals are enabled for submission and staff review. Community-vote
-      adjudication remains disabled until the governance feature is ready.
+      Eligible appeals are reviewed by five independently assigned trained
+      reviewers. A trained adjudicator confirms the outcome; high-risk cases
+      require two independent adjudications. There is no community voting or
+      time-based automatic resolution.
     </p>
   </section>
 </BaseLayout>

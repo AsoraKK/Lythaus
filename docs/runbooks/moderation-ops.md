@@ -1,8 +1,10 @@
 # Moderation operations
 
+**Status:** Repository operational design / Partial deployment evidence. The exact reviewed SHA has not been verified in production.
+
 ## Runtime
 
-Lythaus moderation is handled by the native Workers architecture:
+The repository designs Lythaus moderation for the native Workers architecture:
 
 - `lythaus-public-api-development` accepts content and records it as `under_review`.
 - `lythaus-jobs-development` evaluates text, media, and profiles with Lythaus Authenticity AI.
@@ -18,7 +20,7 @@ There is no external classifier fallback. Evaluation failure leaves content unde
 3. Prioritise credible threats, exploitation, self-harm, fraud, impersonation, and coordinated abuse.
 4. Inspect the declaration, provider-neutral evaluation, policy version, and available context.
 5. Record one decision through `POST /api/admin/moderation/cases/{caseId}/decision`.
-6. Confirm the case, content state, public label, appeal state, enforcement event, and audit entry changed atomically.
+6. Confirm the case, content state, public label, appeal state, enforcement event, and audit entry changed atomically; do not infer this from repository source alone—retain migrated runtime evidence.
 
 Supported outcomes are `allow`, `block`, and `queue`. `queue` keeps the case open and the content under review.
 

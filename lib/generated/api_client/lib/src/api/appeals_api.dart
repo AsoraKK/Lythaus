@@ -19,6 +19,7 @@ import 'package:lythaus_api_client/src/model/governance_appeal_vote_response.dar
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 import 'package:lythaus_api_client/src/model/reviewer_qualification_response.dart';
 import 'package:lythaus_api_client/src/model/reviewer_qualification_update_request.dart';
+import 'package:lythaus_api_client/src/model/safety_limit_error.dart';
 
 class AppealsApi {
 
@@ -400,7 +401,7 @@ class AppealsApi {
   ///
   /// Parameters:
   /// * [appealCreateRequest]
-  /// * [idempotencyKey] - Caller-generated replay key. Completed retries return the stored response.
+  /// * [idempotencyKey] - Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -585,7 +586,7 @@ class AppealsApi {
   ///
   /// Parameters:
   /// * [appealId]
-  /// * [idempotencyKey] - Required replay key for an immutable reviewer vote.
+  /// * [idempotencyKey] - Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -669,7 +670,7 @@ class AppealsApi {
   ///
   /// Parameters:
   /// * [appealId]
-  /// * [idempotencyKey] - Required replay key for an immutable reviewer vote.
+  /// * [idempotencyKey] - Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
   /// * [governanceAppealVoteRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request

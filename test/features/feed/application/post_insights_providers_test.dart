@@ -62,7 +62,7 @@ void main() {
         reasonCodes: [],
         configVersion: 2,
         decidedAt: DateTime.now(),
-        appeal: const InsightAppeal(status: InsightAppealStatus.approved),
+        appeal: const InsightAppeal(status: InsightAppealStatus.overturned),
       );
 
       final result1 = InsightsSuccess(insights1);
@@ -249,7 +249,7 @@ void main() {
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime.now(),
-        appeal: const InsightAppeal(status: InsightAppealStatus.rejected),
+        appeal: const InsightAppeal(status: InsightAppealStatus.upheld),
       );
       final insights2 = PostInsights(
         postId: 'post2',

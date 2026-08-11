@@ -32,6 +32,16 @@ void main() {
       // TODO
     });
 
+    // ReactionCounts reactionCounts
+    test('to test the property `reactionCounts`', () async {
+      // TODO
+    });
+
+    // String viewerReaction
+    test('to test the property `viewerReaction`', () async {
+      // TODO
+    });
+
     // String topic
     test('to test the property `topic`', () async {
       // TODO

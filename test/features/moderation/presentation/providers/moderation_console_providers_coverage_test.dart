@@ -129,7 +129,7 @@ void main() {
               status: 'pending',
               queue: 'default',
               reportCount: 1,
-              communityVotes: 0,
+              reviewerDecisions: 0,
               isEscalated: false,
               createdAt: DateTime(2024),
             ),

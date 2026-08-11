@@ -21,8 +21,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Community Voting Progress'), findsOneWidget);
-      expect(find.byIcon(Icons.how_to_vote), findsOneWidget);
+      expect(find.text('Independent reviewer panel'), findsOneWidget);
+      expect(find.byIcon(Icons.groups_outlined), findsOneWidget);
     });
 
     testWidgets('displays progress bar when votes exist', (tester) async {
@@ -60,10 +60,13 @@ void main() {
         ),
       );
 
-      expect(find.text('Waiting for community votes...'), findsOneWidget);
+      expect(
+        find.text('Waiting for assigned trained reviewer decisions...'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('displays time remaining when available', (tester) async {
+    testWidgets('does not expose a timed reviewer window', (tester) async {
       const progress = VotingProgress(
         totalVotes: 10,
         approveVotes: 6,
@@ -79,7 +82,7 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('2h 30m remaining'), findsOneWidget);
+      expect(find.textContaining('2h 30m remaining'), findsNothing);
     });
 
     testWidgets('displays vote breakdown correctly', (tester) async {
@@ -98,8 +101,8 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('6 approve'), findsOneWidget);
-      expect(find.textContaining('4 reject'), findsOneWidget);
+      expect(find.textContaining('6 overturn'), findsOneWidget);
+      expect(find.textContaining('4 uphold'), findsOneWidget);
     });
 
     testWidgets('displays quorum progress correctly', (tester) async {

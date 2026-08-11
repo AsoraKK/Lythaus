@@ -55,8 +55,11 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
       
-    - name: Run tests
-      run: flutter test
+    - name: Run tests with P1/P2 coverage
+      run: bash scripts/test-with-coverage.sh
+
+    - name: Enforce coverage gates
+      run: bash scripts/check_coverage_gates.sh
 
   # Web build job
   web-build:

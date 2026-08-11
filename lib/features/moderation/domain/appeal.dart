@@ -4,24 +4,20 @@ library appeal_models;
 
 /// LYTHAUS APPEAL MODELS
 ///
-/// 🎯 Purpose: Data models for community voting and appeal system
-/// 📊 Models: Appeal, Vote, VotingCard, AppealDetails
+/// 🎯 Purpose: Data models for case-gated appeals and reviewer panels
+/// 📊 Models: Appeal records and reviewer-panel compatibility data
 /// 🔐 Type Safety: Comprehensive validation and serialization
 /// 📱 Platform: Flutter with JSON serialization support
 
-/// Content moderation status enum
-enum ModerationStatus {
-  clean,
-  flagged,
-  hidden,
-  communityApproved,
-  communityRejected,
-}
+/// Content moderation status enum.
+///
+/// Resolved appeal outcomes are distinct from an initial moderation state.
+enum ModerationStatus { clean, flagged, hidden, appealRestored, appealUpheld }
 
-/// Appeal status enum
-enum AppealStatus { pending, approved, rejected, expired }
+/// Appeal status enum.
+enum AppealStatus { pending, overturned, upheld, expired }
 
-/// Appeal model for community voting
+/// Appeal record for an independently assigned reviewer panel.
 class Appeal {
   final String appealId;
   final String contentId;
@@ -46,13 +42,13 @@ class Appeal {
   final List<String> flagCategories;
   final int flagCount;
 
-  // Voting status
+  // Reviewer-panel status. Legacy JSON field names remain readable.
   final VotingStatus votingStatus;
   final VotingProgress? votingProgress;
   final int urgencyScore;
   final String estimatedResolution;
 
-  // User voting state
+  // Legacy serialized reviewer-decision fields retained for appeal history.
   final bool hasUserVoted;
   final String? userVote; // 'approve' or 'reject'
   final bool canUserVote;
@@ -163,10 +159,10 @@ class Appeal {
   }
 }
 
-/// Voting status enum
+/// Reviewer-panel status enum, retaining legacy wire values for history.
 enum VotingStatus { active, quorumReached, timeExpired, resolved }
 
-/// Extended voting progress with additional metadata
+/// Reviewer-panel progress with compatibility metadata.
 class VotingProgress {
   final int totalVotes;
   final int approveVotes;
@@ -226,7 +222,7 @@ class VotingProgress {
   }
 }
 
-/// Vote breakdown by category or demographics
+/// Reviewer decision breakdown by category or demographics.
 class VoteBreakdown {
   final String category;
   final int approveCount;
@@ -260,7 +256,7 @@ class VoteBreakdown {
   }
 }
 
-/// User vote record
+/// Stored reviewer-decision record retained for passive appeal history.
 class UserVote {
   final String voteId;
   final String appealId;

@@ -1,5 +1,3 @@
-import 'package:lythaus/services/moderation_service.dart';
-import 'package:lythaus/services/post_service.dart';
 import 'package:lythaus/services/push/device_token_service.dart';
 import 'package:lythaus/services/push/push_notification_service.dart';
 import 'package:lythaus/services/service_providers.dart';
@@ -24,8 +22,6 @@ void main() {
     addTearDown(container.dispose);
 
     expect(container.read(secureStorageProvider), isNotNull);
-    expect(container.read(postServiceProvider), isA<PostService>());
-    expect(container.read(moderationServiceProvider), isA<ModerationClient>());
     expect(
       container.read(deviceTokenServiceProvider),
       isA<DeviceTokenService>(),

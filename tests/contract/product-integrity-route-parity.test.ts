@@ -156,6 +156,12 @@ describe('product-integrity OpenAPI parity', () => {
       '/feed/public',
       '/posts/{id}/bookmark',
       '/moderation/ledger/{entryId}/appeal',
+      '/moderation/my-appeals',
+      '/moderation/submit-appeal',
+      '/moderation/vote-appeal',
+      '/moderation/appeals',
+      '/moderation/appeals/{appealId}/review',
+      '/moderation/appeals/{appealId}/vote',
       '/reactions',
       '/reactions/{id}',
     ]) {
@@ -170,6 +176,32 @@ describe('product-integrity OpenAPI parity', () => {
     expect(create['x-lythaus-ai-assisted-max-graphemes-exclusive']).toBe(250);
     expect(spec.components.schemas.Comment.properties.moderationState.$ref).toContain('ModerationState');
     expect(spec.components.schemas.ModerationState.enum).toContain('under_review');
+  });
+
+  test('canonical authorship and reputation schemas exclude retired public states', () => {
+    expect(spec.components.schemas.CreatePostRequest.properties.declaredCreationMode.enum).toEqual([
+      'human',
+      'ai_assisted',
+    ]);
+    expect(spec.components.schemas.PublicAuthorship.properties.authorshipLabel.enum).toEqual([
+      'Human-authored',
+      'AI-assisted',
+      'Under review',
+    ]);
+    expect(spec.components.schemas.PublicAuthorship.properties.declaredAuthorship.enum).toEqual([
+      'human',
+      'assisted',
+    ]);
+    expect(productIntegritySpec.components.schemas.ReputationPublicV2.properties.reputationBand.enum).toEqual([
+      'new',
+      'accountable',
+      'trusted',
+      'established',
+    ]);
+    expect(productIntegritySpec.components.schemas.ReputationPublicV2.properties.level).toMatchObject({
+      minimum: 0,
+      maximum: 5,
+    });
   });
 
   test('private accountability and governance outbox contracts do not disclose sensitive fields', () => {
@@ -206,6 +238,7 @@ describe('product-integrity OpenAPI parity', () => {
       'media_daily_limit_reached',
       'relationship_change_limit_reached',
       'export_cooldown_active',
+      'privacy_request_active',
     ]));
     const limitedOperations: Array<[string, HttpMethod, string]> = [
       ['/flags', 'post', 'flag_daily_limit_reached'],

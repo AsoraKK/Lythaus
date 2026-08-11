@@ -3,7 +3,7 @@ import 'package:lythaus_api_client/lythaus_api_client.dart';
 
 // tests for Post
 void main() {
-  //final instance = PostBuilder();
+  final instance = PostBuilder();
   // TODO add properties to the builder and call build()
 
   group(Post, () {

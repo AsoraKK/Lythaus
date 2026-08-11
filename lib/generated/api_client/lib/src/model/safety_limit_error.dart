@@ -18,7 +18,7 @@ part 'safety_limit_error.g.dart';
 abstract class SafetyLimitError implements Built<SafetyLimitError, SafetyLimitErrorBuilder> {
   @BuiltValueField(wireName: r'error')
   SafetyLimitErrorErrorEnum get error;
-  // enum errorEnum {  flag_daily_limit_reached,  media_daily_limit_reached,  relationship_change_limit_reached,  export_cooldown_active,  };
+  // enum errorEnum {  rate_limit_exceeded,  post_daily_limit_reached,  comment_daily_limit_reached,  reaction_daily_limit_reached,  appeal_daily_limit_reached,  flag_daily_limit_reached,  media_daily_limit_reached,  relationship_change_limit_reached,  export_cooldown_active,  privacy_request_active,  };
 
   @BuiltValueField(wireName: r'correlationId')
   String get correlationId;
@@ -124,6 +124,16 @@ class _$SafetyLimitErrorSerializer implements PrimitiveSerializer<SafetyLimitErr
 
 class SafetyLimitErrorErrorEnum extends EnumClass {
 
+  @BuiltValueEnumConst(wireName: r'rate_limit_exceeded')
+  static const SafetyLimitErrorErrorEnum rateLimitExceeded = _$safetyLimitErrorErrorEnum_rateLimitExceeded;
+  @BuiltValueEnumConst(wireName: r'post_daily_limit_reached')
+  static const SafetyLimitErrorErrorEnum postDailyLimitReached = _$safetyLimitErrorErrorEnum_postDailyLimitReached;
+  @BuiltValueEnumConst(wireName: r'comment_daily_limit_reached')
+  static const SafetyLimitErrorErrorEnum commentDailyLimitReached = _$safetyLimitErrorErrorEnum_commentDailyLimitReached;
+  @BuiltValueEnumConst(wireName: r'reaction_daily_limit_reached')
+  static const SafetyLimitErrorErrorEnum reactionDailyLimitReached = _$safetyLimitErrorErrorEnum_reactionDailyLimitReached;
+  @BuiltValueEnumConst(wireName: r'appeal_daily_limit_reached')
+  static const SafetyLimitErrorErrorEnum appealDailyLimitReached = _$safetyLimitErrorErrorEnum_appealDailyLimitReached;
   @BuiltValueEnumConst(wireName: r'flag_daily_limit_reached')
   static const SafetyLimitErrorErrorEnum flagDailyLimitReached = _$safetyLimitErrorErrorEnum_flagDailyLimitReached;
   @BuiltValueEnumConst(wireName: r'media_daily_limit_reached')
@@ -132,6 +142,8 @@ class SafetyLimitErrorErrorEnum extends EnumClass {
   static const SafetyLimitErrorErrorEnum relationshipChangeLimitReached = _$safetyLimitErrorErrorEnum_relationshipChangeLimitReached;
   @BuiltValueEnumConst(wireName: r'export_cooldown_active')
   static const SafetyLimitErrorErrorEnum exportCooldownActive = _$safetyLimitErrorErrorEnum_exportCooldownActive;
+  @BuiltValueEnumConst(wireName: r'privacy_request_active')
+  static const SafetyLimitErrorErrorEnum privacyRequestActive = _$safetyLimitErrorErrorEnum_privacyRequestActive;
 
   static Serializer<SafetyLimitErrorErrorEnum> get serializer => _$safetyLimitErrorErrorEnumSerializer;
 

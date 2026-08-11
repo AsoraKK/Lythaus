@@ -42,7 +42,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final TargetUserRequest targetUserRequest = ; // TargetUserRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.blocksCreate(targetUserRequest, idempotencyKey);
@@ -57,7 +57,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **targetUserRequest** | [**TargetUserRequest**](TargetUserRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -85,7 +85,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.blocksDelete(id, idempotencyKey);
@@ -100,7 +100,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -165,7 +165,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final BookmarkCreateRequest bookmarkCreateRequest = ; // BookmarkCreateRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.bookmarksCreate(bookmarkCreateRequest, idempotencyKey);
@@ -180,7 +180,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **bookmarkCreateRequest** | [**BookmarkCreateRequest**](BookmarkCreateRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -208,7 +208,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.bookmarksDelete(postId, idempotencyKey);
@@ -223,7 +223,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -288,7 +288,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final FollowCreateRequest followCreateRequest = ; // FollowCreateRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.followsCreate(followCreateRequest, idempotencyKey);
@@ -303,7 +303,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **followCreateRequest** | [**FollowCreateRequest**](FollowCreateRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -331,7 +331,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final String followedId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.followsDelete(followedId, idempotencyKey);
@@ -346,7 +346,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **followedId** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -374,7 +374,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final TargetUserRequest targetUserRequest = ; // TargetUserRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.mutesCreate(targetUserRequest, idempotencyKey);
@@ -389,7 +389,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **targetUserRequest** | [**TargetUserRequest**](TargetUserRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -417,7 +417,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.mutesDelete(id, idempotencyKey);
@@ -432,7 +432,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -498,7 +498,7 @@ import 'package:lythaus_api_client/api.dart';
 final api = LythausApiClient().getSocialApi();
 final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final ReactionRequest reactionRequest = ; // ReactionRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.postReactionsCreate(postId, reactionRequest, idempotencyKey);
@@ -514,7 +514,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **String**|  |
  **reactionRequest** | [**ReactionRequest**](ReactionRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -542,7 +542,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.postReactionsDelete(postId, idempotencyKey);
@@ -557,7 +557,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -586,7 +586,7 @@ import 'package:lythaus_api_client/api.dart';
 final api = LythausApiClient().getSocialApi();
 final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final ReactionRequest reactionRequest = ; // ReactionRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.postReactionsReplace(postId, reactionRequest, idempotencyKey);
@@ -602,7 +602,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **String**|  |
  **reactionRequest** | [**ReactionRequest**](ReactionRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -630,7 +630,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final TargetUserRequest targetUserRequest = ; // TargetUserRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.usersBlockCreate(targetUserRequest, idempotencyKey);
@@ -645,7 +645,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **targetUserRequest** | [**TargetUserRequest**](TargetUserRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -673,7 +673,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.usersFollowCreate(id, idempotencyKey);
@@ -688,7 +688,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -716,7 +716,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.usersFollowDelete(id, idempotencyKey);
@@ -731,7 +731,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -802,7 +802,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final TargetUserRequest targetUserRequest = ; // TargetUserRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.usersFollowLegacyCreate(targetUserRequest, idempotencyKey);
@@ -817,7 +817,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **targetUserRequest** | [**TargetUserRequest**](TargetUserRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -845,7 +845,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getSocialApi();
 final TargetUserRequest targetUserRequest = ; // TargetUserRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.usersMuteCreate(targetUserRequest, idempotencyKey);
@@ -860,7 +860,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **targetUserRequest** | [**TargetUserRequest**](TargetUserRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 

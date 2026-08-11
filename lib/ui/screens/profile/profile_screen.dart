@@ -162,10 +162,8 @@ class ProfileScreen extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.insights_outlined),
-              title: const Text('Reputation activity'),
-              subtitle: const Text(
-                'Server-recorded reputation and account activity',
-              ),
+              title: const Text('Activity & Audit Log'),
+              subtitle: const Text('Private reputation and account activity'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const ReputationLedgerScreen(),

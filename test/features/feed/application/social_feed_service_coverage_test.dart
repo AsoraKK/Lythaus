@@ -35,6 +35,27 @@ class _ScriptedAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     if (_error != null) throw _error!;
+    if (options.path.contains('/reactions')) {
+      final body = options.method == 'DELETE'
+          ? {'postId': 'p1', 'removed': true}
+          : {'postId': 'p1', 'reactionType': 'like', 'changed': true};
+      return ResponseBody.fromString(
+        jsonEncode(body),
+        200,
+        headers: {
+          'content-type': ['application/json'],
+        },
+      );
+    }
+    if (options.path.endsWith('/flags')) {
+      return ResponseBody.fromString(
+        jsonEncode({'flagId': 'flag-1'}),
+        201,
+        headers: {
+          'content-type': ['application/json'],
+        },
+      );
+    }
     return _response!;
   }
 
@@ -167,7 +188,7 @@ void main() {
   // ─────── likePost ───────
 
   group('likePost', () {
-    test('returns updated post on success', () async {
+    test('returns refreshed post after canonical reaction', () async {
       adapter.respondWith({
         'success': true,
         'post': {
@@ -220,7 +241,7 @@ void main() {
   // ─────── dislikePost ───────
 
   group('dislikePost', () {
-    test('returns updated post on success', () async {
+    test('rejects unsupported dislike reactions locally', () async {
       adapter.respondWith({
         'success': true,
         'post': {
@@ -232,12 +253,10 @@ void main() {
         },
       });
 
-      final post = await service.dislikePost(
-        postId: 'p1',
-        isDislike: true,
-        token: 'tok',
+      await expectLater(
+        () => service.dislikePost(postId: 'p1', isDislike: true, token: 'tok'),
+        throwsA(isA<SocialFeedException>()),
       );
-      expect(post.id, 'p1');
     });
 
     test('remove dislike', () async {
@@ -332,13 +351,10 @@ void main() {
       );
     });
 
-    test('throws when success not true', () async {
+    test('accepts canonical flag acknowledgement', () async {
       adapter.respondWith({'success': false, 'message': 'Already flagged'});
 
-      expect(
-        () => service.flagPost(postId: 'p1', reason: 'spam', token: 'tok'),
-        throwsA(isA<SocialFeedException>()),
-      );
+      await service.flagPost(postId: 'p1', reason: 'spam', token: 'tok');
     });
   });
 

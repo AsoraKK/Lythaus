@@ -564,12 +564,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
       postId: item.id,
       request: UpdatePostRequest(
         text: updatedText,
-        mediaUrl: item.imageUrl,
-        contentType: switch (item.contentType) {
-          ContentType.image => 'image',
-          ContentType.video => 'video',
-          _ => 'text',
-        },
+        aiLabel: item.authorshipLabel == 'AI-assisted' ? 'assisted' : 'human',
       ),
       token: token,
     );

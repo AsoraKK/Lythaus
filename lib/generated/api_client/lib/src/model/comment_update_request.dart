@@ -3,19 +3,25 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:lythaus_api_client/src/model/declared_creation_mode.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
 part 'comment_update_request.g.dart';
 
-/// CommentUpdateRequest
+/// Body-only edits preserve the stored declaration; an explicit declaration may replace it, but generated public content remains blocked.
 ///
 /// Properties:
 /// * [body]
+/// * [declaredCreationMode]
 @BuiltValue()
 abstract class CommentUpdateRequest implements Built<CommentUpdateRequest, CommentUpdateRequestBuilder> {
   @BuiltValueField(wireName: r'body')
   String get body;
+
+  @BuiltValueField(wireName: r'declaredCreationMode')
+  DeclaredCreationMode? get declaredCreationMode;
+  // enum declaredCreationModeEnum {  human,  ai_assisted,  };
 
   CommentUpdateRequest._();
 
@@ -45,6 +51,13 @@ class _$CommentUpdateRequestSerializer implements PrimitiveSerializer<CommentUpd
       object.body,
       specifiedType: const FullType(String),
     );
+    if (object.declaredCreationMode != null) {
+      yield r'declaredCreationMode';
+      yield serializers.serialize(
+        object.declaredCreationMode,
+        specifiedType: const FullType(DeclaredCreationMode),
+      );
+    }
   }
 
   @override
@@ -74,6 +87,13 @@ class _$CommentUpdateRequestSerializer implements PrimitiveSerializer<CommentUpd
             specifiedType: const FullType(String),
           ) as String;
           result.body = valueDes;
+          break;
+        case r'declaredCreationMode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DeclaredCreationMode),
+          ) as DeclaredCreationMode;
+          result.declaredCreationMode = valueDes;
           break;
         default:
           unhandled.add(key);

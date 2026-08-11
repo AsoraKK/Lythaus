@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-/// LYTHAUS VOTING STATUS BADGE
+/// LYTHAUS REVIEWER PANEL STATUS BADGE
 ///
-/// 🎯 Purpose: Display voting status with color-coded badge
+/// 🎯 Purpose: Display reviewer-panel status with a color-coded badge
 /// 🔍 Single Responsibility: Status visualization only
 
 class VotingStatusBadge extends StatelessWidget {
@@ -52,26 +52,26 @@ class VotingStatusBadge extends StatelessWidget {
       case VotingStatus.active:
         return StatusInfo(
           color: scheme.primary,
-          icon: Icons.how_to_vote,
-          label: 'Active Voting',
+          icon: Icons.groups_outlined,
+          label: 'Reviewer panel active',
         );
       case VotingStatus.quorumReached:
         return StatusInfo(
           color: scheme.tertiary,
           icon: Icons.check_circle,
-          label: 'Quorum Reached',
+          label: 'Panel outcome recorded',
         );
       case VotingStatus.timeExpired:
         return StatusInfo(
           color: scheme.onSurface.withValues(alpha: 0.6),
-          icon: Icons.access_time,
-          label: 'Time Expired',
+          icon: Icons.assignment_turned_in_outlined,
+          label: 'Panel review complete',
         );
       case VotingStatus.resolved:
         return StatusInfo(
           color: scheme.secondary,
           icon: Icons.verified,
-          label: 'Resolved',
+          label: 'Adjudicated',
         );
     }
   }

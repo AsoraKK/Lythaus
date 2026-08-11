@@ -46,7 +46,7 @@ class ModerationAuditTimeline extends StatelessWidget {
     return switch (action) {
       ModerationAuditActionType.flagged => Icons.flag,
       ModerationAuditActionType.aiEvaluated => Icons.memory,
-      ModerationAuditActionType.communityVote => Icons.how_to_vote,
+      ModerationAuditActionType.reviewerDecision => Icons.fact_check_outlined,
       ModerationAuditActionType.decision => Icons.rule,
       ModerationAuditActionType.escalation => Icons.arrow_upward,
       ModerationAuditActionType.appeal => Icons.chat,
@@ -57,8 +57,8 @@ class ModerationAuditTimeline extends StatelessWidget {
     return switch (action) {
       ModerationAuditActionType.flagged => 'Flagged',
       ModerationAuditActionType.aiEvaluated => 'AI signal',
-      ModerationAuditActionType.communityVote => 'Community vote',
-      ModerationAuditActionType.decision => 'Moderator decision',
+      ModerationAuditActionType.reviewerDecision => 'Reviewer decision',
+      ModerationAuditActionType.decision => 'Case decision',
       ModerationAuditActionType.escalation => 'Escalated',
       ModerationAuditActionType.appeal => 'Appeal',
     };

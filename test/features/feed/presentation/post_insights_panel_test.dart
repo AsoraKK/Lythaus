@@ -213,7 +213,7 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('shows appeal status APPROVED correctly', (
+    testWidgets('shows appeal status OVERTURN correctly', (
       WidgetTester tester,
     ) async {
       final mockInsights = PostInsights(
@@ -224,7 +224,7 @@ void main() {
         configVersion: 1,
         decidedAt: DateTime(2025, 12, 28, 10, 0),
         appeal: InsightAppeal(
-          status: InsightAppealStatus.approved,
+          status: InsightAppealStatus.overturned,
           updatedAt: DateTime(2025, 12, 28, 11, 30),
         ),
       );
@@ -244,22 +244,22 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Appeal: Approved'), findsOneWidget);
+      expect(find.text('Appeal: Restored'), findsOneWidget);
       // Check icon is present
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
 
-    testWidgets('shows appeal status REJECTED correctly', (
+    testWidgets('shows appeal status UPHOLD correctly', (
       WidgetTester tester,
     ) async {
       final mockInsights = PostInsights(
         postId: 'post-123',
-        riskBand: RiskBand.high, // BLOCK + rejected appeal = HIGH
+        riskBand: RiskBand.high, // BLOCK + upheld appeal = HIGH
         decision: InsightDecision.block,
         reasonCodes: [],
         configVersion: 1,
         decidedAt: DateTime(2025, 12, 28, 10, 0),
-        appeal: const InsightAppeal(status: InsightAppealStatus.rejected),
+        appeal: const InsightAppeal(status: InsightAppealStatus.upheld),
       );
 
       await tester.pumpWidget(
@@ -277,7 +277,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Appeal: Rejected'), findsOneWidget);
+      expect(find.text('Appeal: Upheld'), findsOneWidget);
       expect(find.byIcon(Icons.cancel), findsOneWidget);
     });
   });

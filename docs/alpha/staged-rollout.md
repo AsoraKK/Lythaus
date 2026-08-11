@@ -11,10 +11,23 @@ Owner: Kyle
 | `paused` | No expansion or new registration | Until Kyle review | Diagnostics and reversible remediation |
 | `closed` | No new registration | Terminal for this Alpha window | Evidence retention and next-phase decision |
 
-Every active stage requires start, review, and end timestamps. Registration and invite redemption fail when the operating window is closed or the transactional cohort cap is reached. Outstanding invite count, redeemed count, expiry, revocation, and account membership are enforced by the backend.
+Every active stage requires recorded start, review, and end timestamps. The
+cohort sizes above are manual operating targets, not proven runtime
+enforcement. Kyle or the delegated launch owner maintains the controlled-cohort
+roster and pauses new access when a stage is paused or closed.
 
-Expansion is never automatic. Metrics produce a review report for Kyle; they do not mutate stage configuration. Stage changes use the Cloudflare-owner-protected admin configuration endpoint and are recorded in PostgreSQL and the admin audit stream.
+Expansion is never automatic. Metrics produce a review packet for Kyle; they
+do not mutate configuration. Stage changes require a documented human launch
+decision and reconciliation against the current admin audit stream. There is
+no supported stage-configuration endpoint or invite-redemption runtime claim in
+this rollout record.
 
-Required critical controls are registration, invite redemption, post creation, comment creation, reactions, media upload, authorship classification enforcement, custom-feed creation, News Board, reputation awards, community voting, non-essential notifications, and emergency read-only mode.
+Before expansion, the launch owner must verify the critical controls that are
+actually deployed for the candidate: registration/access handling, post and
+comment creation, reactions, media upload, authorship enforcement, custom
+feeds, News Board, reputation, the independent trained-reviewer appeal
+process, notifications, and emergency read-only mode. Any control without
+current runtime and test evidence remains planned and blocks the associated
+stage decision.
 
 Initial stage recommendation remains `technical_alpha` only after all release gates pass. The current candidate is NO-GO; see the canonical packet.

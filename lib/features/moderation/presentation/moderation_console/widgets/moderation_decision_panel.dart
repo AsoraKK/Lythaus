@@ -54,7 +54,7 @@ class _ModerationDecisionPanelState extends State<ModerationDecisionPanel> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Moderator decision',
+              'Case decision',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),

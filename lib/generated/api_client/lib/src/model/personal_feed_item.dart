@@ -4,7 +4,9 @@
 
 // ignore_for_file: unused_element
 import 'package:lythaus_api_client/src/model/declared_creation_mode.dart';
+import 'package:lythaus_api_client/src/model/reaction_counts.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:lythaus_api_client/src/model/public_authorship_label.dart';
 import 'package:lythaus_api_client/src/model/moderation_state.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -20,6 +22,9 @@ part 'personal_feed_item.g.dart';
 /// * [declaredCreationMode]
 /// * [visibility]
 /// * [moderationState]
+/// * [publicLabel]
+/// * [reactionCounts]
+/// * [viewerReaction]
 /// * [geoScope]
 /// * [placeId]
 /// * [publishedAt]
@@ -48,6 +53,17 @@ abstract class PersonalFeedItem implements Built<PersonalFeedItem, PersonalFeedI
   @BuiltValueField(wireName: r'moderationState')
   ModerationState get moderationState;
   // enum moderationStateEnum {  under_review,  allowed,  blocked,  };
+
+  @BuiltValueField(wireName: r'publicLabel')
+  PublicAuthorshipLabel get publicLabel;
+  // enum publicLabelEnum {  Human-authored,  AI-assisted,  };
+
+  @BuiltValueField(wireName: r'reactionCounts')
+  ReactionCounts get reactionCounts;
+
+  @BuiltValueField(wireName: r'viewerReaction')
+  PersonalFeedItemViewerReactionEnum? get viewerReaction;
+  // enum viewerReactionEnum {  like,  insightful,  support,  };
 
   @BuiltValueField(wireName: r'geoScope')
   PersonalFeedItemGeoScopeEnum? get geoScope;
@@ -120,6 +136,21 @@ class _$PersonalFeedItemSerializer implements PrimitiveSerializer<PersonalFeedIt
     yield serializers.serialize(
       object.moderationState,
       specifiedType: const FullType(ModerationState),
+    );
+    yield r'publicLabel';
+    yield serializers.serialize(
+      object.publicLabel,
+      specifiedType: const FullType(PublicAuthorshipLabel),
+    );
+    yield r'reactionCounts';
+    yield serializers.serialize(
+      object.reactionCounts,
+      specifiedType: const FullType(ReactionCounts),
+    );
+    yield r'viewerReaction';
+    yield object.viewerReaction == null ? null : serializers.serialize(
+      object.viewerReaction,
+      specifiedType: const FullType.nullable(PersonalFeedItemViewerReactionEnum),
     );
     if (object.geoScope != null) {
       yield r'geoScope';
@@ -226,6 +257,28 @@ class _$PersonalFeedItemSerializer implements PrimitiveSerializer<PersonalFeedIt
           ) as ModerationState;
           result.moderationState = valueDes;
           break;
+        case r'publicLabel':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(PublicAuthorshipLabel),
+          ) as PublicAuthorshipLabel;
+          result.publicLabel = valueDes;
+          break;
+        case r'reactionCounts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ReactionCounts),
+          ) as ReactionCounts;
+          result.reactionCounts.replace(valueDes);
+          break;
+        case r'viewerReaction':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(PersonalFeedItemViewerReactionEnum),
+          ) as PersonalFeedItemViewerReactionEnum?;
+          if (valueDes == null) continue;
+          result.viewerReaction = valueDes;
+          break;
         case r'geoScope':
           final valueDes = serializers.deserialize(
             value,
@@ -317,6 +370,23 @@ class PersonalFeedItemVisibilityEnum extends EnumClass {
 
   static BuiltSet<PersonalFeedItemVisibilityEnum> get values => _$personalFeedItemVisibilityEnumValues;
   static PersonalFeedItemVisibilityEnum valueOf(String name) => _$personalFeedItemVisibilityEnumValueOf(name);
+}
+
+class PersonalFeedItemViewerReactionEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'like')
+  static const PersonalFeedItemViewerReactionEnum like = _$personalFeedItemViewerReactionEnum_like;
+  @BuiltValueEnumConst(wireName: r'insightful')
+  static const PersonalFeedItemViewerReactionEnum insightful = _$personalFeedItemViewerReactionEnum_insightful;
+  @BuiltValueEnumConst(wireName: r'support')
+  static const PersonalFeedItemViewerReactionEnum support = _$personalFeedItemViewerReactionEnum_support;
+
+  static Serializer<PersonalFeedItemViewerReactionEnum> get serializer => _$personalFeedItemViewerReactionEnumSerializer;
+
+  const PersonalFeedItemViewerReactionEnum._(String name): super(name);
+
+  static BuiltSet<PersonalFeedItemViewerReactionEnum> get values => _$personalFeedItemViewerReactionEnumValues;
+  static PersonalFeedItemViewerReactionEnum valueOf(String name) => _$personalFeedItemViewerReactionEnumValueOf(name);
 }
 
 class PersonalFeedItemGeoScopeEnum extends EnumClass {

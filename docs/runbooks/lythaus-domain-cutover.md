@@ -25,18 +25,17 @@ Stop if the provider requires a paid upgrade, creates a duplicate billable resou
 ## Approved cutover sequence
 
 1. Capture the current Pages project settings, latest production deployment, custom domain, Access policy, and DNS record.
-2. Create the approved `lythaus-` replacement project from the transferred `LythausHQ/Lythaus` repository.
-3. Deploy the exact control-panel commit and verify asset integrity, SPA routing, Access enforcement, admin API calls, logout, and error states on the replacement preview domain.
-4. Attach a temporary Lythaus test hostname only when explicitly approved.
-5. Move `admin.lythaus.co` to the replacement project.
+2. Compare the registry and live provider state, then reuse and promote the existing Pages project in place; do not create a duplicate project. If in-place promotion is impossible, stop and obtain explicit approval for the named replacement, cost, and rollback before creation.
+3. Deploy the exact control-panel commit and verify asset integrity, SPA routing, Access enforcement, admin API calls, logout, and error states on the existing protected preview domain.
+4. Attach a temporary Lythaus test hostname only when explicitly approved and only when it does not create a new project or cost.
+5. Move `admin.lythaus.co` only after the in-place project and Access mapping pass verification.
 6. Reapply and verify the Access policy before considering the cutover successful.
 7. Confirm the old project receives no production requests.
-8. Delete the retired-name project only after the rollback window closes.
-9. Record sanitized deployment, DNS, Access, and deletion evidence under `docs/history/`.
+8. Record sanitized deployment, DNS, Access, and cutover evidence under `docs/history/`; do not delete any provider resource through this runbook.
 
 ## Rollback
 
 1. Reattach `admin.lythaus.co` to the captured prior Pages deployment.
 2. Restore the captured DNS record and Access application mapping.
 3. Verify authentication, SPA navigation, and admin API access.
-4. Leave the replacement project isolated for investigation; do not delete either project during an active incident.
+4. Leave the in-place project unchanged for investigation; do not delete any project during an active incident.

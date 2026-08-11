@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto';
-import { dirname, isAbsolute, parse, relative, resolve } from 'node:path';
+import { lstatSync, realpathSync } from 'node:fs';
+import { basename, dirname, isAbsolute, parse, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const PHYSICAL_REPOSITORY_ROOT = realpathSync.native(REPOSITORY_ROOT);
 export const MAX_ACQUISITION_COUNT = 80;
 export const MAX_ACQUISITION_BYTES = 512 * 1024 * 1024;
 export const MAX_ACQUISITION_ITEM_BYTES = 20 * 1024 * 1024;
@@ -27,6 +29,34 @@ const APPROVAL_SCOPES = new Set([
 function isInside(parent, candidate) {
   const route = relative(parent, candidate);
   return route === '' || (!route.startsWith('..') && !isAbsolute(route));
+}
+
+function physicalPath(path, label) {
+  let existingAncestor = path;
+  const missingSegments = [];
+
+  while (true) {
+    try {
+      lstatSync(existingAncestor);
+      break;
+    } catch (error) {
+      if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') {
+        throw new Error(`external_path_unresolvable:${label}`);
+      }
+      const parent = dirname(existingAncestor);
+      if (parent === existingAncestor) throw new Error(`external_path_unresolvable:${label}`);
+      missingSegments.unshift(basename(existingAncestor));
+      existingAncestor = parent;
+    }
+  }
+
+  let physicalAncestor;
+  try {
+    physicalAncestor = realpathSync.native(existingAncestor);
+  } catch {
+    throw new Error(`external_path_unresolvable:${label}`);
+  }
+  return resolve(physicalAncestor, ...missingSegments);
 }
 
 function assertNonEmptyString(value, field) {
@@ -111,6 +141,9 @@ export function assertExternalPath(path, label = 'output') {
   const resolved = resolve(path);
   if (resolved === parse(resolved).root) throw new Error(`dangerous_root_path_rejected:${label}`);
   if (isInside(REPOSITORY_ROOT, resolved)) throw new Error(`repository_path_rejected:${label}`);
+  const physical = physicalPath(resolved, label);
+  if (physical === parse(physical).root) throw new Error(`dangerous_root_path_rejected:${label}`);
+  if (isInside(PHYSICAL_REPOSITORY_ROOT, physical)) throw new Error(`repository_path_rejected:${label}`);
   return resolved;
 }
 
@@ -126,6 +159,9 @@ export function assertExternalChildPath(root, candidate, label = 'data') {
   const externalRoot = assertExternalDataPath(root, `${label}_root`);
   const externalCandidate = assertExternalDataPath(candidate, label);
   if (!isInside(externalRoot, externalCandidate)) throw new Error(`path_outside_external_root:${label}`);
+  const physicalRoot = physicalPath(externalRoot, `${label}_root`);
+  const physicalCandidate = physicalPath(externalCandidate, label);
+  if (!isInside(physicalRoot, physicalCandidate)) throw new Error(`path_outside_external_root:${label}`);
   return externalCandidate;
 }
 

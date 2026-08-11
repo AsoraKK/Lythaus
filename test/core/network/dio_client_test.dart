@@ -57,6 +57,17 @@ void main() {
       expect(hasIntegrityInterceptor, isTrue);
     });
 
+    test('includes idempotency retry interceptor', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final dio = container.read(secureDioProvider);
+      expect(
+        dio.interceptors.whereType<IdempotencyRetryInterceptor>(),
+        isNotEmpty,
+      );
+    });
+
     test('includes logging interceptor in debug mode', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);

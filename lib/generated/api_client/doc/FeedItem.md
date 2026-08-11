@@ -13,6 +13,8 @@ Name | Type | Description | Notes
 **body** | **String** |  |
 **publishedAt** | [**DateTime**](DateTime.md) |  |
 **publicLabel** | [**PublicAuthorshipLabel**](PublicAuthorshipLabel.md) |  |
+**reactionCounts** | [**ReactionCounts**](ReactionCounts.md) |  |
+**viewerReaction** | **String** |  |
 **topic** | **String** |  | [optional]
 **regionCode** | **String** |  | [optional]
 

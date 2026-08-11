@@ -97,9 +97,7 @@ void main() {
           publicUserProvider(
             user.id,
           ).overrideWith((ref) => Future.value(profile)),
-          reputationProvider.overrideWith(
-            (ref) async => _reputationSnapshot,
-          ),
+          reputationProvider.overrideWith((ref) async => _reputationSnapshot),
         ],
         child: const MaterialApp(home: ProfileScreen()),
       ),

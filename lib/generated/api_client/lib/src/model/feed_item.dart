@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:lythaus_api_client/src/model/reaction_counts.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:lythaus_api_client/src/model/public_authorship_label.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -17,6 +19,8 @@ part 'feed_item.g.dart';
 /// * [body]
 /// * [publishedAt]
 /// * [publicLabel]
+/// * [reactionCounts]
+/// * [viewerReaction]
 /// * [topic]
 /// * [regionCode]
 @BuiltValue()
@@ -36,6 +40,13 @@ abstract class FeedItem implements Built<FeedItem, FeedItemBuilder> {
   @BuiltValueField(wireName: r'publicLabel')
   PublicAuthorshipLabel get publicLabel;
   // enum publicLabelEnum {  Human-authored,  AI-assisted,  };
+
+  @BuiltValueField(wireName: r'reactionCounts')
+  ReactionCounts get reactionCounts;
+
+  @BuiltValueField(wireName: r'viewerReaction')
+  FeedItemViewerReactionEnum? get viewerReaction;
+  // enum viewerReactionEnum {  like,  insightful,  support,  };
 
   @BuiltValueField(wireName: r'topic')
   String? get topic;
@@ -90,6 +101,16 @@ class _$FeedItemSerializer implements PrimitiveSerializer<FeedItem> {
     yield serializers.serialize(
       object.publicLabel,
       specifiedType: const FullType(PublicAuthorshipLabel),
+    );
+    yield r'reactionCounts';
+    yield serializers.serialize(
+      object.reactionCounts,
+      specifiedType: const FullType(ReactionCounts),
+    );
+    yield r'viewerReaction';
+    yield object.viewerReaction == null ? null : serializers.serialize(
+      object.viewerReaction,
+      specifiedType: const FullType.nullable(FeedItemViewerReactionEnum),
     );
     if (object.topic != null) {
       yield r'topic';
@@ -163,6 +184,21 @@ class _$FeedItemSerializer implements PrimitiveSerializer<FeedItem> {
           ) as PublicAuthorshipLabel;
           result.publicLabel = valueDes;
           break;
+        case r'reactionCounts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ReactionCounts),
+          ) as ReactionCounts;
+          result.reactionCounts.replace(valueDes);
+          break;
+        case r'viewerReaction':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(FeedItemViewerReactionEnum),
+          ) as FeedItemViewerReactionEnum?;
+          if (valueDes == null) continue;
+          result.viewerReaction = valueDes;
+          break;
         case r'topic':
           final valueDes = serializers.deserialize(
             value,
@@ -206,4 +242,21 @@ class _$FeedItemSerializer implements PrimitiveSerializer<FeedItem> {
     );
     return result.build();
   }
+}
+
+class FeedItemViewerReactionEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'like')
+  static const FeedItemViewerReactionEnum like = _$feedItemViewerReactionEnum_like;
+  @BuiltValueEnumConst(wireName: r'insightful')
+  static const FeedItemViewerReactionEnum insightful = _$feedItemViewerReactionEnum_insightful;
+  @BuiltValueEnumConst(wireName: r'support')
+  static const FeedItemViewerReactionEnum support = _$feedItemViewerReactionEnum_support;
+
+  static Serializer<FeedItemViewerReactionEnum> get serializer => _$feedItemViewerReactionEnumSerializer;
+
+  const FeedItemViewerReactionEnum._(String name): super(name);
+
+  static BuiltSet<FeedItemViewerReactionEnum> get values => _$feedItemViewerReactionEnumValues;
+  static FeedItemViewerReactionEnum valueOf(String name) => _$feedItemViewerReactionEnumValueOf(name);
 }

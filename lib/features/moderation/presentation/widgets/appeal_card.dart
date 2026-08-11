@@ -162,7 +162,7 @@ class AppealCard extends StatelessWidget {
         const Spacer(),
         if (appeal.votingStatus == VotingStatus.active)
           Icon(
-            Icons.schedule,
+            Icons.groups_outlined,
             size: 16,
             color: Theme.of(context).colorScheme.primary,
           ),

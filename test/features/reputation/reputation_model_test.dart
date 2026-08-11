@@ -2,16 +2,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/state/models/reputation.dart';
 
 void main() {
-  test('server response can carry a non-threshold reputation level', () {
+  test('server response carries a validated L0-L5 reputation level', () {
     final state = ReputationState.fromJson({
-      'level': 17,
-      'levelName': 'Editorial contributor',
-      'reputationBand': 'earned',
+      'userId': '018f5d33-9a7b-7def-8123-456789abcdef',
+      'level': 5,
+      'reputationLevel': 5,
+      'levelName': 'Highly Trusted Contributor',
+      'reputationBand': 'established',
       'reputationStatus': 'active',
-      'policyVersion': '2026-08',
+      'policyVersion': 'reputation-v2.0.0',
+      'pillars': {
+        'accountability': 80,
+        'contribution': 80,
+        'conduct': 90,
+        'sourcing': 55,
+        'authenticity': 85,
+        'reviewReliability': 50,
+      },
+      'promotionBlockers': <String>[],
     });
 
-    expect(state.level, 17);
-    expect(state.levelName, 'Editorial contributor');
+    expect(state.level, 5);
+    expect(state.levelName, 'Highly Trusted Contributor');
   });
 }

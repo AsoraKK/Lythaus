@@ -2,21 +2,23 @@ import fs from 'node:fs';
 
 const token = process.env.DATABASE_READINESS_TOKEN ?? '';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
-const expectedRelationCount = Number(process.env.EXPECTED_DATABASE_RELATION_COUNT ?? (requireBudgetMigration ? 82 : 78));
-const expectedSchemaFingerprint = process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? (requireBudgetMigration
-  ? ''
-  : '86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625');
-const expectedSchemaVersion = process.env.EXPECTED_DATABASE_SCHEMA_VERSION ?? (requireBudgetMigration
-  ? '0009_cost_budget_enforcement.sql'
-  : '0008_legacy_relink_status.sql');
+const expectedRelationCount = Number(process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '0');
+const expectedSchemaFingerprint = process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '';
+const expectedSchemaVersion = process.env.EXPECTED_DATABASE_SCHEMA_VERSION ?? '';
 const expectedBudgetLedgerApplied = requireBudgetMigration;
 const expectedBranch = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true' ? 'main' : 'unknown';
 const authenticatedAcceptanceProven = process.env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true';
 const requestedWorker = process.env.PRODUCTION_WORKER_SCOPE ?? 'all';
+const releaseSha = process.env.RELEASE_SHA ?? '';
+const expectedWorkerVersionId = process.env.PRODUCTION_WORKER_VERSION_ID ?? '';
 
 if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
+if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
+if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTION_WORKER_VERSION_ID is required');
+if (!authenticatedAcceptanceProven) throw new Error('AUTHENTICATED_ACCEPTANCE_PROVEN=true is required');
 if (!Number.isInteger(expectedRelationCount) || expectedRelationCount <= 0) throw new Error('EXPECTED_DATABASE_RELATION_COUNT is invalid');
-if (!expectedSchemaFingerprint) throw new Error('EXPECTED_DATABASE_SCHEMA_FINGERPRINT is required for post-budget probes');
+if (!/^[0-9a-f]{64}$/.test(expectedSchemaFingerprint)) throw new Error('EXPECTED_DATABASE_SCHEMA_FINGERPRINT is required');
+if (expectedSchemaVersion !== '0012_product_integrity_v2.sql') throw new Error('production probes require migration 0012');
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
 
 const allTargets = [
@@ -45,7 +47,9 @@ if (targets.length === 0) throw new Error(`Unknown PRODUCTION_WORKER_SCOPE: ${re
 if (targets.some(({ baseUrl }) => !baseUrl)) throw new Error('PRODUCTION_JOBS_API_BASE_URL is required; jobs must have an explicit protected probe route');
 
 async function fetchJson(url, options = {}) {
-  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(15_000) });
+  const headers = new Headers(options.headers);
+  headers.set('Cloudflare-Workers-Version-Overrides', `${requestedWorker}="${expectedWorkerVersionId}"`);
+  const response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15_000) });
   const text = await response.text();
   let body = null;
   try { body = JSON.parse(text); } catch { /* response details are not evidence */ }
@@ -74,6 +78,7 @@ function assertDatabaseReport(report, worker, label) {
 }
 
 const evidence = {
+  releaseSha,
   capturedAt: new Date().toISOString(),
   branchFingerprint: expectedBranch,
   readyForAuthentication: authenticatedAcceptanceProven,
@@ -92,6 +97,9 @@ for (const target of targets) {
   const body = await fetchJson(`${base}/internal/readiness/database-identity`, {
     headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
   });
+  if (body.workerVersionId !== expectedWorkerVersionId || body.releaseTag !== releaseSha) {
+    throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
+  }
   const reports = body.databases && typeof body.databases === 'object'
     ? Object.entries(body.databases)
     : [['primary', body]];
@@ -100,6 +108,8 @@ for (const target of targets) {
   if (body.readyForAuthentication !== authenticatedAcceptanceProven) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
   evidence.workers.push({
     worker: target.worker,
+    workerVersionId: body.workerVersionId,
+    releaseTag: body.releaseTag,
     baseUrl: base,
     databaseCount: reports.length,
     readiness: body.readiness,

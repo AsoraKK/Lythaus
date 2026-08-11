@@ -1,139 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
 import 'package:lythaus/core/config/environment_config.dart';
 import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/providers/repository_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/core/security/device_security_service.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/moderation/application/moderation_providers.dart';
-import 'package:lythaus/features/moderation/domain/appeal.dart';
 import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
-import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
-import 'package:lythaus/features/moderation/domain/moderation_case.dart';
-import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
-import 'package:lythaus/features/moderation/domain/moderation_filters.dart';
-import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
-import 'package:lythaus/core/providers/repository_providers.dart';
+
+class _MockModerationRepository extends Mock implements ModerationRepository {}
 
 class _FakeDeviceSecurityService implements DeviceSecurityService {
-  _FakeDeviceSecurityService(this._state);
+  _FakeDeviceSecurityService(this.state);
 
-  final DeviceSecurityState _state;
+  final DeviceSecurityState state;
 
   @override
-  Future<DeviceSecurityState> evaluateSecurity() async => _state;
+  Future<DeviceSecurityState> evaluateSecurity() async => state;
 
   @override
   void clearCache() {}
-}
-
-class _FakeModerationRepository implements ModerationRepository {
-  bool submitAppealCalled = false;
-  bool flagContentCalled = false;
-  bool submitVoteCalled = false;
-
-  @override
-  Future<Appeal> submitAppeal({
-    required String contentId,
-    required String contentType,
-    required String appealType,
-    required String appealReason,
-    required String userStatement,
-    required String token,
-  }) async {
-    submitAppealCalled = true;
-    return _fakeAppeal();
-  }
-
-  @override
-  Future<Map<String, dynamic>> flagContent({
-    required String contentId,
-    required String contentType,
-    required String reason,
-    String? additionalDetails,
-    required String token,
-  }) async {
-    flagContentCalled = true;
-    return {'success': true};
-  }
-
-  @override
-  Future<VoteResult> submitVote({
-    required String appealId,
-    required String vote,
-    String? comment,
-    required String token,
-  }) async {
-    submitVoteCalled = true;
-    return const VoteResult(success: true, tallyTriggered: false);
-  }
-
-  @override
-  Future<List<Appeal>> getMyAppeals({required String token}) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<AppealResponse> getVotingFeed({
-    int page = 1,
-    int pageSize = 20,
-    AppealFilters? filters,
-    required String token,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<ModerationQueueResponse> fetchModerationQueue({
-    int page = 1,
-    int pageSize = 20,
-    ModerationFilters? filters,
-    required String token,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<ModerationCase> fetchModerationCase({
-    required String caseId,
-    required String token,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<ModerationDecisionResult> submitModerationDecision({
-    required String caseId,
-    required String token,
-    required ModerationDecisionInput input,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> escalateModerationCase({
-    required String caseId,
-    required String token,
-    required ModerationEscalationInput input,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<ModerationAuditResponse> fetchCaseAudit({
-    required String caseId,
-    required String token,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<ModerationAuditResponse> searchAudit({
-    required ModerationAuditSearchFilters filters,
-    required String token,
-  }) {
-    throw UnimplementedError();
-  }
 }
 
 DeviceIntegrityGuard _guardFor(DeviceSecurityState state) {
@@ -153,61 +42,41 @@ DeviceIntegrityGuard _guardFor(DeviceSecurityState state) {
   );
 }
 
-Appeal _fakeAppeal() {
-  return Appeal(
-    appealId: 'appeal-1',
-    contentId: 'content-1',
-    contentType: 'post',
-    contentPreview: 'preview',
-    appealType: 'false_positive',
-    appealReason: 'context_missing',
-    userStatement: 'statement',
-    submitterId: 'user-1',
-    submitterName: 'User',
-    submittedAt: DateTime(2025, 1, 1),
-    expiresAt: DateTime(2025, 1, 2),
-    flagReason: 'spam',
-    flagCategories: const ['spam'],
-    flagCount: 1,
-    votingStatus: VotingStatus.active,
-    urgencyScore: 10,
-    estimatedResolution: 'soon',
-    hasUserVoted: false,
-    canUserVote: true,
+ProviderContainer _container(
+  _MockModerationRepository repository,
+  DeviceSecurityState state,
+) {
+  return ProviderContainer(
+    overrides: [
+      deviceIntegrityGuardProvider.overrideWithValue(_guardFor(state)),
+      moderationRepositoryProvider.overrideWithValue(repository),
+      jwtProvider.overrideWith((ref) async => 'token'),
+    ],
   );
 }
 
 void main() {
-  test('blocks appeal submission on compromised devices', () async {
-    final compromised = DeviceSecurityState(
-      isRootedOrJailbroken: true,
-      isEmulator: false,
-      isDebugBuild: false,
-      lastCheckedAt: DateTime.now(),
-    );
+  const submission = FlagSubmission(
+    contentId: 'content-1',
+    contentType: 'post',
+    reason: 'spam',
+  );
 
-    final repo = _FakeModerationRepository();
-    final container = ProviderContainer(
-      overrides: [
-        deviceIntegrityGuardProvider.overrideWithValue(_guardFor(compromised)),
-        moderationRepositoryProvider.overrideWithValue(repo),
-        jwtProvider.overrideWith((ref) async => 'token'),
-      ],
+  test('blocks flagging on a compromised device', () async {
+    final repository = _MockModerationRepository();
+    final container = _container(
+      repository,
+      DeviceSecurityState(
+        isRootedOrJailbroken: true,
+        isEmulator: false,
+        isDebugBuild: false,
+        lastCheckedAt: DateTime.utc(2026),
+      ),
     );
     addTearDown(container.dispose);
 
     await expectLater(
-      container.read(
-        submitAppealProvider(
-          const AppealSubmission(
-            contentId: 'content-1',
-            contentType: 'post',
-            appealType: 'false_positive',
-            appealReason: 'context_missing',
-            userStatement: 'statement',
-          ),
-        ).future,
-      ),
+      container.read(flagContentProvider(submission).future),
       throwsA(
         isA<ModerationException>().having(
           (error) => error.code,
@@ -216,116 +85,50 @@ void main() {
         ),
       ),
     );
-
-    expect(repo.submitAppealCalled, isFalse);
+    verifyNever(
+      () => repository.flagContent(
+        contentId: any(named: 'contentId'),
+        contentType: any(named: 'contentType'),
+        reason: any(named: 'reason'),
+        additionalDetails: any(named: 'additionalDetails'),
+        token: any(named: 'token'),
+      ),
+    );
   });
 
-  test('blocks flagging on compromised devices', () async {
-    final compromised = DeviceSecurityState(
-      isRootedOrJailbroken: true,
-      isEmulator: false,
-      isDebugBuild: false,
-      lastCheckedAt: DateTime.now(),
-    );
-
-    final repo = _FakeModerationRepository();
-    final container = ProviderContainer(
-      overrides: [
-        deviceIntegrityGuardProvider.overrideWithValue(_guardFor(compromised)),
-        moderationRepositoryProvider.overrideWithValue(repo),
-        jwtProvider.overrideWith((ref) async => 'token'),
-      ],
+  test('allows flagging on a clean device', () async {
+    final repository = _MockModerationRepository();
+    final container = _container(
+      repository,
+      DeviceSecurityState(
+        isRootedOrJailbroken: false,
+        isEmulator: false,
+        isDebugBuild: false,
+        lastCheckedAt: DateTime.utc(2026),
+      ),
     );
     addTearDown(container.dispose);
-
-    await expectLater(
-      container.read(
-        flagContentProvider(
-          const FlagSubmission(
-            contentId: 'content-1',
-            contentType: 'post',
-            reason: 'spam',
-          ),
-        ).future,
+    when(
+      () => repository.flagContent(
+        contentId: 'content-1',
+        contentType: 'post',
+        reason: 'spam',
+        additionalDetails: null,
+        token: 'token',
       ),
-      throwsA(
-        isA<ModerationException>().having(
-          (error) => error.code,
-          'code',
-          ErrorCodes.deviceIntegrityBlocked,
-        ),
+    ).thenAnswer((_) async => {'success': true});
+
+    final result = await container.read(flagContentProvider(submission).future);
+
+    expect(result['success'], isTrue);
+    verify(
+      () => repository.flagContent(
+        contentId: 'content-1',
+        contentType: 'post',
+        reason: 'spam',
+        additionalDetails: null,
+        token: 'token',
       ),
-    );
-
-    expect(repo.flagContentCalled, isFalse);
-  });
-
-  test('blocks voting on compromised devices', () async {
-    final compromised = DeviceSecurityState(
-      isRootedOrJailbroken: true,
-      isEmulator: false,
-      isDebugBuild: false,
-      lastCheckedAt: DateTime.now(),
-    );
-
-    final repo = _FakeModerationRepository();
-    final container = ProviderContainer(
-      overrides: [
-        deviceIntegrityGuardProvider.overrideWithValue(_guardFor(compromised)),
-        moderationRepositoryProvider.overrideWithValue(repo),
-        jwtProvider.overrideWith((ref) async => 'token'),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await expectLater(
-      container.read(
-        submitVoteProvider(
-          const VoteSubmission(appealId: 'appeal-1', vote: 'approve'),
-        ).future,
-      ),
-      throwsA(
-        isA<ModerationException>().having(
-          (error) => error.code,
-          'code',
-          ErrorCodes.deviceIntegrityBlocked,
-        ),
-      ),
-    );
-
-    expect(repo.submitVoteCalled, isFalse);
-  });
-
-  test('allows appeal submission on clean devices', () async {
-    final clean = DeviceSecurityState(
-      isRootedOrJailbroken: false,
-      isEmulator: false,
-      isDebugBuild: false,
-      lastCheckedAt: DateTime.now(),
-    );
-
-    final repo = _FakeModerationRepository();
-    final container = ProviderContainer(
-      overrides: [
-        deviceIntegrityGuardProvider.overrideWithValue(_guardFor(clean)),
-        moderationRepositoryProvider.overrideWithValue(repo),
-        jwtProvider.overrideWith((ref) async => 'token'),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await container.read(
-      submitAppealProvider(
-        const AppealSubmission(
-          contentId: 'content-1',
-          contentType: 'post',
-          appealType: 'false_positive',
-          appealReason: 'context_missing',
-          userStatement: 'statement',
-        ),
-      ).future,
-    );
-
-    expect(repo.submitAppealCalled, isTrue);
+    ).called(1);
   });
 }

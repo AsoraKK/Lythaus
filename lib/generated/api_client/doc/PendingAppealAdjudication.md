@@ -14,7 +14,7 @@ Name | Type | Description | Notes
 **policyVersion** | **String** |  |
 **createdAt** | [**DateTime**](DateTime.md) |  |
 **expiresAt** | [**DateTime**](DateTime.md) |  |
-**communityDecision** | **String** |  | [optional]
+**reviewerPanelDecision** | **String** |  | [optional]
 **completedReviewers** | **int** |  |
 **totalWeight** | **int** |  |
 **winningShare** | **num** |  |

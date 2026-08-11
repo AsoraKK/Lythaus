@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:lythaus_api_client/src/model/reaction_counts.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -17,6 +19,8 @@ part 'news_board_item.g.dart';
 /// * [body]
 /// * [authorId]
 /// * [publishedAt]
+/// * [reactionCounts]
+/// * [viewerReaction]
 @BuiltValue()
 abstract class NewsBoardItem implements Built<NewsBoardItem, NewsBoardItemBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -36,6 +40,13 @@ abstract class NewsBoardItem implements Built<NewsBoardItem, NewsBoardItemBuilde
 
   @BuiltValueField(wireName: r'publishedAt')
   DateTime get publishedAt;
+
+  @BuiltValueField(wireName: r'reactionCounts')
+  ReactionCounts get reactionCounts;
+
+  @BuiltValueField(wireName: r'viewerReaction')
+  NewsBoardItemViewerReactionEnum? get viewerReaction;
+  // enum viewerReactionEnum {  like,  insightful,  support,  };
 
   NewsBoardItem._();
 
@@ -95,6 +106,16 @@ class _$NewsBoardItemSerializer implements PrimitiveSerializer<NewsBoardItem> {
     yield serializers.serialize(
       object.publishedAt,
       specifiedType: const FullType(DateTime),
+    );
+    yield r'reactionCounts';
+    yield serializers.serialize(
+      object.reactionCounts,
+      specifiedType: const FullType(ReactionCounts),
+    );
+    yield r'viewerReaction';
+    yield object.viewerReaction == null ? null : serializers.serialize(
+      object.viewerReaction,
+      specifiedType: const FullType.nullable(NewsBoardItemViewerReactionEnum),
     );
   }
 
@@ -164,6 +185,21 @@ class _$NewsBoardItemSerializer implements PrimitiveSerializer<NewsBoardItem> {
           ) as DateTime;
           result.publishedAt = valueDes;
           break;
+        case r'reactionCounts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ReactionCounts),
+          ) as ReactionCounts;
+          result.reactionCounts.replace(valueDes);
+          break;
+        case r'viewerReaction':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(NewsBoardItemViewerReactionEnum),
+          ) as NewsBoardItemViewerReactionEnum?;
+          if (valueDes == null) continue;
+          result.viewerReaction = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -191,4 +227,21 @@ class _$NewsBoardItemSerializer implements PrimitiveSerializer<NewsBoardItem> {
     );
     return result.build();
   }
+}
+
+class NewsBoardItemViewerReactionEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'like')
+  static const NewsBoardItemViewerReactionEnum like = _$newsBoardItemViewerReactionEnum_like;
+  @BuiltValueEnumConst(wireName: r'insightful')
+  static const NewsBoardItemViewerReactionEnum insightful = _$newsBoardItemViewerReactionEnum_insightful;
+  @BuiltValueEnumConst(wireName: r'support')
+  static const NewsBoardItemViewerReactionEnum support = _$newsBoardItemViewerReactionEnum_support;
+
+  static Serializer<NewsBoardItemViewerReactionEnum> get serializer => _$newsBoardItemViewerReactionEnumSerializer;
+
+  const NewsBoardItemViewerReactionEnum._(String name): super(name);
+
+  static BuiltSet<NewsBoardItemViewerReactionEnum> get values => _$newsBoardItemViewerReactionEnumValues;
+  static NewsBoardItemViewerReactionEnum valueOf(String name) => _$newsBoardItemViewerReactionEnumValueOf(name);
 }

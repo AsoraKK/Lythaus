@@ -1,9 +1,9 @@
 export type DeclaredCreationMode = 'human' | 'ai_assisted' | 'ai_generated';
+export type PublicDeclaredCreationMode = Exclude<DeclaredCreationMode, 'ai_generated'>;
 
 export type PublicContentLabel =
   | 'Human-authored'
   | 'AI-assisted'
-  | 'AI-generated'
   | 'Under review';
 
 export type GeoScope =
@@ -30,7 +30,7 @@ export interface TransactionalEmailProvider {
 
 export interface CreatePostInput {
   body: string;
-  declaredCreationMode: DeclaredCreationMode;
+  declaredCreationMode: PublicDeclaredCreationMode;
   geoScope: GeoScope;
   placeId?: string;
 }

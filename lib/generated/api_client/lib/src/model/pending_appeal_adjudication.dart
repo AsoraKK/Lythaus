@@ -18,7 +18,7 @@ part 'pending_appeal_adjudication.g.dart';
 /// * [policyVersion]
 /// * [createdAt]
 /// * [expiresAt]
-/// * [communityDecision]
+/// * [reviewerPanelDecision]
 /// * [completedReviewers]
 /// * [totalWeight]
 /// * [winningShare]
@@ -46,9 +46,9 @@ abstract class PendingAppealAdjudication implements Built<PendingAppealAdjudicat
   @BuiltValueField(wireName: r'expires_at')
   DateTime get expiresAt;
 
-  @BuiltValueField(wireName: r'community_decision')
-  PendingAppealAdjudicationCommunityDecisionEnum? get communityDecision;
-  // enum communityDecisionEnum {  overturn,  uphold,  };
+  @BuiltValueField(wireName: r'reviewer_panel_decision')
+  PendingAppealAdjudicationReviewerPanelDecisionEnum? get reviewerPanelDecision;
+  // enum reviewerPanelDecisionEnum {  overturn,  uphold,  };
 
   @BuiltValueField(wireName: r'completed_reviewers')
   int get completedReviewers;
@@ -123,11 +123,11 @@ class _$PendingAppealAdjudicationSerializer implements PrimitiveSerializer<Pendi
       object.expiresAt,
       specifiedType: const FullType(DateTime),
     );
-    if (object.communityDecision != null) {
-      yield r'community_decision';
+    if (object.reviewerPanelDecision != null) {
+      yield r'reviewer_panel_decision';
       yield serializers.serialize(
-        object.communityDecision,
-        specifiedType: const FullType.nullable(PendingAppealAdjudicationCommunityDecisionEnum),
+        object.reviewerPanelDecision,
+        specifiedType: const FullType.nullable(PendingAppealAdjudicationReviewerPanelDecisionEnum),
       );
     }
     yield r'completed_reviewers';
@@ -225,13 +225,13 @@ class _$PendingAppealAdjudicationSerializer implements PrimitiveSerializer<Pendi
           ) as DateTime;
           result.expiresAt = valueDes;
           break;
-        case r'community_decision':
+        case r'reviewer_panel_decision':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(PendingAppealAdjudicationCommunityDecisionEnum),
-          ) as PendingAppealAdjudicationCommunityDecisionEnum?;
+            specifiedType: const FullType.nullable(PendingAppealAdjudicationReviewerPanelDecisionEnum),
+          ) as PendingAppealAdjudicationReviewerPanelDecisionEnum?;
           if (valueDes == null) continue;
-          result.communityDecision = valueDes;
+          result.reviewerPanelDecision = valueDes;
           break;
         case r'completed_reviewers':
           final valueDes = serializers.deserialize(
@@ -319,19 +319,19 @@ class PendingAppealAdjudicationRiskClassEnum extends EnumClass {
   static PendingAppealAdjudicationRiskClassEnum valueOf(String name) => _$pendingAppealAdjudicationRiskClassEnumValueOf(name);
 }
 
-class PendingAppealAdjudicationCommunityDecisionEnum extends EnumClass {
+class PendingAppealAdjudicationReviewerPanelDecisionEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'overturn')
-  static const PendingAppealAdjudicationCommunityDecisionEnum overturn = _$pendingAppealAdjudicationCommunityDecisionEnum_overturn;
+  static const PendingAppealAdjudicationReviewerPanelDecisionEnum overturn = _$pendingAppealAdjudicationReviewerPanelDecisionEnum_overturn;
   @BuiltValueEnumConst(wireName: r'uphold')
-  static const PendingAppealAdjudicationCommunityDecisionEnum uphold = _$pendingAppealAdjudicationCommunityDecisionEnum_uphold;
+  static const PendingAppealAdjudicationReviewerPanelDecisionEnum uphold = _$pendingAppealAdjudicationReviewerPanelDecisionEnum_uphold;
 
-  static Serializer<PendingAppealAdjudicationCommunityDecisionEnum> get serializer => _$pendingAppealAdjudicationCommunityDecisionEnumSerializer;
+  static Serializer<PendingAppealAdjudicationReviewerPanelDecisionEnum> get serializer => _$pendingAppealAdjudicationReviewerPanelDecisionEnumSerializer;
 
-  const PendingAppealAdjudicationCommunityDecisionEnum._(String name): super(name);
+  const PendingAppealAdjudicationReviewerPanelDecisionEnum._(String name): super(name);
 
-  static BuiltSet<PendingAppealAdjudicationCommunityDecisionEnum> get values => _$pendingAppealAdjudicationCommunityDecisionEnumValues;
-  static PendingAppealAdjudicationCommunityDecisionEnum valueOf(String name) => _$pendingAppealAdjudicationCommunityDecisionEnumValueOf(name);
+  static BuiltSet<PendingAppealAdjudicationReviewerPanelDecisionEnum> get values => _$pendingAppealAdjudicationReviewerPanelDecisionEnumValues;
+  static PendingAppealAdjudicationReviewerPanelDecisionEnum valueOf(String name) => _$pendingAppealAdjudicationReviewerPanelDecisionEnumValueOf(name);
 }
 
 class PendingAppealAdjudicationRequiredAdjudicatorsEnum extends EnumClass {

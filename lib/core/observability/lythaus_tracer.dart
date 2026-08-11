@@ -89,7 +89,7 @@ class LythausSpan {
 class LythausTracer {
   /// Start a span for service method tracing
   ///
-  /// [operationName] - The name of the operation (e.g., 'ModerationService.getMyAppeals')
+  /// [operationName] - The name of the traced operation.
   /// [attributes] - Additional span attributes for context
   static LythausSpan startSpan(
     String operationName, {

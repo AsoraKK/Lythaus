@@ -16,12 +16,7 @@ class _ReactionSuccessAdapter implements HttpClientAdapter {
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    final body = {
-      'reactionId': 'rxn-1',
-      'reactionType': 'helpful',
-      'includedInReputation': true,
-      'antiGamingStatus': 'clear',
-    };
+    final body = {'postId': 'post-1', 'reactionType': 'like', 'changed': true};
     return ResponseBody.fromString(
       jsonEncode(body),
       200,
@@ -59,62 +54,18 @@ Widget _wrap(Widget widget, {List<Override> overrides = const []}) {
 
 void main() {
   group('ReactionBar', () {
-    testWidgets('renders all four positive reaction chips by default', (
-      tester,
-    ) async {
+    testWidgets('renders canonical reaction chips', (tester) async {
       await tester.pumpWidget(
         _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),
       );
 
-      expect(find.text('Helpful'), findsOneWidget);
-      expect(find.text('Well Sourced'), findsOneWidget);
-      expect(find.text('Thoughtful'), findsOneWidget);
-      expect(find.text('Agree'), findsOneWidget);
-    });
-
-    testWidgets('negative reactions are hidden by default', (tester) async {
-      await tester.pumpWidget(
-        _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),
-      );
-
-      expect(find.text('Disagree'), findsNothing);
-      expect(find.text('Misleading'), findsNothing);
-      expect(find.text('Low Effort'), findsNothing);
-      expect(find.text('Report'), findsNothing);
-    });
-
-    testWidgets('toggle reveals negative reactions', (tester) async {
-      await tester.pumpWidget(
-        _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),
-      );
-
-      // Tap the expand arrow
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Disagree'), findsOneWidget);
-      expect(find.text('Misleading'), findsOneWidget);
-      expect(find.text('Report'), findsOneWidget);
-    });
-
-    testWidgets('toggle collapses negative reactions on second tap', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),
-      );
-
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
-      await tester.pumpAndSettle();
-      expect(find.text('Misleading'), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.keyboard_arrow_up));
-      await tester.pumpAndSettle();
-      expect(find.text('Misleading'), findsNothing);
+      expect(find.text('Like'), findsOneWidget);
+      expect(find.text('Insightful'), findsOneWidget);
+      expect(find.text('Support'), findsOneWidget);
     });
 
     testWidgets('displays non-zero counts from initialSummary', (tester) async {
-      const summary = ReactionSummary(counts: {'helpful': 12, 'agree': 3});
+      const summary = ReactionSummary(counts: {'like': 12, 'support': 3});
 
       await tester.pumpWidget(
         _wrap(
@@ -126,8 +77,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Helpful 12'), findsOneWidget);
-      expect(find.text('Agree 3'), findsOneWidget);
+      expect(find.text('Like 12'), findsOneWidget);
+      expect(find.text('Support 3'), findsOneWidget);
     });
 
     testWidgets('tap reaction increments then second tap toggles it off', (
@@ -140,14 +91,14 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Helpful'));
+      await tester.tap(find.text('Like'));
       await tester.pumpAndSettle();
-      expect(find.text('Helpful 1'), findsOneWidget);
+      expect(find.text('Like 1'), findsOneWidget);
 
-      await tester.tap(find.text('Helpful 1'));
+      await tester.tap(find.text('Like 1'));
       await tester.pumpAndSettle();
-      expect(find.text('Helpful'), findsOneWidget);
-      expect(find.text('Helpful 1'), findsNothing);
+      expect(find.text('Like'), findsOneWidget);
+      expect(find.text('Like 1'), findsNothing);
     });
   });
 }

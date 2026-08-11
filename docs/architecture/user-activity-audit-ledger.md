@@ -31,7 +31,7 @@ The proposed/partial storage model is `trust.user_activity_events`:
 | Privacy | allowlisted metadata, retention class, retention-until timestamp |
 | Ordering | immutable `created_at`; owner cursor index `(user_id, created_at DESC, id DESC)` |
 
-The schema uniqueness key `(user_id, source_event_id, event_type)` makes delivery idempotent per user-visible effect. A duplicate source delivery returns the original event rather than creating a second ledger row. UUIDv7 creation and the caller-provided source event make correlation deterministic.
+The schema uniqueness key `(user_id, source_event_id, event_type)` provides at-most-one persisted row per user-visible effect after migration. Sequential replay returns the original event rather than creating a second row. Concurrent conflict/result retrieval still requires migrated database integration evidence. UUIDv7 creation and the caller-provided source event make correlation deterministic.
 
 ## Delivery architecture
 
@@ -44,7 +44,7 @@ Required flow for an authoritative mutation:
 5. The durable activity record is recorded idempotently from that authoritative outcome.
 6. The private API returns cursor-paginated records to the subject.
 
-The repository has shared `recordUserActivity` helpers and activity call sites in public/admin/jobs Workers. **Partial:** an inventory proving every state-changing mutation has the correct event and transaction boundary has not been accepted, and live queue/retry behaviour was not exercised.
+The repository has shared `recordUserActivity` helpers, a catalogue-keyed public-API mutation inventory, and separate admin/jobs activity call-site invariants. **Partial release evidence:** this static inventory and extracted cross-runtime coverage do not prove migrated transaction, concurrent retry/result retrieval, or live queue behaviour.
 
 ## Metadata and operational privacy
 
@@ -83,7 +83,7 @@ Passport v3 includes notification metadata/preferences and accountability signal
 
 ## Flutter experience
 
-`ReputationLedgerScreen` currently provides private Reputation and Account Activity tabs, authenticated server pagination, retry, empty states, and accessible semantic labels. It does not yet provide the full requested category filter rail, entry detail, policy links, or a dedicated appeal affordance. It must not render raw metadata JSON.
+`ReputationLedgerScreen` provides private Reputation and Account Activity tabs, category filters, authenticated cursor pagination, retry, meaningful loading/empty/error states, accessible semantic labels, safe entry detail, contextual policy links, and appealability guidance where relevant. It does not retain or render raw metadata JSON. Authenticated exact-SHA Flutter/API acceptance remains a release gate.
 
 ## Security and launch requirements
 

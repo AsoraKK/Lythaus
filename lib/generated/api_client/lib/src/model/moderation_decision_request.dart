@@ -14,7 +14,7 @@ part 'moderation_decision_request.g.dart';
 /// Properties:
 /// * [outcome]
 /// * [reasonCode]
-/// * [publicLabel]
+/// * [publicLabel] - Public categorical label. AI-generated content cannot be allowed for publication.
 @BuiltValue()
 abstract class ModerationDecisionRequest implements Built<ModerationDecisionRequest, ModerationDecisionRequestBuilder> {
   @BuiltValueField(wireName: r'outcome')
@@ -24,9 +24,10 @@ abstract class ModerationDecisionRequest implements Built<ModerationDecisionRequ
   @BuiltValueField(wireName: r'reasonCode')
   String get reasonCode;
 
+  /// Public categorical label. AI-generated content cannot be allowed for publication.
   @BuiltValueField(wireName: r'publicLabel')
   ModerationDecisionRequestPublicLabelEnum? get publicLabel;
-  // enum publicLabelEnum {  Human-authored,  AI-assisted,  AI-generated,  Under review,  };
+  // enum publicLabelEnum {  Human-authored,  AI-assisted,  Under review,  };
 
   ModerationDecisionRequest._();
 
@@ -160,12 +161,13 @@ class ModerationDecisionRequestOutcomeEnum extends EnumClass {
 
 class ModerationDecisionRequestPublicLabelEnum extends EnumClass {
 
+  /// Public categorical label. AI-generated content cannot be allowed for publication.
   @BuiltValueEnumConst(wireName: r'Human-authored')
   static const ModerationDecisionRequestPublicLabelEnum humanAuthored = _$moderationDecisionRequestPublicLabelEnum_humanAuthored;
+  /// Public categorical label. AI-generated content cannot be allowed for publication.
   @BuiltValueEnumConst(wireName: r'AI-assisted')
   static const ModerationDecisionRequestPublicLabelEnum aIAssisted = _$moderationDecisionRequestPublicLabelEnum_aIAssisted;
-  @BuiltValueEnumConst(wireName: r'AI-generated')
-  static const ModerationDecisionRequestPublicLabelEnum aIGenerated = _$moderationDecisionRequestPublicLabelEnum_aIGenerated;
+  /// Public categorical label. AI-generated content cannot be allowed for publication.
   @BuiltValueEnumConst(wireName: r'Under review')
   static const ModerationDecisionRequestPublicLabelEnum underReview = _$moderationDecisionRequestPublicLabelEnum_underReview;
 

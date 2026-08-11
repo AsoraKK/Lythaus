@@ -30,7 +30,7 @@ components:
       name: Idempotency-Key
       in: header
       required: false
-      description: Caller-generated replay key. Completed retries return the stored response.
+      description: Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
       schema:
         type: string
         pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
@@ -38,7 +38,7 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: Required replay key for an immutable reviewer vote.
+      description: Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
       schema:
         type: string
         pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
@@ -48,7 +48,20 @@ components:
       content:
         application/json:
           schema:
+              $ref: '#/components/schemas/ApiError'
+    IdempotencyConflict:
+      description: The idempotency key conflicts with another actor or payload, is still processing, or has an ambiguous outcome that requires reconciliation and must not be automatically retried under a new execution.
+      content:
+        application/json:
+          schema:
             $ref: '#/components/schemas/ApiError'
+          examples:
+            keyConflict:
+              value: { error: idempotency_key_conflict, correlationId: 01K1LYTHAUSIDEMPOTENCY0001 }
+            inProgress:
+              value: { error: idempotency_in_progress, correlationId: 01K1LYTHAUSIDEMPOTENCY0002 }
+            outcomeUnknown:
+              value: { error: idempotency_outcome_unknown, correlationId: 01K1LYTHAUSIDEMPOTENCY0003 }
     Unauthorized:
       description: Authentication or required Cloudflare Access authorization failed.
       content:
@@ -67,6 +80,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    SafetyLimited:
+      description: A stable rate or neutral anti-abuse limit was reached.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SafetyLimitError'
   schemas:
     ApiError:
       type: object
@@ -83,7 +102,7 @@ components:
       properties:
         error:
           type: string
-          enum: [flag_daily_limit_reached, media_daily_limit_reached, relationship_change_limit_reached, export_cooldown_active]
+          enum: [rate_limit_exceeded, post_daily_limit_reached, comment_daily_limit_reached, reaction_daily_limit_reached, appeal_daily_limit_reached, flag_daily_limit_reached, media_daily_limit_reached, relationship_change_limit_reached, export_cooldown_active, privacy_request_active]
         correlationId:
           type: string
     DeclaredCreationMode:
@@ -105,20 +124,31 @@ components:
           nullable: true
           description: Opaque cursor for the next page, or null when exhausted.
 
+    ReactionCounts:
+      type: object
+      description: Current reaction totals by supported reaction type.
+      additionalProperties: false
+      properties:
+        like: { type: integer, minimum: 0, default: 0 }
+        insightful: { type: integer, minimum: 0, default: 0 }
+        support: { type: integer, minimum: 0, default: 0 }
+
     FeedItem:
       type: object
-      required: [id, authorId, body, publishedAt, publicLabel]
+      required: [id, authorId, body, publishedAt, publicLabel, reactionCounts, viewerReaction]
       properties:
         id: { type: string, format: uuid }
         authorId: { type: string, format: uuid }
         body: { type: string }
         publishedAt: { type: string, format: date-time }
         publicLabel: { $ref: '#/components/schemas/PublicAuthorshipLabel' }
+        reactionCounts: { $ref: '#/components/schemas/ReactionCounts' }
+        viewerReaction: { type: string, enum: [like, insightful, support], nullable: true }
         topic: { type: string, nullable: true }
         regionCode: { type: string, nullable: true }
     PersonalFeedItem:
       type: object
-      required: [id, authorId, body, declaredCreationMode, visibility, moderationState, createdAt]
+      required: [id, authorId, body, declaredCreationMode, visibility, moderationState, publicLabel, reactionCounts, viewerReaction, createdAt]
       properties:
         id: { type: string, format: uuid }
         authorId: { type: string, format: uuid }
@@ -126,6 +156,9 @@ components:
         declaredCreationMode: { $ref: '#/components/schemas/DeclaredCreationMode' }
         visibility: { type: string, enum: [public, followers, private] }
         moderationState: { $ref: '#/components/schemas/ModerationState' }
+        publicLabel: { $ref: '#/components/schemas/PublicAuthorshipLabel' }
+        reactionCounts: { $ref: '#/components/schemas/ReactionCounts' }
+        viewerReaction: { type: string, enum: [like, insightful, support], nullable: true }
         geoScope: { type: string, enum: [global, country, province, municipality, community, none], nullable: true }
         placeId: { type: string, nullable: true }
         publishedAt: { type: string, format: date-time, nullable: true }
@@ -153,7 +186,7 @@ components:
     NewsBoardItem:
       type: object
       description: The Worker retains a redundant legacy `published_at` field for compatibility; clients consume the canonical `publishedAt` field.
-      required: [id, title, publishedAt]
+      required: [id, title, publishedAt, reactionCounts, viewerReaction]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
@@ -161,6 +194,8 @@ components:
         body: { type: string, nullable: true }
         authorId: { type: string, format: uuid, nullable: true }
         publishedAt: { type: string, format: date-time }
+        reactionCounts: { $ref: '#/components/schemas/ReactionCounts' }
+        viewerReaction: { type: string, enum: [like, insightful, support], nullable: true }
     NewsBoardFeedPage:
       allOf:
         - $ref: '#/components/schemas/CursorPage'
@@ -243,8 +278,10 @@ components:
       type: object
       additionalProperties: false
       required: [body]
+      description: Body-only edits preserve the stored declaration; an explicit declaration may replace it, but generated public content remains blocked.
       properties:
         body: { type: string, minLength: 1, maxLength: 20000 }
+        declaredCreationMode: { $ref: '#/components/schemas/DeclaredCreationMode' }
     Comment:
       type: object
       required: [id, authorId, body, depth, moderationState, deleted, createdAt, declaredCreationMode]
@@ -283,10 +320,11 @@ components:
         moderationState: { type: string, enum: [under_review] }
     CommentUpdateResponse:
       type: object
-      required: [id, body, moderationState]
+      required: [id, body, declaredCreationMode, moderationState]
       properties:
         id: { type: string, format: uuid }
         body: { type: string }
+        declaredCreationMode: { $ref: '#/components/schemas/DeclaredCreationMode' }
         moderationState: { type: string, enum: [under_review] }
     CommentDeleteResponse:
       type: object
@@ -577,7 +615,7 @@ components:
       required: [status, completedReviewers, totalWeight, overturnWeight, upholdWeight, winningShare, requiredAdjudicators, policyVersion]
       properties:
         status: { type: string, enum: [pending_quorum, no_consensus, pending_adjudication, adjudication_disagreement, resolved] }
-        communityDecision: { type: string, enum: [overturn, uphold], nullable: true }
+        reviewerPanelDecision: { type: string, enum: [overturn, uphold], nullable: true }
         finalDecision: { type: string, enum: [overturn, uphold], nullable: true }
         completedReviewers: { type: integer, minimum: 0, maximum: 5 }
         totalWeight: { type: integer, minimum: 0, maximum: 6 }
@@ -598,7 +636,7 @@ components:
         created_at: { type: string, format: date-time }
         expires_at: { type: string, format: date-time, nullable: true }
         resolved_at: { type: string, format: date-time, nullable: true }
-        community_decision: { type: string, enum: [overturn, uphold], nullable: true }
+        reviewer_panel_decision: { type: string, enum: [overturn, uphold], nullable: true }
         final_decision: { type: string, enum: [overturn, uphold], nullable: true }
         completed_reviewers: { type: integer, nullable: true }
         outcome_state: { type: string, nullable: true }
@@ -691,7 +729,7 @@ components:
         policy_version: { type: string }
         created_at: { type: string, format: date-time }
         expires_at: { type: string, format: date-time }
-        community_decision: { type: string, enum: [overturn, uphold], nullable: true }
+        reviewer_panel_decision: { type: string, enum: [overturn, uphold], nullable: true }
         completed_reviewers: { type: integer, minimum: 0, maximum: 5 }
         total_weight: { type: integer, minimum: 0, maximum: 6 }
         winning_share: { type: number, minimum: 0, maximum: 1 }
@@ -719,7 +757,7 @@ components:
         riskClass: { type: string, enum: [standard, high] }
     ModerationAppealVoteLockedOutboxPayload:
       type: object
-      description: Internal-only payload for `moderation.appeal.vote_locked`; durable community outcome computation and adjudicator notifications occur downstream. It has no public HTTP route.
+      description: Internal-only payload for `moderation.appeal.vote_locked`; durable reviewer-panel outcome computation and adjudicator notifications occur downstream. It has no public HTTP route.
       x-lythaus-internal-event: moderation.appeal.vote_locked
       required: [appealId, voteId, decision]
       properties:
@@ -854,7 +892,10 @@ components:
       properties:
         outcome: { type: string, enum: [allow, block, queue] }
         reasonCode: { type: string, pattern: '^[A-Z0-9_.:-]{2,80}$' }
-        publicLabel: { type: string, enum: [Human-authored, AI-assisted, AI-generated, Under review] }
+        publicLabel:
+          type: string
+          description: Public categorical label. AI-generated content cannot be allowed for publication.
+          enum: [Human-authored, AI-assisted, Under review]
     ModerationDecisionResponse:
       type: object
       required: [caseId, outcome]
@@ -1159,6 +1200,11 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AppealAdjudicationRequest'
+            examples:
+              uphold:
+                value:
+                  decision: uphold
+                  reasonCode: APPEAL.PANEL_CONFIRMED
       responses:
         '200':
           description: Current governance evaluation and, only if resolved, the applied final outcome.
@@ -1166,6 +1212,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppealAdjudicationResponse'
+              examples:
+                resolved:
+                  value:
+                    appealId: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
+                    status: resolved
+                    reviewerPanelDecision: uphold
+                    finalDecision: uphold
+                    completedReviewers: 5
+                    totalWeight: 5
+                    overturnWeight: 1
+                    upholdWeight: 4
+                    winningShare: 0.8
+                    requiredAdjudicators: 1
+                    policyVersion: appeals-v1.0.0
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1182,7 +1242,7 @@ paths:
         - cloudflareAccess: []
       responses:
         '200':
-          description: Open appeals with a durable community outcome awaiting one or more independent adjudications.
+          description: Open appeals with a durable reviewer-panel outcome awaiting one or more independent adjudications.
           content:
             application/json:
               schema:
@@ -1477,6 +1537,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ProductIntegrityProfileUpdateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Updated private profile.
           content:
@@ -1502,6 +1564,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ProductIntegrityProfileUpdateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Updated private profile.
           content:
@@ -1529,13 +1593,29 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AppealCreateRequest'
+            examples:
+              standard:
+                summary: Appeal a resolved post or comment case
+                value:
+                  caseId: 018b27d4-6e1e-7bd3-bb5a-98f24bb968c2
+                  statement: I believe this decision should be reviewed because the context was misunderstood.
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: An existing open appeal for this case and appellant was returned.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AppealCreateResponse'
+              examples:
+                created:
+                  summary: Appeal accepted for independent assignment
+                  value:
+                    appealId: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
+                    state: open
+                    riskClass: standard
+                    policyVersion: appeals-v1.0.0
         '201':
           description: Appeal submitted.
           content:
@@ -1546,6 +1626,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
   /appeals/{id}:
     get:
       operationId: appealsGet
@@ -1589,13 +1671,28 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/GovernanceAppealVoteRequest'
+            examples:
+              overturn:
+                summary: Vote to overturn the appealed decision
+                value:
+                  decision: overturn
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Previously recorded idempotent vote.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GovernanceAppealVoteResponse'
+              examples:
+                recorded:
+                  summary: Immutable reviewer vote recorded
+                  value:
+                    voteId: 018b27d4-8a9c-7d9e-bf0e-9bf93c3fce43
+                    appealId: 018b27d4-7f9b-7d9e-bf0e-9bf93c3fce43
+                    decision: overturn
+                    locked: true
         '201':
           description: Vote recorded and locked.
           content:
@@ -1606,6 +1703,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
   /appeals/{appealId}/recuse:
     post:
       operationId: appealsRecuse
@@ -1621,6 +1720,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/requiredIdempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Reviewer recusal recorded.
           content:
@@ -1631,6 +1732,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
   /appeals/reviewer/assignments:
     get:
       operationId: appealReviewerAssignmentsList
@@ -1697,6 +1800,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Notification read state recorded.
           content:
@@ -1721,6 +1826,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Notification dismissal recorded.
           content:
@@ -1762,6 +1869,8 @@ paths:
             schema:
               $ref: '#/components/schemas/NotificationPreferenceUpdate'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Updated delivery preferences.
           content:
@@ -1787,6 +1896,8 @@ paths:
             schema:
               $ref: '#/components/schemas/NotificationPreferenceUpdate'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Updated delivery preferences.
           content:
@@ -1876,6 +1987,8 @@ paths:
             schema:
               $ref: '#/components/schemas/FollowCreateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Follow already existed.
           content:
@@ -1916,6 +2029,8 @@ paths:
             schema:
               $ref: '#/components/schemas/TargetUserRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Follow already existed.
           content:
@@ -1952,6 +2067,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Follow removal result.
           content:
@@ -2000,6 +2117,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Follow already existed.
           content:
@@ -2033,6 +2152,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Follow removal result.
           content:
@@ -2079,6 +2200,8 @@ paths:
             schema:
               $ref: '#/components/schemas/TargetUserRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Block state set.
           content:
@@ -2104,6 +2227,8 @@ paths:
             schema:
               $ref: '#/components/schemas/TargetUserRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Block state set.
           content:
@@ -2127,6 +2252,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Block state cleared.
           content:
@@ -2167,6 +2294,8 @@ paths:
             schema:
               $ref: '#/components/schemas/TargetUserRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Mute state set.
           content:
@@ -2192,6 +2321,8 @@ paths:
             schema:
               $ref: '#/components/schemas/TargetUserRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Mute state set.
           content:
@@ -2215,6 +2346,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Mute state cleared.
           content:
@@ -2255,6 +2388,8 @@ paths:
             schema:
               $ref: '#/components/schemas/BookmarkCreateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Bookmark state set.
           content:
@@ -2277,6 +2412,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Bookmark state cleared.
           content:
@@ -2314,6 +2451,10 @@ paths:
                         declaredCreationMode: human
                         visibility: public
                         moderationState: allowed
+                        publicLabel: Human-authored
+                        reactionCounts:
+                          like: 1
+                        viewerReaction: like
                         createdAt: '2026-08-10T09:00:00Z'
                     nextCursor: null
         '400':
@@ -2421,6 +2562,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CustomFeedCreateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '201':
           description: Custom feed created.
           content:
@@ -2476,6 +2619,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CustomFeedUpdateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Updated custom feed.
           content:
@@ -2505,6 +2650,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CustomFeedUpdateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Updated custom feed.
           content:
@@ -2528,6 +2675,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Custom feed deleted.
           content:
@@ -2610,6 +2759,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CommentCreateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '201':
           description: Comment or reply accepted for moderation and publication processing.
           content:
@@ -2641,6 +2792,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CommentUpdateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Updated comment returned to review.
           content:
@@ -2670,6 +2823,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CommentUpdateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Updated comment returned to review.
           content:
@@ -2693,6 +2848,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Comment tombstoned.
           content:
@@ -2722,6 +2879,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ReactionRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Existing reaction already had the requested type or was changed.
           content:
@@ -2757,6 +2916,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ReactionRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Reaction changed or unchanged.
           content:
@@ -2786,6 +2947,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Reaction removal result.
           content:
@@ -2811,13 +2974,25 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/FlagCreateRequest'
+            examples:
+              spam:
+                value:
+                  contentType: post
+                  contentId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a
+                  reasonCode: spam
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '201':
           description: Flag accepted for review.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/FlagCreateResponse'
+              examples:
+                accepted:
+                  value:
+                    flagId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1c
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -2846,6 +3021,8 @@ paths:
             schema:
               $ref: '#/components/schemas/FlagCreateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '201':
           description: Flag accepted for review.
           content:
@@ -2880,6 +3057,8 @@ paths:
             schema:
               $ref: '#/components/schemas/MediaUploadSessionCreateRequest'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '201':
           description: Quarantined upload session created.
           content:
@@ -2918,6 +3097,8 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
         '200':
           description: Upload passed integrity checks and is queued for review.
           content:

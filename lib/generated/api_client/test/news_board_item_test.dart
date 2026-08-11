@@ -37,5 +37,15 @@ void main() {
       // TODO
     });
 
+    // ReactionCounts reactionCounts
+    test('to test the property `reactionCounts`', () async {
+      // TODO
+    });
+
+    // String viewerReaction
+    test('to test the property `viewerReaction`', () async {
+      // TODO
+    });
+
   });
 }

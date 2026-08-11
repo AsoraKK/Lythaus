@@ -20,8 +20,8 @@ const Set<String> supportedPublicAuthorshipLabels = <String>{
 /// The public-text limit for content disclosed as AI-assisted.
 const int aiAssistedPublicTextMaxGraphemes = 249;
 
-/// Counts user-perceived characters rather than UTF-16 code units.
-int userPerceivedCharacterCount(String value) => value.characters.length;
+/// Counts the trimmed user-perceived characters used by backend policy.
+int userPerceivedCharacterCount(String value) => value.trim().characters.length;
 
 bool isSupportedPublicAuthorshipLabel(String? value) =>
     value != null &&
@@ -140,38 +140,45 @@ class CreatePostRequest {
 /// Request model for editing an existing post
 class UpdatePostRequest {
   final String? text;
-  final String? mediaUrl;
-  final bool? isNews;
-  final String? contentType;
   final String? aiLabel;
-  final ProofSignals? proofSignals;
+  final String? visibility;
 
-  const UpdatePostRequest({
-    this.text,
-    this.mediaUrl,
-    this.isNews,
-    this.contentType,
-    this.aiLabel,
-    this.proofSignals,
-  });
+  const UpdatePostRequest({this.text, this.aiLabel, this.visibility});
 
-  bool get isEmpty =>
-      text == null &&
-      mediaUrl == null &&
-      isNews == null &&
-      contentType == null &&
-      aiLabel == null &&
-      proofSignals == null;
+  bool get isEmpty => text == null && aiLabel == null && visibility == null;
 
-  Map<String, dynamic> toJson() => {
-    if (text != null) 'content': text,
-    if (mediaUrl != null) 'mediaUrls': [mediaUrl],
-    if (isNews != null) 'isNews': isNews,
-    if (contentType != null) 'contentType': contentType,
-    if (aiLabel != null) 'aiLabel': aiLabel,
-    if (proofSignals != null && proofSignals!.hasAny)
-      'proofSignals': proofSignals!.toJson(),
-  };
+  Map<String, dynamic> toJson() {
+    if (text != null && aiLabel == null) {
+      throw ArgumentError.value(
+        aiLabel,
+        'aiLabel',
+        'A fresh authorship declaration is required when editing post text.',
+      );
+    }
+    if (text != null && aiLabel != null) {
+      final validationError = validatePublicPostAuthorship(
+        text: text!,
+        aiLabel: aiLabel!,
+      );
+      if (validationError != null) {
+        throw ArgumentError.value(aiLabel, 'aiLabel', validationError);
+      }
+    }
+    if (visibility != null &&
+        !const {'public', 'followers', 'private'}.contains(visibility)) {
+      throw ArgumentError.value(
+        visibility,
+        'visibility',
+        'Invalid visibility.',
+      );
+    }
+    return {
+      if (text != null) 'body': text,
+      if (aiLabel != null)
+        'declaredCreationMode': aiLabel == 'assisted' ? 'ai_assisted' : aiLabel,
+      if (visibility != null) 'visibility': visibility,
+    };
+  }
 }
 
 class ProofSignals {

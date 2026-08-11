@@ -16,7 +16,7 @@ Name | Type | Description | Notes
 **createdAt** | [**DateTime**](DateTime.md) |  |
 **expiresAt** | [**DateTime**](DateTime.md) |  | [optional]
 **resolvedAt** | [**DateTime**](DateTime.md) |  | [optional]
-**communityDecision** | **String** |  | [optional]
+**reviewerPanelDecision** | **String** |  | [optional]
 **finalDecision** | **String** |  | [optional]
 **completedReviewers** | **int** |  | [optional]
 **outcomeState** | **String** |  | [optional]

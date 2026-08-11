@@ -14,17 +14,17 @@ void main() {
       // TODO
     });
 
-    // List posts by a user
+    // Update private region and visibility preferences
     //
-    //Future<JsonObject> usersPostsList(String userId) async
-    test('test usersPostsList', () async {
+    //Future<UsersMeRegionUpdate200Response> usersMeRegionUpdate(String idempotencyKey, UsersMeRegionUpdateRequest usersMeRegionUpdateRequest) async
+    test('test usersMeRegionUpdate', () async {
       // TODO
     });
 
-    // Get trust passport for a user
+    // Update a private content-retention rule
     //
-    //Future<JsonObject> usersTrustPassport(String id) async
-    test('test usersTrustPassport', () async {
+    //Future<UsersMeRetentionUpdate200Response> usersMeRetentionUpdate(String idempotencyKey, UsersMeRetentionUpdateRequest usersMeRetentionUpdateRequest) async
+    test('test usersMeRetentionUpdate', () async {
       // TODO
     });
 

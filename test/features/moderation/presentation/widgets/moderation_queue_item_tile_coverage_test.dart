@@ -26,7 +26,7 @@ void main() {
     status: 'pending',
     queue: 'general_review',
     reportCount: 3,
-    communityVotes: 5,
+    reviewerDecisions: 5,
     isEscalated: isEscalated,
     contentTitle: contentTitle,
     authorHandle: authorHandle,
@@ -49,7 +49,7 @@ void main() {
       expect(find.text('HIGH'), findsOneWidget);
       expect(find.text('General Review'), findsOneWidget);
       expect(find.text('3 flags'), findsOneWidget);
-      expect(find.text('5 community votes'), findsOneWidget);
+      expect(find.text('5 assigned reviewer decisions'), findsOneWidget);
       expect(find.byIcon(Icons.flag_outlined), findsAtLeast(1));
 
       await tester.tap(find.byType(InkWell).first);
@@ -65,7 +65,7 @@ void main() {
           ),
         ),
       );
-      expect(find.byIcon(Icons.how_to_vote), findsOneWidget);
+      expect(find.byIcon(Icons.groups_outlined), findsOneWidget);
     });
 
     testWidgets('falls back to contentPreview when no title', (tester) async {

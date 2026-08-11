@@ -121,18 +121,23 @@ function getParameterSchema(
 describe('critical request examples', () => {
   const cases: Array<{ label: string; pathKey: string; method: HttpMethod; exampleKey: string }> = [
     { label: 'email auth', pathKey: '/auth/email', method: 'post', exampleKey: 'login' },
-    { label: 'auth redeem invite', pathKey: '/auth/redeem-invite', method: 'post', exampleKey: 'redeem' },
-    { label: 'post create', pathKey: '/post', method: 'post', exampleKey: 'basicPost' },
-    { label: 'moderation flag', pathKey: '/moderation/flag', method: 'post', exampleKey: 'spamFlag' },
-    { label: 'moderation appeal', pathKey: '/moderation/appeals', method: 'post', exampleKey: 'standard' },
+    { label: 'password reset request', pathKey: '/auth/password/reset/request', method: 'post', exampleKey: 'request' },
+    { label: 'post create', pathKey: '/posts', method: 'post', exampleKey: 'human' },
+    { label: 'moderation flag', pathKey: '/flags', method: 'post', exampleKey: 'spam' },
+    { label: 'moderation appeal', pathKey: '/appeals', method: 'post', exampleKey: 'standard' },
     {
       label: 'moderation appeal vote',
-      pathKey: '/moderation/appeals/{appealId}/vote',
+      pathKey: '/appeals/{appealId}/vote',
+      method: 'post',
+      exampleKey: 'overturn',
+    },
+    { label: 'privacy export', pathKey: '/privacy/requests', method: 'post', exampleKey: 'export' },
+    {
+      label: 'appeal adjudication',
+      pathKey: '/admin/appeals/{appealId}/adjudications',
       method: 'post',
       exampleKey: 'uphold',
     },
-    { label: 'privacy admin export', pathKey: '/_admin/dsr/export', method: 'post', exampleKey: 'enqueueExport' },
-    { label: 'admin invite create', pathKey: '/_admin/invites', method: 'post', exampleKey: 'singleUse' },
   ];
 
   test.each(cases)('$label request stays schema-valid', ({ pathKey, method, exampleKey }) => {
@@ -152,25 +157,25 @@ describe('critical response examples', () => {
     { label: 'email auth', pathKey: '/auth/email', method: 'post', status: '200', exampleKey: 'success' },
     { label: 'auth userinfo', pathKey: '/auth/userinfo', method: 'get', status: '200', exampleKey: 'authenticated' },
     {
-      label: 'auth redeem invite',
-      pathKey: '/auth/redeem-invite',
+      label: 'password reset request',
+      pathKey: '/auth/password/reset/request',
       method: 'post',
-      status: '200',
-      exampleKey: 'success',
+      status: '202',
+      exampleKey: 'neutral',
     },
     { label: 'feed', pathKey: '/feed', method: 'get', status: '200', exampleKey: 'authenticated' },
-    { label: 'post create', pathKey: '/post', method: 'post', status: '201', exampleKey: 'published' },
-    { label: 'moderation flag', pathKey: '/moderation/flag', method: 'post', status: '202', exampleKey: 'queued' },
+    { label: 'post create', pathKey: '/posts', method: 'post', status: '201', exampleKey: 'published' },
+    { label: 'moderation flag', pathKey: '/flags', method: 'post', status: '201', exampleKey: 'accepted' },
     {
       label: 'moderation appeal',
-      pathKey: '/moderation/appeals',
+      pathKey: '/appeals',
       method: 'post',
-      status: '201',
+      status: '200',
       exampleKey: 'created',
     },
     {
       label: 'moderation appeal vote',
-      pathKey: '/moderation/appeals/{appealId}/vote',
+      pathKey: '/appeals/{appealId}/vote',
       method: 'post',
       status: '200',
       exampleKey: 'recorded',
@@ -190,13 +195,12 @@ describe('critical response examples', () => {
       exampleKey: 'processing',
     },
     {
-      label: 'privacy admin export',
-      pathKey: '/_admin/dsr/export',
+      label: 'appeal adjudication',
+      pathKey: '/admin/appeals/{appealId}/adjudications',
       method: 'post',
-      status: '202',
-      exampleKey: 'queuedExport',
+      status: '200',
+      exampleKey: 'resolved',
     },
-    { label: 'admin invite create', pathKey: '/_admin/invites', method: 'post', status: '201', exampleKey: 'created' },
   ];
 
   test.each(cases)('$label response stays schema-valid', ({ pathKey, method, status, exampleKey }) => {
@@ -213,5 +217,46 @@ describe('critical parameter contracts', () => {
   test('feed query fixtures stay schema-valid', () => {
     expectValidSchema(getParameterSchema('/feed', 'get', 'cursor', 'query'), 'first', 'GET /feed cursor');
     expectValidSchema(getParameterSchema('/feed', 'get', 'limit', 'query'), 20, 'GET /feed limit');
+  });
+
+  test('every idempotent mutation documents the fail-closed conflict response', () => {
+    const idempotentOperations: Array<{ pathKey: string; method: HttpMethod; operation: Record<string, any>; required: boolean }> = [];
+    for (const [pathKey, pathItem] of Object.entries(spec.paths ?? {})) {
+      for (const method of ['post', 'put', 'patch', 'delete'] as const) {
+        const operation = (pathItem as Record<string, any>)?.[method];
+        if (!operation) continue;
+        const idempotencyParameter = (operation.parameters ?? [])
+          .map((parameter: unknown) => deref(parameter))
+          .find((parameter: any) => parameter?.in === 'header' && parameter?.name === 'Idempotency-Key');
+        if (idempotencyParameter) {
+          idempotentOperations.push({ pathKey, method, operation, required: idempotencyParameter.required === true });
+        }
+      }
+    }
+
+    expect(idempotentOperations.length).toBeGreaterThanOrEqual(42);
+    for (const { operation } of idempotentOperations) {
+      const conflict = deref(operation.responses?.['409']);
+      expect(conflict?.content?.['application/json']?.schema).toBeDefined();
+      const errors = Object.values(conflict?.content?.['application/json']?.examples ?? {})
+        .map((example: any) => example?.value?.error);
+      expect(errors).toEqual(expect.arrayContaining([
+        'idempotency_key_conflict',
+        'idempotency_in_progress',
+        'idempotency_outcome_unknown',
+      ]));
+    }
+
+    for (const [pathKey, method] of [
+      ['/users/me/region', 'put'],
+      ['/users/me/retention', 'put'],
+      ['/posts/{id}', 'put'],
+      ['/posts/{id}', 'delete'],
+      ['/appeals/{appealId}/vote', 'post'],
+      ['/appeals/{appealId}/recuse', 'post'],
+    ] as const) {
+      const operation = idempotentOperations.find((candidate) => candidate.pathKey === pathKey && candidate.method === method);
+      expect(operation?.required).toBe(true);
+    }
   });
 });

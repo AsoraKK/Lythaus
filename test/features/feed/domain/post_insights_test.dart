@@ -75,12 +75,12 @@ void main() {
         InsightAppealStatus.pending,
       );
       expect(
-        InsightAppealStatus.fromString('APPROVED'),
-        InsightAppealStatus.approved,
+        InsightAppealStatus.fromString('OVERTURN'),
+        InsightAppealStatus.overturned,
       );
       expect(
-        InsightAppealStatus.fromString('REJECTED'),
-        InsightAppealStatus.rejected,
+        InsightAppealStatus.fromString('UPHOLD'),
+        InsightAppealStatus.upheld,
       );
     });
 
@@ -94,8 +94,8 @@ void main() {
     test('displayLabel returns correct labels', () {
       expect(InsightAppealStatus.none.displayLabel, 'None');
       expect(InsightAppealStatus.pending.displayLabel, 'Pending');
-      expect(InsightAppealStatus.approved.displayLabel, 'Approved');
-      expect(InsightAppealStatus.rejected.displayLabel, 'Rejected');
+      expect(InsightAppealStatus.overturned.displayLabel, 'Restored');
+      expect(InsightAppealStatus.upheld.displayLabel, 'Upheld');
     });
   });
 
@@ -110,12 +110,12 @@ void main() {
 
     test('fromJson parses appeal with status and updatedAt', () {
       final json = {
-        'status': 'APPROVED',
+        'status': 'OVERTURN',
         'updatedAt': '2025-12-28T10:00:00.000Z',
       };
       final appeal = InsightAppeal.fromJson(json);
 
-      expect(appeal.status, InsightAppealStatus.approved);
+      expect(appeal.status, InsightAppealStatus.overturned);
       expect(appeal.updatedAt, isNotNull);
       expect(appeal.updatedAt!.year, 2025);
       expect(appeal.updatedAt!.month, 12);
@@ -124,12 +124,12 @@ void main() {
 
     test('toJson produces correct output', () {
       final appeal = InsightAppeal(
-        status: InsightAppealStatus.rejected,
+        status: InsightAppealStatus.upheld,
         updatedAt: DateTime.utc(2025, 12, 28, 11, 30),
       );
       final json = appeal.toJson();
 
-      expect(json['status'], 'REJECTED');
+      expect(json['status'], 'UPHOLD');
       expect(json['updatedAt'], '2025-12-28T11:30:00.000Z');
     });
   });
@@ -154,7 +154,10 @@ void main() {
       expect(insights.postId, 'post-123');
       expect(insights.riskBand, RiskBand.high);
       expect(insights.decision, InsightDecision.block);
-      expect(insights.reasonCodes, contains('AUTHENTICITY_SCORE_OVER_THRESHOLD'));
+      expect(
+        insights.reasonCodes,
+        contains('AUTHENTICITY_SCORE_OVER_THRESHOLD'),
+      );
       expect(insights.configVersion, 42);
       expect(insights.decidedAt.year, 2025);
       expect(insights.appeal.status, InsightAppealStatus.pending);
@@ -204,7 +207,10 @@ void main() {
       expect(json['postId'], 'post-abc');
       expect(json['riskBand'], 'LOW');
       expect(json['decision'], 'ALLOW');
-      expect(json['reasonCodes'], contains('AUTHENTICITY_SCORE_UNDER_THRESHOLD'));
+      expect(
+        json['reasonCodes'],
+        contains('AUTHENTICITY_SCORE_UNDER_THRESHOLD'),
+      );
       expect(json['configVersion'], 5);
       expect(json['decidedAt'], '2025-12-28T10:00:00.000Z');
       expect(json['appeal']['status'], 'NONE');

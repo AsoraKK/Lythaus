@@ -13,70 +13,29 @@ describe('Appeals page', () => {
     adminRequest.mockReset();
   });
 
-  it('submits a moderator override with an idempotency key', async () => {
+  it('records an immutable trained adjudication through the canonical route', async () => {
+    let listCalls = 0;
     adminRequest.mockImplementation((path) => {
-      if (path === '_admin/appeals') {
+      if (path === 'appeals/pending-adjudication') {
+        listCalls += 1;
         return Promise.resolve({
-          items: [
-            {
-              appealId: 'appeal-123',
-              contentId: 'post-123',
-              authorId: 'user-1',
-              submittedAt: '2024-01-01T00:00:00Z',
-              status: 'pending',
-              originalReasonCategory: 'spam',
-              votesFor: 2,
-              votesAgainst: 1,
-              totalVotes: 3,
-              timeRemainingSeconds: 120,
-              expiresAt: '2024-01-01T00:05:00Z',
-            },
-          ],
-          nextCursor: null,
+          items: listCalls === 1 ? [{
+            appeal_id: 'appeal-123',
+            case_id: 'case-123',
+            risk_class: 'standard',
+            policy_version: 'appeals-v1.0.0',
+            created_at: '2026-08-10T00:00:00Z',
+            completed_reviewers: 5,
+            total_weight: 5,
+            winning_share: 0.8,
+            reviewer_panel_decision: 'uphold',
+            required_adjudicators: 1,
+            completed_adjudicators: 0,
+          }] : [],
         });
       }
-      if (path === '_admin/appeals/appeal-123') {
-        return Promise.resolve({
-          appealId: 'appeal-123',
-          targetType: 'post',
-          targetId: 'post-123',
-          status: 'pending',
-          createdAt: '2024-01-01T00:00:00Z',
-          lastUpdatedAt: '2024-01-01T00:01:00Z',
-          votes: { for: 2, against: 1, total: 3 },
-          quorum: { required: 3, reached: true },
-          moderatorOverrideAllowed: true,
-          finalDecision: null,
-          auditSummary: {
-            lastActorRole: 'community',
-            lastAction: 'appeal_submitted',
-            lastActionAt: '2024-01-01T00:00:00Z',
-          },
-          appeal: {
-            appealId: 'appeal-123',
-            contentId: 'post-123',
-            submittedAt: '2024-01-01T00:00:00Z',
-            status: 'pending',
-            appealType: 'false_positive',
-            appealReason: 'False positive',
-            userStatement: 'This is my statement.',
-            evidenceUrls: [],
-            votesFor: 2,
-            votesAgainst: 1,
-            totalVotes: 3,
-            timeRemainingSeconds: 120,
-            expiresAt: '2024-01-01T00:05:00Z',
-          },
-          content: {
-            contentId: 'post-123',
-            type: 'post',
-            createdAt: '2024-01-01T00:00:00Z',
-            preview: 'Preview',
-          },
-        });
-      }
-      if (path === '_admin/appeals/appeal-123/override') {
-        return Promise.resolve({ ok: true });
+      if (path === 'appeals/appeal-123/adjudications') {
+        return Promise.resolve({ status: 'resolved', finalDecision: 'uphold' });
       }
       return Promise.resolve({});
     });
@@ -86,40 +45,28 @@ describe('Appeals page', () => {
       render(<Appeals />);
     });
 
-    await waitFor(() => expect(adminRequest).toHaveBeenCalled());
-
-    const openButton = await screen.findByRole('button', { name: 'Open' });
+    const adjudicateButton = await screen.findByRole('button', { name: 'Adjudicate' });
     await act(async () => {
-      await user.click(openButton);
-    });
-
-    await screen.findByText('Vote tally');
-    const overrideButton = await screen.findByRole('button', { name: 'Moderator Override' });
-    await act(async () => {
-      await user.click(overrideButton);
+      await user.click(adjudicateButton);
     });
 
     await act(async () => {
-      await user.selectOptions(screen.getByLabelText('Reason'), 'policy_exception');
-      await user.click(screen.getByRole('button', { name: 'Confirm Override' }));
+      await user.click(screen.getByRole('button', { name: 'Record adjudication' }));
     });
 
     await waitFor(() =>
       expect(adminRequest).toHaveBeenCalledWith(
-        '_admin/appeals/appeal-123/override',
+        'appeals/appeal-123/adjudications',
         expect.objectContaining({
           method: 'POST',
-          headers: expect.objectContaining({
-            'Idempotency-Key': expect.any(String),
-          }),
-          body: expect.objectContaining({
-            decision: 'allow',
-            reasonCode: 'policy_exception',
-          }),
+          body: {
+            decision: 'uphold',
+            reasonCode: 'APPEAL.PANEL_CONFIRMED',
+          },
         })
       )
     );
-
-    await waitFor(() => expect(adminRequest).toHaveBeenCalledTimes(4));
+    expect(screen.getByText('There is no moderator override or time-based auto-resolution path.')).toBeInTheDocument();
+    expect(adminRequest).not.toHaveBeenCalledWith(expect.stringContaining('_admin'), expect.anything());
   });
 });

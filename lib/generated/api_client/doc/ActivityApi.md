@@ -156,7 +156,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getActivityApi();
 final ProductIntegrityProfileUpdateRequest productIntegrityProfileUpdateRequest = ; // ProductIntegrityProfileUpdateRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.productIntegrityProfileReplaceMe(productIntegrityProfileUpdateRequest, idempotencyKey);
@@ -171,7 +171,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **productIntegrityProfileUpdateRequest** | [**ProductIntegrityProfileUpdateRequest**](ProductIntegrityProfileUpdateRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -199,7 +199,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getActivityApi();
 final ProductIntegrityProfileUpdateRequest productIntegrityProfileUpdateRequest = ; // ProductIntegrityProfileUpdateRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.productIntegrityProfileUpdateMe(productIntegrityProfileUpdateRequest, idempotencyKey);
@@ -214,7 +214,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **productIntegrityProfileUpdateRequest** | [**ProductIntegrityProfileUpdateRequest**](ProductIntegrityProfileUpdateRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 

@@ -15,7 +15,7 @@ void main() {
         'status': 'pending',
         'queue': 'default',
         'reportCount': 5,
-        'communityVotes': 12,
+        'reviewerPanel': {'completedReviewers': 12},
         'isEscalated': true,
         'contentTitle': 'Sample Post Title',
         'authorHandle': '@user123',
@@ -37,7 +37,7 @@ void main() {
       expect(item.status, 'pending');
       expect(item.queue, 'default');
       expect(item.reportCount, 5);
-      expect(item.communityVotes, 12);
+      expect(item.reviewerDecisions, 12);
       expect(item.isEscalated, isTrue);
       expect(item.contentTitle, 'Sample Post Title');
       expect(item.authorHandle, '@user123');
@@ -47,7 +47,7 @@ void main() {
       expect(item.isPolicyTest, isFalse);
     });
 
-    test('fromJson handles legacy field names', () {
+    test('fromJson reads historical community counts for appeal history', () {
       final json = <String, dynamic>{
         'caseId': 'case-789',
         'type': 'appeal',
@@ -56,7 +56,7 @@ void main() {
         'created_at': '2024-01-15T10:30:00Z',
         'severity': 'medium',
         'flags': 3,
-        'appealVotes': 7,
+        'communityVotes': 7,
         'escalated': true,
         'aiLabel': 'moderate_risk',
       };
@@ -68,7 +68,7 @@ void main() {
       expect(item.contentPreview, 'Legacy content preview');
       expect(item.severity, ModerationSeverityLevel.medium);
       expect(item.reportCount, 3);
-      expect(item.communityVotes, 7);
+      expect(item.reviewerDecisions, 7);
       expect(item.isEscalated, isTrue);
       expect(item.aiRiskBand, 'moderate_risk');
     });
@@ -92,7 +92,7 @@ void main() {
       expect(item.status, 'unknown');
       expect(item.queue, 'default');
       expect(item.reportCount, 0);
-      expect(item.communityVotes, 0);
+      expect(item.reviewerDecisions, 0);
       expect(item.isEscalated, isFalse);
       expect(item.contentTitle, isNull);
       expect(item.authorHandle, isNull);
@@ -196,7 +196,7 @@ void main() {
         status: 'pending',
         queue: 'default',
         reportCount: 1,
-        communityVotes: 0,
+        reviewerDecisions: 0,
         isEscalated: false,
       );
 
@@ -215,7 +215,7 @@ void main() {
         status: 'pending',
         queue: 'default',
         reportCount: 1,
-        communityVotes: 0,
+        reviewerDecisions: 0,
         isEscalated: false,
       );
 
@@ -235,7 +235,7 @@ void main() {
         status: 'pending',
         queue: 'priority',
         reportCount: 10,
-        communityVotes: 25,
+        reviewerDecisions: 25,
         isEscalated: true,
         contentTitle: 'Title',
         authorHandle: '@user',
@@ -257,7 +257,8 @@ void main() {
       expect(json['status'], 'pending');
       expect(json['queue'], 'priority');
       expect(json['reportCount'], 10);
-      expect(json['communityVotes'], 25);
+      expect(json['reviewerDecisions'], 25);
+      expect(json, isNot(contains('communityVotes')));
       expect(json['isEscalated'], isTrue);
       expect(json['contentTitle'], 'Title');
       expect(json['authorHandle'], '@user');
@@ -279,7 +280,7 @@ void main() {
         status: 'pending',
         queue: 'default',
         reportCount: 1,
-        communityVotes: 0,
+        reviewerDecisions: 0,
         isEscalated: false,
       );
 
@@ -357,7 +358,7 @@ void main() {
             'status': 'pending',
             'queue': 'default',
             'reportCount': 2,
-            'communityVotes': 5,
+            'reviewerDecisions': 5,
             'isEscalated': false,
           },
           <String, dynamic>{
@@ -371,7 +372,7 @@ void main() {
             'status': 'reviewed',
             'queue': 'appeals',
             'reportCount': 1,
-            'communityVotes': 3,
+            'reviewerDecisions': 3,
             'isEscalated': true,
           },
         ],
@@ -406,7 +407,7 @@ void main() {
             'status': 'pending',
             'queue': 'default',
             'reportCount': 1,
-            'communityVotes': 0,
+            'reviewerDecisions': 0,
             'isEscalated': false,
           },
         ],

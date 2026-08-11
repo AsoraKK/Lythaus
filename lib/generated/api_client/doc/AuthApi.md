@@ -9,37 +9,36 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**authEmailLogin**](AuthApi.md#authemaillogin) | **POST** /auth/email | Sign in with a verified email identity
+[**authEmail**](AuthApi.md#authemail) | **POST** /auth/email | Register, sign in, or resend email verification
 [**authEmailVerifyGet**](AuthApi.md#authemailverifyget) | **GET** /auth/email/verify | Verify an email address with a query token
 [**authEmailVerifyPost**](AuthApi.md#authemailverifypost) | **POST** /auth/email/verify | Verify an email address with a JSON token
-[**authInviteValidate**](AuthApi.md#authinvitevalidate) | **GET** /auth/invite/validate | Validate an invite code
-[**authPing**](AuthApi.md#authping) | **GET** /auth/ping | Verify authentication token is valid
-[**authRedeemInvite**](AuthApi.md#authredeeminvite) | **POST** /auth/redeem-invite | Redeem an invite code to activate account
+[**authJwksGet**](AuthApi.md#authjwksget) | **GET** /.well-known/jwks.json | Get the public JWT verification key set
+[**authLogout**](AuthApi.md#authlogout) | **POST** /auth/logout | Revoke all active sessions for the authenticated user
+[**authPasswordResetComplete**](AuthApi.md#authpasswordresetcomplete) | **POST** /auth/password/reset/complete | Complete password reset and revoke existing sessions
+[**authPasswordResetRequest**](AuthApi.md#authpasswordresetrequest) | **POST** /auth/password/reset/request | Request an opaque password reset message
 [**authRefresh**](AuthApi.md#authrefresh) | **POST** /auth/refresh | Rotate a refresh token
-[**authSessionsRevoke**](AuthApi.md#authsessionsrevoke) | **POST** /auth/sessions/revoke | Revoke an active session
-[**authUserInfo**](AuthApi.md#authuserinfo) | **GET** /auth/userinfo | Return the current email-authenticated user
-[**authUserInfoPost**](AuthApi.md#authuserinfopost) | **POST** /auth/userinfo | OIDC UserInfo endpoint (POST)
+[**authUserInfo**](AuthApi.md#authuserinfo) | **GET** /auth/userinfo | Get the authenticated user&#39;s current identity claims
 
 
-# **authEmailLogin**
-> EmailSessionResponse authEmailLogin(emailLoginRequest)
+# **authEmail**
+> EmailSessionResponse authEmail(emailAuthRequest)
 
-Sign in with a verified email identity
+Register, sign in, or resend email verification
 
-Creates a Lythaus access and refresh session for a verified email account.
+Registers an email account, signs in a verified account, or resends a verification message. Registration requires a Turnstile token when the production bot-protection gate is enabled.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
-final EmailLoginRequest emailLoginRequest = {"mode":"login","email":"alice@example.com","password":"correct-horse-battery-staple"}; // EmailLoginRequest |
+final EmailAuthRequest emailAuthRequest = {"mode":"login","email":"alice@example.com","password":"correct-horse-battery-staple"}; // EmailAuthRequest |
 
 try {
-    final response = api.authEmailLogin(emailLoginRequest);
+    final response = api.authEmail(emailAuthRequest);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling AuthApi->authEmailLogin: $e\n');
+    print('Exception when calling AuthApi->authEmail: $e\n');
 }
 ```
 
@@ -47,7 +46,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **emailLoginRequest** | [**EmailLoginRequest**](EmailLoginRequest.md)|  |
+ **emailAuthRequest** | [**EmailAuthRequest**](EmailAuthRequest.md)|  |
 
 ### Return type
 
@@ -150,37 +149,31 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **authInviteValidate**
-> InviteValidationResponse authInviteValidate(code)
+# **authJwksGet**
+> AuthJwksGet200Response authJwksGet()
 
-Validate an invite code
-
-Validates an invite code without revealing status details.
+Get the public JWT verification key set
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
-final String code = code_example; // String | Invite code (format XXXX-XXXX)
 
 try {
-    final response = api.authInviteValidate(code);
+    final response = api.authJwksGet();
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling AuthApi->authInviteValidate: $e\n');
+    print('Exception when calling AuthApi->authJwksGet: $e\n');
 }
 ```
 
 ### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **code** | **String**| Invite code (format XXXX-XXXX) | [optional]
+This endpoint does not need any parameter.
 
 ### Return type
 
-[**InviteValidationResponse**](InviteValidationResponse.md)
+[**AuthJwksGet200Response**](AuthJwksGet200Response.md)
 
 ### Authorization
 
@@ -193,10 +186,10 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **authPing**
-> JsonObject authPing()
+# **authLogout**
+> AuthLogout200Response authLogout()
 
-Verify authentication token is valid
+Revoke all active sessions for the authenticated user
 
 ### Example
 ```dart
@@ -205,10 +198,10 @@ import 'package:lythaus_api_client/api.dart';
 final api = LythausApiClient().getAuthApi();
 
 try {
-    final response = api.authPing();
+    final response = api.authLogout();
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling AuthApi->authPing: $e\n');
+    print('Exception when calling AuthApi->authLogout: $e\n');
 }
 ```
 
@@ -217,7 +210,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**AuthLogout200Response**](AuthLogout200Response.md)
 
 ### Authorization
 
@@ -230,25 +223,23 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **authRedeemInvite**
-> RedeemInviteResponse authRedeemInvite(redeemInviteRequest)
+# **authPasswordResetComplete**
+> AuthPasswordResetComplete200Response authPasswordResetComplete(authPasswordResetCompleteRequest)
 
-Redeem an invite code to activate account
-
-Allows an authenticated but inactive user to redeem a valid invite code. On success the user is activated and a fresh token pair is returned.
+Complete password reset and revoke existing sessions
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
-final RedeemInviteRequest redeemInviteRequest = {"inviteCode":"ABCD-1234"}; // RedeemInviteRequest |
+final AuthPasswordResetCompleteRequest authPasswordResetCompleteRequest = ; // AuthPasswordResetCompleteRequest |
 
 try {
-    final response = api.authRedeemInvite(redeemInviteRequest);
+    final response = api.authPasswordResetComplete(authPasswordResetCompleteRequest);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling AuthApi->authRedeemInvite: $e\n');
+    print('Exception when calling AuthApi->authPasswordResetComplete: $e\n');
 }
 ```
 
@@ -256,15 +247,58 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **redeemInviteRequest** | [**RedeemInviteRequest**](RedeemInviteRequest.md)|  |
+ **authPasswordResetCompleteRequest** | [**AuthPasswordResetCompleteRequest**](AuthPasswordResetCompleteRequest.md)|  |
 
 ### Return type
 
-[**RedeemInviteResponse**](RedeemInviteResponse.md)
+[**AuthPasswordResetComplete200Response**](AuthPasswordResetComplete200Response.md)
 
 ### Authorization
 
-[bearerAuth](../README.md#bearerAuth)
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **authPasswordResetRequest**
+> AuthPasswordResetRequest202Response authPasswordResetRequest(authPasswordResetRequestRequest)
+
+Request an opaque password reset message
+
+Always returns the same neutral state so account existence is not disclosed.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAuthApi();
+final AuthPasswordResetRequestRequest authPasswordResetRequestRequest = {"email":"member@example.com","turnstileToken":"turnstile-token"}; // AuthPasswordResetRequestRequest |
+
+try {
+    final response = api.authPasswordResetRequest(authPasswordResetRequestRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AuthApi->authPasswordResetRequest: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **authPasswordResetRequestRequest** | [**AuthPasswordResetRequestRequest**](AuthPasswordResetRequestRequest.md)|  |
+
+### Return type
+
+[**AuthPasswordResetRequest202Response**](AuthPasswordResetRequest202Response.md)
+
+### Authorization
+
+No authorization required
 
 ### HTTP request headers
 
@@ -274,7 +308,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authRefresh**
-> JsonObject authRefresh(body)
+> EmailSessionResponse authRefresh(refreshSessionRequest)
 
 Rotate a refresh token
 
@@ -283,10 +317,10 @@ Rotate a refresh token
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
-final JsonObject body = Object; // JsonObject |
+final RefreshSessionRequest refreshSessionRequest = {"refreshToken":"refresh_example_01K1LYTHAUS"}; // RefreshSessionRequest |
 
 try {
-    final response = api.authRefresh(body);
+    final response = api.authRefresh(refreshSessionRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authRefresh: $e\n');
@@ -297,56 +331,15 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  |
+ **refreshSessionRequest** | [**RefreshSessionRequest**](RefreshSessionRequest.md)|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**EmailSessionResponse**](EmailSessionResponse.md)
 
 ### Authorization
 
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **authSessionsRevoke**
-> JsonObject authSessionsRevoke(body)
-
-Revoke an active session
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getAuthApi();
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.authSessionsRevoke(body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AuthApi->authSessionsRevoke: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
+No authorization required
 
 ### HTTP request headers
 
@@ -356,11 +349,9 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authUserInfo**
-> UserInfoResponse authUserInfo()
+> AuthUserInfo200Response authUserInfo()
 
-Return the current email-authenticated user
-
-Returns the active Lythaus account associated with the bearer session.
+Get the authenticated user's current identity claims
 
 ### Example
 ```dart
@@ -381,7 +372,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**UserInfoResponse**](UserInfoResponse.md)
+[**AuthUserInfo200Response**](AuthUserInfo200Response.md)
 
 ### Authorization
 
@@ -390,45 +381,6 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
  - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **authUserInfoPost**
-> UserInfoResponse authUserInfoPost()
-
-OIDC UserInfo endpoint (POST)
-
-POST variant of the UserInfo endpoint for clients that cannot use query strings.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getAuthApi();
-
-try {
-    final response = api.authUserInfoPost();
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AuthApi->authUserInfoPost: $e\n');
-}
-```
-
-### Parameters
-This endpoint does not need any parameter.
-
-### Return type
-
-[**UserInfoResponse**](UserInfoResponse.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/x-www-form-urlencoded
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

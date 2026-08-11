@@ -7,12 +7,12 @@ void main() {
   final instance = LythausApiClient().getAuthApi();
 
   group(AuthApi, () {
-    // Sign in with a verified email identity
+    // Register, sign in, or resend email verification
     //
-    // Creates a Lythaus access and refresh session for a verified email account.
+    // Registers an email account, signs in a verified account, or resends a verification message. Registration requires a Turnstile token when the production bot-protection gate is enabled.
     //
-    //Future<EmailSessionResponse> authEmailLogin(EmailLoginRequest emailLoginRequest) async
-    test('test authEmailLogin', () async {
+    //Future<EmailSessionResponse> authEmail(EmailAuthRequest emailAuthRequest) async
+    test('test authEmail', () async {
       // TODO
     });
 
@@ -34,60 +34,47 @@ void main() {
       // TODO
     });
 
-    // Validate an invite code
+    // Get the public JWT verification key set
     //
-    // Validates an invite code without revealing status details.
-    //
-    //Future<InviteValidationResponse> authInviteValidate({ String code }) async
-    test('test authInviteValidate', () async {
+    //Future<AuthJwksGet200Response> authJwksGet() async
+    test('test authJwksGet', () async {
       // TODO
     });
 
-    // Verify authentication token is valid
+    // Revoke all active sessions for the authenticated user
     //
-    //Future<JsonObject> authPing() async
-    test('test authPing', () async {
+    //Future<AuthLogout200Response> authLogout() async
+    test('test authLogout', () async {
       // TODO
     });
 
-    // Redeem an invite code to activate account
+    // Complete password reset and revoke existing sessions
     //
-    // Allows an authenticated but inactive user to redeem a valid invite code. On success the user is activated and a fresh token pair is returned.
+    //Future<AuthPasswordResetComplete200Response> authPasswordResetComplete(AuthPasswordResetCompleteRequest authPasswordResetCompleteRequest) async
+    test('test authPasswordResetComplete', () async {
+      // TODO
+    });
+
+    // Request an opaque password reset message
     //
-    //Future<RedeemInviteResponse> authRedeemInvite(RedeemInviteRequest redeemInviteRequest) async
-    test('test authRedeemInvite', () async {
+    // Always returns the same neutral state so account existence is not disclosed.
+    //
+    //Future<AuthPasswordResetRequest202Response> authPasswordResetRequest(AuthPasswordResetRequestRequest authPasswordResetRequestRequest) async
+    test('test authPasswordResetRequest', () async {
       // TODO
     });
 
     // Rotate a refresh token
     //
-    //Future<JsonObject> authRefresh(JsonObject body) async
+    //Future<EmailSessionResponse> authRefresh(RefreshSessionRequest refreshSessionRequest) async
     test('test authRefresh', () async {
       // TODO
     });
 
-    // Revoke an active session
+    // Get the authenticated user's current identity claims
     //
-    //Future<JsonObject> authSessionsRevoke(JsonObject body) async
-    test('test authSessionsRevoke', () async {
-      // TODO
-    });
-
-    // Return the current email-authenticated user
-    //
-    // Returns the active Lythaus account associated with the bearer session.
-    //
-    //Future<UserInfoResponse> authUserInfo() async
+    //Future<AuthUserInfo200Response> authUserInfo() async
     test('test authUserInfo', () async {
-      // TODO
-    });
-
-    // OIDC UserInfo endpoint (POST)
-    //
-    // POST variant of the UserInfo endpoint for clients that cannot use query strings.
-    //
-    //Future<UserInfoResponse> authUserInfoPost() async
-    test('test authUserInfoPost', () async {
       // TODO
     });
 

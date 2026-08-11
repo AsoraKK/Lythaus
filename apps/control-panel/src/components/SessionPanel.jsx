@@ -1,11 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
-  ADMIN_SESSION_CHANGE_EVENT,
   getAdminApiUrl,
-  getAdminToken,
-  getAdminTokenExpiry,
-  setAdminApiUrl,
-  setAdminToken
+  setAdminApiUrl
 } from '../api/adminApi.js';
 import LythButton from './LythButton.jsx';
 import LythCard from './LythCard.jsx';
@@ -13,41 +9,18 @@ import LythInput from './LythInput.jsx';
 
 function SessionPanel() {
   const [apiUrl, setApiUrl] = useState(getAdminApiUrl());
-  const [token, setToken] = useState(getAdminToken());
-  const [expiresAt, setExpiresAt] = useState(getAdminTokenExpiry());
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-
-    const syncSession = () => {
-      setApiUrl(getAdminApiUrl());
-      setToken(getAdminToken());
-      setExpiresAt(getAdminTokenExpiry());
-    };
-
-    window.addEventListener(ADMIN_SESSION_CHANGE_EVENT, syncSession);
-    return () => window.removeEventListener(ADMIN_SESSION_CHANGE_EVENT, syncSession);
-  }, []);
 
   const handleSave = () => {
     setAdminApiUrl(apiUrl);
-    setAdminToken(token);
     setApiUrl(getAdminApiUrl());
-    setToken(getAdminToken());
-    setExpiresAt(getAdminTokenExpiry());
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1600);
   };
 
   const handleClear = () => {
     setAdminApiUrl('');
-    setAdminToken('');
     setApiUrl(getAdminApiUrl());
-    setToken('');
-    setExpiresAt(getAdminTokenExpiry());
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1600);
   };
@@ -55,8 +28,8 @@ function SessionPanel() {
   return (
     <LythCard variant="panel">
       <div className="panel-header">
-        <h2>Admin session</h2>
-        <p>Store the admin API base URL and access token for this tab only.</p>
+        <h2>Admin connection</h2>
+        <p>Cloudflare Access authenticates this browser before the admin API accepts an operation.</p>
       </div>
       <div className="form-grid">
         <label className="field">
@@ -68,22 +41,13 @@ function SessionPanel() {
             placeholder="https://admin-api.lythaus.co/api"
           />
         </label>
-        <label className="field">
-          <span className="field-label">Admin access token</span>
-          <LythInput
-            type="password"
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            placeholder="Paste admin JWT"
-          />
-        </label>
       </div>
       <div className="panel-actions">
         <LythButton type="button" onClick={handleSave}>
-          Save for this tab
+          Save API override
         </LythButton>
         <LythButton variant="ghost" type="button" onClick={handleClear}>
-          Clear session
+          Use production API
         </LythButton>
         <span
           className={saved ? 'saved-indicator show' : 'saved-indicator'}
@@ -93,17 +57,8 @@ function SessionPanel() {
         </span>
       </div>
       <p className="panel-hint">
-        The admin JWT lives in <code>sessionStorage</code>, clears on tab close,
-        and is capped to 15 minutes or the token&apos;s own <code>exp</code>,
-        whichever comes first.
-      </p>
-      <p className="panel-hint">
-        {expiresAt
-          ? `Current token expires at ${expiresAt.toLocaleTimeString()}.`
-          : 'A 401 response clears the current token and forces re-entry.'}
-      </p>
-      <p className="panel-hint">
-        XSS in an active control-panel tab can still exfiltrate the token until it expires or is cleared.
+        Requests use credentialed CORS to the exact configured API origin. No
+        administrator token is stored by this application.
       </p>
     </LythCard>
   );

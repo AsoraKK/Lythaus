@@ -106,9 +106,7 @@ void main() {
   });
 
   test('interceptor maps connectionError for pinned host', () async {
-    final dio = createPinnedDio(
-      baseUrl: 'https://api.lythaus.co',
-    );
+    final dio = createPinnedDio(baseUrl: 'https://api.lythaus.co');
     final fake = _FakeAdapter();
     dio.httpClientAdapter = PinnedCertHttpClientAdapter(fake);
     // adapter will throw a DioException connectionError using incoming request options

@@ -37,8 +37,17 @@ try {
   fail(`cannot read manifest: ${error instanceof Error ? error.message : String(error)}`);
 }
 
-if (manifest.schemaVersion !== 'lythaus-critical-production-coverage-v1') fail('unsupported manifest schema');
+if (manifest.schemaVersion !== 'lythaus-critical-production-coverage-v2') fail('unsupported manifest schema');
 if (!manifest.minimums || !Array.isArray(manifest.modules) || manifest.modules.length === 0) fail('manifest must define minimums and modules');
+if (!Array.isArray(manifest.requiredRuntimeSeams) || manifest.requiredRuntimeSeams.length === 0) {
+  fail('manifest must name every required invoked runtime seam');
+}
+if (!Array.isArray(manifest.requiredDomainCategories) || manifest.requiredDomainCategories.length === 0) {
+  fail('manifest must name every required critical domain category');
+}
+if (!manifest.domainCategoryOwners || typeof manifest.domainCategoryOwners !== 'object') {
+  fail('manifest must map critical domain categories to covered modules');
+}
 
 for (const metric of ['lines', 'branches']) {
   const minimum = manifest.minimums[metric];
@@ -46,8 +55,12 @@ for (const metric of ['lines', 'branches']) {
 }
 
 const sourceOwners = new Set();
+const moduleIds = new Set();
+const runtimeSeams = new Set();
 for (const entry of manifest.modules) {
   if (!entry || typeof entry.id !== 'string' || !entry.id) fail('each module needs an id');
+  if (moduleIds.has(entry.id)) fail(`duplicate module id: ${entry.id}`);
+  moduleIds.add(entry.id);
   if (entry.priority !== 'P1' && entry.priority !== 'P2') fail(`${entry.id} must declare a P1 or P2 priority`);
   if (!Array.isArray(entry.sources) || entry.sources.length === 0) fail(`${entry.id} has no sources`);
   if (!Array.isArray(entry.tests) || entry.tests.length === 0) fail(`${entry.id} has no tests`);
@@ -59,7 +72,11 @@ for (const entry of manifest.modules) {
     }
     if (sourceOwners.has(source)) fail(`source appears in more than one module: ${source}`);
     sourceOwners.add(source);
+    if (entry.runtimeSeam && !source.startsWith('apps/')) {
+      fail(`${entry.id} runtime seam source must be an invoked application Worker policy: ${source}`);
+    }
   }
+  if (entry.runtimeSeam) runtimeSeams.add(entry.id);
   for (const testFile of entry.tests) requireFile(testFile, `${entry.id} test`);
 
   const args = [
@@ -78,4 +95,23 @@ for (const entry of manifest.modules) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+for (const id of manifest.requiredRuntimeSeams) {
+  if (typeof id !== 'string' || !id) fail('requiredRuntimeSeams contains an invalid id');
+  if (!runtimeSeams.has(id)) fail(`required runtime seam is absent or not marked runtimeSeam: ${id}`);
+}
+
+const requiredDomainCategories = new Set(manifest.requiredDomainCategories);
+for (const category of requiredDomainCategories) {
+  if (typeof category !== 'string' || !category) fail('requiredDomainCategories contains an invalid category');
+  const owners = manifest.domainCategoryOwners[category];
+  if (!Array.isArray(owners) || owners.length === 0) fail(`critical domain category has no coverage owner: ${category}`);
+  for (const owner of owners) {
+    if (!moduleIds.has(owner)) fail(`critical domain category ${category} names an unknown module: ${owner}`);
+  }
+}
+for (const category of Object.keys(manifest.domainCategoryOwners)) {
+  if (!requiredDomainCategories.has(category)) fail(`domainCategoryOwners contains an undeclared category: ${category}`);
+}
+
+console.log(`Covered ${requiredDomainCategories.size} required critical domain categories across ${moduleIds.size} production modules.`);
 console.log('Critical production coverage gate passed.');

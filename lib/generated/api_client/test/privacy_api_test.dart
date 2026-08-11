@@ -34,5 +34,26 @@ void main() {
       // TODO
     });
 
+    // Get the authenticated user's private storage ledger
+    //
+    //Future<StorageUsageGet200Response> storageUsageGet() async
+    test('test storageUsageGet', () async {
+      // TODO
+    });
+
+    // Update private region and visibility preferences
+    //
+    //Future<UsersMeRegionUpdate200Response> usersMeRegionUpdate(String idempotencyKey, UsersMeRegionUpdateRequest usersMeRegionUpdateRequest) async
+    test('test usersMeRegionUpdate', () async {
+      // TODO
+    });
+
+    // Update a private content-retention rule
+    //
+    //Future<UsersMeRetentionUpdate200Response> usersMeRetentionUpdate(String idempotencyKey, UsersMeRetentionUpdateRequest usersMeRetentionUpdateRequest) async
+    test('test usersMeRetentionUpdate', () async {
+      // TODO
+    });
+
   });
 }

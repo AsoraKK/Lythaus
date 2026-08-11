@@ -82,11 +82,11 @@ void main() {
           expect(find.byType(AppealCard), findsOneWidget);
           expect(find.byType(VotingProgressIndicator), findsOneWidget);
 
-          // Look for voting progress indicators - these are the specific widgets that show when showProgress is true
-          expect(find.text('Community Voting Progress'), findsOneWidget);
-          expect(find.text('10 votes'), findsOneWidget); // total votes
-          expect(find.text('7 approve'), findsOneWidget); // approve votes
-          expect(find.text('3 reject'), findsOneWidget); // reject votes
+          // Reviewer-panel details appear only when progress is available.
+          expect(find.text('Independent reviewer panel'), findsOneWidget);
+          expect(find.text('10 reviewer decisions'), findsOneWidget);
+          expect(find.text('7 overturn'), findsOneWidget);
+          expect(find.text('3 uphold'), findsOneWidget);
         },
       );
 
@@ -101,9 +101,9 @@ void main() {
           // Assert
           expect(find.byType(AppealCard), findsOneWidget);
 
-          // Progress indicators should not be present when showProgress is false
+          // Reviewer-panel details should not be present when hidden.
           expect(find.byType(VotingProgressIndicator), findsNothing);
-          expect(find.text('Community Voting Progress'), findsNothing);
+          expect(find.text('Independent reviewer panel'), findsNothing);
         },
       );
 

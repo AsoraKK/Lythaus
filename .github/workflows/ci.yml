@@ -61,7 +61,9 @@ jobs:
       - run: npm run typecheck:native
       - run: npm run test:native-architecture
       - run: npm run test:product-integrity-runtime
+      - run: npm run test:product-contracts
       - run: npm run test:critical-coverage
+      - run: npm run test:authenticity-foundation
       - run: npm run test:database-identity
       - run: npm run test:budget
       - run: npm run validate:native-workers
@@ -93,7 +95,12 @@ jobs:
       - run: npm run openapi:lint
       - run: npm run openapi:bundle
       - run: npm run openapi:check:bundle
+      - run: npm run openapi:validate:examples
+      - run: npx openapi-generator-cli version-manager set 7.7.0
+      - run: npm run openapi:gen:dart
       - run: npm run openapi:check:dart
+      - run: npm run openapi:test:dart
+      - run: npm run openapi:test:contract
 
   flutter:
     name: Flutter analyze and test
@@ -107,7 +114,8 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze
-      - run: flutter test
+      - run: bash scripts/test-with-coverage.sh
+      - run: bash scripts/check_coverage_gates.sh
 
   frontends:
     name: Web frontends
@@ -121,6 +129,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm ci --ignore-scripts --prefix apps/control-panel
       - run: npm ci --ignore-scripts --prefix apps/marketing-site
+      - run: npm --prefix apps/control-panel test
       - run: npm --prefix apps/control-panel run build
       - run: npm --prefix apps/marketing-site run build
 

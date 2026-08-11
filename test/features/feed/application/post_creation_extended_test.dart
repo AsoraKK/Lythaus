@@ -270,50 +270,36 @@ void main() {
       expect(u.isEmpty, isFalse);
     });
 
-    test('isEmpty is false when mediaUrl is set', () {
-      const u = UpdatePostRequest(mediaUrl: 'url');
-      expect(u.isEmpty, isFalse);
-    });
-
-    test('isEmpty is false when isNews is set', () {
-      const u = UpdatePostRequest(isNews: true);
-      expect(u.isEmpty, isFalse);
-    });
-
-    test('isEmpty is false when contentType is set', () {
-      const u = UpdatePostRequest(contentType: 'image');
+    test('isEmpty is false when visibility is set', () {
+      const u = UpdatePostRequest(visibility: 'public');
       expect(u.isEmpty, isFalse);
     });
 
     test('isEmpty is false when aiLabel is set', () {
-      const u = UpdatePostRequest(aiLabel: 'mixed');
+      const u = UpdatePostRequest(aiLabel: 'human');
       expect(u.isEmpty, isFalse);
     });
 
-    test('isEmpty is false when proofSignals is set', () {
-      const u = UpdatePostRequest(proofSignals: ProofSignals());
-      expect(u.isEmpty, isFalse);
-    });
-
-    test('toJson includes only non-null fields', () {
-      const u = UpdatePostRequest(text: 'new', isNews: true);
-      final json = u.toJson();
-      expect(json['content'], 'new');
-      expect(json['isNews'], isTrue);
-      expect(json.containsKey('contentType'), isFalse);
-      expect(json.containsKey('aiLabel'), isFalse);
-    });
-
-    test('toJson includes proofSignals when hasAny', () {
+    test('toJson includes only canonical non-null fields', () {
       const u = UpdatePostRequest(
-        proofSignals: ProofSignals(editHistoryHash: 'h'),
+        text: 'new',
+        aiLabel: 'human',
+        visibility: 'public',
       );
-      expect(u.toJson().containsKey('proofSignals'), isTrue);
+      final json = u.toJson();
+      expect(json['body'], 'new');
+      expect(json['declaredCreationMode'], 'human');
+      expect(json['visibility'], 'public');
     });
 
-    test('toJson excludes empty proofSignals', () {
-      const u = UpdatePostRequest(proofSignals: ProofSignals());
-      expect(u.toJson().containsKey('proofSignals'), isFalse);
+    test('text without declaration is rejected', () {
+      const u = UpdatePostRequest(text: 'new');
+      expect(u.toJson, throwsArgumentError);
+    });
+
+    test('visibility-only update stays declaration-free', () {
+      const u = UpdatePostRequest(visibility: 'private');
+      expect(u.toJson(), {'visibility': 'private'});
     });
   });
 

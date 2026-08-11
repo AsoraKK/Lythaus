@@ -162,14 +162,14 @@ void main() {
           score: 0.9,
           flags: ['explicit', 'spam'],
           analyzedAt: DateTime.now(),
-            provider: 'lythaus_authenticity_ai',
+          provider: 'lythaus_authenticity_ai',
         );
         final noFlags = PostModerationData(
           confidence: 'low',
           score: 0.1,
           flags: [],
           analyzedAt: DateTime.now(),
-            provider: 'lythaus_authenticity_ai',
+          provider: 'lythaus_authenticity_ai',
         );
 
         expect(withFlags.flags.isNotEmpty, isTrue);

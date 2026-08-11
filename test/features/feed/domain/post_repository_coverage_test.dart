@@ -2,6 +2,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 
 void main() {
+  group('public authorship policy', () {
+    test('ignores surrounding whitespace at the assisted boundary', () {
+      final text = '${'a' * aiAssistedPublicTextMaxGraphemes}  \n';
+
+      expect(
+        userPerceivedCharacterCount(text),
+        aiAssistedPublicTextMaxGraphemes,
+      );
+      expect(
+        validatePublicPostAuthorship(text: text, aiLabel: 'assisted'),
+        isNull,
+      );
+    });
+
+    test('counts canonically equivalent combining text as graphemes', () {
+      const decomposed = 'e\u0301';
+      const composed = '\u00e9';
+
+      expect(userPerceivedCharacterCount(decomposed), 1);
+      expect(
+        userPerceivedCharacterCount(decomposed),
+        userPerceivedCharacterCount(composed),
+      );
+    });
+  });
+
   group('UpdatePostRequest', () {
     test('isEmpty returns true when all fields null', () {
       const req = UpdatePostRequest();
@@ -13,18 +39,8 @@ void main() {
       expect(req.isEmpty, isFalse);
     });
 
-    test('isEmpty returns false when mediaUrl set', () {
-      const req = UpdatePostRequest(mediaUrl: 'url');
-      expect(req.isEmpty, isFalse);
-    });
-
-    test('isEmpty returns false when isNews set', () {
-      const req = UpdatePostRequest(isNews: true);
-      expect(req.isEmpty, isFalse);
-    });
-
-    test('isEmpty returns false when contentType set', () {
-      const req = UpdatePostRequest(contentType: 'image');
+    test('isEmpty returns false when visibility set', () {
+      const req = UpdatePostRequest(visibility: 'followers');
       expect(req.isEmpty, isFalse);
     });
 
@@ -33,45 +49,43 @@ void main() {
       expect(req.isEmpty, isFalse);
     });
 
-    test('isEmpty returns false when proofSignals set', () {
-      const req = UpdatePostRequest(proofSignals: ProofSignals());
-      expect(req.isEmpty, isFalse);
-    });
-
-    test('toJson includes only non-null fields', () {
+    test('toJson uses the canonical body and declaration fields', () {
       const req = UpdatePostRequest(
         text: 'edited',
-        isNews: true,
         aiLabel: 'human',
+        visibility: 'followers',
       );
       final json = req.toJson();
-      expect(json['content'], 'edited');
-      expect(json['isNews'], true);
-      expect(json['aiLabel'], 'human');
-      expect(json.containsKey('mediaUrls'), isFalse);
-      expect(json.containsKey('contentType'), isFalse);
-      expect(json.containsKey('proofSignals'), isFalse);
+      expect(json, {
+        'body': 'edited',
+        'declaredCreationMode': 'human',
+        'visibility': 'followers',
+      });
     });
 
-    test('toJson wraps mediaUrl in list', () {
-      const req = UpdatePostRequest(mediaUrl: 'img.png');
-      final json = req.toJson();
-      expect(json['mediaUrls'], ['img.png']);
+    test('toJson maps assisted disclosure to ai_assisted', () {
+      const req = UpdatePostRequest(text: 'edited', aiLabel: 'assisted');
+      expect(req.toJson()['declaredCreationMode'], 'ai_assisted');
     });
 
-    test('toJson includes proofSignals when hasAny', () {
-      const req = UpdatePostRequest(
-        proofSignals: ProofSignals(captureMetadataHash: 'abc'),
-      );
-      final json = req.toJson();
-      expect(json['proofSignals'], isA<Map<String, dynamic>>());
-      expect(json['proofSignals']['captureMetadataHash'], 'abc');
+    test('visibility-only updates preserve the stored declaration', () {
+      const req = UpdatePostRequest(visibility: 'private');
+      expect(req.toJson(), {'visibility': 'private'});
     });
 
-    test('toJson excludes proofSignals when empty', () {
-      const req = UpdatePostRequest(proofSignals: ProofSignals());
-      final json = req.toJson();
-      expect(json.containsKey('proofSignals'), isFalse);
+    test('body changes require a fresh declaration', () {
+      const req = UpdatePostRequest(text: 'edited');
+      expect(req.toJson, throwsArgumentError);
+    });
+
+    test('generated disclosure remains blocked', () {
+      const req = UpdatePostRequest(text: 'edited', aiLabel: 'generated');
+      expect(req.toJson, throwsArgumentError);
+    });
+
+    test('invalid visibility is rejected', () {
+      const req = UpdatePostRequest(visibility: 'everyone');
+      expect(req.toJson, throwsArgumentError);
     });
 
     test('toJson returns empty map when all null', () {

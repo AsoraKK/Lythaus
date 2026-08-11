@@ -53,7 +53,9 @@ class _PostCardState extends ConsumerState<PostCard> {
               ModerationInfoBanner(
                 status: widget.post.moderationStatus,
                 message: _getModerationMessage(),
-                onAppeal: _canAppeal() ? _showAppealDialog : null,
+                onAppeal: _canViewAppealInformation()
+                    ? _showAppealDialog
+                    : null,
                 onDismiss: () {
                   setState(() {
                     _bannerDismissed = true;
@@ -108,7 +110,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                   ModerationBadges(
                     status: widget.post.moderationStatus,
                     appealStatus: widget.post.appealStatus,
-                    onAppeal: widget.isOwnPost && _canAppeal()
+                    onAppeal: widget.isOwnPost && _canViewAppealInformation()
                         ? _showAppealDialog
                         : null,
                     isOwnContent: widget.isOwnPost,
@@ -176,7 +178,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                     ),
                     SizedBox(height: spacing.xs),
                     Text(
-                      'This content has been hidden due to community reports',
+                      'This content is hidden pending moderation review.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.55),
                       ),
@@ -281,7 +283,7 @@ class _PostCardState extends ConsumerState<PostCard> {
   String? _getModerationMessage() {
     switch (widget.post.moderationStatus) {
       case ModerationStatus.flagged:
-        return 'Your post has been flagged by the community. It is still visible.';
+        return 'Your post has been reported. It is still visible.';
       case ModerationStatus.hidden:
         final appealStatus = widget.post.appealStatus?.toLowerCase();
         if (appealStatus == 'pending' ||
@@ -289,21 +291,21 @@ class _PostCardState extends ConsumerState<PostCard> {
             appealStatus == 'underreview') {
           return 'Your post is blocked pending an appeal outcome.';
         }
-        return 'Your post has been blocked. You can appeal this decision if you believe it was made in error.';
-      case ModerationStatus.communityRejected:
-        return 'The community voted to keep your post blocked after your appeal.';
-      case ModerationStatus.communityApproved:
-        return 'Great news! The community voted to approve your appealed content.';
+        return 'Your post has been blocked. Review the appeal information to '
+            'see whether its moderation case is eligible.';
+      case ModerationStatus.appealUpheld:
+        return 'Your appeal was resolved and your post remains blocked.';
+      case ModerationStatus.appealRestored:
+        return 'Your appeal was resolved and your post was restored.';
       default:
         return null;
     }
   }
 
-  bool _canAppeal() {
+  bool _canViewAppealInformation() {
     return (widget.post.moderationStatus == ModerationStatus.hidden ||
             widget.post.moderationStatus == ModerationStatus.flagged ||
-            widget.post.moderationStatus ==
-                ModerationStatus.communityRejected) &&
+            widget.post.moderationStatus == ModerationStatus.appealUpheld) &&
         widget.post.appealStatus == null;
   }
 

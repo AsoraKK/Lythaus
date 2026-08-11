@@ -117,9 +117,9 @@ void main() {
         ModerationAuditEntry.fromJson({
           'timestamp': '2024-01-15T10:30:00.000Z',
           'caseId': 'case-5',
-          'action': 'community_vote',
+          'action': 'reviewer_decision',
         }).action,
-        ModerationAuditActionType.communityVote,
+        ModerationAuditActionType.reviewerDecision,
       );
 
       expect(
@@ -128,7 +128,7 @@ void main() {
           'caseId': 'case-6',
           'action': 'vote',
         }).action,
-        ModerationAuditActionType.communityVote,
+        ModerationAuditActionType.reviewerDecision,
       );
 
       expect(
@@ -369,7 +369,7 @@ void main() {
       );
       expect(
         ModerationAuditActionType.values,
-        contains(ModerationAuditActionType.communityVote),
+        contains(ModerationAuditActionType.reviewerDecision),
       );
       expect(
         ModerationAuditActionType.values,

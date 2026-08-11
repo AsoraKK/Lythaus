@@ -60,8 +60,8 @@ test('public API dispatch awaits rejection-prone async handlers', () => {
 
 test('admin API dispatch awaits rejection-prone mutations', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
-  assert.match(source, /return await decideModeration\(/);
-  assert.match(source, /return await updateAccountStatus\(/);
+  assert.match(source, /return cors\(await decideModeration\(/);
+  assert.match(source, /return cors\(await updateAccountStatus\(/);
 });
 
 test('native Workers declare cache-disabled Hyperdrive intent', () => {
@@ -267,7 +267,10 @@ test('account deletion clears private and derived relationships while preserving
   assert.match(grants, /GRANT SELECT, DELETE ON feed\.notification_preferences, feed\.notification_devices TO lythaus_jobs/);
   assert.match(grants, /GRANT SELECT, DELETE ON trust\.accountability_signals TO lythaus_jobs/);
   assert.match(grants, /GRANT SELECT, INSERT, UPDATE, DELETE ON trust\.reputation_balances TO lythaus_jobs/);
-  assert.match(grants, /GRANT SELECT \(actor_id\), DELETE ON system\.idempotency_keys TO lythaus_jobs/);
+  assert.match(source, /DELETE FROM system\.idempotency_keys[\s\S]*response ->> 'state' = 'completed'/);
+  assert.match(source, /UPDATE system\.idempotency_keys[\s\S]*SET actor_id = NULL[\s\S]*WHERE actor_id = \$1/);
+  assert.match(source, /actor_id IS NULL[\s\S]*COALESCE\(response ->> 'state', ''\) <> 'completed'[\s\S]*interval '30 days'/);
+  assert.match(grants, /GRANT SELECT \(actor_id, response\), UPDATE \(actor_id\), DELETE ON system\.idempotency_keys TO lythaus_jobs/);
   assert.match(grants, /social\.blocks, social\.mutes/);
   assert.match(grants, /GRANT SELECT \(user_id\), DELETE ON identity\.provider_links[\s\S]*identity\.user_region_preferences, identity\.admin_memberships TO lythaus_privacy/);
   assert.match(grants, /GRANT SELECT \(user_id\), DELETE ON editorial\.applications, editorial\.memberships TO lythaus_privacy/);
@@ -331,14 +334,38 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(script, /migration checksum mismatch/);
   assert.doesNotMatch(script, /0001_feature_flags/);
   assert.match(verifier, /system\.schema_migrations/);
-  assert.match(verifier, /expectedMigrationBytes = 51_104/);
-  assert.match(verifier, /da6cd97b29ab5ea26dd0237e413fbe868d696df4c082ede81ed950faa3f34ced/);
+  assert.match(verifier, /expectedMigrationBytes = 79_778/);
+  assert.match(verifier, /d06ac01ac0b47bf04c7c19dd5267ba9c7c13e7cd187ea5fb1f0f7621f206282e/);
   assert.match(verifier, /migration SHA-256 mismatch/);
   assert.match(verifier, /approved applied migration payload mismatch/);
   assert.match(verifier, /searchParams\.get\('sslrootcert'\) === 'system'/);
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
   assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
+  assert.match(verifier, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION/);
+  assert.match(verifier, /0012_product_integrity_v2\.sql/);
+  assert.match(verifier, /production post-0012 schema fingerprint mismatch/);
+  assert.match(verifier, /production post-0012 relation count/);
   assert.doesNotMatch(verifier, /to_regclass|identity\.users|content\.posts/);
+  const deployIdentity = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
+  assert.match(workflow, /MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'true'/);
+  assert.match(workflow, /node scripts\/ci\/validate-product-integrity-deploy-identity\.mjs[\s\S]*validate:native-workers:provisioned/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0012_SCHEMA_FINGERPRINT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0012_RELATION_COUNT/);
+  assert.match(deployIdentity, /fs\.writeFileSync\(configPath, source/);
+  assert.match(workflow, /Capture predeployment Worker state/);
+  assert.match(workflow, /Roll back partial Worker deployment on failure/);
+  assert.match(workflow, /Validate final production gates/);
+  assert.match(workflow, /validate:production-gates:final/);
+  assert.match(workflow, /wrangler versions upload --config apps\/lythaus-public-api\/wrangler\.jsonc/);
+  assert.match(workflow, /PRODUCTION_WORKER_VERSION_ID: \$\{\{ env\.PUBLIC_WORKER_VERSION_ID \}\}/);
+  assert.match(workflow, /wrangler versions deploy \$PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development/);
+  assert.match(workflow, /wrangler versions deploy \$ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development/);
+  assert.match(workflow, /wrangler versions deploy \$JOBS_ROLLBACK_SPECS --name lythaus-jobs-development/);
+  assert.ok(workflow.indexOf('Validate final production gates before activation') < workflow.indexOf('Activate exact candidate Worker versions'));
+  for (const worker of ['public-api', 'admin-api', 'jobs']) {
+    const config = fs.readFileSync(path.join(root, `apps/lythaus-${worker}/wrangler.jsonc`), 'utf8');
+    assert.match(config, /"keep_vars"\s*:\s*false/);
+  }
 });
 
 test('production deployment is fail-closed on predeploy and final gate phases', () => {

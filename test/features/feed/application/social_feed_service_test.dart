@@ -260,28 +260,28 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/posts/post-1/like',
+        '/posts/post-1/reactions',
         data: any(named: 'data'),
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
-        'success': true,
-        'post': _postJson('post-1'),
-      }, '/posts/post-1/like'),
+        'postId': 'post-1',
+        'reactionType': 'like',
+        'changed': true,
+      }, '/posts/post-1/reactions'),
     );
 
     when(
-      () => dio.post<Map<String, dynamic>>(
-        '/posts/post-1/dislike',
-        data: any(named: 'data'),
+      () => dio.delete<Map<String, dynamic>>(
+        '/posts/post-1/reactions',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
-        'success': true,
-        'post': _postJson('post-1'),
-      }, '/posts/post-1/dislike'),
+        'postId': 'post-1',
+        'removed': true,
+      }, '/posts/post-1/reactions'),
     );
 
     when(
@@ -308,13 +308,11 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/posts/post-1/flag',
+        '/flags',
         data: any(named: 'data'),
         options: any(named: 'options'),
       ),
-    ).thenAnswer(
-      (_) async => _response({'success': true}, '/posts/post-1/flag'),
-    );
+    ).thenAnswer((_) async => _response({'flagId': 'flag-1'}, '/flags'));
 
     final post = await service.getPost(postId: 'post-1', token: 't1');
     final liked = await service.likePost(
@@ -324,7 +322,7 @@ void main() {
     );
     final disliked = await service.dislikePost(
       postId: 'post-1',
-      isDislike: true,
+      isDislike: false,
       token: 't1',
     );
     final comments = await service.getComments(postId: 'post-1', token: 't1');

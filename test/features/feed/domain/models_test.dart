@@ -783,7 +783,6 @@ void main() {
       expect(ContentAuthorship.values, [
         ContentAuthorship.humanAuthored,
         ContentAuthorship.aiAssisted,
-        ContentAuthorship.aiGenerated,
         ContentAuthorship.underReview,
       ]);
     });
@@ -791,7 +790,6 @@ void main() {
     test('labels', () {
       expect(ContentAuthorship.humanAuthored.label, 'Human-authored');
       expect(ContentAuthorship.aiAssisted.label, 'AI-assisted');
-      expect(ContentAuthorship.aiGenerated.label, 'AI-generated');
       expect(ContentAuthorship.underReview.label, 'Under review');
     });
 
@@ -810,11 +808,11 @@ void main() {
       );
       expect(
         ContentAuthorship.fromString('ai_generated'),
-        ContentAuthorship.aiGenerated,
+        ContentAuthorship.underReview,
       );
       expect(
         ContentAuthorship.fromString('ai_gen'),
-        ContentAuthorship.aiGenerated,
+        ContentAuthorship.underReview,
       );
       expect(
         ContentAuthorship.fromString('under_review'),
@@ -843,7 +841,7 @@ void main() {
       expect(ContentAuthorship.fromString('LOW'), ContentAuthorship.aiAssisted);
       expect(
         ContentAuthorship.fromString('AI_GENERATED'),
-        ContentAuthorship.aiGenerated,
+        ContentAuthorship.underReview,
       );
     });
 
@@ -863,7 +861,6 @@ void main() {
     test('displayLabel', () {
       expect(ContentAuthorship.humanAuthored.displayLabel, 'Human-authored');
       expect(ContentAuthorship.aiAssisted.displayLabel, 'AI-assisted');
-      expect(ContentAuthorship.aiGenerated.displayLabel, 'AI-generated');
       expect(ContentAuthorship.underReview.displayLabel, 'Under review');
     });
   });

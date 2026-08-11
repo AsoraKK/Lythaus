@@ -13,6 +13,7 @@ import 'package:dio/dio.dart';
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/network/idempotency_key.dart';
 import 'package:lythaus/core/observability/lythaus_tracer.dart';
 
 /// Concrete implementation of [SocialFeedRepository]
@@ -373,41 +374,26 @@ class SocialFeedService implements SocialFeedRepository {
     return LythausTracer.traceOperation(
       'SocialFeedService.likePost',
       () async {
-        final response = await _dio.post<Map<String, dynamic>>(
-          '$_baseUrl/posts/$postId/like',
-          data: {'action': isLike ? 'like' : 'unlike'},
-          options: Options(headers: {'Authorization': 'Bearer $token'}),
-        );
-
-        final data = response.data;
-        if (data == null) {
-          throw const SocialFeedException(
-            'Invalid like response',
-            code: 'INVALID_RESPONSE',
+        if (isLike) {
+          final response = await _dio.post<Map<String, dynamic>>(
+            '$_baseUrl/posts/$postId/reactions',
+            data: const {'reactionType': 'like'},
+            options: _mutationOptions(token, 'reaction-create'),
           );
+          _requireReactionResponse(response.data, postId);
+        } else {
+          final response = await _dio.delete<Map<String, dynamic>>(
+            '$_baseUrl/posts/$postId/reactions',
+            options: _mutationOptions(token, 'reaction-delete'),
+          );
+          _requireReactionDeleteResponse(response.data, postId);
         }
-
-        if (data['success'] == true) {
-          final payload = data['post'];
-          if (payload is! Map<String, dynamic>) {
-            throw const SocialFeedException(
-              'Invalid like response',
-              code: 'INVALID_RESPONSE',
-            );
-          }
-          return Post.fromJson(payload);
-        }
-
-        final message = data['message'];
-        throw SocialFeedException(
-          message is String ? message : 'Failed to update like',
-          code: 'LIKE_FAILED',
-        );
+        return getPost(postId: postId, token: token);
       },
       attributes:
           LythausTracer.httpRequestAttributes(
             method: 'POST',
-            url: '/api/posts/$postId/like',
+            url: '/api/posts/$postId/reactions',
           )..addAll({
             'request.post_id': postId,
             'request.action': isLike ? 'like' : 'unlike',
@@ -422,50 +408,13 @@ class SocialFeedService implements SocialFeedRepository {
     required bool isDislike,
     required String token,
   }) async {
-    return LythausTracer.traceOperation(
-      'SocialFeedService.dislikePost',
-      () async {
-        final response = await _dio.post<Map<String, dynamic>>(
-          '$_baseUrl/posts/$postId/dislike',
-          data: {'action': isDislike ? 'dislike' : 'remove_dislike'},
-          options: Options(headers: {'Authorization': 'Bearer $token'}),
-        );
-
-        final data = response.data;
-        if (data == null) {
-          throw const SocialFeedException(
-            'Invalid dislike response',
-            code: 'INVALID_RESPONSE',
-          );
-        }
-
-        if (data['success'] == true) {
-          final payload = data['post'];
-          if (payload is! Map<String, dynamic>) {
-            throw const SocialFeedException(
-              'Invalid dislike response',
-              code: 'INVALID_RESPONSE',
-            );
-          }
-          return Post.fromJson(payload);
-        }
-
-        final message = data['message'];
-        throw SocialFeedException(
-          message is String ? message : 'Failed to update dislike',
-          code: 'DISLIKE_FAILED',
-        );
-      },
-      attributes:
-          LythausTracer.httpRequestAttributes(
-            method: 'POST',
-            url: '/api/posts/$postId/dislike',
-          )..addAll({
-            'request.post_id': postId,
-            'request.action': isDislike ? 'dislike' : 'remove_dislike',
-          }),
-      onError: (error) => _handleError(error),
-    );
+    if (isDislike) {
+      throw const SocialFeedException(
+        'Dislikes are not a supported Lythaus reaction',
+        code: 'UNSUPPORTED_REACTION',
+      );
+    }
+    return likePost(postId: postId, isLike: false, token: token);
   }
 
   @override
@@ -538,36 +487,29 @@ class SocialFeedService implements SocialFeedRepository {
       'SocialFeedService.flagPost',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
-          '$_baseUrl/posts/$postId/flag',
-          data: {'reason': reason, if (details != null) 'details': details},
-          options: Options(headers: {'Authorization': 'Bearer $token'}),
+          '$_baseUrl/flags',
+          data: {
+            'contentType': 'post',
+            'contentId': postId,
+            'reasonCode': reason,
+          },
+          options: _mutationOptions(token, 'flag-create'),
         );
-
-        final data = response.data;
-        if (data == null) {
+        final flagId = response.data?['flagId'];
+        if (flagId is! String || flagId.isEmpty) {
           throw const SocialFeedException(
             'Invalid flag response',
             code: 'INVALID_RESPONSE',
           );
         }
-
-        if (data['success'] != true) {
-          final message = data['message'];
-          throw SocialFeedException(
-            message is String ? message : 'Failed to flag post',
-            code: 'FLAG_FAILED',
-          );
-        }
       },
       attributes:
-          LythausTracer.httpRequestAttributes(
-            method: 'POST',
-            url: '/api/posts/$postId/flag',
-          )..addAll({
-            'request.post_id': postId,
-            'request.reason': reason,
-            'request.has_details': details != null,
-          }),
+          LythausTracer.httpRequestAttributes(method: 'POST', url: '/api/flags')
+            ..addAll({
+              'request.post_id': postId,
+              'request.reason': reason,
+              'request.has_details': details != null,
+            }),
       onError: (error) => _handleError(error),
     );
   }
@@ -601,6 +543,36 @@ class SocialFeedService implements SocialFeedRepository {
   static Map<String, dynamic> _unwrapEnvelope(Map<String, dynamic> value) {
     final data = value['data'];
     return data is Map ? Map<String, dynamic>.from(data) : value;
+  }
+
+  Options _mutationOptions(String token, String scope) => Options(
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Idempotency-Key': IdempotencyKey.create(scope),
+    },
+  );
+
+  void _requireReactionResponse(Map<String, dynamic>? data, String postId) {
+    if (data?['postId'] != postId ||
+        data?['reactionType'] is! String ||
+        data?['changed'] is! bool) {
+      throw const SocialFeedException(
+        'Invalid reaction response',
+        code: 'INVALID_RESPONSE',
+      );
+    }
+  }
+
+  void _requireReactionDeleteResponse(
+    Map<String, dynamic>? data,
+    String postId,
+  ) {
+    if (data?['postId'] != postId || data?['removed'] is! bool) {
+      throw const SocialFeedException(
+        'Invalid reaction response',
+        code: 'INVALID_RESPONSE',
+      );
+    }
   }
 
   static Map<String, dynamic> _requireSuccessfulPayload(

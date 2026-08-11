@@ -63,6 +63,7 @@ export interface EnvBindings {
   EXPECTED_DATABASE_ROLE_CLASS?: string;
   EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED?: string;
   AUTHENTICATED_ACCEPTANCE_PROVEN?: string;
+  WORKER_VERSION?: { id: string; tag: string; timestamp: string };
   COST_BUDGET_ENABLED?: string;
   COST_BUDGET_LIMIT_USD?: string;
   COST_BUDGET_WARNING_USD?: string;

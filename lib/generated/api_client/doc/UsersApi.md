@@ -10,8 +10,8 @@ All URIs are relative to *https://api.lythaus.co/api*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**usersGet**](UsersApi.md#usersget) | **GET** /users/{id} | Get a public user profile
-[**usersPostsList**](UsersApi.md#userspostslist) | **GET** /users/{userId}/posts | List posts by a user
-[**usersTrustPassport**](UsersApi.md#userstrustpassport) | **GET** /users/{id}/trust-passport | Get trust passport for a user
+[**usersMeRegionUpdate**](UsersApi.md#usersmeregionupdate) | **PUT** /users/me/region | Update private region and visibility preferences
+[**usersMeRetentionUpdate**](UsersApi.md#usersmeretentionupdate) | **PUT** /users/me/retention | Update a private content-retention rule
 
 
 # **usersGet**
@@ -55,23 +55,24 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **usersPostsList**
-> JsonObject usersPostsList(userId)
+# **usersMeRegionUpdate**
+> UsersMeRegionUpdate200Response usersMeRegionUpdate(idempotencyKey, usersMeRegionUpdateRequest)
 
-List posts by a user
+Update private region and visibility preferences
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getUsersApi();
-final String userId = userId_example; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+final UsersMeRegionUpdateRequest usersMeRegionUpdateRequest = ; // UsersMeRegionUpdateRequest |
 
 try {
-    final response = api.usersPostsList(userId);
+    final response = api.usersMeRegionUpdate(idempotencyKey, usersMeRegionUpdateRequest);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling UsersApi->usersPostsList: $e\n');
+    print('Exception when calling UsersApi->usersMeRegionUpdate: $e\n');
 }
 ```
 
@@ -79,11 +80,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **String**|  |
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
+ **usersMeRegionUpdateRequest** | [**UsersMeRegionUpdateRequest**](UsersMeRegionUpdateRequest.md)|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**UsersMeRegionUpdate200Response**](UsersMeRegionUpdate200Response.md)
 
 ### Authorization
 
@@ -91,28 +93,29 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
- - **Content-Type**: Not defined
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **usersTrustPassport**
-> JsonObject usersTrustPassport(id)
+# **usersMeRetentionUpdate**
+> UsersMeRetentionUpdate200Response usersMeRetentionUpdate(idempotencyKey, usersMeRetentionUpdateRequest)
 
-Get trust passport for a user
+Update a private content-retention rule
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getUsersApi();
-final String id = id_example; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+final UsersMeRetentionUpdateRequest usersMeRetentionUpdateRequest = ; // UsersMeRetentionUpdateRequest |
 
 try {
-    final response = api.usersTrustPassport(id);
+    final response = api.usersMeRetentionUpdate(idempotencyKey, usersMeRetentionUpdateRequest);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling UsersApi->usersTrustPassport: $e\n');
+    print('Exception when calling UsersApi->usersMeRetentionUpdate: $e\n');
 }
 ```
 
@@ -120,11 +123,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
+ **usersMeRetentionUpdateRequest** | [**UsersMeRetentionUpdateRequest**](UsersMeRetentionUpdateRequest.md)|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**UsersMeRetentionUpdate200Response**](UsersMeRetentionUpdate200Response.md)
 
 ### Authorization
 
@@ -132,7 +136,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
- - **Content-Type**: Not defined
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

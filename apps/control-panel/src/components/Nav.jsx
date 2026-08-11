@@ -5,7 +5,6 @@ const links = [
   { to: '/flags', label: 'Flags' },
   { to: '/appeals', label: 'Appeals' },
   { to: '/users', label: 'Users' },
-  { to: '/invites', label: 'Invites' },
   { to: '/audit', label: 'Audit' },
   { to: '/preview', label: 'Preview' }
 ];

@@ -135,7 +135,7 @@ test('Level 5 vote weighting is qualification-gated and capped', () => {
     ordinaryVote('r5', 'uphold'),
   ];
   const result = evaluateAppeal(weightedVotes, [], 'standard');
-  assert.equal(result.communityDecision, 'uphold');
+  assert.equal(result.reviewerPanelDecision, 'uphold');
   assert.equal(result.upholdWeight, 4);
   assert.throws(() => evaluateAppeal([
     weightedVotes[0],
@@ -172,4 +172,55 @@ test('reviewer assignment excludes appellant, conflicts, untrained and related a
   assert.equal(assignments.length, 5);
   assert.equal(assignments.some((item) => item.reviewerId === 'appellant'), false);
   assert.equal(assignments.filter((item) => item.voteWeightSnapshot === 2).length <= 1, true);
+});
+
+test('reviewer assignment gives known linked-account groups at most one seat', async () => {
+  const candidates = [
+    ...Array.from({ length: 4 }, (_, index) => ({
+      userId: `linked-${index}`,
+      level: 4,
+      qualification: 'trained',
+      assignmentEligible: true,
+      conflict: false,
+      relatedAccountGroup: 'linked-group',
+    })),
+    ...Array.from({ length: 5 }, (_, index) => ({
+      userId: `independent-${index}`,
+      level: 4,
+      qualification: 'trained',
+      assignmentEligible: true,
+      conflict: false,
+      relatedAccountGroup: `independent-group-${index}`,
+    })),
+  ];
+  const assignments = await selectAppealReviewers({
+    appealId: 'appeal-linked-groups',
+    appellantId: 'appellant',
+    assignmentSeed: 'server-generated-secret-seed',
+    candidates,
+  });
+
+  assert.equal(assignments.length, 5);
+  assert.equal(assignments.filter((item) => item.reviewerId.startsWith('linked-')).length <= 1, true);
+});
+
+test('reviewer assignment fails closed when linked accounts leave fewer than five independent seats', async () => {
+  const candidates = Array.from({ length: 8 }, (_, index) => ({
+    userId: `linked-only-${index}`,
+    level: 4,
+    qualification: 'trained',
+    assignmentEligible: true,
+    conflict: false,
+    relatedAccountGroup: index < 5 ? 'shared-group' : `group-${index}`,
+  }));
+
+  await assert.rejects(
+    selectAppealReviewers({
+      appealId: 'appeal-insufficient-independent-groups',
+      appellantId: 'appellant',
+      assignmentSeed: 'server-generated-secret-seed',
+      candidates,
+    }),
+    /appeal_reviewer_pool_insufficient/,
+  );
 });

@@ -1,7 +1,7 @@
 # Lythaus Community Guidelines
 
 > **Effective date**: February 2026  
-> **Last updated**: 2026-02-08
+> **Last updated**: 2026-08-11
 
 Welcome to Lythaus — a platform built on authenticity, respect, and human connection. These guidelines help keep our community a safe and meaningful space for everyone.
 
@@ -48,30 +48,32 @@ Welcome to Lythaus — a platform built on authenticity, respect, and human conn
 
 ### Automated Review
 
-Every post goes through automated content analysis at submission:
+Submissions may receive automated evidence at submission:
 
-- Our AI systems check content against our guidelines.
-- High-confidence violations are blocked immediately.
-- Borderline content is flagged for human review while remaining visible.
-- **Important**: Automated decisions can be wrong. You can always appeal.
+- Automated systems can identify possible policy issues for deterministic checks and human review.
+- Model output cannot by itself publish, remove, block, change reputation, or resolve an appeal.
+- Content awaiting required review does not enter public feeds.
+- Eligible authoritative moderation and account decisions can be appealed.
 
-### Community Review
+### Independent Appeal Review
 
 When you appeal a moderation decision:
 
-1. Trusted community members review your appeal.
-2. Eligible cases can be resolved by community majority.
-3. Voting is limited by account age, reputation, conflict checks, and anti-brigading controls.
-4. Sensitive safety, fraud, privacy, legal, child-safety, or manipulation cases may be staff-led instead.
+1. Five independently assigned trained reviewers consider the appeal.
+2. Known related-account groups may occupy at most one reviewer seat, and reviewers must recuse from conflicts.
+3. Submitted reviews are immutable. All five valid reviews and a weighted majority of at least 60% are required.
+4. At most one trained Level 5 reviewer may receive weight two; subscription never changes eligibility or weight.
+5. A trained Editorial or journalist adjudicator must confirm the panel result; high-risk cases require two adjudicators.
 
-### Admin Review
+### Adjudication
 
-Trust & safety staff can:
+Authorised adjudicators can:
 
-- Override community decisions only for safety, fraud, legal, platform integrity, or clear manipulation reasons.
-- Review escalated cases.
-- Adjust moderation thresholds based on false-positive patterns.
-- Record an audit trail and public-safe explanation when an override occurs.
+- Confirm a complete reviewer-panel result when qualified and conflict-free.
+- Record immutable adjudication, outcome, activity, notification, and audit evidence.
+- Escalate disagreement or insufficient-review states without inventing an outcome.
+
+Appeals are not resolved by public voting, a timer, a moderator override, or an administrator override.
 
 ---
 
@@ -82,10 +84,10 @@ If your content is flagged or blocked:
 1. You'll see a clear explanation on your post (including whether the decision was automated).
 2. Tap **"Appeal this decision"** to submit your case.
 3. Provide context — explain why you believe the decision was incorrect.
-4. Community members and/or admins will review your appeal.
+4. Independently assigned trained reviewers and the required trained adjudicator(s) will review your appeal.
 5. You'll be notified of the outcome.
 
-**False positive?** If you believe AI moderation incorrectly flagged your content, select "False positive" as the appeal type — these are prioritized for faster review.
+**False positive?** Explain why the recorded decision is incorrect and provide relevant context. No appeal type bypasses independence, quorum, or adjudication requirements.
 
 ---
 

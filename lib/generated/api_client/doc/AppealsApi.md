@@ -207,8 +207,8 @@ The case determines standard or high risk; the service assigns independent train
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAppealsApi();
-final AppealCreateRequest appealCreateRequest = ; // AppealCreateRequest |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final AppealCreateRequest appealCreateRequest = {"caseId":"018b27d4-6e1e-7bd3-bb5a-98f24bb968c2","statement":"I believe this decision should be reviewed because the context was misunderstood."}; // AppealCreateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.appealsCreate(appealCreateRequest, idempotencyKey);
@@ -223,7 +223,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **appealCreateRequest** | [**AppealCreateRequest**](AppealCreateRequest.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -294,7 +294,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAppealsApi();
 final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Required replay key for an immutable reviewer vote.
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
 
 try {
     final response = api.appealsRecuse(appealId, idempotencyKey);
@@ -309,7 +309,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **appealId** | **String**|  |
- **idempotencyKey** | **String**| Required replay key for an immutable reviewer vote. |
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
 
 ### Return type
 
@@ -339,8 +339,8 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAppealsApi();
 final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Required replay key for an immutable reviewer vote.
-final GovernanceAppealVoteRequest governanceAppealVoteRequest = ; // GovernanceAppealVoteRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+final GovernanceAppealVoteRequest governanceAppealVoteRequest = {"decision":"overturn"}; // GovernanceAppealVoteRequest |
 
 try {
     final response = api.appealsVote(appealId, idempotencyKey, governanceAppealVoteRequest);
@@ -355,7 +355,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **appealId** | **String**|  |
- **idempotencyKey** | **String**| Required replay key for an immutable reviewer vote. |
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
  **governanceAppealVoteRequest** | [**GovernanceAppealVoteRequest**](GovernanceAppealVoteRequest.md)|  |
 
 ### Return type

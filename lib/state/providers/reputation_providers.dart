@@ -45,12 +45,20 @@ final reputationLedgerProvider = FutureProvider<List<LedgerEntry>>((ref) async {
 
 /// One server-paginated page of private account activity.
 final activityPageProvider =
-    FutureProvider.family<CursorPage<ActivityEntry>, String?>((ref, cursor) {
+    FutureProvider.family<CursorPage<ActivityEntry>, ActivityPageQuery?>((
+      ref,
+      query,
+    ) {
+      final resolvedQuery = query ?? const ActivityPageQuery();
+      final category = resolvedQuery.category.queryValue;
       return _fetchCursorPage(
         ref: ref,
         path: '/api/activity',
-        cursor: cursor,
+        cursor: resolvedQuery.cursor,
         mapper: ActivityEntry.fromJson,
+        queryParameters: <String, dynamic>{
+          if (category != null) 'category': category,
+        },
       );
     });
 
@@ -59,6 +67,7 @@ Future<CursorPage<T>> _fetchCursorPage<T>({
   required String path,
   required String? cursor,
   required T Function(Map<String, dynamic> json) mapper,
+  Map<String, dynamic> queryParameters = const <String, dynamic>{},
 }) async {
   final token = await ref.watch(jwtProvider.future);
   if (token == null || token.isEmpty) {
@@ -71,6 +80,7 @@ Future<CursorPage<T>> _fetchCursorPage<T>({
         path,
         queryParameters: <String, dynamic>{
           'limit': 20,
+          ...queryParameters,
           if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),

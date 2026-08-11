@@ -275,11 +275,11 @@ void main() {
       );
       expect(
         ModerationAuditEntry.fromJson({'action': 'vote'}).action,
-        ModerationAuditActionType.communityVote,
+        ModerationAuditActionType.reviewerDecision,
       );
       expect(
         ModerationAuditEntry.fromJson({'action': 'community_vote'}).action,
-        ModerationAuditActionType.communityVote,
+        ModerationAuditActionType.reviewerDecision,
       );
       expect(
         ModerationAuditEntry.fromJson({'action': 'decision'}).action,

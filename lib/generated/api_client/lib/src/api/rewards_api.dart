@@ -8,6 +8,7 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/api_error.dart';
 import 'package:lythaus_api_client/src/model/error.dart';
 import 'package:lythaus_api_client/src/model/forbidden_error.dart';
 import 'package:lythaus_api_client/src/model/reward_redemption.dart';
@@ -106,6 +107,7 @@ class RewardsApi {
   ///
   /// Parameters:
   /// * [id]
+  /// * [idempotencyKey] - Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -117,6 +119,7 @@ class RewardsApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<RewardRedemption>> rewardsRedeemPost({
     required String id,
+    String? idempotencyKey,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -128,6 +131,7 @@ class RewardsApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
         ...?headers,
       },
       extra: <String, dynamic>{

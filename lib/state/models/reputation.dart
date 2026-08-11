@@ -23,34 +23,49 @@ class ReputationState {
   final String reputationStatus;
   final String reputationBand;
   final String policyVersion;
-  final Map<String, String> pillars;
+  final Map<String, Object> pillars;
   final List<String> promotionBlockers;
   final DateTime? evaluatedAt;
 
   factory ReputationState.fromJson(Map<String, dynamic> json) {
-    final level =
-        int.tryParse(
-          (json['level'] ?? json['reputationLevel'] ?? 0).toString(),
-        ) ??
-        0;
-    final rawPillars = json['pillars'];
+    final level = _requiredBoundedInt(
+      json['level'],
+      'level',
+      minimum: 0,
+      maximum: 5,
+    );
+    final reputationLevel = _requiredBoundedInt(
+      json['reputationLevel'],
+      'reputationLevel',
+      minimum: 0,
+      maximum: 5,
+    );
+    if (level != reputationLevel) {
+      throw const FormatException('Invalid private reputation response.');
+    }
     return ReputationState(
-      userId: json['userId']?.toString() ?? '',
+      userId: _requiredString(json['userId'], 'userId'),
       level: level,
-      levelName: json['levelName']?.toString() ?? 'Level $level',
-      reputationStatus: json['reputationStatus']?.toString() ?? 'active',
-      reputationBand: json['reputationBand']?.toString() ?? 'Unspecified',
-      policyVersion: json['policyVersion']?.toString() ?? 'unknown',
-      pillars: rawPillars is Map
-          ? Map<String, String>.fromEntries(
-              rawPillars.entries.map(
-                (entry) =>
-                    MapEntry(entry.key.toString(), entry.value.toString()),
-              ),
-            )
-          : const <String, String>{},
+      levelName: _requiredString(json['levelName'], 'levelName'),
+      reputationStatus: _requiredEnumString(
+        json['reputationStatus'],
+        'reputationStatus',
+        const <String>{
+          'active',
+          'restricted',
+          'suspended',
+          'under_investigation',
+        },
+      ),
+      reputationBand: _requiredEnumString(
+        json['reputationBand'],
+        'reputationBand',
+        const <String>{'new', 'accountable', 'trusted', 'established'},
+      ),
+      policyVersion: _requiredString(json['policyVersion'], 'policyVersion'),
+      pillars: _reputationPillars(json['pillars']),
       promotionBlockers: _stringList(json['promotionBlockers']),
-      evaluatedAt: _parseDate(json['evaluatedAt']),
+      evaluatedAt: _nullableDate(json['evaluatedAt'], 'evaluatedAt'),
     );
   }
 }
@@ -102,58 +117,150 @@ class LedgerEntry {
   }
 }
 
+enum ActivityCategory {
+  all,
+  account,
+  content,
+  social,
+  reputation,
+  moderation,
+  appeals,
+  privacy,
+  rewards;
+
+  String get label => switch (this) {
+    ActivityCategory.all => 'All',
+    ActivityCategory.account => 'Account',
+    ActivityCategory.content => 'Content',
+    ActivityCategory.social => 'Social',
+    ActivityCategory.reputation => 'Reputation',
+    ActivityCategory.moderation => 'Moderation',
+    ActivityCategory.appeals => 'Appeals',
+    ActivityCategory.privacy => 'Privacy',
+    ActivityCategory.rewards => 'Rewards',
+  };
+
+  String? get queryValue => this == ActivityCategory.all ? null : name;
+
+  static ActivityCategory? fromValue(String value) {
+    final normalized = value.trim().toLowerCase();
+    for (final category in ActivityCategory.values) {
+      if (category.queryValue == normalized) {
+        return category;
+      }
+    }
+    return null;
+  }
+}
+
+/// A cursor and category combination for a private activity page.
+class ActivityPageQuery {
+  const ActivityPageQuery({this.cursor, this.category = ActivityCategory.all});
+
+  final String? cursor;
+  final ActivityCategory category;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ActivityPageQuery &&
+      other.cursor == cursor &&
+      other.category == category;
+
+  @override
+  int get hashCode => Object.hash(cursor, category);
+}
+
 /// A private activity record returned by `/api/activity`.
 class ActivityEntry {
   const ActivityEntry({
     required this.id,
+    required this.category,
+    required this.source,
     required this.title,
     required this.explanation,
     required this.result,
-    required this.reasonCode,
+    this.reasonCode,
     required this.policyVersion,
-    required this.objectType,
+    this.objectType,
     required this.appealable,
+    required this.retentionDays,
     required this.createdAt,
     this.objectId,
-    this.reputationEffect,
-    this.retentionClass,
-    this.metadata = const <String, dynamic>{},
+    required this.reputationEffect,
+    required this.retentionClass,
   });
 
   final String id;
+  final String category;
+  final String source;
   final String title;
   final String explanation;
   final String result;
-  final String reasonCode;
+  final String? reasonCode;
   final String policyVersion;
-  final String objectType;
+  final String? objectType;
   final bool appealable;
+  final int retentionDays;
   final DateTime createdAt;
   final String? objectId;
-  final String? reputationEffect;
-  final String? retentionClass;
-  final Map<String, dynamic> metadata;
+  final String reputationEffect;
+  final String retentionClass;
 
   factory ActivityEntry.fromJson(Map<String, dynamic> json) {
-    final rawMetadata = json['metadata'];
     return ActivityEntry(
-      id: json['id']?.toString() ?? '',
-      title: json['title']?.toString() ?? 'Account activity',
-      explanation: json['explanation']?.toString() ?? '',
-      result: json['result']?.toString() ?? 'recorded',
-      reasonCode: json['reasonCode']?.toString() ?? 'unavailable',
-      policyVersion: json['policyVersion']?.toString() ?? 'unknown',
-      objectType: json['objectType']?.toString() ?? 'account',
-      objectId: json['objectId']?.toString(),
-      reputationEffect: json['reputationEffect']?.toString(),
-      appealable: json['appealable'] as bool? ?? false,
-      retentionClass: json['retentionClass']?.toString(),
-      metadata: rawMetadata is Map
-          ? Map<String, dynamic>.from(rawMetadata)
-          : const <String, dynamic>{},
-      createdAt:
-          _parseDate(json['createdAt']) ??
-          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      id: _requiredString(json['id'], 'activity.id'),
+      category: _requiredEnumString(
+        json['category'],
+        'activity.category',
+        const <String>{
+          'account',
+          'content',
+          'social',
+          'reputation',
+          'moderation',
+          'appeals',
+          'privacy',
+          'rewards',
+        },
+      ),
+      source: _requiredEnumString(
+        json['source'],
+        'activity.source',
+        const <String>{'public_api', 'admin_api', 'jobs', 'workflow', 'system'},
+      ),
+      title: _requiredString(json['title'], 'activity.title'),
+      explanation: _requiredString(json['explanation'], 'activity.explanation'),
+      result: _requiredEnumString(
+        json['result'],
+        'activity.result',
+        const <String>{
+          'succeeded',
+          'failed',
+          'withheld',
+          'reversed',
+          'pending',
+        },
+      ),
+      reasonCode: _optionalString(json['reasonCode']),
+      policyVersion: _requiredString(
+        json['policyVersion'],
+        'activity.policyVersion',
+      ),
+      objectType: _optionalString(json['objectType']),
+      objectId: _optionalString(json['objectId']),
+      reputationEffect: _requiredEnumString(
+        json['reputationEffect'],
+        'activity.reputationEffect',
+        const <String>{'none', 'positive', 'negative', 'reversed', 'withheld'},
+      ),
+      appealable: _requiredBool(json['appealable'], 'activity.appealable'),
+      retentionClass: _requiredEnumString(
+        json['retentionClass'],
+        'activity.retentionClass',
+        const <String>{'ordinary', 'security', 'moderation'},
+      ),
+      retentionDays: _requiredRetentionDays(json['retentionDays']),
+      createdAt: _requiredDate(json['createdAt'], 'activity.createdAt'),
     );
   }
 }
@@ -170,10 +277,94 @@ class CursorPage<T> {
 
 List<String> _stringList(Object? value) {
   if (value is! List) {
-    return const <String>[];
+    throw const FormatException('Invalid private reputation response.');
   }
-  return value.map((entry) => entry.toString()).toList();
+  return value
+      .whereType<String>()
+      .where((entry) => entry.trim().isNotEmpty)
+      .toList(growable: false);
 }
 
+Map<String, Object> _reputationPillars(Object? value) {
+  if (value is! Map) {
+    throw const FormatException('Invalid private reputation response.');
+  }
+  const requiredPillars = <String>[
+    'accountability',
+    'contribution',
+    'conduct',
+    'sourcing',
+    'authenticity',
+    'reviewReliability',
+  ];
+  final pillars = <String, Object>{};
+  for (final pillar in requiredPillars) {
+    final score = value[pillar];
+    if (score is! num || !score.isFinite) {
+      throw const FormatException('Invalid private reputation response.');
+    }
+    pillars[pillar] = score;
+  }
+  return Map<String, Object>.unmodifiable(pillars);
+}
+
+String _requiredString(Object? value, String field) {
+  if (value is! String || value.trim().isEmpty) {
+    throw FormatException('Invalid $field.');
+  }
+  return value;
+}
+
+String? _optionalString(Object? value) =>
+    value is String && value.trim().isNotEmpty ? value : null;
+
+String _requiredEnumString(Object? value, String field, Set<String> allowed) {
+  final parsed = _requiredString(value, field);
+  if (!allowed.contains(parsed)) {
+    throw FormatException('Invalid $field.');
+  }
+  return parsed;
+}
+
+int _requiredBoundedInt(
+  Object? value,
+  String field, {
+  required int minimum,
+  required int maximum,
+}) {
+  if (value is! int || value < minimum || value > maximum) {
+    throw FormatException('Invalid $field.');
+  }
+  return value;
+}
+
+bool _requiredBool(Object? value, String field) {
+  if (value is! bool) {
+    throw FormatException('Invalid $field.');
+  }
+  return value;
+}
+
+int _requiredRetentionDays(Object? value) {
+  if (value is! int || !const <int>{90, 365, 730}.contains(value)) {
+    throw const FormatException('Invalid activity.retentionDays.');
+  }
+  return value;
+}
+
+DateTime _requiredDate(Object? value, String field) {
+  if (value is! String) {
+    throw FormatException('Invalid $field.');
+  }
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null) {
+    throw FormatException('Invalid $field.');
+  }
+  return parsed;
+}
+
+DateTime? _nullableDate(Object? value, String field) =>
+    value == null ? null : _requiredDate(value, field);
+
 DateTime? _parseDate(Object? value) =>
-    value == null ? null : DateTime.tryParse(value.toString());
+    value is String ? DateTime.tryParse(value) : null;

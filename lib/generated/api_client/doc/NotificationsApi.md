@@ -151,7 +151,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
 final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.notificationsDismiss(id, idempotencyKey);
@@ -166,7 +166,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -274,7 +274,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
 final NotificationPreferenceUpdate notificationPreferenceUpdate = ; // NotificationPreferenceUpdate |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.notificationsPreferencesReplace(notificationPreferenceUpdate, idempotencyKey);
@@ -289,7 +289,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **notificationPreferenceUpdate** | [**NotificationPreferenceUpdate**](NotificationPreferenceUpdate.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -317,7 +317,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
 final NotificationPreferenceUpdate notificationPreferenceUpdate = ; // NotificationPreferenceUpdate |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.notificationsPreferencesUpdate(notificationPreferenceUpdate, idempotencyKey);
@@ -332,7 +332,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **notificationPreferenceUpdate** | [**NotificationPreferenceUpdate**](NotificationPreferenceUpdate.md)|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -360,7 +360,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
 final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = idempotencyKey_example; // String | Caller-generated replay key. Completed retries return the stored response.
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.notificationsRead(id, idempotencyKey);
@@ -375,7 +375,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **idempotencyKey** | **String**| Caller-generated replay key. Completed retries return the stored response. | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 

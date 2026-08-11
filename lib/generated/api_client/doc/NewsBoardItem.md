@@ -14,5 +14,7 @@ Name | Type | Description | Notes
 **body** | **String** |  | [optional]
 **authorId** | **String** |  | [optional]
 **publishedAt** | [**DateTime**](DateTime.md) |  |
+**reactionCounts** | [**ReactionCounts**](ReactionCounts.md) |  |
+**viewerReaction** | **String** |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -12,8 +12,8 @@ void main() {
       // TODO
     });
 
-    // String communityDecision
-    test('to test the property `communityDecision`', () async {
+    // String reviewerPanelDecision
+    test('to test the property `reviewerPanelDecision`', () async {
       // TODO
     });
 

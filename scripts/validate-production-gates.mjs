@@ -50,6 +50,9 @@ if (phase === 'final') {
   for (const [gateName, record] of Object.entries(manifest.gates?.final ?? {})) {
     if (record.status !== 'COMPLETED') failures.push(`final.${gateName} is not COMPLETED`);
   }
+  for (const evidenceVariable of ['HYPERDRIVE_VERIFIED_MAIN', 'DATABASE_IDENTITY_VERIFIED', 'BUDGET_ENFORCEMENT_VERIFIED', 'AUTHENTICATED_ACCEPTANCE_PROVEN']) {
+    if (process.env[evidenceVariable] !== 'true') failures.push(`${evidenceVariable}=true is required from this exact deployment run`);
+  }
 }
 
 if (failures.length) {

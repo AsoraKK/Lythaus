@@ -48,7 +48,6 @@ function installWindow({ localEntries = {}, sessionEntries = {} } = {}) {
 beforeEach(() => {
   installWindow();
 });
-
 afterEach(() => {
   vi.resetModules();
   vi.restoreAllMocks();
@@ -56,16 +55,16 @@ afterEach(() => {
 
 describe('adminApi URL construction', () => {
   describe('resolveToAbsoluteUrl', () => {
-    it('returns absolute URLs unchanged', async () => {
+    it('normalizes the absolute API root to the admin dispatcher', async () => {
       window.localStorage.setItem('controlPanelAdminApiUrl', 'https://admin-api.lythaus.co/api');
 
       const { getAbsoluteAdminApiUrl } = await import('../api/adminApi.js');
-      expect(getAbsoluteAdminApiUrl()).toBe('https://admin-api.lythaus.co/api');
+      expect(getAbsoluteAdminApiUrl()).toBe('https://admin-api.lythaus.co/api/admin');
     });
 
     it('resolves relative paths against window.location.origin', async () => {
       const { getAbsoluteAdminApiUrl } = await import('../api/adminApi.js');
-      expect(getAbsoluteAdminApiUrl()).toBe(`${mockOrigin}/api/admin`);
+      expect(getAbsoluteAdminApiUrl()).toBe('https://admin-api.lythaus.co/api/admin');
     });
 
     it('handles relative paths from localStorage', async () => {
@@ -78,21 +77,23 @@ describe('adminApi URL construction', () => {
 
   describe('buildUrl via adminRequest', () => {
     it('builds the correct URL for moderation test', async () => {
-      const { adminRequest, setAdminToken } = await import('../api/adminApi.js');
-      setAdminToken('test-token');
+      const { adminRequest } = await import('../api/adminApi.js');
 
       let capturedUrl = null;
-      globalThis.fetch = vi.fn(async (url) => {
+      let capturedOptions = null;
+      globalThis.fetch = vi.fn(async (url, options) => {
         capturedUrl = url;
+        capturedOptions = options;
         return {
           ok: true,
           text: async () => '{"status":"ok"}'
         };
       });
 
-      await adminRequest('_admin/flags', { method: 'POST' });
+      await adminRequest('moderation/cases', { method: 'GET' });
 
-      expect(capturedUrl).toBe(`${mockOrigin}/api/admin/_admin/flags`);
+      expect(capturedUrl).toBe('https://admin-api.lythaus.co/api/admin/moderation/cases');
+      expect(capturedOptions.credentials).toBe('include');
     });
 
     it('handles paths without leading slash', async () => {
@@ -106,9 +107,9 @@ describe('adminApi URL construction', () => {
       });
 
       const { adminRequest } = await import('../api/adminApi.js');
-      await adminRequest('_admin/flags', { method: 'GET' });
+      await adminRequest('moderation/cases', { method: 'GET' });
 
-      expect(capturedUrl).toBe(`${mockOrigin}/api/admin/_admin/flags`);
+      expect(capturedUrl).toBe('https://admin-api.lythaus.co/api/admin/moderation/cases');
     });
 
     it('handles a base URL with trailing slash', async () => {
@@ -165,9 +166,9 @@ describe('adminApi URL construction', () => {
       });
 
       const { adminRequest } = await import('../api/adminApi.js');
-      await adminRequest('_admin/flags', { method: 'POST' });
+      await adminRequest('moderation/cases', { method: 'GET' });
 
-      expect(capturedUrl).toBe(`${directApiUrl}/_admin/flags`);
+      expect(capturedUrl).toBe(`${directApiUrl}/admin/moderation/cases`);
     });
   });
 
@@ -230,63 +231,5 @@ describe('adminApi URL construction', () => {
       expect(parsedUrl.searchParams.has('filter')).toBe(false);
       expect(parsedUrl.searchParams.has('page')).toBe(false);
     });
-  });
-});
-
-describe('adminApi token storage hardening', () => {
-  it('stores admin JWT in sessionStorage and clears legacy localStorage copies', async () => {
-    window.localStorage.setItem('controlPanelAdminToken', 'legacy-token');
-
-    const { setAdminToken, getAdminToken, getAdminTokenExpiry } = await import('../api/adminApi.js');
-    setAdminToken('header.payload.signature');
-
-    expect(window.localStorage.getItem('controlPanelAdminToken')).toBeNull();
-    expect(window.sessionStorage.getItem('controlPanelAdminToken')).toBe('header.payload.signature');
-    expect(getAdminToken()).toBe('header.payload.signature');
-    expect(getAdminTokenExpiry()).toBeInstanceOf(Date);
-  });
-
-  it('clears expired session tokens on read', async () => {
-    window.sessionStorage.setItem('controlPanelAdminToken', 'expired-token');
-    window.sessionStorage.setItem(
-      'controlPanelAdminTokenExpiresAt',
-      String(Date.now() - 1_000)
-    );
-
-    const { getAdminToken, getAdminTokenExpiry } = await import('../api/adminApi.js');
-
-    expect(getAdminToken()).toBe('');
-    expect(getAdminTokenExpiry()).toBeNull();
-    expect(window.sessionStorage.getItem('controlPanelAdminToken')).toBeNull();
-    expect(window.sessionStorage.getItem('controlPanelAdminTokenExpiresAt')).toBeNull();
-  });
-
-  it('caps stored session lifetime to 15 minutes even without a JWT exp claim', async () => {
-    const now = Date.now();
-    vi.spyOn(Date, 'now').mockReturnValue(now);
-
-    const { setAdminToken, getAdminTokenExpiry } = await import('../api/adminApi.js');
-    setAdminToken('not-a-jwt');
-
-    expect(getAdminTokenExpiry()?.getTime()).toBe(now + 15 * 60 * 1000);
-  });
-
-  it('clears the stored token after a 401 response', async () => {
-    const { adminRequest, setAdminToken, getAdminToken } = await import('../api/adminApi.js');
-    setAdminToken('test-token');
-
-    globalThis.fetch = vi.fn(async () => ({
-      ok: false,
-      status: 401,
-      statusText: 'Unauthorized',
-      text: async () => '{"message":"expired"}'
-    }));
-
-    await expect(
-      adminRequest('/_admin/flags', { method: 'GET' })
-    ).rejects.toMatchObject({ status: 401 });
-
-    expect(getAdminToken()).toBe('');
-    expect(window.sessionStorage.getItem('controlPanelAdminToken')).toBeNull();
   });
 });

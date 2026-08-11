@@ -9,13 +9,13 @@ import PageLayout from '../components/PageLayout.jsx';
 const USERS_GUIDE = {
   title: 'What this page does',
   summary:
-    'Users gives moderators direct account safety controls for search, disable, and enable workflows.',
+    'Users gives administrators direct account safety controls for search, suspension, and reactivation.',
   items: [
     'Search by user id, handle, or email to find the exact account.',
     'Review current status before taking action.',
-    'Disable requires a reason code and internal note.',
-    'Enable should only be used after remediation verification.',
-    'Keep notes concise, factual, and policy-linked.'
+    'Every status change requires a stable policy reason code.',
+    'Reactivate only after remediation verification.',
+    'Use locked only for the documented account-security workflow.'
   ],
   footnote:
     'User status actions are sensitive. Avoid ambiguous reason codes and ensure internal notes are decision-grade.'
@@ -29,7 +29,6 @@ function Users() {
 
   const [selected, setSelected] = useState(null);
   const [reasonCode, setReasonCode] = useState('');
-  const [note, setNote] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
 
@@ -43,8 +42,8 @@ function Users() {
     setLoading(true);
     setError('');
     try {
-      const response = await adminRequest('_admin/users/search', {
-        query: { q: trimmed, limit: 25 }
+      const response = await adminRequest('users/search', {
+        query: { q: trimmed }
       });
       setItems(response?.items || []);
       setSelected(null);
@@ -55,34 +54,27 @@ function Users() {
     }
   };
 
-  const runAction = async (action) => {
+  const runAction = async (status) => {
     if (!selected) {
       return;
     }
     const trimmedReason = reasonCode.trim();
-    const trimmedNote = note.trim();
-    if (action === 'disable') {
-      if (!trimmedReason) {
-        setActionMessage('Reason code is required.');
-        return;
-      }
-      if (!trimmedNote) {
-        setActionMessage('Internal note is required for disable.');
-        return;
-      }
+    const normalizedReason = trimmedReason.toUpperCase();
+    if (!/^[A-Z0-9_.:-]{2,80}$/.test(normalizedReason)) {
+      setActionMessage('A stable policy reason code is required.');
+      return;
     }
     setActionBusy(true);
     setActionMessage('');
     try {
-      await adminRequest(`_admin/users/${selected.userId}/${action}`, {
+      await adminRequest(`users/${selected.id}/status`, {
         method: 'POST',
         body: {
-          reasonCode: trimmedReason || undefined,
-          note: trimmedNote || undefined
+          status,
+          reasonCode: normalizedReason
         }
       });
       setReasonCode('');
-      setNote('');
       await runSearch({ preventDefault: () => {} });
     } catch (err) {
       setActionMessage(err.message || 'User update failed.');
@@ -94,7 +86,7 @@ function Users() {
   return (
     <PageLayout
       title="Users"
-      subtitle="Account safety operations for search, disable, and re-enable."
+      subtitle="Account safety operations for search, suspension, locking, and reactivation."
       guide={USERS_GUIDE}
     >
       <LythCard variant="panel">
@@ -118,13 +110,12 @@ function Users() {
             <span>Actions</span>
           </div>
           {items.map((user) => (
-            <div key={user.userId} className="data-row">
+            <div key={user.id} className="data-row">
               <span>
-                <strong>{user.displayName || user.handle || 'User'}</strong>
-                <span className="muted">{user.userId}</span>
-                {user.email ? <span className="muted">{user.email}</span> : null}
+                <strong>{user.display_name || user.handle || 'User'}</strong>
+                <span className="muted">{user.id}</span>
               </span>
-              <span>{formatDateTime(user.createdAt)}</span>
+              <span>{formatDateTime(user.created_at)}</span>
               <span>
                 <span className={`status-pill ${String(user.status).toLowerCase()}`}>
                   {user.status}
@@ -151,13 +142,13 @@ function Users() {
           <h2>Action</h2>
         </div>
         {!selected ? (
-          <div className="empty-state">Select a user to enable or disable.</div>
+          <div className="empty-state">Select a user to suspend or reactivate.</div>
         ) : (
           <>
             <div className="detail-list">
               <div>
                 <span className="detail-label">User id</span>
-                <span>{selected.userId}</span>
+                <span>{selected.id}</span>
               </div>
               <div>
                 <span className="detail-label">Status</span>
@@ -177,33 +168,23 @@ function Users() {
                   placeholder="ABUSE_PATTERN"
                 />
               </label>
-              <label className="field">
-                <span className="field-label">Internal note</span>
-                <LythInput
-                  as="textarea"
-                  rows={3}
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  placeholder="Required for disabling a user"
-                />
-              </label>
             </div>
             <div className="panel-actions">
               <LythButton
                 variant="danger"
                 type="button"
-                onClick={() => runAction('disable')}
+                onClick={() => runAction('suspended')}
                 disabled={actionBusy}
               >
-                Disable user
+                Suspend user
               </LythButton>
               <LythButton
                 variant="secondary"
                 type="button"
-                onClick={() => runAction('enable')}
+                onClick={() => runAction('active')}
                 disabled={actionBusy}
               >
-                Enable user
+                Reactivate user
               </LythButton>
             </div>
           </>

@@ -4,7 +4,6 @@ import Audit from './pages/Audit.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Appeals from './pages/Appeals.jsx';
 import Flags from './pages/Flags.jsx';
-import Invites from './pages/Invites.jsx';
 import Users from './pages/Users.jsx';
 import AppPreview from './pages/AppPreview.jsx';
 
@@ -30,7 +29,6 @@ function App() {
             <Route path="/flags" element={<Flags />} />
             <Route path="/appeals" element={<Appeals />} />
             <Route path="/users" element={<Users />} />
-            <Route path="/invites" element={<Invites />} />
             <Route path="/moderation" element={<Flags />} />
             <Route path="/audit" element={<Audit />} />
             <Route path="/preview" element={<AppPreview />} />

@@ -12,6 +12,9 @@ Method | HTTP request | Description
 [**privacyRequestCreate**](PrivacyApi.md#privacyrequestcreate) | **POST** /privacy/requests | Submit an asynchronous privacy request
 [**privacyRequestExportDownload**](PrivacyApi.md#privacyrequestexportdownload) | **GET** /privacy/requests/{requestId}/export | Download my completed privacy export
 [**privacyRequestStatus**](PrivacyApi.md#privacyrequeststatus) | **GET** /privacy/requests | Get the latest privacy request status
+[**storageUsageGet**](PrivacyApi.md#storageusageget) | **GET** /storage/usage | Get the authenticated user&#39;s private storage ledger
+[**usersMeRegionUpdate**](PrivacyApi.md#usersmeregionupdate) | **PUT** /users/me/region | Update private region and visibility preferences
+[**usersMeRetentionUpdate**](PrivacyApi.md#usersmeretentionupdate) | **PUT** /users/me/retention | Update a private content-retention rule
 
 
 # **privacyRequestCreate**
@@ -26,8 +29,8 @@ Records an export, account deletion, or rectification request and queues it for 
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPrivacyApi();
-final PrivacyRequestCreate privacyRequestCreate = ; // PrivacyRequestCreate |
-final String idempotencyKey = idempotencyKey_example; // String |
+final PrivacyRequestCreate privacyRequestCreate = {"requestType":"export"}; // PrivacyRequestCreate |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
     final response = api.privacyRequestCreate(privacyRequestCreate, idempotencyKey);
@@ -42,7 +45,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **privacyRequestCreate** | [**PrivacyRequestCreate**](PrivacyRequestCreate.md)|  |
- **idempotencyKey** | **String**|  | [optional]
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -141,6 +144,129 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **storageUsageGet**
+> StorageUsageGet200Response storageUsageGet()
+
+Get the authenticated user's private storage ledger
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPrivacyApi();
+
+try {
+    final response = api.storageUsageGet();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PrivacyApi->storageUsageGet: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**StorageUsageGet200Response**](StorageUsageGet200Response.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **usersMeRegionUpdate**
+> UsersMeRegionUpdate200Response usersMeRegionUpdate(idempotencyKey, usersMeRegionUpdateRequest)
+
+Update private region and visibility preferences
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPrivacyApi();
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+final UsersMeRegionUpdateRequest usersMeRegionUpdateRequest = ; // UsersMeRegionUpdateRequest |
+
+try {
+    final response = api.usersMeRegionUpdate(idempotencyKey, usersMeRegionUpdateRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PrivacyApi->usersMeRegionUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
+ **usersMeRegionUpdateRequest** | [**UsersMeRegionUpdateRequest**](UsersMeRegionUpdateRequest.md)|  |
+
+### Return type
+
+[**UsersMeRegionUpdate200Response**](UsersMeRegionUpdate200Response.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **usersMeRetentionUpdate**
+> UsersMeRetentionUpdate200Response usersMeRetentionUpdate(idempotencyKey, usersMeRetentionUpdateRequest)
+
+Update a private content-retention rule
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPrivacyApi();
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+final UsersMeRetentionUpdateRequest usersMeRetentionUpdateRequest = ; // UsersMeRetentionUpdateRequest |
+
+try {
+    final response = api.usersMeRetentionUpdate(idempotencyKey, usersMeRetentionUpdateRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PrivacyApi->usersMeRetentionUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
+ **usersMeRetentionUpdateRequest** | [**UsersMeRetentionUpdateRequest**](UsersMeRetentionUpdateRequest.md)|  |
+
+### Return type
+
+[**UsersMeRetentionUpdate200Response**](UsersMeRetentionUpdate200Response.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

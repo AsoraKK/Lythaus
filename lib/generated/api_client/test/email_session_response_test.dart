@@ -7,18 +7,26 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(EmailSessionResponse, () {
-    // bool success
-    test('to test the property `success`', () async {
+    // Short-lived JWT bearer token (15 minutes).
+    // String accessToken
+    test('to test the property `accessToken`', () async {
       // TODO
     });
 
-    // EmailSessionResponseData data
-    test('to test the property `data`', () async {
+    // Rotating opaque refresh token.
+    // String refreshToken
+    test('to test the property `refreshToken`', () async {
       // TODO
     });
 
-    // DateTime timestamp
-    test('to test the property `timestamp`', () async {
+    // String tokenType
+    test('to test the property `tokenType`', () async {
+      // TODO
+    });
+
+    // Access-token lifetime in seconds.
+    // int expiresIn
+    test('to test the property `expiresIn`', () async {
       // TODO
     });
 

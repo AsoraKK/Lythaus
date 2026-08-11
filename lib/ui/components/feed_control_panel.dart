@@ -76,7 +76,7 @@ class FeedControlPanel extends ConsumerWidget {
             ),
           if (onOpenAppeals != null)
             ListTile(
-              leading: const Icon(Icons.how_to_vote_outlined),
+              leading: const Icon(Icons.rule_folder_outlined),
               title: const Text('Appeals queue'),
               onTap: onOpenAppeals,
             ),

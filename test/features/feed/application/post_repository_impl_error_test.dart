@@ -130,7 +130,7 @@ void main() {
 
     test('returns success on 200', () async {
       when(
-        () => dio.patch<Map<String, dynamic>>(
+        () => dio.put<Map<String, dynamic>>(
           '/api/posts/p1',
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -142,7 +142,7 @@ void main() {
 
       final result = await repo.updatePost(
         postId: 'p1',
-        request: const UpdatePostRequest(text: 'updated'),
+        request: const UpdatePostRequest(text: 'updated', aiLabel: 'human'),
         token: 't',
       );
       expect(result, isA<CreatePostSuccess>());
@@ -150,7 +150,7 @@ void main() {
 
     test('returns error on unexpected status', () async {
       when(
-        () => dio.patch<Map<String, dynamic>>(
+        () => dio.put<Map<String, dynamic>>(
           '/api/posts/p1',
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -161,7 +161,7 @@ void main() {
 
       final result = await repo.updatePost(
         postId: 'p1',
-        request: const UpdatePostRequest(text: 'updated'),
+        request: const UpdatePostRequest(text: 'updated', aiLabel: 'human'),
         token: 't',
       );
       expect(result, isA<CreatePostError>());
@@ -169,7 +169,7 @@ void main() {
 
     test('returns error on generic exception', () async {
       when(
-        () => dio.patch<Map<String, dynamic>>(
+        () => dio.put<Map<String, dynamic>>(
           '/api/posts/p1',
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -178,7 +178,7 @@ void main() {
 
       final result = await repo.updatePost(
         postId: 'p1',
-        request: const UpdatePostRequest(text: 'updated'),
+        request: const UpdatePostRequest(text: 'updated', aiLabel: 'human'),
         token: 't',
       );
       expect(result, isA<CreatePostError>());
@@ -188,7 +188,7 @@ void main() {
   // ────── deletePost ──────
 
   group('deletePost', () {
-    test('returns true on 204', () async {
+    test('returns true on canonical 200 response', () async {
       when(
         () => dio.delete<dynamic>(
           '/api/posts/p1',
@@ -196,7 +196,8 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => Response<dynamic>(
-          statusCode: 204,
+          data: <String, dynamic>{'postId': 'p1', 'deleted': true},
+          statusCode: 200,
           requestOptions: RequestOptions(path: '/api/posts/p1'),
         ),
       );
@@ -204,7 +205,7 @@ void main() {
       expect(await repo.deletePost(postId: 'p1', token: 't'), isTrue);
     });
 
-    test('returns true on 200 with success map', () async {
+    test('returns false for non-canonical 200 response', () async {
       when(
         () => dio.delete<dynamic>(
           '/api/posts/p1',
@@ -218,10 +219,10 @@ void main() {
         ),
       );
 
-      expect(await repo.deletePost(postId: 'p1', token: 't'), isTrue);
+      expect(await repo.deletePost(postId: 'p1', token: 't'), isFalse);
     });
 
-    test('returns false on 200 with success=false', () async {
+    test('returns false when canonical deleted flag is false', () async {
       when(
         () => dio.delete<dynamic>(
           '/api/posts/p1',
@@ -229,7 +230,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => Response<dynamic>(
-          data: <String, dynamic>{'success': false},
+          data: <String, dynamic>{'postId': 'p1', 'deleted': false},
           statusCode: 200,
           requestOptions: RequestOptions(path: '/api/posts/p1'),
         ),
@@ -237,6 +238,26 @@ void main() {
 
       expect(await repo.deletePost(postId: 'p1', token: 't'), isFalse);
     });
+
+    test(
+      'returns false when canonical response postId does not match',
+      () async {
+        when(
+          () => dio.delete<dynamic>(
+            '/api/posts/p1',
+            options: any(named: 'options'),
+          ),
+        ).thenAnswer(
+          (_) async => Response<dynamic>(
+            data: <String, dynamic>{'postId': 'p2', 'deleted': true},
+            statusCode: 200,
+            requestOptions: RequestOptions(path: '/api/posts/p1'),
+          ),
+        );
+
+        expect(await repo.deletePost(postId: 'p1', token: 't'), isFalse);
+      },
+    );
 
     test('returns false on 200 with non-map data', () async {
       when(

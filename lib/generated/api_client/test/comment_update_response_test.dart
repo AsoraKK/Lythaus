@@ -17,6 +17,11 @@ void main() {
       // TODO
     });
 
+    // DeclaredCreationMode declaredCreationMode
+    test('to test the property `declaredCreationMode`', () async {
+      // TODO
+    });
+
     // String moderationState
     test('to test the property `moderationState`', () async {
       // TODO

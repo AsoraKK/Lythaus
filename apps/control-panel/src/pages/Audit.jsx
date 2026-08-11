@@ -7,7 +7,8 @@ import PageLayout from '../components/PageLayout.jsx';
 
 function formatActionLabel(entry) {
   const action = entry.action || 'UNKNOWN';
-  const reason = entry.reasonCode ? ` (${entry.reasonCode})` : '';
+  const reasonCode = entry.reason_code || entry.reasonCode;
+  const reason = reasonCode ? ` (${reasonCode})` : '';
   return `${action}${reason}`;
 }
 
@@ -35,9 +36,7 @@ function Audit() {
     setLoading(true);
     setError('');
     try {
-      const response = await adminRequest('_admin/audit', {
-        query: { limit: 50 }
-      });
+      const response = await adminRequest('audit');
       setItems(response?.items || []);
     } catch (err) {
       setError(err.message || 'Failed to load audit entries.');
@@ -79,17 +78,17 @@ function Audit() {
             <span>Target</span>
           </div>
           {items.map((entry) => (
-            <div key={entry.id || entry.correlationId} className="audit-row">
-              <span>{formatDateTime(entry.timestamp)}</span>
-              <span>{entry.actorId || '-'}</span>
+            <div key={entry.id || entry.correlation_id} className="audit-row">
+              <span>{formatDateTime(entry.created_at || entry.timestamp)}</span>
+              <span>{entry.actor_id || entry.actorId || '-'}</span>
               <span>
                 <strong>{formatActionLabel(entry)}</strong>
                 {entry.note ? <span className="muted">{entry.note}</span> : null}
               </span>
               <span>
-                <strong>{entry.subjectId || '-'}</strong>
-                {entry.targetType ? (
-                  <span className="muted">{entry.targetType}</span>
+                <strong>{entry.target_id || entry.subjectId || '-'}</strong>
+                {entry.target_type || entry.targetType ? (
+                  <span className="muted">{entry.target_type || entry.targetType}</span>
                 ) : null}
               </span>
             </div>

@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:lythaus_api_client/src/model/declared_creation_mode.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -14,6 +15,7 @@ part 'comment_update_response.g.dart';
 /// Properties:
 /// * [id]
 /// * [body]
+/// * [declaredCreationMode]
 /// * [moderationState]
 @BuiltValue()
 abstract class CommentUpdateResponse implements Built<CommentUpdateResponse, CommentUpdateResponseBuilder> {
@@ -22,6 +24,10 @@ abstract class CommentUpdateResponse implements Built<CommentUpdateResponse, Com
 
   @BuiltValueField(wireName: r'body')
   String get body;
+
+  @BuiltValueField(wireName: r'declaredCreationMode')
+  DeclaredCreationMode get declaredCreationMode;
+  // enum declaredCreationModeEnum {  human,  ai_assisted,  };
 
   @BuiltValueField(wireName: r'moderationState')
   CommentUpdateResponseModerationStateEnum get moderationState;
@@ -59,6 +65,11 @@ class _$CommentUpdateResponseSerializer implements PrimitiveSerializer<CommentUp
     yield serializers.serialize(
       object.body,
       specifiedType: const FullType(String),
+    );
+    yield r'declaredCreationMode';
+    yield serializers.serialize(
+      object.declaredCreationMode,
+      specifiedType: const FullType(DeclaredCreationMode),
     );
     yield r'moderationState';
     yield serializers.serialize(
@@ -101,6 +112,13 @@ class _$CommentUpdateResponseSerializer implements PrimitiveSerializer<CommentUp
             specifiedType: const FullType(String),
           ) as String;
           result.body = valueDes;
+          break;
+        case r'declaredCreationMode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DeclaredCreationMode),
+          ) as DeclaredCreationMode;
+          result.declaredCreationMode = valueDes;
           break;
         case r'moderationState':
           final valueDes = serializers.deserialize(

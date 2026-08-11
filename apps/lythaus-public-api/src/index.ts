@@ -1,13 +1,21 @@
 import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
-import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, TIER_POLICIES, normalizeUserTier, type ActivityCategory, type ActivityEventType, type CreatePostInput, type EmailDeliveryReference, type ReputationEffect, type TransactionalEmailProvider, type UserTier } from '@lythaus/contracts';
+import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, normalizeUserTier, type ActivityCategory, type ActivityEventType, type CreatePostInput, type EmailDeliveryReference, type ReputationEffect, type TransactionalEmailProvider, type UserTier } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
+import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
+import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
+import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
+import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
+import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
+import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
+import { readBoundedJson } from './request-body-runtime.ts';
 
 interface Env extends EnvBindings {
+  WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
   DB_APP_FRESH: HyperdriveBinding;
   MEDIA_QUARANTINE: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
   PRIVATE_EXPORTS: NonNullable<EnvBindings['PRIVATE_EXPORTS']>;
@@ -28,63 +36,6 @@ interface EmailAuthInput {
   email?: string;
   password?: string;
   turnstileToken?: string;
-}
-
-const PUBLIC_ERROR_CODES = new Set([
-  'account_exists', 'account_unavailable', 'admin_public_label_declaration_mismatch',
-  'ai_assisted_character_limit_exceeded', 'ai_generated_public_content_blocked',
-  'appeal_not_allowed', 'appeal_not_found', 'appeal_recusal_not_allowed',
-  'appeal_statement_required', 'appeal_vote_invalid', 'appeal_vote_locked',
-  'appeal_vote_not_allowed', 'authentication_not_configured', 'authentication_required',
-  'case_id_required', 'checksum_required', 'comment_not_found',
-  'custom_feed_limit_reached', 'custom_feed_not_found', 'email_delivery_not_configured',
-  'email_provider_mode_invalid', 'email_verification_required', 'export_not_configured',
-  'export_cooldown_active', 'export_not_found', 'export_unavailable', 'feature_disabled',
-  'idempotency_in_progress',
-  'idempotency_key_conflict', 'idempotency_key_required', 'invalid_accountability_name',
-  'invalid_activity_category', 'invalid_bio', 'invalid_block', 'invalid_bookmark',
-  'invalid_comment', 'invalid_comment_parent', 'invalid_credentials', 'invalid_cursor',
-  'invalid_custom_feed', 'invalid_custom_feed_rule', 'invalid_custom_feed_rules',
-  'invalid_display_name', 'invalid_email', 'invalid_flag', 'invalid_follow',
-  'invalid_geo_scope', 'invalid_idempotency_key', 'invalid_json', 'invalid_mute',
-  'invalid_notification_device', 'invalid_page_limit', 'invalid_password', 'invalid_post',
-  'invalid_post_visibility', 'invalid_privacy_request', 'invalid_profile_visibility',
-  'invalid_reaction', 'invalid_retention_content_type', 'invalid_retention_period',
-  'invalid_visibility_level', 'invalid_countryCode', 'invalid_regionCode',
-  'invalid_municipalityCode', 'media_signing_not_configured', 'media_size_exceeded',
-  'news_board_not_entitled', 'notification_device_not_found',
-  'notification_device_not_recorded', 'notification_not_found',
-  'notification_preference_required', 'post_not_available', 'post_not_found',
-  'profile_not_found', 'provider_unavailable', 'rate_limit_exceeded',
-  'refresh_token_invalid', 'refresh_token_required', 'refresh_token_reuse',
-  'relationship_change_limit_reached', 'request_too_large', 'reset_token_invalid',
-  'reward_already_redeemed', 'reward_locked',
-  'reward_not_found', 'self_reaction_not_allowed', 'social_interaction_not_allowed',
-  'storage_quota_exceeded', 'storage_quota_not_configured', 'turnstile_failed',
-  'turnstile_required', 'turnstile_unavailable', 'unsupported_media_type',
-  'upload_checksum_invalid', 'upload_object_invalid', 'upload_session_invalid',
-  'user_not_found', 'userinfo_unavailable', 'verification_token_invalid',
-]);
-
-function publicError(error: unknown): { exposedCode: string; internalCode: string; status: number } {
-  const internalCode = error instanceof Error ? error.message : 'non_error_thrown';
-  const expected = PUBLIC_ERROR_CODES.has(internalCode)
-    || /^(post|comment|reaction|appeal|flag|media)_daily_limit_reached$/.test(internalCode)
-    || /^email_delivery_failed_[1-5][0-9]{2}$/.test(internalCode);
-  const exposedCode = expected ? internalCode : 'request_failed';
-  const status = exposedCode === 'request_failed' ? 500
-    : ['authentication_required', 'invalid_credentials', 'refresh_token_invalid', 'refresh_token_reuse'].includes(exposedCode) ? 401
-      : ['news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed'].includes(exposedCode) ? 403
-        : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
-          : ['idempotency_key_conflict', 'idempotency_in_progress', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed'].includes(exposedCode) ? 409
-            : exposedCode === 'request_too_large' ? 413
-              : exposedCode === 'rate_limit_exceeded'
-                  || exposedCode.endsWith('_daily_limit_reached')
-                  || exposedCode === 'relationship_change_limit_reached'
-                  || exposedCode === 'export_cooldown_active' ? 429
-                : /^email_delivery_failed_/.test(exposedCode) ? 502
-                  : exposedCode.endsWith('_unavailable') || exposedCode.endsWith('_not_configured') ? 503 : 400;
-  return { exposedCode, internalCode, status };
 }
 
 interface ActivityDescriptor {
@@ -135,12 +86,6 @@ async function writeActivity(
   });
 }
 
-function normalizeEmail(value: string): string {
-  const email = value.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320) throw new Error('invalid_email');
-  return email;
-}
-
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -174,19 +119,24 @@ async function enforceDailyAction(
   userId: string,
   action: 'post' | 'comment' | 'reaction' | 'appeal' | 'flag' | 'media',
 ): Promise<void> {
-  const definitions = {
-    post: { table: 'content.posts', column: 'author_id', limit: PLATFORM_SAFETY_LIMITS.dailyPosts },
-    comment: { table: 'content.comments', column: 'author_id', limit: PLATFORM_SAFETY_LIMITS.dailyComments },
-    reaction: { table: 'social.reactions', column: 'user_id', limit: PLATFORM_SAFETY_LIMITS.dailyReactions },
-    appeal: { table: 'moderation.appeals', column: 'appellant_id', limit: PLATFORM_SAFETY_LIMITS.dailyAppeals },
-    flag: { table: 'moderation.content_flags', column: 'reporter_id', limit: PLATFORM_SAFETY_LIMITS.dailyFlags },
-    media: { table: 'media.upload_sessions', column: 'user_id', limit: PLATFORM_SAFETY_LIMITS.dailyMediaUploads },
+  const limits = {
+    post: PLATFORM_SAFETY_LIMITS.dailyPosts,
+    comment: PLATFORM_SAFETY_LIMITS.dailyComments,
+    reaction: PLATFORM_SAFETY_LIMITS.dailyReactions,
+    appeal: PLATFORM_SAFETY_LIMITS.dailyAppeals,
+    flag: PLATFORM_SAFETY_LIMITS.dailyFlags,
+    media: PLATFORM_SAFETY_LIMITS.dailyMediaUploads,
   } as const;
-  const definition = definitions[action];
-  const result = await query<{ count: string }>(env.DB_APP_FRESH,
-    `SELECT count(*)::text AS count FROM ${definition.table}
-     WHERE ${definition.column} = $1 AND created_at >= date_trunc('day', now())`, [userId]);
-  if (Number(result.rows[0]?.count ?? 0) >= definition.limit) throw new Error(`${action}_daily_limit_reached`);
+  const scope = `daily-action:${action}`;
+  const subjectHash = await sha256Hex(`${scope}:${userId}`);
+  const result = await query(env.DB_APP_FRESH,
+    `INSERT INTO system.rate_limit_windows (scope, subject_hash, window_started_at, request_count, expires_at)
+     VALUES ($1, $2, date_trunc('day', now()), 1, date_trunc('day', now()) + interval '2 days')
+     ON CONFLICT (scope, subject_hash, window_started_at)
+     DO UPDATE SET request_count = system.rate_limit_windows.request_count + 1
+     WHERE system.rate_limit_windows.request_count < $3
+     RETURNING request_count`, [scope, subjectHash, limits[action]]);
+  if (result.rowCount !== 1) throw new Error(`${action}_daily_limit_reached`);
 }
 
 async function enforceRelationshipChangeLimit(
@@ -209,13 +159,6 @@ async function enforceRelationshipChangeLimit(
   }
 }
 
-function requireAuthSecrets(env: Env): { pepper: string; encryptionKey: string; hmacKey: string; privateKey: string; keyId: string } {
-  if (!env.AUTH_PASSWORD_PEPPER_V1 || !env.PII_ENCRYPTION_KEY_V1 || !env.PII_HMAC_KEY_V1 || !env.JWT_PRIVATE_KEY || !env.JWT_KEY_ID) {
-    throw new Error('authentication_not_configured');
-  }
-  return { pepper: env.AUTH_PASSWORD_PEPPER_V1, encryptionKey: env.PII_ENCRYPTION_KEY_V1, hmacKey: env.PII_HMAC_KEY_V1, privateKey: env.JWT_PRIVATE_KEY, keyId: env.JWT_KEY_ID };
-}
-
 function hashConfiguredPassword(env: Env, password: string, pepper: string): PasswordHash {
   return hashPassword(password, pepper, {
     fallbackToScrypt: env.PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK === 'true',
@@ -224,8 +167,7 @@ function hashConfiguredPassword(env: Env, password: string, pepper: string): Pas
 }
 
 async function verifyTurnstile(env: Env, token: unknown): Promise<void> {
-  if (env.TURNSTILE_REQUIRED !== 'true') return;
-  if (!env.TURNSTILE_SECRET_KEY || typeof token !== 'string' || token.length < 10) throw new Error('turnstile_required');
+  if (!requiresTurnstileVerification(env.TURNSTILE_REQUIRED, env.TURNSTILE_SECRET_KEY, token)) return;
   const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -236,21 +178,30 @@ async function verifyTurnstile(env: Env, token: unknown): Promise<void> {
   if (result.success !== true) throw new Error('turnstile_failed');
 }
 
-async function issueSession(env: Env, userId: string, roles: string[] = []): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+async function issueSession(
+  env: Env,
+  userId: string,
+  roles: string[] = [],
+  onSessionCreated?: (client: DatabaseClient) => Promise<void>,
+): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
   const secrets = requireAuthSecrets(env);
-  const account = await query<{ status: string; token_version: number }>(env.DB_APP_FRESH,
-    `SELECT status, token_version FROM identity.users WHERE id = $1`, [userId]);
-  if (!account.rows[0] || account.rows[0].status !== 'active') throw new Error('account_unavailable');
-  const tokenVersion = Number(account.rows[0].token_version);
-  const refreshToken = randomToken(32);
-  const refreshHash = hashResetToken(refreshToken);
-  const familyId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    await client.query(`INSERT INTO identity.refresh_token_families (id, user_id) VALUES ($1, $2)`, [familyId, userId]);
-    await client.query(`INSERT INTO identity.auth_sessions (id, user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, decode($4, 'base64'), now() + interval '30 days')`, [uuidv7(), userId, familyId, refreshHash]);
-  });
-  const accessToken = await signAccessToken({ userId, roles, tokenVersion, privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
-  return { accessToken, refreshToken, expiresIn: 900 };
+  return issueAuthSession({
+    loadAccount: async (subjectId) => {
+      const account = await query<{ status: string; token_version: number }>(env.DB_APP_FRESH,
+        `SELECT status, token_version FROM identity.users WHERE id = $1`, [subjectId]);
+      const row = account.rows[0];
+      return row ? { status: row.status, tokenVersion: Number(row.token_version) } : undefined;
+    },
+    createRefreshFamilyAndSession: async (input) => transaction(env.DB_APP_FRESH, async (client) => {
+      await client.query(`INSERT INTO identity.refresh_token_families (id, user_id) VALUES ($1, $2)`, [input.familyId, input.userId]);
+      await client.query(`INSERT INTO identity.auth_sessions (id, user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, decode($4, 'base64'), now() + ($5::integer * interval '1 day'))`, [input.sessionId, input.userId, input.familyId, input.refreshTokenHash, input.refreshSessionDays]);
+      if (onSessionCreated) await onSessionCreated(client);
+    }),
+    randomToken,
+    hashRefreshToken: hashResetToken,
+    newId: uuidv7,
+    signAccessToken: ({ userId: subjectId, roles: subjectRoles, tokenVersion }) => signAccessToken({ userId: subjectId, roles: [...subjectRoles], tokenVersion, privateKeyPem: secrets.privateKey, keyId: secrets.keyId }),
+  }, { userId, roles });
 }
 
 async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string; text: string }): Promise<EmailDeliveryReference> {
@@ -319,10 +270,9 @@ async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'passw
 
 async function emailAuth(request: Request, env: Env): Promise<Response> {
   const input = await readJson<EmailAuthInput>(request, 16 * 1024);
-  const email = normalizeEmail(input.email ?? '');
-  const password = input.password ?? '';
-  if (input.mode !== 'resend_verification' && (password.length < 12 || password.length > 128)) throw new Error('invalid_password');
-  if (input.mode === 'register') await verifyTurnstile(env, input.turnstileToken);
+  const attempt = prepareEmailAuthAttempt(input);
+  const { email, password, mode } = attempt;
+  if (mode === 'register') await verifyTurnstile(env, attempt.turnstileToken);
   const secrets = requireAuthSecrets(env);
   const lookup = hmacLookup(email, secrets.hmacKey);
   const existing = await query<{ id: string; status: string; password_hash: PasswordHash; verified_at: string | null }>(env.DB_APP_FRESH,
@@ -330,7 +280,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
        FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id
       WHERE c.email_lookup_hmac = decode($1, 'base64')`, [lookup]);
   const account = existing.rows[0];
-  if (input.mode === 'resend_verification') {
+  if (mode === 'resend_verification') {
     if (!account || account.verified_at) return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     const verificationToken = randomToken(32);
     const sourceEventId = uuidv7();
@@ -349,7 +299,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
-  if ((input.mode ?? 'login') === 'register') {
+  if (mode === 'register') {
     if (account) throw new Error('account_exists');
     const userId = uuidv7();
     const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
@@ -381,7 +331,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
       [JSON.stringify(upgradedHash), account.id]);
   }
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
+  const tokens = await issueSession(env, account.id, [], async (client) => {
     await client.query(
       `INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_login', '{}'::jsonb)`,
       [uuidv7(), account.id]);
@@ -391,14 +341,12 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
       retentionClass: 'security', metadata: { authenticationMethod: 'email' },
     });
   });
-  const tokens = await issueSession(env, account.id);
   return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
 
 async function verifyEmail(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  const token = url.searchParams.get('token') ?? (await readJson<{ token?: string }>(request, 8 * 1024)).token;
-  if (!token || token.length < 32) throw new Error('verification_token_invalid');
+  const token = requireToken(url.searchParams.get('token') ?? (await readJson<{ token?: string }>(request, 8 * 1024)).token, 'verification_token_invalid');
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
     const found = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.email_verification_tokens WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now()`, [hashResetToken(token)]);
@@ -424,48 +372,63 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
 
 async function refreshSession(request: Request, env: Env): Promise<Response> {
   const input = await readJson<{ refreshToken?: string; refresh_token?: string }>(request, 16 * 1024);
-  const refreshToken = input.refreshToken ?? input.refresh_token;
-  if (!refreshToken) throw new Error('refresh_token_required');
-  requireAuthSecrets(env);
-  const tokenHash = hashResetToken(refreshToken);
-  const current = await query<{ session_id: string; user_id: string; family_id: string; status: string }>(env.DB_APP_FRESH,
-    `SELECT s.id AS session_id, s.user_id, s.refresh_family_id AS family_id, u.status
-       FROM identity.auth_sessions s JOIN identity.refresh_token_families f ON f.id = s.refresh_family_id
-       JOIN identity.users u ON u.id = s.user_id
-      WHERE s.refresh_token_hash = decode($1, 'base64') AND s.revoked_at IS NULL AND s.expires_at > now() AND f.revoked_at IS NULL`, [tokenHash]);
-  const session = current.rows[0];
-  if (!session || session.status !== 'active') throw new Error('refresh_token_invalid');
-  const replacement = randomToken(32);
-  const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    const revoked = await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, [session.session_id]);
-    if (revoked.rowCount !== 1) {
-      await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE id = $1`, [session.family_id]);
-      throw new Error('refresh_token_reuse');
-    }
-    await client.query(`UPDATE identity.refresh_token_families SET last_used_at = now() WHERE id = $1`, [session.family_id]);
-    await client.query(`INSERT INTO identity.auth_sessions (id, user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, decode($4, 'base64'), now() + interval '30 days')`, [uuidv7(), session.user_id, session.family_id, hashResetToken(replacement)]);
-    await writeActivity(client, request, { userId: session.user_id }, sourceEventId, {
-      eventType: 'account.session_refreshed', category: 'account', title: 'Your session was refreshed',
-      explanation: 'A valid session was rotated and the previous refresh token was revoked.',
-      objectType: 'account', objectId: session.user_id, retentionClass: 'security',
-      metadata: { sessionAction: 'refresh' },
-    });
-  });
+  const refreshToken = requireRefreshToken(input);
   const secrets = requireAuthSecrets(env);
-  const tokenVersion = await query<{ token_version: number }>(env.DB_APP_FRESH,
-    `SELECT token_version FROM identity.users WHERE id = $1`, [session.user_id]);
-  const accessToken = await signAccessToken({ userId: session.user_id, tokenVersion: Number(tokenVersion.rows[0]?.token_version ?? 1), privateKeyPem: secrets.privateKey, keyId: secrets.keyId });
-  return privateResponse(request, env, { accessToken, refreshToken: replacement, expiresIn: 900, tokenType: 'Bearer' });
+  const sourceEventId = uuidv7();
+  const tokens = await rotateAuthSession({
+    findRefreshSession: async (tokenHash) => {
+      const current = await query<{ session_id: string; user_id: string; family_id: string; status: string; token_state: 'active' | 'revoked' | 'expired' | 'family_revoked' }>(env.DB_APP_FRESH,
+        `SELECT s.id AS session_id, s.user_id, s.refresh_family_id AS family_id, u.status,
+                CASE
+                  WHEN s.revoked_at IS NOT NULL THEN 'revoked'
+                  WHEN s.expires_at <= now() THEN 'expired'
+                  WHEN f.revoked_at IS NOT NULL THEN 'family_revoked'
+                  ELSE 'active'
+                END AS token_state
+           FROM identity.auth_sessions s JOIN identity.refresh_token_families f ON f.id = s.refresh_family_id
+           JOIN identity.users u ON u.id = s.user_id
+          WHERE s.refresh_token_hash = decode($1, 'base64')`, [tokenHash]);
+      const session = current.rows[0];
+      return session ? { sessionId: session.session_id, userId: session.user_id, familyId: session.family_id, status: session.status, tokenState: session.token_state } : undefined;
+    },
+    rotatePresentedSession: async (rotation) => transaction(env.DB_APP_FRESH, async (client) => {
+      const revoked = await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, [rotation.sessionId]);
+      if (revoked.rowCount !== 1) return false;
+      await client.query(`UPDATE identity.refresh_token_families SET last_used_at = now() WHERE id = $1`, [rotation.familyId]);
+      await client.query(`INSERT INTO identity.auth_sessions (id, user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, decode($4, 'base64'), now() + ($5::integer * interval '1 day'))`, [rotation.replacementSessionId, rotation.userId, rotation.familyId, rotation.replacementTokenHash, rotation.refreshSessionDays]);
+      await writeActivity(client, request, { userId: rotation.userId }, sourceEventId, {
+        eventType: 'account.session_refreshed', category: 'account', title: 'Your session was refreshed',
+        explanation: 'A valid session was rotated and the previous refresh token was revoked.',
+        objectType: 'account', objectId: rotation.userId, retentionClass: 'security',
+        metadata: { sessionAction: 'refresh' },
+      });
+      return true;
+    }),
+    revokeRefreshFamily: async (familyId) => {
+      await query(env.DB_APP_FRESH, `UPDATE identity.refresh_token_families SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, [familyId]);
+    },
+    loadActiveTokenVersion: async (subjectId: string) => {
+      const tokenVersion = await query<{ token_version: number }>(env.DB_APP_FRESH,
+        `SELECT token_version FROM identity.users WHERE id = $1 AND status = 'active'`, [subjectId]);
+      return tokenVersion.rows[0]?.token_version;
+    },
+    randomToken,
+    hashRefreshToken: hashResetToken,
+    newId: uuidv7,
+    signAccessToken: ({ userId: subjectId, roles, tokenVersion }) => signAccessToken({ userId: subjectId, roles: [...roles], tokenVersion, privateKeyPem: secrets.privateKey, keyId: secrets.keyId }),
+  }, refreshToken);
+  return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
 
 async function logout(request: Request, env: Env): Promise<Response> {
   const user = await principal(request, env);
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
-    await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
-    await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [user.userId]);
-    await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [user.userId]);
+    await revokeAllAuthSessions({
+      revokeAllSessions: async (subjectId) => { await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
+      revokeAllRefreshFamilies: async (subjectId) => { await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
+      bumpTokenVersion: async (subjectId) => { await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [subjectId]); },
+    }, user.userId);
     await writeActivity(client, request, user, sourceEventId, {
       eventType: 'account.logout_succeeded', category: 'account', title: 'You signed out',
       explanation: 'Your active sessions were revoked.', objectType: 'account', objectId: user.userId,
@@ -478,7 +441,7 @@ async function logout(request: Request, env: Env): Promise<Response> {
 async function requestPasswordReset(request: Request, env: Env): Promise<Response> {
   const input = await readJson<{ email?: string; turnstileToken?: string }>(request, 8 * 1024);
   await verifyTurnstile(env, input.turnstileToken);
-  const email = normalizeEmail(input.email ?? '');
+  const email = normalizeEmailAddress(input.email);
   if (!env.PII_HMAC_KEY_V1) throw new Error('authentication_not_configured');
   const lookup = hmacLookup(email, env.PII_HMAC_KEY_V1);
   const account = await query<{ id: string }>(env.DB_APP_FRESH,
@@ -506,10 +469,8 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
 async function completePasswordReset(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const input = await readJson<{ token?: string; password?: string }>(request, 16 * 1024);
-  const token = url.searchParams.get('token') ?? input.token;
-  const password = input.password ?? '';
-  if (!token || token.length < 32) throw new Error('reset_token_invalid');
-  if (password.length < 12 || password.length > 128) throw new Error('invalid_password');
+  const token = requireToken(url.searchParams.get('token') ?? input.token, 'reset_token_invalid');
+  const password = requireResetPassword(input.password);
   const secrets = requireAuthSecrets(env);
   const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   const sourceEventId = uuidv7();
@@ -518,9 +479,11 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
     if (!found.rows[0]) throw new Error('reset_token_invalid');
     await client.query(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
     await client.query(`UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`, [JSON.stringify(passwordHash), found.rows[0].user_id]);
-    await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [found.rows[0].user_id]);
-    await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [found.rows[0].user_id]);
-    await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [found.rows[0].user_id]);
+    await revokeAllAuthSessions({
+      revokeAllSessions: async (subjectId) => { await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
+      revokeAllRefreshFamilies: async (subjectId) => { await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
+      bumpTokenVersion: async (subjectId) => { await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [subjectId]); },
+    }, found.rows[0].user_id);
     await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'password_reset_completed', '{}'::jsonb)`, [uuidv7(), found.rows[0].user_id]);
     await writeActivity(client, request, { userId: found.rows[0].user_id }, sourceEventId, {
       eventType: 'account.password_reset', category: 'account', title: 'You reset your password',
@@ -569,26 +532,129 @@ async function principal(request: Request, env: Env): Promise<Principal> {
   }
   const account = await query<{ status: string; token_version: number }>(env.DB_APP_FRESH,
     `SELECT status, token_version FROM identity.users WHERE id = $1`, [subject.userId]);
-  if (!account.rows[0] || account.rows[0].status !== 'active' || Number(account.rows[0].token_version) !== subject.tokenVersion) {
+  if (!isCurrentActivePrincipal(account.rows[0], subject.tokenVersion)) {
     throw new Error('authentication_required');
   }
   return subject;
 }
 
 async function readJson<T>(request: Request, maxBytes: number): Promise<T> {
-  const length = Number(request.headers.get('content-length') ?? 0);
-  if (length > maxBytes) throw new Error('request_too_large');
-  const bytes = await request.arrayBuffer();
-  if (bytes.byteLength > maxBytes) throw new Error('request_too_large');
-  try {
-    return JSON.parse(new TextDecoder().decode(bytes)) as T;
-  } catch {
-    throw new Error('invalid_json');
+  return readBoundedJson<T>(request, maxBytes);
+}
+
+function feedResponse(request: Request, env: Env, body: unknown, surface: FeedSurface, hasViewer: boolean): Response {
+  const plan = feedResponsePlan(surface, hasViewer);
+  const result = plan.privateResponse ? privateResponse(request, env, body) : response(request, env, body);
+  result.headers.set('cache-control', plan.cacheControl);
+  return result;
+}
+
+interface FeedResponseCandidate {
+  authorId: string;
+  visibility: string;
+  moderationState: string;
+  publicLabel: string;
+  feedItemDeleted: boolean;
+  feedBlocked: boolean;
+  feedMuted: boolean;
+  feedFollowsAuthor: boolean;
+}
+
+function assertFeedResponseCandidates(items: readonly FeedResponseCandidate[], viewer?: Principal): void {
+  for (const item of items) {
+    assertFeedItemEligibility({
+      authorId: item.authorId,
+      visibility: item.visibility,
+      moderationState: item.moderationState,
+      publicLabel: item.publicLabel,
+      deleted: item.feedItemDeleted,
+      viewer: viewer ? {
+        userId: viewer.userId,
+        followsAuthor: item.feedFollowsAuthor,
+        blocked: item.feedBlocked,
+        muted: item.feedMuted,
+      } : undefined,
+    });
   }
 }
 
+function presentFeedItems<T extends FeedResponseCandidate>(items: readonly T[]): Array<Omit<T, keyof FeedResponseCandidate>> {
+  return items.map(({ feedItemDeleted: _deleted, feedBlocked: _blocked, feedMuted: _muted, feedFollowsAuthor: _follows, ...item }) => item) as Array<Omit<T, keyof FeedResponseCandidate>>;
+}
+
+interface CommentFeedResponseCandidate {
+  publicLabel: unknown;
+  feedPostVisibility: string;
+  feedPostModerationState: string;
+  feedPostDeleted: boolean;
+  feedViewerIsPostAuthor: boolean;
+  feedFollowsPostAuthor: boolean;
+  feedBlockedCommentAuthor: boolean;
+  feedMutedCommentAuthor: boolean;
+}
+
+function assertCommentFeedResponseCandidates(items: readonly CommentFeedResponseCandidate[], viewer?: Principal): void {
+  for (const item of items) {
+    assertCommentFeedItemEligibility({
+      postVisibility: item.feedPostVisibility,
+      postModerationState: item.feedPostModerationState,
+      postDeleted: item.feedPostDeleted,
+      publicLabel: item.publicLabel,
+      viewer: viewer ? {
+        isPostAuthor: item.feedViewerIsPostAuthor,
+        followsPostAuthor: item.feedFollowsPostAuthor,
+        blockedCommentAuthor: item.feedBlockedCommentAuthor,
+        mutedCommentAuthor: item.feedMutedCommentAuthor,
+      } : undefined,
+    });
+  }
+}
+
+function presentCommentFeedItems<T extends CommentFeedResponseCandidate>(items: readonly T[]): Array<Omit<T, keyof CommentFeedResponseCandidate>> {
+  return items.map(({ feedPostVisibility: _visibility, feedPostModerationState: _moderationState, feedPostDeleted: _deleted, feedViewerIsPostAuthor: _isPostAuthor, feedFollowsPostAuthor: _follows, feedBlockedCommentAuthor: _blocked, feedMutedCommentAuthor: _muted, ...item }) => item) as Array<Omit<T, keyof CommentFeedResponseCandidate>>;
+}
+
+interface NewsBoardResponseCandidate {
+  feedPublicationPublished: boolean;
+  feedPostBacked: boolean;
+  feedPostAuthorId: string | null;
+  feedPostVisibility: unknown;
+  feedPostModerationState: unknown;
+  feedPostDeleted: boolean;
+  feedPostPublicLabel: unknown;
+  feedPostBlocked: boolean;
+  feedPostMuted: boolean;
+  feedPostFollowsAuthor: boolean;
+}
+
+function assertNewsBoardResponseCandidates(items: readonly NewsBoardResponseCandidate[], viewer: Principal): void {
+  for (const item of items) {
+    assertNewsBoardItemEligibility({
+      publicationPublished: item.feedPublicationPublished,
+      postBacked: item.feedPostBacked,
+      post: item.feedPostBacked ? {
+        authorId: item.feedPostAuthorId ?? '',
+        visibility: item.feedPostVisibility,
+        moderationState: item.feedPostModerationState,
+        publicLabel: item.feedPostPublicLabel,
+        deleted: item.feedPostDeleted,
+        viewer: {
+          userId: viewer.userId,
+          followsAuthor: item.feedPostFollowsAuthor,
+          blocked: item.feedPostBlocked,
+          muted: item.feedPostMuted,
+        },
+      } : undefined,
+    });
+  }
+}
+
+function presentNewsBoardItems<T extends NewsBoardResponseCandidate>(items: readonly T[]): Array<Omit<T, keyof NewsBoardResponseCandidate>> {
+  return items.map(({ feedPublicationPublished: _published, feedPostBacked: _postBacked, feedPostAuthorId: _authorId, feedPostVisibility: _visibility, feedPostModerationState: _moderationState, feedPostDeleted: _deleted, feedPostPublicLabel: _publicLabel, feedPostBlocked: _blocked, feedPostMuted: _muted, feedPostFollowsAuthor: _follows, ...item }) => item) as Array<Omit<T, keyof NewsBoardResponseCandidate>>;
+}
+
 type IdempotencyRecord = {
-  state: 'processing' | 'completed';
+  state: 'processing' | 'completed' | 'outcome_unknown';
   requestHash: string;
   status?: number;
   body?: unknown;
@@ -613,10 +679,13 @@ async function idempotentMutation(
   actorId: string,
   scope: string,
   work: () => Promise<Response>,
+  requiredKey = false,
 ): Promise<Response> {
-  const key = request.headers.get('idempotency-key')?.trim();
-  if (!key) return work();
-  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(key)) throw new Error('invalid_idempotency_key');
+  const key = idempotencyKey(request.headers.get('idempotency-key'));
+  if (!key) {
+    if (requiredKey) throw new Error('idempotency_key_required');
+    return work();
+  }
   const requestHash = await idempotencyRequestHash(request);
   const claimed = await query<{ response: IdempotencyRecord }>(env.DB_APP_FRESH,
     `INSERT INTO system.idempotency_keys (scope, key, actor_id, response)
@@ -627,65 +696,90 @@ async function idempotentMutation(
     const existing = await query<{ actor_id: string | null; response: IdempotencyRecord; created_at: string }>(env.DB_APP_FRESH,
       `SELECT actor_id, response, created_at FROM system.idempotency_keys WHERE scope = $1 AND key = $2`, [scope, key]);
     const record = existing.rows[0];
-    if (!record || record.actor_id !== actorId) throw new Error('idempotency_key_conflict');
-    if (record.response.requestHash !== requestHash) throw new Error('idempotency_key_conflict');
-    if (record.response.state === 'completed') {
-      return privateResponse(request, env, record.response.body ?? null, { status: record.response.status ?? 200 });
+    const plan = planExistingIdempotencyRecord({
+      record: record ? { actorId: record.actor_id, response: record.response, createdAt: record.created_at } : undefined,
+      actorId,
+      requestHash,
+    });
+    if (plan.action === 'replay') {
+      return privateResponse(request, env, plan.body, { status: plan.status });
     }
-    const reclaimed = await query(env.DB_APP_FRESH,
+    if (plan.action === 'in_progress') throw new Error('idempotency_in_progress');
+    if (plan.action === 'outcome_unknown') throw new Error('idempotency_outcome_unknown');
+    const quarantined = await query(env.DB_APP_FRESH,
       `UPDATE system.idempotency_keys
-          SET created_at = now(), response = $4::jsonb
+          SET response = $4::jsonb
         WHERE scope = $1 AND key = $2 AND actor_id = $3
           AND response ->> 'state' = 'processing'
           AND created_at < now() - interval '5 minutes'`,
-      [scope, key, actorId, JSON.stringify({ state: 'processing', requestHash })]);
-    if (reclaimed.rowCount === 0) throw new Error('idempotency_in_progress');
+      [scope, key, actorId, JSON.stringify({ state: 'outcome_unknown', requestHash })]);
+    if (quarantined.rowCount === 0) throw new Error('idempotency_in_progress');
+    throw new Error('idempotency_outcome_unknown');
   }
-  try {
-    const result = await work();
-    const rawBody = await result.clone().text();
-    const body = rawBody ? JSON.parse(rawBody) : null;
+  const quarantine = async (): Promise<void> => {
     await query(env.DB_APP_FRESH,
-      `UPDATE system.idempotency_keys SET response = $4::jsonb WHERE scope = $1 AND key = $2 AND actor_id = $3`,
-      [scope, key, actorId, JSON.stringify({ state: 'completed', requestHash, status: result.status, body })]);
-    return result;
-  } catch (error) {
-    await query(env.DB_APP_FRESH,
-      `DELETE FROM system.idempotency_keys WHERE scope = $1 AND key = $2 AND actor_id = $3`, [scope, key, actorId]).catch(() => undefined);
-    throw error;
-  }
+      `UPDATE system.idempotency_keys
+          SET response = $4::jsonb
+        WHERE scope = $1 AND key = $2 AND actor_id = $3
+          AND response ->> 'requestHash' = $5
+          AND response ->> 'state' = 'processing'`,
+      [scope, key, actorId, JSON.stringify({ state: 'outcome_unknown', requestHash }), requestHash]);
+  };
+  return runClaimedIdempotentWork({
+    work,
+    finalize: async (result) => {
+      const rawBody = await result.clone().text();
+      const body = rawBody ? JSON.parse(rawBody) : null;
+      const finalized = await query(env.DB_APP_FRESH,
+        `UPDATE system.idempotency_keys
+            SET response = $4::jsonb
+          WHERE scope = $1 AND key = $2 AND actor_id = $3
+            AND response ->> 'requestHash' = $5
+            AND response ->> 'state' IN ('processing', 'outcome_unknown')`,
+        [scope, key, actorId, JSON.stringify({ state: 'completed', requestHash, status: result.status, body }), requestHash]);
+      if (finalized.rowCount !== 1) throw new Error('idempotency_finalize_failed');
+    },
+    quarantine,
+    errorResponse: (classified) => {
+      const id = correlationId(request);
+      logEvent({
+        service: 'lythaus-public-api',
+        correlationId: id,
+        errorCode: classified.exposedCode,
+        internalErrorCode: classified.internalCode,
+        route: new URL(request.url).pathname,
+      });
+      return privateResponse(request, env, { error: classified.exposedCode, correlationId: id }, { status: classified.status });
+    },
+  });
 }
 
 async function createPost(request: Request, env: Env, user: Principal): Promise<Response> {
   await enforceDailyAction(env, user.userId, 'post');
   const input = await readJson<CreatePostInput>(request, 64 * 1024);
   const declaration = enforceContentDeclaration(input);
-  if (!['global', 'country', 'province', 'municipality', 'community', 'none'].includes(input.geoScope)) {
-    throw new Error('invalid_geo_scope');
-  }
+  const publication = planPostPublication(input.geoScope, input.placeId);
   const postId = uuidv7();
   const eventId = uuidv7();
   const createdAt = new Date().toISOString();
+  const bodyHash = await sha256Hex(declaration.body);
   await transaction(env.DB_APP_FRESH, async (client) => {
     await client.query(
-      `INSERT INTO content.posts (id, author_id, body, declared_creation_mode, geo_scope, place_id, moderation_state, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, 'under_review', $7, $7)`,
-      [postId, user.userId, declaration.body, declaration.declaredCreationMode, input.geoScope, input.placeId ?? null, createdAt]
+      `INSERT INTO content.posts (id, author_id, body, declared_creation_mode, geo_scope, place_id, moderation_state, created_at, updated_at, moderation_source_event_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9)`,
+      [postId, user.userId, declaration.body, declaration.declaredCreationMode, publication.geoScope, publication.placeId ?? null, publication.moderationState, createdAt, eventId]
     );
-    if (input.placeId && input.geoScope !== 'none' && input.geoScope !== 'global') {
-      const precision = input.geoScope === 'country' ? 'country'
-        : input.geoScope === 'province' ? 'province'
-          : input.geoScope === 'municipality' ? 'municipality' : 'community';
+    if (publication.locationPrecision) {
       await client.query(
         `INSERT INTO content.post_locations (post_id, place_id, location_source, location_precision)
          VALUES ($1, $2, 'user_selected', $3)`,
-        [postId, input.placeId, precision]
+        [postId, publication.placeId, publication.locationPrecision]
       );
     }
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'content.post.created', 'post', $2, $3, $4::jsonb)`,
-      [eventId, postId, user.userId, JSON.stringify({ postId, declaredCreationMode: declaration.declaredCreationMode })]
+      [eventId, postId, user.userId, JSON.stringify({ postId, sourceEventId: eventId, declaredCreationMode: declaration.declaredCreationMode, bodyHash })]
     );
     await writeActivity(client, request, user, eventId, {
       eventType: 'content.post_submitted',
@@ -696,7 +790,7 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
       objectType: 'post',
       objectId: postId,
       reputationEffect: declaration.declaredCreationMode === 'human' ? 'withheld' : 'none',
-      metadata: { contentType: 'post', creationMode: declaration.declaredCreationMode, visibility: 'public', moderationState: 'under_review' },
+      metadata: { contentType: 'post', creationMode: declaration.declaredCreationMode, visibility: 'public', moderationState: publication.moderationState },
     });
     await writeActivity(client, request, user, eventId, {
       eventType: 'content.declaration_selected',
@@ -868,7 +962,7 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
        LEFT JOIN trust.reputation_profiles r ON r.user_id = u.id
        LEFT JOIN identity.user_entitlements entitlement ON entitlement.user_id = u.id
       WHERE u.id = $1 AND u.status = 'active'
-        AND ($3::boolean OR COALESCE(p.public_visibility, true))`, [userId, REPUTATION_POLICY.version, privateView]);
+        AND ($3::boolean OR (COALESCE(p.moderation_state, 'allowed') = 'allowed' AND COALESCE(p.public_visibility, true)))`, [userId, REPUTATION_POLICY.version, privateView]);
   const profile = result.rows[0] as {
     id: string;
     display_name: string;
@@ -977,21 +1071,58 @@ async function updateProfile(request: Request, env: Env, user: Principal): Promi
     throw new Error('invalid_accountability_name');
   }
   if (accountabilityName !== undefined && !env.PII_ENCRYPTION_KEY_V1) throw new Error('authentication_not_configured');
-  const sourceEventId = uuidv7();
-  const accountabilitySourceEventId = accountabilityName === undefined ? undefined : uuidv7();
-  const encryptedAccountability = accountabilityName
-    ? await encryptField(JSON.stringify({ accountabilityName }), env.PII_ENCRYPTION_KEY_V1!, 'v1')
-    : null;
   await transaction(env.DB_APP_FRESH, async (client) => {
-    if (displayName !== undefined) await client.query('UPDATE identity.users SET display_name = $1, updated_at = now() WHERE id = $2', [displayName, user.userId]);
-    if (bio !== undefined) await client.query(`INSERT INTO social.profiles (user_id, bio) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET bio = EXCLUDED.bio, updated_at = now()`, [user.userId, bio]);
-    if (visibility !== undefined) await client.query(
+    const currentUser = await client.query<{ display_name: string }>(
+      `SELECT display_name FROM identity.users WHERE id = $1 FOR UPDATE`,
+      [user.userId],
+    );
+    if (!currentUser.rows[0]) throw new Error('user_not_found');
+    const currentProfile = await client.query<{ bio: string; trust_passport_visibility: string }>(
+      `SELECT bio, trust_passport_visibility FROM social.profiles WHERE user_id = $1 FOR UPDATE`,
+      [user.userId],
+    );
+    const currentPrivate = await client.query<{ encrypted_payload: string; encryption_key_version: string }>(
+      `SELECT convert_from(encrypted_payload, 'utf8') AS encrypted_payload, encryption_key_version
+         FROM social.profile_private_fields WHERE user_id = $1 FOR UPDATE`,
+      [user.userId],
+    );
+    let currentAccountabilityName: string | null = null;
+    if (currentPrivate.rows[0]) {
+      const plaintext = await decryptField({
+        ciphertext: currentPrivate.rows[0].encrypted_payload,
+        encryptionKeyVersion: currentPrivate.rows[0].encryption_key_version,
+      }, env.PII_ENCRYPTION_KEY_V1!);
+      const parsed = JSON.parse(plaintext) as { accountabilityName?: unknown };
+      if (typeof parsed.accountabilityName !== 'string') throw new Error('encrypted_field_invalid');
+      currentAccountabilityName = parsed.accountabilityName;
+    }
+    const changedDisplayName = displayName !== undefined && displayName !== currentUser.rows[0].display_name;
+    const changedBio = bio !== undefined && bio !== (currentProfile.rows[0]?.bio ?? '');
+    const changedVisibility = visibility !== undefined
+      && visibility !== (currentProfile.rows[0]?.trust_passport_visibility ?? 'public_minimal');
+    const changedAccountability = accountabilityName !== undefined && accountabilityName !== currentAccountabilityName;
+    if (!changedDisplayName && !changedBio && !changedVisibility && !changedAccountability) return;
+    const sourceEventId = uuidv7();
+    const accountabilitySourceEventId = changedAccountability ? uuidv7() : undefined;
+    const encryptedAccountability = changedAccountability && accountabilityName
+      ? await encryptField(JSON.stringify({ accountabilityName }), env.PII_ENCRYPTION_KEY_V1!, 'v1')
+      : null;
+    if (changedDisplayName) await client.query('UPDATE identity.users SET display_name = $1, updated_at = now() WHERE id = $2', [displayName, user.userId]);
+    if (changedDisplayName || changedBio) await client.query(
+      `INSERT INTO social.profiles (user_id, bio, moderation_source_event_id, moderation_state)
+       VALUES ($1, COALESCE($2, ''), $3, 'under_review')
+       ON CONFLICT (user_id) DO UPDATE SET bio = COALESCE($2, social.profiles.bio),
+         moderation_source_event_id = EXCLUDED.moderation_source_event_id,
+         moderation_state = 'under_review', updated_at = now()`,
+      [user.userId, bio ?? null, sourceEventId],
+    );
+    if (changedVisibility) await client.query(
       `INSERT INTO social.profiles (user_id, public_visibility, trust_passport_visibility)
        VALUES ($1, $2, $3)
        ON CONFLICT (user_id) DO UPDATE SET public_visibility = EXCLUDED.public_visibility,
          trust_passport_visibility = EXCLUDED.trust_passport_visibility, updated_at = now()`,
       [user.userId, visibility !== 'private', visibility]);
-    if (accountabilityName !== undefined) {
+    if (changedAccountability) {
       if (encryptedAccountability) {
         await client.query(
           `INSERT INTO social.profile_private_fields (user_id, encrypted_payload, encryption_key_version)
@@ -1037,15 +1168,15 @@ async function updateProfile(request: Request, env: Env, user: Principal): Promi
         metadata: { changedField: 'accountability_name' },
       });
     }
-    if (displayName !== undefined || bio !== undefined) {
+    if (changedDisplayName || changedBio) {
       await client.query(
         `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
          VALUES ($1, 'content.profile.updated', 'profile', $2, $2, $3::jsonb)`,
-        [sourceEventId, user.userId, JSON.stringify({ userId: user.userId, changedFields: [displayName !== undefined ? 'displayName' : null, bio !== undefined ? 'bio' : null].filter(Boolean) })]);
+        [sourceEventId, user.userId, JSON.stringify({ userId: user.userId, sourceEventId, changedFields: [changedDisplayName ? 'displayName' : null, changedBio ? 'bio' : null].filter(Boolean) })]);
     }
-    const changedFields = [displayName !== undefined ? 'display_name' : null, bio !== undefined ? 'bio' : null, visibility !== undefined ? 'visibility' : null].filter((value): value is string => Boolean(value));
+    const changedFields = [changedDisplayName ? 'display_name' : null, changedBio ? 'bio' : null, changedVisibility ? 'visibility' : null].filter((value): value is string => Boolean(value));
     if (changedFields.length > 0) await writeActivity(client, request, user, sourceEventId, {
-      eventType: visibility !== undefined && changedFields.length === 1 ? 'profile.visibility_changed' : displayName !== undefined ? 'profile.display_name_changed' : 'profile.bio_changed',
+      eventType: changedVisibility && changedFields.length === 1 ? 'profile.visibility_changed' : changedDisplayName ? 'profile.display_name_changed' : 'profile.bio_changed',
       category: 'account',
       title: 'You updated your profile',
       explanation: 'Your selected profile fields were updated. Sensitive values are not copied into this log.',
@@ -1170,61 +1301,70 @@ async function removeFollow(request: Request, env: Env, user: Principal, followe
 }
 
 async function setBlock(request: Request, env: Env, user: Principal, targetUserId: string, blocked: boolean): Promise<Response> {
-  if (!targetUserId || targetUserId === user.userId) throw new Error('invalid_block');
+  const change = planRelationshipMutation('block', user.userId, targetUserId, blocked);
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    const target = await client.query(`SELECT 1 FROM identity.users WHERE id = $1 AND status = 'active'`, [targetUserId]);
+  const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    const target = await client.query(`SELECT 1 FROM identity.users WHERE id = $1 AND status = 'active'`, [change.targetUserId]);
     if (target.rowCount !== 1) throw new Error('user_not_found');
     if (blocked) {
-      await client.query(`INSERT INTO social.blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [user.userId, targetUserId]);
-      await client.query(`DELETE FROM social.follows WHERE (follower_id = $1 AND followed_id = $2) OR (follower_id = $2 AND followed_id = $1)`, [user.userId, targetUserId]);
+      const inserted = await client.query(`INSERT INTO social.blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING blocked_id`, [user.userId, change.targetUserId]);
+      if (inserted.rowCount === 0) return false;
+      if (change.removeFollowEdges) await client.query(`DELETE FROM social.follows WHERE (follower_id = $1 AND followed_id = $2) OR (follower_id = $2 AND followed_id = $1)`, [user.userId, change.targetUserId]);
     } else {
-      await client.query(`DELETE FROM social.blocks WHERE blocker_id = $1 AND blocked_id = $2`, [user.userId, targetUserId]);
+      const removed = await client.query(`DELETE FROM social.blocks WHERE blocker_id = $1 AND blocked_id = $2 RETURNING blocked_id`, [user.userId, change.targetUserId]);
+      if (removed.rowCount === 0) return false;
     }
     await writeActivity(client, request, user, sourceEventId, {
-      eventType: blocked ? 'social.block_created' : 'social.block_removed', category: 'social',
+      eventType: change.activityEvent, category: 'social',
       title: blocked ? 'You blocked a user' : 'You unblocked a user',
       explanation: blocked ? 'The user can no longer interact with you through normal social surfaces.' : 'The block relationship was removed.',
-      objectType: 'user', objectId: targetUserId, metadata: { relationshipType: 'block', targetType: 'user' },
+      objectType: 'user', objectId: change.targetUserId, metadata: { relationshipType: 'block', targetType: 'user' },
     });
+    return true;
   });
-  return privateResponse(request, env, { userId: targetUserId, blocked });
+  return privateResponse(request, env, { userId: change.targetUserId, blocked, changed });
 }
 
 async function setMute(request: Request, env: Env, user: Principal, targetUserId: string, muted: boolean): Promise<Response> {
-  if (!targetUserId || targetUserId === user.userId) throw new Error('invalid_mute');
+  const change = planRelationshipMutation('mute', user.userId, targetUserId, muted);
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    const target = await client.query(`SELECT 1 FROM identity.users WHERE id = $1 AND status = 'active'`, [targetUserId]);
+  const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    const target = await client.query(`SELECT 1 FROM identity.users WHERE id = $1 AND status = 'active'`, [change.targetUserId]);
     if (target.rowCount !== 1) throw new Error('user_not_found');
-    if (muted) await client.query(`INSERT INTO social.mutes (muter_id, muted_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [user.userId, targetUserId]);
-    else await client.query(`DELETE FROM social.mutes WHERE muter_id = $1 AND muted_id = $2`, [user.userId, targetUserId]);
+    const mutation = muted
+      ? await client.query(`INSERT INTO social.mutes (muter_id, muted_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING muted_id`, [user.userId, change.targetUserId])
+      : await client.query(`DELETE FROM social.mutes WHERE muter_id = $1 AND muted_id = $2 RETURNING muted_id`, [user.userId, change.targetUserId]);
+    if (mutation.rowCount === 0) return false;
     await writeActivity(client, request, user, sourceEventId, {
-      eventType: muted ? 'social.mute_created' : 'social.mute_removed', category: 'social',
+      eventType: change.activityEvent, category: 'social',
       title: muted ? 'You muted a user' : 'You unmuted a user',
       explanation: muted ? 'Content from this user is suppressed from your personalised surfaces.' : 'The mute relationship was removed.',
-      objectType: 'user', objectId: targetUserId, metadata: { relationshipType: 'mute', targetType: 'user' },
+      objectType: 'user', objectId: change.targetUserId, metadata: { relationshipType: 'mute', targetType: 'user' },
     });
+    return true;
   });
-  return privateResponse(request, env, { userId: targetUserId, muted });
+  return privateResponse(request, env, { userId: change.targetUserId, muted, changed });
 }
 
 async function setBookmark(request: Request, env: Env, user: Principal, postId: string, bookmarked: boolean): Promise<Response> {
   if (!postId) throw new Error('invalid_bookmark');
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
+  const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    let mutation;
     if (bookmarked) {
       await visiblePostForInteraction(client, postId, user.userId);
-      await client.query(`INSERT INTO social.bookmarks (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [user.userId, postId]);
-    } else await client.query(`DELETE FROM social.bookmarks WHERE user_id = $1 AND post_id = $2`, [user.userId, postId]);
+      mutation = await client.query(`INSERT INTO social.bookmarks (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING post_id`, [user.userId, postId]);
+    } else mutation = await client.query(`DELETE FROM social.bookmarks WHERE user_id = $1 AND post_id = $2 RETURNING post_id`, [user.userId, postId]);
+    if (mutation.rowCount === 0) return false;
     await writeActivity(client, request, user, sourceEventId, {
       eventType: bookmarked ? 'content.bookmark_added' : 'content.bookmark_removed', category: 'content',
       title: bookmarked ? 'You bookmarked a post' : 'You removed a bookmark',
       explanation: bookmarked ? 'The post was added to your private bookmarks.' : 'The post was removed from your private bookmarks.',
       objectType: 'post', objectId: postId, metadata: { contentType: 'post' },
     });
+    return true;
   });
-  return privateResponse(request, env, { postId, bookmarked });
+  return privateResponse(request, env, { postId, bookmarked, changed });
 }
 
 async function createComment(request: Request, env: Env, user: Principal, postId: string): Promise<Response> {
@@ -1235,28 +1375,39 @@ async function createComment(request: Request, env: Env, user: Principal, postId
     declaredCreationMode: input.declaredCreationMode,
   });
   if (declaration.body.length > 20_000) throw new Error('invalid_comment');
+  const comment = planCommentCreation(input.parentId);
   const commentId = uuidv7();
   const sourceEventId = uuidv7();
+  const bodyHash = await sha256Hex(declaration.body);
   let depth = 0;
   await transaction(env.DB_APP_FRESH, async (client) => {
     await visiblePostForInteraction(client, postId, user.userId);
-    if (input.parentId) {
+    if (comment.isReply) {
       const parent = await client.query<{ depth: number }>(
-        `SELECT depth FROM content.comments
-          WHERE id = $1 AND post_id = $2 AND deleted_at IS NULL AND moderation_state <> 'blocked'`,
-        [input.parentId, postId],
+        `SELECT parent.depth FROM content.comments parent
+          WHERE parent.id = $1 AND parent.post_id = $2
+            AND parent.deleted_at IS NULL AND parent.moderation_state = 'allowed'
+            AND NOT EXISTS (
+              SELECT 1 FROM social.blocks block
+               WHERE (block.blocker_id = $3 AND block.blocked_id = parent.author_id)
+                  OR (block.blocker_id = parent.author_id AND block.blocked_id = $3)
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM social.mutes mute
+               WHERE mute.muter_id = $3 AND mute.muted_id = parent.author_id
+            )`,
+        [comment.parentId, postId, user.userId],
       );
-      if (!parent.rows[0] || Number(parent.rows[0].depth) !== 0) throw new Error('invalid_comment_parent');
-      depth = 1;
+      depth = replyDepth(parent.rows[0]);
     }
-    await client.query(`INSERT INTO content.comments (id, post_id, author_id, parent_id, body, depth, declared_creation_mode) VALUES ($1, $2, $3, $4, $5, $6, $7)`, [commentId, postId, user.userId, input.parentId ?? null, declaration.body, depth, declaration.declaredCreationMode]);
-    await client.query(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload) VALUES ($1, 'content.comment.created', 'comment', $2, $3, $4::jsonb)`, [sourceEventId, commentId, user.userId, JSON.stringify({ postId, commentId, parentId: input.parentId ?? null, declaredCreationMode: declaration.declaredCreationMode })]);
+    await client.query(`INSERT INTO content.comments (id, post_id, author_id, parent_id, body, depth, declared_creation_mode, moderation_source_event_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [commentId, postId, user.userId, comment.parentId, declaration.body, depth, declaration.declaredCreationMode, sourceEventId]);
+    await client.query(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload) VALUES ($1, 'content.comment.created', 'comment', $2, $3, $4::jsonb)`, [sourceEventId, commentId, user.userId, JSON.stringify({ postId, commentId, parentId: comment.parentId, sourceEventId, declaredCreationMode: declaration.declaredCreationMode, bodyHash })]);
     await writeActivity(client, request, user, sourceEventId, {
-      eventType: input.parentId ? 'content.reply_created' : 'content.comment_created', category: 'content',
-      title: input.parentId ? 'You submitted a reply' : 'You submitted a comment',
+      eventType: comment.activityEvent, category: 'content',
+      title: comment.isReply ? 'You submitted a reply' : 'You submitted a comment',
       explanation: 'Your contribution was accepted for moderation and publication processing.', result: 'pending',
       objectType: 'comment', objectId: commentId, reputationEffect: declaration.declaredCreationMode === 'human' ? 'withheld' : 'none',
-      metadata: { contentType: input.parentId ? 'reply' : 'comment', creationMode: declaration.declaredCreationMode, moderationState: 'under_review' },
+      metadata: { contentType: comment.contentType, creationMode: declaration.declaredCreationMode, moderationState: comment.moderationState },
     });
     await writeActivity(client, request, user, sourceEventId, {
       eventType: 'content.declaration_selected', category: 'content',
@@ -1266,65 +1417,82 @@ async function createComment(request: Request, env: Env, user: Principal, postId
         : 'You disclosed AI assistance; this contribution is not eligible for authorship reputation.',
       objectType: 'comment', objectId: commentId,
       reputationEffect: declaration.declaredCreationMode === 'human' ? 'withheld' : 'none',
-      metadata: { contentType: input.parentId ? 'reply' : 'comment', creationMode: declaration.declaredCreationMode },
+      metadata: { contentType: comment.contentType, creationMode: declaration.declaredCreationMode },
     });
   });
-  return privateResponse(request, env, { id: commentId, commentId, postId, parentId: input.parentId ?? null, body: declaration.body, depth, declaredCreationMode: declaration.declaredCreationMode, moderationState: 'under_review' }, { status: 201 });
+  return privateResponse(request, env, { id: commentId, commentId, postId, parentId: comment.parentId, body: declaration.body, depth, declaredCreationMode: declaration.declaredCreationMode, moderationState: comment.moderationState }, { status: 201 });
 }
 
 async function updatePost(request: Request, env: Env, user: Principal, postId: string): Promise<Response> {
   const input = await readJson<{ body?: string; declaredCreationMode?: unknown; visibility?: string }>(request, 64 * 1024);
   const sourceEventId = uuidv7();
   const updated = await transaction(env.DB_APP_FRESH, async (client) => {
-    const current = await client.query<{ body: string; declared_creation_mode: string; visibility: string }>(
-      `SELECT body, declared_creation_mode, visibility FROM content.posts
+    const current = await client.query<{ body: string; declared_creation_mode: string; visibility: string; moderation_state: string }>(
+      `SELECT body, declared_creation_mode, visibility, moderation_state FROM content.posts
         WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL FOR UPDATE`, [postId, user.userId]);
     if (!current.rows[0]) throw new Error('post_not_found');
+    const revision = planPostRevision({
+      visibility: input.visibility ?? current.rows[0].visibility,
+      bodyProvided: input.body !== undefined,
+      declaredCreationMode: input.declaredCreationMode,
+    });
     const declaration = enforceContentDeclaration({
-      body: input.body ?? current.rows[0].body,
+      body: revision.bodyUpdated ? input.body : current.rows[0].body,
       declaredCreationMode: input.declaredCreationMode ?? current.rows[0].declared_creation_mode,
     });
-    const visibility = input.visibility ?? current.rows[0].visibility;
-    if (!['public', 'followers', 'private'].includes(visibility)) throw new Error('invalid_post_visibility');
+    const changed = declaration.body !== current.rows[0].body
+      || declaration.declaredCreationMode !== current.rows[0].declared_creation_mode
+      || revision.visibility !== current.rows[0].visibility;
+    if (!changed) {
+      return {
+        id: postId,
+        body: current.rows[0].body,
+        declaredCreationMode: current.rows[0].declared_creation_mode,
+        visibility: current.rows[0].visibility,
+        moderationState: current.rows[0].moderation_state,
+      };
+    }
+    const bodyHash = await sha256Hex(declaration.body);
     await client.query(
       `UPDATE content.posts
           SET body = $1, declared_creation_mode = $2, visibility = $3,
-              moderation_state = 'under_review', published_at = NULL, updated_at = now()
-        WHERE id = $4 AND author_id = $5`,
-      [declaration.body, declaration.declaredCreationMode, visibility, postId, user.userId],
+              moderation_state = $4, published_at = NULL, moderation_source_event_id = $5, updated_at = now()
+        WHERE id = $6 AND author_id = $7`,
+      [declaration.body, declaration.declaredCreationMode, revision.visibility, revision.moderationState, sourceEventId, postId, user.userId],
     );
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'content.post.updated', 'post', $2, $3, $4::jsonb)`,
-      [sourceEventId, postId, user.userId, JSON.stringify({ postId, declaredCreationMode: declaration.declaredCreationMode })],
+      [sourceEventId, postId, user.userId, JSON.stringify({ postId, sourceEventId, declaredCreationMode: declaration.declaredCreationMode, bodyHash })],
     );
     await writeActivity(client, request, user, sourceEventId, {
       eventType: 'content.post_edited', category: 'content', title: 'You edited a post',
       explanation: 'Your edited post returned to publication review.', result: 'pending',
       objectType: 'post', objectId: postId, reputationEffect: 'withheld',
-      metadata: { contentType: 'post', creationMode: declaration.declaredCreationMode, visibility, moderationState: 'under_review' },
+      metadata: { contentType: 'post', creationMode: declaration.declaredCreationMode, visibility: revision.visibility, moderationState: revision.moderationState },
     });
-    return { id: postId, body: declaration.body, declaredCreationMode: declaration.declaredCreationMode, visibility, moderationState: 'under_review' };
+    return { id: postId, body: declaration.body, declaredCreationMode: declaration.declaredCreationMode, visibility: revision.visibility, moderationState: revision.moderationState };
   });
   return privateResponse(request, env, { post: updated });
 }
 
 async function deletePost(request: Request, env: Env, user: Principal, postId: string): Promise<Response> {
+  const deletion = contentDeletionPlan('post');
   const sourceEventId = uuidv7();
   const deleted = await transaction(env.DB_APP_FRESH, async (client) => {
     const result = await client.query(
-      `UPDATE content.posts SET deleted_at = now(), visibility = 'private', published_at = NULL, updated_at = now()
-        WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL RETURNING id`, [postId, user.userId]);
+      `UPDATE content.posts SET deleted_at = now(), visibility = $1, published_at = NULL, updated_at = now()
+        WHERE id = $2 AND author_id = $3 AND deleted_at IS NULL RETURNING id`, [deletion.visibility, postId, user.userId]);
     if (result.rowCount === 0) return false;
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
-       VALUES ($1, 'content.post.deleted', 'post', $2, $3, $4::jsonb)`,
-      [sourceEventId, postId, user.userId, JSON.stringify({ postId })],
+       VALUES ($1, $2, 'post', $3, $4, $5::jsonb)`,
+      [sourceEventId, deletion.outboxEventType, postId, user.userId, JSON.stringify({ postId })],
     );
     await writeActivity(client, request, user, sourceEventId, {
-      eventType: 'content.post_deleted', category: 'content', title: 'You deleted a post',
+      eventType: deletion.activityEvent, category: 'content', title: 'You deleted a post',
       explanation: 'The post was removed from public and personalised surfaces and entered the deletion-retention window.',
-      objectType: 'post', objectId: postId, metadata: { contentType: 'post', visibility: 'private' },
+      objectType: 'post', objectId: postId, metadata: { contentType: deletion.contentType, visibility: deletion.visibility },
     });
     return true;
   });
@@ -1333,33 +1501,57 @@ async function deletePost(request: Request, env: Env, user: Principal, postId: s
 
 async function updateComment(request: Request, env: Env, user: Principal, commentId: string): Promise<Response> {
   const input = await readJson<{ body?: string; declaredCreationMode?: unknown }>(request, 32 * 1024);
-  const declaration = enforceContentDeclaration({ body: input.body, declaredCreationMode: input.declaredCreationMode });
-  if (declaration.body.length > 20_000) throw new Error('invalid_comment');
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
+  const updated = await transaction(env.DB_APP_FRESH, async (client) => {
+    const current = await client.query<{ post_id: string; body: string; declared_creation_mode: unknown; moderation_state: string }>(
+      `SELECT post_id, body, declared_creation_mode, moderation_state FROM content.comments
+        WHERE id = $1 AND author_id = $2 AND deleted_at IS NULL FOR UPDATE`,
+      [commentId, user.userId],
+    );
+    if (!current.rows[0]) throw new Error('comment_not_found');
+    const revision = planCommentRevision(input, current.rows[0].declared_creation_mode);
+    let declaration;
+    try {
+      declaration = enforceContentDeclaration(revision);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'invalid_post') throw new Error('invalid_comment');
+      throw error;
+    }
+    if (declaration.body.length > 20_000) throw new Error('invalid_comment');
+    if (declaration.body === current.rows[0].body && declaration.declaredCreationMode === current.rows[0].declared_creation_mode) {
+      return { declaration, moderationState: current.rows[0].moderation_state };
+    }
+    const bodyHash = await sha256Hex(declaration.body);
     const result = await client.query(
       `UPDATE content.comments
-          SET body = $1, declared_creation_mode = $2, moderation_state = 'under_review', updated_at = now()
-        WHERE id = $3 AND author_id = $4 AND deleted_at IS NULL RETURNING post_id`,
-      [declaration.body, declaration.declaredCreationMode, commentId, user.userId],
+          SET body = $1, declared_creation_mode = $2, moderation_state = $3, moderation_source_event_id = $4, updated_at = now()
+        WHERE id = $5 AND author_id = $6 AND deleted_at IS NULL RETURNING post_id`,
+      [declaration.body, declaration.declaredCreationMode, revision.moderationState, sourceEventId, commentId, user.userId],
     );
     if (result.rowCount === 0) throw new Error('comment_not_found');
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'content.comment.updated', 'comment', $2, $3, $4::jsonb)`,
-      [sourceEventId, commentId, user.userId, JSON.stringify({ commentId, postId: result.rows[0]?.post_id })],
+      [sourceEventId, commentId, user.userId, JSON.stringify({ commentId, postId: result.rows[0]?.post_id, sourceEventId, declaredCreationMode: declaration.declaredCreationMode, bodyHash })],
     );
     await writeActivity(client, request, user, sourceEventId, {
       eventType: 'content.comment_edited', category: 'content', title: 'You edited a comment',
       explanation: 'Your edited comment returned to moderation review.', result: 'pending',
       objectType: 'comment', objectId: commentId, reputationEffect: 'withheld',
-      metadata: { contentType: 'comment', creationMode: declaration.declaredCreationMode, moderationState: 'under_review' },
+      metadata: { contentType: 'comment', creationMode: declaration.declaredCreationMode, moderationState: revision.moderationState },
     });
+    return { declaration, moderationState: revision.moderationState };
   });
-  return privateResponse(request, env, { id: commentId, body: declaration.body, declaredCreationMode: declaration.declaredCreationMode, moderationState: 'under_review' });
+  return privateResponse(request, env, {
+    id: commentId,
+    body: updated.declaration.body,
+    declaredCreationMode: updated.declaration.declaredCreationMode,
+    moderationState: updated.moderationState,
+  });
 }
 
 async function deleteComment(request: Request, env: Env, user: Principal, commentId: string): Promise<Response> {
+  const deletion = contentDeletionPlan('comment');
   const sourceEventId = uuidv7();
   const deleted = await transaction(env.DB_APP_FRESH, async (client) => {
     const result = await client.query(
@@ -1368,13 +1560,13 @@ async function deleteComment(request: Request, env: Env, user: Principal, commen
     if (result.rowCount === 0) return false;
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
-       VALUES ($1, 'content.comment.deleted', 'comment', $2, $3, $4::jsonb)`,
-      [sourceEventId, commentId, user.userId, JSON.stringify({ commentId, postId: result.rows[0]?.post_id })],
+       VALUES ($1, $2, 'comment', $3, $4, $5::jsonb)`,
+      [sourceEventId, deletion.outboxEventType, commentId, user.userId, JSON.stringify({ commentId, postId: result.rows[0]?.post_id })],
     );
     await writeActivity(client, request, user, sourceEventId, {
-      eventType: 'content.comment_deleted', category: 'content', title: 'You deleted a comment',
+      eventType: deletion.activityEvent, category: 'content', title: 'You deleted a comment',
       explanation: 'The comment body was removed; a tombstone may remain to preserve thread structure.',
-      objectType: 'comment', objectId: commentId, metadata: { contentType: 'comment' },
+      objectType: 'comment', objectId: commentId, metadata: { contentType: deletion.contentType },
     });
     return true;
   });
@@ -1383,23 +1575,23 @@ async function deleteComment(request: Request, env: Env, user: Principal, commen
 
 async function createReaction(request: Request, env: Env, user: Principal, postId: string): Promise<Response> {
   const input = await readJson<{ reactionType?: string }>(request, 8 * 1024);
-  if (!input.reactionType || !['like', 'insightful', 'support'].includes(input.reactionType)) throw new Error('invalid_reaction');
   const existing = await query<{ reaction_type: string }>(env.DB_APP_FRESH,
     `SELECT reaction_type FROM social.reactions WHERE user_id = $1 AND post_id = $2 LIMIT 1`, [user.userId, postId]);
-  if (existing.rows[0]?.reaction_type === input.reactionType) {
-    return privateResponse(request, env, { postId, reactionType: input.reactionType, changed: false });
+  const reaction = planReactionChange(input.reactionType, existing.rows[0]?.reaction_type);
+  if (!reaction.changed) {
+    return privateResponse(request, env, { postId, reactionType: reaction.reactionType, changed: false });
   }
   await enforceDailyAction(env, user.userId, 'reaction');
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
     const post = await visiblePostForInteraction(client, postId, user.userId);
-    if (post.author_id === user.userId) throw new Error('self_reaction_not_allowed');
+    assertDistinctReactionAuthor(post.author_id, user.userId);
     await client.query(`DELETE FROM social.reactions WHERE user_id = $1 AND post_id = $2`, [user.userId, postId]);
-    await client.query(`INSERT INTO social.reactions (user_id, post_id, reaction_type) VALUES ($1, $2, $3)`, [user.userId, postId, input.reactionType]);
+    await client.query(`INSERT INTO social.reactions (user_id, post_id, reaction_type) VALUES ($1, $2, $3)`, [user.userId, postId, reaction.reactionType]);
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'social.reaction.changed', 'post', $2, $3, $4::jsonb)`,
-      [sourceEventId, postId, user.userId, JSON.stringify({ postId, authorId: post.author_id, reactionType: input.reactionType })],
+      [sourceEventId, postId, user.userId, JSON.stringify({ postId, authorId: post.author_id, reactionType: reaction.reactionType })],
     );
     await writeActivity(client, request, user, sourceEventId, {
       eventType: 'content.reaction_added', category: 'content', title: 'You reacted to a post',
@@ -1407,7 +1599,7 @@ async function createReaction(request: Request, env: Env, user: Principal, postI
       objectType: 'post', objectId: postId, metadata: { contentType: 'post' },
     });
   });
-  return privateResponse(request, env, { postId, reactionType: input.reactionType, changed: true }, { status: existing.rows[0] ? 200 : 201 });
+  return privateResponse(request, env, { postId, reactionType: reaction.reactionType, changed: true }, { status: reaction.status });
 }
 
 async function removeReaction(request: Request, env: Env, user: Principal, postId: string): Promise<Response> {
@@ -1431,8 +1623,16 @@ async function createFlag(request: Request, env: Env, user: Principal): Promise<
   if (!input.contentType || !input.contentId || !input.reasonCode) throw new Error('invalid_flag');
   const flagId = uuidv7();
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    await client.query(`INSERT INTO moderation.content_flags (id, reporter_id, content_type, content_id, reason_code) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`, [flagId, user.userId, input.contentType, input.contentId, input.reasonCode]);
+  const result = await transaction(env.DB_APP_FRESH, async (client) => {
+    const inserted = await client.query<{ id: string }>(`INSERT INTO moderation.content_flags (id, reporter_id, content_type, content_id, reason_code) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING id`, [flagId, user.userId, input.contentType, input.contentId, input.reasonCode]);
+    if (!inserted.rows[0]) {
+      const existing = await client.query<{ id: string }>(
+        `SELECT id FROM moderation.content_flags WHERE reporter_id = $1 AND content_type = $2 AND content_id = $3 AND reason_code = $4`,
+        [user.userId, input.contentType, input.contentId, input.reasonCode],
+      );
+      if (!existing.rows[0]) throw new Error('flag_not_recorded');
+      return { flagId: existing.rows[0].id, created: false };
+    }
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'moderation.flag.created', 'content_flag', $2, $3, $4::jsonb)`,
@@ -1443,8 +1643,9 @@ async function createFlag(request: Request, env: Env, user: Principal): Promise<
       explanation: 'Your report was accepted for review. A report is evidence, not a finding of guilt.',
       objectType: input.contentType, objectId: input.contentId, metadata: { decisionType: 'content_report' },
     });
+    return { flagId, created: true };
   });
-  return privateResponse(request, env, { flagId }, { status: 201 });
+  return privateResponse(request, env, { flagId: result.flagId }, { status: result.created ? 201 : 200 });
 }
 
 async function createAppeal(request: Request, env: Env, user: Principal): Promise<Response> {
@@ -1497,7 +1698,7 @@ async function createAppeal(request: Request, env: Env, user: Principal): Promis
 async function getAppeal(request: Request, env: Env, user: Principal, appealId: string): Promise<Response> {
   const result = await query(env.DB_APP_FRESH,
     `SELECT a.id, a.case_id, a.state, a.risk_class, a.policy_version, a.created_at, a.expires_at, a.resolved_at,
-            o.community_decision, o.final_decision, o.completed_reviewers, o.state AS outcome_state,
+            o.reviewer_panel_decision, o.final_decision, o.completed_reviewers, o.state AS outcome_state,
             (assignment.id IS NOT NULL) AS reviewer_assigned,
             vote.decision AS reviewer_decision
        FROM moderation.appeals a
@@ -1620,11 +1821,20 @@ async function reviewerAssignments(request: Request, env: Env, user: Principal):
 
 async function createPrivacyRequest(request: Request, env: Env, user: Principal): Promise<Response> {
   const input = await readJson<{ requestType?: 'export' | 'delete' | 'rectify' }>(request, 8 * 1024);
-  if (!input.requestType || !['export', 'delete', 'rectify'].includes(input.requestType)) throw new Error('invalid_privacy_request');
+  const plan = privacyRequestPlan(input.requestType);
   const requestId = uuidv7();
   const acceptedAt = await transaction(env.DB_APP_FRESH, async (client) => {
     await client.query(`SELECT id FROM identity.users WHERE id = $1 FOR UPDATE`, [user.userId]);
-    if (input.requestType === 'export') {
+    const active = await client.query(
+      `SELECT 1 FROM privacy.requests
+        WHERE subject_id = $1
+          AND request_type = $2
+          AND state IN ('received', 'processing', 'blocked')
+        LIMIT 1`,
+      [user.userId, plan.requestType],
+    );
+    if (active.rowCount !== 0) throw new Error('privacy_request_active');
+    if (plan.requiresExportCooldown) {
       const recent = await client.query(
         `SELECT 1 FROM privacy.requests
           WHERE subject_id = $1
@@ -1639,25 +1849,25 @@ async function createPrivacyRequest(request: Request, env: Env, user: Principal)
       `INSERT INTO privacy.requests (id, subject_id, request_type)
        VALUES ($1, $2, $3)
        RETURNING created_at`,
-      [requestId, user.userId, input.requestType],
+      [requestId, user.userId, plan.requestType],
     );
     const sourceEventId = uuidv7();
-    await client.query(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload) VALUES ($1, 'privacy.request.created', 'privacy_request', $2, $3, $4::jsonb)`, [sourceEventId, requestId, user.userId, JSON.stringify({ requestId, requestType: input.requestType })]);
+    await client.query(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload) VALUES ($1, 'privacy.request.created', 'privacy_request', $2, $3, $4::jsonb)`, [sourceEventId, requestId, user.userId, JSON.stringify({ requestId, requestType: plan.requestType })]);
     await writeActivity(client, request, user, sourceEventId, {
-      eventType: input.requestType === 'delete' ? 'privacy.deletion_requested' : input.requestType === 'export' ? 'privacy.export_requested' : 'privacy.rectification_requested',
+      eventType: plan.activityEvent,
       category: 'privacy',
-      title: input.requestType === 'delete' ? 'You requested account deletion' : input.requestType === 'export' ? 'You requested a data export' : 'You requested data rectification',
+      title: plan.activityTitle,
       explanation: 'Lythaus accepted your privacy request for processing.',
       result: 'pending',
       objectType: 'privacy_request',
       objectId: requestId,
-      metadata: { requestType: input.requestType, requestState: 'received' },
+      metadata: { requestType: plan.requestType, requestState: 'received' },
     });
     return created.rows[0]?.created_at;
   });
   return privateResponse(request, env, {
     requestId,
-    requestType: input.requestType,
+    requestType: plan.requestType,
     state: 'received',
     acceptedAt,
   }, { status: 202 });
@@ -1665,8 +1875,7 @@ async function createPrivacyRequest(request: Request, env: Env, user: Principal)
 
 async function getPrivacyRequestStatus(request: Request, env: Env, user: Principal): Promise<Response> {
   const url = new URL(request.url);
-  const requestType = url.searchParams.get('requestType');
-  if (requestType && !['export', 'delete', 'rectify'].includes(requestType)) throw new Error('invalid_privacy_request');
+  const requestType = optionalPrivacyRequestType(url.searchParams.get('requestType'));
   const result = await query<{
     id: string;
     request_type: string;
@@ -1719,21 +1928,20 @@ async function downloadPrivacyExport(
       LIMIT 1`,
     [requestId, user.userId],
   );
-  const row = manifest.rows[0];
-  if (!row) throw new Error('export_not_found');
-  if (!env.PRIVATE_EXPORTS) throw new Error('export_not_configured');
-  const object = await env.PRIVATE_EXPORTS.get(row.object_key);
-  if (!object) throw new Error('export_unavailable');
+  const exportDependencies = requirePrivacyExportDependencies({ manifest: manifest.rows[0], storage: env.PRIVATE_EXPORTS });
+  const row = exportDependencies.manifest;
+  const object = requirePrivacyExportObject(await exportDependencies.storage.get(row.object_key));
+  const activity = privacyExportAccessActivity(requestId);
   await transaction(env.DB_APP_FRESH, async (client) => {
     await writeActivity(client, request, user, uuidv7(), {
-      eventType: 'privacy.export_accessed',
+      eventType: activity.eventType,
       category: 'privacy',
-      title: 'You accessed your data export',
+      title: activity.title,
       explanation: 'Your generated data export was securely downloaded.',
-      objectType: 'privacy_request',
-      objectId: requestId,
+      objectType: activity.objectType,
+      objectId: activity.objectId,
       retentionClass: 'security',
-      metadata: { requestType: 'export', requestState: 'completed' },
+      metadata: { requestType: activity.requestType, requestState: activity.requestState },
     });
   });
   const result = new Response(object.body, {
@@ -1770,42 +1978,57 @@ async function updateRegionPreferences(request: Request, env: Env, user: Princip
   };
   const visibility = input.visibilityLevel ?? 'private';
   if (!['private', 'region', 'country'].includes(visibility)) throw new Error('invalid_visibility_level');
+  const countryCode = code(input.countryCode, 'country_code');
+  const regionCode = code(input.regionCode, 'region_code');
+  const municipalityCode = code(input.municipalityCode, 'municipality_code');
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
+  const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    const current = await client.query<{ country_code: string | null; region_code: string | null; municipality_code: string | null; visibility_level: string }>(
+      `SELECT country_code, region_code, municipality_code, visibility_level
+         FROM identity.user_region_preferences WHERE user_id = $1 FOR UPDATE`,
+      [user.userId],
+    );
+    const previous = current.rows[0] ?? { country_code: null, region_code: null, municipality_code: null, visibility_level: 'private' };
+    if (previous.country_code === countryCode && previous.region_code === regionCode
+      && previous.municipality_code === municipalityCode && previous.visibility_level === visibility) return false;
     await client.query(
       `INSERT INTO identity.user_region_preferences (user_id, country_code, region_code, municipality_code, visibility_level)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (user_id) DO UPDATE SET country_code = EXCLUDED.country_code, region_code = EXCLUDED.region_code,
          municipality_code = EXCLUDED.municipality_code, visibility_level = EXCLUDED.visibility_level, updated_at = now()`,
-      [user.userId, code(input.countryCode, 'country_code'), code(input.regionCode, 'region_code'), code(input.municipalityCode, 'municipality_code'), visibility]);
+      [user.userId, countryCode, regionCode, municipalityCode, visibility]);
     await writeActivity(client, request, user, sourceEventId, {
       eventType: 'profile.region_changed', category: 'account', title: 'You updated region preferences',
       explanation: 'Your region and region-visibility preferences were updated without copying location values into this log.',
       objectType: 'region_preferences', metadata: { changedField: 'region_preferences' },
     });
+    return true;
   });
-  return privateResponse(request, env, { updated: true });
+  return privateResponse(request, env, { updated: true, changed });
 }
 
 async function updateRetentionRule(request: Request, env: Env, user: Principal): Promise<Response> {
   const input = await readJson<{ contentType?: 'post' | 'posts' | 'media'; retentionDays?: number }>(request, 8 * 1024);
-  const contentType = input.contentType === 'posts' ? 'post' : input.contentType;
-  if (!contentType || !['post', 'media'].includes(contentType)) throw new Error('invalid_retention_content_type');
-  if (!Number.isInteger(input.retentionDays) || (input.retentionDays ?? 0) < 30 || (input.retentionDays ?? 0) > 3650) {
-    throw new Error('invalid_retention_period');
-  }
+  const plan = retentionRulePlan(input);
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
+  const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    const current = await client.query<{ retention_days: number }>(
+      `SELECT round(extract(epoch FROM retention_period) / 86400)::integer AS retention_days
+         FROM privacy.retention_rules WHERE user_id = $1 AND content_type = $2 FOR UPDATE`,
+      [user.userId, plan.contentType],
+    );
+    if (Number(current.rows[0]?.retention_days) === plan.retentionDays) return false;
     await client.query(
       `SELECT privacy.set_retention_rule($1, $2, $3, make_interval(days => $4::integer), $5)`,
-      [uuidv7(), user.userId, contentType, input.retentionDays, 'user-v1']);
+      [uuidv7(), user.userId, plan.contentType, plan.retentionDays, 'user-v1']);
     await writeActivity(client, request, user, sourceEventId, {
       eventType: 'profile.retention_preference_changed', category: 'account', title: 'You updated retention preferences',
       explanation: 'Your selected content retention period was updated.', objectType: 'retention_rule',
       metadata: { changedField: 'retention_preference' },
     });
+    return true;
   });
-  return privateResponse(request, env, { contentType, retentionDays: input.retentionDays });
+  return privateResponse(request, env, { ...plan, changed });
 }
 
 async function listCustomFeeds(request: Request, env: Env, user: Principal): Promise<Response> {
@@ -1828,7 +2051,7 @@ async function createCustomFeed(request: Request, env: Env, user: Principal): Pr
   const tier = await tierForUser(env, user.userId);
   const existing = await query<{ count: string }>(env.DB_APP_FRESH,
     `SELECT count(*)::text AS count FROM social.custom_feeds WHERE user_id = $1`, [user.userId]);
-  if (Number(existing.rows[0]?.count ?? 0) >= TIER_POLICIES[tier].maxCustomFeeds) throw new Error('custom_feed_limit_reached');
+  assertCustomFeedAvailable(tier, Number(existing.rows[0]?.count ?? 0));
   const feedId = uuidv7();
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
@@ -1857,23 +2080,29 @@ async function customFeed(request: Request, env: Env, user: Principal, feedId: s
   if (request.method === 'GET') return privateResponse(request, env, owned.rows[0]);
   if (request.method === 'DELETE') {
     const sourceEventId = uuidv7();
-    await transaction(env.DB_APP_FRESH, async (client) => {
-      await client.query(`DELETE FROM social.custom_feeds WHERE id = $1 AND user_id = $2`, [feedId, user.userId]);
+    const deleted = await transaction(env.DB_APP_FRESH, async (client) => {
+      const mutation = await client.query(`DELETE FROM social.custom_feeds WHERE id = $1 AND user_id = $2 RETURNING id`, [feedId, user.userId]);
+      if (mutation.rowCount !== 1) return false;
       await writeActivity(client, request, user, sourceEventId, {
         eventType: 'social.custom_feed_deleted', category: 'social', title: 'You deleted a custom feed',
         explanation: 'The custom feed and its rules were deleted.', objectType: 'custom_feed', objectId: feedId,
         metadata: { relationshipType: 'custom_feed', targetType: 'feed' },
       });
+      return true;
     });
-    return privateResponse(request, env, { id: feedId, deleted: true });
+    return privateResponse(request, env, { id: feedId, deleted });
   }
   const input = await readJson<{ name?: string; rules?: unknown[] }>(request, 32 * 1024);
   const name = input.name?.trim() ?? owned.rows[0].name;
   const rules = Array.isArray(input.rules) ? normalizeCustomFeedRules(input.rules) : owned.rows[0].rules;
   if (!name || name.length > 120) throw new Error('invalid_custom_feed');
+  if (name === owned.rows[0].name && JSON.stringify(rules) === JSON.stringify(owned.rows[0].rules)) {
+    return privateResponse(request, env, { id: feedId, name, rules, changed: false });
+  }
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    await client.query(`UPDATE social.custom_feeds SET name = $1 WHERE id = $2 AND user_id = $3`, [name, feedId, user.userId]);
+  const changed = await transaction(env.DB_APP_FRESH, async (client) => {
+    const mutation = await client.query(`UPDATE social.custom_feeds SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING id`, [name, feedId, user.userId]);
+    if (mutation.rowCount !== 1) return false;
     if (Array.isArray(input.rules)) {
       await client.query(`DELETE FROM social.custom_feed_rules WHERE feed_id = $1`, [feedId]);
       for (const rule of rules) {
@@ -1885,8 +2114,9 @@ async function customFeed(request: Request, env: Env, user: Principal, feedId: s
       explanation: 'The custom feed configuration was updated.', objectType: 'custom_feed', objectId: feedId,
       metadata: { relationshipType: 'custom_feed', targetType: 'feed' },
     });
+    return true;
   });
-  return privateResponse(request, env, { id: feedId, name, rules });
+  return privateResponse(request, env, { id: feedId, name, rules, changed });
 }
 
 async function customFeedItems(request: Request, env: Env, user: Principal, feedId: string): Promise<Response> {
@@ -1896,9 +2126,21 @@ async function customFeedItems(request: Request, env: Env, user: Principal, feed
      WHERE f.id = $1 AND f.user_id = $2 GROUP BY f.id`, [feedId, user.userId]);
   if (!owned.rows[0]) throw new Error('custom_feed_not_found');
   const page = pageRequest(new URL(request.url));
-  const result = await query<{ id: string; publishedAt: string }>(env.DB_APP_FRESH,
+  const result = await query<FeedResponseCandidate & { id: string; publishedAt: string }>(env.DB_APP_FRESH,
     `SELECT p.id, p.author_id AS "authorId", p.body, p.published_at AS "publishedAt",
-            declaration.public_label AS "publicLabel", d.topic, d.region_code AS "regionCode"
+            p.visibility, p.moderation_state AS "moderationState", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
+            declaration.public_label AS "publicLabel", d.topic, d.region_code AS "regionCode",
+            COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)
+                        FROM (SELECT reaction.reaction_type, count(*)::integer AS reaction_count
+                                FROM social.reactions reaction WHERE reaction.post_id = p.id
+                                 AND reaction.reaction_type IN ('like', 'insightful', 'support')
+                               GROUP BY reaction.reaction_type) counted), '{}'::jsonb) AS "reactionCounts",
+            (SELECT reaction.reaction_type FROM social.reactions reaction
+              WHERE reaction.user_id = $2 AND reaction.post_id = p.id
+                AND reaction.reaction_type IN ('like', 'insightful', 'support') LIMIT 1) AS "viewerReaction",
+            EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = p.author_id) OR (b.blocker_id = p.author_id AND b.blocked_id = $2)) AS "feedBlocked",
+            EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $2 AND m.muted_id = p.author_id) AS "feedMuted",
+            EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $2 AND f.followed_id = p.author_id) AS "feedFollowsAuthor"
        FROM content.posts p
        JOIN identity.users author ON author.id = p.author_id AND author.status = 'active'
        JOIN content.content_declarations declaration ON declaration.post_id = p.id
@@ -1919,43 +2161,75 @@ async function customFeedItems(request: Request, env: Env, user: Principal, feed
         AND ($3::timestamptz IS NULL OR (p.published_at, p.id) < ($3::timestamptz, $4::uuid))
       ORDER BY p.published_at DESC, p.id DESC LIMIT $5`,
     [feedId, user.userId, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
+  assertFeedResponseCandidates(result.rows, user);
   const hasMore = result.rows.length > page.limit;
   const items = result.rows.slice(0, page.limit);
   const tail = items.at(-1);
-  return privateResponse(request, env, { items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.publishedAt, id: tail.id }) : null });
+  return feedResponse(request, env, { items: presentFeedItems(items), nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.publishedAt, id: tail.id }) : null }, 'custom', true);
 }
 
 async function getEntitlements(request: Request, env: Env, user: Principal): Promise<Response> {
   const tier = await tierForUser(env, user.userId);
-  return privateResponse(request, env, { tier, entitlements: TIER_POLICIES[tier] });
+  return privateResponse(request, env, { tier, entitlements: entitlementsForTier(tier) });
 }
 
 async function getNewsBoard(request: Request, env: Env, user: Principal): Promise<Response> {
   const tier = await tierForUser(env, user.userId);
-  const access = TIER_POLICIES[tier].newsBoardAccess;
-  if (access !== 'full') throw new Error('news_board_not_entitled');
+  const access = requireNewsBoardAccess(tier);
   const page = pageRequest(new URL(request.url));
-  const result = await query<{ id: string; publishedAt: string }>(env.DB_APP_FRESH,
+  const result = await query<NewsBoardResponseCandidate & { id: string; publishedAt: string }>(env.DB_APP_FRESH,
     `SELECT publication.id, publication.title, publication.post_id, publication.published_at,
-            post.body, post.author_id AS "authorId", publication.published_at AS "publishedAt"
+            post.body, post.author_id AS "authorId", publication.published_at AS "publishedAt",
+            (publication.published_at IS NOT NULL) AS "feedPublicationPublished", (post.id IS NOT NULL) AS "feedPostBacked",
+            post.author_id AS "feedPostAuthorId", post.visibility AS "feedPostVisibility", post.moderation_state AS "feedPostModerationState",
+            (post.deleted_at IS NOT NULL) AS "feedPostDeleted", declaration.public_label AS "feedPostPublicLabel",
+            EXISTS (SELECT 1 FROM social.blocks block WHERE (block.blocker_id = $1 AND block.blocked_id = post.author_id) OR (block.blocker_id = post.author_id AND block.blocked_id = $1)) AS "feedPostBlocked",
+            EXISTS (SELECT 1 FROM social.mutes mute WHERE mute.muter_id = $1 AND mute.muted_id = post.author_id) AS "feedPostMuted",
+            EXISTS (SELECT 1 FROM social.follows follow WHERE follow.follower_id = $1 AND follow.followed_id = post.author_id) AS "feedPostFollowsAuthor",
+            COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)
+                        FROM (SELECT reaction.reaction_type, count(*)::integer AS reaction_count
+                                FROM social.reactions reaction WHERE reaction.post_id = post.id
+                                 AND reaction.reaction_type IN ('like', 'insightful', 'support')
+                               GROUP BY reaction.reaction_type) counted), '{}'::jsonb) AS "reactionCounts",
+            (SELECT reaction.reaction_type FROM social.reactions reaction
+              WHERE reaction.user_id = $1 AND reaction.post_id = post.id
+                AND reaction.reaction_type IN ('like', 'insightful', 'support') LIMIT 1) AS "viewerReaction"
      FROM editorial.publications publication
      LEFT JOIN content.posts post ON post.id = publication.post_id
+     LEFT JOIN content.content_declarations declaration ON declaration.post_id = post.id
      WHERE publication.published_at IS NOT NULL
-       AND (post.id IS NULL OR (post.deleted_at IS NULL AND post.moderation_state = 'allowed'))
-       AND ($1::timestamptz IS NULL OR (publication.published_at, publication.id) < ($1::timestamptz, $2::uuid))
-     ORDER BY publication.published_at DESC, publication.id DESC LIMIT $3`,
-    [page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
+       AND (post.id IS NULL OR (post.deleted_at IS NULL AND post.moderation_state = 'allowed' AND declaration.public_label IN ('Human-authored', 'AI-assisted')))
+       AND (post.id IS NULL OR (
+         NOT EXISTS (SELECT 1 FROM social.blocks block WHERE (block.blocker_id = $1 AND block.blocked_id = post.author_id) OR (block.blocker_id = post.author_id AND block.blocked_id = $1))
+         AND NOT EXISTS (SELECT 1 FROM social.mutes mute WHERE mute.muter_id = $1 AND mute.muted_id = post.author_id)
+       ))
+       AND ($2::timestamptz IS NULL OR (publication.published_at, publication.id) < ($2::timestamptz, $3::uuid))
+     ORDER BY publication.published_at DESC, publication.id DESC LIMIT $4`,
+    [user.userId, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
+  assertNewsBoardResponseCandidates(result.rows, user);
   const hasMore = result.rows.length > page.limit;
   const items = result.rows.slice(0, page.limit);
   const tail = items.at(-1);
-  return privateResponse(request, env, { access, items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.publishedAt, id: tail.id }) : null });
+  return feedResponse(request, env, { access, items: presentNewsBoardItems(items), nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.publishedAt, id: tail.id }) : null }, 'news', true);
 }
 
 async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Promise<Response> {
   const page = pageRequest(new URL(request.url));
-  const result = await query<{ id: string; publishedAt: string }>(env.DB_APP_FRESH,
+  const result = await query<FeedResponseCandidate & { id: string; publishedAt: string }>(env.DB_APP_FRESH,
     `SELECT p.id, p.author_id AS "authorId", p.body, p.published_at AS "publishedAt",
-            declaration.public_label AS "publicLabel", d.topic, d.region_code AS "regionCode"
+            p.visibility, p.moderation_state AS "moderationState", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
+            declaration.public_label AS "publicLabel", d.topic, d.region_code AS "regionCode",
+            COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)
+                        FROM (SELECT reaction.reaction_type, count(*)::integer AS reaction_count
+                                FROM social.reactions reaction WHERE reaction.post_id = p.id
+                                 AND reaction.reaction_type IN ('like', 'insightful', 'support')
+                               GROUP BY reaction.reaction_type) counted), '{}'::jsonb) AS "reactionCounts",
+            (SELECT reaction.reaction_type FROM social.reactions reaction
+              WHERE reaction.user_id = $1 AND reaction.post_id = p.id
+                AND reaction.reaction_type IN ('like', 'insightful', 'support') LIMIT 1) AS "viewerReaction",
+            EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $1 AND b.blocked_id = p.author_id) OR (b.blocker_id = p.author_id AND b.blocked_id = $1)) AS "feedBlocked",
+            EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $1 AND m.muted_id = p.author_id) AS "feedMuted",
+            EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $1 AND f.followed_id = p.author_id) AS "feedFollowsAuthor"
        FROM content.posts p
        JOIN identity.users author ON author.id = p.author_id AND author.status = 'active'
        JOIN content.content_declarations declaration ON declaration.post_id = p.id
@@ -1969,14 +2243,12 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
         AND ($2::timestamptz IS NULL OR (p.published_at, p.id) < ($2::timestamptz, $3::uuid))
       ORDER BY p.published_at DESC, p.id DESC LIMIT $4`,
     [viewer?.userId ?? null, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
+  assertFeedResponseCandidates(result.rows, viewer);
   const hasMore = result.rows.length > page.limit;
   const items = result.rows.slice(0, page.limit);
   const tail = items.at(-1);
-  const body = { items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.publishedAt, id: tail.id }) : null };
-  if (viewer) return privateResponse(request, env, body);
-  const output = response(request, env, body);
-  output.headers.set('cache-control', 'public, s-maxage=30, stale-while-revalidate=60');
-  return output;
+  const body = { items: presentFeedItems(items), nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.publishedAt, id: tail.id }) : null };
+  return feedResponse(request, env, body, 'discovery', Boolean(viewer));
 }
 
 async function notifications(request: Request, env: Env, user: Principal): Promise<Response> {
@@ -1996,7 +2268,7 @@ async function notifications(request: Request, env: Env, user: Principal): Promi
                 WHEN 'appeals.appeal_expired' THEN 'Appeal review expired'
                 WHEN 'appeals.reviewer_assigned' THEN 'Appeal review assigned'
                 WHEN 'appeals.reviewer_qualification_changed' THEN 'Reviewer eligibility updated'
-                WHEN 'appeals.community_result_reached' THEN 'Appeal community result reached'
+                WHEN 'appeals.reviewer_panel_result_reached' THEN 'Appeal reviewer panel result reached'
                 WHEN 'appeals.adjudication_required' THEN 'Appeal adjudication required'
                 WHEN 'reputation_level' THEN 'Reputation level updated'
                 WHEN 'reputation.level_promoted' THEN 'Reputation level increased'
@@ -2047,6 +2319,20 @@ async function notificationPreferences(request: Request, env: Env, user: Princip
   const values = [input.emailEnabled, input.pushEnabled, input.repliesEnabled, input.moderationEnabled, input.rewardsEnabled];
   const sourceEventId = uuidv7();
   const row = await transaction(env.DB_APP_FRESH, async (client) => {
+    const current = await client.query<{
+      emailEnabled: boolean; pushEnabled: boolean; repliesEnabled: boolean; moderationEnabled: boolean; rewardsEnabled: boolean; updatedAt: string | null;
+    }>(
+      `SELECT email_enabled AS "emailEnabled", push_enabled AS "pushEnabled",
+              replies_enabled AS "repliesEnabled", moderation_enabled AS "moderationEnabled",
+              rewards_enabled AS "rewardsEnabled", updated_at AS "updatedAt"
+         FROM feed.notification_preferences WHERE user_id = $1 FOR UPDATE`,
+      [user.userId],
+    );
+    const before = current.rows[0] ?? {
+      emailEnabled: true, pushEnabled: true, repliesEnabled: true, moderationEnabled: true, rewardsEnabled: true, updatedAt: null,
+    };
+    const changed = input.changedKeys.some((key) => input[key] !== null && before[key] !== input[key]);
+    if (!changed) return before;
     const result = await client.query(
       `INSERT INTO feed.notification_preferences
          (user_id, email_enabled, push_enabled, replies_enabled, moderation_enabled, rewards_enabled)
@@ -2084,18 +2370,26 @@ async function notificationDevices(request: Request, env: Env, user: Principal):
   const input = normalizeNotificationDevice(await readJson<Record<string, unknown>>(request, 8 * 1024));
   const secrets = requireAuthSecrets(env);
   const deviceId = uuidv7();
+  const sourceEventId = uuidv7();
   const encryptedToken = await encryptField(input.token, secrets.encryptionKey, 'v1');
+  const tokenHmac = hmacLookup(input.token, secrets.hmacKey);
   const stored = await transaction(env.DB_APP_FRESH, async (client) => {
+    const current = await client.query<{ id: string; user_id: string; platform: string; active: boolean }>(
+      `SELECT id, user_id, platform, active FROM feed.notification_devices WHERE token_hmac = decode($1, 'base64') FOR UPDATE`,
+      [tokenHmac],
+    );
+    const existing = current.rows[0];
+    if (existing?.user_id === user.userId && existing.platform === input.platform && existing.active) return existing.id;
     const result = await client.query<{ id: string }>(
       `INSERT INTO feed.notification_devices (id, user_id, platform, token_ciphertext, token_hmac)
        VALUES ($1, $2, $3, convert_to($4, 'utf8'), decode($5, 'base64'))
        ON CONFLICT (token_hmac) DO UPDATE SET user_id = EXCLUDED.user_id, platform = EXCLUDED.platform, active = true, revoked_at = NULL
        RETURNING id`,
-      [deviceId, user.userId, input.platform, encryptedToken.ciphertext, hmacLookup(input.token, secrets.hmacKey)],
+      [deviceId, user.userId, input.platform, encryptedToken.ciphertext, tokenHmac],
     );
     const storedId = result.rows[0]?.id;
     if (!storedId) throw new Error('notification_device_not_recorded');
-    await writeActivity(client, request, user, storedId, {
+    await writeActivity(client, request, user, sourceEventId, {
       eventType: 'profile.notification_device_registered', category: 'account',
       title: 'You registered a notification device',
       explanation: 'A notification delivery endpoint was registered securely; the raw token is never shown in activity history.',
@@ -2253,10 +2547,22 @@ async function redeemReward(request: Request, env: Env, user: Principal, rewardI
 
 async function getPersonalFeed(request: Request, env: Env, user: Principal): Promise<Response> {
   const page = pageRequest(new URL(request.url));
-  const result = await query<{ id: string; cursor_timestamp: string }>(env.DB_APP_FRESH,
+  const result = await query<FeedResponseCandidate & { id: string; cursor_timestamp: string }>(env.DB_APP_FRESH,
     `SELECT p.id, p.author_id AS "authorId", p.body, p.declared_creation_mode AS "declaredCreationMode",
             p.visibility, p.moderation_state AS "moderationState", p.geo_scope AS "geoScope",
             p.place_id AS "placeId", p.published_at AS "publishedAt", p.created_at AS "createdAt",
+            declaration.public_label AS "publicLabel", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
+            COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)
+                        FROM (SELECT reaction.reaction_type, count(*)::integer AS reaction_count
+                                FROM social.reactions reaction WHERE reaction.post_id = p.id
+                                 AND reaction.reaction_type IN ('like', 'insightful', 'support')
+                               GROUP BY reaction.reaction_type) counted), '{}'::jsonb) AS "reactionCounts",
+            (SELECT reaction.reaction_type FROM social.reactions reaction
+              WHERE reaction.user_id = $1 AND reaction.post_id = p.id
+                AND reaction.reaction_type IN ('like', 'insightful', 'support') LIMIT 1) AS "viewerReaction",
+            EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $1 AND b.blocked_id = p.author_id) OR (b.blocker_id = p.author_id AND b.blocked_id = $1)) AS "feedBlocked",
+            EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $1 AND m.muted_id = p.author_id) AS "feedMuted",
+            EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $1 AND f.followed_id = p.author_id) AS "feedFollowsAuthor",
             i.source, i.explanation_basis AS "explanationBasis", i.created_at AS cursor_timestamp
        FROM feed.user_inbox i
        JOIN content.posts p ON p.id = i.post_id
@@ -2271,18 +2577,30 @@ async function getPersonalFeed(request: Request, env: Env, user: Principal): Pro
         AND NOT EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $1 AND m.muted_id = p.author_id)
         AND ($2::timestamptz IS NULL OR (i.created_at, p.id) < ($2::timestamptz, $3::uuid))
       ORDER BY i.created_at DESC, p.id DESC LIMIT $4`, [user.userId, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
+  assertFeedResponseCandidates(result.rows, user);
   const hasMore = result.rows.length > page.limit;
   const items = result.rows.slice(0, page.limit);
   const tail = items.at(-1);
-  return privateResponse(request, env, { items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.cursor_timestamp, id: tail.id }) : null });
+  return feedResponse(request, env, { items: presentFeedItems(items), nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.cursor_timestamp, id: tail.id }) : null }, 'personal', true);
 }
 
 async function getPost(request: Request, env: Env, postId: string, viewer?: Principal): Promise<Response> {
-  const result = await query(env.DB_APP_FRESH,
+  const result = await query<FeedResponseCandidate & { id: string }>(env.DB_APP_FRESH,
     `SELECT p.id, p.author_id AS "authorId", p.body, p.declared_creation_mode AS "declaredCreationMode",
             p.visibility, p.moderation_state AS "moderationState", p.geo_scope AS "geoScope",
             p.place_id AS "placeId", p.published_at AS "publishedAt", p.created_at AS "createdAt",
-            declaration.public_label AS "publicLabel"
+            declaration.public_label AS "publicLabel", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
+            COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)
+                        FROM (SELECT reaction.reaction_type, count(*)::integer AS reaction_count
+                                FROM social.reactions reaction WHERE reaction.post_id = p.id
+                                 AND reaction.reaction_type IN ('like', 'insightful', 'support')
+                               GROUP BY reaction.reaction_type) counted), '{}'::jsonb) AS "reactionCounts",
+            (SELECT reaction.reaction_type FROM social.reactions reaction
+              WHERE reaction.user_id = $2 AND reaction.post_id = p.id
+                AND reaction.reaction_type IN ('like', 'insightful', 'support') LIMIT 1) AS "viewerReaction",
+            EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = p.author_id) OR (b.blocker_id = p.author_id AND b.blocked_id = $2)) AS "feedBlocked",
+            false AS "feedMuted",
+            EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $2 AND f.followed_id = p.author_id) AS "feedFollowsAuthor"
        FROM content.posts p
        JOIN identity.users author ON author.id = p.author_id AND author.status = 'active'
        JOIN content.content_declarations declaration ON declaration.post_id = p.id
@@ -2295,20 +2613,23 @@ async function getPost(request: Request, env: Env, postId: string, viewer?: Prin
           SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = p.author_id) OR (b.blocker_id = p.author_id AND b.blocked_id = $2)
         ))`, [postId, viewer?.userId ?? null]);
   if (!result.rows[0]) throw new Error('post_not_found');
-  const output = viewer ? privateResponse(request, env, { post: result.rows[0] }) : response(request, env, { post: result.rows[0] });
-  if (!viewer) output.headers.set('cache-control', 'public, max-age=15, s-maxage=15');
-  return output;
+  assertFeedResponseCandidates(result.rows, viewer);
+  return feedResponse(request, env, { post: presentFeedItems(result.rows)[0] }, 'post', Boolean(viewer));
 }
 
 async function getComments(request: Request, env: Env, postId: string, viewer?: Principal): Promise<Response> {
   const page = pageRequest(new URL(request.url), 100);
-  const result = await query<{ id: string; createdAt: string }>(env.DB_APP_FRESH,
+  const result = await query<Omit<CommentFeedResponseCandidate, 'publicLabel'> & { id: string; createdAt: string; declaredCreationMode: unknown }>(env.DB_APP_FRESH,
     `SELECT comment.id, comment.author_id AS "authorId", comment.parent_id AS "parentId",
             CASE WHEN comment.deleted_at IS NULL THEN comment.body ELSE NULL END AS body,
             comment.depth, comment.declared_creation_mode AS "declaredCreationMode",
-            CASE comment.declared_creation_mode WHEN 'ai_assisted' THEN 'AI-assisted' ELSE 'Human-authored' END AS "publicLabel",
             comment.moderation_state AS "moderationState",
-            (comment.deleted_at IS NOT NULL) AS deleted, comment.created_at AS "createdAt", comment.updated_at AS "updatedAt"
+            (comment.deleted_at IS NOT NULL) AS deleted, comment.created_at AS "createdAt", comment.updated_at AS "updatedAt",
+            post.visibility AS "feedPostVisibility", post.moderation_state AS "feedPostModerationState", (post.deleted_at IS NOT NULL) AS "feedPostDeleted",
+            (post.author_id = $2) AS "feedViewerIsPostAuthor",
+            EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $2 AND f.followed_id = post.author_id) AS "feedFollowsPostAuthor",
+            EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = comment.author_id) OR (b.blocker_id = comment.author_id AND b.blocked_id = $2)) AS "feedBlockedCommentAuthor",
+            EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $2 AND m.muted_id = comment.author_id) AS "feedMutedCommentAuthor"
        FROM content.comments comment
        JOIN content.posts post ON post.id = comment.post_id
        JOIN identity.users author ON author.id = comment.author_id AND author.status = 'active'
@@ -2324,14 +2645,12 @@ async function getComments(request: Request, env: Env, postId: string, viewer?: 
         AND ($3::timestamptz IS NULL OR (comment.created_at, comment.id) > ($3::timestamptz, $4::uuid))
       ORDER BY comment.created_at ASC, comment.id ASC LIMIT $5`,
     [postId, viewer?.userId ?? null, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
-  const hasMore = result.rows.length > page.limit;
-  const items = result.rows.slice(0, page.limit);
+  const candidates = result.rows.map((item) => ({ ...item, publicLabel: commentPublicLabel(item.declaredCreationMode) }));
+  assertCommentFeedResponseCandidates(candidates, viewer);
+  const hasMore = candidates.length > page.limit;
+  const items = candidates.slice(0, page.limit);
   const tail = items.at(-1);
-  const output = viewer
-    ? privateResponse(request, env, { items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.createdAt, id: tail.id }) : null })
-    : response(request, env, { items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.createdAt, id: tail.id }) : null });
-  if (!viewer) output.headers.set('cache-control', 'public, max-age=10, s-maxage=10');
-  return output;
+  return feedResponse(request, env, { items: presentCommentFeedItems(items), nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.createdAt, id: tail.id }) : null }, 'comments', Boolean(viewer));
 }
 
 export default {
@@ -2347,6 +2666,8 @@ export default {
         const identity = await inspectDatabaseIdentity(env.DB_APP_FRESH, databaseExpectationsFromEnv(env));
         return privateResponse(request, env, {
           service: 'lythaus-public-api',
+          workerVersionId: env.WORKER_VERSION.id,
+          releaseTag: env.WORKER_VERSION.tag,
           ...databaseReadinessResponse(identity, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
         });
       }
@@ -2355,7 +2676,8 @@ export default {
         return response(request, env, { status: 'ready', service: 'lythaus-public-api' });
       }
       if (request.method === 'GET' && url.pathname === '/.well-known/jwks.json') return new Response(env.JWT_PUBLIC_JWKS ?? '{"keys":[]}', { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=300' } });
-      await enforceRateLimit(request, env, url.pathname.startsWith('/api/auth') ? 'auth' : 'public-api', url.pathname.startsWith('/api/auth') ? 10 : 120);
+      const rateLimit = rateLimitPlan(url.pathname);
+      await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
       if (request.method === 'GET' && url.pathname === '/api/feed/discover') {
         const user = request.headers.has('authorization') ? await principal(request, env) : undefined;
         return await discoveryFeed(request, env, user);
@@ -2371,11 +2693,11 @@ export default {
       }
       if ((request.method === 'PUT' || request.method === 'PATCH') && post) {
         const user = await principal(request, env);
-        return await idempotentMutation(request, env, user.userId, 'post.update', () => updatePost(request, env, user, post[1]));
+        return await idempotentMutation(request, env, user.userId, 'post.update', () => updatePost(request, env, user, post[1]), request.method === 'PUT');
       }
       if (request.method === 'DELETE' && post) {
         const user = await principal(request, env);
-        return await idempotentMutation(request, env, user.userId, 'post.delete', () => deletePost(request, env, user, post[1]));
+        return await idempotentMutation(request, env, user.userId, 'post.delete', () => deletePost(request, env, user, post[1]), true);
       }
       const comments = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if (request.method === 'GET' && comments) {
@@ -2493,12 +2815,12 @@ export default {
       const appealVote = url.pathname.match(/^\/api\/appeals\/([^/]+)\/vote$/);
       if (request.method === 'POST' && appealVote) {
         const user = await principal(request, env);
-        return await idempotentMutation(request, env, user.userId, 'appeal.vote', () => submitAppealVote(request, env, user, appealVote[1]));
+        return await idempotentMutation(request, env, user.userId, 'appeal.vote', () => submitAppealVote(request, env, user, appealVote[1]), true);
       }
       const appealRecusal = url.pathname.match(/^\/api\/appeals\/([^/]+)\/recuse$/);
       if (request.method === 'POST' && appealRecusal) {
         const user = await principal(request, env);
-        return await idempotentMutation(request, env, user.userId, 'appeal.recuse', () => recuseAppealReview(request, env, user, appealRecusal[1]));
+        return await idempotentMutation(request, env, user.userId, 'appeal.recuse', () => recuseAppealReview(request, env, user, appealRecusal[1]), true);
       }
       if (request.method === 'GET' && url.pathname === '/api/appeals/reviewer/assignments') return await reviewerAssignments(request, env, await principal(request, env));
       if (request.method === 'GET' && url.pathname === '/api/reputation/me') {
@@ -2528,14 +2850,18 @@ export default {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, `notification.${notificationRoute[2]}`, () => notificationAction(request, env, user, notificationRoute[1], notificationRoute[2] as 'read' | 'dismiss'));
       }
-      if (url.pathname === '/api/notifications/preferences' && ['GET', 'PUT', 'PATCH'].includes(request.method)) return await notificationPreferences(request, env, await principal(request, env));
+      if (url.pathname === '/api/notifications/preferences' && ['GET', 'PUT', 'PATCH'].includes(request.method)) {
+        const user = await principal(request, env);
+        if (request.method === 'GET') return await notificationPreferences(request, env, user);
+        return await idempotentMutation(request, env, user.userId, `notification.preferences.${request.method.toLowerCase()}`, () => notificationPreferences(request, env, user));
+      }
       if (url.pathname === '/api/notifications/devices' && ['GET', 'POST'].includes(request.method)) return await notificationDevices(request, env, await principal(request, env));
       const notificationDeviceRevoke = url.pathname.match(/^\/api\/notifications\/devices\/([^/]+)\/revoke$/);
       if (request.method === 'POST' && notificationDeviceRevoke) {
         const user = await principal(request, env);
         await transaction(env.DB_APP_FRESH, async (client) => {
           const result = await client.query(
-            `UPDATE feed.notification_devices SET active = false, revoked_at = now() WHERE id = $1 AND user_id = $2 RETURNING id`,
+            `UPDATE feed.notification_devices SET active = false, revoked_at = now() WHERE id = $1 AND user_id = $2 AND active = true RETURNING id`,
             [notificationDeviceRevoke[1], user.userId]);
           if (result.rowCount !== 1) throw new Error('notification_device_not_found');
           await writeActivity(client, request, user, notificationDeviceRevoke[1], {
@@ -2555,26 +2881,26 @@ export default {
       if (request.method === 'GET' && privacyExport) {
         return await downloadPrivacyExport(request, env, await principal(request, env), privacyExport[1]);
       }
-      if (request.method === 'POST' && (url.pathname === '/api/privacy/requests' || url.pathname === '/api/privacy/request')) {
+      if (request.method === 'POST' && url.pathname === '/api/privacy/requests') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'privacy.request.create', () => createPrivacyRequest(request, env, user));
       }
-      if (request.method === 'GET' && (url.pathname === '/api/storage' || url.pathname === '/api/storage/usage')) return await getStorage(request, env, await principal(request, env));
-      if (request.method === 'PUT' && (url.pathname === '/api/users/me/region' || url.pathname === '/api/privacy/region')) {
+      if (request.method === 'GET' && url.pathname === '/api/storage/usage') return await getStorage(request, env, await principal(request, env));
+      if (request.method === 'PUT' && url.pathname === '/api/users/me/region') {
         const user = await principal(request, env);
-        return await idempotentMutation(request, env, user.userId, 'region.update', () => updateRegionPreferences(request, env, user));
+        return await idempotentMutation(request, env, user.userId, 'region.update', () => updateRegionPreferences(request, env, user), true);
       }
-      if (request.method === 'PUT' && (url.pathname === '/api/users/me/retention' || url.pathname === '/api/privacy/retention')) {
+      if (request.method === 'PUT' && url.pathname === '/api/users/me/retention') {
         const user = await principal(request, env);
-        return await idempotentMutation(request, env, user.userId, 'retention.update', () => updateRetentionRule(request, env, user));
+        return await idempotentMutation(request, env, user.userId, 'retention.update', () => updateRetentionRule(request, env, user), true);
       }
       if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return await getUserInfo(request, env, (await principal(request, env)).userId);
-      if (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail' || url.pathname.startsWith('/api/auth/email/verify') || url.pathname.startsWith('/api/auth/password/reset') || url.pathname === '/api/auth/password-reset') {
+      if (url.pathname === '/api/auth/email' || url.pathname.startsWith('/api/auth/email/verify') || url.pathname.startsWith('/api/auth/password/reset')) {
         if (env.EMAIL_PROVIDER_MODE === 'disabled') return response(request, env, { error: 'provider_unavailable', provider: 'email', correlationId: id }, { status: 404 });
       }
-      if (request.method === 'POST' && (url.pathname === '/api/auth/email' || url.pathname === '/api/authEmail')) return await emailAuth(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/email') return await emailAuth(request, env);
       if ((request.method === 'GET' || request.method === 'POST') && url.pathname === '/api/auth/email/verify') return await verifyEmail(request, env);
-      if (request.method === 'POST' && (url.pathname === '/api/auth/password/reset/request' || url.pathname === '/api/auth/password-reset')) return await requestPasswordReset(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/request') return await requestPasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return await completePasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return await refreshSession(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') return await logout(request, env);
@@ -2598,7 +2924,7 @@ export default {
       }
       return response(request, env, { error: 'not_found', correlationId: id }, { status: 404 });
     } catch (error) {
-      const classified = publicError(error);
+      const classified = classifyPublicError(error);
       logEvent({
         service: 'lythaus-public-api',
         correlationId: id,

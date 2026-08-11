@@ -14,6 +14,9 @@ Name | Type | Description | Notes
 **declaredCreationMode** | [**DeclaredCreationMode**](DeclaredCreationMode.md) |  |
 **visibility** | **String** |  |
 **moderationState** | [**ModerationState**](ModerationState.md) |  |
+**publicLabel** | [**PublicAuthorshipLabel**](PublicAuthorshipLabel.md) |  |
+**reactionCounts** | [**ReactionCounts**](ReactionCounts.md) |  |
+**viewerReaction** | **String** |  |
 **geoScope** | **String** |  | [optional]
 **placeId** | **String** |  | [optional]
 **publishedAt** | [**DateTime**](DateTime.md) |  | [optional]

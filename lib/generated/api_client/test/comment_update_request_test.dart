@@ -12,5 +12,10 @@ void main() {
       // TODO
     });
 
+    // DeclaredCreationMode declaredCreationMode
+    test('to test the property `declaredCreationMode`', () async {
+      // TODO
+    });
+
   });
 }

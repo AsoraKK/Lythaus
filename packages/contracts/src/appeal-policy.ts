@@ -65,8 +65,18 @@ export async function selectAppealReviewers(input: {
   ranked.sort((left, right) => left.rank.localeCompare(right.rank));
   if (ranked.length < APPEAL_POLICY.reviewerCount) throw new Error('appeal_reviewer_pool_insufficient');
 
+  const selected: AppealReviewerCandidate[] = [];
+  const selectedRelatedAccountGroups = new Set<string>();
+  for (const { candidate } of ranked) {
+    if (candidate.relatedAccountGroup && selectedRelatedAccountGroups.has(candidate.relatedAccountGroup)) continue;
+    selected.push(candidate);
+    if (candidate.relatedAccountGroup) selectedRelatedAccountGroups.add(candidate.relatedAccountGroup);
+    if (selected.length === APPEAL_POLICY.reviewerCount) break;
+  }
+  if (selected.length < APPEAL_POLICY.reviewerCount) throw new Error('appeal_reviewer_pool_insufficient');
+
   let weightedLevel5Reviewers = 0;
-  return ranked.slice(0, APPEAL_POLICY.reviewerCount).map(({ candidate }) => {
+  return selected.map((candidate) => {
     const receivesLevel5Weight =
       candidate.level === 5 && weightedLevel5Reviewers < APPEAL_POLICY.maximumWeightedLevel5Reviewers;
     if (receivesLevel5Weight) weightedLevel5Reviewers += 1;
@@ -99,7 +109,7 @@ export interface AppealAdjudication {
 
 export interface AppealEvaluation {
   status: 'pending_quorum' | 'no_consensus' | 'pending_adjudication' | 'adjudication_disagreement' | 'resolved';
-  communityDecision: AppealDecision | null;
+  reviewerPanelDecision: AppealDecision | null;
   finalDecision: AppealDecision | null;
   completedReviewers: number;
   totalWeight: number;
@@ -149,28 +159,28 @@ export function evaluateAppeal(
   };
 
   if (effectiveVotes.length < APPEAL_POLICY.quorum) {
-    return { ...base, status: 'pending_quorum', communityDecision: null, finalDecision: null, winningShare: 0 };
+    return { ...base, status: 'pending_quorum', reviewerPanelDecision: null, finalDecision: null, winningShare: 0 };
   }
 
   const overturnShare = totalWeight === 0 ? 0 : overturnWeight / totalWeight;
   const upholdShare = totalWeight === 0 ? 0 : upholdWeight / totalWeight;
-  const communityDecision = overturnShare >= APPEAL_POLICY.weightedMajority
+  const reviewerPanelDecision = overturnShare >= APPEAL_POLICY.weightedMajority
     ? 'overturn'
     : upholdShare >= APPEAL_POLICY.weightedMajority ? 'uphold' : null;
   const winningShare = Math.max(overturnShare, upholdShare);
-  if (!communityDecision) {
-    return { ...base, status: 'no_consensus', communityDecision: null, finalDecision: null, winningShare };
+  if (!reviewerPanelDecision) {
+    return { ...base, status: 'no_consensus', reviewerPanelDecision: null, finalDecision: null, winningShare };
   }
 
   const uniqueAdjudications = new Map(adjudications.map((item) => [item.adjudicatorId, item]));
   const qualifiedAdjudications = Array.from(uniqueAdjudications.values()).filter((item) => item.trained);
-  if (qualifiedAdjudications.some((item) => item.decision !== communityDecision)) {
-    return { ...base, status: 'adjudication_disagreement', communityDecision, finalDecision: null, winningShare };
+  if (qualifiedAdjudications.some((item) => item.decision !== reviewerPanelDecision)) {
+    return { ...base, status: 'adjudication_disagreement', reviewerPanelDecision, finalDecision: null, winningShare };
   }
-  const confirmations = qualifiedAdjudications.filter((item) => item.decision === communityDecision).length;
+  const confirmations = qualifiedAdjudications.filter((item) => item.decision === reviewerPanelDecision).length;
   if (confirmations < requiredAdjudicators) {
-    return { ...base, status: 'pending_adjudication', communityDecision, finalDecision: null, winningShare };
+    return { ...base, status: 'pending_adjudication', reviewerPanelDecision, finalDecision: null, winningShare };
   }
 
-  return { ...base, status: 'resolved', communityDecision, finalDecision: communityDecision, winningShare };
+  return { ...base, status: 'resolved', reviewerPanelDecision, finalDecision: reviewerPanelDecision, winningShare };
 }

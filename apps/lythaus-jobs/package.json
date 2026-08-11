@@ -7,6 +7,7 @@
     "@lythaus/authenticity": "file:../../packages/authenticity",
     "@lythaus/cloudflare-env": "file:../../packages/cloudflare-env",
     "@lythaus/db": "file:../../packages/db",
+    "@lythaus/media": "file:../../packages/media",
     "@lythaus/observability": "file:../../packages/observability"
   }
 }

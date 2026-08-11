@@ -654,14 +654,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final statement = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Appeal this decision', style: GoogleFonts.sora()),
+        title: Text('Request an appeal review', style: GoogleFonts.sora()),
         content: TextField(
           controller: controller,
           minLines: 3,
           maxLines: 6,
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
-            hintText: 'Briefly explain why this should be reviewed.',
+            hintText:
+                'Briefly explain why this moderation case should be reviewed.',
           ),
         ),
         actions: [
@@ -698,7 +699,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       SnackBar(
         content: Text(
           success
-              ? 'Appeal submitted. We will notify you when there is an update.'
+              ? 'Appeal submitted for independent trained-reviewer and '
+                    'adjudicator review. We will notify you when there is an update.'
               : 'Failed to submit appeal. Please try again.',
           style: GoogleFonts.sora(),
         ),

@@ -180,7 +180,7 @@ CREATE TABLE moderation.appeal_adjudications (
 CREATE TABLE moderation.appeal_outcomes (
   appeal_id uuid PRIMARY KEY REFERENCES moderation.appeals(id) ON DELETE CASCADE,
   risk_class text NOT NULL CHECK (risk_class IN ('standard', 'high')),
-  community_decision text CHECK (community_decision IN ('overturn', 'uphold')),
+  reviewer_panel_decision text CHECK (reviewer_panel_decision IN ('overturn', 'uphold')),
   final_decision text CHECK (final_decision IN ('overturn', 'uphold')),
   completed_reviewers smallint NOT NULL DEFAULT 0 CHECK (completed_reviewers BETWEEN 0 AND 5),
   total_weight smallint NOT NULL DEFAULT 0 CHECK (total_weight BETWEEN 0 AND 6),
@@ -212,7 +212,7 @@ ALTER TABLE moderation.appeals
   ADD COLUMN policy_version text NOT NULL DEFAULT 'appeals-v1.0.0',
   ADD COLUMN statement text CHECK (statement IS NULL OR length(statement) BETWEEN 1 AND 2000),
   ADD COLUMN expires_at timestamptz,
-  ADD COLUMN community_result_at timestamptz,
+  ADD COLUMN reviewer_panel_result_at timestamptz,
   ADD COLUMN adjudicated_at timestamptz;
 
 CREATE UNIQUE INDEX appeals_one_open_case_appellant_idx
@@ -220,11 +220,47 @@ CREATE UNIQUE INDEX appeals_one_open_case_appellant_idx
   WHERE state = 'open';
 
 ALTER TABLE content.posts
-  ADD COLUMN deleted_at timestamptz;
+  ADD COLUMN deleted_at timestamptz,
+  ADD COLUMN moderation_source_event_id uuid;
+
+ALTER TABLE moderation.detector_runs
+  ADD COLUMN source_event_id uuid;
+
+ALTER TABLE trust.provenance_events
+  ADD COLUMN source_event_id uuid;
+
+ALTER TABLE moderation.cases
+  ADD COLUMN source_event_id uuid;
+
+CREATE UNIQUE INDEX detector_runs_provider_source_event_idx
+  ON moderation.detector_runs (provider, source_event_id)
+  WHERE source_event_id IS NOT NULL;
+
+CREATE INDEX provenance_events_content_source_event_idx
+  ON trust.provenance_events (content_id, source_event_id)
+  WHERE source_event_id IS NOT NULL;
+
+CREATE UNIQUE INDEX moderation_cases_content_source_event_idx
+  ON moderation.cases (content_type, content_id, source_event_id)
+  WHERE source_event_id IS NOT NULL;
+
+CREATE UNIQUE INDEX posts_moderation_source_event_idx
+  ON content.posts (moderation_source_event_id)
+  WHERE moderation_source_event_id IS NOT NULL;
+
+ALTER TABLE social.profiles
+  ADD COLUMN moderation_source_event_id uuid,
+  ADD COLUMN moderation_state text NOT NULL DEFAULT 'allowed'
+    CHECK (moderation_state IN ('under_review', 'allowed', 'blocked'));
+
+CREATE UNIQUE INDEX profiles_moderation_source_event_idx
+  ON social.profiles (moderation_source_event_id)
+  WHERE moderation_source_event_id IS NOT NULL;
 
 ALTER TABLE content.comments
-  ADD COLUMN declared_creation_mode text NOT NULL DEFAULT 'human'
-    CHECK (declared_creation_mode IN ('human', 'ai_assisted')),
+  ADD COLUMN declared_creation_mode text NOT NULL DEFAULT 'unknown'
+    CHECK (declared_creation_mode IN ('human', 'ai_assisted', 'unknown')),
+  ADD COLUMN moderation_source_event_id uuid,
   ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now(),
   ADD COLUMN deleted_at timestamptz,
   ADD COLUMN depth smallint NOT NULL DEFAULT 0 CHECK (depth BETWEEN 0 AND 1);
@@ -233,16 +269,173 @@ UPDATE content.comments
    SET depth = 1
  WHERE parent_id IS NOT NULL;
 
+UPDATE content.comments
+   SET moderation_state = 'under_review'
+ WHERE declared_creation_mode = 'unknown';
+
 ALTER TABLE content.comments
   ALTER COLUMN declared_creation_mode DROP DEFAULT;
+
+UPDATE moderation.cases
+   SET source_event_id = id
+ WHERE source_event_id IS NULL;
+
+WITH ranked_open_cases AS (
+  SELECT id,
+         row_number() OVER (
+           PARTITION BY content_type, content_id
+           ORDER BY created_at DESC, id DESC
+         ) AS revision_rank
+    FROM moderation.cases
+   WHERE state = 'open'
+)
+UPDATE moderation.cases moderation_case
+   SET state = 'superseded',
+       resolved_at = COALESCE(moderation_case.resolved_at, now())
+  FROM ranked_open_cases ranked
+ WHERE moderation_case.id = ranked.id
+   AND ranked.revision_rank > 1;
+
+ALTER TABLE moderation.cases
+  ALTER COLUMN source_event_id SET NOT NULL,
+  ADD CONSTRAINT moderation_cases_state_check
+    CHECK (state IN ('open', 'resolved', 'superseded'));
+
+CREATE UNIQUE INDEX moderation_cases_one_open_content_idx
+  ON moderation.cases (content_type, content_id)
+  WHERE state = 'open';
+
+WITH current_cases AS (
+  SELECT content_type, content_id, source_event_id
+    FROM moderation.cases
+   WHERE state = 'open'
+)
+UPDATE content.posts post
+   SET moderation_source_event_id = current_case.source_event_id
+  FROM current_cases current_case
+ WHERE current_case.content_type = 'post'
+   AND current_case.content_id = post.id;
+
+WITH current_cases AS (
+  SELECT content_type, content_id, source_event_id
+    FROM moderation.cases
+   WHERE state = 'open'
+)
+UPDATE content.comments comment
+   SET moderation_source_event_id = current_case.source_event_id
+  FROM current_cases current_case
+ WHERE current_case.content_type = 'comment'
+   AND current_case.content_id = comment.id;
+
+WITH current_cases AS (
+  SELECT content_type, content_id, source_event_id
+    FROM moderation.cases
+   WHERE state = 'open'
+)
+UPDATE social.profiles profile
+   SET moderation_source_event_id = current_case.source_event_id,
+       moderation_state = 'under_review'
+  FROM current_cases current_case
+ WHERE current_case.content_type = 'profile'
+   AND current_case.content_id = profile.user_id;
 
 CREATE INDEX comments_visible_cursor_idx
   ON content.comments (post_id, moderation_state, created_at, id)
   WHERE deleted_at IS NULL;
 
+CREATE UNIQUE INDEX comments_moderation_source_event_idx
+  ON content.comments (moderation_source_event_id)
+  WHERE moderation_source_event_id IS NOT NULL;
+
 CREATE INDEX posts_visible_cursor_idx
   ON content.posts (moderation_state, visibility, published_at DESC, id DESC)
   WHERE deleted_at IS NULL;
+
+CREATE INDEX custom_feed_rules_feed_idx
+  ON social.custom_feed_rules (feed_id);
+
+CREATE INDEX editorial_publications_cursor_idx
+  ON editorial.publications (published_at DESC, id DESC)
+  WHERE published_at IS NOT NULL;
+
+CREATE INDEX user_inbox_cursor_idx
+  ON feed.user_inbox (user_id, created_at DESC, post_id DESC);
+
+WITH legacy_ai_generated_posts AS (
+  SELECT post.id
+    FROM content.posts post
+   WHERE post.declared_creation_mode = 'ai_generated'
+  UNION
+  SELECT declaration.post_id
+    FROM content.content_declarations declaration
+   WHERE declaration.public_label = 'AI-generated'
+      OR (
+        declaration.public_label IS NOT NULL
+        AND declaration.public_label NOT IN ('Human-authored', 'AI-assisted', 'Under review')
+      )
+  UNION
+  SELECT moderation_case.content_id
+    FROM moderation.decisions decision
+    JOIN moderation.cases moderation_case ON moderation_case.id = decision.case_id
+   WHERE (
+       decision.public_label = 'AI-generated'
+       OR (
+         decision.public_label IS NOT NULL
+         AND decision.public_label NOT IN ('Human-authored', 'AI-assisted', 'Under review')
+       )
+     )
+     AND moderation_case.content_type = 'post'
+)
+UPDATE content.posts post
+   SET visibility = 'private',
+       moderation_state = 'under_review',
+       published_at = NULL,
+       updated_at = now()
+ WHERE post.id IN (SELECT id FROM legacy_ai_generated_posts);
+
+UPDATE content.content_declarations
+   SET public_label = 'Under review',
+       review_required = true,
+       updated_at = now()
+ WHERE public_label = 'AI-generated'
+    OR declared_creation_mode = 'ai_generated'
+    OR (
+      public_label IS NOT NULL
+      AND public_label NOT IN ('Human-authored', 'AI-assisted', 'Under review')
+    );
+
+UPDATE moderation.decisions
+   SET public_label = 'Under review'
+ WHERE public_label IS NOT NULL
+   AND public_label NOT IN ('Human-authored', 'AI-assisted', 'Under review');
+
+ALTER TABLE content.content_declarations
+  DROP CONSTRAINT IF EXISTS content_declarations_public_label_check;
+ALTER TABLE content.content_declarations
+  ADD CONSTRAINT content_declarations_public_label_check
+  CHECK (public_label IS NULL OR public_label IN ('Human-authored', 'AI-assisted', 'Under review'));
+
+ALTER TABLE content.content_declarations
+  ADD CONSTRAINT content_declarations_generated_private_check
+  CHECK (
+    declared_creation_mode <> 'ai_generated'
+    OR (public_label IS NULL OR public_label = 'Under review') AND review_required
+  );
+
+ALTER TABLE moderation.decisions
+  ADD CONSTRAINT moderation_decisions_public_label_check
+  CHECK (public_label IS NULL OR public_label IN ('Human-authored', 'AI-assisted', 'Under review'));
+
+ALTER TABLE content.posts
+  ADD CONSTRAINT posts_generated_private_check
+  CHECK (
+    declared_creation_mode <> 'ai_generated'
+    OR (
+      visibility = 'private'
+      AND moderation_state <> 'allowed'
+      AND published_at IS NULL
+    )
+  );
 
 WITH ranked_reactions AS (
   SELECT user_id, post_id, reaction_type,
@@ -262,6 +455,13 @@ DELETE FROM social.reactions reaction
 CREATE UNIQUE INDEX reactions_one_current_idx
   ON social.reactions (user_id, post_id);
 
+CREATE INDEX reactions_post_type_idx
+  ON social.reactions (post_id, reaction_type);
+
+ALTER TABLE social.reactions
+  ADD CONSTRAINT reactions_type_check
+  CHECK (reaction_type IN ('like', 'insightful', 'support')) NOT VALID;
+
 ALTER TABLE feed.notifications
   ADD COLUMN source_event_id uuid,
   ADD COLUMN policy_version text,
@@ -270,6 +470,17 @@ ALTER TABLE feed.notifications
 CREATE UNIQUE INDEX notifications_source_once_idx
   ON feed.notifications (recipient_id, notification_type, source_event_id)
   WHERE source_event_id IS NOT NULL;
+
+CREATE INDEX outbox_events_actor_cursor_idx
+  ON system.outbox_events (actor_id, created_at DESC, id DESC)
+  WHERE actor_id IS NOT NULL;
+
+CREATE INDEX consumer_inbox_event_idx
+  ON system.consumer_inbox (event_id);
+
+CREATE INDEX idempotency_keys_actor_created_idx
+  ON system.idempotency_keys (actor_id, created_at DESC)
+  WHERE actor_id IS NOT NULL;
 
 ALTER FUNCTION privacy.reconcile_subject_data_locations(uuid)
   RENAME TO reconcile_subject_data_locations_pre_integrity_v2;
@@ -297,6 +508,67 @@ BEGIN
     (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
   SELECT p_subject_id, 'planetscale', 'trust.accountability_signals', 'accountability_signal', signal.id, 'authoritative', 'trust'
     FROM trust.accountability_signals signal WHERE signal.user_id = p_subject_id
+  ON CONFLICT DO NOTHING;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.contact_emails', 'contact_email', email.user_id, 'authoritative', 'account'
+    FROM identity.contact_emails email WHERE email.user_id = p_subject_id
+  ON CONFLICT DO NOTHING;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.user_entitlements', 'user_entitlement', entitlement.user_id, 'authoritative', 'account'
+    FROM identity.user_entitlements entitlement WHERE entitlement.user_id = p_subject_id
+  ON CONFLICT DO NOTHING;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'trust.reward_redemptions', 'reward_redemption', redemption.id, 'authoritative', 'rewards'
+    FROM trust.reward_redemptions redemption WHERE redemption.user_id = p_subject_id
+  ON CONFLICT DO NOTHING;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'identity.account_events', 'account_event', event.id, 'authoritative', 'security'
+    FROM identity.account_events event WHERE event.user_id = p_subject_id
+  ON CONFLICT DO NOTHING;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'system.audit_events', 'audit_event', audit.id, 'authoritative', 'security'
+    FROM system.audit_events audit
+   WHERE audit.actor_id = p_subject_id
+      OR (audit.target_type = 'user' AND audit.target_id = p_subject_id)
+  ON CONFLICT DO NOTHING;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'system.outbox_events', 'outbox_event', event.id, 'authoritative', 'operational'
+    FROM system.outbox_events event
+   WHERE event.actor_id = p_subject_id
+      OR jsonb_path_exists(
+        event.payload,
+        '$.** ? (@ == $subject)',
+        jsonb_build_object('subject', p_subject_id::text)
+      )
+  ON CONFLICT DO NOTHING;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT p_subject_id, 'planetscale', 'system.consumer_inbox', 'consumer_inbox_event', inbox.event_id, 'derived', 'operational'
+    FROM system.consumer_inbox inbox
+    LEFT JOIN system.outbox_events event ON event.id = inbox.event_id
+   WHERE event.actor_id = p_subject_id
+      OR jsonb_path_exists(
+        inbox.payload,
+        '$.** ? (@ == $subject)',
+        jsonb_build_object('subject', p_subject_id::text)
+      )
+      OR jsonb_path_exists(
+        event.payload,
+        '$.** ? (@ == $subject)',
+        jsonb_build_object('subject', p_subject_id::text)
+      )
+  ON CONFLICT DO NOTHING;
+  INSERT INTO privacy.subject_data_locations
+    (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)
+  SELECT DISTINCT p_subject_id, 'planetscale', 'system.idempotency_keys', 'idempotency_record', p_subject_id, 'derived', 'operational'
+    FROM system.idempotency_keys key
+   WHERE key.actor_id = p_subject_id
   ON CONFLICT DO NOTHING;
   INSERT INTO privacy.subject_data_locations
     (subject_id, store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class)

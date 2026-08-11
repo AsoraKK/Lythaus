@@ -14,7 +14,7 @@ part 'appeal_adjudication_response.g.dart';
 ///
 /// Properties:
 /// * [status]
-/// * [communityDecision]
+/// * [reviewerPanelDecision]
 /// * [finalDecision]
 /// * [completedReviewers]
 /// * [totalWeight]
@@ -57,11 +57,11 @@ class _$AppealAdjudicationResponseSerializer implements PrimitiveSerializer<Appe
       object.policyVersion,
       specifiedType: const FullType(String),
     );
-    if (object.communityDecision != null) {
-      yield r'communityDecision';
+    if (object.reviewerPanelDecision != null) {
+      yield r'reviewerPanelDecision';
       yield serializers.serialize(
-        object.communityDecision,
-        specifiedType: const FullType.nullable(AppealOutcomeCommunityDecisionEnum),
+        object.reviewerPanelDecision,
+        specifiedType: const FullType.nullable(AppealOutcomeReviewerPanelDecisionEnum),
       );
     }
     yield r'upholdWeight';
@@ -141,13 +141,13 @@ class _$AppealAdjudicationResponseSerializer implements PrimitiveSerializer<Appe
           ) as String;
           result.policyVersion = valueDes;
           break;
-        case r'communityDecision':
+        case r'reviewerPanelDecision':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(AppealOutcomeCommunityDecisionEnum),
-          ) as AppealOutcomeCommunityDecisionEnum?;
+            specifiedType: const FullType.nullable(AppealOutcomeReviewerPanelDecisionEnum),
+          ) as AppealOutcomeReviewerPanelDecisionEnum?;
           if (valueDes == null) continue;
-          result.communityDecision = valueDes;
+          result.reviewerPanelDecision = valueDes;
           break;
         case r'upholdWeight':
           final valueDes = serializers.deserialize(
@@ -263,19 +263,19 @@ class AppealAdjudicationResponseStatusEnum extends EnumClass {
   static AppealAdjudicationResponseStatusEnum valueOf(String name) => _$appealAdjudicationResponseStatusEnumValueOf(name);
 }
 
-class AppealAdjudicationResponseCommunityDecisionEnum extends EnumClass {
+class AppealAdjudicationResponseReviewerPanelDecisionEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'overturn')
-  static const AppealAdjudicationResponseCommunityDecisionEnum overturn = _$appealAdjudicationResponseCommunityDecisionEnum_overturn;
+  static const AppealAdjudicationResponseReviewerPanelDecisionEnum overturn = _$appealAdjudicationResponseReviewerPanelDecisionEnum_overturn;
   @BuiltValueEnumConst(wireName: r'uphold')
-  static const AppealAdjudicationResponseCommunityDecisionEnum uphold = _$appealAdjudicationResponseCommunityDecisionEnum_uphold;
+  static const AppealAdjudicationResponseReviewerPanelDecisionEnum uphold = _$appealAdjudicationResponseReviewerPanelDecisionEnum_uphold;
 
-  static Serializer<AppealAdjudicationResponseCommunityDecisionEnum> get serializer => _$appealAdjudicationResponseCommunityDecisionEnumSerializer;
+  static Serializer<AppealAdjudicationResponseReviewerPanelDecisionEnum> get serializer => _$appealAdjudicationResponseReviewerPanelDecisionEnumSerializer;
 
-  const AppealAdjudicationResponseCommunityDecisionEnum._(String name): super(name);
+  const AppealAdjudicationResponseReviewerPanelDecisionEnum._(String name): super(name);
 
-  static BuiltSet<AppealAdjudicationResponseCommunityDecisionEnum> get values => _$appealAdjudicationResponseCommunityDecisionEnumValues;
-  static AppealAdjudicationResponseCommunityDecisionEnum valueOf(String name) => _$appealAdjudicationResponseCommunityDecisionEnumValueOf(name);
+  static BuiltSet<AppealAdjudicationResponseReviewerPanelDecisionEnum> get values => _$appealAdjudicationResponseReviewerPanelDecisionEnumValues;
+  static AppealAdjudicationResponseReviewerPanelDecisionEnum valueOf(String name) => _$appealAdjudicationResponseReviewerPanelDecisionEnumValueOf(name);
 }
 
 class AppealAdjudicationResponseFinalDecisionEnum extends EnumClass {

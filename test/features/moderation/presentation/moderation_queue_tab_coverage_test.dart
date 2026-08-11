@@ -24,7 +24,7 @@ ModerationQueueItem _fakeItem({String id = 'q1'}) => ModerationQueueItem(
   status: 'pending',
   queue: 'default',
   reportCount: 3,
-  communityVotes: 1,
+  reviewerDecisions: 1,
   isEscalated: false,
   createdAt: DateTime(2024),
 );

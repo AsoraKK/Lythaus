@@ -290,7 +290,7 @@ class ActivityApi {
   ///
   /// Parameters:
   /// * [productIntegrityProfileUpdateRequest]
-  /// * [idempotencyKey] - Caller-generated replay key. Completed retries return the stored response.
+  /// * [idempotencyKey] - Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -394,7 +394,7 @@ class ActivityApi {
   ///
   /// Parameters:
   /// * [productIntegrityProfileUpdateRequest]
-  /// * [idempotencyKey] - Caller-generated replay key. Completed retries return the stored response.
+  /// * [idempotencyKey] - Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request

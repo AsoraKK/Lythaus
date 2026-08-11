@@ -171,7 +171,8 @@ void main() {
           request: any(
             named: 'request',
             that: predicate<CreatePostRequest>(
-              (r) => r.text == 'My first post on Lythaus!' && r.mediaUrl == null,
+              (r) =>
+                  r.text == 'My first post on Lythaus!' && r.mediaUrl == null,
             ),
           ),
           token: 'test-jwt-token',

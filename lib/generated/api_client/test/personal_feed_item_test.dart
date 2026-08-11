@@ -37,6 +37,21 @@ void main() {
       // TODO
     });
 
+    // PublicAuthorshipLabel publicLabel
+    test('to test the property `publicLabel`', () async {
+      // TODO
+    });
+
+    // ReactionCounts reactionCounts
+    test('to test the property `reactionCounts`', () async {
+      // TODO
+    });
+
+    // String viewerReaction
+    test('to test the property `viewerReaction`', () async {
+      // TODO
+    });
+
     // String geoScope
     test('to test the property `geoScope`', () async {
       // TODO
