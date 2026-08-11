@@ -53,7 +53,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **rewardsRedeemPost**
-> RewardRedemption rewardsRedeemPost(id)
+> RewardRedemption rewardsRedeemPost(id, idempotencyKey)
 
 Redeem a reward
 
@@ -63,9 +63,10 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getRewardsApi();
 final String id = id_example; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.rewardsRedeemPost(id);
+    final response = api.rewardsRedeemPost(id, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling RewardsApi->rewardsRedeemPost: $e\n');
@@ -77,6 +78,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 

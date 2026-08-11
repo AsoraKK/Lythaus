@@ -100,9 +100,7 @@ void main() {
   group('isPinValidationError', () {
     test('returns false for connectionError while pinning is disabled', () {
       final err = DioException(
-        requestOptions: RequestOptions(
-          path: 'https://api.lythaus.co/api/test',
-        ),
+        requestOptions: RequestOptions(path: 'https://api.lythaus.co/api/test'),
         type: DioExceptionType.connectionError,
       );
       expect(isPinValidationError(err), isFalse);
@@ -110,9 +108,7 @@ void main() {
 
     test('returns false for unknown error while pinning is disabled', () {
       final err = DioException(
-        requestOptions: RequestOptions(
-          path: 'https://api.lythaus.co/api/test',
-        ),
+        requestOptions: RequestOptions(path: 'https://api.lythaus.co/api/test'),
         type: DioExceptionType.unknown,
       );
       expect(isPinValidationError(err), isFalse);
@@ -120,9 +116,7 @@ void main() {
 
     test('returns false for badCertificate while pinning is disabled', () {
       final err = DioException(
-        requestOptions: RequestOptions(
-          path: 'https://api.lythaus.co/api/test',
-        ),
+        requestOptions: RequestOptions(path: 'https://api.lythaus.co/api/test'),
         type: DioExceptionType.badCertificate,
       );
       expect(isPinValidationError(err), isFalse);
@@ -138,9 +132,7 @@ void main() {
 
     test('returns false for timeout error', () {
       final err = DioException(
-        requestOptions: RequestOptions(
-          path: 'https://api.lythaus.co/api/test',
-        ),
+        requestOptions: RequestOptions(path: 'https://api.lythaus.co/api/test'),
         type: DioExceptionType.receiveTimeout,
       );
       expect(isPinValidationError(err), isFalse);
@@ -148,9 +140,7 @@ void main() {
 
     test('returns false for badResponse', () {
       final err = DioException(
-        requestOptions: RequestOptions(
-          path: 'https://api.lythaus.co/api/test',
-        ),
+        requestOptions: RequestOptions(path: 'https://api.lythaus.co/api/test'),
         type: DioExceptionType.badResponse,
       );
       expect(isPinValidationError(err), isFalse);
@@ -158,9 +148,7 @@ void main() {
 
     test('returns false for cancel', () {
       final err = DioException(
-        requestOptions: RequestOptions(
-          path: 'https://api.lythaus.co/api/test',
-        ),
+        requestOptions: RequestOptions(path: 'https://api.lythaus.co/api/test'),
         type: DioExceptionType.cancel,
       );
       expect(isPinValidationError(err), isFalse);

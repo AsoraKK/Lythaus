@@ -7,20 +7,24 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(CreatePostRequest, () {
-    // Post body text
-    // String text
-    test('to test the property `text`', () async {
+    // String body
+    test('to test the property `body`', () async {
       // TODO
     });
 
-    // String mediaUrl
-    test('to test the property `mediaUrl`', () async {
+    // Required user authorship disclosure. Public responses use categorical labels only.
+    // String declaredCreationMode
+    test('to test the property `declaredCreationMode`', () async {
       // TODO
     });
 
-    // Required authorship disclosure.
-    // String aiLabel
-    test('to test the property `aiLabel`', () async {
+    // String geoScope
+    test('to test the property `geoScope`', () async {
+      // TODO
+    });
+
+    // String placeId
+    test('to test the property `placeId`', () async {
       // TODO
     });
 

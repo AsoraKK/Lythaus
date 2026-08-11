@@ -9,32 +9,32 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**notificationsDevicesCreate**](NotificationsApi.md#notificationsdevicescreate) | **POST** /notifications/devices | Register a push device token
-[**notificationsDevicesList**](NotificationsApi.md#notificationsdeviceslist) | **GET** /notifications/devices | List registered push devices
-[**notificationsDevicesRevoke**](NotificationsApi.md#notificationsdevicesrevoke) | **POST** /notifications/devices/{id}/revoke | Revoke a push device registration
+[**notificationsDevicesCreate**](NotificationsApi.md#notificationsdevicescreate) | **POST** /notifications/devices | Register or reactivate a push device
+[**notificationsDevicesList**](NotificationsApi.md#notificationsdeviceslist) | **GET** /notifications/devices | List my push devices
+[**notificationsDevicesRevoke**](NotificationsApi.md#notificationsdevicesrevoke) | **POST** /notifications/devices/{id}/revoke | Revoke a push device
 [**notificationsDismiss**](NotificationsApi.md#notificationsdismiss) | **POST** /notifications/{id}/dismiss | Dismiss a notification
-[**notificationsList**](NotificationsApi.md#notificationslist) | **GET** /notifications | List notifications for the current user
+[**notificationsList**](NotificationsApi.md#notificationslist) | **GET** /notifications | List my notifications
 [**notificationsPreferencesGet**](NotificationsApi.md#notificationspreferencesget) | **GET** /notifications/preferences | Get notification preferences
-[**notificationsPreferencesUpdate**](NotificationsApi.md#notificationspreferencesupdate) | **PUT** /notifications/preferences | Update notification preferences
-[**notificationsRead**](NotificationsApi.md#notificationsread) | **POST** /notifications/{id}/read | Mark a notification as read
-[**notificationsSend**](NotificationsApi.md#notificationssend) | **POST** /notifications/send | Send an admin-triggered notification
-[**notificationsUnreadCount**](NotificationsApi.md#notificationsunreadcount) | **GET** /notifications/unread-count | Get unread notification count
+[**notificationsPreferencesReplace**](NotificationsApi.md#notificationspreferencesreplace) | **PUT** /notifications/preferences | Replace notification preferences
+[**notificationsPreferencesUpdate**](NotificationsApi.md#notificationspreferencesupdate) | **PATCH** /notifications/preferences | Partially update notification preferences
+[**notificationsRead**](NotificationsApi.md#notificationsread) | **POST** /notifications/{id}/read | Mark a notification read
+[**notificationsUnreadCount**](NotificationsApi.md#notificationsunreadcount) | **GET** /notifications/unread-count | Get my unread notification count
 
 
 # **notificationsDevicesCreate**
-> JsonObject notificationsDevicesCreate(body)
+> NotificationDeviceCreated notificationsDevicesCreate(notificationDeviceCreate)
 
-Register a push device token
+Register or reactivate a push device
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
-final JsonObject body = Object; // JsonObject |
+final NotificationDeviceCreate notificationDeviceCreate = ; // NotificationDeviceCreate |
 
 try {
-    final response = api.notificationsDevicesCreate(body);
+    final response = api.notificationsDevicesCreate(notificationDeviceCreate);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling NotificationsApi->notificationsDevicesCreate: $e\n');
@@ -45,11 +45,11 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  |
+ **notificationDeviceCreate** | [**NotificationDeviceCreate**](NotificationDeviceCreate.md)|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationDeviceCreated**](NotificationDeviceCreated.md)
 
 ### Authorization
 
@@ -63,9 +63,9 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **notificationsDevicesList**
-> JsonObject notificationsDevicesList()
+> NotificationDeviceList notificationsDevicesList()
 
-List registered push devices
+List my push devices
 
 ### Example
 ```dart
@@ -86,7 +86,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationDeviceList**](NotificationDeviceList.md)
 
 ### Authorization
 
@@ -100,20 +100,19 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **notificationsDevicesRevoke**
-> JsonObject notificationsDevicesRevoke(id, body)
+> NotificationDeviceRevoked notificationsDevicesRevoke(id)
 
-Revoke a push device registration
+Revoke a push device
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 
 try {
-    final response = api.notificationsDevicesRevoke(id, body);
+    final response = api.notificationsDevicesRevoke(id);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling NotificationsApi->notificationsDevicesRevoke: $e\n');
@@ -125,11 +124,10 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **body** | **JsonObject**|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationDeviceRevoked**](NotificationDeviceRevoked.md)
 
 ### Authorization
 
@@ -137,13 +135,13 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
- - **Content-Type**: application/json
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **notificationsDismiss**
-> JsonObject notificationsDismiss(id, body)
+> NotificationActionResponse notificationsDismiss(id, idempotencyKey)
 
 Dismiss a notification
 
@@ -152,11 +150,11 @@ Dismiss a notification
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.notificationsDismiss(id, body);
+    final response = api.notificationsDismiss(id, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling NotificationsApi->notificationsDismiss: $e\n');
@@ -168,11 +166,11 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **body** | **JsonObject**|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationActionResponse**](NotificationActionResponse.md)
 
 ### Authorization
 
@@ -180,24 +178,26 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
- - **Content-Type**: application/json
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **notificationsList**
-> JsonObject notificationsList()
+> NotificationPage notificationsList(cursor, limit)
 
-List notifications for the current user
+List my notifications
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
 
 try {
-    final response = api.notificationsList();
+    final response = api.notificationsList(cursor, limit);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling NotificationsApi->notificationsList: $e\n');
@@ -205,11 +205,15 @@ try {
 ```
 
 ### Parameters
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationPage**](NotificationPage.md)
 
 ### Authorization
 
@@ -223,7 +227,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **notificationsPreferencesGet**
-> JsonObject notificationsPreferencesGet()
+> NotificationPreferences notificationsPreferencesGet()
 
 Get notification preferences
 
@@ -246,7 +250,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationPreferences**](NotificationPreferences.md)
 
 ### Authorization
 
@@ -259,20 +263,64 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **notificationsPreferencesUpdate**
-> JsonObject notificationsPreferencesUpdate(body)
+# **notificationsPreferencesReplace**
+> NotificationPreferences notificationsPreferencesReplace(notificationPreferenceUpdate, idempotencyKey)
 
-Update notification preferences
+Replace notification preferences
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
-final JsonObject body = Object; // JsonObject |
+final NotificationPreferenceUpdate notificationPreferenceUpdate = ; // NotificationPreferenceUpdate |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.notificationsPreferencesUpdate(body);
+    final response = api.notificationsPreferencesReplace(notificationPreferenceUpdate, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling NotificationsApi->notificationsPreferencesReplace: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **notificationPreferenceUpdate** | [**NotificationPreferenceUpdate**](NotificationPreferenceUpdate.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
+
+### Return type
+
+[**NotificationPreferences**](NotificationPreferences.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **notificationsPreferencesUpdate**
+> NotificationPreferences notificationsPreferencesUpdate(notificationPreferenceUpdate, idempotencyKey)
+
+Partially update notification preferences
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getNotificationsApi();
+final NotificationPreferenceUpdate notificationPreferenceUpdate = ; // NotificationPreferenceUpdate |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
+
+try {
+    final response = api.notificationsPreferencesUpdate(notificationPreferenceUpdate, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling NotificationsApi->notificationsPreferencesUpdate: $e\n');
@@ -283,11 +331,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  |
+ **notificationPreferenceUpdate** | [**NotificationPreferenceUpdate**](NotificationPreferenceUpdate.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationPreferences**](NotificationPreferences.md)
 
 ### Authorization
 
@@ -301,20 +350,20 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **notificationsRead**
-> JsonObject notificationsRead(id, body)
+> NotificationActionResponse notificationsRead(id, idempotencyKey)
 
-Mark a notification as read
+Mark a notification read
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getNotificationsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.notificationsRead(id, body);
+    final response = api.notificationsRead(id, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling NotificationsApi->notificationsRead: $e\n');
@@ -326,11 +375,11 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **body** | **JsonObject**|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationActionResponse**](NotificationActionResponse.md)
 
 ### Authorization
 
@@ -338,56 +387,15 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **notificationsSend**
-> JsonObject notificationsSend(body)
-
-Send an admin-triggered notification
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getNotificationsApi();
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.notificationsSend(body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling NotificationsApi->notificationsSend: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **notificationsUnreadCount**
-> JsonObject notificationsUnreadCount()
+> NotificationUnreadCount notificationsUnreadCount()
 
-Get unread notification count
+Get my unread notification count
 
 ### Example
 ```dart
@@ -408,7 +416,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**NotificationUnreadCount**](NotificationUnreadCount.md)
 
 ### Authorization
 

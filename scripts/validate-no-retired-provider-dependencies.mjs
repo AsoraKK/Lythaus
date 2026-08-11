@@ -26,6 +26,7 @@ const approvedAllowlistPaths = new Set([
   'docs/security/github-credential-purpose-inventory.md',
   'docs/security/provider-decommission-follow-up.md',
   'docs/architecture/email-guest-authentication-adr.md',
+  'docs/architecture/adr-003-lythaus-current-state.md',
   'README.md',
   'AGENTS.md',
   '.github/copilot-instructions.md',
@@ -82,6 +83,10 @@ for (const relative of scannedFiles) {
     continue;
   }
   if (contents.includes('\0')) continue;
+
+  if (normalized === 'package.json') {
+    contents = contents.replaceAll('https://github.com/AsoraKK/Lythaus', '');
+  }
 
   for (const rule of forbidden) {
     if (rule.pattern.test(contents)) {

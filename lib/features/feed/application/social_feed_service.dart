@@ -13,6 +13,7 @@ import 'package:dio/dio.dart';
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/network/idempotency_key.dart';
 import 'package:lythaus/core/observability/lythaus_tracer.dart';
 
 /// Concrete implementation of [SocialFeedRepository]
@@ -47,7 +48,7 @@ class SocialFeedService implements SocialFeedRepository {
         };
 
         final response = await _dio.get<Map<String, dynamic>>(
-          '$_baseUrl$urlPath',
+          urlPath,
           queryParameters: queryParameters,
           options: Options(
             headers: token != null ? {'Authorization': 'Bearer $token'} : null,
@@ -62,30 +63,29 @@ class SocialFeedService implements SocialFeedRepository {
           );
         }
 
-        final rawItems = data['items'];
+        final payload = _unwrapEnvelope(data);
+        final rawItems = payload['items'] ?? payload['posts'];
         final posts =
             (rawItems as List<dynamic>?)
-                ?.whereType<Map<String, dynamic>>()
-                .map(Post.fromJson)
+                ?.whereType<Map<Object?, Object?>>()
+                .map((item) => Post.fromJson(Map<String, dynamic>.from(item)))
                 .toList() ??
             [];
 
         return FeedResponse.fromCursor(
           posts: posts,
-          nextCursor: data['nextCursor'] as String?,
+          nextCursor: _nextCursor(payload),
           limit: limit,
         );
       },
       attributes: () {
         final attrs =
-            LythausTracer.httpRequestAttributes(
-              method: 'GET',
-              url: '/api$urlPath',
-            )..addAll({
-              'request.limit': limit,
-              'request.cursor_present': cursor != null,
-              'request.has_token': token != null,
-            });
+            LythausTracer.httpRequestAttributes(method: 'GET', url: urlPath)
+              ..addAll({
+                'request.limit': limit,
+                'request.cursor_present': cursor != null,
+                'request.has_token': token != null,
+              });
         if (extraQuery != null && extraQuery.isNotEmpty) {
           attrs['request.extra_params'] = extraQuery.keys.join(',');
         }
@@ -103,7 +103,7 @@ class SocialFeedService implements SocialFeedRepository {
   }) {
     return _fetchCursorFeed(
       operation: 'getDiscoverFeed',
-      urlPath: '/feed/discover',
+      urlPath: '/api/feed/discover',
       cursor: cursor,
       limit: limit,
       token: token,
@@ -118,7 +118,7 @@ class SocialFeedService implements SocialFeedRepository {
   }) {
     return _fetchCursorFeed(
       operation: 'getNewsFeed',
-      urlPath: '/feed/news',
+      urlPath: '/api/feed/news',
       cursor: cursor,
       limit: limit,
       token: token,
@@ -136,7 +136,7 @@ class SocialFeedService implements SocialFeedRepository {
     final extra = includeReplies ? {'includeReplies': 'true'} : null;
     return _fetchCursorFeed(
       operation: 'getUserFeed',
-      urlPath: '/feed/user/$userId',
+      urlPath: '/api/feed/user/$userId',
       cursor: cursor,
       limit: limit,
       token: token,
@@ -169,13 +169,11 @@ class SocialFeedService implements SocialFeedRepository {
         }
 
         if (data['success'] == true) {
-          final payload = data['data'];
-          if (payload is! Map<String, dynamic>) {
-            throw const SocialFeedException(
-              'Invalid feed response',
-              code: 'INVALID_RESPONSE',
-            );
-          }
+          return FeedResponse.fromJson(_requireSuccessfulPayload(data));
+        }
+
+        final payload = _unwrapEnvelope(data);
+        if (payload.containsKey('items') || payload.containsKey('posts')) {
           return FeedResponse.fromJson(payload);
         }
 
@@ -376,41 +374,26 @@ class SocialFeedService implements SocialFeedRepository {
     return LythausTracer.traceOperation(
       'SocialFeedService.likePost',
       () async {
-        final response = await _dio.post<Map<String, dynamic>>(
-          '$_baseUrl/posts/$postId/like',
-          data: {'action': isLike ? 'like' : 'unlike'},
-          options: Options(headers: {'Authorization': 'Bearer $token'}),
-        );
-
-        final data = response.data;
-        if (data == null) {
-          throw const SocialFeedException(
-            'Invalid like response',
-            code: 'INVALID_RESPONSE',
+        if (isLike) {
+          final response = await _dio.post<Map<String, dynamic>>(
+            '$_baseUrl/posts/$postId/reactions',
+            data: const {'reactionType': 'like'},
+            options: _mutationOptions(token, 'reaction-create'),
           );
+          _requireReactionResponse(response.data, postId);
+        } else {
+          final response = await _dio.delete<Map<String, dynamic>>(
+            '$_baseUrl/posts/$postId/reactions',
+            options: _mutationOptions(token, 'reaction-delete'),
+          );
+          _requireReactionDeleteResponse(response.data, postId);
         }
-
-        if (data['success'] == true) {
-          final payload = data['post'];
-          if (payload is! Map<String, dynamic>) {
-            throw const SocialFeedException(
-              'Invalid like response',
-              code: 'INVALID_RESPONSE',
-            );
-          }
-          return Post.fromJson(payload);
-        }
-
-        final message = data['message'];
-        throw SocialFeedException(
-          message is String ? message : 'Failed to update like',
-          code: 'LIKE_FAILED',
-        );
+        return getPost(postId: postId, token: token);
       },
       attributes:
           LythausTracer.httpRequestAttributes(
             method: 'POST',
-            url: '/api/posts/$postId/like',
+            url: '/api/posts/$postId/reactions',
           )..addAll({
             'request.post_id': postId,
             'request.action': isLike ? 'like' : 'unlike',
@@ -425,50 +408,13 @@ class SocialFeedService implements SocialFeedRepository {
     required bool isDislike,
     required String token,
   }) async {
-    return LythausTracer.traceOperation(
-      'SocialFeedService.dislikePost',
-      () async {
-        final response = await _dio.post<Map<String, dynamic>>(
-          '$_baseUrl/posts/$postId/dislike',
-          data: {'action': isDislike ? 'dislike' : 'remove_dislike'},
-          options: Options(headers: {'Authorization': 'Bearer $token'}),
-        );
-
-        final data = response.data;
-        if (data == null) {
-          throw const SocialFeedException(
-            'Invalid dislike response',
-            code: 'INVALID_RESPONSE',
-          );
-        }
-
-        if (data['success'] == true) {
-          final payload = data['post'];
-          if (payload is! Map<String, dynamic>) {
-            throw const SocialFeedException(
-              'Invalid dislike response',
-              code: 'INVALID_RESPONSE',
-            );
-          }
-          return Post.fromJson(payload);
-        }
-
-        final message = data['message'];
-        throw SocialFeedException(
-          message is String ? message : 'Failed to update dislike',
-          code: 'DISLIKE_FAILED',
-        );
-      },
-      attributes:
-          LythausTracer.httpRequestAttributes(
-            method: 'POST',
-            url: '/api/posts/$postId/dislike',
-          )..addAll({
-            'request.post_id': postId,
-            'request.action': isDislike ? 'dislike' : 'remove_dislike',
-          }),
-      onError: (error) => _handleError(error),
-    );
+    if (isDislike) {
+      throw const SocialFeedException(
+        'Dislikes are not a supported Lythaus reaction',
+        code: 'UNSUPPORTED_REACTION',
+      );
+    }
+    return likePost(postId: postId, isLike: false, token: token);
   }
 
   @override
@@ -541,36 +487,29 @@ class SocialFeedService implements SocialFeedRepository {
       'SocialFeedService.flagPost',
       () async {
         final response = await _dio.post<Map<String, dynamic>>(
-          '$_baseUrl/posts/$postId/flag',
-          data: {'reason': reason, if (details != null) 'details': details},
-          options: Options(headers: {'Authorization': 'Bearer $token'}),
+          '$_baseUrl/flags',
+          data: {
+            'contentType': 'post',
+            'contentId': postId,
+            'reasonCode': reason,
+          },
+          options: _mutationOptions(token, 'flag-create'),
         );
-
-        final data = response.data;
-        if (data == null) {
+        final flagId = response.data?['flagId'];
+        if (flagId is! String || flagId.isEmpty) {
           throw const SocialFeedException(
             'Invalid flag response',
             code: 'INVALID_RESPONSE',
           );
         }
-
-        if (data['success'] != true) {
-          final message = data['message'];
-          throw SocialFeedException(
-            message is String ? message : 'Failed to flag post',
-            code: 'FLAG_FAILED',
-          );
-        }
       },
       attributes:
-          LythausTracer.httpRequestAttributes(
-            method: 'POST',
-            url: '/api/posts/$postId/flag',
-          )..addAll({
-            'request.post_id': postId,
-            'request.reason': reason,
-            'request.has_details': details != null,
-          }),
+          LythausTracer.httpRequestAttributes(method: 'POST', url: '/api/flags')
+            ..addAll({
+              'request.post_id': postId,
+              'request.reason': reason,
+              'request.has_details': details != null,
+            }),
       onError: (error) => _handleError(error),
     );
   }
@@ -586,13 +525,11 @@ class SocialFeedService implements SocialFeedRepository {
     }
 
     if (data['success'] == true) {
-      final payload = data['data'];
-      if (payload is! Map<String, dynamic>) {
-        throw const SocialFeedException(
-          'Invalid feed response',
-          code: 'INVALID_RESPONSE',
-        );
-      }
+      return FeedResponse.fromJson(_requireSuccessfulPayload(data));
+    }
+
+    final payload = _unwrapEnvelope(data);
+    if (payload.containsKey('items') || payload.containsKey('posts')) {
       return FeedResponse.fromJson(payload);
     }
 
@@ -601,6 +538,72 @@ class SocialFeedService implements SocialFeedRepository {
       message is String ? message : 'Failed to load feed',
       code: 'LOAD_FEED_FAILED',
     );
+  }
+
+  static Map<String, dynamic> _unwrapEnvelope(Map<String, dynamic> value) {
+    final data = value['data'];
+    return data is Map ? Map<String, dynamic>.from(data) : value;
+  }
+
+  Options _mutationOptions(String token, String scope) => Options(
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Idempotency-Key': IdempotencyKey.create(scope),
+    },
+  );
+
+  void _requireReactionResponse(Map<String, dynamic>? data, String postId) {
+    if (data?['postId'] != postId ||
+        data?['reactionType'] is! String ||
+        data?['changed'] is! bool) {
+      throw const SocialFeedException(
+        'Invalid reaction response',
+        code: 'INVALID_RESPONSE',
+      );
+    }
+  }
+
+  void _requireReactionDeleteResponse(
+    Map<String, dynamic>? data,
+    String postId,
+  ) {
+    if (data?['postId'] != postId || data?['removed'] is! bool) {
+      throw const SocialFeedException(
+        'Invalid reaction response',
+        code: 'INVALID_RESPONSE',
+      );
+    }
+  }
+
+  static Map<String, dynamic> _requireSuccessfulPayload(
+    Map<String, dynamic> value,
+  ) {
+    final payload = value['data'];
+    if (payload is! Map) {
+      throw const SocialFeedException(
+        'Invalid feed response',
+        code: 'INVALID_RESPONSE',
+      );
+    }
+    return Map<String, dynamic>.from(payload);
+  }
+
+  static String? _nextCursor(Map<String, dynamic> payload) {
+    final direct =
+        payload['nextCursor'] ??
+        payload['continuationToken'] ??
+        payload['cursor'];
+    if (direct is String && direct.isNotEmpty) {
+      return direct;
+    }
+    final pageInfo = payload['pageInfo'];
+    if (pageInfo is Map) {
+      final cursor = pageInfo['nextCursor'] ?? pageInfo['endCursor'];
+      if (cursor is String && cursor.isNotEmpty) {
+        return cursor;
+      }
+    }
+    return null;
   }
 
   /// Helper method to handle and convert errors

@@ -1,5 +1,7 @@
 import { Client, type QueryResult, type QueryResultRow } from 'pg';
 
+export type DatabaseClient = Client;
+
 export interface HyperdriveBinding {
   connectionString: string;
 }
@@ -106,3 +108,17 @@ export {
   type ReserveBudgetInput,
   type SettleBudgetInput,
 } from './budget.ts';
+export {
+  listUserActivity,
+  recordUserActivity,
+  type ActivityCursor,
+  type ActivityPage,
+} from './activity.ts';
+export {
+  refreshReputationProfile,
+  recordReputationSignal,
+  type ReputationEventRecord,
+  type ReputationMutationResult,
+  type ReputationProfileSnapshot,
+  type ReputationSignalInput,
+} from './reputation.ts';

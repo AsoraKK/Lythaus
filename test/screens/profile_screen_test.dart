@@ -13,9 +13,26 @@ import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/state/models/reputation.dart';
+import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 class _MockFollowService extends Mock implements FollowService {}
+
+const _reputationSnapshot = ReputationState(
+  userId: 'user-1',
+  level: 2,
+  levelName: 'Trusted contributor',
+  reputationStatus: 'active',
+  reputationBand: 'Constructive participation',
+  policyVersion: 'reputation-policy-v1',
+  pillars: <String, String>{
+    'constructiveParticipation': 'strong',
+    'accountability': 'strong',
+    'governance': 'developing',
+  },
+  promotionBlockers: <String>[],
+);
 
 class _FakeAnalyticsEventTracker implements AnalyticsEventTracker {
   final List<String> loggedOnce = [];
@@ -80,6 +97,7 @@ void main() {
           publicUserProvider(
             user.id,
           ).overrideWith((ref) => Future.value(profile)),
+          reputationProvider.overrideWith((ref) async => _reputationSnapshot),
         ],
         child: const MaterialApp(home: ProfileScreen()),
       ),

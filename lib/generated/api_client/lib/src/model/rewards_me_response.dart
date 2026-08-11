@@ -28,7 +28,7 @@ part 'rewards_me_response.g.dart';
 abstract class RewardsMeResponse implements Built<RewardsMeResponse, RewardsMeResponseBuilder> {
   @BuiltValueField(wireName: r'subscriptionTier')
   RewardsMeResponseSubscriptionTierEnum get subscriptionTier;
-  // enum subscriptionTierEnum {  guest,  free,  premium,  black,  editorial,  };
+  // enum subscriptionTierEnum {  free,  premium,  black,  };
 
   @BuiltValueField(wireName: r'reputationLevel')
   int get reputationLevel;
@@ -255,16 +255,12 @@ class _$RewardsMeResponseSerializer implements PrimitiveSerializer<RewardsMeResp
 
 class RewardsMeResponseSubscriptionTierEnum extends EnumClass {
 
-  @BuiltValueEnumConst(wireName: r'guest')
-  static const RewardsMeResponseSubscriptionTierEnum guest = _$rewardsMeResponseSubscriptionTierEnum_guest;
   @BuiltValueEnumConst(wireName: r'free')
   static const RewardsMeResponseSubscriptionTierEnum free = _$rewardsMeResponseSubscriptionTierEnum_free;
   @BuiltValueEnumConst(wireName: r'premium')
   static const RewardsMeResponseSubscriptionTierEnum premium = _$rewardsMeResponseSubscriptionTierEnum_premium;
   @BuiltValueEnumConst(wireName: r'black')
   static const RewardsMeResponseSubscriptionTierEnum black = _$rewardsMeResponseSubscriptionTierEnum_black;
-  @BuiltValueEnumConst(wireName: r'editorial')
-  static const RewardsMeResponseSubscriptionTierEnum editorial = _$rewardsMeResponseSubscriptionTierEnum_editorial;
 
   static Serializer<RewardsMeResponseSubscriptionTierEnum> get serializer => _$rewardsMeResponseSubscriptionTierEnumSerializer;
 

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/core/config/environment_config.dart';
 import 'package:lythaus/core/providers/repository_providers.dart';
 import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
-import 'package:lythaus/features/feed/domain/feed_repository.dart';
 
 void main() {
   group('Repository Providers', () {
@@ -36,12 +35,6 @@ void main() {
       final repo = container.read(moderationRepositoryProvider);
 
       expect(repo, isA<ModerationRepository>());
-    });
-
-    test('feedRepositoryProvider provides FeedRepository', () {
-      final repo = container.read(feedRepositoryProvider);
-
-      expect(repo, isA<FeedRepository>());
     });
   });
 }

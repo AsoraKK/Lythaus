@@ -3,28 +3,36 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:lythaus_api_client/src/model/email_session_response_data.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
 part 'email_session_response.g.dart';
 
-/// Email authentication session response envelope.
+/// Direct email authentication or refresh-token rotation response.
 ///
 /// Properties:
-/// * [success]
-/// * [data]
-/// * [timestamp]
+/// * [accessToken] - Short-lived JWT bearer token (15 minutes).
+/// * [refreshToken] - Rotating opaque refresh token.
+/// * [tokenType]
+/// * [expiresIn] - Access-token lifetime in seconds.
 @BuiltValue()
 abstract class EmailSessionResponse implements Built<EmailSessionResponse, EmailSessionResponseBuilder> {
-  @BuiltValueField(wireName: r'success')
-  bool get success;
+  /// Short-lived JWT bearer token (15 minutes).
+  @BuiltValueField(wireName: r'accessToken')
+  String get accessToken;
 
-  @BuiltValueField(wireName: r'data')
-  EmailSessionResponseData get data;
+  /// Rotating opaque refresh token.
+  @BuiltValueField(wireName: r'refreshToken')
+  String get refreshToken;
 
-  @BuiltValueField(wireName: r'timestamp')
-  DateTime get timestamp;
+  @BuiltValueField(wireName: r'tokenType')
+  EmailSessionResponseTokenTypeEnum get tokenType;
+  // enum tokenTypeEnum {  Bearer,  };
+
+  /// Access-token lifetime in seconds.
+  @BuiltValueField(wireName: r'expiresIn')
+  int get expiresIn;
 
   EmailSessionResponse._();
 
@@ -49,20 +57,25 @@ class _$EmailSessionResponseSerializer implements PrimitiveSerializer<EmailSessi
     EmailSessionResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'success';
+    yield r'accessToken';
     yield serializers.serialize(
-      object.success,
-      specifiedType: const FullType(bool),
+      object.accessToken,
+      specifiedType: const FullType(String),
     );
-    yield r'data';
+    yield r'refreshToken';
     yield serializers.serialize(
-      object.data,
-      specifiedType: const FullType(EmailSessionResponseData),
+      object.refreshToken,
+      specifiedType: const FullType(String),
     );
-    yield r'timestamp';
+    yield r'tokenType';
     yield serializers.serialize(
-      object.timestamp,
-      specifiedType: const FullType(DateTime),
+      object.tokenType,
+      specifiedType: const FullType(EmailSessionResponseTokenTypeEnum),
+    );
+    yield r'expiresIn';
+    yield serializers.serialize(
+      object.expiresIn,
+      specifiedType: const FullType(int),
     );
   }
 
@@ -87,26 +100,33 @@ class _$EmailSessionResponseSerializer implements PrimitiveSerializer<EmailSessi
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'success':
+        case r'accessToken':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(bool),
-          ) as bool;
-          result.success = valueDes;
+            specifiedType: const FullType(String),
+          ) as String;
+          result.accessToken = valueDes;
           break;
-        case r'data':
+        case r'refreshToken':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(EmailSessionResponseData),
-          ) as EmailSessionResponseData;
-          result.data.replace(valueDes);
+            specifiedType: const FullType(String),
+          ) as String;
+          result.refreshToken = valueDes;
           break;
-        case r'timestamp':
+        case r'tokenType':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
-          result.timestamp = valueDes;
+            specifiedType: const FullType(EmailSessionResponseTokenTypeEnum),
+          ) as EmailSessionResponseTokenTypeEnum;
+          result.tokenType = valueDes;
+          break;
+        case r'expiresIn':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.expiresIn = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -135,4 +155,17 @@ class _$EmailSessionResponseSerializer implements PrimitiveSerializer<EmailSessi
     );
     return result.build();
   }
+}
+
+class EmailSessionResponseTokenTypeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'Bearer')
+  static const EmailSessionResponseTokenTypeEnum bearer = _$emailSessionResponseTokenTypeEnum_bearer;
+
+  static Serializer<EmailSessionResponseTokenTypeEnum> get serializer => _$emailSessionResponseTokenTypeEnumSerializer;
+
+  const EmailSessionResponseTokenTypeEnum._(String name): super(name);
+
+  static BuiltSet<EmailSessionResponseTokenTypeEnum> get values => _$emailSessionResponseTokenTypeEnumValues;
+  static EmailSessionResponseTokenTypeEnum valueOf(String name) => _$emailSessionResponseTokenTypeEnumValueOf(name);
 }

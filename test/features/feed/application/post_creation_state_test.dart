@@ -60,6 +60,29 @@ void main() {
       expect(state.isValid, isFalse);
     });
 
+    test('AI-assisted text uses user-perceived character boundaries', () {
+      final withinLimit = PostCreationState(
+        text: '👨‍👩‍👧‍👦' * aiAssistedPublicTextMaxGraphemes,
+        aiLabel: 'assisted',
+      );
+      final overLimit = PostCreationState(
+        text: '👨‍👩‍👧‍👦' * (aiAssistedPublicTextMaxGraphemes + 1),
+        aiLabel: 'assisted',
+      );
+
+      expect(
+        withinLimit.userPerceivedTextLength,
+        aiAssistedPublicTextMaxGraphemes,
+      );
+      expect(withinLimit.isValid, isTrue);
+      expect(overLimit.isValid, isFalse);
+    });
+
+    test('AI-generated public disclosure is invalid', () {
+      const state = PostCreationState(text: 'Hello', aiLabel: 'generated');
+      expect(state.isValid, isFalse);
+    });
+
     test('isSuccess returns true for CreatePostSuccess', () {
       final state = PostCreationState(
         result: CreatePostSuccess(
@@ -152,4 +175,16 @@ void main() {
       expect(postTextMaxLength, 5000);
     });
   });
+
+  test(
+    'CreatePostRequest rejects generated public content before transport',
+    () {
+      const request = CreatePostRequest(
+        text: 'Public draft',
+        aiLabel: 'generated',
+      );
+
+      expect(request.toJson, throwsArgumentError);
+    },
+  );
 }

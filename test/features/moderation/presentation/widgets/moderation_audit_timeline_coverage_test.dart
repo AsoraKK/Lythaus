@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -71,7 +72,7 @@ void main() {
             entries: [
               entry(ModerationAuditActionType.flagged),
               entry(ModerationAuditActionType.aiEvaluated),
-              entry(ModerationAuditActionType.communityVote),
+              entry(ModerationAuditActionType.reviewerDecision),
               entry(ModerationAuditActionType.decision),
             ],
           ),
@@ -79,8 +80,8 @@ void main() {
       );
       expect(find.text('Flagged • actor-1'), findsOneWidget);
       expect(find.text('AI signal • actor-1'), findsOneWidget);
-      expect(find.text('Community vote • actor-1'), findsOneWidget);
-      expect(find.text('Moderator decision • actor-1'), findsOneWidget);
+      expect(find.text('Reviewer decision • actor-1'), findsOneWidget);
+      expect(find.text('Case decision • actor-1'), findsOneWidget);
       expect(find.byType(Divider), findsNWidgets(3));
     });
   });

@@ -1,223 +1,144 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dio/dio.dart';
+import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
-import 'package:lythaus/features/auth/domain/user.dart';
-import 'package:lythaus/services/service_providers.dart';
-import 'package:lythaus/services/subscription/subscription_service.dart';
+import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 
-void main() {
-  group('reputationTiersProvider', () {
-    test('provides three tiers', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+class _CapturingAdapter implements HttpClientAdapter {
+  _CapturingAdapter(this._handler);
 
-      final tiers = container.read(reputationTiersProvider);
+  final ResponseBody Function(RequestOptions options) _handler;
+  final List<RequestOptions> requests = <RequestOptions>[];
 
-      expect(tiers, hasLength(3));
-    });
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<List<int>>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    return _handler(options);
+  }
 
-    test('tiers are ordered by minXP', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+  @override
+  void close({bool force = false}) {}
+}
 
-      final tiers = container.read(reputationTiersProvider);
+Dio _dioWith(_CapturingAdapter adapter) {
+  final dio = Dio(BaseOptions(baseUrl: 'https://test.lythaus.co'));
+  dio.httpClientAdapter = adapter;
+  return dio;
+}
 
-      expect(tiers[0].id, 'free');
-      expect(tiers[0].minXP, 0);
-      expect(tiers[1].id, 'premium');
-      expect(tiers[1].minXP, 1200);
-      expect(tiers[2].id, 'black');
-      expect(tiers[2].minXP, 3200);
-    });
-
-    test('free tier has expected privileges', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final tiers = container.read(reputationTiersProvider);
-      final free = tiers.firstWhere((t) => t.id == 'free');
-
-      expect(free.privileges, isNotEmpty);
-      expect(free.privileges, contains('Limited daily posting'));
-      expect(
-        free.privileges,
-        contains('Rewards capped through reputation level 3'),
-      );
-    });
-
-    test('premium tier has expected privileges', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final tiers = container.read(reputationTiersProvider);
-      final premium = tiers.firstWhere((t) => t.id == 'premium');
-
-      expect(premium.name, 'Premium');
-      expect(premium.privileges, isNotEmpty);
-    });
-
-    test('black tier has expected privileges', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final tiers = container.read(reputationTiersProvider);
-      final black = tiers.firstWhere((t) => t.id == 'black');
-
-      expect(black.name, 'Black');
-      expect(black.minXP, 3200);
-      expect(black.privileges, isNotEmpty);
-    });
-
-    test('each tier has a unique id', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final tiers = container.read(reputationTiersProvider);
-      final ids = tiers.map((t) => t.id).toSet();
-
-      expect(ids.length, tiers.length);
-    });
-  });
-
-  group('reputationProvider', () {
-    User userWithTier(UserTier tier) {
-      return User(
-        id: 'u1',
-        email: 'user@example.com',
-        role: UserRole.user,
-        tier: tier,
-        reputationScore: 42,
-        createdAt: DateTime.parse('2026-01-01T00:00:00Z'),
-        lastLoginAt: DateTime.parse('2026-01-01T00:00:00Z'),
-      );
-    }
-
-    test(
-      'uses subscription tier and paid achievement when token exists',
-      () async {
-        final status = SubscriptionStatus(
-          userId: 'u1',
-          tier: 'premium',
-          status: 'active',
-          provider: 'test',
-          currentPeriodEnd: DateTime.now().add(const Duration(days: 14)),
-          cancelAtPeriodEnd: true,
-          entitlements: const SubscriptionEntitlements(
-            dailyPosts: 20,
-            dailyComments: 100,
-            dailyReactions: 300,
-            dailyAppeals: 6,
-            exportCooldownDays: 14,
-            maxMediaSizeMB: 30,
-            maxMediaPerPost: 4,
-            maxCustomFeeds: 2,
-            newsBoardAccessLevel: 'full',
-            newsBoardPreview: true,
-            postingRestricted: false,
-            rewardLevelCap: 5,
-            rewardOptionsPerLevel: 1,
-            rewardChoiceBreadth: 'increased',
-          ),
-        );
-
-        final container = ProviderContainer(
-          overrides: [
-            currentUserProvider.overrideWithValue(
-              userWithTier(UserTier.bronze),
-            ),
-            jwtProvider.overrideWith((_) async => 'token'),
-            subscriptionServiceProvider.overrideWithValue(
-              _FakeSubscriptionService(status),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final reputation = await container.read(reputationProvider.future);
-
-        expect(reputation.tier.id, 'premium');
-        expect(reputation.missions, hasLength(3));
-        expect(
-          reputation.recentAchievements,
-          contains('Subscription entitlement active: Premium'),
-        );
-        expect(
-          reputation.recentAchievements,
-          contains('Paid tier entitlements active'),
-        );
-        expect(
-          reputation.recentAchievements.any(
-            (item) => item.startsWith('Renews through '),
-          ),
-          isTrue,
-        );
+ResponseBody _jsonResponse(Map<String, dynamic> payload) =>
+    ResponseBody.fromString(
+      jsonEncode(payload),
+      200,
+      headers: {
+        Headers.contentTypeHeader: <String>[Headers.jsonContentType],
       },
     );
 
-    test('falls back to user tier mapping when token is missing', () async {
+void main() {
+  test('private reputation state fails clearly without a session', () async {
+    final container = ProviderContainer(
+      overrides: [jwtProvider.overrideWith((ref) async => null)],
+    );
+    addTearDown(container.dispose);
+
+    await expectLater(
+      container.read(reputationProvider.future),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('private activity pages fail clearly without a session', () async {
+    final container = ProviderContainer(
+      overrides: [jwtProvider.overrideWith((ref) async => null)],
+    );
+    addTearDown(container.dispose);
+
+    await expectLater(
+      container.read(activityPageProvider(null).future),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('private activity sends the selected category and cursor', () async {
+    final adapter = _CapturingAdapter(
+      (_) => _jsonResponse({
+        'items': [
+          {
+            'id': 'activity-1',
+            'category': 'moderation',
+            'source': 'system',
+            'title': 'Moderation case resolved',
+            'explanation': 'A decision is available.',
+            'result': 'succeeded',
+            'reasonCode': 'decision_resolved',
+            'policyVersion': 'activity-v1.0.0',
+            'objectType': 'moderation_case',
+            'reputationEffect': 'withheld',
+            'appealable': true,
+            'retentionClass': 'moderation',
+            'retentionDays': 90,
+            'createdAt': '2026-08-11T10:00:00Z',
+          },
+        ],
+        'nextCursor': 'next-page',
+      }),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        jwtProvider.overrideWith((ref) async => 'session-token'),
+        secureDioProvider.overrideWithValue(_dioWith(adapter)),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final page = await container.read(
+      activityPageProvider(
+        const ActivityPageQuery(
+          cursor: 'prior-page',
+          category: ActivityCategory.moderation,
+        ),
+      ).future,
+    );
+
+    expect(page.items.single.title, 'Moderation case resolved');
+    expect(page.nextCursor, 'next-page');
+    final request = adapter.requests.single;
+    expect(request.path, '/api/activity');
+    expect(request.uri.queryParameters['category'], 'moderation');
+    expect(request.uri.queryParameters['cursor'], 'prior-page');
+    expect(request.uri.queryParameters['limit'], '20');
+    expect(request.headers['Authorization'], 'Bearer session-token');
+  });
+
+  test(
+    'the legacy unfiltered activity query omits the category parameter',
+    () async {
+      final adapter = _CapturingAdapter(
+        (_) => _jsonResponse({'items': <Map<String, dynamic>>[]}),
+      );
       final container = ProviderContainer(
         overrides: [
-          currentUserProvider.overrideWithValue(
-            userWithTier(UserTier.platinum),
-          ),
-          jwtProvider.overrideWith((_) async => null),
+          jwtProvider.overrideWith((ref) async => 'session-token'),
+          secureDioProvider.overrideWithValue(_dioWith(adapter)),
         ],
       );
       addTearDown(container.dispose);
 
-      final reputation = await container.read(reputationProvider.future);
-      expect(reputation.tier.id, 'black');
-      expect(reputation.missions, isEmpty);
+      await container.read(activityPageProvider(null).future);
+
       expect(
-        reputation.recentAchievements,
-        contains('Subscription entitlement active: Black'),
+        adapter.requests.single.uri.queryParameters.containsKey('category'),
+        isFalse,
       );
-    });
-
-    test(
-      'falls back to user tier mapping when subscription check fails',
-      () async {
-        final container = ProviderContainer(
-          overrides: [
-            currentUserProvider.overrideWithValue(userWithTier(UserTier.gold)),
-            jwtProvider.overrideWith((_) async => 'token'),
-            subscriptionServiceProvider.overrideWithValue(
-              _ThrowingSubscriptionService(),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final reputation = await container.read(reputationProvider.future);
-        expect(reputation.tier.id, 'premium');
-        expect(reputation.missions, isEmpty);
-        expect(
-          reputation.recentAchievements,
-          contains('Subscription entitlement active: Premium'),
-        );
-      },
-    );
-  });
-}
-
-class _FakeSubscriptionService extends BackendSubscriptionService {
-  _FakeSubscriptionService(this._status) : super(dio: Dio());
-
-  final SubscriptionStatus _status;
-
-  @override
-  Future<SubscriptionStatus> checkStatus({required String token}) async {
-    return _status;
-  }
-}
-
-class _ThrowingSubscriptionService extends BackendSubscriptionService {
-  _ThrowingSubscriptionService() : super(dio: Dio());
-
-  @override
-  Future<SubscriptionStatus> checkStatus({required String token}) {
-    throw Exception('subscription unavailable');
-  }
+    },
+  );
 }

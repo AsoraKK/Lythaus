@@ -8,12 +8,10 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:lythaus_api_client/src/api_util.dart';
-import 'package:lythaus_api_client/src/model/accepted_response.dart';
-import 'package:lythaus_api_client/src/model/error.dart';
-import 'package:lythaus_api_client/src/model/ledger_page.dart';
-import 'package:lythaus_api_client/src/model/public_reputation_view.dart';
-import 'package:lythaus_api_client/src/model/reputation_summary.dart';
-import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
+import 'package:lythaus_api_client/src/model/api_error.dart';
+import 'package:lythaus_api_client/src/model/reputation_ledger_page.dart';
+import 'package:lythaus_api_client/src/model/reputation_private_v2.dart';
+import 'package:lythaus_api_client/src/model/reputation_public_v2.dart';
 
 class ReputationApi {
 
@@ -23,11 +21,12 @@ class ReputationApi {
 
   const ReputationApi(this._dio, this._serializers);
 
-  /// Appeal a reputation ledger entry
-  /// Marks an appealable moderation-related ledger entry as under appeal for the authenticated owner.
+  /// List my Reputation V2 ledger
+  ///
   ///
   /// Parameters:
-  /// * [entryId]
+  /// * [cursor] - Opaque keyset cursor returned by the preceding page.
+  /// * [limit]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -35,93 +34,9 @@ class ReputationApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [AcceptedResponse] as data
+  /// Returns a [Future] containing a [Response] with a [ReputationLedgerPage] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AcceptedResponse>> moderationLedgerAppealPost({
-    required String entryId,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/moderation/ledger/{entryId}/appeal'.replaceAll('{' r'entryId' '}', encodeQueryParameter(_serializers, entryId, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    AcceptedResponse? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(AcceptedResponse),
-      ) as AcceptedResponse;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<AcceptedResponse>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// Get my reputation ledger
-  /// Returns user-visible reputation events. Internal reason codes, raw deltas, authenticity scores, and anti-abuse scores are excluded.
-  ///
-  /// Parameters:
-  /// * [filter]
-  /// * [cursor] - Opaque pagination cursor returned in the previous response's `meta.nextCursor`
-  /// * [limit] - Maximum number of items to return per page
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [LedgerPage] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<LedgerPage>> reputationLedgerGet({
-    String? filter = 'all',
+  Future<Response<ReputationLedgerPage>> reputationLedgerGet({
     String? cursor,
     int? limit = 25,
     CancelToken? cancelToken,
@@ -151,7 +66,6 @@ class ReputationApi {
     );
 
     final _queryParameters = <String, dynamic>{
-      if (filter != null) r'filter': encodeQueryParameter(_serializers, filter, const FullType(String)),
       if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
       if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
     };
@@ -165,14 +79,14 @@ class ReputationApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    LedgerPage? _responseData;
+    ReputationLedgerPage? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(LedgerPage),
-      ) as LedgerPage;
+        specifiedType: const FullType(ReputationLedgerPage),
+      ) as ReputationLedgerPage;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -184,7 +98,7 @@ class ReputationApi {
       );
     }
 
-    return Response<LedgerPage>(
+    return Response<ReputationLedgerPage>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -196,8 +110,8 @@ class ReputationApi {
     );
   }
 
-  /// Get my reputation summary
-  /// Returns the authenticated user&#39;s reputation level, band, pillar scores, and eligibility statuses. Raw formulas and internal risk scores are not returned.
+  /// Get my private Reputation V2 summary
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -207,9 +121,9 @@ class ReputationApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [ReputationSummary] as data
+  /// Returns a [Future] containing a [Response] with a [ReputationPrivateV2] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ReputationSummary>> reputationMeGet({
+  Future<Response<ReputationPrivateV2>> reputationMeGet({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -244,14 +158,14 @@ class ReputationApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    ReputationSummary? _responseData;
+    ReputationPrivateV2? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(ReputationSummary),
-      ) as ReputationSummary;
+        specifiedType: const FullType(ReputationPrivateV2),
+      ) as ReputationPrivateV2;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -263,7 +177,7 @@ class ReputationApi {
       );
     }
 
-    return Response<ReputationSummary>(
+    return Response<ReputationPrivateV2>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -275,7 +189,7 @@ class ReputationApi {
     );
   }
 
-  /// Get public reputation view
+  /// Get public Reputation V2 summary
   ///
   ///
   /// Parameters:
@@ -287,9 +201,9 @@ class ReputationApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [PublicReputationView] as data
+  /// Returns a [Future] containing a [Response] with a [ReputationPublicV2] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PublicReputationView>> reputationUserGet({
+  Future<Response<ReputationPublicV2>> reputationUserGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -319,14 +233,14 @@ class ReputationApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    PublicReputationView? _responseData;
+    ReputationPublicV2? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(PublicReputationView),
-      ) as PublicReputationView;
+        specifiedType: const FullType(ReputationPublicV2),
+      ) as ReputationPublicV2;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -338,7 +252,7 @@ class ReputationApi {
       );
     }
 
-    return Response<PublicReputationView>(
+    return Response<ReputationPublicV2>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -350,7 +264,7 @@ class ReputationApi {
     );
   }
 
-  /// Get public reputation view
+  /// Get public Reputation V2 summary (compatibility alias)
   ///
   ///
   /// Parameters:
@@ -362,9 +276,10 @@ class ReputationApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [PublicReputationView] as data
+  /// Returns a [Future] containing a [Response] with a [ReputationPublicV2] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PublicReputationView>> reputationUserGetSingular({
+  @Deprecated('This operation has been deprecated')
+  Future<Response<ReputationPublicV2>> reputationUserGetSingular({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -394,14 +309,14 @@ class ReputationApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    PublicReputationView? _responseData;
+    ReputationPublicV2? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(PublicReputationView),
-      ) as PublicReputationView;
+        specifiedType: const FullType(ReputationPublicV2),
+      ) as ReputationPublicV2;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -413,7 +328,7 @@ class ReputationApi {
       );
     }
 
-    return Response<PublicReputationView>(
+    return Response<ReputationPublicV2>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

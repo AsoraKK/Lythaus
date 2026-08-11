@@ -108,7 +108,7 @@ void main() {
 
     expect(find.text('Moderation Case'), findsOneWidget);
     expect(find.text('Content'), findsOneWidget);
-    expect(find.text('Appeal & Community vote'), findsOneWidget);
+    expect(find.text('Appeal & independent reviewer panel'), findsOneWidget);
 
     final escalateCase = find.text('Escalate Case');
     await tester.ensureVisible(escalateCase);

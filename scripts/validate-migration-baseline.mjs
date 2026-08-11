@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
-const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql', '0009_cost_budget_enforcement.sql', '0010_native_runtime_parity.sql', '0011_email_guest_auth_only.sql'];
+const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql', '0009_cost_budget_enforcement.sql', '0010_native_runtime_parity.sql', '0011_email_guest_auth_only.sql', '0012_product_integrity_v2.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
 const requiredRecoveryFiles = ['restore-verify.sql'];
 const requiredSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system'];
@@ -19,10 +19,13 @@ const requiredTables = [
   'feed.regional_memberships', 'feed.notifications', 'feed.notification_preferences', 'feed.notification_devices',
   'moderation.content_flags', 'moderation.cases', 'moderation.detector_runs', 'moderation.decisions', 'moderation.appeals',
   'moderation.appeal_votes', 'moderation.policy_versions', 'moderation.enforcement_events',
+  'moderation.reviewer_qualifications', 'moderation.appeal_assignments', 'moderation.appeal_review_votes',
+  'moderation.appeal_adjudications', 'moderation.appeal_outcomes', 'moderation.appeal_outcome_effects',
   'privacy.requests', 'privacy.request_events', 'privacy.legal_holds', 'privacy.subject_data_locations',
   'privacy.deletion_tombstones', 'privacy.export_manifests', 'privacy.retention_rules',
   'trust.provenance_events', 'trust.human_contribution_events', 'trust.reputation_events', 'trust.reputation_balances',
   'trust.source_citations', 'trust.accountability_signals', 'trust.policy_versions', 'trust.reward_redemptions',
+  'trust.user_activity_events', 'trust.reputation_profiles',
   'media.upload_sessions', 'media.storage_ledger', 'media.objects', 'media.variants', 'media.moderation_results',
   'media.ownership', 'media.deletion_events',
   'editorial.memberships', 'editorial.membership_events', 'editorial.applications', 'editorial.portfolio_items',

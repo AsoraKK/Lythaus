@@ -7,72 +7,72 @@ void main() {
   final instance = LythausApiClient().getNotificationsApi();
 
   group(NotificationsApi, () {
-    // Register a push device token
+    // Register or reactivate a push device
     //
-    //Future<JsonObject> notificationsDevicesCreate(JsonObject body) async
+    //Future<NotificationDeviceCreated> notificationsDevicesCreate(NotificationDeviceCreate notificationDeviceCreate) async
     test('test notificationsDevicesCreate', () async {
       // TODO
     });
 
-    // List registered push devices
+    // List my push devices
     //
-    //Future<JsonObject> notificationsDevicesList() async
+    //Future<NotificationDeviceList> notificationsDevicesList() async
     test('test notificationsDevicesList', () async {
       // TODO
     });
 
-    // Revoke a push device registration
+    // Revoke a push device
     //
-    //Future<JsonObject> notificationsDevicesRevoke(String id, JsonObject body) async
+    //Future<NotificationDeviceRevoked> notificationsDevicesRevoke(String id) async
     test('test notificationsDevicesRevoke', () async {
       // TODO
     });
 
     // Dismiss a notification
     //
-    //Future<JsonObject> notificationsDismiss(String id, JsonObject body) async
+    //Future<NotificationActionResponse> notificationsDismiss(String id, { String idempotencyKey }) async
     test('test notificationsDismiss', () async {
       // TODO
     });
 
-    // List notifications for the current user
+    // List my notifications
     //
-    //Future<JsonObject> notificationsList() async
+    //Future<NotificationPage> notificationsList({ String cursor, int limit }) async
     test('test notificationsList', () async {
       // TODO
     });
 
     // Get notification preferences
     //
-    //Future<JsonObject> notificationsPreferencesGet() async
+    //Future<NotificationPreferences> notificationsPreferencesGet() async
     test('test notificationsPreferencesGet', () async {
       // TODO
     });
 
-    // Update notification preferences
+    // Replace notification preferences
     //
-    //Future<JsonObject> notificationsPreferencesUpdate(JsonObject body) async
+    //Future<NotificationPreferences> notificationsPreferencesReplace(NotificationPreferenceUpdate notificationPreferenceUpdate, { String idempotencyKey }) async
+    test('test notificationsPreferencesReplace', () async {
+      // TODO
+    });
+
+    // Partially update notification preferences
+    //
+    //Future<NotificationPreferences> notificationsPreferencesUpdate(NotificationPreferenceUpdate notificationPreferenceUpdate, { String idempotencyKey }) async
     test('test notificationsPreferencesUpdate', () async {
       // TODO
     });
 
-    // Mark a notification as read
+    // Mark a notification read
     //
-    //Future<JsonObject> notificationsRead(String id, JsonObject body) async
+    //Future<NotificationActionResponse> notificationsRead(String id, { String idempotencyKey }) async
     test('test notificationsRead', () async {
       // TODO
     });
 
-    // Send an admin-triggered notification
+    // Get my unread notification count
     //
-    //Future<JsonObject> notificationsSend(JsonObject body) async
-    test('test notificationsSend', () async {
-      // TODO
-    });
-
-    // Get unread notification count
-    //
-    //Future<JsonObject> notificationsUnreadCount() async
+    //Future<NotificationUnreadCount> notificationsUnreadCount() async
     test('test notificationsUnreadCount', () async {
       // TODO
     });

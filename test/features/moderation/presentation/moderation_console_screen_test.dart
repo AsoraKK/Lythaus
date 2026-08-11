@@ -127,7 +127,7 @@ void main() {
           status: 'open',
           queue: 'default',
           reportCount: 2,
-          communityVotes: 5,
+          reviewerDecisions: 5,
           isEscalated: false,
         ),
       ],

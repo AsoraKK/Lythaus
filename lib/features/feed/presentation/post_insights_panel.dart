@@ -181,9 +181,9 @@ class _InsightsPanelContent extends StatelessWidget {
         return Icons.remove_circle_outline;
       case InsightAppealStatus.pending:
         return Icons.hourglass_empty;
-      case InsightAppealStatus.approved:
+      case InsightAppealStatus.overturned:
         return Icons.check_circle;
-      case InsightAppealStatus.rejected:
+      case InsightAppealStatus.upheld:
         return Icons.cancel;
     }
   }
@@ -194,9 +194,9 @@ class _InsightsPanelContent extends StatelessWidget {
         return Colors.grey;
       case InsightAppealStatus.pending:
         return Colors.orange;
-      case InsightAppealStatus.approved:
+      case InsightAppealStatus.overturned:
         return Colors.green;
-      case InsightAppealStatus.rejected:
+      case InsightAppealStatus.upheld:
         return Colors.red;
     }
   }

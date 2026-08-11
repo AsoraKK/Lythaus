@@ -13,11 +13,11 @@ class AppealService {
   Future<bool> submit(String caseId, String statement) async {
     try {
       final token = await ref.read(jwtProvider.future);
-      if (token == null) return false;
+      if (token == null || token.isEmpty) return false;
 
       final dio = ref.read(secureDioProvider);
       await dio.post<void>(
-        '/appeals',
+        '/api/appeals',
         data: {'caseId': caseId, 'statement': statement},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );

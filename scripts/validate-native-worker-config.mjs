@@ -24,11 +24,15 @@ for (const relative of configs) {
   const production = source.slice(0, source.indexOf('"env"') === -1 ? source.length : source.indexOf('"env"'));
   if (!/"workers_dev"\s*:\s*false/.test(source)) failures.push(`${relative}: production workers_dev must be false`);
   if (!/"preview_urls"\s*:\s*false/.test(source)) failures.push(`${relative}: production preview_urls must be false`);
+  if (!/"keep_vars"\s*:\s*false/.test(production)) failures.push(`${relative}: production plain-text vars must be config-owned`);
   if (!/"nodejs_compat"/.test(source)) failures.push(`${relative}: nodejs_compat is required`);
   if (retiredProductionOrigin.test(production)) failures.push(`${relative}: legacy or public preview hostname found in production config`);
   if (!new RegExp(`"name"\\s*:\\s*"${expectedNames[relative]}"`).test(production)) failures.push(`${relative}: production must reuse ${expectedNames[relative]}`);
   if (/"images"\s*:/.test(production)) failures.push(`${relative}: Cloudflare Images binding is forbidden for this migration`);
   if (!/HYPERDRIVE_QUERY_CACHE_MODE/.test(source) || !/disabled/.test(source)) failures.push(`${relative}: Hyperdrive cache-disabled intent missing`);
+  if (!/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0012_product_integrity_v2\.sql"/.test(production)) failures.push(`${relative}: production must require migration 0012`);
+  if (!/"EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED"\s*:\s*"true"/.test(production)) failures.push(`${relative}: production must require the budget ledger`);
+  if (/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0008_legacy_relink_status\.sql"/.test(production)) failures.push(`${relative}: legacy 0008 production identity is forbidden`);
   if (relative.includes('public-api') && !/api\.lythaus\.co/.test(production)) failures.push(`${relative}: public API must use api.lythaus.co`);
   if (relative.includes('admin-api') && !/admin-api\.lythaus\.co/.test(production)) failures.push(`${relative}: admin API must use admin-api.lythaus.co`);
   if (relative.includes('jobs') && /"routes"\s*:/.test(production)) failures.push(`${relative}: jobs Worker must not expose a production route`);

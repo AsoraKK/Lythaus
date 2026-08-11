@@ -78,8 +78,8 @@ enum InsightDecision {
 enum InsightAppealStatus {
   none,
   pending,
-  approved,
-  rejected;
+  overturned,
+  upheld;
 
   String get displayLabel {
     switch (this) {
@@ -87,10 +87,10 @@ enum InsightAppealStatus {
         return 'None';
       case InsightAppealStatus.pending:
         return 'Pending';
-      case InsightAppealStatus.approved:
-        return 'Approved';
-      case InsightAppealStatus.rejected:
-        return 'Rejected';
+      case InsightAppealStatus.overturned:
+        return 'Restored';
+      case InsightAppealStatus.upheld:
+        return 'Upheld';
     }
   }
 
@@ -100,12 +100,32 @@ enum InsightAppealStatus {
         return InsightAppealStatus.none;
       case 'PENDING':
         return InsightAppealStatus.pending;
+      case 'OVERTURN':
+      case 'OVERTURNED':
+        return InsightAppealStatus.overturned;
+      case 'UPHOLD':
+      case 'UPHELD':
+        return InsightAppealStatus.upheld;
+      // Retained local history may still use the former outcome values.
       case 'APPROVED':
-        return InsightAppealStatus.approved;
+        return InsightAppealStatus.overturned;
       case 'REJECTED':
-        return InsightAppealStatus.rejected;
+        return InsightAppealStatus.upheld;
       default:
         return InsightAppealStatus.none;
+    }
+  }
+
+  String get wireValue {
+    switch (this) {
+      case InsightAppealStatus.none:
+        return 'NONE';
+      case InsightAppealStatus.pending:
+        return 'PENDING';
+      case InsightAppealStatus.overturned:
+        return 'OVERTURN';
+      case InsightAppealStatus.upheld:
+        return 'UPHOLD';
     }
   }
 }
@@ -129,7 +149,7 @@ class InsightAppeal {
   }
 
   Map<String, dynamic> toJson() => {
-    'status': status.name.toUpperCase(),
+    'status': status.wireValue,
     if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
   };
 }

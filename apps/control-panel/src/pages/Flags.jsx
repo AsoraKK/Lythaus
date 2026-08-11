@@ -1,450 +1,154 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { adminRequest } from '../api/adminApi.js';
-import { formatDateTime, formatList } from '../utils/formatters.js';
+import { formatDateTime } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import LythInput from '../components/LythInput.jsx';
 import PageLayout from '../components/PageLayout.jsx';
 
-const STATUS_OPTIONS = [
-  { value: 'open', label: 'Open' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'all', label: 'All' }
-];
-
-const FLAGS_GUIDE = {
+const MODERATION_GUIDE = {
   title: 'What this page does',
-  summary:
-    'Flags is your first-line moderation queue for reported content. Decisions here directly affect public visibility.',
+  summary: 'Moderation cases aggregates neutral user flags and records one auditable allow, block, or queue decision.',
   items: [
-    'Filter queue by status to focus on unresolved risk first.',
-    'Open an item, review content, reasons, and timeline history.',
-    'Apply a reason code before block/publish/resolve actions.',
-    'Use Block when policy risk is confirmed; Publish when false-positive.',
-    'Resolve only after a clear action trail is recorded.'
+    'Review open cases before resolved cases.',
+    'A flag is evidence, not a public finding.',
+    'Allow and block resolve the case; queue keeps it under review.',
+    'Every decision requires a stable policy reason code.',
+    'AI-generated content cannot be allowed for public publication.'
   ],
-  footnote:
-    'Every action should include a reason code to preserve immutable moderation audit quality.'
+  footnote: 'Appeals remain open until the independent reviewer and adjudication policy resolves them.'
 };
 
 function Flags() {
   const [items, setItems] = useState([]);
-  const [status, setStatus] = useState('open');
-  const [cursor, setCursor] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const [selected, setSelected] = useState(null);
-  const [detail, setDetail] = useState(null);
-  const [detailError, setDetailError] = useState('');
+  const [outcome, setOutcome] = useState('queue');
+  const [reasonCode, setReasonCode] = useState('MODERATION.REVIEW_REQUIRED');
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
 
-  const [reasonCode, setReasonCode] = useState('');
-  const [note, setNote] = useState('');
-  const [actionBusy, setActionBusy] = useState(false);
-  const [actionMessage, setActionMessage] = useState('');
-
-  const historyEntries = [];
-  if (detail?.history?.flags?.length) {
-    detail.history.flags.forEach((entry, index) => {
-      historyEntries.push({
-        id: `flag-${entry.at}-${index}`,
-        at: entry.at,
-        label: `Flagged: ${entry.reason || 'unknown'}`
-      });
-    });
-  }
-  if (detail?.history?.adminActions?.length) {
-    detail.history.adminActions.forEach((entry, index) => {
-      historyEntries.push({
-        id: `admin-${entry.at}-${index}`,
-        at: entry.at,
-        label: `${entry.action}${entry.reasonCode ? ` (${entry.reasonCode})` : ''}`
-      });
-    });
-  }
-  if (detail?.history?.appeal) {
-    historyEntries.push({
-      id: `appeal-${detail.history.appeal.at}`,
-      at: detail.history.appeal.at,
-      label: `Appeal ${detail.history.appeal.status}`
-    });
-  }
-  historyEntries.sort((a, b) => new Date(b.at) - new Date(a.at));
-
-  const loadFlags = async (reset = false) => {
+  const loadCases = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await adminRequest('_admin/flags', {
-        query: { status, limit: 25, cursor: reset ? undefined : cursor }
+      const response = await adminRequest('moderation/cases');
+      setItems(response?.items || []);
+      setSelected((current) => {
+        if (!current) return null;
+        return (response?.items || []).find((item) => item.id === current.id) || null;
       });
-      const nextItems = reset ? response?.items || [] : [...items, ...(response?.items || [])];
-      setItems(nextItems);
-      setCursor(response?.nextCursor || null);
-      if (reset) {
-        setSelected(null);
-        setDetail(null);
-        setDetailError('');
-      }
     } catch (err) {
-      setError(err.message || 'Failed to load flags.');
+      setError(err.message || 'Failed to load moderation cases.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadDetail = async (item) => {
-    setSelected(item);
-    setDetail(null);
-    setDetailError('');
-    const flagId = item?.flags?.flagId;
-    if (!flagId) {
-      setDetailError('No flag id available for this item.');
-      return;
-    }
-    try {
-      const response = await adminRequest(`_admin/flags/${flagId}`);
-      setDetail(response);
-    } catch (err) {
-      setDetailError(err.message || 'Failed to load flag details.');
-    }
-  };
-
-  const runContentAction = async (action) => {
-    if (!selected) {
-      return;
-    }
-    const trimmedReason = reasonCode.trim();
-    if (!trimmedReason) {
-      setActionMessage('Reason code is required.');
-      return;
-    }
-    const actionLabel = action === 'block' ? 'Block' : 'Publish';
-    const contentId = selected?.content?.contentId;
-    if (!window.confirm(`${actionLabel} content ${contentId}?`)) {
-      return;
-    }
-    setActionBusy(true);
-    setActionMessage('');
-    try {
-      await adminRequest(`_admin/content/${selected.content.contentId}/${action}`, {
-        method: 'POST',
-        body: {
-          contentType: selected.content.type,
-          reasonCode: trimmedReason,
-          note: note.trim() || undefined
-        }
-      });
-      setReasonCode('');
-      setNote('');
-      await loadFlags(true);
-    } catch (err) {
-      setActionMessage(err.message || 'Action failed.');
-    } finally {
-      setActionBusy(false);
-    }
-  };
-
-  const runResolve = async () => {
-    if (!selected) {
-      return;
-    }
-    const trimmedReason = reasonCode.trim();
-    if (!trimmedReason) {
-      setActionMessage('Reason code is required.');
-      return;
-    }
-    const flagId = selected?.flags?.flagId;
-    if (!flagId) {
-      setActionMessage('No flag id available to resolve.');
-      return;
-    }
-    setActionBusy(true);
-    setActionMessage('');
-    try {
-      await adminRequest(`_admin/flags/${flagId}/resolve`, {
-        method: 'POST',
-        body: {
-          reasonCode: trimmedReason,
-          note: note.trim() || undefined
-        }
-      });
-      setReasonCode('');
-      setNote('');
-      await loadFlags(true);
-    } catch (err) {
-      setActionMessage(err.message || 'Resolve failed.');
-    } finally {
-      setActionBusy(false);
-    }
-  };
+  }, []);
 
   useEffect(() => {
-    loadFlags(true);
-  }, [status]);
+    loadCases();
+  }, [loadCases]);
+
+  const submitDecision = async () => {
+    if (!selected) return;
+    const normalizedReason = reasonCode.trim().toUpperCase();
+    if (!/^[A-Z0-9_.:-]{2,80}$/.test(normalizedReason)) {
+      setMessage('Enter a stable policy reason code.');
+      return;
+    }
+    setSubmitting(true);
+    setMessage('');
+    try {
+      const result = await adminRequest(`moderation/cases/${selected.id}/decision`, {
+        method: 'POST',
+        body: { outcome, reasonCode: normalizedReason }
+      });
+      setMessage(`Decision recorded: ${result?.outcome || outcome}.`);
+      await loadCases();
+    } catch (err) {
+      setMessage(err.message || 'Failed to record moderation decision.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <PageLayout
-      title="Flagged content"
-      subtitle="Review flagged posts/comments and apply publish or block decisions."
-      guide={FLAGS_GUIDE}
+      title="Moderation cases"
+      subtitle="Review aggregated flags and record auditable visibility decisions."
+      guide={MODERATION_GUIDE}
     >
       <div className="page-grid">
         <LythCard variant="panel">
           <div className="panel-header">
-            <h2>Queue</h2>
-            <div className="panel-actions">
-              <LythInput
-                as="select"
-                value={status}
-                onChange={(event) => setStatus(event.target.value)}
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </LythInput>
-              <LythButton
-                variant="ghost"
-                type="button"
-                onClick={() => loadFlags(true)}
-                disabled={loading}
-              >
-                Refresh
-              </LythButton>
-            </div>
+            <h2>Cases</h2>
+            <LythButton variant="ghost" type="button" onClick={loadCases} disabled={loading}>
+              Refresh
+            </LythButton>
           </div>
           {error ? <div className="notice error">{error}</div> : null}
           <div className="data-table">
             <div className="data-row header">
+              <span>Case</span>
               <span>Content</span>
-              <span>Author</span>
-              <span>Flags</span>
-              <span>Moderation</span>
               <span>State</span>
-              <span>Status</span>
+              <span>Flags</span>
+              <span>Policy</span>
+              <span>Created</span>
               <span>Actions</span>
             </div>
             {items.map((item) => (
-              <div key={item.content.contentId} className="data-row">
+              <div key={item.id} className="data-row">
+                <span>{item.id}</span>
                 <span>
-                  <strong>{item.content.type}</strong>
-                  <span className="muted">{item.content.contentId}</span>
-                  <span className="muted">
-                    {formatDateTime(item.content.createdAt)}
-                  </span>
+                  <strong>{item.content_type}</strong>
+                  <span className="muted">{item.content_id}</span>
                 </span>
+                <span>{item.state}</span>
+                <span>{item.flag_count}</span>
+                <span>{item.policy_version}</span>
+                <span>{formatDateTime(item.created_at)}</span>
                 <span>
-                  {item.author.displayName || item.author.handle || 'Unknown'}
-                  {item.author.handle ? (
-                    <span className="muted">{item.author.handle}</span>
-                  ) : null}
-                  <span className="muted">{item.author.authorId}</span>
-                </span>
-                <span>
-                  <strong>{item.flags.flagCount}</strong>
-                  <span className="muted">
-                    {formatList(item.flags.reasonCategories)}
-                  </span>
-                  <span className="muted">
-                    {formatDateTime(item.flags.lastFlaggedAt)}
-                  </span>
-                </span>
-                <span>
-                  <span className="muted">
-                    {formatDateTime(item.moderation.lastDecisionAt)}
-                  </span>
-                  <span className="muted">
-                    Config {item.moderation.configVersionUsed ?? '-'}
-                  </span>
-                </span>
-                <span>
-                  <span className={`status-pill ${String(item.state).toLowerCase()}`}>
-                    {item.state}
-                  </span>
-                </span>
-                <span>
-                  <span className={`status-pill ${String(item.status).toLowerCase()}`}>
-                    {item.status}
-                  </span>
-                </span>
-                <span>
-                  <LythButton
-                    variant="ghost"
-                    type="button"
-                    onClick={() => loadDetail(item)}
-                  >
-                    Open
+                  <LythButton variant="ghost" type="button" onClick={() => setSelected(item)}>
+                    Decide
                   </LythButton>
                 </span>
               </div>
             ))}
           </div>
-          {!items.length && !loading ? (
-            <div className="empty-state">No flagged content found.</div>
-          ) : null}
-          {cursor ? (
-            <div className="panel-actions">
-              <LythButton
-                variant="secondary"
-                type="button"
-                onClick={() => loadFlags(false)}
-                disabled={loading}
-              >
-                Load more
-              </LythButton>
-            </div>
-          ) : null}
+          {!items.length && !loading ? <div className="empty-state">No moderation cases found.</div> : null}
         </LythCard>
+
         <LythCard variant="panel">
-          <div className="panel-header">
-            <h2>Detail</h2>
-          </div>
+          <div className="panel-header"><h2>Record decision</h2></div>
           {!selected ? (
-            <div className="empty-state">
-              Select a queue item to see details and take action.
-            </div>
+            <div className="empty-state">Select a moderation case.</div>
           ) : (
-            <>
-              {detailError ? <div className="notice error">{detailError}</div> : null}
-              {detail ? (
-                <>
-                  <div className="detail-grid">
-                  <div>
-                    <h3>Content</h3>
-                    <div className="detail-list">
-                      <div>
-                        <span className="detail-label">Content id</span>
-                        <span>{detail.content.contentId}</span>
-                      </div>
-                      <div>
-                        <span className="detail-label">Type</span>
-                        <span>{detail.content.type}</span>
-                      </div>
-                      <div>
-                        <span className="detail-label">Created</span>
-                        <span>{formatDateTime(detail.content.createdAt)}</span>
-                      </div>
-                      <div>
-                        <span className="detail-label">State</span>
-                        <span className={`status-pill ${String(detail.content.state).toLowerCase()}`}>
-                          {detail.content.state}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="preview-card">
-                      {detail.content.preview || 'No preview available.'}
-                    </div>
-                  </div>
-                  <div>
-                    <h3>Flags</h3>
-                    <div className="detail-list">
-                      <div>
-                        <span className="detail-label">Flag count</span>
-                        <span>{detail.flags.flagCount}</span>
-                      </div>
-                      <div>
-                        <span className="detail-label">Reporters</span>
-                        <span>{detail.flags.reporterCount}</span>
-                      </div>
-                      <div>
-                        <span className="detail-label">Status</span>
-                        <span className={`status-pill ${String(detail.flags.status).toLowerCase()}`}>
-                          {detail.flags.status}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="detail-label">Last decision</span>
-                        <span>{formatDateTime(detail.moderation.lastDecisionAt)}</span>
-                      </div>
-                      <div>
-                        <span className="detail-label">Config version</span>
-                        <span>{detail.moderation.configVersionUsed ?? '-'}</span>
-                      </div>
-                    </div>
-                    <div className="pill-list">
-                      {detail.flags.reasons.map((reason, index) => (
-                        <span key={`${reason.reason}-${index}`} className="tag">
-                          {reason.reason}
-                        </span>
-                      ))}
-                    </div>
-                    {detail.appeal ? (
-                      <div className="detail-note">
-                        Appeal: {detail.appeal.status}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                  <div className="divider" />
-                  <h3>History</h3>
-                  {historyEntries.length ? (
-                    <div className="timeline">
-                      {historyEntries.map((entry) => (
-                        <div key={entry.id} className="timeline-item">
-                          <span className="muted">{formatDateTime(entry.at)}</span>
-                          <span>{entry.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="empty-state">No history entries yet.</div>
-                  )}
-                </>
-              ) : (
-                <div className="empty-state">Loading details...</div>
-              )}
-              <div className="divider" />
-              <h3>Decision</h3>
-              {actionMessage ? <div className="notice error">{actionMessage}</div> : null}
-              <div className="form-grid">
-                <label className="field">
-                  <span className="field-label">Reason code</span>
-                  <LythInput
-                    type="text"
-                    value={reasonCode}
-                    onChange={(event) => setReasonCode(event.target.value)}
-                    placeholder="POLICY_123"
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Internal note</span>
-                  <LythInput
-                    as="textarea"
-                    rows={3}
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    placeholder="Optional internal context"
-                  />
-                </label>
+            <div className="form-grid">
+              <div className="detail-list">
+                <div><span className="detail-label">Case</span><span>{selected.id}</span></div>
+                <div><span className="detail-label">Content</span><span>{selected.content_type} {selected.content_id}</span></div>
               </div>
+              <label className="field">
+                <span className="field-label">Outcome</span>
+                <LythInput as="select" value={outcome} onChange={(event) => setOutcome(event.target.value)}>
+                  <option value="queue">Keep under review</option>
+                  <option value="allow">Allow publication</option>
+                  <option value="block">Block publication</option>
+                </LythInput>
+              </label>
+              <label className="field">
+                <span className="field-label">Reason code</span>
+                <LythInput value={reasonCode} maxLength={80} onChange={(event) => setReasonCode(event.target.value)} />
+              </label>
+              {message ? <div className="notice">{message}</div> : null}
               <div className="panel-actions">
-                <LythButton
-                  variant="danger"
-                  type="button"
-                  onClick={() => runContentAction('block')}
-                  disabled={actionBusy}
-                >
-                  Block content
-                </LythButton>
-                <LythButton
-                  type="button"
-                  onClick={() => runContentAction('publish')}
-                  disabled={actionBusy}
-                >
-                  Publish content
-                </LythButton>
-                <LythButton
-                  variant="ghost"
-                  type="button"
-                  onClick={runResolve}
-                  disabled={actionBusy}
-                >
-                  Resolve flag
+                <LythButton type="button" onClick={submitDecision} disabled={submitting}>
+                  Record decision
                 </LythButton>
               </div>
-            </>
+            </div>
           )}
         </LythCard>
       </div>

@@ -12,22 +12,26 @@ part 'create_post_request.g.dart';
 /// CreatePostRequest
 ///
 /// Properties:
-/// * [text] - Post body text
-/// * [mediaUrl]
-/// * [aiLabel] - Required authorship disclosure.
+/// * [body]
+/// * [declaredCreationMode] - Required user authorship disclosure. Public responses use categorical labels only.
+/// * [geoScope]
+/// * [placeId]
 @BuiltValue()
 abstract class CreatePostRequest implements Built<CreatePostRequest, CreatePostRequestBuilder> {
-  /// Post body text
-  @BuiltValueField(wireName: r'text')
-  String get text;
+  @BuiltValueField(wireName: r'body')
+  String get body;
 
-  @BuiltValueField(wireName: r'mediaUrl')
-  String? get mediaUrl;
+  /// Required user authorship disclosure. Public responses use categorical labels only.
+  @BuiltValueField(wireName: r'declaredCreationMode')
+  CreatePostRequestDeclaredCreationModeEnum get declaredCreationMode;
+  // enum declaredCreationModeEnum {  human,  ai_assisted,  };
 
-  /// Required authorship disclosure.
-  @BuiltValueField(wireName: r'aiLabel')
-  CreatePostRequestAiLabelEnum get aiLabel;
-  // enum aiLabelEnum {  human,  assisted,  generated,  };
+  @BuiltValueField(wireName: r'geoScope')
+  CreatePostRequestGeoScopeEnum get geoScope;
+  // enum geoScopeEnum {  global,  country,  province,  municipality,  community,  none,  };
+
+  @BuiltValueField(wireName: r'placeId')
+  String? get placeId;
 
   CreatePostRequest._();
 
@@ -52,23 +56,28 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
     CreatePostRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'text';
+    yield r'body';
     yield serializers.serialize(
-      object.text,
+      object.body,
       specifiedType: const FullType(String),
     );
-    if (object.mediaUrl != null) {
-      yield r'mediaUrl';
+    yield r'declaredCreationMode';
+    yield serializers.serialize(
+      object.declaredCreationMode,
+      specifiedType: const FullType(CreatePostRequestDeclaredCreationModeEnum),
+    );
+    yield r'geoScope';
+    yield serializers.serialize(
+      object.geoScope,
+      specifiedType: const FullType(CreatePostRequestGeoScopeEnum),
+    );
+    if (object.placeId != null) {
+      yield r'placeId';
       yield serializers.serialize(
-        object.mediaUrl,
-        specifiedType: const FullType.nullable(String),
+        object.placeId,
+        specifiedType: const FullType(String),
       );
     }
-    yield r'aiLabel';
-    yield serializers.serialize(
-      object.aiLabel,
-      specifiedType: const FullType(CreatePostRequestAiLabelEnum),
-    );
   }
 
   @override
@@ -92,27 +101,33 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'text':
+        case r'body':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.text = valueDes;
+          result.body = valueDes;
           break;
-        case r'mediaUrl':
+        case r'declaredCreationMode':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.mediaUrl = valueDes;
+            specifiedType: const FullType(CreatePostRequestDeclaredCreationModeEnum),
+          ) as CreatePostRequestDeclaredCreationModeEnum;
+          result.declaredCreationMode = valueDes;
           break;
-        case r'aiLabel':
+        case r'geoScope':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(CreatePostRequestAiLabelEnum),
-          ) as CreatePostRequestAiLabelEnum;
-          result.aiLabel = valueDes;
+            specifiedType: const FullType(CreatePostRequestGeoScopeEnum),
+          ) as CreatePostRequestGeoScopeEnum;
+          result.geoScope = valueDes;
+          break;
+        case r'placeId':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.placeId = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -143,22 +158,42 @@ class _$CreatePostRequestSerializer implements PrimitiveSerializer<CreatePostReq
   }
 }
 
-class CreatePostRequestAiLabelEnum extends EnumClass {
+class CreatePostRequestDeclaredCreationModeEnum extends EnumClass {
 
-  /// Required authorship disclosure.
+  /// Required user authorship disclosure. Public responses use categorical labels only.
   @BuiltValueEnumConst(wireName: r'human')
-  static const CreatePostRequestAiLabelEnum human = _$createPostRequestAiLabelEnum_human;
-  /// Required authorship disclosure.
-  @BuiltValueEnumConst(wireName: r'assisted')
-  static const CreatePostRequestAiLabelEnum assisted = _$createPostRequestAiLabelEnum_assisted;
-  /// Required authorship disclosure.
-  @BuiltValueEnumConst(wireName: r'generated')
-  static const CreatePostRequestAiLabelEnum generated = _$createPostRequestAiLabelEnum_generated;
+  static const CreatePostRequestDeclaredCreationModeEnum human = _$createPostRequestDeclaredCreationModeEnum_human;
+  /// Required user authorship disclosure. Public responses use categorical labels only.
+  @BuiltValueEnumConst(wireName: r'ai_assisted')
+  static const CreatePostRequestDeclaredCreationModeEnum aiAssisted = _$createPostRequestDeclaredCreationModeEnum_aiAssisted;
 
-  static Serializer<CreatePostRequestAiLabelEnum> get serializer => _$createPostRequestAiLabelEnumSerializer;
+  static Serializer<CreatePostRequestDeclaredCreationModeEnum> get serializer => _$createPostRequestDeclaredCreationModeEnumSerializer;
 
-  const CreatePostRequestAiLabelEnum._(String name): super(name);
+  const CreatePostRequestDeclaredCreationModeEnum._(String name): super(name);
 
-  static BuiltSet<CreatePostRequestAiLabelEnum> get values => _$createPostRequestAiLabelEnumValues;
-  static CreatePostRequestAiLabelEnum valueOf(String name) => _$createPostRequestAiLabelEnumValueOf(name);
+  static BuiltSet<CreatePostRequestDeclaredCreationModeEnum> get values => _$createPostRequestDeclaredCreationModeEnumValues;
+  static CreatePostRequestDeclaredCreationModeEnum valueOf(String name) => _$createPostRequestDeclaredCreationModeEnumValueOf(name);
+}
+
+class CreatePostRequestGeoScopeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'global')
+  static const CreatePostRequestGeoScopeEnum global = _$createPostRequestGeoScopeEnum_global;
+  @BuiltValueEnumConst(wireName: r'country')
+  static const CreatePostRequestGeoScopeEnum country = _$createPostRequestGeoScopeEnum_country;
+  @BuiltValueEnumConst(wireName: r'province')
+  static const CreatePostRequestGeoScopeEnum province = _$createPostRequestGeoScopeEnum_province;
+  @BuiltValueEnumConst(wireName: r'municipality')
+  static const CreatePostRequestGeoScopeEnum municipality = _$createPostRequestGeoScopeEnum_municipality;
+  @BuiltValueEnumConst(wireName: r'community')
+  static const CreatePostRequestGeoScopeEnum community = _$createPostRequestGeoScopeEnum_community;
+  @BuiltValueEnumConst(wireName: r'none')
+  static const CreatePostRequestGeoScopeEnum none = _$createPostRequestGeoScopeEnum_none;
+
+  static Serializer<CreatePostRequestGeoScopeEnum> get serializer => _$createPostRequestGeoScopeEnumSerializer;
+
+  const CreatePostRequestGeoScopeEnum._(String name): super(name);
+
+  static BuiltSet<CreatePostRequestGeoScopeEnum> get values => _$createPostRequestGeoScopeEnumValues;
+  static CreatePostRequestGeoScopeEnum valueOf(String name) => _$createPostRequestGeoScopeEnumValueOf(name);
 }

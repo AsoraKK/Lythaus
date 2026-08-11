@@ -29,6 +29,7 @@ try {
   cpSync(source, validationPackage, { recursive: true });
   run(['pub', 'get']);
   run(['run', 'build_runner', 'build']);
+  run(['analyze', '--no-fatal-warnings']);
   run(['test', '--reporter', 'compact']);
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true });

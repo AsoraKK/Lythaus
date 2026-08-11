@@ -25,7 +25,7 @@ class ReactionBar extends ConsumerStatefulWidget {
   /// The ID of the post / article being reacted to.
   final String contentId;
 
-  /// The author's userId (required for backend validation).
+  /// Retained for source compatibility; reactions are now post-scoped.
   final String authorUserId;
 
   /// Optional initial reaction summary from the feed payload.
@@ -51,27 +51,10 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
   /// Currently selected reaction for the local user (null = no reaction yet).
   String? _myReaction;
 
-  /// Whether to show the negative/report reactions.
-  bool _showNegative = false;
-
   /// Whether a submit is in flight.
   bool _submitting = false;
 
-  // Positive reactions shown by default.
-  static const _positiveTypes = [
-    ReactionType.helpful,
-    ReactionType.well_sourced,
-    ReactionType.thoughtful,
-    ReactionType.agree,
-  ];
-
-  // Negative reactions revealed on tap.
-  static const _negativeTypes = [
-    ReactionType.disagree,
-    ReactionType.misleading,
-    ReactionType.low_effort,
-    ReactionType.report,
-  ];
+  static const _positiveTypes = ReactionType.values;
 
   @override
   void initState() {
@@ -104,17 +87,17 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
     });
 
     try {
-      await ref
-          .read(
-            submitReactionProvider(
-              SubmitReactionRequest(
-                targetContentId: widget.contentId,
-                targetUserId: widget.authorUserId,
-                reactionType: type.apiValue,
-              ),
-            ).future,
-          )
-          .timeout(const Duration(seconds: 10));
+      final request = previous == type.apiValue
+          ? ref.read(deleteReactionProvider(widget.contentId).future)
+          : ref.read(
+              submitReactionProvider(
+                SubmitReactionRequest(
+                  postId: widget.contentId,
+                  reactionType: type.apiValue,
+                ),
+              ).future,
+            );
+      await request.timeout(const Duration(seconds: 10));
     } catch (_) {
       // Revert optimistic update on error
       setState(() {
@@ -165,45 +148,10 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
                 onTap: _submitting ? null : () => _handleReaction(type),
               ),
             ),
-            // Toggle button for negative reactions
-            InkWell(
-              onTap: () => setState(() => _showNegative = !_showNegative),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Icon(
-                  _showNegative
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  size: 18,
-                  color: defaultColor,
-                ),
-              ),
-            ),
           ],
         ),
 
         // ── Negative reactions row (collapsible) ──────────────────────────
-        if (_showNegative)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: _negativeTypes
-                  .map(
-                    (type) => _ReactionChip(
-                      type: type,
-                      count: _countFor(type),
-                      selected: _isSelected(type),
-                      selectedColor: colorScheme.error,
-                      defaultColor: defaultColor,
-                      onTap: _submitting ? null : () => _handleReaction(type),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
       ],
     );
   }
@@ -266,24 +214,5 @@ class _ReactionChip extends StatelessWidget {
     );
   }
 
-  String get _icon {
-    switch (type) {
-      case ReactionType.helpful:
-        return '👍';
-      case ReactionType.well_sourced:
-        return '📚';
-      case ReactionType.thoughtful:
-        return '💭';
-      case ReactionType.agree:
-        return '✅';
-      case ReactionType.disagree:
-        return '🙅';
-      case ReactionType.misleading:
-        return '⚠️';
-      case ReactionType.low_effort:
-        return '📉';
-      case ReactionType.report:
-        return '🚩';
-    }
-  }
+  String get _icon => type.name;
 }

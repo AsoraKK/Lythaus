@@ -1,6 +1,7 @@
 import {
   createDecisionAudit,
   type CompressionFeatures,
+  type CameraEvidenceLevel,
   type FileProvenanceFeatures,
   type ForensicFeatureBundle,
   type ImageDimensions,
@@ -402,6 +403,80 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
 
+function periodicMoireScore(grid: readonly number[], size: number): number {
+  if (grid.length < size * size || size < 8) return 0;
+  const magnitude = dftFeatures(grid, size).magnitude;
+  const band = magnitude.filter((_, index) => {
+    const x = index % size;
+    const y = Math.floor(index / size);
+    return x >= 2 && x <= size - 3 && y >= 2 && y <= size - 3;
+  });
+  if (band.length === 0) return 0;
+  const ratio = Math.max(...band) / (mean(band) + 1e-9);
+  return clamp01((ratio - 3) / 3);
+}
+
+function channelCorrelation(decoded: DecodedImage | undefined, leftChannel: number, rightChannel: number): number | null {
+  if (!decoded || decoded.channels < 3 || decoded.pixels.length < decoded.width * decoded.height * decoded.channels) return null;
+  const left: number[] = [];
+  const right: number[] = [];
+  for (let index = 0; index < decoded.width * decoded.height; index += 1) {
+    left.push(Number(decoded.pixels[index * decoded.channels + leftChannel] ?? 0));
+    right.push(Number(decoded.pixels[index * decoded.channels + rightChannel] ?? 0));
+  }
+  const leftMean = mean(left);
+  const rightMean = mean(right);
+  const numerator = left.reduce((sum, value, index) => sum + (value - leftMean) * ((right[index] ?? 0) - rightMean), 0);
+  const denominator = Math.sqrt(left.reduce((sum, value) => sum + (value - leftMean) ** 2, 0) * right.reduce((sum, value) => sum + (value - rightMean) ** 2, 0));
+  return denominator === 0 ? null : clamp01((numerator / denominator + 1) / 2);
+}
+
+function cameraEvidenceFromDecoded(input: { decoded?: DecodedImage; parsed: MediaInspection; residuals: readonly number[]; edgeMagnitude: readonly number[]; moireScore: number | null }) {
+  const correlations = [channelCorrelation(input.decoded, 0, 1), channelCorrelation(input.decoded, 0, 2), channelCorrelation(input.decoded, 1, 2)].filter((value): value is number => value !== null);
+  const cfaProxy = correlations.length === 0 ? null : mean(correlations);
+  const noiseVariance = input.decoded ? variance(input.residuals) : null;
+  const edgeGradientCoherence = input.decoded ? clamp01(1 - variance(input.edgeMagnitude) * 8) : null;
+  const chromaticAberrationProxy = correlations.length === 0 ? null : clamp01(1 - Math.abs((correlations[0] ?? 0) - (correlations[2] ?? 0)));
+  const metadataEvidence = [
+    input.parsed.metadata.exifPresent ? 'EXIF_PRESENT' : null,
+    input.parsed.metadata.xmpPresent ? 'XMP_PRESENT' : null,
+    input.parsed.encoderInformation ? 'ENCODER_PRESENT' : null,
+    input.parsed.compression.quantisationTableCount !== null ? 'QUANTISATION_TABLES_PRESENT' : null,
+  ].filter((value): value is string => value !== null);
+  const cameraPipelineConsistency = metadataEvidence.length === 0 ? null : clamp01(metadataEvidence.length / 4);
+  const sensorNoiseScore = noiseVariance === null ? null : clamp01(noiseVariance * 32);
+  const opticalCharacteristicsScore = chromaticAberrationProxy;
+  const screenRecaptureScore = input.parsed.screenshotIndicatorScore === null
+    ? input.moireScore
+    : clamp01(Math.max(input.parsed.screenshotIndicatorScore, input.moireScore ?? 0));
+  const screenRecaptureIndicators = [
+    (input.parsed.screenshotIndicatorScore ?? 0) >= 0.5 ? 'CONTAINER_SCREENSHOT_MARKER' : null,
+    (input.moireScore ?? 0) >= 0.5 ? 'PERIODIC_MOIRE_PROXY' : null,
+  ].filter((value): value is string => value !== null);
+  let cameraOrigin: CameraEvidenceLevel = 'CAMERA_EVIDENCE_ABSENT';
+  if (screenRecaptureScore !== null && screenRecaptureScore >= 0.7) cameraOrigin = 'SCREEN_RECAPTURE_LIKELY';
+  else if (cameraPipelineConsistency !== null && cameraPipelineConsistency >= 0.5 && cfaProxy !== null) cameraOrigin = 'CAMERA_NATIVE_LIKELY';
+  else if (input.decoded) cameraOrigin = 'CAMERA_ORIGIN_UNCERTAIN';
+  return {
+    cameraPipelineConsistency,
+    cfaDemosaicingScore: cfaProxy,
+    sensorNoiseScore,
+    opticalCharacteristicsScore,
+    screenRecaptureScore,
+    moireScore: input.moireScore,
+    cameraEvidenceApplicability: input.decoded ? 'applicable' as const : 'unavailable' as const,
+    cameraOrigin,
+    evidenceDetails: {
+      metadataEvidence,
+      cfaProxy,
+      noiseVariance,
+      edgeGradientCoherence,
+      chromaticAberrationProxy,
+      screenRecaptureIndicators,
+    },
+  };
+}
+
 export function featureVectorFromBundle(bundle: Pick<ForensicFeatureBundle, 'fileProvenance' | 'physicalAcquisition' | 'spectralStability' | 'reconstruction'>): readonly number[] {
   const values = [
     bundle.fileProvenance.compression.quantisationMean ?? 0,
@@ -512,6 +587,112 @@ export async function generateForensicFeatureBundle(input: ForensicInput): Promi
       executionMs: Date.now() - startedAt,
       costEstimateUsd: 0,
       uncertainty: { grade: 'unknown', lowerBound: null, upperBound: null, rationale: 'No trained authenticity detector is invoked by deterministic forensics v0.' },
+    }),
+  };
+}
+
+export async function generateForensicFeatureBundleV1(input: ForensicInput): Promise<ForensicFeatureBundle> {
+  const startedAt = Date.now();
+  const parsed = inspectMedia(input.bytes, input.mime);
+  const scaleDefinitions = [8, 16];
+  const scaleFeatures = scaleDefinitions.map((scale) => {
+    const samples = grayscaleGrid(input.decoded, input.bytes, scale);
+    const dft = dftFeatures(samples.grid, scale);
+    return {
+      scale,
+      grid: samples,
+      fftMagnitude: dft.magnitude,
+      fftPhase: dft.phase,
+      dct: dctFeatures(samples.grid, scale),
+      wavelets: waveletFeatures(samples.grid, scale),
+      residuals: residualFeatures(samples.grid, scale),
+    };
+  });
+  const base = scaleFeatures[0];
+  const sampleMean = mean(base.grid.grid);
+  const sampleVariance = variance(base.grid.grid, sampleMean);
+  const edgeMagnitude = base.residuals.map(Math.abs);
+  const moireScore = base.grid.decoded ? periodicMoireScore(base.grid.grid, base.scale) : null;
+  const camera = cameraEvidenceFromDecoded({ decoded: input.decoded, parsed, residuals: base.residuals, edgeMagnitude, moireScore });
+  const sha256 = await sha256Hex(input.bytes);
+  const fileProvenance: FileProvenanceFeatures = {
+    sha256,
+    perceptualHash: perceptualHash(base.grid.grid, base.grid.grid.length === 0 ? 8 : base.scale),
+    mime: input.mime,
+    dimensions: parsed.dimensions,
+    metadata: parsed.metadata,
+    encoderInformation: parsed.encoderInformation,
+    compression: parsed.compression,
+    screenshotIndicatorScore: parsed.screenshotIndicatorScore,
+  };
+  const spectralStability = {
+    fftMagnitude: base.fftMagnitude,
+    fftPhase: base.fftPhase,
+    dct: base.dct,
+    wavelets: base.wavelets,
+    residuals: base.residuals,
+    transformedImageScores: [],
+    featureMovement: null,
+    mean: sampleMean,
+    variance: sampleVariance,
+    edgeStatistics: { meanMagnitude: base.grid.decoded ? mean(edgeMagnitude) : null, variance: base.grid.decoded ? variance(edgeMagnitude) : null, sampleCount: base.grid.decoded ? edgeMagnitude.length : 0 },
+    robustnessGrade: 'unknown' as const,
+    multiScale: scaleFeatures.map(({ scale, fftMagnitude, fftPhase, dct, wavelets, residuals }) => ({ scale, fftMagnitude, fftPhase, dct, wavelets, residuals })),
+    featureLabels: ['fft_magnitude', 'fft_phase', 'dct', 'wavelets', 'residuals', 'camera_pipeline', 'cfa_proxy', 'sensor_noise', 'optical_proxy', 'screen_recapture'],
+  };
+  const reconstruction = {
+    inpaintingScore: null,
+    localGenerationScore: null,
+    reconstructionCharacteristics: [],
+    mixedOriginScore: null,
+    manipulationMasks: [],
+    regionalInconsistencyScore: null,
+  };
+  const generativeForensics = {
+    syntheticFeatureScore: null,
+    textureStatisticsScore: null,
+    latentDecoderScore: null,
+    globalStructureScore: null,
+    generatorFamilyEmbedding: null,
+    localSyntheticRegions: [],
+    syntheticEvidence: 'NO_POSITIVE_SYNTHETIC_EVIDENCE' as const,
+  };
+  const featureVector = [
+    fileProvenance.metadata.exifPresent ? 1 : 0,
+    fileProvenance.metadata.xmpPresent ? 1 : 0,
+    fileProvenance.encoderInformation ? 1 : 0,
+    fileProvenance.compression.quantisationTableCount !== null ? 1 : 0,
+    camera.cameraPipelineConsistency ?? 0,
+    camera.cfaDemosaicingScore ?? 0,
+    camera.sensorNoiseScore ?? 0,
+    camera.opticalCharacteristicsScore ?? 0,
+    camera.screenRecaptureScore ?? 0,
+    ...scaleFeatures.flatMap((scale) => [
+      ...scale.fftMagnitude.slice(0, 16),
+      ...scale.fftPhase.slice(0, 16),
+      ...scale.dct.slice(0, 16),
+      ...scale.wavelets.slice(0, 16),
+      ...scale.residuals.slice(0, 16),
+    ]),
+  ].map((value) => Number.isFinite(value) ? value : 0);
+  return {
+    id: uuidv7(),
+    caseId: input.caseId,
+    featureVersion: 'lythaus-forensics-v1',
+    fileProvenance,
+    physicalAcquisition: camera,
+    generativeForensics,
+    spectralStability,
+    reconstruction,
+    imagePyramid: imagePyramid(base.grid.width || parsed.dimensions?.width || 0, base.grid.height || parsed.dimensions?.height || 0, base.grid.grid),
+    featureVector,
+    audit: createDecisionAudit({
+      timestamp: input.now,
+      reasonCodes: base.grid.decoded ? ['DETERMINISTIC_V1_SPECTRAL_FEATURES_GENERATED', 'CAMERA_ORIGIN_EVIDENCE_ONLY', 'NO_ENFORCEMENT'] : ['DECODED_PIXELS_UNAVAILABLE', 'RAW_CONTAINER_FEATURES_ONLY', 'NO_ENFORCEMENT'],
+      applicability: base.grid.decoded ? 'applicable' : 'unavailable',
+      executionMs: Date.now() - startedAt,
+      costEstimateUsd: 0,
+      uncertainty: { grade: 'unknown', lowerBound: null, upperBound: null, rationale: 'v1 features are deterministic evidence and require benchmark calibration.' },
     }),
   };
 }

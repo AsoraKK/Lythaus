@@ -91,12 +91,9 @@ void main() {
       expect(InsightAppealStatus.values, contains(InsightAppealStatus.pending));
       expect(
         InsightAppealStatus.values,
-        contains(InsightAppealStatus.approved),
+        contains(InsightAppealStatus.overturned),
       );
-      expect(
-        InsightAppealStatus.values,
-        contains(InsightAppealStatus.rejected),
-      );
+      expect(InsightAppealStatus.values, contains(InsightAppealStatus.upheld));
     });
 
     test('fromString parses case-insensitively', () {
@@ -109,12 +106,12 @@ void main() {
         equals(InsightAppealStatus.pending),
       );
       expect(
-        InsightAppealStatus.fromString('APPROVED'),
-        equals(InsightAppealStatus.approved),
+        InsightAppealStatus.fromString('OVERTURN'),
+        equals(InsightAppealStatus.overturned),
       );
       expect(
-        InsightAppealStatus.fromString('REJECTED'),
-        equals(InsightAppealStatus.rejected),
+        InsightAppealStatus.fromString('UPHOLD'),
+        equals(InsightAppealStatus.upheld),
       );
     });
 
@@ -128,12 +125,23 @@ void main() {
         equals(InsightAppealStatus.pending),
       );
       expect(
+        InsightAppealStatus.fromString('overturn'),
+        equals(InsightAppealStatus.overturned),
+      );
+      expect(
+        InsightAppealStatus.fromString('uphold'),
+        equals(InsightAppealStatus.upheld),
+      );
+    });
+
+    test('decodes historical approved and rejected values only on input', () {
+      expect(
         InsightAppealStatus.fromString('approved'),
-        equals(InsightAppealStatus.approved),
+        equals(InsightAppealStatus.overturned),
       );
       expect(
         InsightAppealStatus.fromString('rejected'),
-        equals(InsightAppealStatus.rejected),
+        equals(InsightAppealStatus.upheld),
       );
     });
 
@@ -151,8 +159,8 @@ void main() {
     test('displayLabel returns proper strings', () {
       expect(InsightAppealStatus.none.displayLabel, equals('None'));
       expect(InsightAppealStatus.pending.displayLabel, equals('Pending'));
-      expect(InsightAppealStatus.approved.displayLabel, equals('Approved'));
-      expect(InsightAppealStatus.rejected.displayLabel, equals('Rejected'));
+      expect(InsightAppealStatus.overturned.displayLabel, equals('Restored'));
+      expect(InsightAppealStatus.upheld.displayLabel, equals('Upheld'));
     });
   });
 
@@ -228,7 +236,7 @@ void main() {
         'reasonCodes': ['OFFENSIVE', 'SPAM'],
         'configVersion': 2,
         'decidedAt': '2026-01-18T10:00:00Z',
-        'appeal': {'status': 'APPROVED', 'updatedAt': '2026-01-17T10:00:00Z'},
+        'appeal': {'status': 'OVERTURN', 'updatedAt': '2026-01-17T10:00:00Z'},
       };
 
       final insights = PostInsights.fromJson(json);
@@ -238,7 +246,7 @@ void main() {
       expect(insights.decision, equals(InsightDecision.block));
       expect(insights.reasonCodes, equals(['OFFENSIVE', 'SPAM']));
       expect(insights.configVersion, equals(2));
-      expect(insights.appeal.status, equals(InsightAppealStatus.approved));
+      expect(insights.appeal.status, equals(InsightAppealStatus.overturned));
     });
 
     test('fromJson handles missing optional fields with defaults', () {

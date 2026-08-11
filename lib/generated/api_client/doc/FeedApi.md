@@ -9,26 +9,29 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**feedDiscover**](FeedApi.md#feeddiscover) | **GET** /feed/discover | Return discovery/explore feed
-[**feedNews**](FeedApi.md#feednews) | **GET** /feed/news | Return News Board feed
-[**feedPublicGet**](FeedApi.md#feedpublicget) | **GET** /feed/public | Retrieve public discovery feed
-[**feedUser**](FeedApi.md#feeduser) | **GET** /feed/user/{userId} | Return a public user&#39;s post feed
-[**getFeed**](FeedApi.md#getfeed) | **GET** /feed | Retrieve personalized feed items
+[**feedDiscover**](FeedApi.md#feeddiscover) | **GET** /feed/discover | List the public discovery feed
+[**feedList**](FeedApi.md#feedlist) | **GET** /feed | List the authenticated personal feed
+[**feedNews**](FeedApi.md#feednews) | **GET** /feed/news | List the Black-tier News Board
+[**newsBoardGetLegacy**](FeedApi.md#newsboardgetlegacy) | **GET** /news-board | List the Black-tier News Board
 
 
 # **feedDiscover**
-> JsonObject feedDiscover()
+> DiscoveryFeedPage feedDiscover(cursor, limit)
 
-Return discovery/explore feed
+List the public discovery feed
+
+Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getFeedApi();
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
 
 try {
-    final response = api.feedDiscover();
+    final response = api.feedDiscover(cursor, limit);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling FeedApi->feedDiscover: $e\n');
@@ -36,11 +39,58 @@ try {
 ```
 
 ### Parameters
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**DiscoveryFeedPage**](DiscoveryFeedPage.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **feedList**
+> PersonalFeedPage feedList(cursor, limit)
+
+List the authenticated personal feed
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getFeedApi();
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
+
+try {
+    final response = api.feedList(cursor, limit);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling FeedApi->feedList: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
+
+### Return type
+
+[**PersonalFeedPage**](PersonalFeedPage.md)
 
 ### Authorization
 
@@ -54,23 +104,22 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **feedNews**
-> NewsBoardFeedResponse feedNews(cursor, limit, region)
+> NewsBoardFeedPage feedNews(cursor, limit)
 
-Return News Board feed
+List the Black-tier News Board
 
-Return authenticated News Board posts. Free receives a maximum three-item preview with no cursor; Premium and Black receive the full board. Admin is an authorization role, not a commercial tier. Publishing remains restricted to editorial contributors and approved ingestion paths.
+This is an authenticated Black-only entitlement. Free and Premium callers receive a forbidden response; there is no preview contract.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getFeedApi();
-final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
-final int limit = 25; // int | Maximum number of items to return per page
-final String region = region_example; // String |
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
 
 try {
-    final response = api.feedNews(cursor, limit, region);
+    final response = api.feedNews(cursor, limit);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling FeedApi->feedNews: $e\n');
@@ -81,13 +130,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
- **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
- **region** | **String**|  | [optional]
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
 
 ### Return type
 
-[**NewsBoardFeedResponse**](NewsBoardFeedResponse.md)
+[**NewsBoardFeedPage**](NewsBoardFeedPage.md)
 
 ### Authorization
 
@@ -100,28 +148,26 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **feedPublicGet**
-> FeedPageResponse feedPublicGet(cursor, limit, includeTopics, excludeTopics)
+# **newsBoardGetLegacy**
+> NewsBoardFeedPage newsBoardGetLegacy(cursor, limit)
 
-Retrieve public discovery feed
+List the Black-tier News Board
 
-Public feed surface using ranking safety filters and reputation-derived trust weighting without paid-tier boosting.
+Compatibility alias for `/feed/news`. This is an authenticated Black-only entitlement.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getFeedApi();
-final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
-final int limit = 25; // int | Maximum number of items to return per page
-final String includeTopics = includeTopics_example; // String |
-final String excludeTopics = excludeTopics_example; // String |
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
 
 try {
-    final response = api.feedPublicGet(cursor, limit, includeTopics, excludeTopics);
+    final response = api.newsBoardGetLegacy(cursor, limit);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling FeedApi->feedPublicGet: $e\n');
+    print('Exception when calling FeedApi->newsBoardGetLegacy: $e\n');
 }
 ```
 
@@ -129,100 +175,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
- **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
- **includeTopics** | **String**|  | [optional]
- **excludeTopics** | **String**|  | [optional]
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
 
 ### Return type
 
-[**FeedPageResponse**](FeedPageResponse.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **feedUser**
-> JsonObject feedUser(userId)
-
-Return a public user's post feed
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getFeedApi();
-final String userId = userId_example; // String |
-
-try {
-    final response = api.feedUser(userId);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling FeedApi->feedUser: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **userId** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **getFeed**
-> FeedPageEnvelope getFeed(cursor, limit)
-
-Retrieve personalized feed items
-
-Return a page of feed items.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getFeedApi();
-final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
-final int limit = 25; // int | Maximum number of items to return per page
-
-try {
-    final response = api.getFeed(cursor, limit);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling FeedApi->getFeed: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
- **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
-
-### Return type
-
-[**FeedPageEnvelope**](FeedPageEnvelope.md)
+[**NewsBoardFeedPage**](NewsBoardFeedPage.md)
 
 ### Authorization
 

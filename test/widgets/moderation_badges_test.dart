@@ -56,9 +56,9 @@ void main() {
     );
 
     expect(find.text('Content Blocked'), findsOneWidget);
-    expect(find.text('Appeal decision'), findsOneWidget);
+    expect(find.text('Appeal information'), findsOneWidget);
 
-    await tester.tap(find.text('Appeal decision'));
+    await tester.tap(find.text('Appeal information'));
     await tester.tap(find.byIcon(Icons.close));
     await tester.pump();
 
@@ -81,36 +81,36 @@ void main() {
     expect(find.text('Blocked'), findsOneWidget);
   });
 
-  testWidgets('appeal badge shows approved status', (tester) async {
+  testWidgets('appeal badge shows overturned status', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
           body: ModerationBadges(
             status: ModerationStatus.flagged,
-            appealStatus: 'approved',
+            appealStatus: 'overturned',
             isOwnContent: true,
           ),
         ),
       ),
     );
 
-    expect(find.text('Appeal Approved'), findsOneWidget);
+    expect(find.text('Appeal resolved: restored'), findsOneWidget);
   });
 
-  testWidgets('appeal badge shows rejected status', (tester) async {
+  testWidgets('appeal badge shows upheld status', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
           body: ModerationBadges(
             status: ModerationStatus.hidden,
-            appealStatus: 'rejected',
+            appealStatus: 'upheld',
             isOwnContent: true,
           ),
         ),
       ),
     );
 
-    expect(find.text('Appeal Rejected'), findsOneWidget);
+    expect(find.text('Appeal resolved: upheld'), findsOneWidget);
   });
 
   testWidgets('does not show appeal badge for non-own content', (tester) async {
@@ -145,7 +145,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Appeal decision'), findsNothing);
+    expect(find.text('Appeal information'), findsNothing);
   });
 }
 

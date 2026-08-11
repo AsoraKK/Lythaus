@@ -11,3 +11,4 @@ export * from './model-registry.ts';
 export * from './moderation.ts';
 export * from './pipeline.ts';
 export * from './transformations.ts';
+export * from './dataset-provenance.ts';

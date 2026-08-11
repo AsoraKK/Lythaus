@@ -63,6 +63,7 @@ export interface EnvBindings {
   EXPECTED_DATABASE_ROLE_CLASS?: string;
   EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED?: string;
   AUTHENTICATED_ACCEPTANCE_PROVEN?: string;
+  WORKER_VERSION?: { id: string; tag: string; timestamp: string };
   COST_BUDGET_ENABLED?: string;
   COST_BUDGET_LIMIT_USD?: string;
   COST_BUDGET_WARNING_USD?: string;
@@ -86,7 +87,12 @@ export interface R2Bucket {
   head(key: string): Promise<R2ObjectLike | null>;
   get(key: string): Promise<R2ObjectBody | null>;
   put(key: string, value: ReadableStream | ArrayBuffer | Uint8Array, options?: Record<string, unknown>): Promise<R2ObjectLike>;
-  delete(key: string): Promise<void>;
+  delete(keys: string | string[]): Promise<void>;
+  list(options?: { prefix?: string; cursor?: string; limit?: number }): Promise<{
+    objects: R2ObjectLike[];
+    truncated: boolean;
+    cursor?: string;
+  }>;
 }
 
 export interface R2ObjectBody extends R2ObjectLike {

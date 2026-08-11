@@ -35,7 +35,7 @@ class ModerationQueueItemTile extends StatelessWidget {
                   backgroundColor: theme.colorScheme.primary,
                   child: Icon(
                     item.type == ModerationItemType.appeal
-                        ? Icons.how_to_vote
+                        ? Icons.groups_outlined
                         : Icons.flag_outlined,
                     color: Colors.white,
                   ),
@@ -100,9 +100,9 @@ class ModerationQueueItemTile extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text('${item.reportCount} flags'),
                   const SizedBox(width: 16),
-                  const Icon(Icons.how_to_vote_outlined, size: 16),
+                  const Icon(Icons.fact_check_outlined, size: 16),
                   const SizedBox(width: 4),
-                  Text('${item.communityVotes} community votes'),
+                  Text('${item.reviewerDecisions} assigned reviewer decisions'),
                 ],
               ),
             ],

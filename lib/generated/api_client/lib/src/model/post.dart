@@ -27,8 +27,8 @@ part 'post.g.dart';
 /// * [authorship]
 /// * [createdAt]
 /// * [updatedAt]
-@BuiltValue(instantiable: false)
-abstract class Post  {
+@BuiltValue()
+abstract class Post implements Built<Post, PostBuilder> {
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -70,13 +70,20 @@ abstract class Post  {
   @BuiltValueField(wireName: r'updatedAt')
   DateTime get updatedAt;
 
+  Post._();
+
+  factory Post([void updates(PostBuilder b)]) = _$Post;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(PostBuilder b) => b;
+
   @BuiltValueSerializer(custom: true)
   static Serializer<Post> get serializer => _$PostSerializer();
 }
 
 class _$PostSerializer implements PrimitiveSerializer<Post> {
   @override
-  final Iterable<Type> types = const [Post];
+  final Iterable<Type> types = const [Post, _$Post];
 
   @override
   final String wireName = r'Post';
@@ -168,46 +175,6 @@ class _$PostSerializer implements PrimitiveSerializer<Post> {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
-
-  @override
-  Post deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return serializers.deserialize(serialized, specifiedType: FullType($Post)) as $Post;
-  }
-}
-
-/// a concrete implementation of [Post], since [Post] is not instantiable
-@BuiltValue(instantiable: true)
-abstract class $Post implements Post, Built<$Post, $PostBuilder> {
-  $Post._();
-
-  factory $Post([void Function($PostBuilder)? updates]) = _$$Post;
-
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults($PostBuilder b) => b;
-
-  @BuiltValueSerializer(custom: true)
-  static Serializer<$Post> get serializer => _$$PostSerializer();
-}
-
-class _$$PostSerializer implements PrimitiveSerializer<$Post> {
-  @override
-  final Iterable<Type> types = const [$Post, _$$Post];
-
-  @override
-  final String wireName = r'$Post';
-
-  @override
-  Object serialize(
-    Serializers serializers,
-    $Post object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return serializers.serialize(object, specifiedType: FullType(Post))!;
   }
 
   void _deserializeProperties(
@@ -322,12 +289,12 @@ class _$$PostSerializer implements PrimitiveSerializer<$Post> {
   }
 
   @override
-  $Post deserialize(
+  Post deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = $PostBuilder();
+    final result = PostBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

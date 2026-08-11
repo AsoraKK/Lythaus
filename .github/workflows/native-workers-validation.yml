@@ -26,6 +26,9 @@ on:
       - 'scripts/tests/budget-contract.test.mjs'
       - 'scripts/tests/db-identity-contract.test.mjs'
       - 'scripts/tests/native-architecture-invariants.test.js'
+      - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
+      - 'scripts/critical-coverage-gate.mjs'
+      - 'scripts/critical-coverage-manifest.json'
       - 'tsconfig.native.json'
       - 'package.json'
       - 'package-lock.json'
@@ -53,6 +56,9 @@ on:
       - 'scripts/tests/budget-contract.test.mjs'
       - 'scripts/tests/db-identity-contract.test.mjs'
       - 'scripts/tests/native-architecture-invariants.test.js'
+      - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
+      - 'scripts/critical-coverage-gate.mjs'
+      - 'scripts/critical-coverage-manifest.json'
       - 'tsconfig.native.json'
       - 'package.json'
       - 'package-lock.json'
@@ -80,5 +86,7 @@ jobs:
       - run: npm run validate:planetscale-migrations
       - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
+      - run: npm run test:product-integrity-runtime
+      - run: npm run test:critical-coverage
       - run: npm run test:database-identity
       - run: npm run test:budget

@@ -7,17 +7,24 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:built_value/json_object.dart';
 import 'package:lythaus_api_client/src/api_util.dart';
-import 'package:lythaus_api_client/src/model/email_login_request.dart';
+import 'package:lythaus_api_client/src/model/api_error.dart';
+import 'package:lythaus_api_client/src/model/auth_jwks_get200_response.dart';
+import 'package:lythaus_api_client/src/model/auth_logout200_response.dart';
+import 'package:lythaus_api_client/src/model/auth_password_reset_complete200_response.dart';
+import 'package:lythaus_api_client/src/model/auth_password_reset_complete_request.dart';
+import 'package:lythaus_api_client/src/model/auth_password_reset_request202_response.dart';
+import 'package:lythaus_api_client/src/model/auth_password_reset_request_request.dart';
+import 'package:lythaus_api_client/src/model/auth_user_info200_response.dart';
+import 'package:lythaus_api_client/src/model/email_auth_request.dart';
 import 'package:lythaus_api_client/src/model/email_session_response.dart';
+import 'package:lythaus_api_client/src/model/email_verification_request.dart';
+import 'package:lythaus_api_client/src/model/email_verification_required_response.dart';
+import 'package:lythaus_api_client/src/model/email_verification_response.dart';
 import 'package:lythaus_api_client/src/model/error.dart';
-import 'package:lythaus_api_client/src/model/invite_validation_response.dart';
 import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
-import 'package:lythaus_api_client/src/model/redeem_invite_request.dart';
-import 'package:lythaus_api_client/src/model/redeem_invite_response.dart';
+import 'package:lythaus_api_client/src/model/refresh_session_request.dart';
 import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
-import 'package:lythaus_api_client/src/model/user_info_response.dart';
 import 'package:lythaus_api_client/src/model/validation_error_response.dart';
 
 class AuthApi {
@@ -28,11 +35,11 @@ class AuthApi {
 
   const AuthApi(this._dio, this._serializers);
 
-  /// Sign in with a verified email identity
-  /// Creates a Lythaus access and refresh session for a verified email account.
+  /// Register, sign in, or resend email verification
+  /// Registers an email account, signs in a verified account, or resends a verification message. Registration requires a Turnstile token when the production bot-protection gate is enabled.
   ///
   /// Parameters:
-  /// * [emailLoginRequest]
+  /// * [emailAuthRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -42,8 +49,8 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [EmailSessionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<EmailSessionResponse>> authEmailLogin({
-    required EmailLoginRequest emailLoginRequest,
+  Future<Response<EmailSessionResponse>> authEmail({
+    EmailAuthRequest? emailAuthRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -68,8 +75,8 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EmailLoginRequest);
-      _bodyData = _serializers.serialize(emailLoginRequest, specifiedType: _type);
+      const _type = FullType(EmailAuthRequest);
+      _bodyData = _serializers.serialize(emailAuthRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -123,11 +130,11 @@ class AuthApi {
     );
   }
 
-  /// Validate an invite code
-  /// Validates an invite code without revealing status details.
+  /// Verify an email address with a query token
+  /// Consumes a single-use email-verification token and returns only a private verification state.
   ///
   /// Parameters:
-  /// * [code] - Invite code (format XXXX-XXXX)
+  /// * [token]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -135,10 +142,10 @@ class AuthApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [InviteValidationResponse] as data
+  /// Returns a [Future] containing a [Response] with a [EmailVerificationResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<InviteValidationResponse>> authInviteValidate({
-    String? code,
+  Future<Response<EmailVerificationResponse>> authEmailVerifyGet({
+    required String token,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -146,7 +153,7 @@ class AuthApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/auth/invite/validate';
+    final _path = r'/auth/email/verify';
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -160,7 +167,7 @@ class AuthApi {
     );
 
     final _queryParameters = <String, dynamic>{
-      if (code != null) r'code': encodeQueryParameter(_serializers, code, const FullType(String)),
+      r'token': encodeQueryParameter(_serializers, token, const FullType(String)),
     };
 
     final _response = await _dio.request<Object>(
@@ -172,14 +179,14 @@ class AuthApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    InviteValidationResponse? _responseData;
+    EmailVerificationResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(InviteValidationResponse),
-      ) as InviteValidationResponse;
+        specifiedType: const FullType(EmailVerificationResponse),
+      ) as EmailVerificationResponse;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -191,7 +198,7 @@ class AuthApi {
       );
     }
 
-    return Response<InviteValidationResponse>(
+    return Response<EmailVerificationResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -203,10 +210,11 @@ class AuthApi {
     );
   }
 
-  /// Verify authentication token is valid
-  ///
+  /// Verify an email address with a JSON token
+  /// Consumes a single-use email-verification token and returns only a private verification state.
   ///
   /// Parameters:
+  /// * [emailVerificationRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -214,9 +222,10 @@ class AuthApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [EmailVerificationResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> authPing({
+  Future<Response<EmailVerificationResponse>> authEmailVerifyPost({
+    required EmailVerificationRequest emailVerificationRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -224,101 +233,14 @@ class AuthApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/auth/ping';
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    JsonObject? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<JsonObject>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// Redeem an invite code to activate account
-  /// Allows an authenticated but inactive user to redeem a valid invite code. On success the user is activated and a fresh token pair is returned.
-  ///
-  /// Parameters:
-  /// * [redeemInviteRequest]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [RedeemInviteResponse] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<RedeemInviteResponse>> authRedeemInvite({
-    required RedeemInviteRequest redeemInviteRequest,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/auth/redeem-invite';
+    final _path = r'/auth/email/verify';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
         ...?headers,
       },
       extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
-        ],
+        'secure': <Map<String, String>>[],
         ...?extra,
       },
       contentType: 'application/json',
@@ -328,8 +250,8 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(RedeemInviteRequest);
-      _bodyData = _serializers.serialize(redeemInviteRequest, specifiedType: _type);
+      const _type = FullType(EmailVerificationRequest);
+      _bodyData = _serializers.serialize(emailVerificationRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -352,14 +274,14 @@ class AuthApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    RedeemInviteResponse? _responseData;
+    EmailVerificationResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(RedeemInviteResponse),
-      ) as RedeemInviteResponse;
+        specifiedType: const FullType(EmailVerificationResponse),
+      ) as EmailVerificationResponse;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -371,7 +293,349 @@ class AuthApi {
       );
     }
 
-    return Response<RedeemInviteResponse>(
+    return Response<EmailVerificationResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Get the public JWT verification key set
+  ///
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AuthJwksGet200Response] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AuthJwksGet200Response>> authJwksGet({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/.well-known/jwks.json';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AuthJwksGet200Response? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AuthJwksGet200Response),
+      ) as AuthJwksGet200Response;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AuthJwksGet200Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Revoke all active sessions for the authenticated user
+  ///
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AuthLogout200Response] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AuthLogout200Response>> authLogout({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/logout';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AuthLogout200Response? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AuthLogout200Response),
+      ) as AuthLogout200Response;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AuthLogout200Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Complete password reset and revoke existing sessions
+  ///
+  ///
+  /// Parameters:
+  /// * [authPasswordResetCompleteRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AuthPasswordResetComplete200Response] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AuthPasswordResetComplete200Response>> authPasswordResetComplete({
+    required AuthPasswordResetCompleteRequest authPasswordResetCompleteRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/password/reset/complete';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AuthPasswordResetCompleteRequest);
+      _bodyData = _serializers.serialize(authPasswordResetCompleteRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AuthPasswordResetComplete200Response? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AuthPasswordResetComplete200Response),
+      ) as AuthPasswordResetComplete200Response;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AuthPasswordResetComplete200Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Request an opaque password reset message
+  /// Always returns the same neutral state so account existence is not disclosed.
+  ///
+  /// Parameters:
+  /// * [authPasswordResetRequestRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AuthPasswordResetRequest202Response] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AuthPasswordResetRequest202Response>> authPasswordResetRequest({
+    required AuthPasswordResetRequestRequest authPasswordResetRequestRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/password/reset/request';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AuthPasswordResetRequestRequest);
+      _bodyData = _serializers.serialize(authPasswordResetRequestRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AuthPasswordResetRequest202Response? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AuthPasswordResetRequest202Response),
+      ) as AuthPasswordResetRequest202Response;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AuthPasswordResetRequest202Response>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -387,7 +651,7 @@ class AuthApi {
   ///
   ///
   /// Parameters:
-  /// * [body]
+  /// * [refreshSessionRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -395,10 +659,10 @@ class AuthApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [EmailSessionResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> authRefresh({
-    required JsonObject body,
+  Future<Response<EmailSessionResponse>> authRefresh({
+    required RefreshSessionRequest refreshSessionRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -413,13 +677,7 @@ class AuthApi {
         ...?headers,
       },
       extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
-        ],
+        'secure': <Map<String, String>>[],
         ...?extra,
       },
       contentType: 'application/json',
@@ -429,7 +687,8 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = body;
+      const _type = FullType(RefreshSessionRequest);
+      _bodyData = _serializers.serialize(refreshSessionRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -452,14 +711,14 @@ class AuthApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    EmailSessionResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(EmailSessionResponse),
+      ) as EmailSessionResponse;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -471,7 +730,7 @@ class AuthApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<EmailSessionResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -483,108 +742,8 @@ class AuthApi {
     );
   }
 
-  /// Revoke an active session
+  /// Get the authenticated user&#39;s current identity claims
   ///
-  ///
-  /// Parameters:
-  /// * [body]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> authSessionsRevoke({
-    required JsonObject body,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/auth/sessions/revoke';
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      _bodyData = body;
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    JsonObject? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<JsonObject>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// Return the current email-authenticated user
-  /// Returns the active Lythaus account associated with the bearer session.
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -594,9 +753,9 @@ class AuthApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [UserInfoResponse] as data
+  /// Returns a [Future] containing a [Response] with a [AuthUserInfo200Response] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<UserInfoResponse>> authUserInfo({
+  Future<Response<AuthUserInfo200Response>> authUserInfo({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -631,14 +790,14 @@ class AuthApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    UserInfoResponse? _responseData;
+    AuthUserInfo200Response? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(UserInfoResponse),
-      ) as UserInfoResponse;
+        specifiedType: const FullType(AuthUserInfo200Response),
+      ) as AuthUserInfo200Response;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -650,87 +809,7 @@ class AuthApi {
       );
     }
 
-    return Response<UserInfoResponse>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// OIDC UserInfo endpoint (POST)
-  /// POST variant of the UserInfo endpoint for clients that cannot use query strings.
-  ///
-  /// Parameters:
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [UserInfoResponse] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<UserInfoResponse>> authUserInfoPost({
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/auth/userinfo';
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/x-www-form-urlencoded',
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    UserInfoResponse? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(UserInfoResponse),
-      ) as UserInfoResponse;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<UserInfoResponse>(
+    return Response<AuthUserInfo200Response>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

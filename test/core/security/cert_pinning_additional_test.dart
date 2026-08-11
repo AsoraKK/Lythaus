@@ -39,9 +39,7 @@ void main() {
     });
 
     test('isPinValidationError handles all DioException types', () {
-      final pinnedOptions = RequestOptions(
-        path: 'https://api.lythaus.co/api',
-      );
+      final pinnedOptions = RequestOptions(path: 'https://api.lythaus.co/api');
       final unpinnedOptions = RequestOptions(path: 'https://example.com/api');
 
       // Test all DioException types

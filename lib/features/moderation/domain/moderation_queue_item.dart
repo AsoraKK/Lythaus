@@ -19,7 +19,7 @@ class ModerationQueueItem {
     required this.status,
     required this.queue,
     required this.reportCount,
-    required this.communityVotes,
+    required this.reviewerDecisions,
     required this.isEscalated,
     this.contentTitle,
     this.authorHandle,
@@ -40,7 +40,7 @@ class ModerationQueueItem {
   final String status;
   final String queue;
   final int reportCount;
-  final int communityVotes;
+  final int reviewerDecisions;
   final bool isEscalated;
   final String? contentTitle;
   final String? authorHandle;
@@ -82,10 +82,7 @@ class ModerationQueueItem {
           (json['flags'] as int?) ??
           (json['reports'] as int?) ??
           0,
-      communityVotes:
-          (json['communityVotes'] as int?) ??
-          (json['appealVotes'] as int?) ??
-          0,
+      reviewerDecisions: _readReviewerDecisions(json),
       isEscalated: json['isEscalated'] == true || json['escalated'] == true,
       thumbnailUrl: json['thumbnailUrl']?.toString(),
       aiRiskBand: json['aiRiskBand']?.toString() ?? json['aiLabel']?.toString(),
@@ -110,7 +107,7 @@ class ModerationQueueItem {
       'status': status,
       'queue': queue,
       'reportCount': reportCount,
-      'communityVotes': communityVotes,
+      'reviewerDecisions': reviewerDecisions,
       'isEscalated': isEscalated,
       'contentTitle': contentTitle,
       'authorHandle': authorHandle,
@@ -130,6 +127,24 @@ class ModerationQueueItem {
       default:
         return ModerationItemType.flag;
     }
+  }
+
+  static int _readReviewerDecisions(Map<String, dynamic> json) {
+    final reviewerPanel = json['reviewerPanel'];
+    final panelCount = reviewerPanel is Map
+        ? reviewerPanel['completedReviewers'] ??
+              reviewerPanel['reviewerDecisions'] ??
+              reviewerPanel['decisionCount']
+        : null;
+
+    if (panelCount is int) return panelCount;
+
+    return (json['reviewerDecisions'] as int?) ??
+        (json['reviewer_decisions'] as int?) ??
+        (json['completedReviewers'] as int?) ??
+        // Historical queue snapshots used these fields before reviewer panels.
+        (json['communityVotes'] as int?) ??
+        0;
   }
 
   static ModerationSeverityLevel parseSeverity(String? value) {

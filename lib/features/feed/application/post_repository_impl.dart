@@ -4,7 +4,7 @@
 ///
 /// 🎯 Purpose: HTTP client implementation for post repository
 /// 🏗️ Architecture: Application layer - implements domain contracts
-/// 📡 Endpoints: POST/PATCH /posts, DELETE /posts/{id}, GET /posts/{id}
+/// 📡 Endpoints: POST/PUT /posts, DELETE /posts/{id}, GET /posts/{id}
 /// 🔐 Authentication: Bearer token from secure storage
 /// 📱 Platform: Flutter with Dio HTTP client
 library;
@@ -13,6 +13,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:lythaus/core/observability/lythaus_tracer.dart';
 import 'package:lythaus/core/error/error_codes.dart';
+import 'package:lythaus/core/network/idempotency_key.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
 
@@ -34,7 +35,12 @@ class PostRepositoryImpl implements PostRepository {
           final response = await _dio.post<Map<String, dynamic>>(
             '/api/posts',
             data: request.toJson(),
-            options: Options(headers: {'Authorization': 'Bearer $token'}),
+            options: Options(
+              headers: {
+                'Authorization': 'Bearer $token',
+                'Idempotency-Key': IdempotencyKey.create('post-create'),
+              },
+            ),
           );
 
           if (response.statusCode == 201) {
@@ -82,14 +88,21 @@ class PostRepositoryImpl implements PostRepository {
       );
     }
 
+    final idempotencyKey = IdempotencyKey.create('post-update');
+
     return LythausTracer.traceOperation(
       'PostRepository.updatePost',
       () async {
         try {
-          final response = await _dio.patch<Map<String, dynamic>>(
+          final response = await _dio.put<Map<String, dynamic>>(
             '/api/posts/$postId',
             data: request.toJson(),
-            options: Options(headers: {'Authorization': 'Bearer $token'}),
+            options: Options(
+              headers: {
+                'Authorization': 'Bearer $token',
+                'Idempotency-Key': idempotencyKey,
+              },
+            ),
           );
 
           if (response.statusCode == 200) {
@@ -113,7 +126,7 @@ class PostRepositoryImpl implements PostRepository {
       },
       attributes:
           LythausTracer.httpRequestAttributes(
-            method: 'PATCH',
+            method: 'PUT',
             url: '/api/posts/$postId',
           )..addAll({
             'request.post_id': postId,
@@ -127,23 +140,26 @@ class PostRepositoryImpl implements PostRepository {
     required String postId,
     required String token,
   }) async {
+    final idempotencyKey = IdempotencyKey.create('post-delete');
+
     return LythausTracer.traceOperation(
       'PostRepository.deletePost',
       () async {
         try {
           final response = await _dio.delete<dynamic>(
             '/api/posts/$postId',
-            options: Options(headers: {'Authorization': 'Bearer $token'}),
+            options: Options(
+              headers: {
+                'Authorization': 'Bearer $token',
+                'Idempotency-Key': idempotencyKey,
+              },
+            ),
           );
-
-          if (response.statusCode == 204) {
-            return true;
-          }
 
           if (response.statusCode == 200) {
             final data = response.data;
             if (data is Map<String, dynamic>) {
-              return data['success'] == true;
+              return data['postId'] == postId && data['deleted'] == true;
             }
             return false;
           }

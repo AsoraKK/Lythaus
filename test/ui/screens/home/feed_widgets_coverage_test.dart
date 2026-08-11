@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/home/discover_feed.dart';
 import 'package:lythaus/ui/screens/home/news_feed.dart';
 import 'package:lythaus/ui/screens/home/custom_feed.dart';
@@ -48,6 +49,15 @@ void main() {
 
   Widget wrap(Widget child) {
     return ProviderScope(
+      overrides: [
+        feedEntitlementsProvider.overrideWith(
+          (ref) async => const FeedEntitlements(
+            tier: 'black',
+            maxCustomFeeds: 3,
+            newsBoardAccess: 'full',
+          ),
+        ),
+      ],
       child: MaterialApp(
         home: Scaffold(body: SizedBox(height: 800, child: child)),
       ),
@@ -171,7 +181,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.text('Hybrid newsroom + high reputation contributors.'),
+        find.text('Editorial coverage from earned, revocable contributors.'),
         findsOneWidget,
       );
       expect(find.text('Title 0'), findsOneWidget);

@@ -3,7 +3,7 @@
   "$id": "https://lythaus.co/schemas/authenticity-benchmark-v0.json",
   "title": "Lythaus Authenticity Benchmark v0 Manifest",
   "type": "object",
-  "required": ["schemaVersion", "manifestId", "datasetRegistryVersion", "samples"],
+  "required": ["schemaVersion", "manifestId", "datasetRegistryVersion", "containsUserContent", "samples"],
   "properties": {
     "schemaVersion": { "const": "lythaus-authenticity-benchmark-v0" },
     "manifestId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
@@ -14,10 +14,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["sampleId", "groupId", "origin", "transformation", "sourceDatasetId", "contentSha256", "split"],
+          "required": ["sampleId", "groupId", "sourceFamilyId", "origin", "transformation", "sourceDatasetId", "contentSha256", "rightsClass", "split"],
         "properties": {
           "sampleId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
           "groupId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+          "sourceFamilyId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
           "origin": { "enum": ["CAMERA_NATIVE", "AI_GENERATED", "AI_EDITED", "TRADITIONAL_DIGITAL_ART", "CGI", "SCAN", "COMPOSITE", "UNKNOWN"] },
           "transformation": { "enum": ["ORIGINAL", "JPEG_COMPRESSED", "RESIZED", "CROPPED", "SCREENSHOT", "SCREEN_RECAPTURE", "BLURRED", "SHARPENED", "METADATA_STRIPPED", "INPAINTED"] },
           "generatorFamily": { "type": ["string", "null"] },
@@ -26,6 +27,10 @@
           "sourceDatasetId": { "type": "string", "minLength": 1 },
           "sourceUrl": { "type": "string", "format": "uri" },
           "licenceClassification": { "enum": ["APPROVED_FOR_COMMERCIAL_TRAINING", "APPROVED_FOR_EVALUATION_ONLY", "APPROVED_WITH_CONDITIONS", "REQUIRES_PERMISSION", "PROHIBITED", "UNCLEAR"] },
+          "rightsClass": { "enum": ["CLASS_A_COMMERCIAL_TRAINING", "CLASS_B_EVALUATION_ONLY", "CLASS_C_LYTHAUS_OWNED"] },
+          "trainingGate": { "enum": ["ALLOW", "DENY", "CONDITIONAL", "DO_NOT_TRAIN", "UNKNOWN"] },
+          "evaluationGate": { "enum": ["ALLOW", "DENY", "CONDITIONAL", "DO_NOT_TRAIN", "UNKNOWN"] },
+          "distillationGate": { "enum": ["ALLOW", "DENY", "CONDITIONAL", "DO_NOT_TRAIN", "UNKNOWN"] },
           "contentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "perceptualHash": { "type": "string", "minLength": 1 },
           "parentSampleId": { "type": ["string", "null"], "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
@@ -37,7 +42,7 @@
           "consentStatus": { "type": "string" },
           "truthSynthetic": { "type": ["boolean", "null"] },
           "truthLocalManipulation": { "type": ["boolean", "null"] },
-          "split": { "enum": ["TRAIN", "CALIBRATION", "KNOWN_TEST", "UNSEEN_TEST"] },
+          "split": { "enum": ["TRAIN", "CALIBRATION", "KNOWN_TEST", "UNSEEN_TEST", "EVALUATION_ONLY"] },
           "retentionClass": { "type": "string" }
         }
       }

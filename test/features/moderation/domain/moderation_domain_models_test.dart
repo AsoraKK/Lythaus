@@ -275,11 +275,11 @@ void main() {
       );
       expect(
         ModerationAuditEntry.fromJson({'action': 'vote'}).action,
-        ModerationAuditActionType.communityVote,
+        ModerationAuditActionType.reviewerDecision,
       );
       expect(
         ModerationAuditEntry.fromJson({'action': 'community_vote'}).action,
-        ModerationAuditActionType.communityVote,
+        ModerationAuditActionType.reviewerDecision,
       );
       expect(
         ModerationAuditEntry.fromJson({'action': 'decision'}).action,
@@ -448,7 +448,11 @@ void main() {
       );
       expect(
         ErrorMessages.forCode(ErrorCodes.aiLabelRequired),
-        contains('AI-generated'),
+        contains('AI-assisted'),
+      );
+      expect(
+        ErrorMessages.forCode(ErrorCodes.aiLabelRequired),
+        isNot(contains('AI-generated')),
       );
     });
   });

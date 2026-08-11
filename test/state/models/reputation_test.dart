@@ -2,161 +2,153 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/state/models/reputation.dart';
 
 void main() {
-  group('ReputationTier', () {
-    test('constructs with required fields', () {
-      const tier = ReputationTier(
-        id: 'premium',
-        name: 'Premium',
-        minXP: 1200,
-        privileges: ['custom feeds', 'rewards'],
-      );
-
-      expect(tier.id, 'premium');
-      expect(tier.name, 'Premium');
-      expect(tier.minXP, 1200);
-      expect(tier.privileges, hasLength(2));
+  test('reputation state preserves backend-issued labels and blockers', () {
+    final state = ReputationState.fromJson({
+      'userId': 'user-1',
+      'level': 4,
+      'reputationLevel': 4,
+      'levelName': 'Credible',
+      'reputationStatus': 'active',
+      'reputationBand': 'established',
+      'policyVersion': '2026-08',
+      'pillars': {
+        'accountability': 1,
+        'contribution': 2,
+        'conduct': 3,
+        'sourcing': 4,
+        'authenticity': 5,
+        'reviewReliability': 6,
+      },
+      'promotionBlockers': [
+        'review_pending',
+        {'untrusted': 'raw-json'},
+      ],
+      'evaluatedAt': '2026-08-10T10:00:00Z',
     });
 
-    test('supports const construction', () {
-      const tier1 = ReputationTier(
-        id: 'free',
-        name: 'Free',
-        minXP: 0,
-        privileges: [],
-      );
-      const tier2 = ReputationTier(
-        id: 'free',
-        name: 'Free',
-        minXP: 0,
-        privileges: [],
-      );
-
-      expect(tier1.id, tier2.id);
-      expect(tier1.minXP, tier2.minXP);
-    });
+    expect(state.level, 4);
+    expect(state.levelName, 'Credible');
+    expect(state.pillars['conduct'], 3);
+    expect(state.promotionBlockers, ['review_pending']);
   });
 
-  group('Mission', () {
-    test('constructs with required fields and defaults', () {
-      const mission = Mission(
-        id: 'daily_post',
-        title: 'Post daily',
-        xpReward: 50,
-      );
-
-      expect(mission.id, 'daily_post');
-      expect(mission.title, 'Post daily');
-      expect(mission.xpReward, 50);
-      expect(mission.completed, false);
+  test('ledger and activity parse private server records', () {
+    final ledger = LedgerEntry.fromJson({
+      'id': 'ledger-1',
+      'eventType': 'post_published',
+      'pillar': 'contribution',
+      'impact': '2',
+      'status': 'active',
+      'explanationCode': 'contribution_recorded',
+      'policyVersion': '2026-08',
+      'createdAt': '2026-08-10T10:00:00Z',
+      'appealId': 'appeal-1',
+    });
+    final activity = ActivityEntry.fromJson({
+      'id': 'activity-1',
+      'category': 'appeals',
+      'source': 'system',
+      'title': 'Appeal opened',
+      'explanation': 'A moderation case opened an appeal.',
+      'result': 'pending',
+      'reasonCode': 'appeal_opened',
+      'policyVersion': '2026-08',
+      'objectType': 'appeal',
+      'reputationEffect': 'none',
+      'appealable': false,
+      'retentionClass': 'ordinary',
+      'retentionDays': 730,
+      'createdAt': '2026-08-10T10:00:00Z',
     });
 
-    test('constructs with completed flag', () {
-      const mission = Mission(
-        id: 'daily_login',
-        title: 'Log in daily',
-        xpReward: 10,
-        completed: true,
-      );
-
-      expect(mission.completed, true);
-    });
+    expect(ledger.appealId, 'appeal-1');
+    expect(activity.title, 'Appeal opened');
   });
 
-  group('UserReputation', () {
-    const baseTier = ReputationTier(
-      id: 'free',
-      name: 'Free',
-      minXP: 0,
-      privileges: ['basic feed'],
-    );
-
-    test('constructs with required fields and defaults', () {
-      const rep = UserReputation(xp: 100, tier: baseTier);
-
-      expect(rep.xp, 100);
-      expect(rep.tier.id, 'free');
-      expect(rep.missions, isEmpty);
-      expect(rep.recentAchievements, isEmpty);
-    });
-
-    test('constructs with missions and achievements', () {
-      const mission = Mission(
-        id: 'm1',
-        title: 'Test',
-        xpReward: 10,
-        completed: true,
-      );
-
-      const rep = UserReputation(
-        xp: 500,
-        tier: baseTier,
-        missions: [mission],
-        recentAchievements: ['First post'],
-      );
-
-      expect(rep.missions, hasLength(1));
-      expect(rep.recentAchievements, contains('First post'));
-    });
-
-    test('copyWith replaces xp', () {
-      const original = UserReputation(xp: 100, tier: baseTier);
-      final updated = original.copyWith(xp: 200);
-
-      expect(updated.xp, 200);
-      expect(updated.tier.id, 'free');
-    });
-
-    test('copyWith replaces tier', () {
-      const premiumTier = ReputationTier(
-        id: 'premium',
-        name: 'Premium',
-        minXP: 1200,
-        privileges: ['extra feeds'],
-      );
-
-      const original = UserReputation(xp: 100, tier: baseTier);
-      final updated = original.copyWith(tier: premiumTier);
-
-      expect(updated.tier.id, 'premium');
-      expect(updated.xp, 100);
-    });
-
-    test('copyWith replaces missions', () {
-      const mission = Mission(id: 'm1', title: 'New', xpReward: 25);
-
-      const original = UserReputation(xp: 100, tier: baseTier);
-      final updated = original.copyWith(missions: const [mission]);
-
-      expect(updated.missions, hasLength(1));
-      expect(updated.missions.first.title, 'New');
-    });
-
-    test('copyWith replaces recentAchievements', () {
-      const original = UserReputation(xp: 100, tier: baseTier);
-      final updated = original.copyWith(
-        recentAchievements: const ['Achievement 1', 'Achievement 2'],
-      );
-
-      expect(updated.recentAchievements, hasLength(2));
-    });
-
-    test('copyWith with no arguments returns equivalent object', () {
-      const mission = Mission(id: 'm1', title: 'Test', xpReward: 5);
-      const original = UserReputation(
-        xp: 300,
-        tier: baseTier,
-        missions: [mission],
-        recentAchievements: ['Ach1'],
-      );
-      final copy = original.copyWith();
-
-      expect(copy.xp, original.xp);
-      expect(copy.tier.id, original.tier.id);
-      expect(copy.missions.length, original.missions.length);
+  test(
+    'private reputation and activity records fail closed on malformed data',
+    () {
       expect(
-        copy.recentAchievements.length,
-        original.recentAchievements.length,
+        () => ReputationState.fromJson({
+          'userId': 'user-1',
+          'level': 4,
+          'reputationLevel': 4,
+          'levelName': 'Credible',
+          'reputationStatus': {'untrusted': 'active'},
+          'reputationBand': 'established',
+          'policyVersion': '2026-08',
+          'pillars': {
+            'accountability': 1,
+            'contribution': 2,
+            'conduct': 3,
+            'sourcing': 4,
+            'authenticity': 5,
+            'reviewReliability': 6,
+          },
+          'promotionBlockers': <String>[],
+          'evaluatedAt': null,
+        }),
+        throwsFormatException,
       );
-    });
+      expect(
+        () => ActivityEntry.fromJson({
+          'id': 'activity-1',
+          'category': 'moderation',
+          'source': 'system',
+          'title': {'untrusted': 'raw-json'},
+          'explanation': 'A decision is available.',
+          'result': 'succeeded',
+          'policyVersion': 'activity-v1.0.0',
+          'reputationEffect': 'withheld',
+          'appealable': true,
+          'retentionClass': 'moderation',
+          'retentionDays': 90,
+          'createdAt': '2026-08-11T10:00:00Z',
+        }),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test(
+    'optional activity fields drop nested values rather than displaying them',
+    () {
+      final entry = ActivityEntry.fromJson({
+        'id': 'activity-1',
+        'category': 'moderation',
+        'source': 'system',
+        'title': 'Moderation case resolved',
+        'explanation': 'A decision is available.',
+        'result': 'succeeded',
+        'reasonCode': {'untrusted': 'raw-json'},
+        'policyVersion': 'activity-v1.0.0',
+        'objectType': ['not', 'a', 'string'],
+        'objectId': {'id': 'untrusted'},
+        'reputationEffect': 'withheld',
+        'appealable': true,
+        'retentionClass': 'moderation',
+        'retentionDays': 90,
+        'createdAt': '2026-08-11T10:00:00Z',
+      });
+
+      expect(entry.reasonCode, isNull);
+      expect(entry.objectType, isNull);
+      expect(entry.objectId, isNull);
+    },
+  );
+
+  test('activity category queries preserve the API category vocabulary', () {
+    expect(ActivityCategory.values, hasLength(9));
+    expect(ActivityCategory.all.queryValue, isNull);
+    expect(ActivityCategory.moderation.queryValue, 'moderation');
+    expect(ActivityCategory.fromValue('PRIVACY'), ActivityCategory.privacy);
+    expect(ActivityCategory.fromValue('all'), isNull);
+
+    const query = ActivityPageQuery(
+      cursor: 'opaque-cursor',
+      category: ActivityCategory.content,
+    );
+    expect(query.cursor, 'opaque-cursor');
+    expect(query.category, ActivityCategory.content);
   });
 }

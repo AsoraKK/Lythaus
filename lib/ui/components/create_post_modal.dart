@@ -30,9 +30,10 @@ class CreatePostModal extends ConsumerStatefulWidget {
 
 class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   static const String _policyReminderMessage =
-      'Choose Human-authored, AI-assisted, or AI-generated before posting.\n'
-      'AI-generated posts are labeled and do not earn reputation.\n'
-      'Community appeal votes are advisory; a moderator records the final decision.\n'
+      'Choose Human-authored or AI-assisted before posting.\n'
+      'AI-generated public content is not allowed.\n'
+      'AI-assisted public text is limited to 249 user-perceived characters.\n'
+      'Appeal outcomes are recorded by Lythaus.\n'
       'This is an invite-only Alpha.';
 
   ContentType selectedType = ContentType.text;
@@ -185,13 +186,29 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 selected: state.aiLabel == 'assisted',
                 onSelected: (_) => notifier.setAiLabel('assisted'),
               ),
-              ChoiceChip(
-                label: const Text('AI-generated'),
-                selected: state.aiLabel == 'generated',
-                onSelected: (_) => notifier.setAiLabel('generated'),
-              ),
             ],
           ),
+          if (state.aiLabel == 'assisted') ...[
+            SizedBox(height: spacing.xs),
+            Semantics(
+              liveRegion: true,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${state.userPerceivedTextLength}/'
+                  '$aiAssistedPublicTextMaxGraphemes user-perceived '
+                  'characters for AI-assisted public text',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color:
+                        state.userPerceivedTextLength >
+                            aiAssistedPublicTextMaxGraphemes
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ],
           SizedBox(height: spacing.lg),
           Align(
             alignment: Alignment.centerLeft,

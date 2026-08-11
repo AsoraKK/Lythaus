@@ -7,114 +7,81 @@ void main() {
   final instance = LythausApiClient().getPostsApi();
 
   group(PostsApi, () {
-    // Create a new post
+    // Delete my comment
     //
-    // Create a new post.
-    //
-    //Future<LegacyCreatePostResponse> createPost(CreatePostRequest createPostRequest) async
-    test('test createPost', () async {
+    //Future<CommentDeleteResponse> commentsDelete(String commentId, { String idempotencyKey }) async
+    test('test commentsDelete', () async {
       // TODO
     });
 
-    // Bookmark a post
+    // Replace my comment body
     //
-    //Future<JsonObject> postsBookmarkCreate(String id, JsonObject body) async
-    test('test postsBookmarkCreate', () async {
+    //Future<CommentUpdateResponse> commentsReplace(String commentId, CommentUpdateRequest commentUpdateRequest, { String idempotencyKey }) async
+    test('test commentsReplace', () async {
       // TODO
     });
 
-    // Remove a bookmark
+    // Partially update my comment body
     //
-    //Future<JsonObject> postsBookmarkDelete(String id) async
-    test('test postsBookmarkDelete', () async {
+    //Future<CommentUpdateResponse> commentsUpdate(String commentId, CommentUpdateRequest commentUpdateRequest, { String idempotencyKey }) async
+    test('test commentsUpdate', () async {
       // TODO
     });
 
-    // Get bookmark status for a post
+    // Submit a comment or one-level reply
     //
-    //Future<JsonObject> postsBookmarkGet(String id) async
-    test('test postsBookmarkGet', () async {
-      // TODO
-    });
-
-    // Create a comment on a post
+    // A submission is recorded as under review; it is not immediately published to public comment listings.
     //
-    //Future<JsonObject> postsCommentsCreate(String postId, JsonObject body) async
+    //Future<CommentSubmission> postsCommentsCreate(String postId, CommentCreateRequest commentCreateRequest, { String idempotencyKey }) async
     test('test postsCommentsCreate', () async {
       // TODO
     });
 
-    // List comments on a post
+    // List publicly visible comments
     //
-    //Future<JsonObject> postsCommentsList(String postId) async
+    // Only allowed comments are returned. Anonymous callers may read public posts; authenticated callers additionally receive relationship filtering.
+    //
+    //Future<CommentPage> postsCommentsList(String postId, { String cursor, int limit }) async
     test('test postsCommentsList', () async {
       // TODO
     });
 
     // Create a post with moderation and AI authenticity checks
     //
-    // Create a post for the authenticated user. An authorship disclosure is required. Disclosed AI-assisted and AI-generated content may be published with categorical labels; conflicts or unavailable classification enter review. Prohibited content remains blocked regardless of authorship.
+    // Create a post for the authenticated user. An authorship disclosure is required. Human-authored text may publish after review. AI-assisted text may publish only when its normalised, trimmed body is at most 249 user-perceived Unicode characters and receives the categorical `AI-assisted` label. AI-generated public content is blocked and may exist only in an author-private feedback or appeal state where supported.
     //
-    //Future<Post> postsCreate(CreatePostRequest createPostRequest) async
+    //Future<Post> postsCreate(CreatePostRequest createPostRequest, { String idempotencyKey }) async
     test('test postsCreate', () async {
+      // TODO
+    });
+
+    // Soft-delete a post owned by the authenticated user
+    //
+    //Future<PostsDelete200Response> postsDelete(String id, String idempotencyKey) async
+    test('test postsDelete', () async {
       // TODO
     });
 
     // Get a post by ID
     //
-    //Future<PostView> postsGet(String id) async
+    //Future<PostsGet200Response> postsGet(String id, { String idempotencyKey }) async
     test('test postsGet', () async {
       // TODO
     });
 
-    // Get engagement insights for a post
+    // Replace editable post fields and return the post to review
     //
-    //Future<JsonObject> postsInsights(String id) async
-    test('test postsInsights', () async {
-      // TODO
-    });
-
-    // Like a post
-    //
-    //Future<JsonObject> postsLikeCreate(String id, JsonObject body) async
-    test('test postsLikeCreate', () async {
-      // TODO
-    });
-
-    // Unlike a post
-    //
-    //Future<JsonObject> postsLikeDelete(String id) async
-    test('test postsLikeDelete', () async {
-      // TODO
-    });
-
-    // Get like status for a post
-    //
-    //Future<JsonObject> postsLikeGet(String id) async
-    test('test postsLikeGet', () async {
-      // TODO
-    });
-
-    // Get read receipt for a post
-    //
-    //Future<JsonObject> postsReceipt(String id) async
-    test('test postsReceipt', () async {
+    //Future<PostRevisionResponse> postsReplace(String id, String idempotencyKey, UpdatePostRequest updatePostRequest) async
+    test('test postsReplace', () async {
       // TODO
     });
 
     // Update a post with moderation and AI authenticity checks
     //
-    // Update a post owned by the caller. Content or media changes require a new authorship disclosure. Conflicts or unavailable classification enter review; prohibited content remains blocked regardless of authorship.
+    // Update a post owned by the caller. A body change requires a fresh declaredCreationMode; a visibility-only change preserves the stored declaration. Every accepted update returns the post to review.
     //
-    //Future<Post> postsUpdate(String id, UpdatePostRequest updatePostRequest) async
+    //Future<PostRevisionResponse> postsUpdate(String id, UpdatePostRequest updatePostRequest) async
     test('test postsUpdate', () async {
-      // TODO
-    });
-
-    // Record a post view event
-    //
-    //Future<JsonObject> postsView(String id, JsonObject body) async
-    test('test postsView', () async {
       // TODO
     });
 

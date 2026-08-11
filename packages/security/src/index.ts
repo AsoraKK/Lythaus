@@ -117,5 +117,5 @@ export async function decryptField(field: EncryptedField, base64Key: string): Pr
   return new TextDecoder().decode(plaintext);
 }
 
-export { signAccessToken, verifyAccessToken, type Principal } from './jwt';
-export { uuidv7 } from './uuidv7';
+export { signAccessToken, verifyAccessToken, type Principal } from './jwt.ts';
+export { uuidv7 } from './uuidv7.ts';

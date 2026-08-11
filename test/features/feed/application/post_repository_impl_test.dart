@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 
@@ -140,7 +143,7 @@ void main() {
 
   test('updatePost returns success and maps blocked errors', () async {
     when(
-      () => dio.patch<Map<String, dynamic>>(
+      () => dio.put<Map<String, dynamic>>(
         '/api/posts/p1',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -151,13 +154,27 @@ void main() {
 
     final success = await repo.updatePost(
       postId: 'p1',
-      request: const UpdatePostRequest(text: 'updated'),
+      request: const UpdatePostRequest(text: 'updated', aiLabel: 'human'),
       token: 't1',
     );
     expect(success, isA<CreatePostSuccess>());
+    final updateOptions =
+        verify(
+              () => dio.put<Map<String, dynamic>>(
+                '/api/posts/p1',
+                data: any(named: 'data'),
+                options: captureAny(named: 'options'),
+              ),
+            ).captured.single
+            as Options;
+    expect(updateOptions.headers?['Authorization'], 'Bearer t1');
+    expect(
+      updateOptions.headers?['Idempotency-Key'],
+      matches(RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$')),
+    );
 
     when(
-      () => dio.patch<Map<String, dynamic>>(
+      () => dio.put<Map<String, dynamic>>(
         '/api/posts/p1',
         data: any(named: 'data'),
         options: any(named: 'options'),
@@ -181,7 +198,7 @@ void main() {
 
     final blocked = await repo.updatePost(
       postId: 'p1',
-      request: const UpdatePostRequest(text: 'bad'),
+      request: const UpdatePostRequest(text: 'bad', aiLabel: 'human'),
       token: 't1',
     );
     expect(blocked, isA<CreatePostBlocked>());
@@ -192,12 +209,28 @@ void main() {
       () =>
           dio.delete<dynamic>('/api/posts/p1', options: any(named: 'options')),
     ).thenAnswer(
-      (_) async =>
-          _response(<String, dynamic>{}, '/api/posts/p1', statusCode: 204),
+      (_) async => _response(
+        <String, dynamic>{'postId': 'p1', 'deleted': true},
+        '/api/posts/p1',
+        statusCode: 200,
+      ),
     );
 
     final ok = await repo.deletePost(postId: 'p1', token: 't1');
     expect(ok, isTrue);
+    final options =
+        verify(
+              () => dio.delete<dynamic>(
+                '/api/posts/p1',
+                options: captureAny(named: 'options'),
+              ),
+            ).captured.single
+            as Options;
+    expect(options.headers?['Authorization'], 'Bearer t1');
+    expect(
+      options.headers?['Idempotency-Key'],
+      matches(RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$')),
+    );
 
     when(
       () =>
@@ -251,4 +284,66 @@ void main() {
       throwsA(isA<PostException>()),
     );
   });
+
+  test('updatePost preserves its key across a transport retry', () async {
+    final retryDio = Dio(BaseOptions(baseUrl: 'http://localhost'));
+    final adapter = _FailOnceAdapter(_postJson('p1'));
+    retryDio.httpClientAdapter = adapter;
+    retryDio.interceptors.add(IdempotencyRetryInterceptor(retryDio));
+    final retryRepo = PostRepositoryImpl(retryDio);
+
+    final result = await retryRepo.updatePost(
+      postId: 'p1',
+      request: const UpdatePostRequest(text: 'updated', aiLabel: 'human'),
+      token: 't1',
+    );
+
+    expect(result, isA<CreatePostSuccess>());
+    expect(adapter.requests, hasLength(2));
+    expect(
+      adapter.requests.map((request) => request.method),
+      everyElement('PUT'),
+    );
+    final keys = adapter.requests
+        .map((request) => request.headers['Idempotency-Key'])
+        .toSet();
+    expect(keys, hasLength(1));
+    expect(
+      keys.single,
+      matches(RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$')),
+    );
+  });
+}
+
+class _FailOnceAdapter implements HttpClientAdapter {
+  _FailOnceAdapter(this._responseData);
+
+  final Map<String, dynamic> _responseData;
+  final List<RequestOptions> requests = [];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<List<int>>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    if (requests.length == 1) {
+      throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+      );
+    }
+
+    return ResponseBody.fromString(
+      jsonEncode(_responseData),
+      200,
+      headers: <String, List<String>>{
+        Headers.contentTypeHeader: <String>[Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

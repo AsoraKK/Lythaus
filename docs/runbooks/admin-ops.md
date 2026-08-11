@@ -1,164 +1,111 @@
-# Lythaus Admin Ops Runbook (Beta)
+# Lythaus Admin Operations Runbook (Beta)
 
 ## Purpose
-Operate the Lythaus beta admin surface with strict binary content states and appeal-only review.
 
-## Preconditions
-- Admin JWT with `admin` role is required for all admin endpoints.
-- Actions are audited in `audit_logs` (partition key `subjectId`).
-- Content state is binary: `PUBLISHED` or `BLOCKED`.
-- In `apps/control-panel`, the admin JWT is tab-scoped in `sessionStorage`, capped to 15 minutes or the token `exp`, and cleared on explicit session clear or `401`.
-- Residual risk: XSS in an active control-panel tab can still exfiltrate the bearer token until it expires or is cleared.
+Operate the Cloudflare Access-protected Lythaus admin Worker using only its
+current `/api/admin/*` contract. The Control Panel is the primary interface;
+direct requests are for approved incident response or automation only.
 
-## Primary UI
-Use the Lythaus Control Panel as the primary admin UI. The API calls below are
-intended for fallback or automation.
+## Safe session and data handling
 
-## Flagged Content Queue
-### List flags (open by default)
-```bash
-curl -s -H "Authorization: Bearer $ADMIN_JWT" \
-  "https://<function-host>/api/_admin/flags?status=open&limit=25"
-```
+- Start from an approved Cloudflare Access session. Where the Worker accepts an
+  admin JWT, use only the short-lived, approved principal for that session; do
+  not place tokens in shell history, tickets, screenshots, or logs.
+- Use the existing admin origin, `https://admin-api.lythaus.co/api`, and retain
+  the returned correlation ID with the incident record.
+- Admin responses contain sensitive operational data. Preserve
+  `Cache-Control: private, no-store`; do not cache, replay, or forward a
+  response through a shared proxy.
+- Every write requires the contract's reason code or request body and must be
+  reconciled against the audit stream. Stop on `401`, `403`, `400`, or an
+  unexpected response rather than retrying an unchanged request.
+- Retired admin and public-voting namespaces, direct appeal overrides, timed
+  appeal resolution, and public voting are prohibited.
 
-### Block or publish content
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"contentType":"post","reasonCode":"POLICY_VIOLATION","note":"Spam"}' \
-  "https://<function-host>/api/_admin/content/<contentId>/block"
-```
+## Live operations
 
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"contentType":"post","reasonCode":"FALSE_POSITIVE","note":"Appeal approved"}' \
-  "https://<function-host>/api/_admin/content/<contentId>/publish"
-```
+The following 16 operations are the complete supported admin surface. Paths in
+this table are relative to `https://admin-api.lythaus.co/api`.
 
-## Appeals Queue (only review path)
-- Appeals auto-resolve after a 5-minute community vote window; admins can override at any time.
-### List appeals (oldest pending first)
-```bash
-curl -s -H "Authorization: Bearer $ADMIN_JWT" \
-  "https://<function-host>/api/_admin/appeals?status=pending&limit=25"
-```
+| Method | Path | Operational use |
+| --- | --- | --- |
+| GET | `/admin/health` | Check Worker and database health before an incident action. |
+| GET | `/admin/privacy/requests` | Read recent privacy requests; do not alter request state from this endpoint. |
+| GET | `/admin/moderation/cases` | List recent staff moderation cases. |
+| GET | `/admin/audit` | Read recent admin audit events for reconciliation. |
+| GET | `/admin/users/search?q=<query>` | Search users; `q` must be 2–120 characters. |
+| GET | `/admin/privacy/legal-holds` | List active and released legal holds. |
+| POST | `/admin/privacy/legal-holds` | Place a legal hold using the current `LegalHoldCreate` request. |
+| POST | `/admin/privacy/legal-holds/<holdId>/clear` | Clear only the named legal hold after the required approval. |
+| POST | `/admin/editorial/publications` | Publish an editorial News Board entry using `EditorialPublicationCreate`. |
+| POST | `/admin/moderation/cases/<caseId>/decision` | Apply a staff moderation decision using `ModerationDecisionRequest`. |
+| POST | `/admin/appeals/<appealId>/adjudications` | Record a trained editorial appeal adjudication. |
+| GET | `/admin/appeals/pending-adjudication` | List appeals with a durable reviewer-panel outcome awaiting adjudication. |
+| POST | `/admin/reviewers/<reviewerId>/qualification` | Set reviewer qualification for compatibility. |
+| PUT | `/admin/reviewers/<reviewerId>/qualification` | Idempotently set reviewer qualification. |
+| POST | `/admin/users/<userId>/status` | Update account status using `AccountStatusUpdate`. |
+| POST | `/admin/users/<userId>/tier` | Update subscription tier using `AccountTierUpdate`. |
 
-### Approve or reject appeal
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"reasonCode":"APPEAL_APPROVE","note":"Policy exception"}' \
-  "https://<function-host>/api/_admin/appeals/<appealId>/approve"
-```
+## Moderation cases
 
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"reasonCode":"APPEAL_REJECT","note":"Violates policy"}' \
-  "https://<function-host>/api/_admin/appeals/<appealId>/reject"
-```
+Use `GET /admin/moderation/cases` to identify the exact case ID, then submit a
+documented `ModerationDecisionRequest` only through the decision endpoint. A
+moderation decision does not resolve an associated appeal: that appeal remains
+open until the independent reviewer and adjudication policy resolves it.
 
-## User Lookup + Disable/Enable
-### Search users
-```bash
-curl -s -H "Authorization: Bearer $ADMIN_JWT" \
-  "https://<function-host>/api/_admin/users/search?q=handle-or-id"
-```
+## Appeal governance
 
-### Disable user (reason + note required)
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"reasonCode":"ABUSE","note":"Repeated harassment reports"}' \
-  "https://<function-host>/api/_admin/users/<userId>/disable"
-```
+An appeal is submitted only from an eligible resolved moderation case. The
+service independently assigns five trained reviewers. Their immutable reviewer
+decisions establish a panel outcome, but they do not directly change content
+state. Standard-risk cases require one trained editorial adjudicator; high-risk
+cases require two independent trained adjudicators.
 
-### Enable user
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{}' \
-  "https://<function-host>/api/_admin/users/<userId>/enable"
-```
+Editorial, administrator, and owner roles may use
+`GET /admin/appeals/pending-adjudication` to view pending work. Only a trained
+editorial adjudicator who is not the appellant, subject, or an assigned
+reviewer may call the adjudication endpoint. Its body is exactly:
 
-## Invites
-### Create a single invite
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"maxUses":1,"label":"beta-partner"}' \
-  "https://<function-host>/api/_admin/invites"
-```
-
-### Create a batch
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"count":10,"maxUses":1,"label":"event"}' \
-  "https://<function-host>/api/_admin/invites/batch"
-```
-
-### List invites
-```bash
-curl -s -H "Authorization: Bearer $ADMIN_JWT" \
-  "https://<function-host>/api/_admin/invites?limit=50"
-```
-
-### Revoke invite
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{"reasonCode":"ABUSE","note":"Sharing invite publicly"}' \
-  "https://<function-host>/api/_admin/invites/<inviteCode>/revoke"
-```
-
-## Audit Log
-### Pull recent audit records
-```bash
-curl -s -H "Authorization: Bearer $ADMIN_JWT" \
-  "https://<function-host>/api/_admin/audit?limit=50"
-```
-
-## Curated News Ingestion
-### Manual ingest (admin-triggered)
-```bash
-curl -s -X POST -H "Authorization: Bearer $ADMIN_JWT" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "content":"Headline and summary text",
-    "sourceType":"partner",
-    "sourceName":"Reuters",
-    "sourceUrl":"https://www.reuters.com/world/...",
-    "sourceFeedUrl":"https://www.reuters.com/world/rss",
-    "externalId":"reuters:article-id",
-    "publishedAt":"2026-02-08T09:00:00.000Z"
-  }' \
-  "https://<function-host>/api/_admin/news/ingest"
-```
-
-### Automated scheduled pull
-- Function: `curatedNewsIngest` (every 15 minutes).
-- Required env vars:
-  - `CURATED_NEWS_AUTHOR_ID`: user ID used as author for automated ingests.
-  - `CURATED_NEWS_SOURCES_JSON`: JSON array of feed sources.
-- Example `CURATED_NEWS_SOURCES_JSON`:
 ```json
-[
-  {
-    "id": "reuters-world",
-    "name": "Reuters",
-    "url": "https://www.reuters.com/world/rss",
-    "format": "rss",
-    "sourceType": "partner",
-    "topics": ["world", "policy"],
-    "maxItems": 10,
-    "enabled": true
-  }
-]
+{
+  "decision": "uphold",
+  "reasonCode": "APPEAL.PANEL_CONFIRMED"
+}
 ```
 
-## Guardrails
-- Admin decisions only flip `PUBLISHED` <-> `BLOCKED`.
-- Appeals are the only review mechanism (no queued or held state).
-- Every admin write action is audited with reason code and note.
+`decision` is `uphold` or `overturn`. A response of `pending_adjudication`,
+`no_consensus`, or `adjudication_disagreement` leaves the appeal unresolved;
+only `resolved` applies a final outcome. Never replace this process with an
+administrator override, a timer, or a public vote.
+
+## Reviewer qualification and reviewer actions
+
+Reviewer training is separate from reputation. Qualification updates use the
+same `ReviewerQualificationUpdateRequest` on either supported method and carry
+the state (`none`, `eligible`, `trained`, or `suspended`) plus a reason code.
+
+Admin users do not vote on behalf of reviewers. An independently assigned
+trained reviewer uses the authenticated public appeal surface only for their
+own assignment: `GET /api/appeals/reviewer/assignments`,
+`POST /api/appeals/<appealId>/recuse`, and
+`POST /api/appeals/<appealId>/vote` with `decision` set to `overturn` or
+`uphold`. Votes lock when recorded. These reviewer actions are never exposed
+as a public Flutter voting workflow.
+
+## Privacy, account, and publication actions
+
+Read privacy requests before considering a legal hold. A legal hold is
+materially sensitive: place or clear only the exact named record with the
+required approval, then verify the corresponding audit event. User search,
+status, and tier changes must use the exact user ID returned by the current
+search result and must be audited. Editorial publication is limited to the
+existing News Board workflow; do not use a retired invitation or ingestion
+endpoint as a substitute.
+
+## Completion checks
+
+1. Verify health before and after a material incident action.
+2. Confirm the response is private/no-store and capture its correlation ID.
+3. Confirm the expected event appears in `GET /admin/audit`.
+4. For appeal work, confirm the returned policy version, reviewer count, and
+   adjudication status rather than inferring a final content state.

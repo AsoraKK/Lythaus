@@ -166,7 +166,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // No appeal section should appear
-    expect(find.text('Appeal & Community vote'), findsNothing);
+    expect(find.text('Appeal & independent reviewer panel'), findsNothing);
     // But regular sections should be present
     expect(find.text('Content'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);
@@ -189,7 +189,7 @@ void main() {
     await tester.pumpWidget(buildWidget(repo));
     await tester.pumpAndSettle();
 
-    expect(find.text('Appeal & Community vote'), findsOneWidget);
+    expect(find.text('Appeal & independent reviewer panel'), findsOneWidget);
     expect(find.text('User appealed'), findsOneWidget);
     expect(find.text('Overturn: 5'), findsOneWidget);
     expect(find.text('Uphold: 3'), findsOneWidget);

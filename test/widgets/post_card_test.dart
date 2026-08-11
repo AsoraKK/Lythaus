@@ -25,7 +25,7 @@ Post _buildPost({
 }
 
 void main() {
-  testWidgets('shows moderation banner and time for own flagged post', (
+  testWidgets('shows moderation banner and time for an own reported post', (
     tester,
   ) async {
     final post = _buildPost(
@@ -48,9 +48,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('flagged by the community'), findsOneWidget);
+    expect(find.textContaining('post has been reported'), findsOneWidget);
     expect(find.textContaining('h ago'), findsOneWidget);
-    expect(find.text('Appeal decision'), findsOneWidget);
+    expect(find.text('Appeal information'), findsOneWidget);
     expect(find.text('Flagged'), findsOneWidget);
   });
 
@@ -144,13 +144,10 @@ void main() {
     expect(find.byType(Image), findsOneWidget);
   });
 
-  testWidgets('shows community approved banner without appeal action', (
+  testWidgets('shows resolved appeal banner without an appeal action', (
     tester,
   ) async {
-    final post = _buildPost(
-      id: 'p6',
-      status: ModerationStatus.communityApproved,
-    );
+    final post = _buildPost(id: 'p6', status: ModerationStatus.appealRestored);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -160,14 +157,17 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('community voted to approve'), findsOneWidget);
-    expect(find.text('Appeal decision'), findsNothing);
+    expect(
+      find.textContaining('appeal was resolved and your post was restored'),
+      findsOneWidget,
+    );
+    expect(find.text('Appeal information'), findsNothing);
   });
 
   testWidgets('hides appeal action when appeal status is set', (tester) async {
     final post = _buildPost(
       id: 'p7',
-      status: ModerationStatus.communityRejected,
+      status: ModerationStatus.appealUpheld,
       appealStatus: 'pending',
     );
 
@@ -179,8 +179,11 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('community voted to keep'), findsOneWidget);
-    expect(find.text('Appeal decision'), findsNothing);
+    expect(
+      find.textContaining('appeal was resolved and your post remains blocked'),
+      findsOneWidget,
+    );
+    expect(find.text('Appeal information'), findsNothing);
   });
 
   testWidgets('formats time ago for days and minutes', (tester) async {
@@ -224,10 +227,10 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('flagged by the community'), findsOneWidget);
+    expect(find.textContaining('post has been reported'), findsOneWidget);
     await tester.tap(find.byTooltip('Dismiss'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('flagged by the community'), findsNothing);
+    expect(find.textContaining('post has been reported'), findsNothing);
   });
 }

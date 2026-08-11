@@ -60,7 +60,7 @@ class CustomFeedService {
 
     return domain.FeedResponse.fromCursor(
       posts: posts,
-      nextCursor: payload['nextCursor'] as String?,
+      nextCursor: _nextCursor(payload),
       limit: limit,
     );
   }
@@ -198,5 +198,23 @@ class CustomFeedService {
       return data;
     }
     return value;
+  }
+
+  static String? _nextCursor(Map<String, dynamic> payload) {
+    final direct =
+        payload['nextCursor'] ??
+        payload['continuationToken'] ??
+        payload['cursor'];
+    if (direct is String && direct.isNotEmpty) {
+      return direct;
+    }
+    final pageInfo = payload['pageInfo'];
+    if (pageInfo is Map) {
+      final cursor = pageInfo['nextCursor'] ?? pageInfo['endCursor'];
+      if (cursor is String && cursor.isNotEmpty) {
+        return cursor;
+      }
+    }
+    return null;
   }
 }

@@ -71,8 +71,8 @@ void main() {
         timestamp: DateTime.now().subtract(const Duration(seconds: 30)),
         actorId: 'user-2',
         actorRole: 'user',
-        action: ModerationAuditActionType.communityVote,
-        details: 'community voted',
+        action: ModerationAuditActionType.reviewerDecision,
+        details: 'reviewer decision recorded',
       ),
       ModerationAuditEntry(
         id: 'a6',

@@ -52,7 +52,7 @@ void main() {
           status: 'open',
           queue: 'default',
           reportCount: 3,
-          communityVotes: 12,
+          reviewerDecisions: 12,
           isEscalated: false,
         ),
       ],

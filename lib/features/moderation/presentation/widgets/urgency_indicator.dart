@@ -9,8 +9,8 @@ import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 /// 🎯 Purpose: Display urgency score with color-coded indicator
 /// 🔍 Single Responsibility: Urgency visualization only
 /// 📊 Policy: Shows NUMERIC score to appeal submitters (their own appeals)
-///           Community voters see only qualitative labels (Critical/High/Medium/Low)
-///           This prevents vote bias while keeping submitters informed
+///           Reviewers see only qualitative labels (Critical/High/Medium/Low)
+///           This prevents reviewer bias while keeping submitters informed
 
 class UrgencyIndicator extends StatelessWidget {
   final int score;

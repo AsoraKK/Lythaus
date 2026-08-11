@@ -9,30 +9,32 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**customFeedsCreate**](CustomFeedsApi.md#customfeedscreate) | **POST** /custom-feeds | Create a new custom feed
-[**customFeedsDelete**](CustomFeedsApi.md#customfeedsdelete) | **DELETE** /custom-feeds/{id} | Delete a custom feed
-[**customFeedsGet**](CustomFeedsApi.md#customfeedsget) | **GET** /custom-feeds/{id} | Get a custom feed
-[**customFeedsItemsList**](CustomFeedsApi.md#customfeedsitemslist) | **GET** /custom-feeds/{id}/items | List items in a custom feed
-[**customFeedsList**](CustomFeedsApi.md#customfeedslist) | **GET** /custom-feeds | List custom feeds for the current user
-[**customFeedsUpdate**](CustomFeedsApi.md#customfeedsupdate) | **PATCH** /custom-feeds/{id} | Update a custom feed
+[**customFeedsCreate**](CustomFeedsApi.md#customfeedscreate) | **POST** /custom-feeds | Create a custom feed
+[**customFeedsDelete**](CustomFeedsApi.md#customfeedsdelete) | **DELETE** /custom-feeds/{id} | Delete an owned custom feed
+[**customFeedsGet**](CustomFeedsApi.md#customfeedsget) | **GET** /custom-feeds/{id} | Get an owned custom feed
+[**customFeedsItemsList**](CustomFeedsApi.md#customfeedsitemslist) | **GET** /custom-feeds/{id}/items | List items from an owned custom feed
+[**customFeedsList**](CustomFeedsApi.md#customfeedslist) | **GET** /custom-feeds | List my custom feeds
+[**customFeedsReplace**](CustomFeedsApi.md#customfeedsreplace) | **PUT** /custom-feeds/{id} | Replace an owned custom feed
+[**customFeedsUpdate**](CustomFeedsApi.md#customfeedsupdate) | **PATCH** /custom-feeds/{id} | Partially update an owned custom feed
 
 
 # **customFeedsCreate**
-> CustomFeedDefinition customFeedsCreate(createCustomFeedRequest)
+> CustomFeed customFeedsCreate(customFeedCreateRequest, idempotencyKey)
 
-Create a new custom feed
+Create a custom feed
 
-Create a custom feed definition. The service enforces tier limits: Free users may create 1 custom feed, Premium users 2, Black users 3, and Admin users 20.
+Tier limits are Free 1, Premium 2, and Black 3 custom feeds.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getCustomFeedsApi();
-final CreateCustomFeedRequest createCustomFeedRequest = ; // CreateCustomFeedRequest |
+final CustomFeedCreateRequest customFeedCreateRequest = ; // CustomFeedCreateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.customFeedsCreate(createCustomFeedRequest);
+    final response = api.customFeedsCreate(customFeedCreateRequest, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsCreate: $e\n');
@@ -43,11 +45,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createCustomFeedRequest** | [**CreateCustomFeedRequest**](CreateCustomFeedRequest.md)|  |
+ **customFeedCreateRequest** | [**CustomFeedCreateRequest**](CustomFeedCreateRequest.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**CustomFeedDefinition**](CustomFeedDefinition.md)
+[**CustomFeed**](CustomFeed.md)
 
 ### Authorization
 
@@ -61,21 +64,21 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsDelete**
-> customFeedsDelete(id)
+> CustomFeedDeleteResponse customFeedsDelete(id, idempotencyKey)
 
-Delete a custom feed
-
-Delete an owned custom feed definition.
+Delete an owned custom feed
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getCustomFeedsApi();
-final String id = id_example; // String |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    api.customFeedsDelete(id);
+    final response = api.customFeedsDelete(id, idempotencyKey);
+    print(response);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsDelete: $e\n');
 }
@@ -86,10 +89,11 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-void (empty response body)
+[**CustomFeedDeleteResponse**](CustomFeedDeleteResponse.md)
 
 ### Authorization
 
@@ -103,18 +107,16 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsGet**
-> CustomFeedDefinition customFeedsGet(id)
+> CustomFeed customFeedsGet(id)
 
-Get a custom feed
-
-Fetch a custom feed definition owned by the authenticated user.
+Get an owned custom feed
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getCustomFeedsApi();
-final String id = id_example; // String |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 
 try {
     final response = api.customFeedsGet(id);
@@ -132,7 +134,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**CustomFeedDefinition**](CustomFeedDefinition.md)
+[**CustomFeed**](CustomFeed.md)
 
 ### Authorization
 
@@ -146,20 +148,18 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsItemsList**
-> CursorPaginatedPostView customFeedsItemsList(id, cursor, limit)
+> DiscoveryFeedPage customFeedsItemsList(id, cursor, limit)
 
-List items in a custom feed
-
-Return posts matching a custom feed's filters.
+List items from an owned custom feed
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getCustomFeedsApi();
-final String id = id_example; // String |
-final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
-final int limit = 25; // int | Maximum number of items to return per page
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
 
 try {
     final response = api.customFeedsItemsList(id, cursor, limit);
@@ -174,12 +174,12 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
- **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
 
 ### Return type
 
-[**CursorPaginatedPostView**](CursorPaginatedPostView.md)
+[**DiscoveryFeedPage**](DiscoveryFeedPage.md)
 
 ### Authorization
 
@@ -193,22 +193,18 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **customFeedsList**
-> CustomFeedListResponse customFeedsList(cursor, limit)
+> CustomFeedList customFeedsList()
 
-List custom feeds for the current user
-
-List custom feed definitions owned by the authenticated user.
+List my custom feeds
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getCustomFeedsApi();
-final String cursor = eyJsYXN0SWQiOiIwMThiMjdkNC01YjNiLTczZTMtYmY3Ny1iZjdiYjk1MzBmMjEiLCJ0cyI6MTcxNDQ3ODQwMH0; // String | Opaque pagination cursor returned in the previous response's `meta.nextCursor`
-final int limit = 25; // int | Maximum number of items to return per page
 
 try {
-    final response = api.customFeedsList(cursor, limit);
+    final response = api.customFeedsList();
     print(response);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsList: $e\n');
@@ -216,15 +212,11 @@ try {
 ```
 
 ### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **cursor** | **String**| Opaque pagination cursor returned in the previous response's `meta.nextCursor` | [optional]
- **limit** | **int**| Maximum number of items to return per page | [optional] [default to 25]
+This endpoint does not need any parameter.
 
 ### Return type
 
-[**CustomFeedListResponse**](CustomFeedListResponse.md)
+[**CustomFeedList**](CustomFeedList.md)
 
 ### Authorization
 
@@ -237,23 +229,67 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **customFeedsUpdate**
-> CustomFeedDefinition customFeedsUpdate(id, updateCustomFeedRequest)
+# **customFeedsReplace**
+> CustomFeed customFeedsReplace(id, customFeedUpdateRequest, idempotencyKey)
 
-Update a custom feed
-
-Update an owned custom feed's name, filters, sorting, or home flag.
+Replace an owned custom feed
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getCustomFeedsApi();
-final String id = id_example; // String |
-final UpdateCustomFeedRequest updateCustomFeedRequest = ; // UpdateCustomFeedRequest |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CustomFeedUpdateRequest customFeedUpdateRequest = ; // CustomFeedUpdateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.customFeedsUpdate(id, updateCustomFeedRequest);
+    final response = api.customFeedsReplace(id, customFeedUpdateRequest, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling CustomFeedsApi->customFeedsReplace: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  |
+ **customFeedUpdateRequest** | [**CustomFeedUpdateRequest**](CustomFeedUpdateRequest.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
+
+### Return type
+
+[**CustomFeed**](CustomFeed.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **customFeedsUpdate**
+> CustomFeed customFeedsUpdate(id, customFeedUpdateRequest, idempotencyKey)
+
+Partially update an owned custom feed
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getCustomFeedsApi();
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CustomFeedUpdateRequest customFeedUpdateRequest = ; // CustomFeedUpdateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
+
+try {
+    final response = api.customFeedsUpdate(id, customFeedUpdateRequest, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling CustomFeedsApi->customFeedsUpdate: $e\n');
@@ -265,11 +301,12 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
- **updateCustomFeedRequest** | [**UpdateCustomFeedRequest**](UpdateCustomFeedRequest.md)|  |
+ **customFeedUpdateRequest** | [**CustomFeedUpdateRequest**](CustomFeedUpdateRequest.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**CustomFeedDefinition**](CustomFeedDefinition.md)
+[**CustomFeed**](CustomFeed.md)
 
 ### Authorization
 

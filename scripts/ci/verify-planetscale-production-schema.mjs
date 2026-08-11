@@ -11,6 +11,9 @@ const databaseUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
 const manifestOnly = process.argv.includes('--manifest-only');
 const committedOnly = process.argv.includes('--committed') || process.env.CI === 'true';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
+const requireProductIntegrityMigration = process.env.REQUIRE_PRODUCT_INTEGRITY_MIGRATION === 'true';
+const expectedSchemaFingerprint = process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '';
+const expectedRelationCount = Number(process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '0');
 const migrationsPath = 'database/planetscale/migrations';
 const expectedMigrations = [
   { name: '0000_preflight.sql', repositorySha256: '813a3bc7d2ff3c5f332ceefac17791b3916e62ade69f5e377fbe31f48b8cfc87', lfOnlyBreaks: [], appliedBytes: 195, appliedSha256: '8d4466de2ffa8c1fb3f6cb46464045e5ef199a64fcba312682623945636eaf33' },
@@ -25,9 +28,19 @@ const expectedMigrations = [
   { name: '0009_cost_budget_enforcement.sql', repositorySha256: 'b7e0c47f38e1169c4c07558229137f739687133566478474ca6b174dd4bdee2b', lfOnlyBreaks: [[1, 50]], appliedBytes: 2_544, appliedSha256: 'f01612bd36151317d08c3dc7d9903e1c46e62ec076876fc3e4890ad794c7602b' },
   { name: '0010_native_runtime_parity.sql', repositorySha256: '4dba201af44a2c9fad06a8b4c0706bd2a6ee4181aca0d7145f3d57e00b046ce6', lfOnlyBreaks: [], appliedBytes: 2_304, appliedSha256: '01bd4c8fc4548fed3d6504f242ca146504fe60c8b49eed868880f82d8d0c0c94' },
   { name: '0011_email_guest_auth_only.sql', repositorySha256: '427afd1ad035b35f998ab2316a47f73556a1a49e66a2f92fce1c05926236f72d', lfOnlyBreaks: [], appliedBytes: 606, appliedSha256: '0536054f579e4f0bad3f459a19abeae3706b45d1c488a205aa8a1274632f356e' },
+  { name: '0012_product_integrity_v2.sql', repositorySha256: 'b2d4b02030333494b9959b5de040530845a7a97cbef746cb02cb931e7fdbb725', lfOnlyBreaks: [[1, 623]], appliedBytes: 28_673, appliedSha256: 'b2d4b02030333494b9959b5de040530845a7a97cbef746cb02cb931e7fdbb725' },
 ];
-const expectedMigrationBytes = 51_104;
-const expectedMigrationSetSha256 = 'da6cd97b29ab5ea26dd0237e413fbe868d696df4c082ede81ed950faa3f34ced';
+const expectedMigrationBytes = 79_778;
+const expectedMigrationSetSha256 = 'd06ac01ac0b47bf04c7c19dd5267ba9c7c13e7cd187ea5fb1f0f7621f206282e';
+
+if (requireProductIntegrityMigration) {
+  if (!/^[0-9a-f]{64}$/.test(expectedSchemaFingerprint)) {
+    throw new Error('post-0012 verification requires EXPECTED_DATABASE_SCHEMA_FINGERPRINT');
+  }
+  if (!Number.isInteger(expectedRelationCount) || expectedRelationCount <= 0) {
+    throw new Error('post-0012 verification requires EXPECTED_DATABASE_RELATION_COUNT');
+  }
+}
 
 function gitOutput(args) {
   return execFileSync('git', args, { cwd: root, encoding: null, maxBuffer: 4 * 1024 * 1024 });
@@ -118,9 +131,11 @@ try {
     'SELECT version, checksum FROM system.schema_migrations ORDER BY version'
   );
   const recorded = new Map(registry.rows.map((row) => [row.version, row.checksum]));
-  const appliedThrough = requireBudgetMigration
-    ? '0009_cost_budget_enforcement.sql'
-    : '0008_legacy_relink_status.sql';
+  const appliedThrough = requireProductIntegrityMigration
+    ? '0012_product_integrity_v2.sql'
+    : requireBudgetMigration
+      ? '0009_cost_budget_enforcement.sql'
+      : '0008_legacy_relink_status.sql';
   const appliedThroughIndex = migrations.findIndex(({ name }) => name === appliedThrough);
   if (appliedThroughIndex < 0) throw new Error(`production migration manifest is missing ${appliedThrough}`);
   const expectedAppliedMigrations = migrations.slice(0, appliedThroughIndex + 1);
@@ -131,11 +146,37 @@ try {
     }
   }
   if (recorded.size !== expectedAppliedMigrations.length) {
-    throw new Error(`production migration registry contains ${recorded.size} entries; expected ${expectedAppliedMigrations.length} for ${requireBudgetMigration ? 'post-budget' : 'current-baseline'} state`);
+    const state = requireProductIntegrityMigration ? 'post-product-integrity' : requireBudgetMigration ? 'post-budget' : 'current-baseline';
+    throw new Error(`production migration registry contains ${recorded.size} entries; expected ${expectedAppliedMigrations.length} for ${state} state`);
+  }
+
+  if (requireProductIntegrityMigration) {
+    const relations = await client.query(
+      `SELECT table_type, table_schema, table_name
+         FROM information_schema.tables
+        WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+        ORDER BY table_type, table_schema, table_name`
+    );
+    const relationLines = relations.rows
+      .map((row) => `${row.table_type}:${row.table_schema}.${row.table_name}`)
+      .sort((left, right) => left.localeCompare(right));
+    const migrationLines = registry.rows
+      .map((row) => `${row.version}=${row.checksum}`)
+      .sort((left, right) => left.localeCompare(right));
+    const fingerprintInput = `${relationLines.join('\n')}\n--migrations--\n${migrationLines.join('\n')}`;
+    const actualFingerprint = createHash('sha256').update(fingerprintInput).digest('hex');
+    const actualRelationCount = relations.rowCount ?? relations.rows.length;
+    if (actualFingerprint !== expectedSchemaFingerprint) {
+      throw new Error('production post-0012 schema fingerprint mismatch');
+    }
+    if (actualRelationCount !== expectedRelationCount) {
+      throw new Error(`production post-0012 relation count is ${actualRelationCount}; expected ${expectedRelationCount}`);
+    }
   }
 
   await client.query('ROLLBACK');
-  console.log(`Verified read-only PlanetScale migration registry on ${branch} (${requireBudgetMigration ? 'post-budget' : 'current-baseline'} state).`);
+  const state = requireProductIntegrityMigration ? 'post-product-integrity' : requireBudgetMigration ? 'post-budget' : 'current-baseline';
+  console.log(`Verified read-only PlanetScale migration registry on ${branch} (${state} state).`);
   console.log(`Approved migration-set SHA-256: ${migrationSetSha256}`);
 } catch (error) {
   await client.query('ROLLBACK').catch(() => undefined);

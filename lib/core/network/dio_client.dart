@@ -46,6 +46,7 @@ final secureDioProvider = Provider<Dio>((ref) {
 
   // Add device integrity interceptor
   dio.interceptors.add(_DeviceIntegrityInterceptor(ref));
+  dio.interceptors.add(IdempotencyRetryInterceptor(dio));
 
   // Add logging in debug mode
   if (kDebugMode) {
@@ -63,6 +64,62 @@ final secureDioProvider = Provider<Dio>((ref) {
 
   return dio;
 });
+
+/// Retries a transient transport failure once when the operation carries a
+/// valid idempotency key. Reusing the original request options preserves that
+/// key across attempts so the backend can safely deduplicate the write.
+class IdempotencyRetryInterceptor extends Interceptor {
+  IdempotencyRetryInterceptor(this._dio, {this.maxRetries = 1});
+
+  static const _retryCountExtraKey = 'lythaus.idempotency_retry_count';
+  static final _idempotencyKeyPattern = RegExp(
+    r'^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$',
+  );
+
+  final Dio _dio;
+  final int maxRetries;
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    final options = err.requestOptions;
+    if (!_shouldRetry(err, options)) {
+      handler.next(err);
+      return;
+    }
+
+    options.extra[_retryCountExtraKey] = _retryCount(options) + 1;
+
+    try {
+      final response = await _dio.fetch<dynamic>(options);
+      handler.resolve(response);
+    } on DioException catch (retryError) {
+      handler.next(retryError);
+    }
+  }
+
+  bool _shouldRetry(DioException error, RequestOptions options) {
+    if (_retryCount(options) >= maxRetries ||
+        !_hasValidIdempotencyKey(options)) {
+      return false;
+    }
+
+    return switch (error.type) {
+      DioExceptionType.connectionTimeout ||
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout ||
+      DioExceptionType.connectionError => true,
+      _ => false,
+    };
+  }
+
+  int _retryCount(RequestOptions options) =>
+      options.extra[_retryCountExtraKey] as int? ?? 0;
+
+  bool _hasValidIdempotencyKey(RequestOptions options) {
+    final key = options.headers['Idempotency-Key'];
+    return key is String && _idempotencyKeyPattern.hasMatch(key);
+  }
+}
 
 /// Device integrity interceptor
 // Internal unified integrity info to normalize across older/newer services

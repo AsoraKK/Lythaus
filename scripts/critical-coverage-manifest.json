@@ -1,0 +1,197 @@
+{
+  "schemaVersion": "lythaus-critical-production-coverage-v2",
+  "minimums": {
+    "lines": 80,
+    "branches": 80
+  },
+  "requiredRuntimeSeams": [
+    "public-auth-runtime",
+    "public-idempotency-runtime",
+    "public-request-body-runtime",
+    "public-auth-session-runtime",
+    "public-content-runtime",
+    "public-feed-runtime",
+    "public-privacy-runtime",
+    "admin-appeal-runtime",
+    "jobs-runtime-policy"
+  ],
+  "requiredDomainCategories": [
+    "authentication",
+    "request-boundaries",
+    "idempotency",
+    "content-publication",
+    "feed-entitlements",
+    "privacy-dsr",
+    "moderation-appeals",
+    "reputation",
+    "activity-audit",
+    "security-crypto",
+    "notifications",
+    "authenticity-cost"
+  ],
+  "domainCategoryOwners": {
+    "authentication": ["public-auth-runtime", "public-auth-session-runtime", "worker-access-token-policy"],
+    "request-boundaries": ["public-request-body-runtime"],
+    "idempotency": ["public-idempotency-runtime", "reputation-persistence-policy"],
+    "content-publication": ["public-content-runtime", "content-declaration-publication-policy"],
+    "feed-entitlements": ["public-feed-runtime", "content-social-feed-policy", "tier-entitlement-policy"],
+    "privacy-dsr": ["public-privacy-runtime", "jobs-runtime-policy"],
+    "moderation-appeals": ["admin-appeal-runtime", "jobs-runtime-policy", "moderation-appeal-policy"],
+    "reputation": ["reputation-impact-policy", "reputation-persistence-policy"],
+    "activity-audit": ["privacy-activity-policy", "admin-appeal-runtime", "jobs-runtime-policy"],
+    "security-crypto": ["worker-security-primitives", "worker-access-token-policy"],
+    "notifications": ["notification-input-policy"],
+    "authenticity-cost": ["authenticity-cost-admission-policy"]
+  },
+  "modules": [
+    {
+      "id": "public-auth-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/auth-runtime-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/auth-runtime-policy.test.mjs"],
+      "rationale": "Invoked public Worker authentication, error, Turnstile, and idempotency policy."
+    },
+    {
+      "id": "public-request-body-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/request-body-runtime.ts"],
+      "tests": ["apps/lythaus-public-api/tests/request-body-runtime.test.mjs"],
+      "rationale": "Invoked public Worker bounded streaming JSON parser that rejects chunked oversized requests before full buffering."
+    },
+    {
+      "id": "public-idempotency-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/idempotency-runtime.ts"],
+      "tests": ["apps/lythaus-public-api/tests/idempotency-runtime.test.mjs"],
+      "rationale": "Invoked public Worker orchestration that caches safe validation failures and quarantines ambiguous claim/domain/finalization outcomes without re-execution."
+    },
+    {
+      "id": "public-auth-session-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/auth-session-runtime.ts"],
+      "tests": ["apps/lythaus-public-api/tests/auth-session-runtime.test.mjs"],
+      "rationale": "Invoked public Worker session issue, refresh rotation, reuse detection, and revocation policy."
+    },
+    {
+      "id": "public-content-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/content-runtime-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/content-runtime-policy.test.mjs"],
+      "rationale": "Invoked public Worker post, comment, reaction, relationship, and deletion transitions."
+    },
+    {
+      "id": "public-feed-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/feed-runtime-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/feed-runtime-policy.test.mjs"],
+      "rationale": "Invoked public Worker feed eligibility, cache separation, and entitlements."
+    },
+    {
+      "id": "public-privacy-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/privacy-runtime-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/privacy-runtime-policy.test.mjs"],
+      "rationale": "Invoked public Worker privacy request, export access, and retention boundaries."
+    },
+    {
+      "id": "admin-appeal-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-admin-api/src/runtime-policy.ts"],
+      "tests": ["apps/lythaus-admin-api/tests/runtime-policy.test.mjs"],
+      "rationale": "Invoked admin Worker appeal validation, stale-revision rejection, and auditable adjudication effects."
+    },
+    {
+      "id": "jobs-runtime-policy",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-jobs/src/runtime-policy.ts"],
+      "tests": ["apps/lythaus-jobs/tests/runtime-policy.test.mjs"],
+      "rationale": "Invoked Jobs Worker privacy, reputation, reviewer, and canonical moderation-revision policy."
+    },
+    {
+      "id": "worker-security-primitives",
+      "priority": "P1",
+      "sources": ["packages/security/src/index.ts"],
+      "tests": ["packages/security/tests/critical-security-policy.test.mjs"],
+      "rationale": "Password, PII encryption, lookup, and token utility code imported by the public Worker."
+    },
+    {
+      "id": "worker-access-token-policy",
+      "priority": "P1",
+      "sources": ["packages/security/src/jwt.ts"],
+      "tests": ["packages/security/tests/critical-security-policy.test.mjs"],
+      "rationale": "Access-token signing and verification code imported by the public Worker."
+    },
+    {
+      "id": "content-declaration-publication-policy",
+      "priority": "P1",
+      "sources": ["packages/contracts/src/content-policy.ts"],
+      "tests": ["packages/contracts/tests/critical-content-policy.test.mjs"],
+      "rationale": "Shared declaration enforcement blocks AI-generated publication and caps AI-assisted public text."
+    },
+    {
+      "id": "content-social-feed-policy",
+      "priority": "P1",
+      "sources": ["apps/lythaus-public-api/src/product-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/critical-product-policy.test.mjs"],
+      "rationale": "Public Worker feed pagination, custom-feed rules, cursor integrity, and reputation-band disclosure policy."
+    },
+    {
+      "id": "moderation-appeal-policy",
+      "priority": "P1",
+      "sources": ["packages/contracts/src/appeal-policy.ts"],
+      "tests": ["packages/contracts/tests/critical-domain-policy.test.mjs"],
+      "rationale": "Reviewer independence, quorum, vote validity, and appeal resolution safeguards."
+    },
+    {
+      "id": "reputation-impact-policy",
+      "priority": "P1",
+      "sources": ["packages/contracts/src/reputation-policy.ts"],
+      "tests": ["packages/contracts/tests/critical-domain-policy.test.mjs"],
+      "rationale": "Machine-readable reputation event rules, diminishing returns, misconduct penalties, suspension withholding, and reversals."
+    },
+    {
+      "id": "reputation-persistence-policy",
+      "priority": "P1",
+      "sources": ["packages/db/src/reputation.ts"],
+      "tests": ["packages/db/tests/reputation-persistence.test.mjs"],
+      "rationale": "Transactional immutable reputation event persistence, idempotency, reversal, derived balance compatibility, and deterministic profile recomputation."
+    },
+    {
+      "id": "privacy-activity-policy",
+      "priority": "P1",
+      "sources": ["packages/contracts/src/activity-policy.ts"],
+      "tests": ["packages/contracts/tests/critical-domain-policy.test.mjs"],
+      "rationale": "Privacy-safe audit activity construction, metadata filtering, retention, and actor visibility policy."
+    },
+    {
+      "id": "tier-entitlement-policy",
+      "priority": "P1",
+      "sources": ["packages/contracts/src/tier-policy.ts"],
+      "tests": ["packages/contracts/tests/critical-domain-policy.test.mjs"],
+      "rationale": "Free, Premium, and Black custom-feed and News Board entitlements plus neutral safety limits."
+    },
+    {
+      "id": "notification-input-policy",
+      "priority": "P2",
+      "sources": ["apps/lythaus-public-api/src/notification-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/critical-notification-policy.test.mjs"],
+      "rationale": "Public Worker notification preference and device-registration input validation."
+    },
+    {
+      "id": "authenticity-cost-admission-policy",
+      "priority": "P2",
+      "sources": ["packages/authenticity/src/cost-control.ts"],
+      "tests": ["packages/authenticity/tests/critical-cost-control.test.mjs"],
+      "rationale": "Fail-closed cost admission and emergency-stop policy for authenticity processing."
+    }
+  ]
+}

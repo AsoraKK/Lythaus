@@ -254,7 +254,7 @@ const unauthorizedCases: Array<{ method: HttpMethod; path: string; body?: () => 
   { method: 'get', path: '/auth/userinfo' },
   {
     method: 'post',
-    path: '/moderation/appeals',
+    path: '/appeals',
     body: () => ({ caseId: `case_${randomUUID()}`, statement: 'Contract smoke appeal' })
   },
   { method: 'get', path: '/user/export' }
@@ -477,27 +477,27 @@ describeIfAuth('Authenticated contract coverage', () => {
   // Moderation appeals
   // ---------------------------------------------------------------------------
 
-  test('POST /moderation/appeals returns documented validation or rate-limit response', async () => {
+  test('POST /appeals returns documented validation or rate-limit response', async () => {
     const result = await runOrSkip(() =>
-      request({ method: 'post', pathKey: '/moderation/appeals', auth: true, body: { statement: 'no caseId' } })
+      request({ method: 'post', pathKey: '/appeals', auth: true, body: { statement: 'no caseId' } })
     );
     if (!result) return;
     const { response, payload } = result;
     expect([400, 429]).toContain(response.status);
-    const validate = getValidator('/moderation/appeals', 'post', String(response.status));
+    const validate = getValidator('/appeals', 'post', String(response.status));
     const ok = validate(payload);
     if (!ok) console.error(validate.errors);
     expect(ok).toBe(true);
   });
 
-  test('POST /moderation/appeals/{appealId}/vote rejects unauthenticated request', async () => {
-    const fakeAppealId = `apl_${randomUUID()}`;
+  test('POST /appeals/{appealId}/vote rejects unauthenticated request', async () => {
+    const fakeAppealId = randomUUID();
     const result = await runOrSkip(() =>
       request({
         method: 'post',
-        pathKey: `/moderation/appeals/${fakeAppealId}/vote`,
+        pathKey: `/appeals/${fakeAppealId}/vote`,
         auth: false,
-        body: { vote: 'uphold' }
+        body: { decision: 'uphold' }
       })
     );
     if (!result) return;

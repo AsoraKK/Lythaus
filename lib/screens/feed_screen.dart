@@ -11,7 +11,6 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/widgets/security_widgets.dart';
-import 'package:lythaus/widgets/reputation_badge.dart';
 import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
@@ -410,18 +409,7 @@ class _LythausDrawer extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (isSignedIn && user != null) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      ReputationBadge(
-                        score: user.reputationScore,
-                        size: ReputationBadgeSize.medium,
-                        showLabel: true,
-                      ),
-                    ],
-                  ),
-                ],
+                if (isSignedIn && user != null) ...[const SizedBox(height: 4)],
               ],
             ),
           ),

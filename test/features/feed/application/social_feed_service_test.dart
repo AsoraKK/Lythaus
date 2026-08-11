@@ -48,7 +48,7 @@ void main() {
   test('cursor feeds parse posts and cursors', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/discover',
+        '/api/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
@@ -56,12 +56,12 @@ void main() {
       (_) async => _response({
         'items': [_postJson('p1')],
         'nextCursor': 'next',
-      }, '/feed/discover'),
+      }, '/api/feed/discover'),
     );
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/news',
+        '/api/feed/news',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
@@ -69,12 +69,12 @@ void main() {
       (_) async => _response({
         'items': [_postJson('p2')],
         'nextCursor': null,
-      }, '/feed/news'),
+      }, '/api/feed/news'),
     );
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/user/user-1',
+        '/api/feed/user/user-1',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
@@ -82,7 +82,7 @@ void main() {
       (_) async => _response({
         'items': [_postJson('p3')],
         'nextCursor': 'next-user',
-      }, '/feed/user/user-1'),
+      }, '/api/feed/user/user-1'),
     );
 
     final discover = await service.getDiscoverFeed(
@@ -107,7 +107,7 @@ void main() {
     final captured =
         verify(
               () => dio.get<Map<String, dynamic>>(
-                '/feed/user/user-1',
+                '/api/feed/user/user-1',
                 queryParameters: captureAny(named: 'queryParameters'),
                 options: any(named: 'options'),
               ),
@@ -150,6 +150,38 @@ void main() {
       ),
       throwsA(isA<SocialFeedException>()),
     );
+  });
+
+  test('cursor feeds accept an envelope and continuation token', () async {
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/api/feed/discover',
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => _response({
+        'data': {
+          'items': [
+            {
+              'id': 'server-post',
+              'authorId': 'author-1',
+              'body': 'Server body',
+              'publishedAt': '2026-08-10T10:00:00Z',
+              'publicLabel': 'AI-assisted',
+            },
+          ],
+          'continuationToken': 'cursor-2',
+        },
+      }, '/api/feed/discover'),
+    );
+
+    final page = await service.getDiscoverFeed(token: 'token');
+
+    expect(page.posts.single.text, 'Server body');
+    expect(page.posts.single.authorship.label, ContentAuthorship.aiAssisted);
+    expect(page.nextCursor, 'cursor-2');
+    expect(page.hasMore, isTrue);
   });
 
   test('list feeds use shared response handler', () async {
@@ -228,28 +260,28 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/posts/post-1/like',
+        '/posts/post-1/reactions',
         data: any(named: 'data'),
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
-        'success': true,
-        'post': _postJson('post-1'),
-      }, '/posts/post-1/like'),
+        'postId': 'post-1',
+        'reactionType': 'like',
+        'changed': true,
+      }, '/posts/post-1/reactions'),
     );
 
     when(
-      () => dio.post<Map<String, dynamic>>(
-        '/posts/post-1/dislike',
-        data: any(named: 'data'),
+      () => dio.delete<Map<String, dynamic>>(
+        '/posts/post-1/reactions',
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
-        'success': true,
-        'post': _postJson('post-1'),
-      }, '/posts/post-1/dislike'),
+        'postId': 'post-1',
+        'removed': true,
+      }, '/posts/post-1/reactions'),
     );
 
     when(
@@ -276,13 +308,11 @@ void main() {
 
     when(
       () => dio.post<Map<String, dynamic>>(
-        '/posts/post-1/flag',
+        '/flags',
         data: any(named: 'data'),
         options: any(named: 'options'),
       ),
-    ).thenAnswer(
-      (_) async => _response({'success': true}, '/posts/post-1/flag'),
-    );
+    ).thenAnswer((_) async => _response({'flagId': 'flag-1'}, '/flags'));
 
     final post = await service.getPost(postId: 'post-1', token: 't1');
     final liked = await service.likePost(
@@ -292,7 +322,7 @@ void main() {
     );
     final disliked = await service.dislikePost(
       postId: 'post-1',
-      isDislike: true,
+      isDislike: false,
       token: 't1',
     );
     final comments = await service.getComments(postId: 'post-1', token: 't1');
@@ -307,11 +337,11 @@ void main() {
   test('throws on invalid response and network error', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/discover',
+        '/api/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
-    ).thenAnswer((_) async => _response('bad', '/feed/discover'));
+    ).thenAnswer((_) async => _response('bad', '/api/feed/discover'));
 
     expect(
       () => service.getDiscoverFeed(),

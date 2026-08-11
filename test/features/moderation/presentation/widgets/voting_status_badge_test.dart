@@ -5,18 +5,18 @@ import 'package:lythaus/features/moderation/domain/appeal.dart';
 
 void main() {
   group('VotingStatusBadge', () {
-    testWidgets('displays active voting status correctly', (tester) async {
+    testWidgets('displays an active reviewer panel status', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(body: VotingStatusBadge(status: VotingStatus.active)),
         ),
       );
 
-      expect(find.text('Active Voting'), findsOneWidget);
-      expect(find.byIcon(Icons.how_to_vote), findsOneWidget);
+      expect(find.text('Reviewer panel active'), findsOneWidget);
+      expect(find.byIcon(Icons.groups_outlined), findsOneWidget);
     });
 
-    testWidgets('displays quorum reached status correctly', (tester) async {
+    testWidgets('displays a recorded panel outcome', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -25,11 +25,11 @@ void main() {
         ),
       );
 
-      expect(find.text('Quorum Reached'), findsOneWidget);
+      expect(find.text('Panel outcome recorded'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
 
-    testWidgets('displays time expired status correctly', (tester) async {
+    testWidgets('displays a completed panel review', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -38,11 +38,11 @@ void main() {
         ),
       );
 
-      expect(find.text('Time Expired'), findsOneWidget);
-      expect(find.byIcon(Icons.access_time), findsOneWidget);
+      expect(find.text('Panel review complete'), findsOneWidget);
+      expect(find.byIcon(Icons.assignment_turned_in_outlined), findsOneWidget);
     });
 
-    testWidgets('displays resolved status correctly', (tester) async {
+    testWidgets('displays an adjudicated status', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -51,7 +51,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Resolved'), findsOneWidget);
+      expect(find.text('Adjudicated'), findsOneWidget);
       expect(find.byIcon(Icons.verified), findsOneWidget);
     });
 

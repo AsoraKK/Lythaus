@@ -199,13 +199,19 @@ class ModerationCaseScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Appeal & Community vote',
+            'Appeal & independent reviewer panel',
             style: Theme.of(
               context,
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           SizedBox(height: context.spacing.sm),
           Text(appeal.summary),
+          SizedBox(height: context.spacing.sm),
+          Text(
+            'Five independently assigned trained reviewers establish the '
+            'panel outcome. A trained adjudicator records the final result.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           SizedBox(height: context.spacing.sm),
           Row(
             children: [

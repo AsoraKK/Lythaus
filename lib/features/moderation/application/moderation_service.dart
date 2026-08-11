@@ -10,7 +10,6 @@ library;
 
 import 'package:dio/dio.dart';
 import 'package:lythaus/core/observability/lythaus_tracer.dart';
-import 'package:lythaus/features/moderation/domain/appeal.dart';
 import 'package:lythaus/features/moderation/domain/moderation_audit_entry.dart';
 import 'package:lythaus/features/moderation/domain/moderation_case.dart';
 import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
@@ -155,80 +154,6 @@ class ModerationService implements ModerationRepository {
   }
 
   @override
-  Future<List<Appeal>> getMyAppeals({required String token}) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/api/getMyAppeals',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-
-      if (response.data?['success'] == true &&
-          response.data?['appeals'] != null) {
-        return (response.data!['appeals'] as List)
-            .map((data) => Appeal.fromJson(data as Map<String, dynamic>))
-            .toList();
-      } else {
-        throw ModerationException(
-          (response.data?['message'] as String?) ?? 'Failed to load appeals',
-          code: 'LOAD_APPEALS_FAILED',
-        );
-      }
-    } on DioException catch (e) {
-      throw _mapDioException(e);
-    } catch (e) {
-      throw ModerationException(
-        'Unexpected error: $e',
-        code: 'UNKNOWN_ERROR',
-        originalError: e,
-      );
-    }
-  }
-
-  @override
-  Future<Appeal> submitAppeal({
-    required String contentId,
-    required String contentType,
-    required String appealType,
-    required String appealReason,
-    required String userStatement,
-    required String token,
-  }) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/api/appealContent',
-        data: {
-          'contentId': contentId,
-          'contentType': contentType,
-          'appealType': appealType,
-          'appealReason': appealReason,
-          'userStatement': userStatement,
-        },
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-
-      if (response.data?['success'] == true &&
-          response.data?['appeal'] != null) {
-        return Appeal.fromJson(
-          response.data!['appeal'] as Map<String, dynamic>,
-        );
-      } else {
-        throw ModerationException(
-          (response.data?['message'] as String?) ?? 'Failed to submit appeal',
-          code: 'SUBMIT_APPEAL_FAILED',
-        );
-      }
-    } on DioException catch (e) {
-      throw _mapDioException(e);
-    } catch (e) {
-      throw ModerationException(
-        'Unexpected error: $e',
-        code: 'UNKNOWN_ERROR',
-        originalError: e,
-      );
-    }
-  }
-
-  @override
   Future<Map<String, dynamic>> flagContent({
     required String contentId,
     required String contentType,
@@ -260,93 +185,6 @@ class ModerationService implements ModerationRepository {
       rethrow;
     } on DioException catch (e) {
       throw _mapDioException(e);
-    } catch (e) {
-      throw ModerationException(
-        'Unexpected error: $e',
-        code: 'UNKNOWN_ERROR',
-        originalError: e,
-      );
-    }
-  }
-
-  @override
-  Future<VoteResult> submitVote({
-    required String appealId,
-    required String vote,
-    String? comment,
-    required String token,
-  }) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/api/voteOnAppeal',
-        data: {
-          'appealId': appealId,
-          'vote': vote,
-          if (comment != null) 'comment': comment,
-        },
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-
-      final data = response.data;
-      if (data == null) {
-        throw const ModerationException(
-          'Invalid vote response',
-          code: 'INVALID_RESPONSE',
-        );
-      }
-      return VoteResult.fromJson(data);
-    } on ModerationException {
-      rethrow;
-    } on DioException catch (e) {
-      throw _mapDioException(e);
-    } catch (e) {
-      throw ModerationException(
-        'Unexpected error: $e',
-        code: 'UNKNOWN_ERROR',
-        originalError: e,
-      );
-    }
-  }
-
-  @override
-  Future<AppealResponse> getVotingFeed({
-    int page = 1,
-    int pageSize = 20,
-    AppealFilters? filters,
-    required String token,
-  }) async {
-    try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'pageSize': pageSize,
-        if (filters != null) ...filters.toJson(),
-      };
-
-      final response = await _dio.get<Map<String, dynamic>>(
-        '/api/reviewAppealedContent',
-        queryParameters: queryParams,
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-
-      final Map<String, dynamic> responseData =
-          response.data ?? <String, dynamic>{};
-      if (responseData['success'] == true) {
-        return AppealResponse.fromJson(responseData);
-      } else {
-        final message = responseData['message'] as String?;
-        throw ModerationException(
-          message ?? 'Failed to load voting feed',
-          code: 'LOAD_FEED_FAILED',
-        );
-      }
-    } on ModerationException {
-      rethrow;
-    } on DioException catch (e) {
-      throw ModerationException(
-        'Network error: ${e.message}',
-        code: 'NETWORK_ERROR',
-        originalError: e,
-      );
     } catch (e) {
       throw ModerationException(
         'Unexpected error: $e',

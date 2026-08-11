@@ -9,42 +9,36 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**createPost**](PostsApi.md#createpost) | **POST** /post | Create a new post
-[**postsBookmarkCreate**](PostsApi.md#postsbookmarkcreate) | **POST** /posts/{id}/bookmark | Bookmark a post
-[**postsBookmarkDelete**](PostsApi.md#postsbookmarkdelete) | **DELETE** /posts/{id}/bookmark | Remove a bookmark
-[**postsBookmarkGet**](PostsApi.md#postsbookmarkget) | **GET** /posts/{id}/bookmark | Get bookmark status for a post
-[**postsCommentsCreate**](PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Create a comment on a post
-[**postsCommentsList**](PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List comments on a post
+[**commentsDelete**](PostsApi.md#commentsdelete) | **DELETE** /comments/{commentId} | Delete my comment
+[**commentsReplace**](PostsApi.md#commentsreplace) | **PUT** /comments/{commentId} | Replace my comment body
+[**commentsUpdate**](PostsApi.md#commentsupdate) | **PATCH** /comments/{commentId} | Partially update my comment body
+[**postsCommentsCreate**](PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Submit a comment or one-level reply
+[**postsCommentsList**](PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List publicly visible comments
 [**postsCreate**](PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
+[**postsDelete**](PostsApi.md#postsdelete) | **DELETE** /posts/{id} | Soft-delete a post owned by the authenticated user
 [**postsGet**](PostsApi.md#postsget) | **GET** /posts/{id} | Get a post by ID
-[**postsInsights**](PostsApi.md#postsinsights) | **GET** /posts/{id}/insights | Get engagement insights for a post
-[**postsLikeCreate**](PostsApi.md#postslikecreate) | **POST** /posts/{id}/like | Like a post
-[**postsLikeDelete**](PostsApi.md#postslikedelete) | **DELETE** /posts/{id}/like | Unlike a post
-[**postsLikeGet**](PostsApi.md#postslikeget) | **GET** /posts/{id}/like | Get like status for a post
-[**postsReceipt**](PostsApi.md#postsreceipt) | **GET** /posts/{id}/receipt | Get read receipt for a post
+[**postsReplace**](PostsApi.md#postsreplace) | **PUT** /posts/{id} | Replace editable post fields and return the post to review
 [**postsUpdate**](PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
-[**postsView**](PostsApi.md#postsview) | **POST** /posts/{id}/view | Record a post view event
 
 
-# **createPost**
-> LegacyCreatePostResponse createPost(createPostRequest)
+# **commentsDelete**
+> CommentDeleteResponse commentsDelete(commentId, idempotencyKey)
 
-Create a new post
-
-Create a new post.
+Delete my comment
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final CreatePostRequest createPostRequest = {"text":"Launch checklist is locked and ready for review.","aiLabel":"human"}; // CreatePostRequest |
+final String commentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.createPost(createPostRequest);
+    final response = api.commentsDelete(commentId, idempotencyKey);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling PostsApi->createPost: $e\n');
+    print('Exception when calling PostsApi->commentsDelete: $e\n');
 }
 ```
 
@@ -52,95 +46,12 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  |
+ **commentId** | **String**|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**LegacyCreatePostResponse**](LegacyCreatePostResponse.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **postsBookmarkCreate**
-> JsonObject postsBookmarkCreate(id, body)
-
-Bookmark a post
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.postsBookmarkCreate(id, body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsBookmarkCreate: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **postsBookmarkDelete**
-> JsonObject postsBookmarkDelete(id)
-
-Remove a bookmark
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-
-try {
-    final response = api.postsBookmarkDelete(id);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsBookmarkDelete: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
+[**CommentDeleteResponse**](CommentDeleteResponse.md)
 
 ### Authorization
 
@@ -153,23 +64,25 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **postsBookmarkGet**
-> JsonObject postsBookmarkGet(id)
+# **commentsReplace**
+> CommentUpdateResponse commentsReplace(commentId, commentUpdateRequest, idempotencyKey)
 
-Get bookmark status for a post
+Replace my comment body
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
+final String commentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommentUpdateRequest commentUpdateRequest = ; // CommentUpdateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.postsBookmarkGet(id);
+    final response = api.commentsReplace(commentId, commentUpdateRequest, idempotencyKey);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling PostsApi->postsBookmarkGet: $e\n');
+    print('Exception when calling PostsApi->commentsReplace: $e\n');
 }
 ```
 
@@ -177,11 +90,13 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
+ **commentId** | **String**|  |
+ **commentUpdateRequest** | [**CommentUpdateRequest**](CommentUpdateRequest.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CommentUpdateResponse**](CommentUpdateResponse.md)
 
 ### Authorization
 
@@ -189,26 +104,74 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
- - **Content-Type**: Not defined
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **commentsUpdate**
+> CommentUpdateResponse commentsUpdate(commentId, commentUpdateRequest, idempotencyKey)
+
+Partially update my comment body
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPostsApi();
+final String commentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommentUpdateRequest commentUpdateRequest = ; // CommentUpdateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
+
+try {
+    final response = api.commentsUpdate(commentId, commentUpdateRequest, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PostsApi->commentsUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **commentId** | **String**|  |
+ **commentUpdateRequest** | [**CommentUpdateRequest**](CommentUpdateRequest.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
+
+### Return type
+
+[**CommentUpdateResponse**](CommentUpdateResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **postsCommentsCreate**
-> JsonObject postsCommentsCreate(postId, body)
+> CommentSubmission postsCommentsCreate(postId, commentCreateRequest, idempotencyKey)
 
-Create a comment on a post
+Submit a comment or one-level reply
+
+A submission is recorded as under review; it is not immediately published to public comment listings.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final String postId = postId_example; // String |
-final JsonObject body = Object; // JsonObject |
+final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommentCreateRequest commentCreateRequest = ; // CommentCreateRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.postsCommentsCreate(postId, body);
+    final response = api.postsCommentsCreate(postId, commentCreateRequest, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsCommentsCreate: $e\n');
@@ -220,11 +183,12 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **String**|  |
- **body** | **JsonObject**|  |
+ **commentCreateRequest** | [**CommentCreateRequest**](CommentCreateRequest.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CommentSubmission**](CommentSubmission.md)
 
 ### Authorization
 
@@ -238,19 +202,23 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **postsCommentsList**
-> JsonObject postsCommentsList(postId)
+> CommentPage postsCommentsList(postId, cursor, limit)
 
-List comments on a post
+List publicly visible comments
+
+Only allowed comments are returned. Anonymous callers may read public posts; authenticated callers additionally receive relationship filtering.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final String postId = postId_example; // String |
+final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
+final int limit = 56; // int |
 
 try {
-    final response = api.postsCommentsList(postId);
+    final response = api.postsCommentsList(postId, cursor, limit);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsCommentsList: $e\n');
@@ -262,10 +230,12 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **String**|  |
+ **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
+ **limit** | **int**|  | [optional] [default to 25]
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**CommentPage**](CommentPage.md)
 
 ### Authorization
 
@@ -279,21 +249,22 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **postsCreate**
-> Post postsCreate(createPostRequest)
+> Post postsCreate(createPostRequest, idempotencyKey)
 
 Create a post with moderation and AI authenticity checks
 
-Create a post for the authenticated user. An authorship disclosure is required. Disclosed AI-assisted and AI-generated content may be published with categorical labels; conflicts or unavailable classification enter review. Prohibited content remains blocked regardless of authorship.
+Create a post for the authenticated user. An authorship disclosure is required. Human-authored text may publish after review. AI-assisted text may publish only when its normalised, trimmed body is at most 249 user-perceived Unicode characters and receives the categorical `AI-assisted` label. AI-generated public content is blocked and may exist only in an author-private feedback or appeal state where supported.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final CreatePostRequest createPostRequest = ; // CreatePostRequest |
+final CreatePostRequest createPostRequest = {"body":"Local reporting from the community meeting.","declaredCreationMode":"human","geoScope":"community","placeId":"018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1c"}; // CreatePostRequest |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.postsCreate(createPostRequest);
+    final response = api.postsCreate(createPostRequest, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsCreate: $e\n');
@@ -305,6 +276,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **createPostRequest** | [**CreatePostRequest**](CreatePostRequest.md)|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
@@ -321,8 +293,51 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **postsDelete**
+> PostsDelete200Response postsDelete(id, idempotencyKey)
+
+Soft-delete a post owned by the authenticated user
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPostsApi();
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+
+try {
+    final response = api.postsDelete(id, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PostsApi->postsDelete: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **String**|  |
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
+
+### Return type
+
+[**PostsDelete200Response**](PostsDelete200Response.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **postsGet**
-> PostView postsGet(id)
+> PostsGet200Response postsGet(id, idempotencyKey)
 
 Get a post by ID
 
@@ -332,9 +347,10 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
 
 try {
-    final response = api.postsGet(id);
+    final response = api.postsGet(id, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsGet: $e\n');
@@ -346,10 +362,11 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
 
 ### Return type
 
-[**PostView**](PostView.md)
+[**PostsGet200Response**](PostsGet200Response.md)
 
 ### Authorization
 
@@ -362,23 +379,25 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **postsInsights**
-> JsonObject postsInsights(id)
+# **postsReplace**
+> PostRevisionResponse postsReplace(id, idempotencyKey, updatePostRequest)
 
-Get engagement insights for a post
+Replace editable post fields and return the post to review
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
+final String id = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed.
+final UpdatePostRequest updatePostRequest = ; // UpdatePostRequest |
 
 try {
-    final response = api.postsInsights(id);
+    final response = api.postsReplace(id, idempotencyKey, updatePostRequest);
     print(response);
 } catch on DioException (e) {
-    print('Exception when calling PostsApi->postsInsights: $e\n');
+    print('Exception when calling PostsApi->postsReplace: $e\n');
 }
 ```
 
@@ -387,53 +406,12 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **String**|  |
+ **idempotencyKey** | **String**| Required caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. |
+ **updatePostRequest** | [**UpdatePostRequest**](UpdatePostRequest.md)|  |
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **postsLikeCreate**
-> JsonObject postsLikeCreate(id, body)
-
-Like a post
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.postsLikeCreate(id, body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsLikeCreate: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
+[**PostRevisionResponse**](PostRevisionResponse.md)
 
 ### Authorization
 
@@ -446,135 +424,12 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **postsLikeDelete**
-> JsonObject postsLikeDelete(id)
-
-Unlike a post
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-
-try {
-    final response = api.postsLikeDelete(id);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsLikeDelete: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **postsLikeGet**
-> JsonObject postsLikeGet(id)
-
-Get like status for a post
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-
-try {
-    final response = api.postsLikeGet(id);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsLikeGet: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **postsReceipt**
-> JsonObject postsReceipt(id)
-
-Get read receipt for a post
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-
-try {
-    final response = api.postsReceipt(id);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsReceipt: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **postsUpdate**
-> Post postsUpdate(id, updatePostRequest)
+> PostRevisionResponse postsUpdate(id, updatePostRequest)
 
 Update a post with moderation and AI authenticity checks
 
-Update a post owned by the caller. Content or media changes require a new authorship disclosure. Conflicts or unavailable classification enter review; prohibited content remains blocked regardless of authorship.
+Update a post owned by the caller. A body change requires a fresh declaredCreationMode; a visibility-only change preserves the stored declaration. Every accepted update returns the post to review.
 
 ### Example
 ```dart
@@ -582,7 +437,7 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getPostsApi();
 final String id = id_example; // String |
-final UpdatePostRequest updatePostRequest = ; // UpdatePostRequest |
+final UpdatePostRequest updatePostRequest = {"body":"Corrected local reporting from the community meeting.","declaredCreationMode":"human"}; // UpdatePostRequest |
 
 try {
     final response = api.postsUpdate(id, updatePostRequest);
@@ -601,50 +456,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**Post**](Post.md)
-
-### Authorization
-
-[bearerAuth](../README.md#bearerAuth)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **postsView**
-> JsonObject postsView(id, body)
-
-Record a post view event
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getPostsApi();
-final String id = id_example; // String |
-final JsonObject body = Object; // JsonObject |
-
-try {
-    final response = api.postsView(id, body);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling PostsApi->postsView: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **id** | **String**|  |
- **body** | **JsonObject**|  |
-
-### Return type
-
-[**JsonObject**](JsonObject.md)
+[**PostRevisionResponse**](PostRevisionResponse.md)
 
 ### Authorization
 

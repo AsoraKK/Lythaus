@@ -6,7 +6,7 @@ library;
 enum ModerationAuditActionType {
   flagged,
   aiEvaluated,
-  communityVote,
+  reviewerDecision,
   decision,
   escalation,
   appeal,
@@ -67,9 +67,13 @@ class ModerationAuditEntry {
       case 'ai_evaluated':
       case 'ai':
         return ModerationAuditActionType.aiEvaluated;
+      case 'reviewer_decision':
+      case 'reviewerdecision':
+        return ModerationAuditActionType.reviewerDecision;
+      // Historical audit records used these values before reviewer panels.
       case 'vote':
       case 'community_vote':
-        return ModerationAuditActionType.communityVote;
+        return ModerationAuditActionType.reviewerDecision;
       case 'decision':
       case 'moderator_decision':
         return ModerationAuditActionType.decision;

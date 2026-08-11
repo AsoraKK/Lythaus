@@ -1,0 +1,11 @@
+{
+  "name": "@lythaus/authenticity-materialiser",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node materialise.mjs --help"
+  },
+  "dependencies": {
+    "sharp": "^0.35.3"
+  }
+}

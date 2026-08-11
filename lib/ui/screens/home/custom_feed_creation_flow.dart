@@ -120,6 +120,51 @@ class _CustomFeedCreationFlowState
       return;
     }
 
+    try {
+      final entitlements = await ref.read(feedEntitlementsProvider.future);
+      final existingFeeds = await ref.read(customFeedsProvider.future);
+      if (entitlements == null) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not confirm your custom-feed access. Try again.',
+            ),
+          ),
+        );
+        return;
+      }
+      if (existingFeeds.length >= entitlements.maxCustomFeeds) {
+        if (!mounted) {
+          return;
+        }
+        final count = entitlements.maxCustomFeeds;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Your ${entitlements.tier} access allows $count custom '
+              'feed${count == 1 ? '' : 's'}. Lythaus remains authoritative.',
+            ),
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not confirm your custom-feed access. Try again.',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isCreating = true);
     try {
       final created = await ref

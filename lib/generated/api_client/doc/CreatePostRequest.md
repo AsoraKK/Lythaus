@@ -8,8 +8,9 @@ import 'package:lythaus_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**text** | **String** | Post body text |
-**mediaUrl** | **String** |  | [optional]
-**aiLabel** | **String** | Required authorship disclosure. |
+**body** | **String** |  |
+**declaredCreationMode** | **String** | Required user authorship disclosure. Public responses use categorical labels only. |
+**geoScope** | **String** |  |
+**placeId** | **String** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -7,7 +7,15 @@ rules:
   operation-security-defined:
     description: Authenticated operations must declare security requirements
     severity: error
-    given: $.paths[*][*]
+    given:
+      - $.paths[*].get
+      - $.paths[*].post
+      - $.paths[*].put
+      - $.paths[*].patch
+      - $.paths[*].delete
+      - $.paths[*].options
+      - $.paths[*].head
+      - $.paths[*].trace
     then:
       field: security
       function: truthy

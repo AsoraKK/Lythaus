@@ -70,18 +70,18 @@ class ModerationBadges extends StatelessWidget {
         text = 'Blocked';
         break;
 
-      case ModerationStatus.communityApproved:
+      case ModerationStatus.appealRestored:
         icon = Icons.check_circle;
         backgroundColor = scheme.primary.withValues(alpha: 0.2);
         textColor = scheme.onSurface;
-        text = 'Community Approved';
+        text = 'Appeal resolved: restored';
         break;
 
-      case ModerationStatus.communityRejected:
+      case ModerationStatus.appealUpheld:
         icon = Icons.cancel;
         backgroundColor = scheme.error.withValues(alpha: 0.14);
         textColor = scheme.error;
-        text = 'Community Rejected';
+        text = 'Appeal resolved: blocked';
         break;
 
       case ModerationStatus.clean:
@@ -115,18 +115,20 @@ class ModerationBadges extends StatelessWidget {
         text = 'Appeal Pending';
         break;
 
-      case 'approved':
+      case 'overturn':
+      case 'overturned':
         icon = Icons.check_circle;
         backgroundColor = scheme.primary.withValues(alpha: 0.2);
         textColor = scheme.onSurface;
-        text = 'Appeal Approved';
+        text = 'Appeal resolved: restored';
         break;
 
-      case 'rejected':
+      case 'uphold':
+      case 'upheld':
         icon = Icons.cancel;
         backgroundColor = scheme.error.withValues(alpha: 0.14);
         textColor = scheme.error;
-        text = 'Appeal Rejected';
+        text = 'Appeal resolved: upheld';
         break;
 
       case 'expired':
@@ -257,18 +259,18 @@ class ModerationInfoBanner extends StatelessWidget {
         title = 'Content Blocked';
         break;
 
-      case ModerationStatus.communityApproved:
+      case ModerationStatus.appealRestored:
         backgroundColor = scheme.primary.withValues(alpha: 0.16);
         textColor = scheme.onSurface;
         icon = Icons.check_circle;
-        title = 'Community Approved';
+        title = 'Appeal resolved: restored';
         break;
 
-      case ModerationStatus.communityRejected:
+      case ModerationStatus.appealUpheld:
         backgroundColor = scheme.error.withValues(alpha: 0.12);
         textColor = scheme.error;
         icon = Icons.cancel;
-        title = 'Community Rejected';
+        title = 'Appeal resolved: blocked';
         break;
 
       case ModerationStatus.clean:
@@ -314,7 +316,7 @@ class ModerationInfoBanner extends StatelessWidget {
                   LythButton.secondary(
                     onPressed: onAppeal,
                     icon: Icons.gavel,
-                    label: 'Appeal decision',
+                    label: 'Appeal information',
                   ),
                 ],
               ],

@@ -85,10 +85,9 @@ abstract final class ErrorMessages {
     ErrorCodes.contentBlocked:
         'This content cannot be posted as it may violate our community guidelines.',
     ErrorCodes.aiContentBlocked:
-        'This AI-generated content is prohibited by the safety policy.\n'
-        'You can appeal this decision.',
+        'AI-generated public content cannot be posted.',
     ErrorCodes.aiLabelRequired:
-        'Choose Human-authored, AI-assisted, or AI-generated before posting.',
+        'Choose Human-authored or AI-assisted before posting.',
     ErrorCodes.appealExists:
         'You have already submitted an appeal for this content.',
     ErrorCodes.validationFailed: 'Please check your input and try again.',

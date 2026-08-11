@@ -74,9 +74,13 @@ class PostCreationState {
     );
   }
 
-  /// Check if the form is valid for submission
+  int get userPerceivedTextLength => userPerceivedCharacterCount(text);
+
+  /// Check if the form is valid for submission.
   bool get isValid =>
-      text.trim().isNotEmpty && text.length <= 5000 && aiLabel != null;
+      text.trim().isNotEmpty &&
+      text.length <= postTextMaxLength &&
+      validatePublicPostAuthorship(text: text, aiLabel: aiLabel) == null;
 
   /// Check if there's a successful result
   bool get isSuccess => result is CreatePostSuccess;
@@ -129,6 +133,11 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       validationError = null; // Don't show error for empty field
     } else if (text.length > postTextMaxLength) {
       validationError = 'Post text cannot exceed $postTextMaxLength characters';
+    } else if (state.aiLabel != null) {
+      validationError = validatePublicPostAuthorship(
+        text: text,
+        aiLabel: state.aiLabel,
+      );
     }
 
     state = state.copyWith(
@@ -148,7 +157,27 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   }
 
   void setAiLabel(String value) {
-    state = state.copyWith(aiLabel: value, clearResult: true);
+    final normalizedValue = value.trim().toLowerCase();
+    if (!isSupportedPublicAuthorshipLabel(normalizedValue)) {
+      state = state.copyWith(
+        clearResult: true,
+        validationError: 'AI-generated public content cannot be posted',
+      );
+      return;
+    }
+
+    final validationError = state.text.isEmpty
+        ? null
+        : validatePublicPostAuthorship(
+            text: state.text,
+            aiLabel: normalizedValue,
+          );
+    state = state.copyWith(
+      aiLabel: normalizedValue,
+      clearResult: true,
+      validationError: validationError,
+      clearValidationError: validationError == null,
+    );
   }
 
   void updateCaptureMetadataHash(String? value) {
@@ -209,11 +238,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       return 'Post text cannot exceed $postTextMaxLength characters';
     }
 
-    if (state.aiLabel == null) {
-      return 'Choose an authorship disclosure before posting';
-    }
-
-    return null;
+    return validatePublicPostAuthorship(text: text, aiLabel: state.aiLabel);
   }
 
   /// Submit the post

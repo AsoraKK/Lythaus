@@ -34,11 +34,13 @@ jobs:
           PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main
         run: npm run validate:cloudflare-hyperdrive-targets
-      - name: Verify current read-only schema baseline
+      - name: Verify post-0012 schema read-only
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main
-          REQUIRE_BUDGET_MIGRATION: 'false'
+          REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
         run: node scripts/ci/verify-planetscale-production-schema.mjs
       - name: Mark external routing proof for the harness
         run: echo "HYPERDRIVE_VERIFIED_MAIN=true" >> "$GITHUB_ENV"
@@ -57,10 +59,10 @@ jobs:
           ADR003_WEB_EMAIL_ACCEPTED: ${{ vars.ADR003_WEB_EMAIL_ACCEPTED }}
           ADR003_MOBILE_EMAIL_ACCEPTED: ${{ vars.ADR003_MOBILE_EMAIL_ACCEPTED }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
-          EXPECTED_DATABASE_RELATION_COUNT: '78'
-          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: 86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0008_legacy_relink_status.sql
-          EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'false'
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0012_product_integrity_v2.sql
+          EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.ADR003_TEST_EMAIL }}
           ADR003_TEST_PASSWORD: ${{ secrets.ADR003_TEST_PASSWORD }}

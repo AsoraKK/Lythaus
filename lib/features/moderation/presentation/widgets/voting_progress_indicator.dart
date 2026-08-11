@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/features/moderation/domain/appeal.dart';
 
-/// LYTHAUS VOTING PROGRESS INDICATOR
+/// LYTHAUS REVIEWER PANEL PROGRESS INDICATOR
 ///
-/// 🎯 Purpose: Display voting progress with progress bar and statistics
+/// 🎯 Purpose: Display independent reviewer-panel progress and statistics
 /// 🔍 Single Responsibility: Progress visualization only
 
 class VotingProgressIndicator extends StatelessWidget {
@@ -29,10 +29,6 @@ class VotingProgressIndicator extends StatelessWidget {
         ] else ...[
           _buildWaitingMessage(context),
         ],
-        if (progress.timeRemaining != null) ...[
-          SizedBox(height: context.spacing.xs),
-          _buildTimeRemaining(context),
-        ],
       ],
     );
   }
@@ -41,20 +37,20 @@ class VotingProgressIndicator extends StatelessWidget {
     return Row(
       children: [
         Icon(
-          Icons.how_to_vote,
+          Icons.groups_outlined,
           size: 16,
           color: Theme.of(context).colorScheme.primary,
         ),
         SizedBox(width: context.spacing.sm),
         Text(
-          'Community Voting Progress',
+          'Independent reviewer panel',
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const Spacer(),
         Text(
-          '${progress.totalVotes} votes',
+          '${progress.totalVotes} reviewer decisions',
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
@@ -75,7 +71,7 @@ class VotingProgressIndicator extends StatelessWidget {
     return Row(
       children: [
         Text(
-          '${progress.approveVotes} approve',
+          '${progress.approveVotes} overturn',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: scheme.primary,
             fontWeight: FontWeight.w600,
@@ -83,7 +79,7 @@ class VotingProgressIndicator extends StatelessWidget {
         ),
         const Spacer(),
         Text(
-          '${progress.rejectVotes} reject',
+          '${progress.rejectVotes} uphold',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: scheme.error,
             fontWeight: FontWeight.w600,
@@ -95,19 +91,10 @@ class VotingProgressIndicator extends StatelessWidget {
 
   Widget _buildWaitingMessage(BuildContext context) {
     return Text(
-      'Waiting for community votes...',
+      'Waiting for assigned trained reviewer decisions...',
       style: Theme.of(
         context,
       ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-    );
-  }
-
-  Widget _buildTimeRemaining(BuildContext context) {
-    return Text(
-      'Time remaining: ${progress.timeRemaining ?? '5m window'}',
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: Theme.of(context).colorScheme.outline,
-      ),
     );
   }
 }

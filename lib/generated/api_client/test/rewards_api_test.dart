@@ -18,7 +18,7 @@ void main() {
 
     // Redeem a reward
     //
-    //Future<RewardRedemption> rewardsRedeemPost(String id) async
+    //Future<RewardRedemption> rewardsRedeemPost(String id, { String idempotencyKey }) async
     test('test rewardsRedeemPost', () async {
       // TODO
     });

@@ -126,20 +126,47 @@ void main() {
   });
 
   group('feedListProvider', () {
-    test('returns system feeds when no custom feeds', () {
-      final container = ProviderContainer(
-        overrides: [customFeedsProvider.overrideWith((ref) async => const [])],
-      );
-      addTearDown(container.dispose);
+    test('returns only Discover for Free and Premium accounts', () async {
+      for (final entitlements in const [
+        FeedEntitlements(
+          tier: 'free',
+          maxCustomFeeds: 1,
+          newsBoardAccess: 'none',
+        ),
+        FeedEntitlements(
+          tier: 'premium',
+          maxCustomFeeds: 2,
+          newsBoardAccess: 'full',
+        ),
+      ]) {
+        final container = ProviderContainer(
+          overrides: [
+            feedEntitlementsProvider.overrideWith((ref) async => entitlements),
+            customFeedsProvider.overrideWith((ref) async => const []),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final feeds = container.read(feedListProvider);
-      expect(feeds.length, greaterThanOrEqualTo(2));
-      expect(feeds[0].isHome, isTrue);
+        await container.read(feedEntitlementsProvider.future);
+        await container.read(customFeedsProvider.future);
+
+        final feeds = container.read(feedListProvider);
+        expect(feeds, hasLength(1));
+        expect(feeds.single.id, 'discover');
+        expect(feeds.single.isHome, isTrue);
+      }
     });
 
-    test('merges custom feeds', () {
+    test('merges custom feeds with Black-only News Board access', () async {
       final container = ProviderContainer(
         overrides: [
+          feedEntitlementsProvider.overrideWith(
+            (ref) async => const FeedEntitlements(
+              tier: 'black',
+              maxCustomFeeds: 3,
+              newsBoardAccess: 'full',
+            ),
+          ),
           customFeedsProvider.overrideWith(
             (ref) async => [
               const FeedModel(
@@ -159,12 +186,12 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      // Read the async provider value first
-      container.read(customFeedsProvider);
+      await container.read(feedEntitlementsProvider.future);
+      await container.read(customFeedsProvider.future);
 
       final feeds = container.read(feedListProvider);
-      // Should have system feeds + custom
-      expect(feeds.length, greaterThanOrEqualTo(2));
+      expect(feeds.map((feed) => feed.id), ['discover', 'news', 'custom1']);
+      expect(feeds.first.isHome, isTrue);
     });
   });
 

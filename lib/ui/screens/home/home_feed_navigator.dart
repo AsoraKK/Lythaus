@@ -134,7 +134,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     final heading = switch (widget.section) {
       AlphaFeedSection.discover => 'Discover unavailable',
       AlphaFeedSection.myFeeds => 'No custom feeds yet',
-      AlphaFeedSection.newsBoard => 'News unavailable',
+      AlphaFeedSection.newsBoard => 'News Board is Black-only',
     };
     final description = switch (widget.section) {
       AlphaFeedSection.discover =>
@@ -142,7 +142,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       AlphaFeedSection.myFeeds =>
         'Create a feed to follow the topics and accounts you choose.',
       AlphaFeedSection.newsBoard =>
-        'Try again when the News Board service is available.',
+        'News Board is available only to Black accounts. Lythaus confirms access before content loads.',
     };
     final icon = switch (widget.section) {
       AlphaFeedSection.discover => Icons.explore_outlined,
@@ -564,12 +564,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
       postId: item.id,
       request: UpdatePostRequest(
         text: updatedText,
-        mediaUrl: item.imageUrl,
-        contentType: switch (item.contentType) {
-          ContentType.image => 'image',
-          ContentType.video => 'video',
-          _ => 'text',
-        },
+        aiLabel: item.authorshipLabel == 'AI-assisted' ? 'assisted' : 'human',
       ),
       token: token,
     );

@@ -6,12 +6,14 @@ import { randomUUID } from 'node:crypto';
 const apiBase = required('ADR003_API_BASE_URL').replace(/\/$/, '');
 const readinessToken = required('DATABASE_READINESS_TOKEN');
 const expected = {
-  relationCount: Number(process.env.EXPECTED_DATABASE_RELATION_COUNT ?? 78),
+  relationCount: Number(required('EXPECTED_DATABASE_RELATION_COUNT')),
   schemaFingerprint: required('EXPECTED_DATABASE_SCHEMA_FINGERPRINT'),
   schemaVersion: required('EXPECTED_DATABASE_SCHEMA_VERSION'),
   budgetLedgerApplied: process.env.EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED === 'true',
 };
 const hyperdriveVerifiedMain = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true';
+const candidateWorkerName = process.env.ADR003_WORKER_NAME?.trim() ?? '';
+const candidateWorkerVersionId = process.env.ADR003_WORKER_VERSION_ID?.trim() ?? '';
 const evidencePath = process.env.ADR003_EVIDENCE_PATH;
 const results = [];
 let readiness = null;
@@ -45,6 +47,12 @@ function correlationId(response, body) {
 
 async function requestJson(route, options = {}) {
   const headers = new Headers(options.headers ?? {});
+  if (candidateWorkerName || candidateWorkerVersionId) {
+    if (!/^[a-z0-9-]+$/.test(candidateWorkerName) || !/^[0-9a-f-]{36}$/.test(candidateWorkerVersionId)) {
+      throw new Error('candidate_worker_override_invalid');
+    }
+    headers.set('Cloudflare-Workers-Version-Overrides', `${candidateWorkerName}="${candidateWorkerVersionId}"`);
+  }
   headers.set('accept', 'application/json');
   if (options.body !== undefined && !headers.has('content-type')) {
     headers.set('content-type', typeof options.body === 'string' ? 'application/x-www-form-urlencoded' : 'application/json');
@@ -116,12 +124,20 @@ async function webSecurityCheck() {
 }
 
 async function writeEvidence(databaseReport) {
+  const releaseSha = process.env.RELEASE_SHA ?? process.env.GITHUB_SHA ?? 'local';
+  if (releaseSha !== 'local' && !/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('release_sha_invalid');
+  if (process.env.RELEASE_SHA && process.env.GITHUB_SHA && process.env.RELEASE_SHA !== process.env.GITHUB_SHA) {
+    throw new Error('release_sha_checkout_mismatch');
+  }
   const evidence = {
     formatVersion: 'lythaus-adr003-acceptance-v1',
     status: results.every((item) => item.outcome === 'passed') ? 'PASSED' : 'BLOCKED',
     capturedAt: new Date().toISOString(),
-    releaseSha: process.env.GITHUB_SHA ?? 'local',
+    releaseSha,
     githubActionsRunId: process.env.GITHUB_RUN_ID ?? 'local',
+    candidateWorker: candidateWorkerName && candidateWorkerVersionId
+      ? { name: candidateWorkerName, versionId: candidateWorkerVersionId }
+      : { status: 'not_provided' },
     database: databaseReport,
     workerVersions: parseSanitizedJson(process.env.ADR003_WORKER_VERSIONS_JSON, 'workerVersions'),
     hyperdriveIds: parseSanitizedJson(process.env.ADR003_HYPERDRIVE_IDS_JSON, 'hyperdriveIds'),

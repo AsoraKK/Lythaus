@@ -42,7 +42,7 @@ class AnalyticsOverviewCards extends StatelessWidget {
         Expanded(
           child: _buildOverviewCard(
             context,
-            'Active',
+            'Panel active',
             analytics.activeAppeals.toString(),
             Icons.pending_actions,
             Colors.orange,

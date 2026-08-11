@@ -6,65 +6,32 @@
 
 /// Mirrors the backend `ReactionType` union.
 enum ReactionType {
-  helpful,
-  // ignore: constant_identifier_names
-  well_sourced,
-  thoughtful,
-  agree,
-  disagree,
-  misleading,
-  // ignore: constant_identifier_names
-  low_effort,
-  report;
+  like,
+  insightful,
+  support;
 
   /// Human-readable label for display in the reaction bar.
   String get label {
     switch (this) {
-      case ReactionType.helpful:
-        return 'Helpful';
-      case ReactionType.well_sourced:
-        return 'Well Sourced';
-      case ReactionType.thoughtful:
-        return 'Thoughtful';
-      case ReactionType.agree:
-        return 'Agree';
-      case ReactionType.disagree:
-        return 'Disagree';
-      case ReactionType.misleading:
-        return 'Misleading';
-      case ReactionType.low_effort:
-        return 'Low Effort';
-      case ReactionType.report:
-        return 'Report';
+      case ReactionType.like:
+        return 'Like';
+      case ReactionType.insightful:
+        return 'Insightful';
+      case ReactionType.support:
+        return 'Support';
     }
   }
 
   /// Wire value sent to / received from the API.
-  String get apiValue {
-    switch (this) {
-      case ReactionType.well_sourced:
-        return 'well_sourced';
-      case ReactionType.low_effort:
-        return 'low_effort';
-      default:
-        return name;
-    }
-  }
+  String get apiValue => name;
 
   /// Positive (+), negative (-), or neutral (0) direction.
   int get direction {
     switch (this) {
-      case ReactionType.helpful:
-      case ReactionType.well_sourced:
-      case ReactionType.thoughtful:
-      case ReactionType.agree:
+      case ReactionType.like:
+      case ReactionType.insightful:
+      case ReactionType.support:
         return 1;
-      case ReactionType.misleading:
-      case ReactionType.low_effort:
-      case ReactionType.disagree:
-        return -1;
-      case ReactionType.report:
-        return 0;
     }
   }
 
@@ -107,63 +74,52 @@ class ReactionSummary {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SubmitReactionRequest — sent to POST /api/reactions
+// SubmitReactionRequest — sent to POST /posts/{postId}/reactions
 // ─────────────────────────────────────────────────────────────────────────────
 
 class SubmitReactionRequest {
   const SubmitReactionRequest({
-    required this.targetContentId,
-    required this.targetUserId,
+    required this.postId,
     required this.reactionType,
   });
 
-  final String targetContentId;
-  final String targetUserId;
+  final String postId;
   final String reactionType;
 
   factory SubmitReactionRequest.fromJson(Map<String, dynamic> json) =>
       SubmitReactionRequest(
-        targetContentId: json['targetContentId'] as String,
-        targetUserId: json['targetUserId'] as String,
+        postId: json['postId'] as String,
         reactionType: json['reactionType'] as String,
       );
 
-  Map<String, dynamic> toJson() => {
-    'targetContentId': targetContentId,
-    'targetUserId': targetUserId,
-    'reactionType': reactionType,
-  };
+  Map<String, dynamic> toJson() => {'reactionType': reactionType};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SubmitReactionResponse — returned by POST /api/reactions
+// SubmitReactionResponse — returned by POST /posts/{postId}/reactions
 // ─────────────────────────────────────────────────────────────────────────────
 
 class SubmitReactionResponse {
   const SubmitReactionResponse({
-    required this.reactionId,
+    required this.postId,
     required this.reactionType,
-    required this.includedInReputation,
-    required this.antiGamingStatus,
+    required this.changed,
   });
 
-  final String reactionId;
+  final String postId;
   final String reactionType;
-  final bool includedInReputation;
-  final String antiGamingStatus;
+  final bool changed;
 
   factory SubmitReactionResponse.fromJson(Map<String, dynamic> json) =>
       SubmitReactionResponse(
-        reactionId: json['reactionId'] as String,
+        postId: json['postId'] as String,
         reactionType: json['reactionType'] as String,
-        includedInReputation: json['includedInReputation'] as bool,
-        antiGamingStatus: json['antiGamingStatus'] as String,
+        changed: json['changed'] as bool,
       );
 
   Map<String, dynamic> toJson() => {
-    'reactionId': reactionId,
+    'postId': postId,
     'reactionType': reactionType,
-    'includedInReputation': includedInReputation,
-    'antiGamingStatus': antiGamingStatus,
+    'changed': changed,
   };
 }

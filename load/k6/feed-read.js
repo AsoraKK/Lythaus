@@ -1,11 +1,10 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { resolveUrl, resolveDurationThresholds } from './utils.js';
+import { readDurationThreshold, resolveUrl } from './utils.js';
 
-const durationThresholds = resolveDurationThresholds(__ENV, 'FEED_READ', {
-  p95: 200,
-  p99: 400,
-});
+// The launch contract is a hard p95 of strictly less than 200ms. Keep p99
+// configurable for diagnostic runs, but never permit the p95 gate to drift.
+const feedReadP99Threshold = readDurationThreshold(__ENV, 'FEED_READ_P99_THRESHOLD', 400);
 
 export const options = {
   scenarios: {
@@ -19,13 +18,13 @@ export const options = {
     // Tag-based thresholds for endpoint-level metrics
     'http_req_failed{endpoint:feed}': ['rate<0.01'],
     'http_req_duration{endpoint:feed}': [
-      `p(95)<${durationThresholds.p95}`,
-      `p(99)<${durationThresholds.p99}`,
+      'p(95)<200',
+      `p(99)<${feedReadP99Threshold}`,
     ],
     // Scenario-based thresholds (more precise for multi-scenario tests)
     'http_req_duration{scenario:steady}': [
-      `p(95)<${durationThresholds.p95}`,
-      `p(99)<${durationThresholds.p99}`,
+      'p(95)<200',
+      `p(99)<${feedReadP99Threshold}`,
     ],
   },
   summaryTrendStats: ['min', 'avg', 'med', 'p(75)', 'p(90)', 'p(95)', 'p(99)'],

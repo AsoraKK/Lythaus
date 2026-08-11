@@ -7,31 +7,77 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/application/custom_feed_service.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/services/service_providers.dart';
+import 'package:lythaus/services/subscription/subscription_service.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 
-const List<FeedModel> _systemFeeds = [
-  FeedModel(
-    id: 'discover',
-    name: 'Discover',
-    type: FeedType.discover,
-    contentFilters: ContentFilters(allowedTypes: {ContentType.mixed}),
-    sorting: SortingRule.hot,
-    refinements: FeedRefinements(),
-    subscriptionLevelRequired: 0,
-    isHome: true,
+const FeedModel _discoverFeed = FeedModel(
+  id: 'discover',
+  name: 'Discover',
+  type: FeedType.discover,
+  contentFilters: ContentFilters(allowedTypes: {ContentType.mixed}),
+  sorting: SortingRule.hot,
+  refinements: FeedRefinements(),
+  subscriptionLevelRequired: 0,
+  isHome: true,
+);
+
+const FeedModel _newsBoardFeed = FeedModel(
+  id: 'news',
+  name: 'News',
+  type: FeedType.news,
+  contentFilters: ContentFilters(
+    allowedTypes: {ContentType.text, ContentType.image},
   ),
-  FeedModel(
-    id: 'news',
-    name: 'News',
-    type: FeedType.news,
-    contentFilters: ContentFilters(
-      allowedTypes: {ContentType.text, ContentType.image},
-    ),
-    sorting: SortingRule.newest,
-    refinements: FeedRefinements(),
-    subscriptionLevelRequired: 0,
-  ),
-];
+  sorting: SortingRule.newest,
+  refinements: FeedRefinements(),
+  subscriptionLevelRequired: 0,
+);
+
+class FeedEntitlements {
+  const FeedEntitlements({
+    required this.tier,
+    required this.maxCustomFeeds,
+    required this.newsBoardAccess,
+  });
+
+  final String tier;
+  final int maxCustomFeeds;
+  final String newsBoardAccess;
+
+  bool get canAccessNewsBoard =>
+      tier.toLowerCase() == 'black' && newsBoardAccess.toLowerCase() == 'full';
+
+  factory FeedEntitlements.fromSubscription(SubscriptionStatus status) {
+    return FeedEntitlements(
+      tier: status.tier,
+      maxCustomFeeds: status.entitlements.maxCustomFeeds,
+      newsBoardAccess: status.entitlements.newsBoardAccessLevel,
+    );
+  }
+}
+
+class CustomFeedCapacity {
+  const CustomFeedCapacity({required this.used, this.maximum});
+
+  final int used;
+  final int? maximum;
+
+  bool get isKnown => maximum != null;
+  bool get canCreate => maximum == null || used < maximum!;
+}
+
+/// Server-issued feed limits for the signed-in account.
+final feedEntitlementsProvider = FutureProvider<FeedEntitlements?>((ref) async {
+  final token = await ref.watch(jwtProvider.future);
+  if (token == null || token.isEmpty) {
+    return null;
+  }
+  final status = await ref
+      .read(subscriptionServiceProvider)
+      .checkStatus(token: token);
+  return FeedEntitlements.fromSubscription(status);
+});
 
 final customFeedServiceProvider = Provider<CustomFeedService>((ref) {
   final dio = ref.watch(secureDioProvider);
@@ -53,10 +99,17 @@ final customFeedsProvider = FutureProvider<List<FeedModel>>((ref) async {
 });
 
 final feedListProvider = Provider<List<FeedModel>>((ref) {
-  const systemFeeds = _systemFeeds;
+  final entitlements = ref.watch(feedEntitlementsProvider).valueOrNull;
   final customFeeds = ref.watch(customFeedsProvider).valueOrNull ?? const [];
+  final systemFeeds = <FeedModel>[
+    _discoverFeed,
+    if (entitlements?.canAccessNewsBoard ?? false) _newsBoardFeed,
+  ];
+  final visibleCustomFeeds = entitlements == null
+      ? const <FeedModel>[]
+      : customFeeds.take(entitlements.maxCustomFeeds).toList();
 
-  final merged = <FeedModel>[...systemFeeds, ...customFeeds];
+  final merged = <FeedModel>[...systemFeeds, ...visibleCustomFeeds];
 
   if (merged.isNotEmpty && merged.every((feed) => !feed.isHome)) {
     merged[0] = merged[0].copyWith(isHome: true);
@@ -65,48 +118,57 @@ final feedListProvider = Provider<List<FeedModel>>((ref) {
   return merged;
 });
 
+final customFeedCapacityProvider = Provider<CustomFeedCapacity>((ref) {
+  final customFeeds = ref.watch(customFeedsProvider).valueOrNull ?? const [];
+  final entitlements = ref.watch(feedEntitlementsProvider).valueOrNull;
+  return CustomFeedCapacity(
+    used: customFeeds.length,
+    maximum: entitlements?.maxCustomFeeds,
+  );
+});
+
 final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
   ref,
   feed,
 ) async {
-  try {
-    final service = ref.read(socialFeedServiceProvider);
-    final token = await ref.read(jwtProvider.future);
-    final authToken = token?.isNotEmpty == true ? token : null;
-    List<domain.Post> posts;
+  final service = ref.read(socialFeedServiceProvider);
+  final token = await ref.read(jwtProvider.future);
+  final authToken = token?.isNotEmpty == true ? token : null;
+  List<domain.Post> posts;
 
-    switch (feed.type) {
-      case FeedType.discover:
-        posts = (await service.getDiscoverFeed(
-          limit: 25,
-          token: authToken,
-        )).posts;
-        break;
-      case FeedType.news:
-        posts = (await service.getNewsFeed(limit: 25, token: authToken)).posts;
-        break;
-      case FeedType.custom:
-        if (authToken == null) {
-          return const [];
-        }
-        posts =
-            (await ref
-                    .read(customFeedServiceProvider)
-                    .getCustomFeedItems(
-                      token: authToken,
-                      feedId: feed.id,
-                      limit: 25,
-                    ))
-                .posts;
-        break;
-      case FeedType.moderation:
+  switch (feed.type) {
+    case FeedType.discover:
+      posts = (await service.getDiscoverFeed(
+        limit: 25,
+        token: authToken,
+      )).posts;
+      break;
+    case FeedType.news:
+      final entitlements = await ref.read(feedEntitlementsProvider.future);
+      if (entitlements == null || !entitlements.canAccessNewsBoard) {
+        throw StateError('News Board is available to Black accounts only.');
+      }
+      posts = (await service.getNewsFeed(limit: 25, token: authToken)).posts;
+      break;
+    case FeedType.custom:
+      if (authToken == null) {
         return const [];
-    }
-
-    return posts.map(_mapPostToFeedItem).toList();
-  } catch (_) {
-    return const [];
+      }
+      posts =
+          (await ref
+                  .read(customFeedServiceProvider)
+                  .getCustomFeedItems(
+                    token: authToken,
+                    feedId: feed.id,
+                    limit: 25,
+                  ))
+              .posts;
+      break;
+    case FeedType.moderation:
+      return const [];
   }
+
+  return posts.map(_mapPostToFeedItem).toList();
 });
 
 final currentFeedIndexProvider = StateProvider<int>((ref) {
@@ -252,6 +314,10 @@ class LiveFeedNotifier extends LiveFeedController {
           token: authToken,
         );
       case FeedType.news:
+        final entitlements = await _ref.read(feedEntitlementsProvider.future);
+        if (entitlements == null || !entitlements.canAccessNewsBoard) {
+          throw StateError('News Board is available to Black accounts only.');
+        }
         return service.getNewsFeed(cursor: cursor, limit: 25, token: authToken);
       case FeedType.custom:
         if (authToken == null) {

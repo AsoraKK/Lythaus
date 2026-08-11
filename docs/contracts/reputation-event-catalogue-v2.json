@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "lythaus-reputation-event-catalogue-v2",
+  "policyVersion": "reputation-v2.0.0",
+  "status": "partial",
+  "contractSource": "packages/contracts/src/reputation-policy.ts",
+  "scopeNote": "This catalogue states shared policy calculations. It is not evidence that every source signal is emitted in production or that the database migration has been applied.",
+  "events": [
+    {"key":"email_verified","pillar":"accountability","disposition":"positive","baseImpact":5,"oneTime":true,"dailyDiminishing":false,"sourceRequirement":"authoritative verified-email outcome","withholding":"repeat verification is withheld","activityEvent":"reputation.event_awarded","publicVisibility":"private"},
+    {"key":"accountability_identity_declared","pillar":"accountability","disposition":"positive","baseImpact":5,"oneTime":true,"dailyDiminishing":false,"sourceRequirement":"private accountability declaration; it is not proof of legal identity","withholding":"repeat declaration is withheld","activityEvent":"reputation.event_awarded","publicVisibility":"private"},
+    {"key":"qualifying_human_contribution","pillar":"contribution","disposition":"positive","baseImpact":10,"oneTime":false,"dailyDiminishing":true,"sourceRequirement":"authoritative qualifying human-authored contribution","withholding":"AI-assisted, AI-generated, duplicate, self-interaction, suspension, and daily-cap outcomes are withheld","activityEvent":"reputation.event_awarded","publicVisibility":"private"},
+    {"key":"verified_source","pillar":"sourcing","disposition":"positive","baseImpact":5,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"authoritative source-verification outcome","withholding":"unverified or irrelevant sources must not produce this signal","activityEvent":"reputation.event_awarded","publicVisibility":"private"},
+    {"key":"confirmed_spam","pillar":"conduct","disposition":"negative","baseImpact":-20,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"confirmed moderation outcome","withholding":"unconfirmed reports are not guilt","activityEvent":"reputation.deduction_applied","publicVisibility":"private"},
+    {"key":"confirmed_harassment","pillar":"conduct","disposition":"negative","baseImpact":-30,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"confirmed moderation outcome","withholding":"civil disagreement alone is not this signal","activityEvent":"reputation.deduction_applied","publicVisibility":"private"},
+    {"key":"authenticity_evasion","pillar":"authenticity","disposition":"negative","baseImpact":-25,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"authoritative deliberate mislabelling or evasion finding","withholding":"tool use or accessibility assistance alone is not this signal","activityEvent":"reputation.deduction_applied","publicVisibility":"private"},
+    {"key":"reliable_review","pillar":"reviewReliability","disposition":"positive","baseImpact":5,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"authoritative qualified-review reliability outcome","withholding":"Level 5 or payment alone never creates reviewer authority","activityEvent":"reputation.event_awarded","publicVisibility":"private"},
+    {"key":"reputation_event_reversal","pillar":null,"disposition":"reversed","baseImpact":0,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"valid reference to one effective prior reputation event","withholding":"missing, invalid, or already reversed references are withheld","activityEvent":"reputation.event_reversed","publicVisibility":"private"},
+    {"key":"ai_assisted_content","pillar":null,"disposition":"withheld","baseImpact":0,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"declared AI-assisted public content at most 249 normalised-and-trimmed graphemes","withholding":"no authorship reputation","activityEvent":"reputation.event_withheld","publicVisibility":"private"},
+    {"key":"ai_generated_content","pillar":null,"disposition":"withheld","baseImpact":0,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"generated-content handling outcome","withholding":"AI-generated public content is blocked and earns no reputation","activityEvent":"reputation.event_withheld","publicVisibility":"private"},
+    {"key":"raw_reaction_received","pillar":null,"disposition":"withheld","baseImpact":0,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"reaction count or receipt","withholding":"raw reactions never directly increase reputation","activityEvent":"reputation.event_withheld","publicVisibility":"private"},
+    {"key":"raw_follow_received","pillar":null,"disposition":"withheld","baseImpact":0,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"follow count or receipt","withholding":"raw followers never directly increase reputation","activityEvent":"reputation.event_withheld","publicVisibility":"private"},
+    {"key":"self_interaction","pillar":null,"disposition":"withheld","baseImpact":0,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"authoritative self-interaction detection","withholding":"self-interaction cannot farm reputation","activityEvent":"reputation.event_withheld","publicVisibility":"private"},
+    {"key":"duplicate_content","pillar":null,"disposition":"withheld","baseImpact":0,"oneTime":false,"dailyDiminishing":false,"sourceRequirement":"authoritative duplicate or near-duplicate determination","withholding":"duplicate content cannot farm reputation","activityEvent":"reputation.event_withheld","publicVisibility":"private"}
+  ],
+  "crossCuttingRules": {
+    "suspension": "Positive events are withheld while the subject is suspended; negative events remain recordable.",
+    "tierIndependence": "Free, Premium, and Black cannot alter event impact, level, reviewer qualification, or appeal vote weight.",
+    "publicDisclosure": "Public views are limited to reputation level and qualitative label; no detailed events, scores, private identity, or authenticity confidence are public.",
+    "reversal": "Reversal applies the inverse of one effective referenced event and marks the original event reversed."
+  }
+}

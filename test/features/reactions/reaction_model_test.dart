@@ -7,11 +7,10 @@ void main() {
   // ReactionType enum
   // ─────────────────────────────────────────────────────────────────────────
   group('ReactionType', () {
-    test('apiValue uses underscores for multi-word types', () {
-      expect(ReactionType.well_sourced.apiValue, 'well_sourced');
-      expect(ReactionType.low_effort.apiValue, 'low_effort');
-      expect(ReactionType.helpful.apiValue, 'helpful');
-      expect(ReactionType.report.apiValue, 'report');
+    test('apiValue mirrors canonical wire values', () {
+      expect(ReactionType.like.apiValue, 'like');
+      expect(ReactionType.insightful.apiValue, 'insightful');
+      expect(ReactionType.support.apiValue, 'support');
     });
 
     test('fromApi resolves all types', () {
@@ -27,33 +26,14 @@ void main() {
     group('direction / isPositive / isNegative', () {
       test('positive reactions have direction=1 and isPositive=true', () {
         for (final type in [
-          ReactionType.helpful,
-          ReactionType.well_sourced,
-          ReactionType.thoughtful,
-          ReactionType.agree,
+          ReactionType.like,
+          ReactionType.insightful,
+          ReactionType.support,
         ]) {
           expect(type.direction, 1, reason: '${type.name} should be positive');
           expect(type.isPositive, isTrue);
           expect(type.isNegative, isFalse);
         }
-      });
-
-      test('negative reactions have direction=-1 and isNegative=true', () {
-        for (final type in [
-          ReactionType.misleading,
-          ReactionType.low_effort,
-          ReactionType.disagree,
-        ]) {
-          expect(type.direction, -1, reason: '${type.name} should be negative');
-          expect(type.isNegative, isTrue);
-          expect(type.isPositive, isFalse);
-        }
-      });
-
-      test('report has direction=0 (neutral)', () {
-        expect(ReactionType.report.direction, 0);
-        expect(ReactionType.report.isPositive, isFalse);
-        expect(ReactionType.report.isNegative, isFalse);
       });
     });
 
@@ -63,8 +43,8 @@ void main() {
       }
     });
 
-    test('enum covers all 8 expected types', () {
-      expect(ReactionType.values.length, 8);
+    test('enum covers all canonical reaction types', () {
+      expect(ReactionType.values.length, 3);
     });
   });
 
@@ -74,13 +54,13 @@ void main() {
   group('ReactionSummary', () {
     test('fromJson / toJson round-trip', () {
       const summary = ReactionSummary(
-        counts: {'helpful': 3, 'agree': 1},
-        myReactionType: 'helpful',
+        counts: {'like': 3, 'insightful': 1},
+        myReactionType: 'like',
       );
       final json = summary.toJson();
       final restored = ReactionSummary.fromJson(json);
-      expect(restored.counts, {'helpful': 3, 'agree': 1});
-      expect(restored.myReactionType, 'helpful');
+      expect(restored.counts, {'like': 3, 'insightful': 1});
+      expect(restored.myReactionType, 'like');
     });
 
     test('defaults to empty counts and null myReactionType', () {
@@ -95,15 +75,9 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
   group('SubmitReactionRequest', () {
     test('serialises to expected JSON keys', () {
-      const req = SubmitReactionRequest(
-        targetContentId: 'post-1',
-        targetUserId: 'user-1',
-        reactionType: 'helpful',
-      );
+      const req = SubmitReactionRequest(postId: 'post-1', reactionType: 'like');
       final json = req.toJson();
-      expect(json['targetContentId'], 'post-1');
-      expect(json['targetUserId'], 'user-1');
-      expect(json['reactionType'], 'helpful');
+      expect(json, {'reactionType': 'like'});
     });
   });
 
@@ -113,15 +87,13 @@ void main() {
   group('SubmitReactionResponse', () {
     test('deserialises all fields', () {
       final response = SubmitReactionResponse.fromJson({
-        'reactionId': 'rxn-1',
-        'reactionType': 'helpful',
-        'includedInReputation': true,
-        'antiGamingStatus': 'clear',
+        'postId': 'post-1',
+        'reactionType': 'like',
+        'changed': true,
       });
-      expect(response.reactionId, 'rxn-1');
-      expect(response.reactionType, 'helpful');
-      expect(response.includedInReputation, isTrue);
-      expect(response.antiGamingStatus, 'clear');
+      expect(response.postId, 'post-1');
+      expect(response.reactionType, 'like');
+      expect(response.changed, isTrue);
     });
   });
 }
