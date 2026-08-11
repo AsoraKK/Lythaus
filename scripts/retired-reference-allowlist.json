@@ -6,6 +6,7 @@
     { "path": "docs/security/github-credential-purpose-inventory.md", "kind": "operational-evidence", "reason": "Sanitised credential-purpose evidence records provider classifications without secret values." },
     { "path": "docs/security/provider-decommission-follow-up.md", "kind": "operational-evidence", "reason": "The provider checklist records gated legacy state and proposed rollback actions." },
     { "path": "docs/architecture/email-guest-authentication-adr.md", "kind": "policy", "reason": "The authoritative decision record names removed providers to prevent restoration." },
+    { "path": "docs/architecture/adr-003-lythaus-current-state.md", "kind": "policy", "reason": "The governing current-state record names prohibited legacy providers and authentication modes to prevent restoration." },
     { "path": "README.md", "kind": "policy", "reason": "Repository source-of-truth guidance describes prohibited legacy fallbacks." },
     { "path": "AGENTS.md", "kind": "policy", "reason": "Agent safety guidance explicitly prohibits retired providers and branding." },
     { "path": ".github/copilot-instructions.md", "kind": "policy", "reason": "Agent safety guidance explicitly prohibits retired providers and branding." },

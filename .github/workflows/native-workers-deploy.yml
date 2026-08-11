@@ -214,9 +214,11 @@ jobs:
         run: npm run acceptance:adr003
       - name: Record candidate evidence assertions
         run: |
-          echo "DATABASE_IDENTITY_VERIFIED=true" >> "$GITHUB_ENV"
-          echo "BUDGET_ENFORCEMENT_VERIFIED=true" >> "$GITHUB_ENV"
-          echo "AUTHENTICATED_ACCEPTANCE_PROVEN=true" >> "$GITHUB_ENV"
+          {
+            echo "DATABASE_IDENTITY_VERIFIED=true"
+            echo "BUDGET_ENFORCEMENT_VERIFIED=true"
+            echo "AUTHENTICATED_ACCEPTANCE_PROVEN=true"
+          } >> "$GITHUB_ENV"
       - name: Reverify production schema before activation
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
