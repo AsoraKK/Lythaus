@@ -19,8 +19,8 @@
         "evidence": ["README.md", "docs/architecture/runtime.md", "infrastructure/lythaus-resource-registry.json"]
       },
       "postgres17Compatibility": {
-        "status": "REQUIRED",
-        "evidence": ["scripts/ci/validate-planetscale-postgres17.mjs", "database/planetscale/README.md"]
+        "status": "COMPLETED",
+        "evidence": ["scripts/ci/validate-planetscale-postgres17.mjs", ".github/workflows/native-planetscale-ci.yml", "database/planetscale/README.md"]
       },
       "rollbackPrepared": {
         "status": "COMPLETED",
