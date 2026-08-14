@@ -11,10 +11,12 @@ test('loads the immutable canonical migration payload and checksum set', () => {
   assert.equal(manifest.migrations.at(-1)?.name, '0013_marketing_waitlist.sql');
 });
 
-test('classifies catalog evidence without treating a partial state as applied', () => {
-  assert.equal(classifyArtifacts([{ present: false }, { present: false }]), 'NOT_APPLIED');
-  assert.equal(classifyArtifacts([{ present: true }, { present: true }]), 'FULLY_APPLIED');
-  assert.equal(classifyArtifacts([{ present: true }, { present: false }]), 'PARTIALLY_APPLIED');
+test('classifies catalog evidence without treating vacuous data invariants as applied structure', () => {
+  assert.equal(classifyArtifacts([{ kind: 'schema_artifact', present: false }, { kind: 'schema_artifact', present: false }]), 'NOT_APPLIED');
+  assert.equal(classifyArtifacts([{ kind: 'schema_artifact', present: true }, { kind: 'data_invariant', present: true }]), 'FULLY_APPLIED');
+  assert.equal(classifyArtifacts([{ kind: 'schema_artifact', present: true }, { kind: 'schema_artifact', present: false }]), 'PARTIALLY_APPLIED');
+  assert.equal(classifyArtifacts([{ kind: 'schema_artifact', present: false }, { kind: 'data_invariant', present: true }]), 'NOT_APPLIED');
+  assert.equal(classifyArtifacts([]), 'NOT_APPLIED');
 });
 
 test('requires complete canonical relation, function and data postconditions before recording 0009 through 0012', async () => {
@@ -48,6 +50,18 @@ test('requires complete canonical relation, function and data postconditions bef
     assert.equal(state.artifacts.find(({ artifact }) => artifact === missingArtifact)?.present, false);
     assert.throws(() => assertCompleteMigrationPostconditions(state), new RegExp(missingArtifact.replace(/[().]/g, '\\$&')));
   }
+});
+
+test('pre-migration waitlist absence stays NOT_APPLIED when no-plaintext invariant is vacuously true', async () => {
+  const client = {
+    async query(sql) {
+      return { rows: [{ present: sql.includes("column_name IN ('email', 'plain_email', 'raw_ip', 'ip_address', 'user_agent', 'turnstile_token')") }] };
+    },
+  };
+  const [state] = await classifyMigrationState(client, ['0013_marketing_waitlist.sql']);
+  assert.equal(state.state, 'NOT_APPLIED');
+  assert.equal(state.artifacts.find(({ artifact }) => artifact === 'waitlist_no_plaintext_columns')?.present, true);
+  assert.ok(state.artifacts.filter(({ kind }) => kind !== 'data_invariant').every(({ present }) => present === false));
 });
 
 test('treats missing pre-migration tables or columns as absent postconditions and still fails unexpected query errors', async () => {
