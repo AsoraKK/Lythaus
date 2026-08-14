@@ -1,4 +1,8 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { APPROVED_MIGRATIONS, expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
+
+const root = process.cwd();
 
 // These fingerprints are generated against the canonical PostgreSQL 17 schema after
 // applying immutable migrations 0000 through 0013. A relation contract includes every
@@ -54,10 +58,29 @@ const relationContracts = {
   },
 };
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function canonicalFunctionBody(migrationName, qualifiedName) {
+  const migrationPath = path.join(root, 'database', 'planetscale', 'migrations', migrationName);
+  const source = fs.readFileSync(migrationPath, 'utf8').replace(/\r\n/g, '\n');
+  const pattern = new RegExp(`CREATE(?: OR REPLACE)? FUNCTION\\s+${escapeRegex(qualifiedName)}\\s*\\([^)]*\\)[\\s\\S]*?\\bAS\\s+\\$\\$([\\s\\S]*?)\\$\\$;`, 'g');
+  const matches = [...source.matchAll(pattern)];
+  if (matches.length !== 1) throw new Error(`expected exactly one canonical function body for ${qualifiedName} in ${migrationName}; found ${matches.length}`);
+  return matches[0][1];
+}
+
 const functionContracts = {
   '0012_product_integrity_v2.sql': {
-    'privacy.reconcile_subject_data_locations(p_subject_id uuid)': 'd0cbeb886b3c149cb4260b8e1c542321bb34ae7583aa9a6c5f6b11332acb3b20',
-    'privacy.reconcile_subject_data_locations_pre_integrity_v2(p_subject_id uuid)': '52d9c09564b5a6bfbce569c66ff30399c3fae33ce01e06660d9e116b72611303',
+    'privacy.reconcile_subject_data_locations(p_subject_id uuid)': {
+      canonicalBody: canonicalFunctionBody('0012_product_integrity_v2.sql', 'privacy.reconcile_subject_data_locations'),
+      searchPath: ['pg_catalog', 'privacy', 'trust', 'moderation'],
+      resultType: 'integer',
+    },
+    'privacy.reconcile_subject_data_locations_pre_integrity_v2(p_subject_id uuid)': {
+      canonicalBody: canonicalFunctionBody('0004_launch_contract.sql', 'privacy.reconcile_subject_data_locations'),
+      searchPath: ['pg_catalog', 'privacy', 'identity', 'content', 'social', 'feed', 'moderation', 'trust', 'media', 'editorial'],
+      resultType: 'integer',
+    },
   },
 };
 
@@ -99,9 +122,16 @@ SELECT resolved.relation_oid IS NOT NULL
   AND encode(digest(contract.value::text, 'sha256'), 'hex') = '${fingerprint}' AS present
 FROM resolved CROSS JOIN contract`;
 
-const functionContractSql = (label, identity, fingerprint) => {
+const dollarQuote = (value) => {
+  const tag = '$lythaus_function_contract$';
+  if (value.includes(tag)) throw new Error('canonical function body contains reserved contract delimiter');
+  return `${tag}${value}${tag}`;
+};
+
+const functionContractSql = (label, identity, contract) => {
   const [qualifiedName, argumentsText] = identity.slice(0, -1).split('(');
   const [schema, name] = qualifiedName.split('.');
+  const normalizedSearchPath = contract.searchPath.join(',');
   return `/* migration-artifact:${label} */
 SELECT EXISTS (
   SELECT 1
@@ -111,7 +141,13 @@ SELECT EXISTS (
    WHERE procedure_namespace.nspname = '${schema}'
      AND procedure_entry.proname = '${name}'
      AND pg_get_function_identity_arguments(procedure_entry.oid) = '${argumentsText}'
-     AND encode(digest(jsonb_build_object('language', procedure_language.lanname, 'securityDefiner', procedure_entry.prosecdef, 'config', procedure_entry.proconfig, 'definition', pg_get_functiondef(procedure_entry.oid))::text, 'sha256'), 'hex') = '${fingerprint}'
+     AND procedure_language.lanname = 'plpgsql'
+     AND procedure_entry.prosecdef IS TRUE
+     AND pg_get_function_result(procedure_entry.oid) = '${contract.resultType}'
+     AND procedure_entry.prosrc = ${dollarQuote(contract.canonicalBody)}
+     AND cardinality(procedure_entry.proconfig) = 1
+     AND split_part(procedure_entry.proconfig[1], '=', 1) = 'search_path'
+     AND regexp_replace(split_part(procedure_entry.proconfig[1], '=', 2), '[[:space:]]+', '', 'g') = '${normalizedSearchPath}'
 ) AS present`;
 };
 
@@ -158,10 +194,10 @@ const contractArtifacts = Object.fromEntries(
         kind: 'relation_contract',
         sql: relationContractSql(`relation:${relation}`, relation, fingerprint),
       })),
-      ...Object.entries(functionContracts[name] ?? {}).map(([identity, fingerprint]) => ({
+      ...Object.entries(functionContracts[name] ?? {}).map(([identity, contract]) => ({
         artifact: `function:${identity}`,
         kind: 'function_contract',
-        sql: functionContractSql(`function:${identity}`, identity, fingerprint),
+        sql: functionContractSql(`function:${identity}`, identity, contract),
       })),
       ...(columnContracts[name] ?? []).map(([relation, column, type]) => ({
         artifact: `column:${relation}.${column}`,
