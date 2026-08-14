@@ -115,6 +115,14 @@ jobs:
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/public-before.json" unused PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/admin-before.json" unused ADMIN
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/jobs-before.json" unused JOBS
+      - name: Capture predeployment same-origin admin API route
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+        run: |
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
+            "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
+            'admin.lythaus.co/api/admin/*'
       - name: Record verified main routing assertion
         run: echo "HYPERDRIVE_VERIFIED_MAIN=true" >> "$GITHUB_ENV"
       - name: Verify production schema read-only
@@ -242,14 +250,33 @@ jobs:
           echo "ADMIN_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
           npx wrangler versions deploy "${JOBS_WORKER_VERSION_ID}@100" --name lythaus-jobs-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
           echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+      - name: Publish and verify same-origin admin API route
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+        run: |
+          echo "ADMIN_ROUTE_TRIGGER_ATTEMPTED=true" >> "$GITHUB_ENV"
+          npx wrangler triggers deploy --config apps/lythaus-admin-api/wrangler.jsonc --name lythaus-admin-api-development
+          echo "ADMIN_ROUTE_TRIGGER_DEPLOYED=true" >> "$GITHUB_ENV"
+          node scripts/ci/manage-cloudflare-worker-route.mjs verify \
+            "$RUNNER_TEMP/production-cutover/admin-api-route-after.json" \
+            'admin.lythaus.co/api/admin/*' \
+            lythaus-admin-api-development
       - name: Roll back partial Worker deployment on failure
         if: failure()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
         run: |
           set +e
           rollback_failed=0
+          if [[ "${ADMIN_ROUTE_TRIGGER_ATTEMPTED:-false}" == "true" ]]; then
+            node scripts/ci/manage-cloudflare-worker-route.mjs restore \
+              "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
+              'admin.lythaus.co/api/admin/*' || rollback_failed=1
+          fi
           if [[ "${JOBS_WORKER_DEPLOYED:-false}" == "true" ]]; then
             npx wrangler versions deploy $JOBS_ROLLBACK_SPECS --name lythaus-jobs-development --yes --message "Restore exact predeployment Lythaus jobs versions" || rollback_failed=1
           fi
