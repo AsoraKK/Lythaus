@@ -6,6 +6,8 @@ on:
     paths:
       - 'database/planetscale/**'
       - 'scripts/ci/validate-planetscale-postgres17.mjs'
+      - 'scripts/ci/planetscale-migration-reconciliation.mjs'
+      - 'scripts/ci/verify-planetscale-local-postconditions.mjs'
       - '.github/workflows/native-planetscale-ci.yml'
 
 permissions:
@@ -44,3 +46,7 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: npm run validate:planetscale-postgres17
+      - name: Verify canonical migration postconditions on PostgreSQL 17
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: node scripts/ci/verify-planetscale-local-postconditions.mjs
