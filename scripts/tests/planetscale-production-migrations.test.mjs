@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { APPROVED_MIGRATIONS, EXPECTED_MIGRATION_BYTES, EXPECTED_MIGRATION_SET_SHA256, loadApprovedMigrations } from '../ci/planetscale-migration-manifest.mjs';
-import { assertMigrationDataPreconditions, classifyArtifacts, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead } from '../ci/planetscale-migration-reconciliation.mjs';
+import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions, classifyArtifacts, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationPostconditions } from '../ci/planetscale-migration-reconciliation.mjs';
 
 test('loads the immutable canonical migration payload and checksum set', () => {
   const manifest = loadApprovedMigrations();
@@ -15,6 +15,39 @@ test('classifies catalog evidence without treating a partial state as applied', 
   assert.equal(classifyArtifacts([{ present: false }, { present: false }]), 'NOT_APPLIED');
   assert.equal(classifyArtifacts([{ present: true }, { present: true }]), 'FULLY_APPLIED');
   assert.equal(classifyArtifacts([{ present: true }, { present: false }]), 'PARTIALLY_APPLIED');
+});
+
+test('requires complete canonical relation, function and data postconditions before recording 0009 through 0012', async () => {
+  const requiredKinds = ['relation_contract', 'function_contract', 'data_invariant'];
+  for (const name of ['0009_cost_budget_enforcement.sql', '0010_native_runtime_parity.sql', '0011_email_guest_auth_only.sql', '0012_product_integrity_v2.sql']) {
+    const checks = migrationPostconditions[name];
+    assert.ok(checks.length > 0, `${name} must have postconditions`);
+    assert.ok(checks.some(({ kind }) => kind === 'relation_contract'), `${name} must verify complete relation contracts`);
+  }
+  for (const kind of requiredKinds) {
+    assert.ok(migrationPostconditions['0012_product_integrity_v2.sql'].some((check) => check.kind === kind), `0012 must verify ${kind}`);
+  }
+
+  const partialFixtures = [
+    ['0009_cost_budget_enforcement.sql', 'relation:system.cost_budget_reservations'],
+    ['0010_native_runtime_parity.sql', 'column:feed.notifications.dismissed_at'],
+    ['0011_email_guest_auth_only.sql', 'data:legacy_auth_flags_removed'],
+    ['0012_product_integrity_v2.sql', 'relation:trust.reputation_events'],
+    ['0012_product_integrity_v2.sql', 'function:privacy.reconcile_subject_data_locations(p_subject_id uuid)'],
+    ['0012_product_integrity_v2.sql', 'data:reactions_deduplicated'],
+  ];
+
+  for (const [name, missingArtifact] of partialFixtures) {
+    const client = {
+      async query(sql) {
+        return { rows: [{ present: !sql.includes(`migration-artifact:${missingArtifact}`) }] };
+      },
+    };
+    const [state] = await classifyMigrationState(client, [name]);
+    assert.equal(state.state, 'PARTIALLY_APPLIED', `${name} must reject missing ${missingArtifact}`);
+    assert.equal(state.artifacts.find(({ artifact }) => artifact === missingArtifact)?.present, false);
+    assert.throws(() => assertCompleteMigrationPostconditions(state), new RegExp(missingArtifact.replace(/[().]/g, '\\$&')));
+  }
 });
 
 test('permits incremental release and resume only from an exact canonical prefix', () => {
@@ -48,6 +81,7 @@ test('production runner preserves immutable registry history', async () => {
   assert.match(source, /incrementalRegistryHead\(registry\)/);
   assert.match(source, /classifyMigrationState/);
   assert.match(source, /recordFullyAppliedMigration/);
+  assert.match(source, /assertCompleteMigrationPostconditions/);
   assert.match(source, /verifyWaitlistPrivileges/);
   assert.match(source, /statement_timeout = '15min'/);
 });

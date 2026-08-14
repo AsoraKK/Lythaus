@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { APPROVED_MIGRATIONS, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
-import { assertMigrationDataPreconditions, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationDataRiskReport } from './planetscale-migration-reconciliation.mjs';
+import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationDataRiskReport } from './planetscale-migration-reconciliation.mjs';
 
 const { Client } = pg;
 const root = process.cwd();
@@ -59,7 +59,7 @@ async function applyMigration(client, migration, pendingRegistry = [], verifyPos
     await client.query(migration.contents.toString('utf8'));
     if (verifyPostcondition) {
       const [state] = await classifyMigrationState(client, [migration.name]);
-      if (state.state !== 'FULLY_APPLIED') throw new Error(`postcondition verification failed for ${migration.name}`);
+      assertCompleteMigrationPostconditions(state);
     }
     const registry = await registryRows(client);
     if (registry) {
@@ -79,7 +79,7 @@ async function recordFullyAppliedMigration(client, migration) {
   try {
     await acquireMigrationLock(client);
     const [state] = await classifyMigrationState(client, [migration.name]);
-    if (state.state !== 'FULLY_APPLIED') throw new Error(`catalog changed before recording ${migration.name}`);
+    assertCompleteMigrationPostconditions(state);
     await recordInsertOnly(client, migration);
     await client.query('COMMIT');
   } catch (error) {
