@@ -52,6 +52,14 @@ async function recordInsertOnly(client, migration) {
   if (inserted.rowCount !== 1) throw new Error(`migration registry already contains ${migration.name}`);
 }
 
+function verifyMigrationPostconditions(state) {
+  try {
+    assertCompleteMigrationPostconditions(state);
+  } catch (error) {
+    throw new Error(`postcondition verification failed: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+  }
+}
+
 async function applyMigration(client, migration, pendingRegistry = [], verifyPostcondition = false) {
   await client.query('BEGIN');
   try {
@@ -59,7 +67,7 @@ async function applyMigration(client, migration, pendingRegistry = [], verifyPos
     await client.query(migration.contents.toString('utf8'));
     if (verifyPostcondition) {
       const [state] = await classifyMigrationState(client, [migration.name]);
-      assertCompleteMigrationPostconditions(state);
+      verifyMigrationPostconditions(state);
     }
     const registry = await registryRows(client);
     if (registry) {
@@ -79,7 +87,7 @@ async function recordFullyAppliedMigration(client, migration) {
   try {
     await acquireMigrationLock(client);
     const [state] = await classifyMigrationState(client, [migration.name]);
-    assertCompleteMigrationPostconditions(state);
+    verifyMigrationPostconditions(state);
     await recordInsertOnly(client, migration);
     await client.query('COMMIT');
   } catch (error) {
