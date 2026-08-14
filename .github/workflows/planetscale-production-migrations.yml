@@ -48,7 +48,11 @@ jobs:
       - name: Reconcile production catalog read-only
         env:
           PSCALE_BRANCH_NAME: main
-          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          # The dedicated schema-read credential cannot inspect every application
+          # schema needed for migration postcondition classification. Use the
+          # migration admin credential here, but the script itself starts a
+          # READ ONLY transaction before issuing any catalog queries.
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
         run: |
           mkdir -p "$RUNNER_TEMP/planetscale-migration"
           node scripts/ci/reconcile-planetscale-migration-state.mjs > "$RUNNER_TEMP/planetscale-migration/reconciliation.json"
@@ -71,7 +75,9 @@ jobs:
       - name: Verify final production schema read-only
         env:
           PSCALE_BRANCH_NAME: main
-          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          # Final verification needs catalog visibility across all application
+          # schemas. The verifier immediately opens a READ ONLY transaction.
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
           REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
