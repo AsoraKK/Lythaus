@@ -1,0 +1,57 @@
+name: Verify exact-main PostgreSQL 17 gate
+
+on:
+  push:
+    branches:
+      - ops/release-e19c5ac4
+    paths:
+      - .github/workflows/ops-postgres17-gate.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-postgres17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RELEASE_SHA: cf01b0369e84421550c0fda532428804f0797657
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Require exact current main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Validate immutable migration and extension contracts
+        run: |
+          npm run validate:planetscale-migrations
+          npm run validate:planetscale-extensions
+      - name: Apply and verify complete PostgreSQL 17 baseline
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: npm run validate:planetscale-postgres17
