@@ -7,9 +7,14 @@ const databaseUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
 if (!databaseUrl) throw new Error('PLANETSCALE_SCHEMA_READ_DATABASE_URL is required');
 if (!branch) throw new Error('PSCALE_BRANCH_NAME is required');
-if (new URL(databaseUrl).searchParams.get('sslmode') !== 'verify-full') throw new Error('migration reconciliation requires sslmode=verify-full');
+const connection = new URL(databaseUrl);
+if (connection.searchParams.get('sslmode') !== 'verify-full') throw new Error('migration reconciliation requires sslmode=verify-full');
+// PlanetScale's libpq connection examples use sslrootcert=system. node-postgres
+// interprets sslrootcert as a literal filename, so remove only that special value
+// and rely on Node's system trust store while keeping certificate verification on.
+if (connection.searchParams.get('sslrootcert') === 'system') connection.searchParams.delete('sslrootcert');
 
-const client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: true } });
+const client = new Client({ connectionString: connection.toString(), ssl: { rejectUnauthorized: true } });
 await client.connect();
 try {
   await client.query('BEGIN READ ONLY');
