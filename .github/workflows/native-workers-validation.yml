@@ -26,6 +26,7 @@ on:
       - 'scripts/tests/budget-contract.test.mjs'
       - 'scripts/tests/db-identity-contract.test.mjs'
       - 'scripts/tests/native-architecture-invariants.test.js'
+      - 'scripts/tests/production-gates.test.mjs'
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
       - 'scripts/critical-coverage-gate.mjs'
       - 'scripts/critical-coverage-manifest.json'
@@ -56,6 +57,7 @@ on:
       - 'scripts/tests/budget-contract.test.mjs'
       - 'scripts/tests/db-identity-contract.test.mjs'
       - 'scripts/tests/native-architecture-invariants.test.js'
+      - 'scripts/tests/production-gates.test.mjs'
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
       - 'scripts/critical-coverage-gate.mjs'
       - 'scripts/critical-coverage-manifest.json'
@@ -86,6 +88,7 @@ jobs:
       - run: npm run validate:planetscale-migrations
       - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
+      - run: node --test scripts/tests/production-gates.test.mjs
       - run: npm run test:product-integrity-runtime
       - run: npm run test:critical-coverage
       - run: npm run test:database-identity
