@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
+import { APPLICATION_SCHEMAS, approvedPost0013Expectation, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
 
 const { Client } = pg;
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
@@ -10,9 +11,13 @@ const emitContract = process.argv.includes('--emit-contract');
 const committedOnly = process.argv.includes('--committed') || process.env.CI === 'true';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
 const requireProductIntegrityMigration = process.env.REQUIRE_PRODUCT_INTEGRITY_MIGRATION === 'true';
-const expectedSchemaFingerprint = process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '';
-const expectedRelationCount = Number(process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '0');
 const manifest = loadApprovedMigrations({ committedOnly });
+const post0013Expectation = requireProductIntegrityMigration || emitContract
+  ? approvedPost0013Expectation(
+    process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
+    process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
+  )
+  : null;
 
 if (manifestOnly) {
   console.log(`Verified ${manifest.migrations.length} committed production migrations, ${manifest.bytes} bytes.`);
@@ -26,23 +31,18 @@ if (!databaseUrl) throw new Error('PLANETSCALE_SCHEMA_READ_DATABASE_URL is requi
 const connection = new URL(databaseUrl);
 if (connection.searchParams.get('sslmode') !== 'verify-full') throw new Error('production schema verification requires sslmode=verify-full');
 if (connection.searchParams.get('sslrootcert') === 'system') connection.searchParams.delete('sslrootcert');
-if (requireProductIntegrityMigration && !emitContract && (!/^[0-9a-f]{64}$/.test(expectedSchemaFingerprint) || !Number.isInteger(expectedRelationCount) || expectedRelationCount <= 0)) {
-  throw new Error('post-0013 verification requires expected schema fingerprint and relation count');
-}
-
-const applicationSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'marketing', 'system'];
 
 async function schemaContract(client, registryRows) {
-  const schemaParams = applicationSchemas.map((_, index) => `$${index + 1}`).join(', ');
+  const schemaParams = APPLICATION_SCHEMAS.map((_, index) => `$${index + 1}`).join(', ');
   const [relations, columns, constraints, indexes, functions, extensions] = await Promise.all([
     client.query(`SELECT table_type, table_schema, table_name
       FROM information_schema.tables
       WHERE table_schema IN (${schemaParams})
-      ORDER BY table_type, table_schema, table_name`, applicationSchemas),
+      ORDER BY table_type, table_schema, table_name`, APPLICATION_SCHEMAS),
     client.query(`SELECT table_schema, table_name, ordinal_position, column_name, udt_name, is_nullable, COALESCE(column_default, '') AS column_default
       FROM information_schema.columns
       WHERE table_schema IN (${schemaParams})
-      ORDER BY table_schema, table_name, ordinal_position`, applicationSchemas),
+      ORDER BY table_schema, table_name, ordinal_position`, APPLICATION_SCHEMAS),
     client.query(`SELECT namespace.nspname AS table_schema, relation.relname AS table_name,
         constraint_row.conname, constraint_row.contype, constraint_row.convalidated,
         pg_get_constraintdef(constraint_row.oid, true) AS definition
@@ -50,11 +50,11 @@ async function schemaContract(client, registryRows) {
       JOIN pg_class relation ON relation.oid = constraint_row.conrelid
       JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
       WHERE namespace.nspname IN (${schemaParams})
-      ORDER BY namespace.nspname, relation.relname, constraint_row.conname`, applicationSchemas),
+      ORDER BY namespace.nspname, relation.relname, constraint_row.conname`, APPLICATION_SCHEMAS),
     client.query(`SELECT schemaname, tablename, indexname, indexdef
       FROM pg_indexes
       WHERE schemaname IN (${schemaParams})
-      ORDER BY schemaname, tablename, indexname`, applicationSchemas),
+      ORDER BY schemaname, tablename, indexname`, APPLICATION_SCHEMAS),
     client.query(`SELECT namespace.nspname AS function_schema, procedure.proname,
         pg_get_function_identity_arguments(procedure.oid) AS arguments,
         pg_get_function_result(procedure.oid) AS result_type,
@@ -63,10 +63,10 @@ async function schemaContract(client, registryRows) {
       FROM pg_proc procedure
       JOIN pg_namespace namespace ON namespace.oid = procedure.pronamespace
       WHERE namespace.nspname IN (${schemaParams})
-      ORDER BY namespace.nspname, procedure.proname, arguments`, applicationSchemas),
+      ORDER BY namespace.nspname, procedure.proname, arguments`, APPLICATION_SCHEMAS),
     client.query('SELECT extname, extversion FROM pg_extension ORDER BY extname'),
   ]);
-  const sections = [
+  const catalogSections = [
     ['relations', relations.rows],
     ['columns', columns.rows],
     ['constraints', constraints.rows],
@@ -75,10 +75,13 @@ async function schemaContract(client, registryRows) {
     ['extensions', extensions.rows],
     ['migrations', registryRows],
   ];
-  const payload = sections.map(([name, rows]) => `--${name}--\n${rows.map((row) => JSON.stringify(row)).join('\n')}`).join('\n');
+  const catalogPayload = catalogSections
+    .map(([name, rows]) => `--${name}--\n${rows.map((row) => JSON.stringify(row)).join('\n')}`)
+    .join('\n');
   return {
-    fingerprint: createHash('sha256').update(payload).digest('hex'),
+    fingerprint: runtimeSchemaFingerprint(relations.rows, registryRows),
     relationCount: relations.rowCount ?? relations.rows.length,
+    catalogFingerprint: createHash('sha256').update(catalogPayload).digest('hex'),
   };
 }
 
@@ -127,6 +130,7 @@ async function verifyWaitlistPrivileges(client) {
     throw new Error('production waitlist least-privilege contract failed');
   }
 }
+
 const client = new Client({ connectionString: connection.toString(), ssl: { rejectUnauthorized: true } });
 await client.connect();
 try {
@@ -146,8 +150,11 @@ try {
     if (emitContract) {
       console.log(JSON.stringify({ branch, ...contract }));
     } else {
-      if (contract.fingerprint !== expectedSchemaFingerprint) throw new Error('production post-0013 schema fingerprint mismatch');
-      if (contract.relationCount !== expectedRelationCount) throw new Error(`production post-0013 relation count is ${contract.relationCount}; expected ${expectedRelationCount}`);
+      if (contract.fingerprint !== post0013Expectation.fingerprint) throw new Error('production post-0013 schema fingerprint mismatch');
+      if (contract.relationCount !== post0013Expectation.relationCount) {
+        throw new Error(`production post-0013 relation count is ${contract.relationCount}; expected ${post0013Expectation.relationCount}`);
+      }
+      console.log(`Observed post-0013 catalog SHA-256: ${contract.catalogFingerprint}`);
     }
   }
   await client.query('ROLLBACK');
