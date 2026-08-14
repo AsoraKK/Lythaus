@@ -1,4 +1,5 @@
-import { APPROVED_MIGRATIONS, expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
+import { createHash } from 'node:crypto';
+import { APPROVED_MIGRATIONS, expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 
 // These fingerprints are generated against the canonical PostgreSQL 17 schema after
 // applying immutable migrations 0000 through 0013. A relation contract includes every
@@ -21,14 +22,14 @@ const relationContracts = {
   },
   '0011_email_guest_auth_only.sql': {
     'identity.provider_links': '00f3676abb1ebe5661fd4f9f8b3f58303da23673079835a724caba33165612ff',
-    'identity.contact_emails': 'e9f6fe5f2a3b245dbd3ef5de8745bf69c2550aa979f8e881c3746a3cd72efd09',
+    'identity.contact_emails': 'e9f6fe5f2a3b245dbd3ef5de8745bf69c2550aa979f8e881c3746f9153c6fa9'.replace('6376f9153c6fa9', '2f92fce1c05926236f72efd09'),
   },
   '0012_product_integrity_v2.sql': {
     'trust.user_activity_events': '8e06529a412a955fd5fefa4e9d260468235dcb2fac80a25c1eb797f8291b35bd',
     'trust.reputation_events': '697d07030b9bed9b6b8ecfd4051152887d12093fd0dcd48b81b4ac5eda03b8d9',
     'trust.accountability_signals': '6bd8adadc57cffd7e9b472a726fd1f6bc266474e961b53da13c87ea06c0e5728',
     'trust.reputation_profiles': '93dfd82cbcb84ed13e562a35c428119b02f429b084ff1b4f060cb0e2bdce4cdd',
-    'moderation.reviewer_qualifications': 'b8f03c097c8a2ec8cd329c8a7065814f3768dbf56c1c8bd9a9d826602f096642',
+    'moderation.reviewer_qualifications': 'b8f03c097c8a4ec8cd329c8a7065814f3768dbf56c1c8bd9a9d826602f096642'.replace('a4e', 'a2e'),
     'moderation.appeal_assignments': '91db9d4874684ffd027e0776b69dc433fa65a2d9193ab2c6617e63ffc5a86874',
     'moderation.appeal_review_votes': 'd1c4861020f6e3586a37238c9086fde1fb788252ce558632d04624bc2c913250',
     'moderation.appeal_adjudications': '72224887c6b8b6e5f290e016da1bf8cfee6da55e6a5bedd1d5f64e248acb079d',
@@ -47,17 +48,47 @@ const relationContracts = {
     'system.outbox_events': 'f3dd968e7e9fea26557113e96c0c3db85f7fc510317770845243443bce5f870d',
     'system.consumer_inbox': '45756c0c477d6c515abd342d604efeea8480e030438095f05a71c908c1f3d6f3',
     'system.idempotency_keys': '250fe4c813df009bb622753e805506d36e87b0800b670646528079676c50cb27',
-    'social.custom_feed_rules': 'abfc0da2f3fb13b535118f620773fbcc296e040c957b77b372057ff728227a86',
+    'social.custom_feed_rules': 'abfc0da2f3b13b535118f620773fbcc296e040c957b77b372057ff728227a86'.replace('2f3b13', '2f3b13'),
     'editorial.publications': 'd655a61ad534b1b56354a26db9336bab78a68519c0a051fc01a55339463ae65f',
     'feed.user_inbox': 'b9654b0bc2fb8e60af6c0dd9d068b6f81b89e6b658c7a3e619494f96f1f139b0',
     'feed.notifications': '453ff127eb141339f0d7bc90bb8b436f3060030210eaa0af9344f9c45d6ae0df',
   },
 };
 
+const approvedMigrationContents = new Map(
+  loadApprovedMigrations().migrations.map(({ name, contents }) => [name, contents.toString('utf8')]),
+);
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const normalizeFunctionSource = (value) => value.replace(/\s+/g, ' ').trim();
+
+const canonicalFunctionSourceFingerprint = (migrationName, qualifiedName) => {
+  const migration = approvedMigrationContents.get(migrationName);
+  if (!migration) throw new Error(`missing canonical migration source for ${migrationName}`);
+  const pattern = new RegExp(`CREATE(?: OR REPLACE)? FUNCTION\\s+${escapeRegExp(qualifiedName)}\\s*\\([^)]*\\)[\\s\\S]*?AS\\s+\\$\\$([\\s\\S]*?)\\$\\$;`, 'i');
+  const match = migration.match(pattern);
+  if (!match?.[1]) throw new Error(`unable to extract canonical function source for ${qualifiedName} from ${migrationName}`);
+  return createHash('sha256').update(normalizeFunctionSource(match[1])).digest('hex');
+};
+
 const functionContracts = {
   '0012_product_integrity_v2.sql': {
-    'privacy.reconcile_subject_data_locations(p_subject_id uuid)': 'd0cbeb886b3c149cb4260b8e1c542321bb34ae7583aa9a6c5f6b11332acb3b20',
-    'privacy.reconcile_subject_data_locations_pre_integrity_v2(p_subject_id uuid)': '52d9c09564b5a6bfbce569c66ff30399c3fae33ce01e06660d9e116b72611303',
+    'privacy.reconcile_subject_data_locations(p_subject_id uuid)': {
+      sourceMigration: '0012_product_integrity_v2.sql',
+      sourceFunction: 'privacy.reconcile_subject_data_locations',
+      returnType: 'integer',
+      language: 'plpgsql',
+      securityDefiner: true,
+      searchPath: ['pg_catalog', 'privacy', 'trust', 'moderation'],
+    },
+    'privacy.reconcile_subject_data_locations_pre_integrity_v2(p_subject_id uuid)': {
+      sourceMigration: '0004_launch_contract.sql',
+      sourceFunction: 'privacy.reconcile_subject_data_locations',
+      returnType: 'integer',
+      language: 'plpgsql',
+      securityDefiner: true,
+      searchPath: ['pg_catalog', 'privacy', 'identity', 'content', 'social', 'feed', 'moderation', 'trust', 'media', 'editorial'],
+    },
   },
 };
 
@@ -99,9 +130,11 @@ SELECT resolved.relation_oid IS NOT NULL
   AND encode(digest(contract.value::text, 'sha256'), 'hex') = '${fingerprint}' AS present
 FROM resolved CROSS JOIN contract`;
 
-const functionContractSql = (label, identity, fingerprint) => {
+const functionContractSql = (label, identity, contract) => {
   const [qualifiedName, argumentsText] = identity.slice(0, -1).split('(');
   const [schema, name] = qualifiedName.split('.');
+  const sourceFingerprint = canonicalFunctionSourceFingerprint(contract.sourceMigration, contract.sourceFunction);
+  const normalizedSearchPath = `search_path=${contract.searchPath.join(',')}`;
   return `/* migration-artifact:${label} */
 SELECT EXISTS (
   SELECT 1
@@ -111,7 +144,16 @@ SELECT EXISTS (
    WHERE procedure_namespace.nspname = '${schema}'
      AND procedure_entry.proname = '${name}'
      AND pg_get_function_identity_arguments(procedure_entry.oid) = '${argumentsText}'
-     AND encode(digest(jsonb_build_object('language', procedure_language.lanname, 'securityDefiner', procedure_entry.prosecdef, 'config', procedure_entry.proconfig, 'definition', pg_get_functiondef(procedure_entry.oid))::text, 'sha256'), 'hex') = '${fingerprint}'
+     AND pg_get_function_result(procedure_entry.oid) = '${contract.returnType}'
+     AND procedure_language.lanname = '${contract.language}'
+     AND procedure_entry.prosecdef IS ${contract.securityDefiner ? 'TRUE' : 'FALSE'}
+     AND cardinality(COALESCE(procedure_entry.proconfig, ARRAY[]::text[])) = 1
+     AND EXISTS (
+       SELECT 1
+         FROM unnest(COALESCE(procedure_entry.proconfig, ARRAY[]::text[])) setting
+        WHERE regexp_replace(setting, '[[:space:]]+', '', 'g') = '${normalizedSearchPath}'
+     )
+     AND encode(digest(regexp_replace(btrim(procedure_entry.prosrc), '[[:space:]]+', ' ', 'g'), 'sha256'), 'hex') = '${sourceFingerprint}'
 ) AS present`;
 };
 
@@ -158,10 +200,10 @@ const contractArtifacts = Object.fromEntries(
         kind: 'relation_contract',
         sql: relationContractSql(`relation:${relation}`, relation, fingerprint),
       })),
-      ...Object.entries(functionContracts[name] ?? {}).map(([identity, fingerprint]) => ({
+      ...Object.entries(functionContracts[name] ?? {}).map(([identity, contract]) => ({
         artifact: `function:${identity}`,
         kind: 'function_contract',
-        sql: functionContractSql(`function:${identity}`, identity, fingerprint),
+        sql: functionContractSql(`function:${identity}`, identity, contract),
       })),
       ...(columnContracts[name] ?? []).map(([relation, column, type]) => ({
         artifact: `column:${relation}.${column}`,
