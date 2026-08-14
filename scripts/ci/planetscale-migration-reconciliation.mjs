@@ -205,6 +205,8 @@ export function assertCompleteMigrationPostconditions(state) {
   throw new Error(`canonical postcondition verification failed for ${state.name}: ${missing.join(', ')}`);
 }
 
+const missingSchemaArtifactCodes = new Set(['42P01', '42703']);
+
 export async function classifyMigrationState(client, names = Object.keys(artifacts)) {
   const states = [];
   for (const name of names) {
@@ -215,6 +217,10 @@ export async function classifyMigrationState(client, names = Object.keys(artifac
       try {
         result = await client.query(sql);
       } catch (error) {
+        if (error && typeof error === 'object' && missingSchemaArtifactCodes.has(error.code)) {
+          results.push({ artifact, present: false });
+          continue;
+        }
         throw new Error(`postcondition query failed for ${name}/${artifact}`, { cause: error });
       }
       results.push({ artifact, present: result.rows[0]?.present === true });

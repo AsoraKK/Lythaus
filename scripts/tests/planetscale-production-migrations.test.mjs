@@ -50,6 +50,34 @@ test('requires complete canonical relation, function and data postconditions bef
   }
 });
 
+test('treats missing pre-migration tables or columns as absent postconditions and still fails unexpected query errors', async () => {
+  for (const code of ['42P01', '42703']) {
+    const client = {
+      async query() {
+        const error = new Error('schema artifact is not present yet');
+        error.code = code;
+        throw error;
+      },
+    };
+    const [state] = await classifyMigrationState(client, ['0012_product_integrity_v2.sql']);
+    assert.equal(state.state, 'NOT_APPLIED');
+    assert.ok(state.artifacts.length > 0);
+    assert.ok(state.artifacts.every(({ present }) => present === false));
+  }
+
+  const unexpectedClient = {
+    async query() {
+      const error = new Error('permission denied');
+      error.code = '42501';
+      throw error;
+    },
+  };
+  await assert.rejects(
+    classifyMigrationState(unexpectedClient, ['0012_product_integrity_v2.sql']),
+    /postcondition query failed for 0012_product_integrity_v2\.sql\//,
+  );
+});
+
 test('permits incremental release and resume only from an exact canonical prefix', () => {
   const prefix = APPROVED_MIGRATIONS.slice(0, 9).map(({ name, appliedSha256 }) => ({ version: name, checksum: appliedSha256 }));
   assert.equal(exactRegistryPrefix(prefix, '0008_legacy_relink_status.sql'), true);
