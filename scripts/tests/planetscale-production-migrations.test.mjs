@@ -78,6 +78,14 @@ test('treats missing pre-migration tables or columns as absent postconditions an
   );
 });
 
+test('production catalog reconciliation keeps read-only safety without one poisonable transaction', async () => {
+  const source = await (await import('node:fs/promises')).readFile('scripts/ci/reconcile-planetscale-migration-state.mjs', 'utf8');
+  assert.match(source, /SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY/);
+  assert.match(source, /SHOW transaction_read_only/);
+  assert.doesNotMatch(source, /BEGIN READ ONLY/);
+  assert.doesNotMatch(source, /client\.query\('ROLLBACK'\)/);
+});
+
 test('permits incremental release and resume only from an exact canonical prefix', () => {
   const prefix = APPROVED_MIGRATIONS.slice(0, 9).map(({ name, appliedSha256 }) => ({ version: name, checksum: appliedSha256 }));
   assert.equal(exactRegistryPrefix(prefix, '0008_legacy_relink_status.sql'), true);
