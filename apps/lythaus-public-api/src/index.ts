@@ -2693,6 +2693,7 @@ export default {
         return response(request, env, { status: 'ready', service: 'lythaus-public-api' });
       }
       if (request.method === 'GET' && url.pathname === '/.well-known/jwks.json') return new Response(env.JWT_PUBLIC_JWKS ?? '{"keys":[]}', { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=300' } });
+      if (request.method === 'POST' && url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       if (url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
