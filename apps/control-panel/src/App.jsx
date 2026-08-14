@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Appeals from './pages/Appeals.jsx';
 import Flags from './pages/Flags.jsx';
 import Users from './pages/Users.jsx';
+import Waitlist from './pages/Waitlist.jsx';
 import AppPreview from './pages/AppPreview.jsx';
 
 const NotFound = () => (
@@ -29,6 +30,7 @@ function App() {
             <Route path="/flags" element={<Flags />} />
             <Route path="/appeals" element={<Appeals />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/waitlist" element={<Waitlist />} />
             <Route path="/moderation" element={<Flags />} />
             <Route path="/audit" element={<Audit />} />
             <Route path="/preview" element={<AppPreview />} />

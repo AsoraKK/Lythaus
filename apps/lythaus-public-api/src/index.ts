@@ -13,6 +13,7 @@ import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyRequest
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
+import { parseWaitlistRequest, requireWaitlistSecrets, verifyWaitlistTurnstile, WAITLIST_SOURCE } from './waitlist-runtime-policy.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -105,6 +106,20 @@ async function enforceRateLimit(request: Request, env: Env, scope: string, limit
      WHERE system.rate_limit_windows.request_count < $4
      RETURNING request_count`,
     [scope, subjectHash, windowStartedAt, limit]);
+  if (result.rowCount !== 1) throw new Error('rate_limit_exceeded');
+}
+
+async function enforceWaitlistRateLimit(request: Request, env: Env, hmacKey: string): Promise<void> {
+  const abuseSubject = request.headers.get('cf-connecting-ip') ?? 'anonymous';
+  const subjectHash = hmacLookup(`waitlist:${abuseSubject}`, hmacKey);
+  const windowStartedAt = new Date(Math.floor(Date.now() / 60_000) * 60_000).toISOString();
+  const result = await query(env.DB_APP_FRESH,
+    `INSERT INTO system.rate_limit_windows (scope, subject_hash, window_started_at, request_count, expires_at)
+     VALUES ('waitlist-signup', $1, $2, 1, $2::timestamptz + interval '2 minutes')
+     ON CONFLICT (scope, subject_hash, window_started_at)
+     DO UPDATE SET request_count = system.rate_limit_windows.request_count + 1
+     WHERE system.rate_limit_windows.request_count < 5
+     RETURNING request_count`, [subjectHash, windowStartedAt]);
   if (result.rowCount !== 1) throw new Error('rate_limit_exceeded');
 }
 
@@ -540,6 +555,40 @@ async function principal(request: Request, env: Env): Promise<Principal> {
 
 async function readJson<T>(request: Request, maxBytes: number): Promise<T> {
   return readBoundedJson<T>(request, maxBytes);
+}
+
+async function joinWaitlist(request: Request, env: Env): Promise<Response> {
+  const submission = await parseWaitlistRequest(request);
+  const secrets = requireWaitlistSecrets(env);
+  await enforceWaitlistRateLimit(request, env, secrets.hmacKey);
+  await verifyWaitlistTurnstile({
+    token: submission.turnstileToken,
+    secret: secrets.turnstileSecret,
+    expectedHostnames: secrets.turnstileExpectedHostnames,
+  });
+  try {
+    const emailHmac = hmacLookup(submission.email, secrets.hmacKey);
+    const encrypted = await encryptField(submission.email, secrets.encryptionKey, 'v1');
+    await query(env.DB_APP_FRESH,
+      `INSERT INTO marketing.waitlist_signups
+         (id, email_lookup_hmac, email_ciphertext, encryption_key_version, status, source, consent_version)
+       VALUES ($1, decode($2, 'base64'), convert_to($3, 'utf8'), $4, 'waiting', $5, $6)
+       ON CONFLICT DO NOTHING`,
+      [uuidv7(), emailHmac, encrypted.ciphertext, encrypted.encryptionKeyVersion, WAITLIST_SOURCE, submission.consentVersion]);
+  } catch {
+    throw new Error('waitlist_unavailable');
+  }
+  logEvent({
+    service: 'lythaus-public-api',
+    event: 'marketing.waitlist_signup_processed',
+    correlationId: correlationId(request),
+    result: 'success',
+    source: WAITLIST_SOURCE,
+  });
+  return response(request, env, { ok: true, status: 'waitlisted' }, {
+    status: 200,
+    headers: { 'cache-control': 'no-store' },
+  });
 }
 
 function feedResponse(request: Request, env: Env, body: unknown, surface: FeedSurface, hasViewer: boolean): Response {
@@ -2676,6 +2725,8 @@ export default {
         return response(request, env, { status: 'ready', service: 'lythaus-public-api' });
       }
       if (request.method === 'GET' && url.pathname === '/.well-known/jwks.json') return new Response(env.JWT_PUBLIC_JWKS ?? '{"keys":[]}', { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=300' } });
+      if (request.method === 'POST' && url.pathname === '/api/waitlist') return await joinWaitlist(request, env);
+      if (url.pathname === '/api/waitlist') throw new Error('method_not_allowed');
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
       if (request.method === 'GET' && url.pathname === '/api/feed/discover') {

@@ -25,6 +25,7 @@ export 'package:lythaus_api_client/src/api/rewards_api.dart';
 export 'package:lythaus_api_client/src/api/social_api.dart';
 export 'package:lythaus_api_client/src/api/subscription_api.dart';
 export 'package:lythaus_api_client/src/api/users_api.dart';
+export 'package:lythaus_api_client/src/api/waitlist_api.dart';
 
 export 'package:lythaus_api_client/src/model/account_status_response.dart';
 export 'package:lythaus_api_client/src/model/account_status_update.dart';
@@ -175,3 +176,13 @@ export 'package:lythaus_api_client/src/model/users_me_retention_update_request.d
 export 'package:lythaus_api_client/src/model/validation_error_response.dart';
 export 'package:lythaus_api_client/src/model/validation_error_response_error.dart';
 export 'package:lythaus_api_client/src/model/validation_error_response_error_fields_inner.dart';
+export 'package:lythaus_api_client/src/model/waitlist_admin_item.dart';
+export 'package:lythaus_api_client/src/model/waitlist_admin_response.dart';
+export 'package:lythaus_api_client/src/model/waitlist_admin_response_summary.dart';
+export 'package:lythaus_api_client/src/model/waitlist_error.dart';
+export 'package:lythaus_api_client/src/model/waitlist_retention_hold_response.dart';
+export 'package:lythaus_api_client/src/model/waitlist_retention_hold_update.dart';
+export 'package:lythaus_api_client/src/model/waitlist_status_response.dart';
+export 'package:lythaus_api_client/src/model/waitlist_status_update.dart';
+export 'package:lythaus_api_client/src/model/waitlist_submission.dart';
+export 'package:lythaus_api_client/src/model/waitlist_success.dart';

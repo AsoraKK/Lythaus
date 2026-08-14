@@ -1,17 +1,19 @@
 import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, recordUserActivity, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
-import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, enforceAdminAllowPublication } from '@lythaus/contracts';
+import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, encodeCursor, enforceAdminAllowPublication } from '@lythaus/contracts';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
-import { constantTimeEqual, hmacLookup, uuidv7 } from '@lythaus/security';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { constantTimeEqual, decryptField, hmacLookup, uuidv7 } from '@lythaus/security';
 import { adminCorsPreflight, withAdminCors } from './admin-cors-policy.ts';
+import { requireActiveAdminMembership, verifiedAccessSubject, type AdminActor } from './admin-access-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
+import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
   DB_ADMIN_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
+  ACCESS_AUDIENCES?: string;
 }
 
 const ADMIN_ERROR_CODES = new Set([
@@ -27,22 +29,23 @@ const ADMIN_ERROR_CODES = new Set([
   'appeal_subject_not_found', 'appeal_vote_decision_invalid', 'appeal_vote_level_invalid',
   'appeal_vote_qualification_invalid', 'appeal_vote_weight_invalid',
   'invalid_account_status', 'invalid_editorial_publication', 'invalid_json',
+  'invalid_cursor', 'invalid_page_limit', 'invalid_waitlist_id', 'invalid_waitlist_retention_hold', 'invalid_waitlist_status',
   'invalid_legal_hold', 'invalid_moderation_outcome', 'invalid_public_label',
   'invalid_subscription_tier', 'invalid_user_search', 'legal_hold_not_found',
   'moderation_case_already_resolved', 'moderation_case_not_found', 'moderation_declaration_missing',
   'moderation_case_superseded', 'rate_limit_exceeded', 'reason_code_required',
-  'request_too_large', 'reviewer_qualification_state_invalid', 'user_not_found',
+  'request_too_large', 'reviewer_qualification_state_invalid', 'user_not_found', 'waitlist_not_found', 'waitlist_status_transition_invalid', 'waitlist_unavailable',
 ]);
 
 function adminError(error: unknown): { exposedCode: string; internalCode: string; status: number } {
   const internalCode = error instanceof Error ? error.message : 'non_error_thrown';
   const exposedCode = ADMIN_ERROR_CODES.has(internalCode) ? internalCode : 'admin_request_failed';
   const status = exposedCode === 'admin_request_failed' || exposedCode === 'appeal_adjudication_not_recorded' ? 500
-    : ['access_verification_not_configured', 'admin_subject_key_not_configured'].includes(exposedCode) ? 503
+    : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable'].includes(exposedCode) ? 503
       : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
         : exposedCode === 'admin_role_required' ? 403
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
-            : ['appeal_adjudication_locked', 'appeal_already_resolved', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing'].includes(exposedCode) ? 409
+            : ['appeal_adjudication_locked', 'appeal_already_resolved', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
               : exposedCode === 'request_too_large' ? 413
                 : exposedCode === 'rate_limit_exceeded' ? 429 : 400;
   return { exposedCode, internalCode, status };
@@ -55,41 +58,15 @@ function hasReadinessAuthorization(request: Request, env: Env): boolean {
   return constantTimeEqual(new TextEncoder().encode(configured), new TextEncoder().encode(supplied));
 }
 
-async function accessSubject(request: Request, env: Env): Promise<string> {
-  const assertion = request.headers.get('cf-access-jwt-assertion');
-  if (!assertion) throw new Error('access_required');
-  if (!env.ACCESS_JWKS_URL || !env.ACCESS_AUDIENCE) throw new Error('access_verification_not_configured');
-  let jwksUrl: URL;
-  try {
-    jwksUrl = new URL(env.ACCESS_JWKS_URL);
-  } catch {
-    throw new Error('access_verification_not_configured');
-  }
-  const jwks = createRemoteJWKSet(jwksUrl);
-  let verified;
-  try {
-    verified = await jwtVerify(assertion, jwks, {
-      audience: env.ACCESS_AUDIENCE,
-      issuer: env.ACCESS_TEAM_DOMAIN ? `https://${env.ACCESS_TEAM_DOMAIN}` : undefined,
-    });
-  } catch {
-    throw new Error('access_assertion_invalid');
-  }
-  const payload = verified.payload as { sub?: string; email?: string };
-  const subject = payload.sub ?? payload.email;
-  if (!subject) throw new Error('access_subject_missing');
-  return subject;
-}
-
-async function requireAdmin(request: Request, env: Env): Promise<{ userId: string; role: string }> {
+async function requireAdmin(request: Request, env: Env): Promise<AdminActor> {
   if (!env.ACCESS_SUBJECT_HMAC_KEY) throw new Error('admin_subject_key_not_configured');
-  const subjectHmac = hmacLookup(await accessSubject(request, env), env.ACCESS_SUBJECT_HMAC_KEY);
+  const subjectHmac = hmacLookup(await verifiedAccessSubject(request, env), env.ACCESS_SUBJECT_HMAC_KEY);
   const result = await query<{ user_id: string; role: string }>(env.DB_ADMIN_FRESH,
     `SELECT user_id, role FROM identity.admin_memberships WHERE access_subject_hmac = decode($1, 'base64') AND active = true`,
     [subjectHmac]
   );
   if (result.rowCount !== 1) throw new Error('admin_role_required');
-  return { userId: result.rows[0].user_id, role: result.rows[0].role };
+  return requireActiveAdminMembership(result.rows[0]);
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -119,6 +96,123 @@ async function listModerationCases(env: Env): Promise<unknown[]> {
      GROUP BY c.id, c.content_type, c.content_id, c.state, c.policy_version, c.created_at
      ORDER BY (c.state = 'open') DESC, c.created_at ASC LIMIT 200`);
   return result.rows;
+}
+
+interface WaitlistRow {
+  id: string;
+  email_ciphertext: string;
+  encryption_key_version: string;
+  status: string;
+  source: string;
+  created_at: string | Date;
+  retention_hold: boolean;
+}
+
+async function listWaitlist(request: Request, env: Env, actor: AdminActor, correlation: string): Promise<Response> {
+  assertWaitlistAdminRole(actor.role);
+  const encryptionKey = requireWaitlistEncryptionKey(env.PII_ENCRYPTION_KEY_V1);
+  const page = waitlistPageRequest(new URL(request.url));
+  const [records, summaryResult] = await Promise.all([
+    query<WaitlistRow>(env.DB_ADMIN_FRESH,
+      `SELECT id, convert_from(email_ciphertext, 'utf8') AS email_ciphertext,
+              encryption_key_version, status, source, created_at, retention_hold
+         FROM marketing.waitlist_signups
+        WHERE ($1::timestamptz IS NULL OR (created_at, id) < ($1::timestamptz, $2::uuid))
+        ORDER BY created_at DESC, id DESC
+        LIMIT $3`,
+      [page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]),
+    query<{ total_waiting: string; last_7_days: string }>(env.DB_ADMIN_FRESH,
+      `SELECT count(id) FILTER (WHERE status = 'waiting')::text AS total_waiting,
+              count(id) FILTER (WHERE created_at >= now() - interval '7 days')::text AS last_7_days
+         FROM marketing.waitlist_signups`),
+  ]);
+  const hasMore = records.rows.length > page.limit;
+  const selectedRows = records.rows.slice(0, page.limit);
+  const items = await Promise.all(selectedRows.map(async (row) => ({
+    id: row.id,
+    email: await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
+    status: row.status,
+    source: row.source,
+    createdAt: new Date(row.created_at).toISOString(),
+    retentionHold: row.retention_hold,
+  })));
+  const tail = selectedRows.at(-1);
+  await query(env.DB_ADMIN_FRESH,
+    `INSERT INTO system.audit_events
+       (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+     VALUES ($1, $2, 'marketing.waitlist_viewed', 'marketing.waitlist', NULL, 'WAITLIST_LIST_VIEW', $3, $4::jsonb)`,
+    [uuidv7(), actor.userId, correlation, JSON.stringify(waitlistAuditMetadata({
+      returnedRowCount: items.length,
+      requestedLimit: page.limit,
+      hasCursor: page.cursor !== null,
+      hasMore,
+    }))]);
+  return json({
+    items,
+    nextCursor: hasMore && tail ? encodeCursor({ timestamp: new Date(tail.created_at).toISOString(), id: tail.id }) : null,
+    summary: {
+      totalWaiting: Number(summaryResult.rows[0]?.total_waiting ?? 0),
+      last7Days: Number(summaryResult.rows[0]?.last_7_days ?? 0),
+    },
+  }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+}
+
+async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActor, rawId: string, correlation: string): Promise<Response> {
+  assertWaitlistAdminRole(actor.role);
+  const id = parseWaitlistId(rawId);
+  const status = parseWaitlistStatusUpdate(await readBoundedJson(request));
+  const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    const current = await client.query<{ status: string }>(
+      `SELECT status FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
+    if (current.rowCount !== 1) throw new Error('waitlist_not_found');
+    const previousStatus = current.rows[0].status;
+    assertWaitlistStatusTransition(previousStatus, status);
+    if (previousStatus !== status) {
+      await client.query(
+        `UPDATE marketing.waitlist_signups
+            SET status = $2,
+                updated_at = now(),
+                invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END,
+                converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END,
+                unsubscribed_at = CASE WHEN $2 = 'unsubscribed' THEN COALESCE(unsubscribed_at, now()) ELSE unsubscribed_at END,
+                purge_after = CASE WHEN $2 IN ('converted', 'unsubscribed')
+                  THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END
+          WHERE id = $1`, [id, status]);
+    }
+    await client.query(
+      `INSERT INTO system.audit_events
+         (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+       VALUES ($1, $2, 'marketing.waitlist_status_changed', 'marketing.waitlist', $3,
+               'WAITLIST_STATUS_CHANGE', $4, $5::jsonb)`,
+      [uuidv7(), actor.userId, id, correlation, JSON.stringify({ status, changed: previousStatus !== status })]);
+    return { id, status };
+  });
+  return json(result, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+}
+
+async function updateWaitlistRetentionHold(request: Request, env: Env, actor: AdminActor, rawId: string, correlation: string): Promise<Response> {
+  assertWaitlistAdminRole(actor.role);
+  const id = parseWaitlistId(rawId);
+  const active = parseWaitlistRetentionHoldUpdate(await readBoundedJson(request));
+  const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    const updated = await client.query<{ id: string; retention_hold: boolean }>(
+      `UPDATE marketing.waitlist_signups
+          SET retention_hold = $2,
+              updated_at = now(),
+              retention_hold_at = CASE WHEN $2 AND retention_hold = false THEN now() ELSE retention_hold_at END,
+              retention_hold_released_at = CASE WHEN $2 = false AND retention_hold THEN now() ELSE retention_hold_released_at END
+        WHERE id = $1
+      RETURNING id, retention_hold`, [id, active]);
+    if (updated.rowCount !== 1) throw new Error('waitlist_not_found');
+    await client.query(
+      `INSERT INTO system.audit_events
+         (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+       VALUES ($1, $2, 'marketing.waitlist_retention_hold_changed', 'marketing.waitlist', $3,
+               'WAITLIST_RETENTION_HOLD_CHANGE', $4, $5::jsonb)`,
+      [uuidv7(), actor.userId, id, correlation, JSON.stringify({ active })]);
+    return { id: updated.rows[0].id, retentionHold: updated.rows[0].retention_hold };
+  });
+  return json(result, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
 
 async function searchUsers(request: Request, env: Env): Promise<Response> {
@@ -999,6 +1093,11 @@ export default {
            FROM system.audit_events ORDER BY created_at DESC LIMIT 200`);
         return cors(json({ items: result.rows }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
       }
+      if (request.method === 'GET' && url.pathname === '/api/admin/waitlist') return cors(await listWaitlist(request, env, actor, id));
+      const waitlistStatus = url.pathname.match(/^\/api\/admin\/waitlist\/([^/]+)\/status$/);
+      if (request.method === 'POST' && waitlistStatus) return cors(await updateWaitlistStatus(request, env, actor, waitlistStatus[1], id));
+      const waitlistRetentionHold = url.pathname.match(/^\/api\/admin\/waitlist\/([^/]+)\/retention-hold$/);
+      if (request.method === 'POST' && waitlistRetentionHold) return cors(await updateWaitlistRetentionHold(request, env, actor, waitlistRetentionHold[1], id));
       if (request.method === 'GET' && url.pathname === '/api/admin/users/search') return cors(await searchUsers(request, env));
       if (url.pathname === '/api/admin/privacy/legal-holds' && ['GET', 'POST'].includes(request.method)) return cors(await legalHolds(request, env, actor, id));
       const legalHoldClear = url.pathname.match(/^\/api\/admin\/privacy\/legal-holds\/([^/]+)\/clear$/);

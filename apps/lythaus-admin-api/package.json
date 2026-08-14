@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@lythaus/cloudflare-env": "file:../../packages/cloudflare-env",
+    "@lythaus/contracts": "file:../../packages/contracts",
     "@lythaus/db": "file:../../packages/db",
     "@lythaus/observability": "file:../../packages/observability",
     "@lythaus/security": "file:../../packages/security"

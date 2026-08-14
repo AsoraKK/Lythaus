@@ -35,6 +35,9 @@ test('classifies public runtime errors into stable safe responses', () => {
   assert.equal(classifyPublicError(new Error('post_daily_limit_reached')).status, 429);
   assert.equal(classifyPublicError(new Error('email_delivery_failed_503')).status, 502);
   assert.equal(classifyPublicError(new Error('turnstile_unavailable')).status, 503);
+  assert.equal(classifyPublicError(new Error('waitlist_unavailable')).status, 503);
+  assert.equal(classifyPublicError(new Error('method_not_allowed')).status, 405);
+  assert.equal(classifyPublicError(new Error('unsupported_content_type')).status, 415);
   assert.equal(classifyPublicError(new Error('invalid_email')).status, 400);
   assert.deepEqual(classifyPublicError(new Error('database detail')), {
     exposedCode: 'request_failed', internalCode: 'database detail', status: 500,

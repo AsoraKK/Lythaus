@@ -111,6 +111,33 @@ void main() {
       // TODO
     });
 
+    // List private beta waitlist signups
+    //
+    // Administrator-only PII access. Every successful view is written to the admin audit log.
+    //
+    //Future<WaitlistAdminResponse> adminWaitlistList({ String cursor, int limit }) async
+    test('test adminWaitlistList', () async {
+      // TODO
+    });
+
+    // Set a waitlist retention hold
+    //
+    // Administrator and owner roles may set or release a retention hold. The response contains no email or encrypted-email fields.
+    //
+    //Future<WaitlistRetentionHoldResponse> adminWaitlistRetentionHoldUpdate(String waitlistId, WaitlistRetentionHoldUpdate waitlistRetentionHoldUpdate) async
+    test('test adminWaitlistRetentionHoldUpdate', () async {
+      // TODO
+    });
+
+    // Update a waitlist signup status
+    //
+    // Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.
+    //
+    //Future<WaitlistStatusResponse> adminWaitlistStatusUpdate(String waitlistId, WaitlistStatusUpdate waitlistStatusUpdate) async
+    test('test adminWaitlistStatusUpdate', () async {
+      // TODO
+    });
+
     // List admin audit events
     //
     //Future<AdminItems> productIntegrityAdminAuditList() async

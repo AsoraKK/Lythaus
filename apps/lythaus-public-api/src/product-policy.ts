@@ -1,43 +1,12 @@
 export {
   countUserPerceivedCharacters,
+  decodeCursor,
+  encodeCursor,
   enforceContentDeclaration,
+  pageRequest,
   type ContentDeclarationDecision,
+  type KeysetCursor,
 } from '@lythaus/contracts';
-
-export interface KeysetCursor {
-  timestamp: string;
-  id: string;
-}
-
-export function encodeCursor(cursor: KeysetCursor): string {
-  const raw = new TextEncoder().encode(JSON.stringify(cursor));
-  const binary = Array.from(raw, (byte) => String.fromCharCode(byte)).join('');
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/u, '');
-}
-
-export function decodeCursor(value: string | null): KeysetCursor | null {
-  if (!value) return null;
-  try {
-    const padded = value.replaceAll('-', '+').replaceAll('_', '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
-    const binary = atob(padded);
-    const decoded = new TextDecoder().decode(Uint8Array.from(binary, (character) => character.charCodeAt(0)));
-    const parsed = JSON.parse(decoded) as Partial<KeysetCursor>;
-    if (typeof parsed.timestamp !== 'string' || !Number.isFinite(Date.parse(parsed.timestamp))) throw new Error('invalid');
-    if (typeof parsed.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(parsed.id)) throw new Error('invalid');
-    return { timestamp: parsed.timestamp, id: parsed.id };
-  } catch {
-    throw new Error('invalid_cursor');
-  }
-}
-
-export function pageRequest(url: URL, maximum = 50): { limit: number; cursor: KeysetCursor | null } {
-  const requestedLimit = Number(url.searchParams.get('limit') ?? 25);
-  if (!Number.isInteger(requestedLimit) || requestedLimit < 1) throw new Error('invalid_page_limit');
-  return {
-    limit: Math.min(maximum, requestedLimit),
-    cursor: decodeCursor(url.searchParams.get('cursor')),
-  };
-}
 
 export interface CustomFeedRule {
   topic?: string;

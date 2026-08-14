@@ -26,6 +26,12 @@ import 'package:lythaus_api_client/src/model/moderation_decision_response.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 import 'package:lythaus_api_client/src/model/reviewer_qualification_response.dart';
 import 'package:lythaus_api_client/src/model/reviewer_qualification_update_request.dart';
+import 'package:lythaus_api_client/src/model/safety_limit_error.dart';
+import 'package:lythaus_api_client/src/model/waitlist_admin_response.dart';
+import 'package:lythaus_api_client/src/model/waitlist_retention_hold_response.dart';
+import 'package:lythaus_api_client/src/model/waitlist_retention_hold_update.dart';
+import 'package:lythaus_api_client/src/model/waitlist_status_response.dart';
+import 'package:lythaus_api_client/src/model/waitlist_status_update.dart';
 
 class AdminApi {
 
@@ -1334,6 +1340,304 @@ class AdminApi {
     }
 
     return Response<AccountTierResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// List private beta waitlist signups
+  /// Administrator-only PII access. Every successful view is written to the admin audit log.
+  ///
+  /// Parameters:
+  /// * [cursor]
+  /// * [limit]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [WaitlistAdminResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<WaitlistAdminResponse>> adminWaitlistList({
+    String? cursor,
+    int? limit = 50,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/waitlist';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'cloudflareAccess',
+            'keyName': 'CF-Access-Jwt-Assertion',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    WaitlistAdminResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(WaitlistAdminResponse),
+      ) as WaitlistAdminResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<WaitlistAdminResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Set a waitlist retention hold
+  /// Administrator and owner roles may set or release a retention hold. The response contains no email or encrypted-email fields.
+  ///
+  /// Parameters:
+  /// * [waitlistId]
+  /// * [waitlistRetentionHoldUpdate]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [WaitlistRetentionHoldResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<WaitlistRetentionHoldResponse>> adminWaitlistRetentionHoldUpdate({
+    required String waitlistId,
+    required WaitlistRetentionHoldUpdate waitlistRetentionHoldUpdate,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/waitlist/{waitlistId}/retention-hold'.replaceAll('{' r'waitlistId' '}', encodeQueryParameter(_serializers, waitlistId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'cloudflareAccess',
+            'keyName': 'CF-Access-Jwt-Assertion',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(WaitlistRetentionHoldUpdate);
+      _bodyData = _serializers.serialize(waitlistRetentionHoldUpdate, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    WaitlistRetentionHoldResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(WaitlistRetentionHoldResponse),
+      ) as WaitlistRetentionHoldResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<WaitlistRetentionHoldResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Update a waitlist signup status
+  /// Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.
+  ///
+  /// Parameters:
+  /// * [waitlistId]
+  /// * [waitlistStatusUpdate]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [WaitlistStatusResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<WaitlistStatusResponse>> adminWaitlistStatusUpdate({
+    required String waitlistId,
+    required WaitlistStatusUpdate waitlistStatusUpdate,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/waitlist/{waitlistId}/status'.replaceAll('{' r'waitlistId' '}', encodeQueryParameter(_serializers, waitlistId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'cloudflareAccess',
+            'keyName': 'CF-Access-Jwt-Assertion',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(WaitlistStatusUpdate);
+      _bodyData = _serializers.serialize(waitlistStatusUpdate, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    WaitlistStatusResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(WaitlistStatusResponse),
+      ) as WaitlistStatusResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<WaitlistStatusResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

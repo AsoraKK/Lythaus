@@ -52,7 +52,9 @@ await withClient(databaseUrl, async (client) => {
 const checks = {
   lythaus_runtime: [
     ['table', 'privacy.legal_holds', 'SELECT', false],
+    ['table', 'marketing.waitlist_signups', 'SELECT', false],
     ['schema', 'content', 'CREATE', false],
+    ['schema', 'marketing', 'CREATE', false],
     ['database', 'postgres', 'CREATE', false],
   ],
   lythaus_jobs: [
@@ -61,6 +63,8 @@ const checks = {
     ['role', 'current', 'CREATEROLE', false],
   ],
   lythaus_admin: [
+    ['table', 'marketing.waitlist_signups', 'INSERT', false],
+    ['schema', 'marketing', 'CREATE', false],
     ['database', 'postgres', 'CREATE', false],
     ['role', 'current', 'CREATEROLE', false],
   ],

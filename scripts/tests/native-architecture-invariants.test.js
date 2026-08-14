@@ -154,7 +154,10 @@ test('password hashing fallback is explicitly environment-gated', () => {
 });
 
 test('admin verifies Access JWTs independently', () => {
-  const source = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
+  const source = [
+    fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8'),
+    fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/admin-access-runtime-policy.ts'), 'utf8'),
+  ].join('\n');
   assert.match(source, /createRemoteJWKSet/);
   assert.match(source, /jwtVerify/);
   assert.match(source, /ACCESS_AUDIENCE/);
@@ -331,26 +334,28 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(script, /branch !== 'main'/);
   assert.match(script, /approval !== 'approved'/);
   assert.match(script, /sslmode.*verify-full/);
-  assert.match(script, /migration checksum mismatch/);
+  assert.match(script, /loadApprovedMigrations/);
+  assert.match(script, /exactRegistryPrefix/);
+  assert.match(script, /postcondition verification failed/);
+  assert.match(script, /PARTIALLY_APPLIED/);
   assert.doesNotMatch(script, /0001_feature_flags/);
   assert.match(verifier, /system\.schema_migrations/);
-  assert.match(verifier, /expectedMigrationBytes = 79_778/);
-  assert.match(verifier, /d06ac01ac0b47bf04c7c19dd5267ba9c7c13e7cd187ea5fb1f0f7621f206282e/);
-  assert.match(verifier, /migration SHA-256 mismatch/);
-  assert.match(verifier, /approved applied migration payload mismatch/);
+  assert.match(verifier, /loadApprovedMigrations/);
+  assert.match(verifier, /expectedMigrationPrefix/);
   assert.match(verifier, /searchParams\.get\('sslrootcert'\) === 'system'/);
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
   assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
   assert.match(verifier, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION/);
-  assert.match(verifier, /0012_product_integrity_v2\.sql/);
-  assert.match(verifier, /production post-0012 schema fingerprint mismatch/);
-  assert.match(verifier, /production post-0012 relation count/);
-  assert.doesNotMatch(verifier, /to_regclass|identity\.users|content\.posts/);
+  assert.match(verifier, /0013_marketing_waitlist\.sql/);
+  assert.match(verifier, /production post-0013 schema fingerprint mismatch/);
+  assert.match(verifier, /production post-0013 relation count/);
+  assert.match(verifier, /to_regclass\('marketing\.waitlist_signups'\)/);
+  assert.match(verifier, /system\.rate_limit_windows/);
   const deployIdentity = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
   assert.match(workflow, /MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'true'/);
   assert.match(workflow, /node scripts\/ci\/validate-product-integrity-deploy-identity\.mjs[\s\S]*validate:native-workers:provisioned/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0012_SCHEMA_FINGERPRINT/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0012_RELATION_COUNT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0013_SCHEMA_FINGERPRINT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0013_RELATION_COUNT/);
   assert.match(deployIdentity, /fs\.writeFileSync\(configPath, source/);
   assert.match(workflow, /Capture predeployment Worker state/);
   assert.match(workflow, /Roll back partial Worker deployment on failure/);

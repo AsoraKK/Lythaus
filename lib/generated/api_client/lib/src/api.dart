@@ -25,6 +25,7 @@ import 'package:lythaus_api_client/src/api/rewards_api.dart';
 import 'package:lythaus_api_client/src/api/social_api.dart';
 import 'package:lythaus_api_client/src/api/subscription_api.dart';
 import 'package:lythaus_api_client/src/api/users_api.dart';
+import 'package:lythaus_api_client/src/api/waitlist_api.dart';
 
 class LythausApiClient {
   static const String basePath = r'https://api.lythaus.co/api';
@@ -174,5 +175,11 @@ class LythausApiClient {
   /// by doing that all interceptors will not be executed
   UsersApi getUsersApi() {
     return UsersApi(dio, serializers);
+  }
+
+  /// Get WaitlistApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  WaitlistApi getWaitlistApi() {
+    return WaitlistApi(dio, serializers);
   }
 }

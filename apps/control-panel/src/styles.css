@@ -689,6 +689,167 @@ textarea.lyth-input {
   padding: 16px 0;
 }
 
+.waitlist-page {
+  --waitlist-bg: #1c1c1a;
+  --waitlist-surface: #232321;
+  --waitlist-surface-soft: #292927;
+  --waitlist-text: #f4f1ea;
+  --waitlist-muted: #9e9a92;
+  --waitlist-line: rgba(244, 241, 234, 0.14);
+  --waitlist-accent: #f2c98d;
+  color: var(--waitlist-text);
+}
+
+.waitlist-page .lyth-card {
+  background: var(--waitlist-surface);
+  border-color: var(--waitlist-line);
+  box-shadow: none;
+}
+
+.waitlist-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.waitlist-summary-card {
+  min-height: 138px;
+  align-content: space-between;
+}
+
+.waitlist-summary-card span {
+  color: var(--waitlist-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.waitlist-summary-card strong {
+  color: var(--waitlist-accent);
+  font-size: 2.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.waitlist-table-panel {
+  min-width: 0;
+}
+
+.waitlist-loading {
+  margin: 0;
+  padding: 28px 0;
+  color: var(--waitlist-muted);
+}
+
+.waitlist-page .notice.error {
+  display: grid;
+  gap: 5px;
+}
+
+.waitlist-page .notice.error span {
+  font-size: 0.88rem;
+}
+
+.waitlist-empty {
+  padding: 52px 16px;
+  text-align: center;
+}
+
+.waitlist-empty h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.waitlist-empty p {
+  margin: 9px 0 0;
+  color: var(--waitlist-muted);
+}
+
+.waitlist-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.waitlist-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.waitlist-table th,
+.waitlist-table td {
+  padding: 16px 14px;
+  border-bottom: 1px solid var(--waitlist-line);
+}
+
+.waitlist-table th {
+  color: var(--waitlist-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.waitlist-table td {
+  color: var(--waitlist-text);
+  font-size: 0.92rem;
+}
+
+.waitlist-table td:first-child {
+  font-weight: 600;
+}
+
+.waitlist-status {
+  display: inline-flex;
+  padding: 4px 8px;
+  color: var(--waitlist-accent);
+  background: rgba(242, 201, 141, 0.10);
+  border: 1px solid rgba(242, 201, 141, 0.25);
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.waitlist-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.waitlist-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.waitlist-actions select {
+  min-height: 34px;
+  padding: 6px 8px;
+  color: var(--waitlist-text);
+  background: var(--waitlist-surface-soft);
+  border: 1px solid var(--waitlist-line);
+  border-radius: 3px;
+}
+
+.waitlist-actions .lyth-button {
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: 0.78rem;
+}
+
+.waitlist-action-error {
+  margin: 0 0 14px;
+  color: var(--waitlist-accent);
+}
+
+@media (max-width: 720px) {
+  .waitlist-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

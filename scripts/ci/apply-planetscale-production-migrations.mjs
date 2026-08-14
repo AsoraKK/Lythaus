@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 import pg from 'pg';
+import { APPROVED_MIGRATIONS, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
+import { assertMigrationDataPreconditions, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationDataRiskReport } from './planetscale-migration-reconciliation.mjs';
 
 const { Client } = pg;
 const root = process.cwd();
@@ -14,116 +15,174 @@ const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
 
 if (branch !== 'main') throw new Error('production migrations require PSCALE_BRANCH_NAME=main');
 if (approval !== 'approved') throw new Error('production migrations require PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED=approved');
-if (usageApproval !== 'approved' || !Number.isFinite(usageMaxUsd) || usageMaxUsd < 0) {
-  throw new Error('production migrations require measured migration usage approval and a non-negative PLANETSCALE_MIGRATION_USAGE_MAX_USD');
-}
+if (usageApproval !== 'approved' || !Number.isFinite(usageMaxUsd) || usageMaxUsd < 0) throw new Error('production migrations require measured migration usage approval');
 if (!databaseUrl) throw new Error('PLANETSCALE_ADMIN_DATABASE_URL is required');
-const connection = new URL(databaseUrl);
-if (connection.searchParams.get('sslmode') !== 'verify-full') throw new Error('production migrations require sslmode=verify-full');
-
-const migrationsDir = path.join(root, 'database', 'planetscale', 'migrations');
-const migrationFiles = fs.readdirSync(migrationsDir)
-  .filter((file) => file.endsWith('.sql'))
-  .sort()
-  .map((file) => ({ name: file, file: path.join(migrationsDir, file), sql: fs.readFileSync(path.join(migrationsDir, file), 'utf8') }));
-const grantsFile = path.join(root, 'database', 'planetscale', 'grants', 'roles.sql');
-const roleLabels = ['runtime', 'admin', 'jobs', 'privacy', 'migrations'];
+if (new URL(databaseUrl).searchParams.get('sslmode') !== 'verify-full') throw new Error('production migrations require sslmode=verify-full');
 
 const quoteRoleIdentifier = (value) => {
   if (!/^pscale_api_[a-z0-9]+$/.test(value)) throw new Error(`invalid PlanetScale role identifier: ${value}`);
   return `"${value}"`;
 };
-
-for (const label of roleLabels) {
-  if (!roleIdentifiers[`lythaus_${label}`]) {
-    throw new Error(`missing PSCALE_ROLE_IDENTIFIERS entry for lythaus_${label}`);
-  }
+for (const label of ['runtime', 'admin', 'jobs', 'privacy', 'migrations']) {
+  if (!roleIdentifiers[`lythaus_${label}`]) throw new Error(`missing PSCALE_ROLE_IDENTIFIERS entry for lythaus_${label}`);
   quoteRoleIdentifier(roleIdentifiers[`lythaus_${label}`]);
 }
 
-function checksum(sql) {
-  return createHash('sha256').update(sql).digest('hex');
-}
-
-async function withClient(callback) {
-  const client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: true } });
-  await client.connect();
-  try {
-    return await callback(client);
-  } finally {
-    await client.end();
-  }
-}
-
-async function hasRegistry(client) {
-  const result = await client.query(`SELECT to_regclass('system.schema_migrations') AS registry`);
-  return Boolean(result.rows[0]?.registry);
-}
-
 async function registryRows(client) {
-  if (!(await hasRegistry(client))) return new Map();
-  const result = await client.query('SELECT version, checksum FROM system.schema_migrations');
-  return new Map(result.rows.map((row) => [row.version, row.checksum]));
+  const exists = await client.query("SELECT to_regclass('system.schema_migrations') AS registry");
+  if (!exists.rows[0]?.registry) return null;
+  const rows = await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
+  return rows.rows;
 }
 
-async function recordMigrations(client, rows) {
-  if (!(await hasRegistry(client))) return;
-  for (const row of rows) {
-    await client.query(
-      `INSERT INTO system.schema_migrations (version, checksum)
-       VALUES ($1, $2)
-       ON CONFLICT (version) DO UPDATE SET checksum = EXCLUDED.checksum`,
-      [row.name, row.checksum]
-    );
+async function acquireMigrationLock(client) {
+  await client.query("SET LOCAL lock_timeout = '10s'");
+  await client.query("SET LOCAL statement_timeout = '15min'");
+  await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'))");
+}
+
+async function recordInsertOnly(client, migration) {
+  const inserted = await client.query(
+    `INSERT INTO system.schema_migrations (version, checksum)
+     VALUES ($1, $2)
+     ON CONFLICT (version) DO NOTHING
+     RETURNING version`,
+    [migration.name, migration.checksum],
+  );
+  if (inserted.rowCount !== 1) throw new Error(`migration registry already contains ${migration.name}`);
+}
+
+async function applyMigration(client, migration, pendingRegistry = [], verifyPostcondition = false) {
+  await client.query('BEGIN');
+  try {
+    await acquireMigrationLock(client);
+    await client.query(migration.contents.toString('utf8'));
+    if (verifyPostcondition) {
+      const [state] = await classifyMigrationState(client, [migration.name]);
+      if (state.state !== 'FULLY_APPLIED') throw new Error(`postcondition verification failed for ${migration.name}`);
+    }
+    const registry = await registryRows(client);
+    if (registry) {
+      for (const row of [...pendingRegistry, migration]) await recordInsertOnly(client, row);
+    } else if (pendingRegistry.length !== 0) {
+      throw new Error('migration registry was not created by the canonical bootstrap migration');
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
   }
 }
 
-await withClient(async (client) => {
-  const existingUsers = await client.query("SELECT to_regclass('identity.users') AS users");
-  if (existingUsers.rows[0]?.users) {
-    const existingRows = await client.query('SELECT count(*)::bigint AS count FROM identity.users');
-    if (Number(existingRows.rows[0]?.count ?? 0) !== 0) throw new Error('main contains application users; refusing clean-slate production migration');
+async function recordFullyAppliedMigration(client, migration) {
+  await client.query('BEGIN');
+  try {
+    await acquireMigrationLock(client);
+    const [state] = await classifyMigrationState(client, [migration.name]);
+    if (state.state !== 'FULLY_APPLIED') throw new Error(`catalog changed before recording ${migration.name}`);
+    await recordInsertOnly(client, migration);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
   }
-  const existing = await registryRows(client);
-  const applied = [];
-  for (const migration of migrationFiles) {
-    const digest = checksum(migration.sql);
-    const recorded = existing.get(migration.name);
-    if (recorded) {
-      if (recorded !== digest) throw new Error(`migration checksum mismatch: ${migration.name}`);
-      continue;
-    }
+}
 
-    await client.query('BEGIN');
-    try {
-      process.stdout.write(`Applying ${migration.name}\n`);
-      await client.query(migration.sql);
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
-      throw error;
+async function verifyWaitlistPrivileges(client) {
+  const roles = {
+    runtime: roleIdentifiers.lythaus_runtime,
+    admin: roleIdentifiers.lythaus_admin,
+    privacy: roleIdentifiers.lythaus_privacy,
+  };
+  const checks = await client.query(`SELECT
+    has_column_privilege($1, 'marketing.waitlist_signups', 'email_lookup_hmac', 'INSERT') AS runtime_insert_hmac,
+    has_table_privilege($1, 'marketing.waitlist_signups', 'SELECT') AS runtime_select,
+    has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS admin_select_ciphertext,
+    has_column_privilege($2, 'marketing.waitlist_signups', 'email_lookup_hmac', 'SELECT') AS admin_select_hmac,
+    has_column_privilege($2, 'marketing.waitlist_signups', 'status', 'UPDATE') AS admin_update_status,
+    has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'UPDATE') AS admin_update_ciphertext,
+    has_table_privilege($3, 'marketing.waitlist_signups', 'DELETE') AS privacy_delete,
+    has_column_privilege($3, 'marketing.waitlist_signups', 'purge_after', 'SELECT') AS privacy_select_purge,
+    has_column_privilege($3, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS privacy_select_ciphertext`,
+  [roles.runtime, roles.admin, roles.privacy]);
+  const row = checks.rows[0];
+  if (!row?.runtime_insert_hmac || row.runtime_select
+    || !row.admin_select_ciphertext || row.admin_select_hmac
+    || !row.admin_update_status || row.admin_update_ciphertext
+    || !row.privacy_delete || !row.privacy_select_purge || row.privacy_select_ciphertext) {
+    throw new Error('waitlist least-privilege verification failed');
+  }
+}
+
+async function applyGrants(client) {
+  const template = fs.readFileSync(path.join(root, 'database', 'planetscale', 'grants', 'roles.sql'), 'utf8');
+  const sql = template.replace(/\blythaus_(runtime|admin|jobs|privacy|migrations)\b/g, (label) => quoteRoleIdentifier(roleIdentifiers[label]));
+  await client.query('BEGIN');
+  try {
+    await acquireMigrationLock(client);
+    await client.query(sql);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
+  }
+}
+
+const { migrations } = loadApprovedMigrations({ root, committedOnly: process.env.CI === 'true' });
+const client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: true } });
+await client.connect();
+try {
+  const registry = await registryRows(client);
+  let mode;
+  let pending;
+  if (registry === null) {
+    const users = await client.query("SELECT to_regclass('identity.users') AS users");
+    if (users.rows[0]?.users) {
+      const count = await client.query('SELECT count(*)::bigint AS count FROM identity.users');
+      if (Number(count.rows[0]?.count ?? 0) !== 0) throw new Error('bootstrap migration requires an empty identity.users relation');
     }
-    applied.push({ name: migration.name, checksum: digest });
-    const current = await registryRows(client);
-    if (current.size !== 0) {
-      await recordMigrations(client, applied);
-      applied.length = 0;
-    }
+    mode = 'bootstrap';
+    pending = migrations;
+  } else if (incrementalRegistryHead(registry) === '0013_marketing_waitlist.sql') {
+    mode = 'verified';
+    pending = [];
+  } else if (incrementalRegistryHead(registry)) {
+    const remainingNames = incrementalMigrationNames(incrementalRegistryHead(registry));
+    const states = await classifyMigrationState(client, remainingNames);
+    const unsafe = states.filter(({ state }) => state === 'PARTIALLY_APPLIED');
+    if (unsafe.length) throw new Error(`incremental migration reconciliation failed: ${JSON.stringify(unsafe)}`);
+    const dataRisks = await migrationDataRiskReport(client);
+    assertMigrationDataPreconditions(dataRisks);
+    console.log(`Migration data preflight (aggregate counts only): ${JSON.stringify(dataRisks)}`);
+    mode = 'incremental';
+    pending = migrations.filter(({ name }) => remainingNames.includes(name)).map((migration) => ({
+      migration,
+      initialState: states.find(({ name }) => name === migration.name)?.state ?? 'PARTIALLY_APPLIED',
+    }));
+  } else {
+    throw new Error('production migration registry is neither a clean bootstrap nor an exact canonical 0000-0008 through 0013 prefix');
   }
 
+  const bootstrapPending = [];
+  for (const item of pending) {
+    const migration = item.migration ?? item;
+    process.stdout.write(`Applying ${migration.name} (${mode})\n`);
+    if (mode === 'incremental' && item.initialState === 'FULLY_APPLIED') {
+      await recordFullyAppliedMigration(client, migration);
+    } else if (mode === 'bootstrap' && !['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql'].includes(migration.name)) {
+      await applyMigration(client, migration, bootstrapPending.splice(0));
+    } else {
+      await applyMigration(client, migration, [], mode === 'incremental');
+      if (mode === 'bootstrap') bootstrapPending.push(migration);
+    }
+    const currentRegistry = await registryRows(client);
+    if (!currentRegistry || !exactRegistryPrefix(currentRegistry, migration.name)) throw new Error(`registry prefix verification failed after ${migration.name}`);
+  }
   const finalRegistry = await registryRows(client);
-  if (finalRegistry.size === 0) throw new Error('migration registry was not created');
-  for (const migration of migrationFiles) {
-    const recorded = finalRegistry.get(migration.name);
-    if (recorded !== checksum(migration.sql)) throw new Error(`migration registry incomplete: ${migration.name}`);
-  }
-
-  const grantsTemplate = fs.readFileSync(grantsFile, 'utf8');
-  const grantsSql = grantsTemplate.replace(/\blythaus_(runtime|admin|jobs|privacy|migrations)\b/g, (label) => {
-    const identifier = roleIdentifiers[label];
-    if (!identifier) throw new Error(`missing PSCALE_ROLE_IDENTIFIERS entry for ${label}`);
-    return quoteRoleIdentifier(identifier);
-  });
-  await client.query(grantsSql);
-  console.log(`Validated and applied PlanetScale production migrations on ${branch}; development seed was not applied.`);
-});
+  if (!finalRegistry || !exactRegistryPrefix(finalRegistry, '0013_marketing_waitlist.sql')) throw new Error('production migration registry is incomplete after apply');
+  await applyGrants(client);
+  await verifyWaitlistPrivileges(client);
+  console.log(`Validated and applied PlanetScale production migrations on ${branch} (${mode}); no migration checksum was updated.`);
+} finally {
+  await client.end();
+}

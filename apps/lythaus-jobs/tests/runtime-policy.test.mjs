@@ -20,6 +20,7 @@ import {
   retentionCleanupPlan,
   reviewerReplacementPlan,
   securityAuditRetentionPlan,
+  waitlistRetentionCleanupPlan,
   workflowCreateFailurePlan,
 } from '../src/runtime-policy.ts';
 
@@ -86,6 +87,11 @@ test('plans privacy request, legal-hold, and retention workflow states', () => {
   assert.equal(retentionCleanupPlan(false, 'media'), 'delete_media');
   assert.equal(retentionCleanupPlan(false, 'comment'), 'skip');
   assert.deepEqual(securityAuditRetentionPlan(), { retentionDays: 365 });
+  const now = new Date('2026-08-14T00:00:00.000Z');
+  assert.equal(waitlistRetentionCleanupPlan({ purgeAfter: '2026-08-13T23:59:59.999Z', retentionHold: false, now }), 'delete');
+  assert.equal(waitlistRetentionCleanupPlan({ purgeAfter: '2026-08-14T00:00:00.001Z', retentionHold: false, now }), 'skip');
+  assert.equal(waitlistRetentionCleanupPlan({ purgeAfter: '2026-08-13T23:59:59.999Z', retentionHold: true, now }), 'skip');
+  assert.equal(waitlistRetentionCleanupPlan({ purgeAfter: 'not-a-date', retentionHold: false, now }), 'skip');
 });
 
 test('only allows the current canonical content revision into moderation', () => {

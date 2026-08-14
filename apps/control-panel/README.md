@@ -8,26 +8,16 @@ Note: Single-page app routing requires Pages redirect rules.
 
 ## Configuration
 
-### API Base URL
+### API Routing
 
-By default, the control panel calls the existing native admin Worker directly at
-`https://admin-api.lythaus.co/api/admin`.
+The control panel uses the same-origin `/api/admin` path. Cloudflare routes only
+that path on `admin.lythaus.co` to the existing native admin Worker; the direct
+`admin-api.lythaus.co` origin remains available for compatible administrative
+service and incident tooling.
 
 Note: Live file uploads are not supported yet; use URL inputs or mock mode.
 
-The Worker permits credentialed CORS only from the configured exact control-panel
-origin. Browser requests include the Cloudflare Access session cookie; the Worker
-then validates the Access assertion and the administrator membership before
-dispatching an operation. No service token is stored in or injected by the Pages
-application.
-
-To override the API origin for a reviewed environment:
-```bash
-VITE_ADMIN_API_URL=https://admin-api.lythaus.co/api npm run build
-```
-
-The client normalises a direct `/api` base to the canonical `/api/admin` route family.
-
-The Dashboard connection panel may store only a reviewed API URL override in
-`localStorage`. It never stores an administrator credential. Cloudflare Access
-remains a separate, required boundary on the admin API origin.
+Browser requests include the Cloudflare Access session cookie. The Worker then
+validates the Access assertion and administrator membership before dispatching
+an operation. No API override, service token or administrator credential is
+stored in the Pages application.

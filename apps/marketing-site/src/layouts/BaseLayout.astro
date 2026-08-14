@@ -3,8 +3,10 @@ const {
   title = 'Lythaus',
   description = 'A calm, human-first publishing network.',
   canonicalPath = '',
+  absoluteTitle = false,
+  homePage = false,
 } = Astro.props;
-const pageTitle = title ? `${title} | Lythaus` : 'Lythaus';
+const pageTitle = absoluteTitle ? title : title ? `${title} | Lythaus` : 'Lythaus';
 const siteUrl = Astro.site?.origin ?? 'https://lythaus.co';
 const canonicalUrl = `${siteUrl}${canonicalPath}`;
 import '../styles/global.css';
@@ -15,7 +17,7 @@ import '../styles/global.css';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#090a0b" />
+    <meta name="theme-color" content={homePage ? '#1c1c1a' : '#090a0b'} />
     <title>{pageTitle}</title>
     <link rel="canonical" href={canonicalUrl} />
 
@@ -36,35 +38,56 @@ import '../styles/global.css';
       rel="stylesheet"
     />
   </head>
-  <body>
+  <body class:list={{ 'home-page': homePage }}>
     <header class="site-header">
       <a class="brand" href="/" aria-label="Lythaus home">
         <img src="/brand/lythaus-mark.svg" alt="" width="34" height="34" />
         <span>Lythaus</span>
       </a>
       <nav class="site-nav" aria-label="Main navigation">
-        <a href="/features">Features</a>
-        <a href="/about">About</a>
-        <a href="/pricing">Pricing</a>
+        {homePage ? (
+          <>
+            <a href="#vision">Vision</a>
+            <a href="#principles">Principles</a>
+            <a href="#audience">Who it is for</a>
+          </>
+        ) : (
+          <>
+            <a href="/features">Features</a>
+            <a href="/about">About</a>
+            <a href="/pricing">Pricing</a>
+          </>
+        )}
       </nav>
-      <a class="header-cta" href="/#waitlist">Request invite</a>
+      <a class="header-cta" href="/#waitlist">{homePage ? 'Join waitlist' : 'Request invite'}</a>
     </header>
 
     <main class="page">
       <slot />
     </main>
 
-    <footer class="site-footer">
-      <a class="brand footer-brand" href="/" aria-label="Lythaus home">
-        <img src="/brand/lythaus-mark.svg" alt="" width="28" height="28" />
-        <span>Lythaus</span>
-      </a>
-      <p>A calmer place for human ideas.</p>
-      <div class="footer-links">
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
-        <a href="/invite">Redeem invite</a>
-      </div>
-    </footer>
+    {homePage ? (
+      <footer class="site-footer home-footer">
+        <p>© 2026 Lythaus</p>
+        <div class="footer-links">
+          <a href="#principles">Principles</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+        </div>
+      </footer>
+    ) : (
+      <footer class="site-footer">
+        <a class="brand footer-brand" href="/" aria-label="Lythaus home">
+          <img src="/brand/lythaus-mark.svg" alt="" width="28" height="28" />
+          <span>Lythaus</span>
+        </a>
+        <p>A calmer place for human ideas.</p>
+        <div class="footer-links">
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/invite">Redeem invite</a>
+        </div>
+      </footer>
+    )}
   </body>
 </html>

@@ -86,6 +86,9 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminReviewerQualificationUpdate**](doc/AdminApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersStatusUpdate**](doc/AdminApi.md#adminusersstatusupdate) | **POST** /admin/users/{userId}/status | Update account status
 [*AdminApi*](doc/AdminApi.md) | [**adminUsersTierUpdate**](doc/AdminApi.md#adminuserstierupdate) | **POST** /admin/users/{userId}/tier | Update subscription tier
+[*AdminApi*](doc/AdminApi.md) | [**adminWaitlistList**](doc/AdminApi.md#adminwaitlistlist) | **GET** /admin/waitlist | List private beta waitlist signups
+[*AdminApi*](doc/AdminApi.md) | [**adminWaitlistRetentionHoldUpdate**](doc/AdminApi.md#adminwaitlistretentionholdupdate) | **POST** /admin/waitlist/{waitlistId}/retention-hold | Set a waitlist retention hold
+[*AdminApi*](doc/AdminApi.md) | [**adminWaitlistStatusUpdate**](doc/AdminApi.md#adminwaitliststatusupdate) | **POST** /admin/waitlist/{waitlistId}/status | Update a waitlist signup status
 [*AdminApi*](doc/AdminApi.md) | [**productIntegrityAdminAuditList**](doc/AdminApi.md#productintegrityadminauditlist) | **GET** /admin/audit | List admin audit events
 [*AdminApi*](doc/AdminApi.md) | [**productIntegrityAdminUsersSearch**](doc/AdminApi.md#productintegrityadminuserssearch) | **GET** /admin/users/search | Search users
 [*AppealsApi*](doc/AppealsApi.md) | [**adminAppealsPendingAdjudicationList**](doc/AppealsApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
@@ -178,6 +181,7 @@ Class | Method | HTTP request | Description
 [*UsersApi*](doc/UsersApi.md) | [**usersGet**](doc/UsersApi.md#usersget) | **GET** /users/{id} | Get a public user profile
 [*UsersApi*](doc/UsersApi.md) | [**usersMeRegionUpdate**](doc/UsersApi.md#usersmeregionupdate) | **PUT** /users/me/region | Update private region and visibility preferences
 [*UsersApi*](doc/UsersApi.md) | [**usersMeRetentionUpdate**](doc/UsersApi.md#usersmeretentionupdate) | **PUT** /users/me/retention | Update a private content-retention rule
+[*WaitlistApi*](doc/WaitlistApi.md) | [**joinWaitlist**](doc/WaitlistApi.md#joinwaitlist) | **POST** /waitlist | Join the Lythaus private beta waitlist
 
 
 ## Documentation For Models
@@ -331,6 +335,16 @@ Class | Method | HTTP request | Description
  - [ValidationErrorResponse](doc/ValidationErrorResponse.md)
  - [ValidationErrorResponseError](doc/ValidationErrorResponseError.md)
  - [ValidationErrorResponseErrorFieldsInner](doc/ValidationErrorResponseErrorFieldsInner.md)
+ - [WaitlistAdminItem](doc/WaitlistAdminItem.md)
+ - [WaitlistAdminResponse](doc/WaitlistAdminResponse.md)
+ - [WaitlistAdminResponseSummary](doc/WaitlistAdminResponseSummary.md)
+ - [WaitlistError](doc/WaitlistError.md)
+ - [WaitlistRetentionHoldResponse](doc/WaitlistRetentionHoldResponse.md)
+ - [WaitlistRetentionHoldUpdate](doc/WaitlistRetentionHoldUpdate.md)
+ - [WaitlistStatusResponse](doc/WaitlistStatusResponse.md)
+ - [WaitlistStatusUpdate](doc/WaitlistStatusUpdate.md)
+ - [WaitlistSubmission](doc/WaitlistSubmission.md)
+ - [WaitlistSuccess](doc/WaitlistSuccess.md)
 
 
 ## Documentation For Authorization

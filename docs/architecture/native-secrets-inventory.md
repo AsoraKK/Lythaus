@@ -19,6 +19,7 @@ data are never stored in this file or in Git.
 ## Admin API Worker
 
 - `ACCESS_SUBJECT_HMAC_KEY`
+- `PII_ENCRYPTION_KEY_V1` (waitlist decryption only)
 
 ## Jobs Worker
 

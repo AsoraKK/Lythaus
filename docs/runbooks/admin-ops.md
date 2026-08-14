@@ -24,7 +24,7 @@ direct requests are for approved incident response or automation only.
 
 ## Live operations
 
-The following 16 operations are the complete supported admin surface. Paths in
+The following 17 operations are the complete supported admin surface. Paths in
 this table are relative to `https://admin-api.lythaus.co/api`.
 
 | Method | Path | Operational use |
@@ -33,6 +33,7 @@ this table are relative to `https://admin-api.lythaus.co/api`.
 | GET | `/admin/privacy/requests` | Read recent privacy requests; do not alter request state from this endpoint. |
 | GET | `/admin/moderation/cases` | List recent staff moderation cases. |
 | GET | `/admin/audit` | Read recent admin audit events for reconciliation. |
+| GET | `/admin/waitlist?limit=50&cursor=<opaque>` | Read administrator-only waitlist email addresses. Every successful view records `marketing.waitlist_viewed`; never copy addresses into operational logs. |
 | GET | `/admin/users/search?q=<query>` | Search users; `q` must be 2–120 characters. |
 | GET | `/admin/privacy/legal-holds` | List active and released legal holds. |
 | POST | `/admin/privacy/legal-holds` | Place a legal hold using the current `LegalHoldCreate` request. |
