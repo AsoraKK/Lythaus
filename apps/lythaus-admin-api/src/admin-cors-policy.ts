@@ -19,6 +19,25 @@ export function allowedAdminOrigin(origin: string | null, configured: string | u
   return configuredOrigins(configured).has(origin) ? origin : undefined;
 }
 
+function isJsonContentType(value: string | null): boolean {
+  return value?.split(';', 1)[0]?.trim().toLowerCase() === 'application/json';
+}
+
+/**
+ * CORS controls response visibility, not request delivery. Require the
+ * configured control-panel origin and JSON media type before mutation routes
+ * read a body or begin a transaction.
+ */
+export function assertAdminMutationRequest(request: Request, configured: string | undefined): void {
+  const origin = request.headers.get('origin');
+  if (!origin || origin !== new URL(request.url).origin || allowedAdminOrigin(origin, configured) !== origin) {
+    throw new Error('admin_mutation_origin_invalid');
+  }
+  if (!isJsonContentType(request.headers.get('content-type'))) {
+    throw new Error('admin_mutation_content_type_invalid');
+  }
+}
+
 function addOriginVary(headers: Headers): void {
   const values = (headers.get('vary') ?? '')
     .split(',')

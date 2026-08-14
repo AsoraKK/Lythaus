@@ -43,7 +43,7 @@
     "validate:production-gates:predeploy": "node scripts/validate-production-gates.mjs --phase predeploy",
     "validate:production-gates:final": "node scripts/validate-production-gates.mjs --phase final",
     "typecheck:native": "tsc -p tsconfig.native.json --noEmit",
-    "test:native-architecture": "node --experimental-strip-types --test scripts/tests/native-architecture-invariants.test.js apps/lythaus-public-api/tests/waitlist-handler-invariants.test.mjs apps/lythaus-admin-api/tests/admin-cors-policy.test.mjs apps/lythaus-admin-api/tests/request-body-policy.test.mjs apps/lythaus-admin-api/tests/waitlist-handler-invariants.test.mjs",
+    "test:native-architecture": "node --experimental-strip-types --experimental-test-module-mocks --test scripts/tests/native-architecture-invariants.test.js apps/lythaus-public-api/tests/waitlist-handler-invariants.test.mjs apps/lythaus-admin-api/tests/admin-cors-policy.test.mjs apps/lythaus-admin-api/tests/request-body-policy.test.mjs apps/lythaus-admin-api/tests/waitlist-handler-invariants.test.mjs apps/lythaus-admin-api/tests/waitlist-handler.test.mjs",
     "test:native-db-connection": "node --experimental-strip-types --test scripts/tests/db-connection-contract.test.mjs",
     "test:database-identity": "node --experimental-strip-types --test scripts/tests/db-identity-contract.test.mjs",
     "test:budget": "node --experimental-strip-types --test scripts/tests/budget-contract.test.mjs",

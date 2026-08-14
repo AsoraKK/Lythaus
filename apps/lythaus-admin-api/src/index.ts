@@ -3,7 +3,7 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, encodeCursor, enforceAdminAllowPublication } from '@lythaus/contracts';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, hmacLookup, uuidv7 } from '@lythaus/security';
-import { adminCorsPreflight, withAdminCors } from './admin-cors-policy.ts';
+import { adminCorsPreflight, assertAdminMutationRequest, withAdminCors } from './admin-cors-policy.ts';
 import { requireActiveAdminMembership, verifiedAccessSubject, type AdminActor } from './admin-access-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
@@ -19,7 +19,7 @@ interface Env extends EnvBindings {
 const ADMIN_ERROR_CODES = new Set([
   'access_assertion_invalid', 'access_required', 'access_subject_missing',
   'access_verification_not_configured', 'admin_public_label_declaration_mismatch',
-  'admin_role_required', 'admin_subject_key_not_configured',
+  'admin_mutation_content_type_invalid', 'admin_mutation_origin_invalid', 'admin_role_required', 'admin_subject_key_not_configured',
   'ai_assisted_character_limit_exceeded', 'ai_generated_public_content_blocked',
   'appeal_adjudication_decision_invalid', 'appeal_adjudication_locked',
   'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
@@ -43,10 +43,11 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
   const status = exposedCode === 'admin_request_failed' || exposedCode === 'appeal_adjudication_not_recorded' ? 500
     : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable'].includes(exposedCode) ? 503
       : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
-        : exposedCode === 'admin_role_required' ? 403
+        : ['admin_role_required', 'admin_mutation_origin_invalid'].includes(exposedCode) ? 403
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
             : ['appeal_adjudication_locked', 'appeal_already_resolved', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
               : exposedCode === 'request_too_large' ? 413
+                : exposedCode === 'admin_mutation_content_type_invalid' ? 415
                 : exposedCode === 'rate_limit_exceeded' ? 429 : 400;
   return { exposedCode, internalCode, status };
 }
@@ -1095,9 +1096,15 @@ export default {
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/waitlist') return cors(await listWaitlist(request, env, actor, id));
       const waitlistStatus = url.pathname.match(/^\/api\/admin\/waitlist\/([^/]+)\/status$/);
-      if (request.method === 'POST' && waitlistStatus) return cors(await updateWaitlistStatus(request, env, actor, waitlistStatus[1], id));
+      if (request.method === 'POST' && waitlistStatus) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await updateWaitlistStatus(request, env, actor, waitlistStatus[1], id));
+      }
       const waitlistRetentionHold = url.pathname.match(/^\/api\/admin\/waitlist\/([^/]+)\/retention-hold$/);
-      if (request.method === 'POST' && waitlistRetentionHold) return cors(await updateWaitlistRetentionHold(request, env, actor, waitlistRetentionHold[1], id));
+      if (request.method === 'POST' && waitlistRetentionHold) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await updateWaitlistRetentionHold(request, env, actor, waitlistRetentionHold[1], id));
+      }
       if (request.method === 'GET' && url.pathname === '/api/admin/users/search') return cors(await searchUsers(request, env));
       if (url.pathname === '/api/admin/privacy/legal-holds' && ['GET', 'POST'].includes(request.method)) return cors(await legalHolds(request, env, actor, id));
       const legalHoldClear = url.pathname.match(/^\/api\/admin\/privacy\/legal-holds\/([^/]+)\/clear$/);

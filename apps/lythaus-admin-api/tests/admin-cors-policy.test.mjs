@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   adminCorsPreflight,
+  assertAdminMutationRequest,
   allowedAdminOrigin,
   withAdminCors,
 } from '../src/admin-cors-policy.ts';
@@ -45,4 +46,30 @@ test('preflight is fail closed for unconfigured origins and explicit for the con
   assert.equal(allowed.headers.get('access-control-allow-credentials'), 'true');
   assert.match(allowed.headers.get('access-control-allow-methods') ?? '', /POST/);
   assert.match(allowed.headers.get('access-control-allow-headers') ?? '', /Authorization/);
+});
+
+test('admin mutations require the configured same origin and JSON content type', () => {
+  const valid = new Request('https://admin.lythaus.co/api/admin/waitlist/id/status', {
+    method: 'POST',
+    headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json; charset=utf-8' },
+  });
+  assert.doesNotThrow(() => assertAdminMutationRequest(valid, configured));
+
+  const crossOrigin = new Request('https://admin.lythaus.co/api/admin/waitlist/id/status', {
+    method: 'POST',
+    headers: { origin: 'https://evil.example', 'content-type': 'application/json' },
+  });
+  assert.throws(() => assertAdminMutationRequest(crossOrigin, configured), /admin_mutation_origin_invalid/);
+
+  const crossHost = new Request('https://admin-api.lythaus.co/api/admin/waitlist/id/status', {
+    method: 'POST',
+    headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json' },
+  });
+  assert.throws(() => assertAdminMutationRequest(crossHost, configured), /admin_mutation_origin_invalid/);
+
+  const nonJson = new Request('https://admin.lythaus.co/api/admin/waitlist/id/status', {
+    method: 'POST',
+    headers: { origin: 'https://admin.lythaus.co', 'content-type': 'text/plain' },
+  });
+  assert.throws(() => assertAdminMutationRequest(nonJson, configured), /admin_mutation_content_type_invalid/);
 });
