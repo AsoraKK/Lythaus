@@ -1,9 +1,14 @@
 import fs from 'node:fs';
+import { approvedPost0013Expectation } from './product-integrity-schema-contract.mjs';
 
 const token = process.env.DATABASE_READINESS_TOKEN ?? '';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
-const expectedRelationCount = Number(process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '0');
-const expectedSchemaFingerprint = process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '';
+const post0013Expectation = approvedPost0013Expectation(
+  process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
+  process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
+);
+const expectedRelationCount = post0013Expectation.relationCount;
+const expectedSchemaFingerprint = post0013Expectation.fingerprint;
 const expectedSchemaVersion = process.env.EXPECTED_DATABASE_SCHEMA_VERSION ?? '';
 const expectedBudgetLedgerApplied = requireBudgetMigration;
 const expectedBranch = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true' ? 'main' : 'unknown';
@@ -16,8 +21,6 @@ if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
 if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTION_WORKER_VERSION_ID is required');
 if (!authenticatedAcceptanceProven) throw new Error('AUTHENTICATED_ACCEPTANCE_PROVEN=true is required');
-if (!Number.isInteger(expectedRelationCount) || expectedRelationCount <= 0) throw new Error('EXPECTED_DATABASE_RELATION_COUNT is invalid');
-if (!/^[0-9a-f]{64}$/.test(expectedSchemaFingerprint)) throw new Error('EXPECTED_DATABASE_SCHEMA_FINGERPRINT is required');
 if (expectedSchemaVersion !== '0013_marketing_waitlist.sql') throw new Error('production probes require migration 0013');
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
 
