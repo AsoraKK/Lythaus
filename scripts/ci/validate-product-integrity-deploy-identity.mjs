@@ -7,10 +7,7 @@ const configPaths = [
   'apps/lythaus-jobs/wrangler.jsonc',
 ];
 const requiredVersion = '0013_marketing_waitlist.sql';
-const post0013Expectation = approvedPost0013Expectation(
-  process.env.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT ?? '',
-  process.env.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT ?? '',
-);
+const post0013Expectation = approvedPost0013Expectation();
 const expectedFingerprint = post0013Expectation.fingerprint;
 const expectedRelationCount = String(post0013Expectation.relationCount);
 const materialize = process.env.MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS === 'true';
@@ -19,8 +16,7 @@ const relationCountPlaceholder = 'REPLACE_WITH_POST_0013_RELATION_COUNT';
 const accessTeamDomain = process.env.PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN ?? '';
 const accessAudiences = (process.env.PRODUCT_INTEGRITY_ACCESS_AUDIENCES ?? '')
   .split(',').map((value) => value.trim()).filter(Boolean);
-const accessJwksUrl = process.env.PRODUCT_INTEGRITY_ACCESS_JWKS_URL ?? '';
-const externalBackupHealthcheckUrl = process.env.PRODUCT_INTEGRITY_EXTERNAL_BACKUP_HEALTHCHECK_URL ?? '';
+const accessJwksUrl = `https://${accessTeamDomain}/cdn-cgi/access/certs`;
 
 function productionValue(source, key) {
   const production = source.slice(0, source.indexOf('"env"') === -1 ? source.length : source.indexOf('"env"'));
@@ -33,15 +29,6 @@ if (!/^[a-z0-9-]+\.cloudflareaccess\.com$/.test(accessTeamDomain)) {
 if (accessAudiences.length !== 2 || new Set(accessAudiences).size !== 2
   || accessAudiences.some((value) => !/^[A-Za-z0-9_-]{8,256}$/.test(value))) {
   throw new Error('PRODUCT_INTEGRITY_ACCESS_AUDIENCES must contain the two approved Cloudflare Access audiences');
-}
-if (accessJwksUrl !== `https://${accessTeamDomain}/cdn-cgi/access/certs`) {
-  throw new Error('PRODUCT_INTEGRITY_ACCESS_JWKS_URL must be the approved Access certificate URL');
-}
-try {
-  const backupUrl = new URL(externalBackupHealthcheckUrl);
-  if (backupUrl.protocol !== 'https:') throw new Error('protocol');
-} catch {
-  throw new Error('PRODUCT_INTEGRITY_EXTERNAL_BACKUP_HEALTHCHECK_URL must be an approved HTTPS URL');
 }
 
 for (const configPath of configPaths) {
@@ -65,9 +52,6 @@ for (const configPath of configPaths) {
       .replace('"REPLACE_WITH_ADMIN_UI_ACCESS_AUDIENCE,REPLACE_WITH_ADMIN_API_ACCESS_AUDIENCE"', JSON.stringify(accessAudiences.join(',')))
       .replace('"REPLACE_WITH_ACCESS_JWKS_URL"', JSON.stringify(accessJwksUrl));
   }
-  if (configPath.includes('jobs')) {
-    source = source.replace('"REPLACE_WITH_EXTERNAL_BACKUP_HEALTHCHECK_URL"', JSON.stringify(externalBackupHealthcheckUrl));
-  }
   const version = productionValue(source, 'EXPECTED_DATABASE_SCHEMA_VERSION');
   const budgetLedger = productionValue(source, 'EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED');
   if (productionValue(source, 'EXPECTED_DATABASE_SCHEMA_FINGERPRINT') !== expectedFingerprint) throw new Error(`${configPath} fingerprint materialization failed`);
@@ -77,6 +61,14 @@ for (const configPath of configPaths) {
   if (productionValue(source, 'AUTHENTICATED_ACCEPTANCE_PROVEN') !== 'true') throw new Error(`${configPath} acceptance materialization failed`);
   if (/REPLACE_WITH_/.test(source.slice(0, source.indexOf('"env"')))) throw new Error(`${configPath} has an unresolved production placeholder`);
   if (materialize) fs.writeFileSync(configPath, source, 'utf8');
+}
+
+if (process.env.GITHUB_ENV) {
+  fs.appendFileSync(
+    process.env.GITHUB_ENV,
+    `EXPECTED_DATABASE_SCHEMA_FINGERPRINT=${expectedFingerprint}\nEXPECTED_DATABASE_RELATION_COUNT=${expectedRelationCount}\n`,
+    'utf8',
+  );
 }
 
 console.log(`${materialize ? 'Materialized' : 'Validated'} canonical post-0013 deployment identity across ${configPaths.length} Worker configs.`);
