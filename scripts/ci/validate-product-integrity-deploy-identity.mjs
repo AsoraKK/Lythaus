@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { approvedPost0013Expectation } from './product-integrity-schema-contract.mjs';
 
 const configPaths = [
   'apps/lythaus-public-api/wrangler.jsonc',
@@ -6,9 +7,12 @@ const configPaths = [
   'apps/lythaus-jobs/wrangler.jsonc',
 ];
 const requiredVersion = '0013_marketing_waitlist.sql';
-const legacyFingerprint = '86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625';
-const expectedFingerprint = process.env.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT ?? '';
-const expectedRelationCount = process.env.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT ?? '';
+const post0013Expectation = approvedPost0013Expectation(
+  process.env.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT ?? '',
+  process.env.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT ?? '',
+);
+const expectedFingerprint = post0013Expectation.fingerprint;
+const expectedRelationCount = String(post0013Expectation.relationCount);
 const materialize = process.env.MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS === 'true';
 const fingerprintPlaceholder = 'REPLACE_WITH_POST_0013_SCHEMA_FINGERPRINT';
 const relationCountPlaceholder = 'REPLACE_WITH_POST_0013_RELATION_COUNT';
@@ -23,12 +27,6 @@ function productionValue(source, key) {
   return production.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`))?.[1] ?? '';
 }
 
-if (!/^[0-9a-f]{64}$/.test(expectedFingerprint) || expectedFingerprint === legacyFingerprint) {
-  throw new Error('PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT must be the approved post-0013 fingerprint');
-}
-if (!/^\d+$/.test(expectedRelationCount) || Number(expectedRelationCount) <= 0 || expectedRelationCount === '78') {
-  throw new Error('PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT must be the approved post-0013 relation count');
-}
 if (!/^[a-z0-9-]+\.cloudflareaccess\.com$/.test(accessTeamDomain)) {
   throw new Error('PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN must be the approved Cloudflare Access team domain');
 }
@@ -49,10 +47,10 @@ try {
 for (const configPath of configPaths) {
   const committedSource = fs.readFileSync(configPath, 'utf8');
   if (productionValue(committedSource, 'EXPECTED_DATABASE_SCHEMA_FINGERPRINT') !== fingerprintPlaceholder) {
-    throw new Error(`${configPath} must retain the post-0013 fingerprint placeholder until live approval`);
+    throw new Error(`${configPath} must retain the post-0013 fingerprint placeholder until release materialization`);
   }
   if (productionValue(committedSource, 'EXPECTED_DATABASE_RELATION_COUNT') !== relationCountPlaceholder) {
-    throw new Error(`${configPath} must retain the post-0013 relation-count placeholder until live approval`);
+    throw new Error(`${configPath} must retain the post-0013 relation-count placeholder until release materialization`);
   }
   if (productionValue(committedSource, 'AUTHENTICATED_ACCEPTANCE_PROVEN') !== 'false') {
     throw new Error(`${configPath} must remain fail-closed before production materialization`);
@@ -81,4 +79,4 @@ for (const configPath of configPaths) {
   if (materialize) fs.writeFileSync(configPath, source, 'utf8');
 }
 
-console.log(`${materialize ? 'Materialized' : 'Validated'} post-0013 deployment identity across ${configPaths.length} Worker configs.`);
+console.log(`${materialize ? 'Materialized' : 'Validated'} canonical post-0013 deployment identity across ${configPaths.length} Worker configs.`);
