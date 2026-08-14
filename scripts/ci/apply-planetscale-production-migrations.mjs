@@ -17,7 +17,12 @@ if (branch !== 'main') throw new Error('production migrations require PSCALE_BRA
 if (approval !== 'approved') throw new Error('production migrations require PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED=approved');
 if (usageApproval !== 'approved' || !Number.isFinite(usageMaxUsd) || usageMaxUsd < 0) throw new Error('production migrations require measured migration usage approval');
 if (!databaseUrl) throw new Error('PLANETSCALE_ADMIN_DATABASE_URL is required');
-if (new URL(databaseUrl).searchParams.get('sslmode') !== 'verify-full') throw new Error('production migrations require sslmode=verify-full');
+const connection = new URL(databaseUrl);
+if (connection.searchParams.get('sslmode') !== 'verify-full') throw new Error('production migrations require sslmode=verify-full');
+// PlanetScale's libpq connection examples use sslrootcert=system. node-postgres
+// interprets sslrootcert as a literal filename, so remove only that special value
+// and rely on Node's system trust store while keeping certificate verification on.
+if (connection.searchParams.get('sslrootcert') === 'system') connection.searchParams.delete('sslrootcert');
 
 const quoteRoleIdentifier = (value) => {
   if (!/^pscale_api_[a-z0-9]+$/.test(value)) throw new Error(`invalid PlanetScale role identifier: ${value}`);
@@ -137,7 +142,7 @@ async function applyGrants(client) {
 }
 
 const { migrations } = loadApprovedMigrations({ root, committedOnly: process.env.CI === 'true' });
-const client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: true } });
+const client = new Client({ connectionString: connection.toString(), ssl: { rejectUnauthorized: true } });
 await client.connect();
 try {
   const registry = await registryRows(client);
