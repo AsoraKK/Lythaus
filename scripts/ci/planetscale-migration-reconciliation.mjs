@@ -180,13 +180,13 @@ const contractArtifacts = Object.fromEntries(
 const artifacts = {
   ...contractArtifacts,
   '0013_marketing_waitlist.sql': [
-    { artifact: 'waitlist_table', sql: "SELECT to_regclass('marketing.waitlist_signups') IS NOT NULL AS present" },
-    { artifact: 'waitlist_purge_after', sql: "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name = 'purge_after') AS present" },
-    { artifact: 'waitlist_hold', sql: "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name = 'retention_hold') AS present" },
-    { artifact: 'waitlist_unique_hmac', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'waitlist_signups_email_lookup_hmac_unique' AND contype = 'u') AS present" },
-    { artifact: 'waitlist_cursor_index', sql: "SELECT to_regclass('marketing.waitlist_signups_created_cursor_idx') IS NOT NULL AS present" },
-    { artifact: 'waitlist_purge_index', sql: "SELECT to_regclass('marketing.waitlist_signups_due_purge_idx') IS NOT NULL AS present" },
-    { artifact: 'waitlist_no_plaintext_columns', sql: "SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name IN ('email', 'plain_email', 'raw_ip', 'ip_address', 'user_agent', 'turnstile_token')) AS present" },
+    { artifact: 'waitlist_table', kind: 'schema_artifact', sql: "SELECT to_regclass('marketing.waitlist_signups') IS NOT NULL AS present" },
+    { artifact: 'waitlist_purge_after', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name = 'purge_after') AS present" },
+    { artifact: 'waitlist_hold', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name = 'retention_hold') AS present" },
+    { artifact: 'waitlist_unique_hmac', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'waitlist_signups_email_lookup_hmac_unique' AND contype = 'u') AS present" },
+    { artifact: 'waitlist_cursor_index', kind: 'schema_artifact', sql: "SELECT to_regclass('marketing.waitlist_signups_created_cursor_idx') IS NOT NULL AS present" },
+    { artifact: 'waitlist_purge_index', kind: 'schema_artifact', sql: "SELECT to_regclass('marketing.waitlist_signups_due_purge_idx') IS NOT NULL AS present" },
+    { artifact: 'waitlist_no_plaintext_columns', kind: 'data_invariant', sql: "SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name IN ('email', 'plain_email', 'raw_ip', 'ip_address', 'user_agent', 'turnstile_token')) AS present" },
   ],
 };
 
@@ -195,8 +195,11 @@ export const migrationPostconditions = Object.fromEntries(
 );
 
 export function classifyArtifacts(results) {
-  const present = results.filter((artifact) => artifact.present).length;
-  return present === 0 ? 'NOT_APPLIED' : present === results.length ? 'FULLY_APPLIED' : 'PARTIALLY_APPLIED';
+  if (results.length === 0) return 'NOT_APPLIED';
+  if (results.every((artifact) => artifact.present)) return 'FULLY_APPLIED';
+  const structural = results.filter(({ kind }) => kind !== 'data_invariant');
+  if (structural.length > 0 && structural.every((artifact) => !artifact.present)) return 'NOT_APPLIED';
+  return 'PARTIALLY_APPLIED';
 }
 
 export function assertCompleteMigrationPostconditions(state) {
@@ -212,18 +215,18 @@ export async function classifyMigrationState(client, names = Object.keys(artifac
   for (const name of names) {
     const checks = artifacts[name] ?? [];
     const results = [];
-    for (const { artifact, sql } of checks) {
+    for (const { artifact, kind = 'legacy_probe', sql } of checks) {
       let result;
       try {
         result = await client.query(sql);
       } catch (error) {
         if (error && typeof error === 'object' && missingSchemaArtifactCodes.has(error.code)) {
-          results.push({ artifact, present: false });
+          results.push({ artifact, kind, present: false });
           continue;
         }
         throw new Error(`postcondition query failed for ${name}/${artifact}`, { cause: error });
       }
-      results.push({ artifact, present: result.rows[0]?.present === true });
+      results.push({ artifact, kind, present: result.rows[0]?.present === true });
     }
     states.push({ name, state: classifyArtifacts(results), artifacts: results });
   }
