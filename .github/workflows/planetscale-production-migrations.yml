@@ -45,14 +45,67 @@ jobs:
           npm run validate:planetscale-migrations
           npm run test:planetscale-production-migrations
           node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
+      - name: Resolve protected migration database credential
+        shell: bash
+        env:
+          STATIC_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${STATIC_ADMIN_DATABASE_URL:-}" ]]; then
+            echo "::add-mask::$STATIC_ADMIN_DATABASE_URL"
+            {
+              echo "PLANETSCALE_ADMIN_DATABASE_URL=$STATIC_ADMIN_DATABASE_URL"
+              echo "PLANETSCALE_SCHEMA_READ_DATABASE_URL=$STATIC_ADMIN_DATABASE_URL"
+              echo "PLANETSCALE_EPHEMERAL_ROLE_ID="
+            } >> "$GITHUB_ENV"
+            echo "Using pre-provisioned protected migration credential."
+            exit 0
+          fi
+
+          if [[ -z "${PLANETSCALE_SERVICE_TOKEN_ID:-}" || -z "${PLANETSCALE_SERVICE_TOKEN:-}" ]]; then
+            echo "Neither PLANETSCALE_ADMIN_DATABASE_URL nor the PlanetScale service-token pair is configured in the protected production environment." >&2
+            exit 1
+          fi
+
+          response_file="$RUNNER_TEMP/planetscale-ephemeral-role.json"
+          payload="$(jq -n --arg name "lythaus-prod-migration-${GITHUB_RUN_ID}" '{name:$name,ttl:3600,inherited_roles:["postgres"],require_where_on_delete:"off",require_where_on_update:"off"}')"
+
+          http_code="$(curl --silent --show-error \
+            --output "$response_file" \
+            --write-out '%{http_code}' \
+            --request POST \
+            --url 'https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-core/branches/main/roles' \
+            --header "Authorization: ${PLANETSCALE_SERVICE_TOKEN_ID}:${PLANETSCALE_SERVICE_TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --data "$payload")"
+
+          if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
+            echo "PlanetScale role creation failed with HTTP $http_code." >&2
+            jq -c '{error:(.error // .message // "unknown")}' "$response_file" 2>/dev/null >&2 || true
+            exit 1
+          fi
+
+          role_id="$(jq -r '.id // empty' "$response_file")"
+          database_url="$(jq -r '.access_host_url // empty' "$response_file")"
+          if [[ -z "$role_id" || -z "$database_url" ]]; then
+            echo "PlanetScale role creation response did not contain the expected role ID and access URL." >&2
+            exit 1
+          fi
+
+          echo "::add-mask::$database_url"
+          {
+            echo "PLANETSCALE_ADMIN_DATABASE_URL=$database_url"
+            echo "PLANETSCALE_SCHEMA_READ_DATABASE_URL=$database_url"
+            echo "PLANETSCALE_EPHEMERAL_ROLE_ID=$role_id"
+          } >> "$GITHUB_ENV"
+          rm -f "$response_file"
+          echo "Created one-hour ephemeral PlanetScale migration role for this protected run."
       - name: Reconcile production catalog read-only
         env:
           PSCALE_BRANCH_NAME: main
-          # The dedicated schema-read credential cannot inspect every application
-          # schema needed for migration postcondition classification. Use the
-          # migration admin credential here, but the script itself starts a
-          # READ ONLY transaction before issuing any catalog queries.
-          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
         run: |
           mkdir -p "$RUNNER_TEMP/planetscale-migration"
           node scripts/ci/reconcile-planetscale-migration-state.mjs > "$RUNNER_TEMP/planetscale-migration/reconciliation.json"
@@ -66,7 +119,6 @@ jobs:
       - name: Apply canonical migrations atomically
         env:
           PSCALE_BRANCH_NAME: main
-          PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED: approved
           PLANETSCALE_MIGRATION_USAGE_APPROVED: approved
@@ -75,14 +127,36 @@ jobs:
       - name: Verify final production schema read-only
         env:
           PSCALE_BRANCH_NAME: main
-          # Final verification needs catalog visibility across all application
-          # schemas. The verifier immediately opens a READ ONLY transaction.
-          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
           REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
         run: node scripts/ci/verify-planetscale-production-schema.mjs
+      - name: Remove ephemeral PlanetScale migration role
+        if: always()
+        shell: bash
+        env:
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+        run: |
+          set -euo pipefail
+          role_id="${PLANETSCALE_EPHEMERAL_ROLE_ID:-}"
+          if [[ -z "$role_id" ]]; then
+            exit 0
+          fi
+          if [[ -z "${PLANETSCALE_SERVICE_TOKEN_ID:-}" || -z "${PLANETSCALE_SERVICE_TOKEN:-}" ]]; then
+            echo "Ephemeral role $role_id will expire automatically; service token unavailable for immediate cleanup." >&2
+            exit 0
+          fi
+          http_code="$(curl --silent --show-error \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            --request DELETE \
+            --url "https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-core/branches/main/roles/$role_id" \
+            --header "Authorization: ${PLANETSCALE_SERVICE_TOKEN_ID}:${PLANETSCALE_SERVICE_TOKEN}")"
+          if [[ "$http_code" != "204" && "$http_code" != "200" ]]; then
+            echo "Ephemeral role cleanup returned HTTP $http_code; the role is TTL-bound to one hour." >&2
+          fi
       - name: Upload sanitized migration evidence
         if: always()
         uses: actions/upload-artifact@v4
