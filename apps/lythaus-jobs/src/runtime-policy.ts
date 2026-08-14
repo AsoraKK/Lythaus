@@ -148,6 +148,17 @@ export function retentionCleanupPlan(hasLegalHold: boolean, contentType: unknown
   return 'skip';
 }
 
+export function waitlistRetentionCleanupPlan(input: {
+  purgeAfter: string | null | undefined;
+  retentionHold: boolean;
+  now: Date;
+}): 'delete' | 'skip' {
+  if (input.retentionHold || typeof input.purgeAfter !== 'string') return 'skip';
+  const purgeAfter = new Date(input.purgeAfter);
+  if (Number.isNaN(purgeAfter.getTime())) return 'skip';
+  return purgeAfter.getTime() <= input.now.getTime() ? 'delete' : 'skip';
+}
+
 export function reviewerReplacementPlan(currentLevel: unknown, hasWeightedAssignment: boolean): { level: number; voteWeight: 1 | 2 } {
   if (!Number.isInteger(currentLevel) || (currentLevel as number) < 0 || (currentLevel as number) > 5) {
     throw new Error('appeal_reviewer_level_invalid');

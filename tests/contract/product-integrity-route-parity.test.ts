@@ -24,6 +24,7 @@ const workers: Record<WorkerName, string> = {
 };
 
 const runtimeRoutes: RuntimeRoute[] = [
+  { path: '/waitlist', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/waitlist'" },
   { path: '/auth/email/verify', method: 'get', worker: 'public', dispatcherNeedle: "url.pathname === '/api/auth/email/verify'" },
   { path: '/auth/email/verify', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/auth/email/verify'" },
   { path: '/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/flags'" },
@@ -102,6 +103,9 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/admin/privacy/requests', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/privacy/requests'" },
   { path: '/admin/moderation/cases', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/moderation/cases'" },
   { path: '/admin/audit', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/audit'" },
+  { path: '/admin/waitlist', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/waitlist'" },
+  { path: '/admin/waitlist/{waitlistId}/status', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistStatus =' },
+  { path: '/admin/waitlist/{waitlistId}/retention-hold', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistRetentionHold =' },
   { path: '/admin/users/search', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/users/search'" },
   { path: '/admin/privacy/legal-holds', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/privacy/legal-holds'" },
   { path: '/admin/privacy/legal-holds', method: 'post', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/privacy/legal-holds'" },
@@ -142,6 +146,28 @@ describe('product-integrity OpenAPI parity', () => {
         expect(workers[route!.worker]).toContain(route!.dispatcherNeedle);
       }
     }
+  });
+
+  test('waitlist administration declares Access, keyset pagination, retention holds, and private responses', () => {
+    const list = spec.paths['/admin/waitlist'].get;
+    expect(list.security).toEqual([{ cloudflareAccess: [] }]);
+    expect(list.parameters.map((parameter: { name: string }) => parameter.name)).toEqual(['cursor', 'limit']);
+    expect(list.responses['200'].headers['Cache-Control'].schema.enum).toEqual(['private, no-store']);
+    expect(spec.components.schemas.WaitlistAdminItem.required).toContain('retentionHold');
+
+    for (const path of [
+      '/admin/waitlist/{waitlistId}/status',
+      '/admin/waitlist/{waitlistId}/retention-hold',
+    ]) {
+      const operation = spec.paths[path].post;
+      expect(operation.security).toEqual([{ cloudflareAccess: [] }]);
+      expect(operation.responses['200'].headers['Cache-Control'].schema.enum).toEqual(['private, no-store']);
+      expect(Object.keys(operation.responses)).toEqual(expect.arrayContaining(['400', '401', '403', '404', '413', '429', '503']));
+    }
+
+    expect(spec.paths['/admin/waitlist/{waitlistId}/status'].post.responses['409']).toBeDefined();
+    expect(spec.components.schemas.WaitlistStatusUpdate.required).toEqual(['status']);
+    expect(spec.components.schemas.WaitlistRetentionHoldUpdate.required).toEqual(['active']);
   });
 
   test('retired duplicate product-integrity routes are absent', () => {

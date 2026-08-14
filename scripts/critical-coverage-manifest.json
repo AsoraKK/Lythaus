@@ -12,6 +12,9 @@
     "public-content-runtime",
     "public-feed-runtime",
     "public-privacy-runtime",
+    "public-waitlist-runtime",
+    "admin-access-runtime",
+    "admin-waitlist-runtime",
     "admin-appeal-runtime",
     "jobs-runtime-policy"
   ],
@@ -27,21 +30,23 @@
     "activity-audit",
     "security-crypto",
     "notifications",
-    "authenticity-cost"
+    "authenticity-cost",
+    "waitlist-security"
   ],
   "domainCategoryOwners": {
-    "authentication": ["public-auth-runtime", "public-auth-session-runtime", "worker-access-token-policy"],
-    "request-boundaries": ["public-request-body-runtime"],
+    "authentication": ["public-auth-runtime", "public-auth-session-runtime", "admin-access-runtime", "worker-access-token-policy"],
+    "request-boundaries": ["public-request-body-runtime", "public-waitlist-runtime"],
     "idempotency": ["public-idempotency-runtime", "reputation-persistence-policy"],
     "content-publication": ["public-content-runtime", "content-declaration-publication-policy"],
     "feed-entitlements": ["public-feed-runtime", "content-social-feed-policy", "tier-entitlement-policy"],
     "privacy-dsr": ["public-privacy-runtime", "jobs-runtime-policy"],
     "moderation-appeals": ["admin-appeal-runtime", "jobs-runtime-policy", "moderation-appeal-policy"],
     "reputation": ["reputation-impact-policy", "reputation-persistence-policy"],
-    "activity-audit": ["privacy-activity-policy", "admin-appeal-runtime", "jobs-runtime-policy"],
+    "activity-audit": ["privacy-activity-policy", "admin-appeal-runtime", "admin-waitlist-runtime", "jobs-runtime-policy"],
     "security-crypto": ["worker-security-primitives", "worker-access-token-policy"],
     "notifications": ["notification-input-policy"],
-    "authenticity-cost": ["authenticity-cost-admission-policy"]
+    "authenticity-cost": ["authenticity-cost-admission-policy"],
+    "waitlist-security": ["public-waitlist-runtime", "admin-access-runtime", "admin-waitlist-runtime", "worker-security-primitives"]
   },
   "modules": [
     {
@@ -101,6 +106,30 @@
       "rationale": "Invoked public Worker privacy request, export access, and retention boundaries."
     },
     {
+      "id": "public-waitlist-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/waitlist-runtime-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/waitlist-runtime-policy.test.mjs"],
+      "rationale": "Invoked public Worker waitlist parsing, consent, Turnstile action, hostname, and configuration boundaries."
+    },
+    {
+      "id": "admin-access-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-admin-api/src/admin-access-runtime-policy.ts"],
+      "tests": ["apps/lythaus-admin-api/tests/admin-access-runtime-policy.test.mjs"],
+      "rationale": "Invoked admin Worker Cloudflare Access assertion and active membership boundary."
+    },
+    {
+      "id": "admin-waitlist-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-admin-api/src/waitlist-runtime-policy.ts"],
+      "tests": ["apps/lythaus-admin-api/tests/waitlist-runtime-policy.test.mjs"],
+      "rationale": "Invoked admin Worker waitlist role, keyset pagination, decryption configuration, and PII-free audit metadata policy."
+    },
+    {
       "id": "admin-appeal-runtime",
       "priority": "P1",
       "runtimeSeam": true,
@@ -140,7 +169,7 @@
     {
       "id": "content-social-feed-policy",
       "priority": "P1",
-      "sources": ["apps/lythaus-public-api/src/product-policy.ts"],
+      "sources": ["apps/lythaus-public-api/src/product-policy.ts", "packages/contracts/src/keyset-cursor.ts"],
       "tests": ["apps/lythaus-public-api/tests/critical-product-policy.test.mjs"],
       "rationale": "Public Worker feed pagination, custom-feed rules, cursor integrity, and reputation-band disclosure policy."
     },

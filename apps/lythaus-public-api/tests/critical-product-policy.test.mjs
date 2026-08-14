@@ -20,8 +20,10 @@ test('feed cursors round-trip and reject adversarial values', () => {
   assert.throws(() => decodeCursor('%%%'), /invalid_cursor/);
   const invalidTimestamp = Buffer.from(JSON.stringify({ ...cursor, timestamp: 'not-a-date' })).toString('base64url');
   const invalidId = Buffer.from(JSON.stringify({ ...cursor, id: 'not-a-uuid' })).toString('base64url');
+  const malformedUuid = Buffer.from(JSON.stringify({ ...cursor, id: '------------------------------------' })).toString('base64url');
   assert.throws(() => decodeCursor(invalidTimestamp), /invalid_cursor/);
   assert.throws(() => decodeCursor(invalidId), /invalid_cursor/);
+  assert.throws(() => decodeCursor(malformedUuid), /invalid_cursor/);
 });
 
 test('discovery, personal, custom, and news feed paging applies safe bounds', () => {

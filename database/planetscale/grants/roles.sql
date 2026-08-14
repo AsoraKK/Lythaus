@@ -10,12 +10,12 @@
 -- pscale_api_* role prefixes before execution; do not paste this template
 -- directly into the web console.
 
-REVOKE ALL ON ALL TABLES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system FROM PUBLIC;
-REVOKE ALL ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system FROM PUBLIC;
+REVOKE ALL ON ALL TABLES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system FROM PUBLIC;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system FROM PUBLIC;
 
 GRANT CONNECT ON DATABASE postgres TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy, lythaus_migrations;
 
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 
 GRANT USAGE ON SCHEMA identity, content, social, feed, moderation, trust, media TO lythaus_runtime;
 GRANT USAGE ON SCHEMA privacy TO lythaus_runtime;
@@ -38,6 +38,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON system.idempotency_keys TO lythaus_runti
 GRANT SELECT, INSERT, UPDATE ON system.rate_limit_windows TO lythaus_runtime;
 GRANT SELECT ON system.cost_budget_periods, system.cost_kill_switches TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.cost_budget_reservations, system.cost_usage_events TO lythaus_runtime;
+GRANT USAGE ON SCHEMA marketing TO lythaus_runtime;
+GRANT INSERT (id, email_lookup_hmac, email_ciphertext, encryption_key_version, status, source, consent_version)
+  ON marketing.waitlist_signups TO lythaus_runtime;
 GRANT EXECUTE ON FUNCTION privacy.set_retention_rule(uuid, uuid, text, interval, text) TO lythaus_runtime;
 
 GRANT USAGE ON SCHEMA identity, content, moderation, trust, editorial, system TO lythaus_admin;
@@ -52,6 +55,12 @@ GRANT SELECT, INSERT ON moderation.appeal_adjudications, moderation.appeal_outco
 GRANT SELECT, INSERT ON trust.user_activity_events TO lythaus_admin;
 GRANT SELECT, INSERT ON system.audit_events, system.outbox_events TO lythaus_admin;
 GRANT SELECT, INSERT, UPDATE ON system.rate_limit_windows TO lythaus_admin;
+GRANT USAGE ON SCHEMA marketing TO lythaus_admin;
+GRANT SELECT (id, email_ciphertext, encryption_key_version, status, source, created_at, retention_hold)
+  ON marketing.waitlist_signups TO lythaus_admin;
+GRANT UPDATE (status, updated_at, invited_at, converted_at, unsubscribed_at, purge_after,
+              retention_hold, retention_hold_at, retention_hold_released_at)
+  ON marketing.waitlist_signups TO lythaus_admin;
 
 GRANT USAGE ON SCHEMA identity, content, moderation, feed, social, trust, media, system TO lythaus_jobs;
 GRANT SELECT ON identity.users, identity.email_credentials, identity.contact_emails, identity.admin_memberships TO lythaus_jobs;
@@ -73,7 +82,7 @@ GRANT SELECT, INSERT ON system.audit_events TO lythaus_jobs;
 GRANT SELECT ON system.cost_budget_periods, system.cost_kill_switches TO lythaus_jobs;
 GRANT SELECT, INSERT, UPDATE ON system.cost_budget_reservations, system.cost_usage_events TO lythaus_jobs;
 
-GRANT USAGE ON SCHEMA privacy, media, identity, social, editorial, moderation, trust, system TO lythaus_privacy;
+GRANT USAGE ON SCHEMA privacy, media, identity, social, editorial, moderation, trust, marketing, system TO lythaus_privacy;
 GRANT SELECT, INSERT, UPDATE ON privacy.requests, privacy.request_events, privacy.legal_holds, privacy.retention_rules, privacy.subject_data_locations, privacy.deletion_tombstones, privacy.export_manifests, media.objects, media.storage_ledger, media.ownership, media.deletion_events, identity.users, identity.account_events, identity.auth_sessions, identity.refresh_token_families TO lythaus_privacy;
 GRANT SELECT ON identity.consent_records TO lythaus_privacy;
 GRANT DELETE ON privacy.retention_rules, privacy.export_manifests TO lythaus_privacy;
@@ -91,22 +100,23 @@ GRANT SELECT ON moderation.content_flags TO lythaus_privacy;
 GRANT SELECT, INSERT, DELETE ON system.audit_events TO lythaus_privacy;
 GRANT SELECT, INSERT, DELETE ON system.outbox_events TO lythaus_privacy;
 GRANT SELECT, DELETE ON system.consumer_inbox, system.idempotency_keys TO lythaus_privacy;
+GRANT SELECT (id, purge_after, retention_hold), DELETE ON marketing.waitlist_signups TO lythaus_privacy;
 GRANT EXECUTE ON FUNCTION privacy.reconcile_subject_data_locations(uuid) TO lythaus_privacy;
 
-GRANT USAGE, CREATE ON SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system TO lythaus_migrations;
+GRANT USAGE, CREATE ON SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_migrations;
 
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system TO lythaus_migrations;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_migrations;
 
 -- These apply to the role executing the migration bundle. PlanetScale-managed
 -- role owners cannot be named in ALTER DEFAULT PRIVILEGES from another role.
 ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES REVOKE ALL ON TABLES FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES REVOKE ALL ON SEQUENCES FROM PUBLIC;
-ALTER DEFAULT PRIVILEGES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, system GRANT USAGE, SELECT ON SEQUENCES TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
+ALTER DEFAULT PRIVILEGES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system GRANT USAGE, SELECT ON SEQUENCES TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 -- Runtime may execute the narrowly scoped retention function, so preserve
 -- schema USAGE while still preventing object creation in the restricted
 -- privacy schema.
-REVOKE CREATE ON SCHEMA privacy FROM lythaus_runtime, lythaus_admin, lythaus_jobs;
+REVOKE CREATE ON SCHEMA privacy, marketing FROM lythaus_runtime, lythaus_admin, lythaus_jobs;
 REVOKE CREATE ON DATABASE postgres FROM lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 
 -- Runtime roles must not own database objects or receive CREATE/CREATEROLE/CREATEDB.

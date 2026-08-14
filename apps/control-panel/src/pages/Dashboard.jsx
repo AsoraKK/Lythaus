@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminRequest } from '../api/adminApi.js';
 import PageLayout from '../components/PageLayout.jsx';
-import SessionPanel from '../components/SessionPanel.jsx';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 
@@ -13,7 +12,7 @@ const DASHBOARD_GUIDE = {
     'Confirm the admin API and database health first.',
     'Prioritise open moderation cases and pending appeal adjudications.',
     'Use the audit trail to verify every high-impact action.',
-    'Use the session panel to clear expired credentials.',
+    'Cloudflare Access manages this browser session.',
     'Treat unavailable metrics as unknown, never zero.'
   ],
   footnote: 'Production launch readiness is tracked separately from this repository console.'
@@ -56,7 +55,6 @@ function Dashboard() {
 
   return (
     <PageLayout title="Operations" subtitle="Live admin Worker health and governance queues." guide={DASHBOARD_GUIDE}>
-      <SessionPanel />
       <LythCard variant="panel">
         <div className="panel-header">
           <h2>Operational snapshot</h2>

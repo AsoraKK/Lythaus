@@ -3,10 +3,10 @@ import path from 'node:path';
 
 const root = process.cwd();
 const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
-const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql', '0009_cost_budget_enforcement.sql', '0010_native_runtime_parity.sql', '0011_email_guest_auth_only.sql', '0012_product_integrity_v2.sql'];
+const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql', '0009_cost_budget_enforcement.sql', '0010_native_runtime_parity.sql', '0011_email_guest_auth_only.sql', '0012_product_integrity_v2.sql', '0013_marketing_waitlist.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
 const requiredRecoveryFiles = ['restore-verify.sql'];
-const requiredSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system'];
+const requiredSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'marketing', 'system'];
 const requiredTables = [
   'identity.users', 'identity.provider_links', 'identity.handles', 'identity.email_credentials', 'identity.refresh_token_families',
   'identity.auth_sessions', 'identity.consent_records', 'identity.user_region_preferences', 'identity.admin_memberships',
@@ -31,6 +31,7 @@ const requiredTables = [
   'editorial.memberships', 'editorial.membership_events', 'editorial.applications', 'editorial.portfolio_items',
   'editorial.peer_reviews', 'editorial.publications',
   'system.outbox_events', 'system.consumer_inbox', 'system.idempotency_keys', 'system.audit_events', 'system.feature_flags',
+  'marketing.waitlist_signups',
   'system.schema_migrations', 'system.cost_budget_periods', 'system.cost_budget_reservations', 'system.cost_usage_events', 'system.cost_kill_switches',
   'system.rate_limit_windows',
 ];

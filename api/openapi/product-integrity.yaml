@@ -80,6 +80,24 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: The requested state transition conflicts with the record's current state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    RequestTooLarge:
+      description: The JSON request body exceeds the route limit.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServiceUnavailable:
+      description: The waitlist administration service is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
     SafetyLimited:
       description: A stable rate or neutral anti-abuse limit was reached.
       content:
@@ -858,6 +876,65 @@ components:
       properties:
         status: { type: string, enum: [ok] }
         database: { type: object, additionalProperties: true }
+    WaitlistAdminItem:
+      type: object
+      additionalProperties: false
+      required: [id, email, status, source, createdAt, retentionHold]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email, maxLength: 320 }
+        status: { type: string, enum: [waiting, invited, converted, unsubscribed] }
+        source: { type: string }
+        createdAt: { type: string, format: date-time }
+        retentionHold:
+          type: boolean
+          description: Whether a retention hold prevents automatic waitlist-record purging.
+    WaitlistAdminResponse:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor, summary]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/WaitlistAdminItem' }
+        nextCursor:
+          type: string
+          nullable: true
+        summary:
+          type: object
+          additionalProperties: false
+          required: [totalWaiting, last7Days]
+          properties:
+            totalWaiting: { type: integer, minimum: 0 }
+            last7Days: { type: integer, minimum: 0 }
+    WaitlistStatusUpdate:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [waiting, invited, converted, unsubscribed] }
+    WaitlistStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [id, status]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [waiting, invited, converted, unsubscribed] }
+    WaitlistRetentionHoldUpdate:
+      type: object
+      additionalProperties: false
+      required: [active]
+      properties:
+        active:
+          type: boolean
+          description: Whether the retention hold is active.
+    WaitlistRetentionHoldResponse:
+      type: object
+      additionalProperties: false
+      required: [id, retentionHold]
+      properties:
+        id: { type: string, format: uuid }
+        retentionHold: { type: boolean }
     LegalHoldCreate:
       type: object
       additionalProperties: false
@@ -1026,6 +1103,137 @@ paths:
                 $ref: '#/components/schemas/AdminItems'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /admin/waitlist:
+    servers:
+      - url: https://admin.lythaus.co/api
+    get:
+      operationId: adminWaitlistList
+      summary: List private beta waitlist signups
+      description: Administrator-only PII access. Every successful view is written to the admin audit log.
+      tags: [Admin]
+      security:
+        - cloudflareAccess: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, minLength: 1 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Decrypted waitlist rows and aggregate counts.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: ['private, no-store'] }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistAdminResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /admin/waitlist/{waitlistId}/status:
+    servers:
+      - url: https://admin.lythaus.co/api
+    post:
+      operationId: adminWaitlistStatusUpdate
+      summary: Update a waitlist signup status
+      description: Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.
+      tags: [Admin]
+      security:
+        - cloudflareAccess: []
+      parameters:
+        - name: waitlistId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WaitlistStatusUpdate'
+      responses:
+        '200':
+          description: Waitlist status recorded.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: ['private, no-store'] }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /admin/waitlist/{waitlistId}/retention-hold:
+    servers:
+      - url: https://admin.lythaus.co/api
+    post:
+      operationId: adminWaitlistRetentionHoldUpdate
+      summary: Set a waitlist retention hold
+      description: Administrator and owner roles may set or release a retention hold. The response contains no email or encrypted-email fields.
+      tags: [Admin]
+      security:
+        - cloudflareAccess: []
+      parameters:
+        - name: waitlistId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WaitlistRetentionHoldUpdate'
+      responses:
+        '200':
+          description: Waitlist retention hold recorded.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: ['private, no-store'] }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistRetentionHoldResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /admin/users/search:
     servers:
       - url: https://admin-api.lythaus.co/api

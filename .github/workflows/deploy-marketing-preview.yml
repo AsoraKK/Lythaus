@@ -29,6 +29,8 @@ jobs:
     env:
       PAGES_PROJECT: lythaus-marketing
       PAGES_BRANCH: ${{ inputs.deployment_class == 'production' && 'main' || 'codex/lythaus-domain-migration' }}
+      PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -67,22 +69,30 @@ jobs:
         working-directory: apps/marketing-site
         run: |
           set -euo pipefail
+          if [[ "${{ inputs.deployment_class }}" = "production" ]]; then
+            test -n "$PUBLIC_API_BASE_URL" || { echo "PRODUCTION_PUBLIC_API_BASE_URL is required" >&2; exit 1; }
+            test -n "$PUBLIC_TURNSTILE_SITE_KEY" || { echo "PUBLIC_TURNSTILE_SITE_KEY is required" >&2; exit 1; }
+            node -e "const url = new URL(process.env.PUBLIC_API_BASE_URL); if (url.protocol !== 'https:' || url.hostname !== 'api.lythaus.co' || url.pathname !== '/') throw new Error('PRODUCTION_PUBLIC_API_BASE_URL must be https://api.lythaus.co');"
+            node -e "if (!/^[A-Za-z0-9_-]{20,}$/.test(process.env.PUBLIC_TURNSTILE_SITE_KEY)) throw new Error('PUBLIC_TURNSTILE_SITE_KEY is invalid');"
+          fi
           npm ci
           npm run build
           node ../../scripts/cloudflare/validate-marketing-output.mjs dist
+          ! rg -n -i 'TURNSTILE_SECRET|PII_ENCRYPTION_KEY|PII_HMAC_KEY' dist
 
       - name: Deploy exact marketing artifact
         id: deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
           npx --yes wrangler@4.110.0 pages deploy apps/marketing-site/dist \
             --project-name "$PAGES_PROJECT" \
             --branch "$PAGES_BRANCH" \
-            --commit-hash "$GITHUB_SHA" \
+            --commit-hash "$RELEASE_SHA" \
             --commit-dirty=false | tee wrangler-output.txt
           preview_url="$(grep -Eo 'https://[a-z0-9-]+\.lythaus-marketing\.pages\.dev' wrangler-output.txt | head -n 1)"
           test -n "$preview_url"
@@ -127,9 +137,10 @@ jobs:
         if: success()
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           jq -n \
-            --arg commitSha "$GITHUB_SHA" \
+            --arg commitSha "$RELEASE_SHA" \
             --arg project "$PAGES_PROJECT" \
             --arg branch "$PAGES_BRANCH" \
             --arg previewUrl "$PREVIEW_URL" \

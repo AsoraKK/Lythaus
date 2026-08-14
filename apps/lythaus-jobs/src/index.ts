@@ -2310,7 +2310,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
 }
 
 export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: string }> {
-  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number }> {
+  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number; expiredWaitlistSignups: number }> {
     const securityAuditRetention = securityAuditRetentionPlan();
     const securityRetentionInterval = `${securityAuditRetention.retentionDays} days`;
     const expiredActivityEvents = await step.do('purge-expired-user-activity', async () => {
@@ -2367,6 +2367,21 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
             AND created_at < now() - interval '30 days'
           RETURNING scope`);
       return result.rowCount ?? 0;
+    });
+    const expiredWaitlistSignups = await step.do('purge-expired-waitlist-signups', async () => {
+      const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
+        `DELETE FROM marketing.waitlist_signups
+          WHERE purge_after <= now()
+            AND retention_hold = false
+          RETURNING id`);
+      const deleted = result.rowCount ?? 0;
+      logEvent({
+        service: 'lythaus-jobs',
+        event: 'waitlist.retention_purged',
+        runId: event.payload.runId,
+        deleted,
+      });
+      return deleted;
     });
     const candidates = await step.do('find-retention-candidates', async () => {
       const result = await query<{ user_id: string; content_type: string; retention_period: string }>(this.env.DB_PRIVACY_FRESH,
@@ -2428,7 +2443,7 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       redactedPosts += result.posts;
       deletedMedia += result.media;
     }
-    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones };
+    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones, expiredWaitlistSignups };
   }
 }
 

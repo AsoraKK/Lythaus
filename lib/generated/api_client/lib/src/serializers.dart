@@ -163,6 +163,16 @@ import 'package:lythaus_api_client/src/model/users_me_retention_update_request.d
 import 'package:lythaus_api_client/src/model/validation_error_response.dart';
 import 'package:lythaus_api_client/src/model/validation_error_response_error.dart';
 import 'package:lythaus_api_client/src/model/validation_error_response_error_fields_inner.dart';
+import 'package:lythaus_api_client/src/model/waitlist_admin_item.dart';
+import 'package:lythaus_api_client/src/model/waitlist_admin_response.dart';
+import 'package:lythaus_api_client/src/model/waitlist_admin_response_summary.dart';
+import 'package:lythaus_api_client/src/model/waitlist_error.dart';
+import 'package:lythaus_api_client/src/model/waitlist_retention_hold_response.dart';
+import 'package:lythaus_api_client/src/model/waitlist_retention_hold_update.dart';
+import 'package:lythaus_api_client/src/model/waitlist_status_response.dart';
+import 'package:lythaus_api_client/src/model/waitlist_status_update.dart';
+import 'package:lythaus_api_client/src/model/waitlist_submission.dart';
+import 'package:lythaus_api_client/src/model/waitlist_success.dart';
 
 part 'serializers.g.dart';
 
@@ -316,6 +326,16 @@ part 'serializers.g.dart';
   ValidationErrorResponse,
   ValidationErrorResponseError,
   ValidationErrorResponseErrorFieldsInner,
+  WaitlistAdminItem,
+  WaitlistAdminResponse,
+  WaitlistAdminResponseSummary,
+  WaitlistError,
+  WaitlistRetentionHoldResponse,
+  WaitlistRetentionHoldUpdate,
+  WaitlistStatusResponse,
+  WaitlistStatusUpdate,
+  WaitlistSubmission,
+  WaitlistSuccess,
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(

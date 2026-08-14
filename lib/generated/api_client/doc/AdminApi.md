@@ -23,6 +23,9 @@ Method | HTTP request | Description
 [**adminReviewerQualificationUpdate**](AdminApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
 [**adminUsersStatusUpdate**](AdminApi.md#adminusersstatusupdate) | **POST** /admin/users/{userId}/status | Update account status
 [**adminUsersTierUpdate**](AdminApi.md#adminuserstierupdate) | **POST** /admin/users/{userId}/tier | Update subscription tier
+[**adminWaitlistList**](AdminApi.md#adminwaitlistlist) | **GET** /admin/waitlist | List private beta waitlist signups
+[**adminWaitlistRetentionHoldUpdate**](AdminApi.md#adminwaitlistretentionholdupdate) | **POST** /admin/waitlist/{waitlistId}/retention-hold | Set a waitlist retention hold
+[**adminWaitlistStatusUpdate**](AdminApi.md#adminwaitliststatusupdate) | **POST** /admin/waitlist/{waitlistId}/status | Update a waitlist signup status
 [**productIntegrityAdminAuditList**](AdminApi.md#productintegrityadminauditlist) | **GET** /admin/audit | List admin audit events
 [**productIntegrityAdminUsersSearch**](AdminApi.md#productintegrityadminuserssearch) | **GET** /admin/users/search | Search users
 
@@ -643,6 +646,153 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**AccountTierResponse**](AccountTierResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminWaitlistList**
+> WaitlistAdminResponse adminWaitlistList(cursor, limit)
+
+List private beta waitlist signups
+
+Administrator-only PII access. Every successful view is written to the admin audit log.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String cursor = cursor_example; // String |
+final int limit = 56; // int |
+
+try {
+    final response = api.adminWaitlistList(cursor, limit);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminWaitlistList: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **cursor** | **String**|  | [optional]
+ **limit** | **int**|  | [optional] [default to 50]
+
+### Return type
+
+[**WaitlistAdminResponse**](WaitlistAdminResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminWaitlistRetentionHoldUpdate**
+> WaitlistRetentionHoldResponse adminWaitlistRetentionHoldUpdate(waitlistId, waitlistRetentionHoldUpdate)
+
+Set a waitlist retention hold
+
+Administrator and owner roles may set or release a retention hold. The response contains no email or encrypted-email fields.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String waitlistId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final WaitlistRetentionHoldUpdate waitlistRetentionHoldUpdate = ; // WaitlistRetentionHoldUpdate |
+
+try {
+    final response = api.adminWaitlistRetentionHoldUpdate(waitlistId, waitlistRetentionHoldUpdate);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminWaitlistRetentionHoldUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **waitlistId** | **String**|  |
+ **waitlistRetentionHoldUpdate** | [**WaitlistRetentionHoldUpdate**](WaitlistRetentionHoldUpdate.md)|  |
+
+### Return type
+
+[**WaitlistRetentionHoldResponse**](WaitlistRetentionHoldResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminWaitlistStatusUpdate**
+> WaitlistStatusResponse adminWaitlistStatusUpdate(waitlistId, waitlistStatusUpdate)
+
+Update a waitlist signup status
+
+Administrator and owner roles may update a waitlist record status. The response never includes email lookup or ciphertext fields.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String waitlistId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final WaitlistStatusUpdate waitlistStatusUpdate = ; // WaitlistStatusUpdate |
+
+try {
+    final response = api.adminWaitlistStatusUpdate(waitlistId, waitlistStatusUpdate);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminWaitlistStatusUpdate: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **waitlistId** | **String**|  |
+ **waitlistStatusUpdate** | [**WaitlistStatusUpdate**](WaitlistStatusUpdate.md)|  |
+
+### Return type
+
+[**WaitlistStatusResponse**](WaitlistStatusResponse.md)
 
 ### Authorization
 

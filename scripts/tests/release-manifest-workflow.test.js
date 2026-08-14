@@ -23,3 +23,19 @@ test('native release verifies schema read-only and deploys only existing Workers
   assert.match(workflow, /apps\/lythaus-jobs\/wrangler\.jsonc/);
   assert.doesNotMatch(workflow, new RegExp(`${retiredCloudHost}\\.net|${retiredLoginAction}|${retiredCliTargets}`, 'i'));
 });
+
+test('native release publishes, verifies, and restores the same-origin admin API route', () => {
+  assert.match(workflow, /Capture predeployment same-origin admin API route/);
+  assert.match(workflow, /wrangler triggers deploy --config apps\/lythaus-admin-api\/wrangler\.jsonc --name lythaus-admin-api-development/);
+  assert.match(workflow, /Publish and verify same-origin admin API route/);
+  assert.match(workflow, /manage-cloudflare-worker-route\.mjs verify/);
+  assert.match(workflow, /ADMIN_ROUTE_TRIGGER_ATTEMPTED=true/);
+  assert.match(workflow, /manage-cloudflare-worker-route\.mjs restore/);
+  const rollbackWorkflow = workflow.slice(workflow.indexOf('Roll back partial Worker deployment on failure'));
+  assert.match(rollbackWorkflow, /CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382/);
+  assert.ok(
+    workflow.indexOf('Activate exact candidate Worker versions')
+      < workflow.indexOf('Publish and verify same-origin admin API route'),
+    'route triggers must be published only after immutable versions activate',
+  );
+});

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
+import { loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 
 const { Client } = pg;
 
@@ -24,21 +25,49 @@ if (!connectionString) throw new Error('PLANETSCALE_PG17_TEST_DATABASE_URL is re
 const connection = new URL(connectionString);
 if (!['localhost', '127.0.0.1', '::1'].includes(connection.hostname)) throw new Error('PostgreSQL 17 compatibility validation refuses non-local database hosts');
 
-const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
-const migrations = fs.readdirSync(migrationDir).filter((file) => file.endsWith('.sql')).sort();
+const { migrations } = loadApprovedMigrations({ root });
 const client = new Client({ connectionString, ssl: false });
 await client.connect();
 try {
   const version = await client.query('SELECT current_setting(\'server_version_num\')::integer AS version');
   if (Number(version.rows[0]?.version) < 170000 || Number(version.rows[0]?.version) >= 180000) throw new Error(`local compatibility server must be PostgreSQL 17.x; found ${version.rows[0]?.version}`);
-  for (const file of migrations) {
-    process.stdout.write(`Applying ${file}\n`);
-    await client.query(fs.readFileSync(path.join(migrationDir, file), 'utf8'));
-  }
-  const grants = fs.readFileSync(path.join(root, 'database', 'planetscale', 'grants', 'roles.sql'), 'utf8');
   for (const role of ['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_migrations']) {
     await client.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN CREATE ROLE ${role}; END IF; END $$;`);
   }
+  const bootstrapPending = [];
+  for (const migration of migrations) {
+    process.stdout.write(`Applying ${migration.name}\n`);
+    await client.query('BEGIN');
+    try {
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'))");
+      await client.query(migration.contents.toString('utf8'));
+      const exists = await client.query("SELECT to_regclass('system.schema_migrations') AS registry");
+      if (exists.rows[0]?.registry) {
+        for (const row of [...bootstrapPending.splice(0), migration]) {
+          const inserted = await client.query(
+            `INSERT INTO system.schema_migrations (version, checksum)
+             VALUES ($1, $2) ON CONFLICT (version) DO NOTHING RETURNING version`,
+            [row.name, row.checksum],
+          );
+          if (inserted.rowCount !== 1) throw new Error(`PostgreSQL 17 registry already contains ${row.name}`);
+        }
+      } else {
+        bootstrapPending.push(migration);
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    }
+  }
+  if (bootstrapPending.length) throw new Error('PostgreSQL 17 migration registry was not created');
+  const recordedMigrations = await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
+  if (recordedMigrations.rows.length !== migrations.length) throw new Error('PostgreSQL 17 migration registry is incomplete');
+  migrations.forEach((migration, index) => {
+    const row = recordedMigrations.rows[index];
+    if (row.version !== migration.name || row.checksum !== migration.checksum) throw new Error(`PostgreSQL 17 migration checksum mismatch: ${migration.name}`);
+  });
+  const grants = fs.readFileSync(path.join(root, 'database', 'planetscale', 'grants', 'roles.sql'), 'utf8');
   await client.query(grants);
   await client.query(fs.readFileSync(path.join(root, 'database', 'planetscale', 'verification', 'verify.sql'), 'utf8'));
   const checks = await client.query(`
@@ -54,19 +83,22 @@ try {
       to_regclass('system.cost_budget_reservations') AS budget_reservations,
       to_regclass('system.cost_usage_events') AS usage_events,
       to_regclass('system.cost_kill_switches') AS kill_switches,
+      to_regclass('marketing.waitlist_signups') AS waitlist_signups,
+      (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name IN ('purge_after', 'retention_hold', 'retention_hold_at', 'retention_hold_released_at')) AS waitlist_retention_column_count,
       (SELECT count(*) FROM pg_extension WHERE extname IN ('pgcrypto', 'pg_trgm', 'unaccent')) AS extension_count,
       (SELECT count(*) FROM information_schema.tables
-        WHERE table_schema IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system')) AS relation_count,
+        WHERE table_schema IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'marketing', 'system')) AS relation_count,
       (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'system')
+        WHERE n.nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'marketing', 'system')
           AND c.relkind IN ('r', 'p')) AS table_count
   `);
   const row = checks.rows[0];
-  for (const field of ['users', 'posts', 'subject_locations', 'idempotency', 'contact_emails', 'locator_function', 'retention_function', 'budget_periods', 'budget_reservations', 'usage_events', 'kill_switches']) if (!row[field]) throw new Error(`PostgreSQL 17 compatibility check missing ${field}`);
+  for (const field of ['users', 'posts', 'subject_locations', 'idempotency', 'contact_emails', 'locator_function', 'retention_function', 'budget_periods', 'budget_reservations', 'usage_events', 'kill_switches', 'waitlist_signups']) if (!row[field]) throw new Error(`PostgreSQL 17 compatibility check missing ${field}`);
+  if (Number(row.waitlist_retention_column_count) !== 4) throw new Error(`PostgreSQL 17 compatibility check expected waitlist retention and hold columns`);
   if (Number(row.extension_count) !== 3) throw new Error(`PostgreSQL 17 compatibility check expected 3 required extensions, found ${row.extension_count}`);
-  if (Number(row.relation_count) !== 93) throw new Error(`PostgreSQL 17 compatibility check expected 93 local application relations after migration 0012, found ${row.relation_count}`);
-  if (Number(row.relation_count) + 2 !== 95) throw new Error(`PostgreSQL 17 compatibility check expected 95 PlanetScale relations including two provider extension views, found ${Number(row.relation_count) + 2}`);
-  if (Number(row.table_count) !== 92) throw new Error(`PostgreSQL 17 compatibility check expected 92 launch tables after migration 0012, found ${row.table_count}`);
+  if (Number(row.relation_count) !== 94) throw new Error(`PostgreSQL 17 compatibility check expected 94 local application relations after migration 0013, found ${row.relation_count}`);
+  if (Number(row.relation_count) + 2 !== 96) throw new Error(`PostgreSQL 17 compatibility check expected 96 PlanetScale relations including two provider extension views, found ${Number(row.relation_count) + 2}`);
+  if (Number(row.table_count) !== 93) throw new Error(`PostgreSQL 17 compatibility check expected 93 launch tables after migration 0013, found ${row.table_count}`);
 
   const privileges = await client.query(`
     SELECT
@@ -78,6 +110,15 @@ try {
       has_schema_privilege('lythaus_jobs', 'privacy', 'CREATE') AS jobs_privacy_ddl_forbidden,
       has_database_privilege('lythaus_jobs', current_database(), 'CREATE') AS jobs_database_ddl_forbidden,
       has_table_privilege('lythaus_admin', 'moderation.decisions', 'INSERT') AS admin_decision_allowed,
+      has_column_privilege('lythaus_runtime', 'marketing.waitlist_signups', 'id', 'INSERT') AS runtime_waitlist_insert_allowed,
+      has_table_privilege('lythaus_runtime', 'marketing.waitlist_signups', 'SELECT') AS runtime_waitlist_read_forbidden,
+      has_column_privilege('lythaus_admin', 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS admin_waitlist_ciphertext_allowed,
+      has_column_privilege('lythaus_admin', 'marketing.waitlist_signups', 'status', 'UPDATE') AS admin_waitlist_status_update_allowed,
+      has_column_privilege('lythaus_admin', 'marketing.waitlist_signups', 'email_lookup_hmac', 'SELECT') AS admin_waitlist_hmac_forbidden,
+      has_table_privilege('lythaus_admin', 'marketing.waitlist_signups', 'INSERT') AS admin_waitlist_insert_forbidden,
+      has_column_privilege('lythaus_privacy', 'marketing.waitlist_signups', 'purge_after', 'SELECT') AS privacy_waitlist_purge_allowed,
+      has_table_privilege('lythaus_privacy', 'marketing.waitlist_signups', 'DELETE') AS privacy_waitlist_delete_allowed,
+      has_column_privilege('lythaus_privacy', 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS privacy_waitlist_ciphertext_forbidden,
       has_table_privilege('lythaus_privacy', 'privacy.legal_holds', 'SELECT') AS privacy_legal_holds_allowed,
       has_table_privilege('lythaus_privacy', 'identity.email_credentials', 'SELECT') AS privacy_credentials_read_forbidden,
       has_schema_privilege('lythaus_migrations', 'identity', 'CREATE') AS migrations_ddl_allowed,
@@ -86,10 +127,10 @@ try {
       COALESCE((SELECT rolcreaterole FROM pg_roles WHERE rolname = 'lythaus_admin'), false) AS admin_create_role_forbidden
   `);
   const privilegeRow = privileges.rows[0];
-  for (const allowed of ['runtime_privacy_request_allowed', 'jobs_post_update_allowed', 'admin_decision_allowed', 'privacy_legal_holds_allowed', 'migrations_ddl_allowed']) {
+  for (const allowed of ['runtime_privacy_request_allowed', 'jobs_post_update_allowed', 'admin_decision_allowed', 'runtime_waitlist_insert_allowed', 'admin_waitlist_ciphertext_allowed', 'admin_waitlist_status_update_allowed', 'privacy_waitlist_purge_allowed', 'privacy_waitlist_delete_allowed', 'privacy_legal_holds_allowed', 'migrations_ddl_allowed']) {
     if (privilegeRow[allowed] !== true) throw new Error(`PostgreSQL 17 role contract missing allowed privilege: ${allowed}`);
   }
-  for (const forbidden of ['runtime_legal_holds_forbidden', 'runtime_content_ddl_forbidden', 'runtime_database_ddl_forbidden', 'jobs_privacy_ddl_forbidden', 'jobs_database_ddl_forbidden', 'privacy_credentials_read_forbidden', 'runtime_create_role_forbidden', 'jobs_create_role_forbidden', 'admin_create_role_forbidden']) {
+  for (const forbidden of ['runtime_legal_holds_forbidden', 'runtime_waitlist_read_forbidden', 'admin_waitlist_hmac_forbidden', 'admin_waitlist_insert_forbidden', 'privacy_waitlist_ciphertext_forbidden', 'runtime_content_ddl_forbidden', 'runtime_database_ddl_forbidden', 'jobs_privacy_ddl_forbidden', 'jobs_database_ddl_forbidden', 'privacy_credentials_read_forbidden', 'runtime_create_role_forbidden', 'jobs_create_role_forbidden', 'admin_create_role_forbidden']) {
     if (privilegeRow[forbidden] !== false) throw new Error(`PostgreSQL 17 role contract unexpectedly grants forbidden privilege: ${forbidden}`);
   }
 

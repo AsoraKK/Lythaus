@@ -44,7 +44,59 @@ tags:
     description: Structured content reactions.
   - name: Rewards
     description: Tier-gated rewards and redemptions.
+  - name: Waitlist
+    description: Private beta waitlist registration.
 paths:
+  /waitlist:
+    post:
+      operationId: joinWaitlist
+      summary: Join the Lythaus private beta waitlist
+      description: Returns the same neutral success response for new and duplicate submissions.
+      tags: [Waitlist]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WaitlistSubmission'
+      responses:
+        '200':
+          description: The submission was processed without disclosing prior membership.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistSuccess'
+        '400':
+          description: Invalid email, JSON, consent version, or Turnstile verification.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistError'
+        '413':
+          description: Request body exceeded the waitlist limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistError'
+        '415':
+          description: Content-Type must be application/json.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistError'
+        '429':
+          description: Submission rate limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistError'
+        '503':
+          description: Waitlist or verification service temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistError'
   /feed:
     $ref: './product-integrity.yaml#/paths/~1feed'
   /flags:
@@ -1175,6 +1227,12 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1moderation~1cases'
   /admin/audit:
     $ref: './product-integrity.yaml#/paths/~1admin~1audit'
+  /admin/waitlist:
+    $ref: './product-integrity.yaml#/paths/~1admin~1waitlist'
+  /admin/waitlist/{waitlistId}/status:
+    $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}~1status'
+  /admin/waitlist/{waitlistId}/retention-hold:
+    $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}~1retention-hold'
   /admin/users/search:
     $ref: './product-integrity.yaml#/paths/~1admin~1users~1search'
   /admin/privacy/legal-holds:
@@ -1205,6 +1263,39 @@ components:
       name: CF-Access-Jwt-Assertion
       description: Cloudflare Access JWT assertion required by the admin Worker.
   schemas:
+    WaitlistSubmission:
+      type: object
+      additionalProperties: false
+      required: [email, turnstileToken, consentVersion]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        turnstileToken:
+          type: string
+          minLength: 10
+          maxLength: 4096
+          writeOnly: true
+        consentVersion:
+          type: string
+          enum: [waitlist-v1]
+    WaitlistSuccess:
+      type: object
+      additionalProperties: false
+      required: [ok, status]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        status: { type: string, enum: [waitlisted] }
+    WaitlistError:
+      type: object
+      additionalProperties: false
+      required: [error, correlationId]
+      properties:
+        error:
+          type: string
+          enum: [invalid_email, invalid_json, invalid_consent_version, request_too_large, turnstile_required, turnstile_failed, turnstile_unavailable, rate_limit_exceeded, unsupported_content_type, waitlist_unavailable, request_failed]
+        correlationId: { type: string }
     Error:
       type: object
       required:

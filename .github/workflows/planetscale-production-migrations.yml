@@ -1,0 +1,86 @@
+name: PlanetScale production migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact merged main commit SHA whose migrations will be applied
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-production-planetscale-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Require exact current main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$RELEASE_SHA" == "$(git rev-parse HEAD)" ]]
+          [[ "$RELEASE_SHA" == "$(git rev-parse origin/main)" ]]
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Validate immutable migration candidate
+        run: |
+          npm run validate:planetscale-migrations
+          npm run test:planetscale-production-migrations
+          node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
+      - name: Reconcile production catalog read-only
+        env:
+          PSCALE_BRANCH_NAME: main
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/planetscale-migration"
+          node scripts/ci/reconcile-planetscale-migration-state.mjs > "$RUNNER_TEMP/planetscale-migration/reconciliation.json"
+      - name: Require documented rollback anchor
+        env:
+          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+          PLANETSCALE_PRODUCTION_BACKUP_CREATED_AT: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_CREATED_AT }}
+        run: |
+          test -n "$PLANETSCALE_PRODUCTION_BACKUP_ID"
+          test -n "$PLANETSCALE_PRODUCTION_BACKUP_CREATED_AT"
+      - name: Apply canonical migrations atomically
+        env:
+          PSCALE_BRANCH_NAME: main
+          PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED: approved
+          PLANETSCALE_MIGRATION_USAGE_APPROVED: approved
+          PLANETSCALE_MIGRATION_USAGE_MAX_USD: ${{ vars.PLANETSCALE_MIGRATION_USAGE_MAX_USD }}
+        run: node scripts/ci/apply-planetscale-production-migrations.mjs
+      - name: Verify final production schema read-only
+        env:
+          PSCALE_BRANCH_NAME: main
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+        run: node scripts/ci/verify-planetscale-production-schema.mjs
+      - name: Upload sanitized migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: planetscale-migration-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/planetscale-migration
+          if-no-files-found: ignore

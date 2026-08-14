@@ -1,183 +1,158 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
 import pg from 'pg';
+import { expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 
 const { Client } = pg;
-const root = process.cwd();
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
 const databaseUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
 const manifestOnly = process.argv.includes('--manifest-only');
+const emitContract = process.argv.includes('--emit-contract');
 const committedOnly = process.argv.includes('--committed') || process.env.CI === 'true';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
 const requireProductIntegrityMigration = process.env.REQUIRE_PRODUCT_INTEGRITY_MIGRATION === 'true';
 const expectedSchemaFingerprint = process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '';
 const expectedRelationCount = Number(process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '0');
-const migrationsPath = 'database/planetscale/migrations';
-const expectedMigrations = [
-  { name: '0000_preflight.sql', repositorySha256: '813a3bc7d2ff3c5f332ceefac17791b3916e62ade69f5e377fbe31f48b8cfc87', lfOnlyBreaks: [], appliedBytes: 195, appliedSha256: '8d4466de2ffa8c1fb3f6cb46464045e5ef199a64fcba312682623945636eaf33' },
-  { name: '0001_extensions_and_schemas.sql', repositorySha256: '49139ae2435dc9cd232e0b7c8d7799de103a8fc966a6f1eea69335d262bfbfdc', lfOnlyBreaks: [[1, 3]], appliedBytes: 817, appliedSha256: '30ed94cab4f9aae8b5ca9701214c0ec6e1b7a8182daa1c4a76bca8f37e7da610' },
-  { name: '0002_core_tables.sql', repositorySha256: 'bf806834f6b03dd7de4f63b2d440a74defbc39c9c25be6ccce206afdfbd2249e', lfOnlyBreaks: [[3, 3], [93, 97], [246, 259], [267, 275]], appliedBytes: 14_232, appliedSha256: '81e3ad9f8f6253219384164c5f36cdc15ad91442371e62497aa27f9e326c0070' },
-  { name: '0003_domain_extensions.sql', repositorySha256: '8e5a86ed2432a5072dc203367bf8c678363c778d761617ba3e6c65771e052587', lfOnlyBreaks: [], appliedBytes: 2_550, appliedSha256: '71b5afe5a01158cc437e75bb82cebbfced6921fc815ad35a647e3da4e1c2818d' },
-  { name: '0004_launch_contract.sql', repositorySha256: '2eb196c98476bee621bda364322ca8d91d3c1b75c486c0607e57fd1a78a0c262', lfOnlyBreaks: [[28, 36], [300, 307]], appliedBytes: 23_422, appliedSha256: '962ccce035cac919de65101c713f4d0db079760550e646af32b794a4c76e8020' },
-  { name: '0005_auth_revocation.sql', repositorySha256: '1abeab5b18a2f55fd995a5a225e8f992c4a49f52136b46a94023d7ee6dec77fd', lfOnlyBreaks: [], appliedBytes: 668, appliedSha256: '47cd39f391a296009bda9abede39dbeddef6519ecffeda3a58b50e0742f09961' },
-  { name: '0006_admin_role_expansion.sql', repositorySha256: '235acb9b66c5a7803bd50cb3309dda12dfaeb0ea05ef9069809ead9dda94b989', lfOnlyBreaks: [], appliedBytes: 295, appliedSha256: 'aa3ba8a9aa252ff250dd5ea9e4c7c975c23b04ff8eef40ee30c2137b98d917a7' },
-  { name: '0007_contact_emails.sql', repositorySha256: 'b6bb0a30b7cc42de61c89fee153d99ab662ccb7271d98ac63b6376f9153c6fa9', lfOnlyBreaks: [[1, 77]], appliedBytes: 3_071, appliedSha256: 'b6bb0a30b7cc42de61c89fee153d99ab662ccb7271d98ac63b6376f9153c6fa9' },
-  { name: '0008_legacy_relink_status.sql', repositorySha256: 'ae74550e61dcd93aebaae29ed4ec91587284524a0f6b6ef3e35b36467dec891a', lfOnlyBreaks: [[1, 9]], appliedBytes: 389, appliedSha256: 'ae74550e61dcd93aebaae29ed4ec91587284524a0f6b6ef3e35b36467dec891a' },
-  { name: '0009_cost_budget_enforcement.sql', repositorySha256: 'b7e0c47f38e1169c4c07558229137f739687133566478474ca6b174dd4bdee2b', lfOnlyBreaks: [[1, 50]], appliedBytes: 2_544, appliedSha256: 'f01612bd36151317d08c3dc7d9903e1c46e62ec076876fc3e4890ad794c7602b' },
-  { name: '0010_native_runtime_parity.sql', repositorySha256: '4dba201af44a2c9fad06a8b4c0706bd2a6ee4181aca0d7145f3d57e00b046ce6', lfOnlyBreaks: [], appliedBytes: 2_304, appliedSha256: '01bd4c8fc4548fed3d6504f242ca146504fe60c8b49eed868880f82d8d0c0c94' },
-  { name: '0011_email_guest_auth_only.sql', repositorySha256: '427afd1ad035b35f998ab2316a47f73556a1a49e66a2f92fce1c05926236f72d', lfOnlyBreaks: [], appliedBytes: 606, appliedSha256: '0536054f579e4f0bad3f459a19abeae3706b45d1c488a205aa8a1274632f356e' },
-  { name: '0012_product_integrity_v2.sql', repositorySha256: 'b2d4b02030333494b9959b5de040530845a7a97cbef746cb02cb931e7fdbb725', lfOnlyBreaks: [[1, 623]], appliedBytes: 28_673, appliedSha256: 'b2d4b02030333494b9959b5de040530845a7a97cbef746cb02cb931e7fdbb725' },
-];
-const expectedMigrationBytes = 79_778;
-const expectedMigrationSetSha256 = 'd06ac01ac0b47bf04c7c19dd5267ba9c7c13e7cd187ea5fb1f0f7621f206282e';
-
-if (requireProductIntegrityMigration) {
-  if (!/^[0-9a-f]{64}$/.test(expectedSchemaFingerprint)) {
-    throw new Error('post-0012 verification requires EXPECTED_DATABASE_SCHEMA_FINGERPRINT');
-  }
-  if (!Number.isInteger(expectedRelationCount) || expectedRelationCount <= 0) {
-    throw new Error('post-0012 verification requires EXPECTED_DATABASE_RELATION_COUNT');
-  }
-}
-
-function gitOutput(args) {
-  return execFileSync('git', args, { cwd: root, encoding: null, maxBuffer: 4 * 1024 * 1024 });
-}
-
-const trackedMigrationNames = committedOnly
-  ? gitOutput(['ls-tree', '-r', '--name-only', 'HEAD', '--', migrationsPath])
-    .toString('utf8')
-    .split(/\r?\n/)
-    .filter((file) => file.endsWith('.sql'))
-    .map((file) => path.posix.basename(file))
-    .sort()
-  : fs.readdirSync(path.join(root, migrationsPath))
-    .filter((file) => file.endsWith('.sql'))
-    .sort();
-const expectedMigrationNames = expectedMigrations.map(({ name }) => name);
-
-if (JSON.stringify(trackedMigrationNames) !== JSON.stringify(expectedMigrationNames)) {
-  throw new Error(`production migration file set mismatch: ${trackedMigrationNames.join(', ')}`);
-}
-
-const migrations = expectedMigrations.map((expected) => {
-  const rawContents = committedOnly
-    ? gitOutput(['show', `HEAD:${migrationsPath}/${expected.name}`])
-    : fs.readFileSync(path.join(root, migrationsPath, expected.name));
-  const repositoryText = rawContents.toString('utf8').replace(/\r\n/g, '\n');
-  const repositoryContents = Buffer.from(repositoryText, 'utf8');
-  const repositorySha256 = createHash('sha256').update(repositoryContents).digest('hex');
-  if (repositorySha256 !== expected.repositorySha256) {
-    throw new Error(`${committedOnly ? 'committed' : 'working-tree'} migration SHA-256 mismatch: ${expected.name}`);
-  }
-  if (repositoryText.includes('\r')) {
-    throw new Error(`migration contains unexpected carriage returns: ${expected.name}`);
-  }
-  const lfOnlyBreaks = new Set(expected.lfOnlyBreaks.flatMap(([start, end]) => (
-    Array.from({ length: end - start + 1 }, (_, offset) => start + offset)
-  )));
-  let breakIndex = 0;
-  const appliedContents = Buffer.from(repositoryText.replace(/\n/g, () => {
-    breakIndex += 1;
-    return lfOnlyBreaks.has(breakIndex) ? '\n' : '\r\n';
-  }), 'utf8');
-  const appliedSha256 = createHash('sha256').update(appliedContents).digest('hex');
-  if (appliedContents.length !== expected.appliedBytes || appliedSha256 !== expected.appliedSha256) {
-    throw new Error(`approved applied migration payload mismatch: ${expected.name}`);
-  }
-  return {
-    name: expected.name,
-    contents: appliedContents,
-    checksum: appliedSha256,
-  };
-});
-
-const migrationPayload = Buffer.concat(migrations.flatMap(({ contents }, index) => (
-  index === 0 ? [contents] : [Buffer.from([0x0a]), contents]
-)));
-const migrationSetSha256 = createHash('sha256').update(migrationPayload).digest('hex');
-
-if (migrationPayload.length !== expectedMigrationBytes) {
-  throw new Error(`production migration payload is ${migrationPayload.length} bytes; expected ${expectedMigrationBytes}`);
-}
-if (migrationSetSha256 !== expectedMigrationSetSha256) {
-  throw new Error(`production migration-set SHA-256 mismatch: ${migrationSetSha256}`);
-}
+const manifest = loadApprovedMigrations({ committedOnly });
 
 if (manifestOnly) {
-  console.log(`Verified ${migrations.length} committed production migrations, ${migrationPayload.length} bytes.`);
-  console.log(`Approved migration-set SHA-256: ${migrationSetSha256}`);
+  console.log(`Verified ${manifest.migrations.length} committed production migrations, ${manifest.bytes} bytes.`);
+  console.log(`Approved migration-set SHA-256: ${manifest.checksum}`);
   process.exit(0);
 }
-
-if (branch !== 'main') throw new Error('production schema verification requires PSCALE_BRANCH_NAME=main');
+if (!branch) throw new Error('schema verification requires PSCALE_BRANCH_NAME');
+if (!emitContract && branch !== 'main') throw new Error('production schema verification requires PSCALE_BRANCH_NAME=main');
+if (emitContract && branch === 'main') throw new Error('schema contract generation is restricted to a non-production branch');
 if (!databaseUrl) throw new Error('PLANETSCALE_SCHEMA_READ_DATABASE_URL is required');
-
 const connection = new URL(databaseUrl);
-if (connection.searchParams.get('sslmode') !== 'verify-full') {
-  throw new Error('production schema verification requires sslmode=verify-full');
-}
-if (connection.searchParams.get('sslrootcert') === 'system') {
-  connection.searchParams.delete('sslrootcert');
+if (connection.searchParams.get('sslmode') !== 'verify-full') throw new Error('production schema verification requires sslmode=verify-full');
+if (connection.searchParams.get('sslrootcert') === 'system') connection.searchParams.delete('sslrootcert');
+if (requireProductIntegrityMigration && !emitContract && (!/^[0-9a-f]{64}$/.test(expectedSchemaFingerprint) || !Number.isInteger(expectedRelationCount) || expectedRelationCount <= 0)) {
+  throw new Error('post-0013 verification requires expected schema fingerprint and relation count');
 }
 
+const applicationSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'marketing', 'system'];
+
+async function schemaContract(client, registryRows) {
+  const schemaParams = applicationSchemas.map((_, index) => `$${index + 1}`).join(', ');
+  const [relations, columns, constraints, indexes, functions, extensions] = await Promise.all([
+    client.query(`SELECT table_type, table_schema, table_name
+      FROM information_schema.tables
+      WHERE table_schema IN (${schemaParams})
+      ORDER BY table_type, table_schema, table_name`, applicationSchemas),
+    client.query(`SELECT table_schema, table_name, ordinal_position, column_name, udt_name, is_nullable, COALESCE(column_default, '') AS column_default
+      FROM information_schema.columns
+      WHERE table_schema IN (${schemaParams})
+      ORDER BY table_schema, table_name, ordinal_position`, applicationSchemas),
+    client.query(`SELECT namespace.nspname AS table_schema, relation.relname AS table_name,
+        constraint_row.conname, constraint_row.contype, constraint_row.convalidated,
+        pg_get_constraintdef(constraint_row.oid, true) AS definition
+      FROM pg_constraint constraint_row
+      JOIN pg_class relation ON relation.oid = constraint_row.conrelid
+      JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+      WHERE namespace.nspname IN (${schemaParams})
+      ORDER BY namespace.nspname, relation.relname, constraint_row.conname`, applicationSchemas),
+    client.query(`SELECT schemaname, tablename, indexname, indexdef
+      FROM pg_indexes
+      WHERE schemaname IN (${schemaParams})
+      ORDER BY schemaname, tablename, indexname`, applicationSchemas),
+    client.query(`SELECT namespace.nspname AS function_schema, procedure.proname,
+        pg_get_function_identity_arguments(procedure.oid) AS arguments,
+        pg_get_function_result(procedure.oid) AS result_type,
+        procedure.prosecdef,
+        COALESCE(array_to_string(procedure.proconfig, ','), '') AS configuration
+      FROM pg_proc procedure
+      JOIN pg_namespace namespace ON namespace.oid = procedure.pronamespace
+      WHERE namespace.nspname IN (${schemaParams})
+      ORDER BY namespace.nspname, procedure.proname, arguments`, applicationSchemas),
+    client.query('SELECT extname, extversion FROM pg_extension ORDER BY extname'),
+  ]);
+  const sections = [
+    ['relations', relations.rows],
+    ['columns', columns.rows],
+    ['constraints', constraints.rows],
+    ['indexes', indexes.rows],
+    ['functions', functions.rows],
+    ['extensions', extensions.rows],
+    ['migrations', registryRows],
+  ];
+  const payload = sections.map(([name, rows]) => `--${name}--\n${rows.map((row) => JSON.stringify(row)).join('\n')}`).join('\n');
+  return {
+    fingerprint: createHash('sha256').update(payload).digest('hex'),
+    relationCount: relations.rowCount ?? relations.rows.length,
+  };
+}
+
+async function verifyWaitlistCatalog(client) {
+  const result = await client.query(`SELECT
+    to_regclass('marketing.waitlist_signups') IS NOT NULL AS waitlist_table,
+    to_regclass('marketing.waitlist_signups_created_cursor_idx') IS NOT NULL AS cursor_index,
+    to_regclass('marketing.waitlist_signups_due_purge_idx') IS NOT NULL AS purge_index,
+    to_regclass('system.rate_limit_windows') IS NOT NULL AS rate_limit_windows,
+    to_regclass('feed.notification_devices') IS NOT NULL AS notification_devices,
+    to_regclass('trust.user_activity_events') IS NOT NULL AS activity_events,
+    to_regclass('moderation.appeal_review_votes') IS NOT NULL AS appeal_review_votes,
+    EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'waitlist_signups_email_lookup_hmac_unique' AND contype = 'u') AS unique_hmac,
+    NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups'
+        AND column_name IN ('email', 'plain_email', 'raw_ip', 'ip_address', 'user_agent', 'turnstile_token')
+    ) AS prohibited_columns_absent`);
+  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error('production post-0013 catalog contract is incomplete');
+}
+
+async function verifyWaitlistPrivileges(client) {
+  const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
+  const runtime = roleIdentifiers.lythaus_runtime;
+  const admin = roleIdentifiers.lythaus_admin;
+  const privacy = roleIdentifiers.lythaus_privacy;
+  if (![runtime, admin, privacy].every((value) => /^pscale_api_[a-z0-9]+$/.test(value ?? ''))) {
+    throw new Error('post-0013 privilege verification requires canonical PlanetScale role identifiers');
+  }
+  const result = await client.query(`SELECT
+    has_column_privilege($1, 'marketing.waitlist_signups', 'email_lookup_hmac', 'INSERT') AS runtime_insert_hmac,
+    has_table_privilege($1, 'marketing.waitlist_signups', 'SELECT') AS runtime_select,
+    has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS admin_select_ciphertext,
+    has_column_privilege($2, 'marketing.waitlist_signups', 'email_lookup_hmac', 'SELECT') AS admin_select_hmac,
+    has_column_privilege($2, 'marketing.waitlist_signups', 'status', 'UPDATE') AS admin_update_status,
+    has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'UPDATE') AS admin_update_ciphertext,
+    has_table_privilege($3, 'marketing.waitlist_signups', 'DELETE') AS privacy_delete,
+    has_column_privilege($3, 'marketing.waitlist_signups', 'purge_after', 'SELECT') AS privacy_select_purge,
+    has_column_privilege($3, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS privacy_select_ciphertext`,
+  [runtime, admin, privacy]);
+  const row = result.rows[0];
+  if (!row?.runtime_insert_hmac || row.runtime_select
+    || !row.admin_select_ciphertext || row.admin_select_hmac
+    || !row.admin_update_status || row.admin_update_ciphertext
+    || !row.privacy_delete || !row.privacy_select_purge || row.privacy_select_ciphertext) {
+    throw new Error('production waitlist least-privilege contract failed');
+  }
+}
 const client = new Client({ connectionString: connection.toString(), ssl: { rejectUnauthorized: true } });
 await client.connect();
 try {
   await client.query('BEGIN READ ONLY');
-  const registry = await client.query(
-    'SELECT version, checksum FROM system.schema_migrations ORDER BY version'
-  );
-  const recorded = new Map(registry.rows.map((row) => [row.version, row.checksum]));
-  const appliedThrough = requireProductIntegrityMigration
-    ? '0012_product_integrity_v2.sql'
-    : requireBudgetMigration
-      ? '0009_cost_budget_enforcement.sql'
-      : '0008_legacy_relink_status.sql';
-  const appliedThroughIndex = migrations.findIndex(({ name }) => name === appliedThrough);
-  if (appliedThroughIndex < 0) throw new Error(`production migration manifest is missing ${appliedThrough}`);
-  const expectedAppliedMigrations = migrations.slice(0, appliedThroughIndex + 1);
-
-  for (const migration of expectedAppliedMigrations) {
-    if (recorded.get(migration.name) !== migration.checksum) {
-      throw new Error(`production migration registry mismatch: ${migration.name}`);
+  const registry = await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
+  const through = requireProductIntegrityMigration || emitContract ? '0013_marketing_waitlist.sql' : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
+  const expected = expectedMigrationPrefix(through);
+  if (registry.rows.length !== expected.length) throw new Error(`production migration registry contains ${registry.rows.length} entries; expected ${expected.length}`);
+  expected.forEach((migration, index) => {
+    const row = registry.rows[index];
+    if (row?.version !== migration.name || row?.checksum !== migration.appliedSha256) throw new Error(`production migration registry mismatch: ${migration.name}`);
+  });
+  if (requireProductIntegrityMigration || emitContract) {
+    await verifyWaitlistCatalog(client);
+    await verifyWaitlistPrivileges(client);
+    const contract = await schemaContract(client, registry.rows);
+    if (emitContract) {
+      console.log(JSON.stringify({ branch, ...contract }));
+    } else {
+      if (contract.fingerprint !== expectedSchemaFingerprint) throw new Error('production post-0013 schema fingerprint mismatch');
+      if (contract.relationCount !== expectedRelationCount) throw new Error(`production post-0013 relation count is ${contract.relationCount}; expected ${expectedRelationCount}`);
     }
   }
-  if (recorded.size !== expectedAppliedMigrations.length) {
-    const state = requireProductIntegrityMigration ? 'post-product-integrity' : requireBudgetMigration ? 'post-budget' : 'current-baseline';
-    throw new Error(`production migration registry contains ${recorded.size} entries; expected ${expectedAppliedMigrations.length} for ${state} state`);
-  }
-
-  if (requireProductIntegrityMigration) {
-    const relations = await client.query(
-      `SELECT table_type, table_schema, table_name
-         FROM information_schema.tables
-        WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-        ORDER BY table_type, table_schema, table_name`
-    );
-    const relationLines = relations.rows
-      .map((row) => `${row.table_type}:${row.table_schema}.${row.table_name}`)
-      .sort((left, right) => left.localeCompare(right));
-    const migrationLines = registry.rows
-      .map((row) => `${row.version}=${row.checksum}`)
-      .sort((left, right) => left.localeCompare(right));
-    const fingerprintInput = `${relationLines.join('\n')}\n--migrations--\n${migrationLines.join('\n')}`;
-    const actualFingerprint = createHash('sha256').update(fingerprintInput).digest('hex');
-    const actualRelationCount = relations.rowCount ?? relations.rows.length;
-    if (actualFingerprint !== expectedSchemaFingerprint) {
-      throw new Error('production post-0012 schema fingerprint mismatch');
-    }
-    if (actualRelationCount !== expectedRelationCount) {
-      throw new Error(`production post-0012 relation count is ${actualRelationCount}; expected ${expectedRelationCount}`);
-    }
-  }
-
   await client.query('ROLLBACK');
-  const state = requireProductIntegrityMigration ? 'post-product-integrity' : requireBudgetMigration ? 'post-budget' : 'current-baseline';
-  console.log(`Verified read-only PlanetScale migration registry on ${branch} (${state} state).`);
-  console.log(`Approved migration-set SHA-256: ${migrationSetSha256}`);
+  console.log(`Verified read-only PlanetScale migration registry on ${branch}.`);
+  console.log(`Approved migration-set SHA-256: ${manifest.checksum}`);
 } catch (error) {
   await client.query('ROLLBACK').catch(() => undefined);
   throw error;

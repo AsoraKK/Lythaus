@@ -51,6 +51,13 @@ export interface ApiErrorBody {
   correlationId: string;
 }
 
+export {
+  decodeCursor,
+  encodeCursor,
+  pageRequest,
+  type KeysetCursor,
+} from './keyset-cursor.ts';
+
 export interface UploadSessionResponse {
   uploadSessionId: string;
   objectKey: string;

@@ -2,19 +2,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Dashboard from './Dashboard.jsx';
-import { adminRequest, getAdminApiUrl } from '../api/adminApi.js';
+import { adminRequest } from '../api/adminApi.js';
 
 vi.mock('../api/adminApi.js', () => ({
   adminRequest: vi.fn(),
-  getAbsoluteAdminApiUrl: vi.fn(() => 'https://admin-api.lythaus.co/api/admin'),
-  getAdminApiUrl: vi.fn(() => '/api/admin'),
-  setAdminApiUrl: vi.fn(),
 }));
 
 describe('Dashboard', () => {
   beforeEach(() => {
     adminRequest.mockReset();
-    getAdminApiUrl.mockReturnValue('/api/admin');
   });
 
   it('loads only canonical admin Worker routes', async () => {

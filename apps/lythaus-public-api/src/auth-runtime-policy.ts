@@ -44,6 +44,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'invalid_comment', 'invalid_comment_parent', 'invalid_credentials', 'invalid_cursor',
   'invalid_custom_feed', 'invalid_custom_feed_rule', 'invalid_custom_feed_rules',
   'invalid_display_name', 'invalid_email', 'invalid_flag', 'invalid_follow',
+  'invalid_consent_version',
   'invalid_geo_scope', 'invalid_idempotency_key', 'invalid_json', 'invalid_mute',
   'invalid_notification_device', 'invalid_page_limit', 'invalid_password', 'invalid_post',
   'invalid_post_visibility', 'invalid_privacy_request', 'invalid_profile_visibility',
@@ -60,6 +61,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'reward_not_found', 'self_reaction_not_allowed', 'social_interaction_not_allowed',
   'storage_quota_exceeded', 'storage_quota_not_configured', 'turnstile_failed',
   'turnstile_required', 'turnstile_unavailable', 'unsupported_media_type',
+  'unsupported_content_type', 'method_not_allowed', 'waitlist_unavailable',
   'upload_checksum_invalid', 'upload_object_invalid', 'upload_session_invalid',
   'user_not_found', 'userinfo_unavailable', 'verification_token_invalid',
 ]);
@@ -74,8 +76,10 @@ export function classifyPublicError(error: unknown): { exposedCode: string; inte
     : ['authentication_required', 'invalid_credentials', 'refresh_token_invalid', 'refresh_token_reuse'].includes(exposedCode) ? 401
       : ['news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed'].includes(exposedCode) ? 403
         : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
-          : ['idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed'].includes(exposedCode) ? 409
+          : exposedCode === 'method_not_allowed' ? 405
+            : ['idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed'].includes(exposedCode) ? 409
             : exposedCode === 'request_too_large' ? 413
+              : exposedCode === 'unsupported_content_type' ? 415
               : exposedCode === 'rate_limit_exceeded'
                   || exposedCode.endsWith('_daily_limit_reached')
                   || exposedCode === 'relationship_change_limit_reached'
