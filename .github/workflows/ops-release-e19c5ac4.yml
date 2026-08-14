@@ -1,4 +1,4 @@
-name: Release reviewed 3b88841f production SHA
+name: Release reviewed cf46b505 production SHA
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
-      RELEASE_SHA: 3b88841f549c516adf111bdab5a4b2fd98737d36
+      RELEASE_SHA: cf46b50579a2b0abc19a6a5793290872ae9b4ddb
     steps:
       - name: Require exact current main SHA
         shell: bash
