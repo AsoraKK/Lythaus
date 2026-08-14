@@ -65,7 +65,7 @@ test('function postconditions verify canonical PL/pgSQL semantics without pg_get
   const functionQueries = queries.filter((sql) => sql.includes('migration-artifact:function:privacy.'));
   assert.equal(functionQueries.length, 2);
   for (const sql of functionQueries) {
-    assert.match(sql, /procedure_entry\.prosrc = \$lythaus_function_contract\$/);
+    assert.ok(sql.includes("replace(procedure_entry.prosrc, E'\\r\\n', E'\\n')"));
     assert.match(sql, /procedure_entry\.prosecdef IS TRUE/);
     assert.match(sql, /pg_get_function_result\(procedure_entry\.oid\)/);
     assert.match(sql, /cardinality\(procedure_entry\.proconfig\) = 1/);

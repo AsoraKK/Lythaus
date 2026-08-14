@@ -144,7 +144,7 @@ SELECT EXISTS (
      AND procedure_language.lanname = 'plpgsql'
      AND procedure_entry.prosecdef IS TRUE
      AND pg_get_function_result(procedure_entry.oid) = '${contract.resultType}'
-     AND procedure_entry.prosrc = ${dollarQuote(contract.canonicalBody)}
+     AND replace(procedure_entry.prosrc, E'\\r\\n', E'\\n') = ${dollarQuote(contract.canonicalBody)}
      AND cardinality(procedure_entry.proconfig) = 1
      AND split_part(procedure_entry.proconfig[1], '=', 1) = 'search_path'
      AND regexp_replace(split_part(procedure_entry.proconfig[1], '=', 2), '[[:space:]]+', '', 'g') = '${normalizedSearchPath}'
