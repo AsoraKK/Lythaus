@@ -12,6 +12,8 @@ const headers = fs.readFileSync(path.join(root, 'public/_headers'), 'utf8');
 
 test('homepage uses the approved waitlist submission and accessible states', () => {
   assert.match(homepage, /aria-live="polite"/);
+  assert.match(homepage, /const successMessage = "You're on the list\. Thanks for joining Lythaus\. We'll be in touch when there is something worth sharing\."/);
+  assert.match(homepage, /if \(success instanceof HTMLElement\) success\.hidden = false;\s*setStatus\(successMessage, 'success'\);/);
   assert.match(homepage, /button\.disabled = true/);
   assert.match(homepage, /Joining\.\.\./);
   assert.match(homepage, /fetch\(`\$\{apiBaseUrl\}\/api\/waitlist`/);

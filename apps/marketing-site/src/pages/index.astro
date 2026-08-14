@@ -210,6 +210,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         return "We couldn't add you right now. Please try again in a moment.";
       };
 
+      const successMessage = "You're on the list. Thanks for joining Lythaus. We'll be in touch when there is something worth sharing.";
+
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (!(input instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
@@ -233,7 +235,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           form.reset();
           form.dataset.state = 'success';
           if (success instanceof HTMLElement) success.hidden = false;
-          setStatus('', 'success');
+          setStatus(successMessage, 'success');
         } catch (error) {
           const code = error instanceof Error ? error.message : 'waitlist_unavailable';
           setStatus(errorMessage(code), 'error');
