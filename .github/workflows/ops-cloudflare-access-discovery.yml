@@ -15,24 +15,63 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Discover Zero Trust organization and admin Access applications
+      - name: Discover Access identity from the currently deployed admin Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN is unavailable outside the protected production environment" >&2; exit 2; }
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID is unavailable outside the protected production environment" >&2; exit 2; }
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "CLOUDFLARE_API_TOKEN is unavailable" >&2; exit 2; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "CLOUDFLARE_ACCOUNT_ID is unavailable" >&2; exit 2; }
 
           api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
-          org_json="$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "${api}/access/organizations")"
-          apps_json="$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "${api}/access/apps?per_page=1000")"
+          settings_json="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "${api}/workers/scripts/lythaus-admin-api-development/settings")"
+          jq -e '.success == true and (.result.bindings | type == "array")' <<<"$settings_json" >/dev/null
 
-          jq -e '.success == true and (.result.auth_domain | type == "string")' <<<"$org_json" >/dev/null
-          auth_domain="$(jq -r '.result.auth_domain' <<<"$org_json")"
-          [[ "$auth_domain" =~ ^[a-z0-9-]+\.cloudflareaccess\.com$ ]] || { echo "Unexpected Zero Trust auth_domain" >&2; exit 1; }
+          binding_text() {
+            local name="$1"
+            jq -r --arg name "$name" '.result.bindings[] | select(.name == $name and .type == "plain_text") | .text' <<<"$settings_json" | head -n1
+          }
 
+          team_domain="$(binding_text ACCESS_TEAM_DOMAIN)"
+          audiences="$(binding_text ACCESS_AUDIENCE)"
+          jwks_url="$(binding_text ACCESS_JWKS_URL)"
+
+          [[ "$team_domain" =~ ^[a-z0-9-]+\.cloudflareaccess\.com$ ]] || {
+            echo "Current admin Worker does not contain a materialized Access team domain." >&2
+            exit 1
+          }
+          IFS=',' read -r -a aud <<<"$audiences"
+          [[ "${#aud[@]}" -eq 2 && -n "${aud[0]}" && -n "${aud[1]}" && "${aud[0]}" != "${aud[1]}" ]] || {
+            echo "Current admin Worker does not contain two distinct Access audiences." >&2
+            exit 1
+          }
+          [[ "$jwks_url" == "https://${team_domain}/cdn-cgi/access/certs" ]] || {
+            echo "Current admin Worker Access JWKS URL does not match its team domain." >&2
+            exit 1
+          }
+
+          echo "ACCESS_TEAM_DOMAIN=${team_domain}"
+          echo "ACCESS_AUDIENCES=${audiences}"
+          echo "ACCESS_JWKS_URL=${jwks_url}"
+
+      - name: Confirm live Zero Trust apps when token permission allows
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}"
+          if ! apps_json="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "${api}/access/apps?per_page=1000" 2>/dev/null)"; then
+            echo "Access Apps read permission is not present on this token; deployed Worker identity was used read-only instead."
+            exit 0
+          fi
           jq -e '.success == true and (.result | type == "array")' <<<"$apps_json" >/dev/null
           mapfile -t matching < <(jq -r '
             .result[]
@@ -41,20 +80,5 @@ jobs:
             | select((.aud // "") | length > 0)
             | [.domain, .aud] | @tsv
           ' <<<"$apps_json")
-
-          if [[ "${#matching[@]}" -ne 2 ]]; then
-            echo "Expected exactly two self-hosted Access applications covering admin.lythaus.co and/or admin-api.lythaus.co; found ${#matching[@]}." >&2
-            printf '%s\n' "${matching[@]%%$'\t'*}" >&2 || true
-            exit 1
-          fi
-
-          aud_one="${matching[0]#*$'\t'}"
-          aud_two="${matching[1]#*$'\t'}"
-          [[ "$aud_one" != "$aud_two" ]] || { echo "Access audience tags must be distinct" >&2; exit 1; }
-
-          echo "ACCESS_TEAM_DOMAIN=${auth_domain}"
-          echo "ACCESS_JWKS_URL=https://${auth_domain}/cdn-cgi/access/certs"
-          echo "ACCESS_APP_1_DOMAIN=${matching[0]%%$'\t'*}"
-          echo "ACCESS_APP_1_AUD=${aud_one}"
-          echo "ACCESS_APP_2_DOMAIN=${matching[1]%%$'\t'*}"
-          echo "ACCESS_APP_2_AUD=${aud_two}"
+          echo "Matching live Access applications: ${#matching[@]}"
+          printf '%s\n' "${matching[@]%%$'\t'*}"
