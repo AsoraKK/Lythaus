@@ -52,6 +52,27 @@ test('requires complete canonical relation, function and data postconditions bef
   }
 });
 
+test('function postconditions verify canonical PL/pgSQL semantics without pg_get_functiondef', async () => {
+  const queries = [];
+  const client = {
+    async query(sql) {
+      queries.push(sql);
+      return { rows: [{ present: true }] };
+    },
+  };
+  const [state] = await classifyMigrationState(client, ['0012_product_integrity_v2.sql']);
+  assert.equal(state.state, 'FULLY_APPLIED');
+  const functionQueries = queries.filter((sql) => sql.includes('migration-artifact:function:privacy.'));
+  assert.equal(functionQueries.length, 2);
+  for (const sql of functionQueries) {
+    assert.match(sql, /procedure_entry\.prosrc = \$lythaus_function_contract\$/);
+    assert.match(sql, /procedure_entry\.prosecdef IS TRUE/);
+    assert.match(sql, /pg_get_function_result\(procedure_entry\.oid\)/);
+    assert.match(sql, /cardinality\(procedure_entry\.proconfig\) = 1/);
+    assert.doesNotMatch(sql, /pg_get_functiondef/);
+  }
+});
+
 test('pre-migration waitlist absence stays NOT_APPLIED when no-plaintext invariant is vacuously true', async () => {
   const client = {
     async query(sql) {
