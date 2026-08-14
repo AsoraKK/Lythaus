@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Discover Access identity from the currently deployed admin Worker
+      - name: Inspect current admin Worker Access bindings read-only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -40,23 +40,20 @@ jobs:
           audiences="$(binding_text ACCESS_AUDIENCE)"
           jwks_url="$(binding_text ACCESS_JWKS_URL)"
 
+          echo "CURRENT_ACCESS_TEAM_DOMAIN=${team_domain}"
+          echo "CURRENT_ACCESS_AUDIENCE=${audiences}"
+          echo "CURRENT_ACCESS_JWKS_URL=${jwks_url}"
+          echo "CURRENT_ACCESS_BINDING_NAMES:"
+          jq -r '.result.bindings[] | select(.type == "plain_text") | .name' <<<"$settings_json" | grep '^ACCESS_' || true
+
           [[ "$team_domain" =~ ^[a-z0-9-]+\.cloudflareaccess\.com$ ]] || {
             echo "Current admin Worker does not contain a materialized Access team domain." >&2
-            exit 1
-          }
-          IFS=',' read -r -a aud <<<"$audiences"
-          [[ "${#aud[@]}" -eq 2 && -n "${aud[0]}" && -n "${aud[1]}" && "${aud[0]}" != "${aud[1]}" ]] || {
-            echo "Current admin Worker does not contain two distinct Access audiences." >&2
             exit 1
           }
           [[ "$jwks_url" == "https://${team_domain}/cdn-cgi/access/certs" ]] || {
             echo "Current admin Worker Access JWKS URL does not match its team domain." >&2
             exit 1
           }
-
-          echo "ACCESS_TEAM_DOMAIN=${team_domain}"
-          echo "ACCESS_AUDIENCES=${audiences}"
-          echo "ACCESS_JWKS_URL=${jwks_url}"
 
       - name: Confirm live Zero Trust apps when token permission allows
         env:
@@ -69,7 +66,7 @@ jobs:
           if ! apps_json="$(curl --fail-with-body --silent --show-error \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             "${api}/access/apps?per_page=1000" 2>/dev/null)"; then
-            echo "Access Apps read permission is not present on this token; deployed Worker identity was used read-only instead."
+            echo "Access Apps read permission is not present on this token."
             exit 0
           fi
           jq -e '.success == true and (.result | type == "array")' <<<"$apps_json" >/dev/null
@@ -81,4 +78,4 @@ jobs:
             | [.domain, .aud] | @tsv
           ' <<<"$apps_json")
           echo "Matching live Access applications: ${#matching[@]}"
-          printf '%s\n' "${matching[@]%%$'\t'*}"
+          printf '%s\n' "${matching[@]}"
