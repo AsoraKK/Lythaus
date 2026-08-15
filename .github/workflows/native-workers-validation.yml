@@ -12,6 +12,10 @@ on:
       - 'scripts/validate-no-retired-provider-dependencies.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'scripts/ci/verify-planetscale-production-schema.mjs'
+      - 'scripts/ci/materialize-public-waitlist-deploy.mjs'
+      - 'scripts/ci/probe-public-waitlist-candidate.mjs'
+      - 'scripts/ci/resolve-latest-worker-version.mjs'
+      - 'scripts/cloudflare/waitlist-turnstile.mjs'
       - 'scripts/validate-production-gates.mjs'
       - 'infrastructure/cloudflare/production-gates.json'
       - 'scripts/validate-planetscale-extensions.mjs'
@@ -28,12 +32,15 @@ on:
       - 'scripts/tests/native-architecture-invariants.test.js'
       - 'scripts/tests/production-gates.test.mjs'
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
+      - 'scripts/tests/public-waitlist-cutover.test.mjs'
       - 'scripts/critical-coverage-gate.mjs'
       - 'scripts/critical-coverage-manifest.json'
       - 'tsconfig.native.json'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/native-workers-validation.yml'
+      - '.github/workflows/deploy-public-waitlist.yml'
+      - '.github/workflows/deploy-marketing-preview.yml'
   push:
     branches: [main, development]
     paths:
@@ -44,6 +51,10 @@ on:
       - 'scripts/validate-no-retired-provider-dependencies.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'scripts/ci/verify-planetscale-production-schema.mjs'
+      - 'scripts/ci/materialize-public-waitlist-deploy.mjs'
+      - 'scripts/ci/probe-public-waitlist-candidate.mjs'
+      - 'scripts/ci/resolve-latest-worker-version.mjs'
+      - 'scripts/cloudflare/waitlist-turnstile.mjs'
       - 'scripts/validate-production-gates.mjs'
       - 'infrastructure/cloudflare/production-gates.json'
       - 'scripts/validate-planetscale-extensions.mjs'
@@ -59,11 +70,15 @@ on:
       - 'scripts/tests/native-architecture-invariants.test.js'
       - 'scripts/tests/production-gates.test.mjs'
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
+      - 'scripts/tests/public-waitlist-cutover.test.mjs'
       - 'scripts/critical-coverage-gate.mjs'
       - 'scripts/critical-coverage-manifest.json'
       - 'tsconfig.native.json'
       - 'package.json'
       - 'package-lock.json'
+      - '.github/workflows/native-workers-validation.yml'
+      - '.github/workflows/deploy-public-waitlist.yml'
+      - '.github/workflows/deploy-marketing-preview.yml'
 
 permissions:
   contents: read
@@ -90,6 +105,7 @@ jobs:
       - run: npm run test:native-architecture
       - run: node --test scripts/tests/production-gates.test.mjs
       - run: npm run test:product-integrity-runtime
+      - run: node --test scripts/tests/public-waitlist-cutover.test.mjs
       - run: npm run test:critical-coverage
       - run: npm run test:database-identity
       - run: npm run test:budget
