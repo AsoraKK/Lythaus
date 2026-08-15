@@ -1,0 +1,111 @@
+name: Deploy Lythaus marketing shell
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact reviewed current main SHA to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-marketing-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-validate:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      PAGES_PROJECT: lythaus-marketing
+      PUBLIC_API_BASE_URL: https://api.lythaus.co
+      PUBLIC_TURNSTILE_SITE_KEY: ''
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Require exact reviewed current main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "release_sha must be a full 40-character commit SHA" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || {
+            echo "Refusing production deployment: release_sha is not current origin/main." >&2
+            exit 1
+          }
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/marketing-site/package-lock.json
+
+      - name: Build and validate exact marketing shell
+        working-directory: apps/marketing-site
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "const url = new URL(process.env.PUBLIC_API_BASE_URL); if (url.protocol !== 'https:' || url.hostname !== 'api.lythaus.co' || url.pathname !== '/') throw new Error('PUBLIC_API_BASE_URL must be https://api.lythaus.co');"
+          test -z "$PUBLIC_TURNSTILE_SITE_KEY"
+          npm ci
+          npm run build
+          node ../../scripts/cloudflare/validate-marketing-output.mjs dist
+          if grep -R -F 'challenges.cloudflare.com/turnstile/v0/api.js' dist; then
+            echo 'Turnstile client must not be present while waitlist activation is deferred.' >&2
+            exit 1
+          fi
+          grep -F 'The internet is changing.' dist/index.html
+          grep -F 'Trust should not disappear with it.' dist/index.html
+          grep -F 'Human authenticity will become more valuable' dist/index.html
+          if grep -R -n -i 'TURNSTILE_SECRET\|PII_ENCRYPTION_KEY\|PII_HMAC_KEY' dist; then
+            echo 'Sensitive binding name leaked into the marketing artifact.' >&2
+            exit 1
+          fi
+
+      - name: Deploy exact artifact to Cloudflare Pages production branch
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@4.110.0 pages deploy apps/marketing-site/dist \
+            --project-name "$PAGES_PROJECT" \
+            --branch main \
+            --commit-hash "$RELEASE_SHA" \
+            --commit-dirty=false
+
+      - name: Validate production custom domains serve the new homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          for host in https://lythaus.co https://www.lythaus.co; do
+            body="$(mktemp)"
+            headers="$(mktemp)"
+            status="$(curl --location --silent --show-error --max-time 30 --retry 6 --retry-delay 3 --dump-header "$headers" --output "$body" --write-out '%{http_code}' "$host/")"
+            test "$status" = 200
+            grep -F 'The internet is changing.' "$body"
+            grep -F 'Trust should not disappear with it.' "$body"
+            grep -F 'Human authenticity will become more valuable' "$body"
+            grep -F -i 'X-Content-Type-Options: nosniff' "$headers"
+            grep -F -i 'X-Frame-Options: DENY' "$headers"
+            rm -f "$body" "$headers"
+          done
+
+      - name: Record marketing-shell release state
+        shell: bash
+        run: |
+          echo 'Marketing shell deployed with waitlist submission intentionally fail closed.'
+          echo 'Activate waitlist only after the production Turnstile widget and /api/waitlist Worker route are deployed together.'
