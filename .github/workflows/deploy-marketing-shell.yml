@@ -60,11 +60,17 @@ jobs:
           npm ci
           npm run build
           node ../../scripts/cloudflare/validate-marketing-output.mjs dist
-          ! grep -R -F 'challenges.cloudflare.com/turnstile/v0/api.js' dist
+          if grep -R -F 'challenges.cloudflare.com/turnstile/v0/api.js' dist; then
+            echo 'Turnstile client must not be present while waitlist activation is deferred.' >&2
+            exit 1
+          fi
           grep -F 'The internet is changing.' dist/index.html
           grep -F 'Trust should not disappear with it.' dist/index.html
           grep -F 'Human authenticity will become more valuable' dist/index.html
-          ! grep -R -n -i 'TURNSTILE_SECRET\|PII_ENCRYPTION_KEY\|PII_HMAC_KEY' dist
+          if grep -R -n -i 'TURNSTILE_SECRET\|PII_ENCRYPTION_KEY\|PII_HMAC_KEY' dist; then
+            echo 'Sensitive binding name leaked into the marketing artifact.' >&2
+            exit 1
+          fi
 
       - name: Deploy exact artifact to Cloudflare Pages production branch
         env:
