@@ -1,0 +1,240 @@
+name: Deploy Lythaus public waitlist
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact reviewed current main SHA to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-public-waitlist-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    env:
+      PUBLIC_WORKER: lythaus-public-api-development
+      PRODUCTION_PUBLIC_API_BASE_URL: https://api.lythaus.co
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Require exact reviewed current main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'release_sha must be a full 40-character commit SHA' >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || {
+            echo 'Refusing production deployment: release_sha is not current origin/main.' >&2
+            exit 1
+          }
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Validate public waitlist release candidate
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+          CLOUDFLARE_ENVIRONMENT: production
+          MATERIALIZE_PUBLIC_WAITLIST_CONFIG: 'true'
+        run: |
+          set -euo pipefail
+          npm run validate:native-workers
+          npm run validate:native-scope:production
+          npm run validate:planetscale-migrations
+          npm run validate:planetscale-extensions
+          npm run validate:no-retired-provider-dependencies
+          node scripts/ci/materialize-public-waitlist-deploy.mjs
+          npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
+
+      - name: Prove Hyperdrive targets PlanetScale main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_ORGANIZATION: lythaus
+          PLANETSCALE_DATABASE: lythaus-core
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/waitlist-cutover"
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs > "$RUNNER_TEMP/waitlist-cutover/hyperdrive-targets.json"
+
+      - name: Verify production schema and waitlist grants read-only
+        env:
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+          REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+        run: node scripts/ci/verify-planetscale-production-schema.mjs
+
+      - name: Verify existing public Worker PII secrets are present
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler secret list --name "$PUBLIC_WORKER" --format json > "$RUNNER_TEMP/public-worker-secrets.json"
+          for required in PII_ENCRYPTION_KEY_V1 PII_HMAC_KEY_V1; do
+            jq -e --arg name "$required" 'any(.[]; .name == $name and .type == "secret_text")' "$RUNNER_TEMP/public-worker-secrets.json" >/dev/null || {
+              echo "Required public Worker secret is missing: $required" >&2
+              exit 1
+            }
+          done
+          rm -f "$RUNNER_TEMP/public-worker-secrets.json"
+
+      - name: Capture predeployment public Worker state
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/waitlist-cutover"
+          npx wrangler deployments status --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-before.json"
+          node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/waitlist-cutover/public-before.json" unused PUBLIC
+          echo 'PUBLIC_ROLLBACK_CAPTURED=true' >> "$GITHUB_ENV"
+
+      - name: Provision or validate production Turnstile widget
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURNSTILE_SECRET_FILE: ${{ runner.temp }}/waitlist-turnstile-secret.json
+          TURNSTILE_EVIDENCE_PATH: ${{ runner.temp }}/waitlist-cutover/turnstile.json
+        run: node scripts/cloudflare/waitlist-turnstile.mjs ensure
+
+      - name: Upload immutable public Worker candidate
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler versions upload \
+            --config apps/lythaus-public-api/wrangler.jsonc \
+            --tag "$RELEASE_SHA" \
+            --message "Lythaus public waitlist candidate $RELEASE_SHA" \
+            --secrets-file "$RUNNER_TEMP/waitlist-turnstile-secret.json" \
+            --strict
+          rm -f "$RUNNER_TEMP/waitlist-turnstile-secret.json"
+          npx wrangler versions list --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-versions.json"
+          node scripts/ci/resolve-latest-worker-version.mjs "$RUNNER_TEMP/waitlist-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
+
+      - name: Probe candidate without production traffic
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PRODUCTION_WORKER_SCOPE: lythaus-public-api-development
+          PRODUCTION_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
+          PRODUCTION_PUBLIC_API_BASE_URL: https://api.lythaus.co
+          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/waitlist-cutover/public-candidate.json
+        run: node scripts/ci/probe-public-waitlist-candidate.mjs
+
+      - name: Reverify production schema before activation
+        env:
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_BRANCH_NAME: main
+          REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+        run: node scripts/ci/verify-planetscale-production-schema.mjs
+
+      - name: Activate exact public Worker candidate
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" \
+            --name "$PUBLIC_WORKER" \
+            --yes \
+            --message "Activate reviewed Lythaus public waitlist $RELEASE_SHA"
+          echo 'PUBLIC_WORKER_DEPLOYED=true' >> "$GITHUB_ENV"
+
+      - name: Verify live route fails closed before browser token
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/waitlist-cutover/live-missing-token.json"
+          headers="$RUNNER_TEMP/waitlist-cutover/live-missing-token.headers"
+          status="$(curl --silent --show-error --max-time 20 \
+            --dump-header "$headers" \
+            --output "$body" \
+            --write-out '%{http_code}' \
+            --request POST 'https://api.lythaus.co/api/waitlist' \
+            --header 'content-type: application/json' \
+            --header 'origin: https://lythaus.co' \
+            --data '{"email":"candidate-probe@example.invalid","turnstileToken":"","consentVersion":"waitlist-v1","source":"lythaus.co"}')"
+          test "$status" = 400
+          jq -e '.error == "turnstile_required"' "$body" >/dev/null
+          grep -F -i 'cache-control: private, no-store' "$headers"
+          grep -F -i 'access-control-allow-origin: https://lythaus.co' "$headers"
+          rm -f "$body" "$headers"
+
+      - name: Write sanitized cutover evidence
+        if: success()
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        shell: bash
+        run: |
+          jq -n \
+            --arg releaseSha "$RELEASE_SHA" \
+            --arg worker "$PUBLIC_WORKER" \
+            --arg versionId "$PUBLIC_WORKER_VERSION_ID" \
+            --arg sitekey "$PUBLIC_TURNSTILE_SITE_KEY" \
+            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion:1,releaseSha:$releaseSha,worker:$worker,workerVersionId:$versionId,turnstileSitekey:$sitekey,status:"activated",capturedAt:$capturedAt}' \
+            > "$RUNNER_TEMP/waitlist-cutover/cutover.json"
+
+      - name: Roll back public Worker on failure
+        if: failure() && env.PUBLIC_WORKER_DEPLOYED == 'true' && env.PUBLIC_ROLLBACK_CAPTURED == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set +e
+          npx wrangler versions deploy $PUBLIC_ROLLBACK_SPECS \
+            --name "$PUBLIC_WORKER" \
+            --yes \
+            --message 'Restore exact pre-waitlist public Worker deployment'
+
+      - name: Remove temporary Turnstile secret material
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/waitlist-turnstile-secret.json"
+
+      - name: Upload sanitized waitlist cutover evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: public-waitlist-cutover-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/waitlist-cutover
+          if-no-files-found: warn
