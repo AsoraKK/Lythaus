@@ -83,7 +83,10 @@ jobs:
           npm ci
           npm run build
           node ../../scripts/cloudflare/validate-marketing-output.mjs dist
-          ! rg -n -i 'TURNSTILE_SECRET|PII_ENCRYPTION_KEY|PII_HMAC_KEY' dist
+          if rg -n -i 'TURNSTILE_SECRET|PII_ENCRYPTION_KEY|PII_HMAC_KEY' dist; then
+            echo 'Sensitive binding name leaked into the marketing artifact.' >&2
+            exit 1
+          fi
           if [[ "${{ inputs.deployment_class }}" = "production" ]]; then
             rg -F 'challenges.cloudflare.com/turnstile/v0/api.js' dist/index.html
             rg -F 'waitlist_signup' dist/index.html
