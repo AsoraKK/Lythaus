@@ -11,7 +11,8 @@ test('canonical production schema fingerprint includes the storage-ledgers view'
 
 test('dedicated schema verifier receives metadata-only visibility for views', async () => {
   const source = await fs.readFile('scripts/ci/reconcile-planetscale-schema-verifier.mjs', 'utf8');
-  assert.match(source, /relation\.relkind IN \('r', 'p', 'v', 'f'\)/);
+  assert.match(source, /relation\.relkind IN \('r', 'p', 'v'\)/);
+  assert.doesNotMatch(source, /relation\.relkind IN \([^)]*'f'/);
   assert.match(source, /has_table_privilege\(current_user, 'media\.storage_ledgers', 'REFERENCES'\)/);
   assert.match(source, /table_name = 'storage_ledgers' AND table_type = 'VIEW'/);
   assert.match(source, /GRANT REFERENCES ON TABLE/);
