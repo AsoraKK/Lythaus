@@ -55,12 +55,12 @@ try {
 
   // information_schema.tables is privilege-filtered. Grant a non-row-reading
   // table privilege to every table/view relation that can contribute to the
-  // canonical schema fingerprint, including ordinary views (relkind = v).
+  // canonical schema fingerprint: ordinary tables, partitioned tables and views.
   const relations = await admin.query(`SELECT namespace.nspname AS schema_name, relation.relname AS relation_name
     FROM pg_class relation
     JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
     WHERE namespace.nspname = ANY($1::text[])
-      AND relation.relkind IN ('r', 'p', 'v', 'f')
+      AND relation.relkind IN ('r', 'p', 'v')
     ORDER BY namespace.nspname, relation.relname`, [APPLICATION_SCHEMAS]);
 
   const roleSql = quoteIdentifier(verifierRole);
