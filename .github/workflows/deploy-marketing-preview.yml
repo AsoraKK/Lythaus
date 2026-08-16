@@ -118,8 +118,12 @@ jobs:
           mkdir -p preview-pages
           routes=(/ /about /ai-moderation /contact /features /guidelines /invite /pricing /privacy /terms)
           for route in "${routes[@]}"; do
-            name="${route//\//_}"
-            response="$(curl --location --silent --show-error --max-time 20 --output "preview-pages/${name:-root}.html" --write-out '%{http_code}|%{url_effective}' "${PREVIEW_URL}${route}")"
+            if [[ "$route" = "/" ]]; then
+              name="_root"
+            else
+              name="${route//\//_}"
+            fi
+            response="$(curl --location --silent --show-error --max-time 20 --output "preview-pages/${name}.html" --write-out '%{http_code}|%{url_effective}' "${PREVIEW_URL}${route}")"
             status="${response%%|*}"
             effective_url="${response#*|}"
             test "$status" = 200 || { echo "Unexpected status $status for $route"; exit 1; }
