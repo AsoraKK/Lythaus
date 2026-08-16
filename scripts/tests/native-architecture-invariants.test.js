@@ -299,7 +299,10 @@ test('production database identity and budget controls are explicit', () => {
   assert.match(manifest.expectedMainOriginFingerprint, /^[a-f0-9]{64}$/);
   assert.match(verifier, /PSCALE_BRANCH_NAME.*main/);
   assert.match(verifier, /originFingerprint/);
-  assert.match(verifier, /developmentOriginFingerprint/);
+  assert.match(verifier, /manifest\.expectedMainOriginFingerprint/);
+  assert.match(verifier, /observedFingerprint === mainFingerprint/);
+  assert.doesNotMatch(verifier, /PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL/);
+  assert.doesNotMatch(verifier, /PLANETSCALE_API_TOKEN/);
   assert.match(verifier, /caching\?\.disabled === true/);
   assert.match(identity, /information_schema\.tables/);
   assert.match(identity, /identity.*contact_emails/);

@@ -56,47 +56,13 @@ if (manifestOnly) {
 const apiToken = process.env.CLOUDFLARE_API_TOKEN ?? '';
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? manifest.accountId ?? '';
 const databaseUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
-const developmentDatabaseUrl = process.env.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL ?? '';
-const planetScaleApiToken = process.env.PLANETSCALE_API_TOKEN ?? '';
-const planetScaleOrganization = process.env.PLANETSCALE_ORGANIZATION ?? manifest.planetScaleOrganization ?? '';
-const planetScaleDatabase = process.env.PLANETSCALE_DATABASE ?? manifest.planetScaleDatabase ?? '';
-if (!apiToken || !accountId || !databaseUrl || !developmentDatabaseUrl || !planetScaleApiToken) throw new Error('Cloudflare and PlanetScale API credentials plus main and development metadata URLs are required');
+if (!apiToken || !accountId || !databaseUrl) throw new Error('Cloudflare API credentials and the PlanetScale main metadata URL are required');
 if ((process.env.PSCALE_BRANCH_NAME ?? '') !== 'main') throw new Error('Hyperdrive target verification requires PSCALE_BRANCH_NAME=main');
 
 const mainOrigin = sourceOrigin(databaseUrl);
 if (mainOrigin.scheme !== 'postgres' || !mainOrigin.host.endsWith('.psdb.cloud')) throw new Error('PlanetScale main metadata URL must be a PostgreSQL psdb.cloud origin');
 const mainFingerprint = fingerprint(mainOrigin);
 if (mainFingerprint !== manifest.expectedMainOriginFingerprint) throw new Error('PlanetScale main origin fingerprint changed without a reviewed manifest update');
-const developmentOrigin = sourceOrigin(developmentDatabaseUrl);
-if (developmentOrigin.scheme !== 'postgres' || !developmentOrigin.host.endsWith('.psdb.cloud')) throw new Error('PlanetScale development metadata URL must be a PostgreSQL psdb.cloud origin');
-const developmentFingerprint = fingerprint(developmentOrigin);
-if (developmentFingerprint === mainFingerprint) throw new Error('PlanetScale main and development origin fingerprints must differ');
-
-async function planetScaleBranchMetadata() {
-  const response = await fetch(`https://api.planetscale.com/v1/organizations/${encodeURIComponent(planetScaleOrganization)}/databases/${encodeURIComponent(planetScaleDatabase)}/branches/main`, {
-    headers: { authorization: `Bearer ${planetScaleApiToken}`, accept: 'application/json' },
-  });
-  const envelope = await response.json();
-  if (!response.ok || !envelope || envelope.name !== 'main' || envelope.production !== true || envelope.ready !== true) {
-    throw new Error('PlanetScale main branch metadata is not production-ready');
-  }
-  return { name: envelope.name, production: envelope.production, ready: envelope.ready, region: envelope.region?.slug ?? null };
-}
-
-const branchMetadata = await planetScaleBranchMetadata();
-
-async function planetScaleDevelopmentBranchMetadata() {
-  const response = await fetch(`https://api.planetscale.com/v1/organizations/${encodeURIComponent(planetScaleOrganization)}/databases/${encodeURIComponent(planetScaleDatabase)}/branches/development`, {
-    headers: { authorization: `Bearer ${planetScaleApiToken}`, accept: 'application/json' },
-  });
-  const envelope = await response.json();
-  if (!response.ok || !envelope || envelope.name !== 'development' || envelope.production === true || envelope.ready !== true) {
-    throw new Error('PlanetScale development branch metadata is not a ready non-production branch');
-  }
-  return { name: envelope.name, production: envelope.production, ready: envelope.ready, region: envelope.region?.slug ?? null };
-}
-
-const developmentBranchMetadata = await planetScaleDevelopmentBranchMetadata();
 
 async function cloudflareConfig(id) {
   const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/hyperdrive/configs/${id}`, {
@@ -128,11 +94,10 @@ for (const entry of manifest.bindings) {
     databaseName: origin.database ?? null,
     originFingerprint: observedFingerprint,
     branch: 'main',
-    branchFingerprint: 'main',
     roleClass: 'runtime-probe-required',
     cacheDisabled,
     tlsMode: config.mtls.sslmode,
     modifiedOn: config.modified_on ?? null,
   });
 }
-console.log(JSON.stringify({ status: 'pass', targetBranch: 'main', branchMetadata, developmentBranchMetadata, originFingerprint: mainFingerprint, developmentOriginFingerprint: developmentFingerprint, bindings: results }));
+console.log(JSON.stringify({ status: 'pass', targetBranch: 'main', originFingerprint: mainFingerprint, bindings: results }));

@@ -5,6 +5,7 @@ import test from 'node:test';
 const turnstile = fs.readFileSync('scripts/cloudflare/waitlist-turnstile.mjs', 'utf8');
 const materializer = fs.readFileSync('scripts/ci/materialize-public-waitlist-deploy.mjs', 'utf8');
 const probe = fs.readFileSync('scripts/ci/probe-public-waitlist-candidate.mjs', 'utf8');
+const hyperdriveProof = fs.readFileSync('scripts/ci/verify-cloudflare-hyperdrive-targets.mjs', 'utf8');
 const cutover = fs.readFileSync('.github/workflows/deploy-public-waitlist.yml', 'utf8');
 const marketing = fs.readFileSync('.github/workflows/deploy-marketing-preview.yml', 'utf8');
 
@@ -47,6 +48,12 @@ test('protected cutover verifies database, preserves secrets, and has rollback',
   assert.match(cutover, /--secrets-file/);
   assert.match(cutover, /probe-public-waitlist-candidate\.mjs/);
   assert.match(cutover, /Restore exact pre-waitlist public Worker deployment/);
+  assert.doesNotMatch(cutover, /PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL/);
+  assert.doesNotMatch(cutover, /PLANETSCALE_API_TOKEN/);
+  assert.match(hyperdriveProof, /manifest\.expectedMainOriginFingerprint/);
+  assert.match(hyperdriveProof, /observedFingerprint === mainFingerprint/);
+  assert.doesNotMatch(hyperdriveProof, /PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL/);
+  assert.doesNotMatch(hyperdriveProof, /PLANETSCALE_API_TOKEN/);
   const typesCheck = cutover.indexOf('wrangler types --check');
   const materialize = cutover.indexOf('materialize-public-waitlist-deploy.mjs');
   assert.ok(typesCheck >= 0 && materialize >= 0 && typesCheck < materialize, 'Wrangler types must be checked before deployment-only config materialization');
