@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 30
+    env:
+      PLANETSCALE_VERIFIER_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -53,6 +55,10 @@ jobs:
           PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
         run: |
           set -euo pipefail
+          test -n "${PLANETSCALE_VERIFIER_DATABASE_URL:-}" || {
+            echo "PLANETSCALE_SCHEMA_READ_DATABASE_URL is required in the protected production environment." >&2
+            exit 1
+          }
 
           if [[ -n "${STATIC_ADMIN_DATABASE_URL:-}" ]]; then
             echo "::add-mask::$STATIC_ADMIN_DATABASE_URL"
@@ -124,8 +130,14 @@ jobs:
           PLANETSCALE_MIGRATION_USAGE_APPROVED: approved
           PLANETSCALE_MIGRATION_USAGE_MAX_USD: ${{ vars.PLANETSCALE_MIGRATION_USAGE_MAX_USD }}
         run: node scripts/ci/apply-planetscale-production-migrations.mjs
-      - name: Verify final production schema read-only
+      - name: Reconcile dedicated schema verifier metadata grants
         env:
+          PSCALE_BRANCH_NAME: main
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+        run: node scripts/ci/reconcile-planetscale-schema-verifier.mjs
+      - name: Verify final production schema with dedicated verifier
+        env:
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main
           REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
