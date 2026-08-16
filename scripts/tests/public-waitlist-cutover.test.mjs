@@ -139,10 +139,14 @@ test('protected cutover verifies database, preserves secrets, stages at zero tra
   assert.ok(typesCheck >= 0 && materialize >= 0 && typesCheck < materialize, 'Wrangler types must be checked before deployment-only config materialization');
 });
 
-test('production marketing resolves the public sitekey from Cloudflare', () => {
+test('production marketing resolves the public sitekey from Cloudflare and validates the root file consistently', () => {
   assert.match(marketing, /PUBLIC_API_BASE_URL: https:\/\/api\.lythaus\.co/);
   assert.match(marketing, /waitlist-turnstile\.mjs resolve/);
   assert.match(marketing, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js/);
   assert.match(marketing, /waitlist_signup/);
+  assert.match(marketing, /name="_root"/);
+  assert.match(marketing, /preview-pages\/\$\{name\}\.html/);
+  assert.match(marketing, /preview-pages\/_root\.html/);
+  assert.doesNotMatch(marketing, /\$\{name:-root\}/);
   assert.doesNotMatch(marketing, /vars\.PUBLIC_TURNSTILE_SITE_KEY/);
 });
