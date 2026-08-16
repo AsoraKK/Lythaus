@@ -34,38 +34,38 @@ if (connection.searchParams.get('sslrootcert') === 'system') connection.searchPa
 
 async function schemaContract(client, registryRows) {
   const schemaParams = APPLICATION_SCHEMAS.map((_, index) => `$${index + 1}`).join(', ');
-  const [relations, columns, constraints, indexes, functions, extensions] = await Promise.all([
-    client.query(`SELECT table_type, table_schema, table_name
-      FROM information_schema.tables
-      WHERE table_schema IN (${schemaParams})
-      ORDER BY table_type, table_schema, table_name`, APPLICATION_SCHEMAS),
-    client.query(`SELECT table_schema, table_name, ordinal_position, column_name, udt_name, is_nullable, COALESCE(column_default, '') AS column_default
-      FROM information_schema.columns
-      WHERE table_schema IN (${schemaParams})
-      ORDER BY table_schema, table_name, ordinal_position`, APPLICATION_SCHEMAS),
-    client.query(`SELECT namespace.nspname AS table_schema, relation.relname AS table_name,
-        constraint_row.conname, constraint_row.contype, constraint_row.convalidated,
-        pg_get_constraintdef(constraint_row.oid, true) AS definition
-      FROM pg_constraint constraint_row
-      JOIN pg_class relation ON relation.oid = constraint_row.conrelid
-      JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
-      WHERE namespace.nspname IN (${schemaParams})
-      ORDER BY namespace.nspname, relation.relname, constraint_row.conname`, APPLICATION_SCHEMAS),
-    client.query(`SELECT schemaname, tablename, indexname, indexdef
-      FROM pg_indexes
-      WHERE schemaname IN (${schemaParams})
-      ORDER BY schemaname, tablename, indexname`, APPLICATION_SCHEMAS),
-    client.query(`SELECT namespace.nspname AS function_schema, procedure.proname,
-        pg_get_function_identity_arguments(procedure.oid) AS arguments,
-        pg_get_function_result(procedure.oid) AS result_type,
-        procedure.prosecdef,
-        COALESCE(array_to_string(procedure.proconfig, ','), '') AS configuration
-      FROM pg_proc procedure
-      JOIN pg_namespace namespace ON namespace.oid = procedure.pronamespace
-      WHERE namespace.nspname IN (${schemaParams})
-      ORDER BY namespace.nspname, procedure.proname, arguments`, APPLICATION_SCHEMAS),
-    client.query('SELECT extname, extversion FROM pg_extension ORDER BY extname'),
-  ]);
+  // Keep a single pg.Client strictly sequential. Concurrent client.query()
+  // calls are deprecated by node-postgres and will be rejected in pg@9.
+  const relations = await client.query(`SELECT table_type, table_schema, table_name
+    FROM information_schema.tables
+    WHERE table_schema IN (${schemaParams})
+    ORDER BY table_type, table_schema, table_name`, APPLICATION_SCHEMAS);
+  const columns = await client.query(`SELECT table_schema, table_name, ordinal_position, column_name, udt_name, is_nullable, COALESCE(column_default, '') AS column_default
+    FROM information_schema.columns
+    WHERE table_schema IN (${schemaParams})
+    ORDER BY table_schema, table_name, ordinal_position`, APPLICATION_SCHEMAS);
+  const constraints = await client.query(`SELECT namespace.nspname AS table_schema, relation.relname AS table_name,
+      constraint_row.conname, constraint_row.contype, constraint_row.convalidated,
+      pg_get_constraintdef(constraint_row.oid, true) AS definition
+    FROM pg_constraint constraint_row
+    JOIN pg_class relation ON relation.oid = constraint_row.conrelid
+    JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+    WHERE namespace.nspname IN (${schemaParams})
+    ORDER BY namespace.nspname, relation.relname, constraint_row.conname`, APPLICATION_SCHEMAS);
+  const indexes = await client.query(`SELECT schemaname, tablename, indexname, indexdef
+    FROM pg_indexes
+    WHERE schemaname IN (${schemaParams})
+    ORDER BY schemaname, tablename, indexname`, APPLICATION_SCHEMAS);
+  const functions = await client.query(`SELECT namespace.nspname AS function_schema, procedure.proname,
+      pg_get_function_identity_arguments(procedure.oid) AS arguments,
+      pg_get_function_result(procedure.oid) AS result_type,
+      procedure.prosecdef,
+      COALESCE(array_to_string(procedure.proconfig, ','), '') AS configuration
+    FROM pg_proc procedure
+    JOIN pg_namespace namespace ON namespace.oid = procedure.pronamespace
+    WHERE namespace.nspname IN (${schemaParams})
+    ORDER BY namespace.nspname, procedure.proname, arguments`, APPLICATION_SCHEMAS);
+  const extensions = await client.query('SELECT extname, extversion FROM pg_extension ORDER BY extname');
   const catalogSections = [
     ['relations', relations.rows],
     ['columns', columns.rows],
@@ -81,8 +81,24 @@ async function schemaContract(client, registryRows) {
   return {
     fingerprint: runtimeSchemaFingerprint(relations.rows, registryRows),
     relationCount: relations.rowCount ?? relations.rows.length,
+    relations: relations.rows,
     catalogFingerprint: createHash('sha256').update(catalogPayload).digest('hex'),
   };
+}
+
+function relationKey(row) {
+  return `${row.table_type}:${row.table_schema}.${row.table_name}`;
+}
+
+function fingerprintMismatch(contract, expectation) {
+  const expected = new Set(expectation.canonical.relations.map(relationKey));
+  const observed = new Set(contract.relations.map(relationKey));
+  const missing = [...expected].filter((key) => !observed.has(key)).sort();
+  const extra = [...observed].filter((key) => !expected.has(key)).sort();
+  return new Error(
+    `production post-0013 schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
+    + `relations=${contract.relationCount}/${expectation.relationCount}; missing=${JSON.stringify(missing)}; extra=${JSON.stringify(extra)}`,
+  );
 }
 
 async function verifyWaitlistCatalog(client) {
@@ -148,9 +164,9 @@ try {
     await verifyWaitlistPrivileges(client);
     const contract = await schemaContract(client, registry.rows);
     if (emitContract) {
-      console.log(JSON.stringify({ branch, ...contract }));
+      console.log(JSON.stringify({ branch, ...contract, relations: undefined }));
     } else {
-      if (contract.fingerprint !== post0013Expectation.fingerprint) throw new Error('production post-0013 schema fingerprint mismatch');
+      if (contract.fingerprint !== post0013Expectation.fingerprint) throw fingerprintMismatch(contract, post0013Expectation);
       if (contract.relationCount !== post0013Expectation.relationCount) {
         throw new Error(`production post-0013 relation count is ${contract.relationCount}; expected ${post0013Expectation.relationCount}`);
       }
