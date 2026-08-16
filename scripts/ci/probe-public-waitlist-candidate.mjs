@@ -36,7 +36,7 @@ for (const path of ['/health', '/ready']) {
   if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
 }
 
-const routeProbe = await request('/api/waitlist', {
+const routeRequest = {
   method: 'POST',
   headers: {
     accept: 'application/json',
@@ -49,10 +49,41 @@ const routeProbe = await request('/api/waitlist', {
     consentVersion: 'waitlist-v1',
     source: 'lythaus.co',
   }),
-});
-const routeBody = await routeProbe.json().catch(() => null);
-if (routeProbe.status !== 400 || routeBody?.error !== 'turnstile_required') {
-  throw new Error('candidate /api/waitlist did not fail closed on a missing Turnstile token');
+};
+
+let routeProbe;
+let routeBody = null;
+let matchedCandidateContract = false;
+let attempts = 0;
+for (attempts = 1; attempts <= 6; attempts += 1) {
+  routeProbe = await request('/api/waitlist', routeRequest);
+  routeBody = await routeProbe.json().catch(() => null);
+  matchedCandidateContract = routeProbe.status === 400 && routeBody?.error === 'turnstile_required';
+  if (matchedCandidateContract) break;
+  if (attempts < 6) await new Promise((resolve) => setTimeout(resolve, 1_000));
+}
+
+const evidence = {
+  schemaVersion: 1,
+  releaseSha,
+  worker: workerName,
+  workerVersionId,
+  baseUrl: base.origin,
+  health: 'pass',
+  ready: 'pass',
+  waitlistRoute: matchedCandidateContract ? 'present_fail_closed' : 'candidate_contract_not_observed',
+  turnstileMissingTokenStatus: routeProbe?.status ?? null,
+  observedError: typeof routeBody?.error === 'string' ? routeBody.error : null,
+  attempts,
+  cacheControl: routeProbe?.headers.get('cache-control') ?? null,
+  corsOrigin: routeProbe?.headers.get('access-control-allow-origin') ?? null,
+  correlationIdPresent: Boolean(routeProbe?.headers.get('x-correlation-id')),
+  capturedAt: new Date().toISOString(),
+};
+if (evidencePath) fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
+
+if (!matchedCandidateContract) {
+  throw new Error(`candidate /api/waitlist did not fail closed on a missing Turnstile token after ${attempts} attempts; observed HTTP ${routeProbe?.status ?? 'none'} error=${evidence.observedError ?? 'none'}`);
 }
 if (routeProbe.headers.get('cache-control') !== 'private, no-store') {
   throw new Error('candidate /api/waitlist error response must be private, no-store');
@@ -64,19 +95,4 @@ if (!routeProbe.headers.get('x-correlation-id')) {
   throw new Error('candidate /api/waitlist response is missing the correlation identifier');
 }
 
-const evidence = {
-  schemaVersion: 1,
-  releaseSha,
-  worker: workerName,
-  workerVersionId,
-  baseUrl: base.origin,
-  health: 'pass',
-  ready: 'pass',
-  waitlistRoute: 'present_fail_closed',
-  turnstileMissingTokenStatus: routeProbe.status,
-  cacheControl: routeProbe.headers.get('cache-control'),
-  corsOrigin: routeProbe.headers.get('access-control-allow-origin'),
-  capturedAt: new Date().toISOString(),
-};
-if (evidencePath) fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
-console.log(JSON.stringify({ status: 'pass', worker: workerName, workerVersionId, waitlistRoute: evidence.waitlistRoute }));
+console.log(JSON.stringify({ status: 'pass', worker: workerName, workerVersionId, waitlistRoute: evidence.waitlistRoute, attempts }));

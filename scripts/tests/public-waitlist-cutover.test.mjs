@@ -31,13 +31,18 @@ test('public materializer keeps full authenticated acceptance fail closed', () =
 test('candidate probe proves the route exists without writing a signup', () => {
   assert.match(probe, /candidate-probe@example\.invalid/);
   assert.match(probe, /turnstileToken: ''/);
-  assert.match(probe, /routeProbe\.status !== 400/);
+  assert.match(probe, /Cloudflare-Workers-Version-Overrides/);
+  assert.match(probe, /routeProbe\.status === 400/);
   assert.match(probe, /turnstile_required/);
+  assert.match(probe, /attempts <= 6/);
+  assert.match(probe, /candidate_contract_not_observed/);
+  assert.match(probe, /observedError/);
+  assert.match(probe, /fs\.writeFileSync\(evidencePath/);
   assert.match(probe, /private, no-store/);
   assert.match(probe, /access-control-allow-origin/);
 });
 
-test('protected cutover verifies database, preserves secrets, and has rollback', () => {
+test('protected cutover verifies database, preserves secrets, stages at zero traffic, and has rollback', () => {
   assert.match(cutover, /environment: production/);
   assert.match(cutover, /Require exact reviewed current main SHA/);
   assert.match(cutover, /PSCALE_ROLE_IDENTIFIERS: \$\{\{ secrets\.PSCALE_ROLE_IDENTIFIERS \}\}/);
@@ -46,6 +51,10 @@ test('protected cutover verifies database, preserves secrets, and has rollback',
   assert.match(cutover, /PII_ENCRYPTION_KEY_V1 PII_HMAC_KEY_V1/);
   assert.match(cutover, /waitlist-turnstile\.mjs ensure/);
   assert.match(cutover, /--secrets-file/);
+  assert.match(cutover, /--env=""/);
+  assert.match(cutover, /Stage public Worker candidate at zero traffic/);
+  assert.match(cutover, /\$\{PUBLIC_WORKER_VERSION_ID\}@0/);
+  assert.match(cutover, /exact 100\/0 staging deployment/);
   assert.match(cutover, /probe-public-waitlist-candidate\.mjs/);
   assert.match(cutover, /Restore exact pre-waitlist public Worker deployment/);
   assert.doesNotMatch(cutover, /PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL/);
@@ -59,6 +68,16 @@ test('protected cutover verifies database, preserves secrets, and has rollback',
   assert.match(proofStep, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
   assert.doesNotMatch(proofStep, /CLOUDFLARE_AUDIT_API_TOKEN/);
   assert.match(cutover.slice(proofEnd), /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+
+  const upload = cutover.indexOf('- name: Upload immutable public Worker candidate');
+  const stage = cutover.indexOf('- name: Stage public Worker candidate at zero traffic');
+  const candidateProbe = cutover.indexOf('- name: Probe candidate without production traffic');
+  const activate = cutover.indexOf('- name: Activate exact public Worker candidate');
+  assert.ok(upload >= 0 && stage > upload && candidateProbe > stage && activate > candidateProbe, 'candidate must be uploaded, staged at 0%, probed, then activated');
+  const stageStep = cutover.slice(stage, candidateProbe);
+  assert.match(stageStep, /PUBLIC_WORKER_DEPLOYED=true/);
+  assert.match(stageStep, /\$\{PUBLIC_WORKER_VERSION_ID\}@0/);
+  assert.match(stageStep, /rollback_specs\[0\]/);
 
   assert.match(hyperdriveProof, /manifest\.expectedMainOriginFingerprint/);
   assert.match(hyperdriveProof, /observedFingerprint === mainFingerprint/);
