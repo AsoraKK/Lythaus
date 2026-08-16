@@ -47,6 +47,11 @@ test('protected cutover verifies database, preserves secrets, and has rollback',
   assert.match(cutover, /--secrets-file/);
   assert.match(cutover, /probe-public-waitlist-candidate\.mjs/);
   assert.match(cutover, /Restore exact pre-waitlist public Worker deployment/);
+
+  const typesCheck = cutover.indexOf('npx wrangler types --check');
+  const materializeConfig = cutover.indexOf('node scripts/ci/materialize-public-waitlist-deploy.mjs');
+  assert.ok(typesCheck !== -1 && materializeConfig !== -1 && typesCheck < materializeConfig,
+    'committed Worker types must be validated before production values are materialized');
 });
 
 test('production marketing resolves the public sitekey from Cloudflare', () => {
