@@ -1,0 +1,47 @@
+name: Regenerate public Worker types
+
+on:
+  push:
+    branches:
+      - fix/waitlist-wrangler-types
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/waitlist-wrangler-types
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Regenerate and verify public Worker declaration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler types apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
+          npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
+          rm -f .github/workflows/ops-regenerate-public-worker-types.yml
+          git diff --check
+
+      - name: Commit generated declaration and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/lythaus-public-api/src/worker-configuration.d.ts .github/workflows/ops-regenerate-public-worker-types.yml
+          git diff --cached --quiet && { echo 'No generated type change was required.'; exit 0; }
+          git commit -m 'fix: refresh public Worker generated types'
+          git push origin HEAD:fix/waitlist-wrangler-types
