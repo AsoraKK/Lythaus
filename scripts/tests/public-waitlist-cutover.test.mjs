@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import test from 'node:test';
 
@@ -10,6 +11,13 @@ const restoreDeployment = fs.readFileSync('scripts/ci/restore-worker-deployment.
 const hyperdriveProof = fs.readFileSync('scripts/ci/verify-cloudflare-hyperdrive-targets.mjs', 'utf8');
 const cutover = fs.readFileSync('.github/workflows/deploy-public-waitlist.yml', 'utf8');
 const marketing = fs.readFileSync('.github/workflows/deploy-marketing-preview.yml', 'utf8');
+
+test('waitlist operational helpers parse under the pinned Node runtime', () => {
+  for (const path of ['scripts/ci/probe-live-public-waitlist.mjs', 'scripts/ci/restore-worker-deployment.mjs']) {
+    const result = spawnSync(process.execPath, ['--check', path], { encoding: 'utf8' });
+    assert.equal(result.status, 0, `${path} failed node --check: ${result.stderr}`);
+  }
+});
 
 test('Turnstile provisioning is exact, idempotent, and secret-safe', () => {
   assert.match(turnstile, /Lythaus Website Waitlist/);
