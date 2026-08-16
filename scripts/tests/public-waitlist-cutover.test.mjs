@@ -50,6 +50,15 @@ test('protected cutover verifies database, preserves secrets, and has rollback',
   assert.match(cutover, /Restore exact pre-waitlist public Worker deployment/);
   assert.doesNotMatch(cutover, /PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL/);
   assert.doesNotMatch(cutover, /PLANETSCALE_API_TOKEN/);
+
+  const proofStart = cutover.indexOf('- name: Prove Hyperdrive targets PlanetScale main');
+  const proofEnd = cutover.indexOf('- name: Verify production schema and waitlist grants read-only');
+  assert.ok(proofStart >= 0 && proofEnd > proofStart, 'Hyperdrive proof step must remain explicit');
+  const proofStep = cutover.slice(proofStart, proofEnd);
+  assert.match(proofStep, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_AUDIT_API_TOKEN \}\}/);
+  assert.doesNotMatch(proofStep, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.match(cutover.slice(proofEnd), /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+
   assert.match(hyperdriveProof, /manifest\.expectedMainOriginFingerprint/);
   assert.match(hyperdriveProof, /observedFingerprint === mainFingerprint/);
   assert.match(hyperdriveProof, /sanitizeCloudflareErrors/);
