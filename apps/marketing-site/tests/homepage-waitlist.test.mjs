@@ -42,6 +42,13 @@ test('homepage public copy stays restrained and launch safe', () => {
   assert.match(styles, /--accent: #f2c98d/i);
 });
 
+test('shared layout declares the Lythaus favicon assets', () => {
+  assert.match(layout, /<link rel="icon" href="\/favicon\.ico" sizes="any" \/>/);
+  assert.match(layout, /<link rel="icon" type="image\/png" href="\/favicon\.png" sizes="64x64" \/>/);
+  assert.ok(fs.existsSync(path.join(root, 'public/favicon.ico')));
+  assert.ok(fs.existsSync(path.join(root, 'public/favicon.png')));
+});
+
 test('Turnstile CSP is narrowly allowlisted', () => {
   assert.match(headers, /script-src[^\n]+https:\/\/challenges\.cloudflare\.com/);
   assert.match(headers, /frame-src https:\/\/challenges\.cloudflare\.com/);
