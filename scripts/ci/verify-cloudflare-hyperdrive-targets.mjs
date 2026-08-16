@@ -64,18 +64,54 @@ if (mainOrigin.scheme !== 'postgres' || !mainOrigin.host.endsWith('.psdb.cloud')
 const mainFingerprint = fingerprint(mainOrigin);
 if (mainFingerprint !== manifest.expectedMainOriginFingerprint) throw new Error('PlanetScale main origin fingerprint changed without a reviewed manifest update');
 
-async function cloudflareConfig(id) {
-  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/hyperdrive/configs/${id}`, {
+function sanitizeCloudflareErrors(envelope) {
+  return Array.isArray(envelope?.errors)
+    ? envelope.errors.map((error) => ({
+        code: error?.code ?? null,
+        message: typeof error?.message === 'string' ? error.message.slice(0, 240) : null,
+      }))
+    : [];
+}
+
+async function cloudflareRequest(resourcePath) {
+  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}${resourcePath}`, {
     headers: { authorization: `Bearer ${apiToken}`, accept: 'application/json' },
   });
-  const envelope = await response.json();
-  if (!response.ok || envelope.success !== true || !envelope.result) throw new Error(`Cloudflare Hyperdrive lookup failed for ${id}`);
-  return envelope.result;
+  let envelope = null;
+  try {
+    envelope = await response.json();
+  } catch {
+    envelope = null;
+  }
+  return { response, envelope };
+}
+
+async function cloudflareConfig(id, expectedConfigName) {
+  const lookup = await cloudflareRequest(`/hyperdrive/configs/${id}`);
+  if (lookup.response.ok && lookup.envelope?.success === true && lookup.envelope?.result) return lookup.envelope.result;
+
+  const list = await cloudflareRequest('/hyperdrive/configs?per_page=100');
+  const nameMatches = list.response.ok && list.envelope?.success === true && Array.isArray(list.envelope?.result)
+    ? list.envelope.result
+        .filter((config) => config?.name === expectedConfigName)
+        .map((config) => ({ id: config?.id ?? null, name: config?.name ?? null }))
+    : [];
+
+  const diagnostic = {
+    requestedId: id,
+    expectedConfigName,
+    lookupStatus: lookup.response.status,
+    lookupErrors: sanitizeCloudflareErrors(lookup.envelope),
+    listStatus: list.response.status,
+    listErrors: sanitizeCloudflareErrors(list.envelope),
+    nameMatches,
+  };
+  throw new Error(`Cloudflare Hyperdrive lookup failed: ${JSON.stringify(diagnostic)}`);
 }
 
 const results = [];
 for (const entry of manifest.bindings) {
-  const config = await cloudflareConfig(entry.hyperdriveId);
+  const config = await cloudflareConfig(entry.hyperdriveId, entry.expectedConfigName);
   const origin = config.origin ?? {};
   const observedFingerprint = fingerprint(origin);
   const cacheDisabled = config.caching?.disabled === true;
