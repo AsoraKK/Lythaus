@@ -63,7 +63,7 @@
     "validate:planetscale-production-script": "node --check scripts/ci/apply-planetscale-production-migrations.mjs",
     "apply:planetscale-production-migrations": "node scripts/ci/apply-planetscale-production-migrations.mjs",
     "reconcile:planetscale-migrations": "node scripts/ci/reconcile-planetscale-migration-state.mjs",
-    "test:planetscale-production-migrations": "node --test scripts/tests/planetscale-production-migrations.test.mjs"
+    "test:planetscale-production-migrations": "node --test scripts/tests/planetscale-production-migrations.test.mjs scripts/tests/planetscale-schema-verifier-views.test.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.25.0",
@@ -77,7 +77,7 @@
     "glob": "^13.0.6",
     "husky": "^8.0.3",
     "jest": "^30.4.2",
-    "jsonpointer": "^5.0.1",
+    "jsonpointer": "^1.0.1",
     "oasdiff": "file:tools/openapi/oasdiff",
     "openapi-client-axios": "^7.7.0",
     "playwright": "^1.60.0",
