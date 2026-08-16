@@ -52,6 +52,11 @@ test('protected cutover verifies database, preserves secrets, and has rollback',
   assert.doesNotMatch(cutover, /PLANETSCALE_API_TOKEN/);
   assert.match(hyperdriveProof, /manifest\.expectedMainOriginFingerprint/);
   assert.match(hyperdriveProof, /observedFingerprint === mainFingerprint/);
+  assert.match(hyperdriveProof, /sanitizeCloudflareErrors/);
+  assert.match(hyperdriveProof, /lookupStatus: lookup\.response\.status/);
+  assert.match(hyperdriveProof, /listStatus: list\.response\.status/);
+  assert.match(hyperdriveProof, /nameMatches/);
+  assert.match(hyperdriveProof, /expectedConfigName/);
   assert.doesNotMatch(hyperdriveProof, /PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL/);
   assert.doesNotMatch(hyperdriveProof, /PLANETSCALE_API_TOKEN/);
   const typesCheck = cutover.indexOf('wrangler types --check');
