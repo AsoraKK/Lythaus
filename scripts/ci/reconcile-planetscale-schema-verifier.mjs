@@ -53,11 +53,14 @@ try {
   if (adminIdentity.rows[0]?.role === verifierRole) throw new Error('schema verifier credential must be distinct from the migration/admin credential');
   if (adminIdentity.rows[0]?.database !== 'postgres') throw new Error('migration/admin credential must target the postgres database');
 
+  // information_schema.tables is privilege-filtered. Grant a non-row-reading
+  // table privilege to every table/view relation that can contribute to the
+  // canonical schema fingerprint, including ordinary views (relkind = v).
   const relations = await admin.query(`SELECT namespace.nspname AS schema_name, relation.relname AS relation_name
     FROM pg_class relation
     JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
     WHERE namespace.nspname = ANY($1::text[])
-      AND relation.relkind IN ('r', 'p')
+      AND relation.relkind IN ('r', 'p', 'v', 'f')
     ORDER BY namespace.nspname, relation.relname`, [APPLICATION_SCHEMAS]);
 
   const roleSql = quoteIdentifier(verifierRole);
@@ -91,17 +94,24 @@ try {
   const checks = await proof.query(`SELECT
     has_schema_privilege(current_user, 'marketing', 'USAGE') AS marketing_usage,
     has_table_privilege(current_user, 'marketing.waitlist_signups', 'REFERENCES') AS waitlist_metadata,
+    has_table_privilege(current_user, 'media.storage_ledgers', 'REFERENCES') AS storage_ledgers_metadata,
     has_table_privilege(current_user, 'system.schema_migrations', 'SELECT') AS migration_registry_read,
     EXISTS (
       SELECT 1 FROM information_schema.tables
-      WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups'
+      WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND table_type = 'BASE TABLE'
     ) AS waitlist_visible,
+    EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'media' AND table_name = 'storage_ledgers' AND table_type = 'VIEW'
+    ) AS storage_ledgers_visible,
     EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name = 'email_lookup_hmac'
     ) AS waitlist_columns_visible`);
   const row = checks.rows[0];
-  if (!row?.marketing_usage || !row.waitlist_metadata || !row.migration_registry_read || !row.waitlist_visible || !row.waitlist_columns_visible) {
+  if (!row?.marketing_usage || !row.waitlist_metadata || !row.storage_ledgers_metadata
+    || !row.migration_registry_read || !row.waitlist_visible || !row.storage_ledgers_visible
+    || !row.waitlist_columns_visible) {
     throw new Error('dedicated schema verifier metadata grant contract failed');
   }
   console.log(`Reconciled dedicated PlanetScale schema verifier metadata grants across ${APPLICATION_SCHEMAS.length} application schemas.`);
