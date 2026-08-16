@@ -63,8 +63,8 @@ jobs:
           npm run validate:planetscale-migrations
           npm run validate:planetscale-extensions
           npm run validate:no-retired-provider-dependencies
-          node scripts/ci/materialize-public-waitlist-deploy.mjs
           npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
+          node scripts/ci/materialize-public-waitlist-deploy.mjs
 
       - name: Prove Hyperdrive targets PlanetScale main
         env:

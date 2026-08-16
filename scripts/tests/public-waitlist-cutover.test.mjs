@@ -47,6 +47,9 @@ test('protected cutover verifies database, preserves secrets, and has rollback',
   assert.match(cutover, /--secrets-file/);
   assert.match(cutover, /probe-public-waitlist-candidate\.mjs/);
   assert.match(cutover, /Restore exact pre-waitlist public Worker deployment/);
+  const typesCheck = cutover.indexOf('wrangler types --check');
+  const materialize = cutover.indexOf('materialize-public-waitlist-deploy.mjs');
+  assert.ok(typesCheck >= 0 && materialize >= 0 && typesCheck < materialize, 'Wrangler types must be checked before deployment-only config materialization');
 });
 
 test('production marketing resolves the public sitekey from Cloudflare', () => {
