@@ -77,7 +77,7 @@ test('protected cutover verifies database, preserves secrets, stages at zero tra
   const stageStep = cutover.slice(stage, candidateProbe);
   assert.match(stageStep, /PUBLIC_WORKER_DEPLOYED=true/);
   assert.match(stageStep, /\$\{PUBLIC_WORKER_VERSION_ID\}@0/);
-  assert.match(stageStep, /rollback_specs\[@\]/);
+  assert.match(stageStep, /rollback_specs\[0\]/);
 
   assert.match(hyperdriveProof, /manifest\.expectedMainOriginFingerprint/);
   assert.match(hyperdriveProof, /observedFingerprint === mainFingerprint/);
