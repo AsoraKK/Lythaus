@@ -12,6 +12,7 @@ on:
       - 'scripts/validate-no-retired-provider-dependencies.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'scripts/ci/verify-planetscale-production-schema.mjs'
+      - 'scripts/ci/reconcile-planetscale-schema-verifier.mjs'
       - 'scripts/ci/materialize-public-waitlist-deploy.mjs'
       - 'scripts/ci/probe-public-waitlist-candidate.mjs'
       - 'scripts/ci/resolve-latest-worker-version.mjs'
@@ -32,6 +33,7 @@ on:
       - 'scripts/tests/native-architecture-invariants.test.js'
       - 'scripts/tests/production-gates.test.mjs'
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
+      - 'scripts/tests/planetscale-production-migrations.test.mjs'
       - 'scripts/tests/public-waitlist-cutover.test.mjs'
       - 'scripts/critical-coverage-gate.mjs'
       - 'scripts/critical-coverage-manifest.json'
@@ -39,6 +41,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/native-workers-validation.yml'
+      - '.github/workflows/planetscale-production-migrations.yml'
       - '.github/workflows/deploy-public-waitlist.yml'
       - '.github/workflows/deploy-marketing-preview.yml'
   push:
@@ -51,6 +54,7 @@ on:
       - 'scripts/validate-no-retired-provider-dependencies.mjs'
       - 'scripts/ci/apply-planetscale-production-migrations.mjs'
       - 'scripts/ci/verify-planetscale-production-schema.mjs'
+      - 'scripts/ci/reconcile-planetscale-schema-verifier.mjs'
       - 'scripts/ci/materialize-public-waitlist-deploy.mjs'
       - 'scripts/ci/probe-public-waitlist-candidate.mjs'
       - 'scripts/ci/resolve-latest-worker-version.mjs'
@@ -70,6 +74,7 @@ on:
       - 'scripts/tests/native-architecture-invariants.test.js'
       - 'scripts/tests/production-gates.test.mjs'
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
+      - 'scripts/tests/planetscale-production-migrations.test.mjs'
       - 'scripts/tests/public-waitlist-cutover.test.mjs'
       - 'scripts/critical-coverage-gate.mjs'
       - 'scripts/critical-coverage-manifest.json'
@@ -77,6 +82,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/native-workers-validation.yml'
+      - '.github/workflows/planetscale-production-migrations.yml'
       - '.github/workflows/deploy-public-waitlist.yml'
       - '.github/workflows/deploy-marketing-preview.yml'
 
@@ -101,6 +107,7 @@ jobs:
       - run: npm run validate:native-scope
       - run: npm run validate:no-retired-provider-dependencies
       - run: npm run validate:planetscale-migrations
+      - run: npm run test:planetscale-production-migrations
       - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
       - run: node --test scripts/tests/production-gates.test.mjs

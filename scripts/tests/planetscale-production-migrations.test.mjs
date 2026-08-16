@@ -161,3 +161,29 @@ test('migration data preconditions reject unresolved open-appeal conflicts only'
   assert.doesNotThrow(() => assertMigrationDataPreconditions({ duplicate_open_appeal_keys: 0 }));
   assert.throws(() => assertMigrationDataPreconditions({ duplicate_open_appeal_keys: 1 }), /open-appeal reconciliation/);
 });
+
+test('dedicated schema verifier grants are metadata-only and fail closed', async () => {
+  const source = await (await import('node:fs/promises')).readFile('scripts/ci/reconcile-planetscale-schema-verifier.mjs', 'utf8');
+  assert.match(source, /PLANETSCALE_VERIFIER_DATABASE_URL/);
+  assert.match(source, /GRANT USAGE ON SCHEMA/);
+  assert.match(source, /GRANT REFERENCES ON TABLE/);
+  assert.match(source, /GRANT SELECT ON TABLE system\.schema_migrations/);
+  assert.match(source, /REVOKE CREATE ON DATABASE postgres/);
+  assert.match(source, /REVOKE CREATE ON SCHEMA/);
+  assert.match(source, /SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY/);
+  assert.doesNotMatch(source, /GRANT SELECT ON TABLE marketing\.waitlist_signups/);
+  assert.doesNotMatch(source, /GRANT (?:INSERT|UPDATE|DELETE|TRUNCATE|TRIGGER) ON TABLE/);
+});
+
+test('production migration workflow repairs and proves the real schema verifier', async () => {
+  const workflow = await (await import('node:fs/promises')).readFile('.github/workflows/planetscale-production-migrations.yml', 'utf8');
+  assert.match(workflow, /PLANETSCALE_VERIFIER_DATABASE_URL: \$\{\{ secrets\.PLANETSCALE_SCHEMA_READ_DATABASE_URL \}\}/);
+  assert.match(workflow, /Reconcile dedicated schema verifier metadata grants/);
+  assert.match(workflow, /reconcile-planetscale-schema-verifier\.mjs/);
+  const verifyStart = workflow.indexOf('- name: Verify final production schema with dedicated verifier');
+  const cleanupStart = workflow.indexOf('- name: Remove ephemeral PlanetScale migration role');
+  assert.ok(verifyStart >= 0 && cleanupStart > verifyStart, 'dedicated verifier proof step must remain explicit');
+  const verifyStep = workflow.slice(verifyStart, cleanupStart);
+  assert.match(verifyStep, /PLANETSCALE_SCHEMA_READ_DATABASE_URL: \$\{\{ secrets\.PLANETSCALE_SCHEMA_READ_DATABASE_URL \}\}/);
+  assert.match(verifyStep, /verify-planetscale-production-schema\.mjs/);
+});
