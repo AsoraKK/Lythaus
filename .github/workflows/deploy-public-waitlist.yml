@@ -210,25 +210,25 @@ jobs:
             --message "Activate reviewed Lythaus public waitlist $RELEASE_SHA"
           echo 'PUBLIC_WORKER_DEPLOYED=true' >> "$GITHUB_ENV"
 
-      - name: Verify live route fails closed before browser token
+      - name: Verify live route fails closed after activation propagation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PRODUCTION_LIVE_EVIDENCE_PATH: ${{ runner.temp }}/waitlist-cutover/public-live.json
         shell: bash
         run: |
           set -euo pipefail
-          body="$RUNNER_TEMP/waitlist-cutover/live-missing-token.json"
-          headers="$RUNNER_TEMP/waitlist-cutover/live-missing-token.headers"
-          status="$(curl --silent --show-error --max-time 20 \
-            --dump-header "$headers" \
-            --output "$body" \
-            --write-out '%{http_code}' \
-            --request POST 'https://api.lythaus.co/api/waitlist' \
-            --header 'content-type: application/json' \
-            --header 'origin: https://lythaus.co' \
-            --data '{"email":"candidate-probe@example.invalid","turnstileToken":"","consentVersion":"waitlist-v1","source":"lythaus.co"}')"
-          test "$status" = 400
-          jq -e '.error == "turnstile_required"' "$body" >/dev/null
-          grep -F -i 'cache-control: private, no-store' "$headers"
-          grep -F -i 'access-control-allow-origin: https://lythaus.co' "$headers"
-          rm -f "$body" "$headers"
+          npx wrangler deployments status --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-active.json"
+          jq -e \
+            --arg candidate "$PUBLIC_WORKER_VERSION_ID" \
+            '(.versions | length) == 1
+             and .versions[0].version_id == $candidate
+             and ((.versions[0].percentage | tonumber) == 100)' \
+            "$RUNNER_TEMP/waitlist-cutover/public-active.json" >/dev/null || {
+              echo 'Cloudflare control plane does not report the exact candidate at 100%.' >&2
+              exit 1
+            }
+          node scripts/ci/probe-live-public-waitlist.mjs
 
       - name: Write sanitized cutover evidence
         if: success()
@@ -254,16 +254,38 @@ jobs:
         run: |
           set +e
           read -r -a rollback_specs <<< "$PUBLIC_ROLLBACK_SPECS"
+          rollback_log="$RUNNER_TEMP/public-waitlist-rollback.log"
           npx wrangler versions deploy "${rollback_specs[@]}" \
             --name "$PUBLIC_WORKER" \
             --env="" \
             --yes \
-            --message 'Restore exact pre-waitlist public Worker deployment'
+            --message 'Restore exact pre-waitlist public Worker deployment' \
+            > "$rollback_log" 2>&1
+          rollback_status=$?
+          if [ "$rollback_status" -eq 0 ]; then
+            rm -f "$rollback_log"
+            exit 0
+          fi
+          if ! grep -Eq '10220' "$rollback_log"; then
+            echo 'Normal rollback failed without the approved Cloudflare secret-drift code 10220.' >&2
+            rm -f "$rollback_log"
+            exit "$rollback_status"
+          fi
+          rm -f "$rollback_log"
+
+          set -euo pipefail
+          current_path="$RUNNER_TEMP/waitlist-cutover/public-rollback-current.json"
+          npx wrangler deployments status --name "$PUBLIC_WORKER" --json > "$current_path"
+          PRODUCTION_WORKER_SCOPE="$PUBLIC_WORKER" \
+          EXPECTED_CANDIDATE_VERSION_ID="$PUBLIC_WORKER_VERSION_ID" \
+          ROLLBACK_SPECS="$PUBLIC_ROLLBACK_SPECS" \
+          CURRENT_DEPLOYMENT_PATH="$current_path" \
+          node scripts/ci/restore-worker-deployment.mjs
 
       - name: Remove temporary Turnstile secret material
         if: always()
         shell: bash
-        run: rm -f "$RUNNER_TEMP/waitlist-turnstile-secret.json"
+        run: rm -f "$RUNNER_TEMP/waitlist-turnstile-secret.json" "$RUNNER_TEMP/public-waitlist-rollback.log"
 
       - name: Upload sanitized waitlist cutover evidence
         if: always()
