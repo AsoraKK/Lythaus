@@ -27,3 +27,22 @@ test('production schema verification is sequential and emits safe relation drift
   assert.match(source, /extra=\$\{JSON\.stringify\(extra\)\}/);
   assert.match(source, /relations: relations\.rows/);
 });
+
+test('runtime rate-limit access requires system schema usage and is verified in production', async () => {
+  const grants = await fs.readFile('database/planetscale/grants/roles.sql', 'utf8');
+  const verifier = await fs.readFile('scripts/ci/verify-planetscale-production-schema.mjs', 'utf8');
+  const diagnostic = await fs.readFile('.github/workflows/diagnose-waitlist-runtime-89e00774-once.yml', 'utf8');
+
+  assert.match(grants, /GRANT USAGE ON SCHEMA identity, content, social, feed, moderation, trust, media, system TO lythaus_runtime;/);
+  assert.match(grants, /GRANT SELECT, INSERT, UPDATE ON system\.rate_limit_windows TO lythaus_runtime;/);
+
+  assert.match(verifier, /has_schema_privilege\(\$1, 'system', 'USAGE'\) AS runtime_system_usage/);
+  assert.match(verifier, /has_table_privilege\(\$1, 'system\.rate_limit_windows', 'SELECT'\) AS runtime_rate_select/);
+  assert.match(verifier, /has_table_privilege\(\$1, 'system\.rate_limit_windows', 'INSERT'\) AS runtime_rate_insert/);
+  assert.match(verifier, /has_table_privilege\(\$1, 'system\.rate_limit_windows', 'UPDATE'\) AS runtime_rate_update/);
+  assert.match(verifier, /!row\?\.runtime_system_usage/);
+
+  assert.match(diagnostic, /const expectedRoutedUser = `\$\{expectedBaseRole\}\.\$\{branchRoute\}`;/);
+  assert.match(diagnostic, /runtimeRoutedRoleMatch: originUser === expectedRoutedUser/);
+  assert.doesNotMatch(diagnostic, /runtimeRoleMatch: originUser === expected/);
+});
