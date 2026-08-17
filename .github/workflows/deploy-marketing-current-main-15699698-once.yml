@@ -1,0 +1,129 @@
+name: Deploy current main marketing once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/deploy-marketing-current-main-15699698-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-marketing-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      EXPECTED_BASE_SHA: 15699698ff5a739b71ae374b41940885c92633ab
+      PAGES_PROJECT: lythaus-marketing
+      PUBLIC_API_BASE_URL: https://api.lythaus.co
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Require merge directly onto reviewed current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || {
+            echo 'Refusing deployment: this run is not current origin/main.' >&2
+            exit 1
+          }
+          test "$(git rev-parse HEAD^1)" = "$EXPECTED_BASE_SHA" || {
+            echo 'Refusing deployment: expected reviewed main SHA is not the first parent.' >&2
+            exit 1
+          }
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/marketing-site/package-lock.json
+
+      - name: Resolve production Turnstile sitekey
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cloudflare/waitlist-turnstile.mjs resolve
+
+      - name: Build exact current-main marketing artifact
+        working-directory: apps/marketing-site
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "const url = new URL(process.env.PUBLIC_API_BASE_URL); if (url.protocol !== 'https:' || url.hostname !== 'api.lythaus.co' || url.pathname !== '/') throw new Error('PUBLIC_API_BASE_URL must be https://api.lythaus.co');"
+          node -e "if (!/^[A-Za-z0-9_-]{20,}$/.test(process.env.PUBLIC_TURNSTILE_SITE_KEY ?? '')) throw new Error('PUBLIC_TURNSTILE_SITE_KEY is invalid');"
+          npm ci
+          npm run build
+          node ../../scripts/cloudflare/validate-marketing-output.mjs dist
+          grep -F 'challenges.cloudflare.com/turnstile/v0/api.js' dist/index.html
+          grep -F 'waitlist_signup' dist/index.html
+          if grep -R -n -i 'TURNSTILE_SECRET\|PII_ENCRYPTION_KEY\|PII_HMAC_KEY' dist; then
+            echo 'Sensitive binding name leaked into the marketing artifact.' >&2
+            exit 1
+          fi
+
+      - name: Deploy exact current main SHA to Cloudflare Pages production
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@4.110.0 pages deploy apps/marketing-site/dist \
+            --project-name "$PAGES_PROJECT" \
+            --branch main \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-dirty=false | tee "$RUNNER_TEMP/wrangler-marketing-output.txt"
+          preview_url="$(grep -Eo 'https://[a-z0-9-]+\.lythaus-marketing\.pages\.dev' "$RUNNER_TEMP/wrangler-marketing-output.txt" | head -n 1)"
+          test -n "$preview_url"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          rm -f "$RUNNER_TEMP/wrangler-marketing-output.txt"
+
+      - name: Verify custom domains serve deployed production artifact
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/marketing-current-main"
+          for host in https://lythaus.co https://www.lythaus.co; do
+            body="$(mktemp)"
+            headers="$(mktemp)"
+            status="$(curl --location --silent --show-error --max-time 30 --retry 6 --retry-delay 3 --dump-header "$headers" --output "$body" --write-out '%{http_code}' "$host/")"
+            test "$status" = 200
+            grep -F 'The internet is changing.' "$body"
+            grep -F 'Trust should not disappear with it.' "$body"
+            grep -F 'challenges.cloudflare.com/turnstile/v0/api.js' "$body"
+            grep -F 'waitlist_signup' "$body"
+            grep -F -i 'X-Content-Type-Options: nosniff' "$headers"
+            grep -F -i 'X-Frame-Options: DENY' "$headers"
+            rm -f "$body" "$headers"
+          done
+          jq -n \
+            --arg commitSha "$GITHUB_SHA" \
+            --arg project "$PAGES_PROJECT" \
+            --arg previewUrl "$PREVIEW_URL" \
+            --arg verifiedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion:1,status:"pass",commitSha:$commitSha,project:$project,branch:"main",previewUrl:$previewUrl,customDomains:["lythaus.co","www.lythaus.co"],turnstileClientPresent:true,waitlistClientPresent:true,verifiedAt:$verifiedAt}' \
+            > "$RUNNER_TEMP/marketing-current-main/deployment.json"
+
+      - name: Upload sanitized deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: marketing-current-main-${{ github.sha }}
+          path: ${{ runner.temp }}/marketing-current-main
+          if-no-files-found: warn
+          retention-days: 90
