@@ -282,7 +282,11 @@ jobs:
             --url "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/hyperdrive/configs/$HYPERDRIVE_ID" \
             --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             --header 'Accept: application/json')"
-          [[ "$after_code" == '200' ]] && jq -e --arg expected "$expected" --arg name "$HYPERDRIVE_NAME" '
+          if [[ "$after_code" != '200' ]]; then
+            echo "Post-update Hyperdrive GET failed with HTTP $after_code." >&2
+            exit 1
+          fi
+          if ! jq -e --arg expected "$expected" --arg name "$HYPERDRIVE_NAME" '
             .success == true
             and .result.id == env.HYPERDRIVE_ID
             and .result.name == $name
@@ -291,7 +295,10 @@ jobs:
             and .result.mtls.sslmode == "verify-full"
             and (.result.origin.host | endswith(".psdb.cloud"))
             and .result.origin.scheme == "postgres"
-          ' "$after" >/dev/null || { echo 'Post-update Hyperdrive invariant verification failed.' >&2; exit 1; }
+          ' "$after" >/dev/null; then
+            echo 'Post-update Hyperdrive invariant verification failed.' >&2
+            exit 1
+          fi
 
           echo 'RUNTIME_ROTATION_PERFORMED=true' >> "$GITHUB_ENV"
           jq -n --arg method "$update_method" '{recoveryAction:"credential_rotated",hyperdriveUpdateMethod:$method}' > "$evidence/recovery-action.json"
