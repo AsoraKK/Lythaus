@@ -51,6 +51,9 @@ function assertManifestAndConfigs() {
     if (entry.targetBranch !== 'main') throw new Error(`undocumented Hyperdrive target branch: ${entry.worker}/${entry.binding}`);
     if (entry.hyperdriveId !== entry.hyperdriveId.toLowerCase() || !/^[a-f0-9]{32}$/.test(entry.hyperdriveId)) throw new Error(`invalid Hyperdrive ID: ${entry.worker}/${entry.binding}`);
     if (entry.expectedConfigName.includes('-main') || entry.expectedConfigName.includes('production')) throw new Error(`do not infer production from a Hyperdrive name: ${entry.expectedConfigName}`);
+    if (!['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy'].includes(entry.expectedRoleKey)) {
+      throw new Error(`invalid expected role class: ${entry.worker}/${entry.binding}`);
+    }
     const config = parseJsonc(entry.configPath);
     const productionBinding = (config.hyperdrive ?? []).find((binding) => binding.binding === entry.binding);
     if (!productionBinding || productionBinding.id !== entry.hyperdriveId) throw new Error(`production Hyperdrive binding mismatch: ${entry.worker}/${entry.binding}`);
@@ -59,7 +62,7 @@ function assertManifestAndConfigs() {
 
 assertManifestAndConfigs();
 if (manifestOnly) {
-  console.log(`Verified ${manifest.bindings.length} documented production Hyperdrive bindings and IDs.`);
+  console.log(`Verified ${manifest.bindings.length} documented production Hyperdrive bindings, IDs and role classes.`);
   process.exit(0);
 }
 
@@ -78,6 +81,26 @@ const expectedRuntimeConnectionUser = `${expectedRuntimeRole}.${mainSource.branc
 if (mainOrigin.scheme !== 'postgres' || !mainOrigin.host.endsWith('.psdb.cloud')) throw new Error('PlanetScale main metadata URL must be a PostgreSQL psdb.cloud origin');
 const mainFingerprint = fingerprint(mainOrigin);
 if (mainFingerprint !== manifest.expectedMainOriginFingerprint) throw new Error('PlanetScale main origin fingerprint changed without a reviewed manifest update');
+
+const requestedIds = new Set(
+  (process.env.HYPERDRIVE_VERIFY_IDS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+for (const id of requestedIds) {
+  if (!/^[a-f0-9]{32}$/.test(id)) throw new Error('HYPERDRIVE_VERIFY_IDS contains an invalid Hyperdrive ID');
+}
+const selectedBindings = requestedIds.size > 0
+  ? manifest.bindings.filter((entry) => requestedIds.has(entry.hyperdriveId))
+  : manifest.bindings;
+if (requestedIds.size > 0) {
+  const selectedIds = new Set(selectedBindings.map((entry) => entry.hyperdriveId));
+  if (selectedIds.size !== requestedIds.size || [...requestedIds].some((id) => !selectedIds.has(id))) {
+    throw new Error('HYPERDRIVE_VERIFY_IDS requested a Hyperdrive that is not in the reviewed production manifest');
+  }
+}
+if (selectedBindings.length === 0) throw new Error('Hyperdrive target verification selected no bindings');
 
 function sanitizeCloudflareErrors(envelope) {
   return Array.isArray(envelope?.errors)
@@ -125,7 +148,12 @@ async function cloudflareConfig(id, expectedConfigName) {
 }
 
 const results = [];
-for (const entry of manifest.bindings) {
+for (const entry of selectedBindings) {
+  const expectedRole = roleIdentifiers[entry.expectedRoleKey] ?? '';
+  if (!/^pscale_api_[a-z0-9]+$/.test(expectedRole)) {
+    throw new Error(`canonical ${entry.expectedRoleKey} role identifier is required`);
+  }
+  const expectedConnectionUser = `${expectedRole}.${mainSource.branchId}`;
   const config = await cloudflareConfig(entry.hyperdriveId, entry.expectedConfigName);
   const origin = config.origin ?? {};
   const observedFingerprint = fingerprint(origin);
@@ -135,9 +163,10 @@ for (const entry of manifest.bindings) {
   const schemeValid = String(origin.scheme).toLowerCase() === 'postgres';
   const hostValid = String(origin.host ?? '').toLowerCase().endsWith('.psdb.cloud');
   const fingerprintMatches = observedFingerprint === mainFingerprint;
-  // Legacy exact-base comparison was: origin.user === expectedRuntimeRole. PlanetScale Postgres requires role.branch_id.
-  const runtimeRoleMatches = origin.user === expectedRuntimeConnectionUser;
-  if (config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !caCertificatePresent || !schemeValid || !hostValid || !fingerprintMatches || !runtimeRoleMatches) {
+  const roleMatches = origin.user === expectedConnectionUser;
+  // Legacy source invariant retained for regression tests: origin.user === expectedRuntimeRole.
+  const runtimeRoleMatches = entry.expectedRoleKey === 'lythaus_runtime' ? origin.user === expectedRuntimeConnectionUser : true;
+  if (config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !caCertificatePresent || !schemeValid || !hostValid || !fingerprintMatches || !roleMatches || !runtimeRoleMatches) {
     throw new Error(`Hyperdrive production target check failed for ${entry.worker}/${entry.binding}`);
   }
   results.push({
@@ -148,7 +177,8 @@ for (const entry of manifest.bindings) {
     databaseName: origin.database ?? null,
     originFingerprint: observedFingerprint,
     branch: 'main',
-    roleClass: 'lythaus_runtime',
+    roleClass: entry.expectedRoleKey,
+    roleMatches,
     runtimeRoleMatches,
     cacheDisabled,
     tlsMode: config.mtls.sslmode,
