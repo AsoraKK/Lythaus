@@ -1,12 +1,19 @@
-name: Diagnose waitlist runtime 89e00774 once
+name: Diagnose Lythaus waitlist runtime
 
 on:
-  push:
-    branches:
-      - ops/diagnose-waitlist-runtime-89e00774
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact current main SHA to diagnose
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+concurrency:
+  group: lythaus-waitlist-runtime-diagnostic
+  cancel-in-progress: false
 
 jobs:
   diagnose:
@@ -16,7 +23,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: 89e0077495893ab581d7258239b2dd795613d87e
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Require exact current main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'release_sha must be a full SHA' >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || {
+            echo 'Refusing diagnostic: release_sha is not current origin/main.' >&2
+            exit 1
+          }
 
       - uses: actions/setup-node@v7
         with:
@@ -24,6 +46,12 @@ jobs:
           cache: npm
 
       - run: npm ci --ignore-scripts
+
+      - name: Validate production Turnstile widget read-only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cloudflare/waitlist-turnstile.mjs resolve
 
       - name: Compare public Hyperdrive origin user to canonical runtime role
         shell: bash
@@ -51,13 +79,12 @@ jobs:
             throw new Error(`Hyperdrive GET failed status=${response.status} codes=${JSON.stringify(codes)}`);
           }
           const originUser = envelope?.result?.origin?.user;
-          const result = {
+          console.log(JSON.stringify({
             hyperdriveLookup: true,
             configNameMatch: envelope?.result?.name === 'lythaus-db-app-dev',
             originUserPresent: typeof originUser === 'string' && originUser.length > 0,
             runtimeRoleMatch: originUser === expected,
-          };
-          console.log(JSON.stringify(result));
+          }));
           NODE
 
       - name: Verify actual canonical runtime privileges read-only
