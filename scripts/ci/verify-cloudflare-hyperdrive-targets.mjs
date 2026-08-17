@@ -23,14 +23,24 @@ function fingerprint(origin) {
   return crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
 }
 
-function sourceOrigin(databaseUrl) {
+function sourceMetadata(databaseUrl) {
   const url = new URL(databaseUrl);
   const scheme = url.protocol.replace(':', '').toLowerCase() === 'postgresql' ? 'postgres' : url.protocol.replace(':', '').toLowerCase();
+  const username = decodeURIComponent(url.username);
+  const separator = username.lastIndexOf('.');
+  if (separator <= 0 || separator === username.length - 1) {
+    throw new Error('PlanetScale main metadata URL must use a branch-qualified username');
+  }
+  const branchId = username.slice(separator + 1);
+  if (!/^[a-z0-9]+$/.test(branchId)) throw new Error('PlanetScale main metadata URL has an invalid branch identifier');
   return {
-    scheme,
-    host: url.hostname.toLowerCase(),
-    port: Number(url.port || 5432),
-    database: decodeURIComponent(url.pathname.replace(/^\/+/, '')),
+    origin: {
+      scheme,
+      host: url.hostname.toLowerCase(),
+      port: Number(url.port || 5432),
+      database: decodeURIComponent(url.pathname.replace(/^\/+/, '')),
+    },
+    branchId,
   };
 }
 
@@ -62,7 +72,9 @@ if (!apiToken || !accountId || !databaseUrl) throw new Error('Cloudflare API cre
 if ((process.env.PSCALE_BRANCH_NAME ?? '') !== 'main') throw new Error('Hyperdrive target verification requires PSCALE_BRANCH_NAME=main');
 if (!/^pscale_api_[a-z0-9]+$/.test(expectedRuntimeRole)) throw new Error('canonical runtime role identifier is required');
 
-const mainOrigin = sourceOrigin(databaseUrl);
+const mainSource = sourceMetadata(databaseUrl);
+const mainOrigin = mainSource.origin;
+const expectedRuntimeConnectionUser = `${expectedRuntimeRole}.${mainSource.branchId}`;
 if (mainOrigin.scheme !== 'postgres' || !mainOrigin.host.endsWith('.psdb.cloud')) throw new Error('PlanetScale main metadata URL must be a PostgreSQL psdb.cloud origin');
 const mainFingerprint = fingerprint(mainOrigin);
 if (mainFingerprint !== manifest.expectedMainOriginFingerprint) throw new Error('PlanetScale main origin fingerprint changed without a reviewed manifest update');
@@ -119,11 +131,13 @@ for (const entry of manifest.bindings) {
   const observedFingerprint = fingerprint(origin);
   const cacheDisabled = config.caching?.disabled === true;
   const tlsVerified = config.mtls?.sslmode === 'verify-full';
+  const caCertificatePresent = typeof config.mtls?.ca_certificate_id === 'string' && config.mtls.ca_certificate_id.length > 0;
   const schemeValid = String(origin.scheme).toLowerCase() === 'postgres';
   const hostValid = String(origin.host ?? '').toLowerCase().endsWith('.psdb.cloud');
   const fingerprintMatches = observedFingerprint === mainFingerprint;
-  const runtimeRoleMatches = origin.user === expectedRuntimeRole;
-  if (config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !schemeValid || !hostValid || !fingerprintMatches || !runtimeRoleMatches) {
+  // Legacy exact-base comparison was: origin.user === expectedRuntimeRole. PlanetScale Postgres requires role.branch_id.
+  const runtimeRoleMatches = origin.user === expectedRuntimeConnectionUser;
+  if (config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !caCertificatePresent || !schemeValid || !hostValid || !fingerprintMatches || !runtimeRoleMatches) {
     throw new Error(`Hyperdrive production target check failed for ${entry.worker}/${entry.binding}`);
   }
   results.push({
@@ -138,6 +152,7 @@ for (const entry of manifest.bindings) {
     runtimeRoleMatches,
     cacheDisabled,
     tlsMode: config.mtls.sslmode,
+    caCertificatePresent,
     modifiedOn: config.modified_on ?? null,
   });
 }
