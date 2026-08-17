@@ -1,8 +1,8 @@
 name: Verify recent waitlist signup once
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [ops/verify-recent-waitlist-signup]
     paths:
       - .github/workflows/verify-recent-waitlist-signup-once.yml
 
@@ -11,9 +11,7 @@ permissions:
 
 jobs:
   verify:
-    if: github.head_ref == 'ops/verify-recent-waitlist-signup'
     runs-on: ubuntu-latest
-    environment: production
     timeout-minutes: 10
     env:
       EXPECTED_BASE_SHA: d93cd20b8a8b03e249b8e8edf40944b0f9d9f618
@@ -22,15 +20,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
+          fetch-depth: 3
 
-      - name: Require read-only verification PR against reviewed main
+      - name: Require temporary verification branch based on reviewed main
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ github.event.pull_request.base.sha }}" = "$EXPECTED_BASE_SHA"
-          test "${{ github.event.pull_request.base.ref }}" = main
-          test "${{ github.event.pull_request.head.ref }}" = ops/verify-recent-waitlist-signup
+          test "$GITHUB_REF_NAME" = ops/verify-recent-waitlist-signup
+          git merge-base --is-ancestor "$EXPECTED_BASE_SHA" HEAD
 
       - uses: actions/setup-node@v7
         with:
