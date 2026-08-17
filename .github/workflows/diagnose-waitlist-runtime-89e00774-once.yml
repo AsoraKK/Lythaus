@@ -53,11 +53,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/cloudflare/waitlist-turnstile.mjs resolve
 
-      - name: Compare public Hyperdrive origin user to canonical runtime role
+      - name: Compare public Hyperdrive routed user to canonical runtime role
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
         run: |
           set -euo pipefail
@@ -65,10 +66,20 @@ jobs:
           const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
           const token = process.env.CLOUDFLARE_API_TOKEN ?? '';
           const roles = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
-          const expected = roles.lythaus_runtime ?? '';
+          const expectedBaseRole = roles.lythaus_runtime ?? '';
+          const metadataUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
           if (!/^[a-f0-9]{32}$/.test(accountId)) throw new Error('Cloudflare account ID unavailable');
           if (!token) throw new Error('Cloudflare API token unavailable');
-          if (!/^pscale_api_[a-z0-9]+$/.test(expected)) throw new Error('canonical runtime role identifier unavailable');
+          if (!/^pscale_api_[a-z0-9]+$/.test(expectedBaseRole)) throw new Error('canonical runtime role identifier unavailable');
+          if (!metadataUrl) throw new Error('PlanetScale main metadata URL unavailable');
+          const metadata = new URL(metadataUrl);
+          if (!metadata.hostname.endsWith('.psdb.cloud')) throw new Error('PlanetScale main metadata URL must target psdb.cloud');
+          const metadataUser = decodeURIComponent(metadata.username);
+          const routeSeparator = metadataUser.lastIndexOf('.');
+          if (routeSeparator <= 0 || routeSeparator === metadataUser.length - 1) throw new Error('PlanetScale routed username is unavailable');
+          const branchRoute = metadataUser.slice(routeSeparator + 1);
+          if (!/^[a-z0-9]+$/.test(branchRoute)) throw new Error('PlanetScale branch route has an unexpected format');
+          const expectedRoutedUser = `${expectedBaseRole}.${branchRoute}`;
           const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/hyperdrive/configs/3e59f07db51345aa896333ca861d1adf`, {
             headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
             signal: AbortSignal.timeout(10_000),
@@ -79,11 +90,15 @@ jobs:
             throw new Error(`Hyperdrive GET failed status=${response.status} codes=${JSON.stringify(codes)}`);
           }
           const originUser = envelope?.result?.origin?.user;
+          const originUserPresent = typeof originUser === 'string' && originUser.length > 0;
+          const originSeparator = originUserPresent ? originUser.lastIndexOf('.') : -1;
           console.log(JSON.stringify({
             hyperdriveLookup: true,
             configNameMatch: envelope?.result?.name === 'lythaus-db-app-dev',
-            originUserPresent: typeof originUser === 'string' && originUser.length > 0,
-            runtimeRoleMatch: originUser === expected,
+            originUserPresent,
+            runtimeBaseRoleMatch: originSeparator > 0 && originUser.slice(0, originSeparator) === expectedBaseRole,
+            branchRouteMatch: originSeparator > 0 && originUser.slice(originSeparator + 1) === branchRoute,
+            runtimeRoutedRoleMatch: originUser === expectedRoutedUser,
           }));
           NODE
 
