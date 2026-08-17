@@ -127,6 +127,20 @@ async function verifyWaitlistPrivileges(client) {
   }
 }
 
+async function verifyRuntimeRateLimitPrivileges(client) {
+  const runtime = roleIdentifiers.lythaus_runtime;
+  const checks = await client.query(`SELECT
+    has_schema_privilege($1, 'system', 'USAGE') AS system_usage,
+    has_table_privilege($1, 'system.rate_limit_windows', 'SELECT') AS rate_limit_select,
+    has_table_privilege($1, 'system.rate_limit_windows', 'INSERT') AS rate_limit_insert,
+    has_table_privilege($1, 'system.rate_limit_windows', 'UPDATE') AS rate_limit_update`,
+  [runtime]);
+  const row = checks.rows[0];
+  if (!row?.system_usage || !row.rate_limit_select || !row.rate_limit_insert || !row.rate_limit_update) {
+    throw new Error('runtime rate-limit privilege verification failed');
+  }
+}
+
 async function applyGrants(client) {
   const template = fs.readFileSync(path.join(root, 'database', 'planetscale', 'grants', 'roles.sql'), 'utf8');
   const sql = template.replace(/\blythaus_(runtime|admin|jobs|privacy|migrations)\b/g, (label) => quoteRoleIdentifier(roleIdentifiers[label]));
@@ -195,6 +209,7 @@ try {
   if (!finalRegistry || !exactRegistryPrefix(finalRegistry, '0013_marketing_waitlist.sql')) throw new Error('production migration registry is incomplete after apply');
   await applyGrants(client);
   await verifyWaitlistPrivileges(client);
+  await verifyRuntimeRateLimitPrivileges(client);
   console.log(`Validated and applied PlanetScale production migrations on ${branch} (${mode}); no migration checksum was updated.`);
 } finally {
   await client.end();

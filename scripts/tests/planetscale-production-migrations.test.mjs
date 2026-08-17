@@ -154,7 +154,35 @@ test('production runner preserves immutable registry history', async () => {
   assert.match(source, /recordFullyAppliedMigration/);
   assert.match(source, /assertCompleteMigrationPostconditions/);
   assert.match(source, /verifyWaitlistPrivileges/);
+  assert.match(source, /verifyRuntimeRateLimitPrivileges/);
+  assert.match(source, /has_schema_privilege\(\$1, 'system', 'USAGE'\)/);
+  assert.match(source, /has_table_privilege\(\$1, 'system\.rate_limit_windows', 'SELECT'\)/);
+  assert.match(source, /has_table_privilege\(\$1, 'system\.rate_limit_windows', 'INSERT'\)/);
+  assert.match(source, /has_table_privilege\(\$1, 'system\.rate_limit_windows', 'UPDATE'\)/);
   assert.match(source, /statement_timeout = '15min'/);
+});
+
+test('runtime grant template includes system schema access for rate limiting', async () => {
+  const grants = await (await import('node:fs/promises')).readFile('database/planetscale/grants/roles.sql', 'utf8');
+  assert.match(grants, /GRANT USAGE ON SCHEMA identity, content, social, feed, moderation, trust, media, system TO lythaus_runtime;/);
+  assert.match(grants, /GRANT SELECT, INSERT, UPDATE ON system\.rate_limit_windows TO lythaus_runtime;/);
+});
+
+test('production Hyperdrive gate requires the canonical runtime identity without exposing it', async () => {
+  const source = await (await import('node:fs/promises')).readFile('scripts/ci/verify-cloudflare-hyperdrive-targets.mjs', 'utf8');
+  assert.match(source, /PSCALE_ROLE_IDENTIFIERS/);
+  assert.match(source, /expectedRuntimeRole/);
+  assert.match(source, /origin\.user === expectedRuntimeRole/);
+  assert.match(source, /runtimeRoleMatches/);
+  assert.doesNotMatch(source, /originUser:/);
+
+  const workflow = await (await import('node:fs/promises')).readFile('.github/workflows/deploy-public-waitlist.yml', 'utf8');
+  const proofStart = workflow.indexOf('- name: Prove Hyperdrive targets PlanetScale main');
+  const nextStep = workflow.indexOf('- name: Verify production schema and waitlist grants read-only');
+  assert.ok(proofStart >= 0 && nextStep > proofStart, 'Hyperdrive proof step must remain explicit');
+  const proofStep = workflow.slice(proofStart, nextStep);
+  assert.match(proofStep, /PSCALE_ROLE_IDENTIFIERS: \$\{\{ secrets\.PSCALE_ROLE_IDENTIFIERS \}\}/);
+  assert.match(proofStep, /verify-cloudflare-hyperdrive-targets\.mjs/);
 });
 
 test('migration data preconditions reject unresolved open-appeal conflicts only', () => {

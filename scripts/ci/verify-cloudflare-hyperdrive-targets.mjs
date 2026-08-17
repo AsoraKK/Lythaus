@@ -56,8 +56,11 @@ if (manifestOnly) {
 const apiToken = process.env.CLOUDFLARE_API_TOKEN ?? '';
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? manifest.accountId ?? '';
 const databaseUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
+const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
+const expectedRuntimeRole = roleIdentifiers.lythaus_runtime ?? '';
 if (!apiToken || !accountId || !databaseUrl) throw new Error('Cloudflare API credentials and the PlanetScale main metadata URL are required');
 if ((process.env.PSCALE_BRANCH_NAME ?? '') !== 'main') throw new Error('Hyperdrive target verification requires PSCALE_BRANCH_NAME=main');
+if (!/^pscale_api_[a-z0-9]+$/.test(expectedRuntimeRole)) throw new Error('canonical runtime role identifier is required');
 
 const mainOrigin = sourceOrigin(databaseUrl);
 if (mainOrigin.scheme !== 'postgres' || !mainOrigin.host.endsWith('.psdb.cloud')) throw new Error('PlanetScale main metadata URL must be a PostgreSQL psdb.cloud origin');
@@ -119,7 +122,8 @@ for (const entry of manifest.bindings) {
   const schemeValid = String(origin.scheme).toLowerCase() === 'postgres';
   const hostValid = String(origin.host ?? '').toLowerCase().endsWith('.psdb.cloud');
   const fingerprintMatches = observedFingerprint === mainFingerprint;
-  if (config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !schemeValid || !hostValid || !fingerprintMatches) {
+  const runtimeRoleMatches = origin.user === expectedRuntimeRole;
+  if (config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !schemeValid || !hostValid || !fingerprintMatches || !runtimeRoleMatches) {
     throw new Error(`Hyperdrive production target check failed for ${entry.worker}/${entry.binding}`);
   }
   results.push({
@@ -130,7 +134,8 @@ for (const entry of manifest.bindings) {
     databaseName: origin.database ?? null,
     originFingerprint: observedFingerprint,
     branch: 'main',
-    roleClass: 'runtime-probe-required',
+    roleClass: 'lythaus_runtime',
+    runtimeRoleMatches,
     cacheDisabled,
     tlsMode: config.mtls.sslmode,
     modifiedOn: config.modified_on ?? null,
