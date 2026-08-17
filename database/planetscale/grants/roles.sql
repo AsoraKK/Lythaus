@@ -17,7 +17,7 @@ GRANT CONNECT ON DATABASE postgres TO lythaus_runtime, lythaus_admin, lythaus_jo
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 
-GRANT USAGE ON SCHEMA identity, content, social, feed, moderation, trust, media TO lythaus_runtime;
+GRANT USAGE ON SCHEMA identity, content, social, feed, moderation, trust, media, system TO lythaus_runtime;
 GRANT USAGE ON SCHEMA privacy TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON identity.users, identity.handles, identity.email_credentials, identity.contact_emails, identity.auth_sessions, identity.refresh_token_families, identity.provider_links, identity.consent_records, identity.user_region_preferences, identity.email_verification_tokens, identity.password_reset_tokens, identity.account_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON content.posts, content.comments, content.content_declarations, content.places, content.post_locations TO lythaus_runtime;
