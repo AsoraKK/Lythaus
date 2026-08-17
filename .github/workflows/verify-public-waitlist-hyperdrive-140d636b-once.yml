@@ -1,0 +1,132 @@
+name: Verify repaired public waitlist Hyperdrive once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-public-waitlist-hyperdrive-140d636b-once.yml
+      - scripts/ci/verify-cloudflare-hyperdrive-targets.mjs
+      - infrastructure/cloudflare/native-hyperdrive-production.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-public-waitlist-hyperdrive-verification
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      EXPECTED_BASE_SHA: 140d636bd88ab440b2b8c3219b445ed00dfa3041
+      PUBLIC_HYPERDRIVE_ID: 3e59f07db51345aa896333ca861d1adf
+      PRODUCTION_PUBLIC_API_BASE_URL: https://api.lythaus.co
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Require verification merged directly onto repaired main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || {
+            echo 'Refusing verification: this run is not current origin/main.' >&2
+            exit 1
+          }
+          test "$(git rev-parse HEAD^1)" = "$EXPECTED_BASE_SHA" || {
+            echo 'Refusing verification: repaired Hyperdrive SHA is not the first parent.' >&2
+            exit 1
+          }
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Verify only the repaired public Hyperdrive
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          PSCALE_BRANCH_NAME: main
+          HYPERDRIVE_VERIFY_IDS: ${{ env.PUBLIC_HYPERDRIVE_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/public-waitlist-hyperdrive-verification"
+          mkdir -p "$evidence"
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs > "$evidence/hyperdrive.json"
+          jq -e '
+            .status == "pass"
+            and (.bindings | length) == 1
+            and .bindings[0].hyperdriveId == env.PUBLIC_HYPERDRIVE_ID
+            and .bindings[0].roleClass == "lythaus_runtime"
+            and .bindings[0].roleMatches == true
+            and .bindings[0].runtimeRoleMatches == true
+            and .bindings[0].cacheDisabled == true
+            and .bindings[0].tlsMode == "verify-full"
+            and .bindings[0].caCertificatePresent == true
+          ' "$evidence/hyperdrive.json" >/dev/null
+
+      - name: Prove live pre-Turnstile database path
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/public-waitlist-hyperdrive-verification"
+          mkdir -p "$evidence"
+          headers="$RUNNER_TEMP/public-waitlist-hyperdrive-headers.txt"
+          body="$RUNNER_TEMP/public-waitlist-hyperdrive-body.json"
+          status="$(curl --silent --show-error \
+            --output "$body" \
+            --dump-header "$headers" \
+            --write-out '%{http_code}' \
+            --request POST \
+            --url "$PRODUCTION_PUBLIC_API_BASE_URL/api/waitlist" \
+            --header 'Origin: https://lythaus.co' \
+            --header 'Content-Type: application/json' \
+            --data '{"email":"runtime-final-verification@example.invalid","turnstileToken":"diagnostic-invalid-turnstile-token","consentVersion":"waitlist-v1","source":"lythaus.co"}')"
+          error_code="$(jq -r '.error // "none"' "$body" 2>/dev/null || echo non_json)"
+          cors_origin="$(tr -d '\r' < "$headers" | awk 'BEGIN{IGNORECASE=1} /^access-control-allow-origin:/ {sub(/^[^:]+:[[:space:]]*/, ""); value=$0} END{print value}')"
+          cache_control="$(tr -d '\r' < "$headers" | awk 'BEGIN{IGNORECASE=1} /^cache-control:/ {sub(/^[^:]+:[[:space:]]*/, ""); value=$0} END{print value}')"
+
+          case "$error_code" in
+            turnstile_failed|turnstile_unavailable|rate_limit_exceeded)
+              ;;
+            request_failed)
+              echo "Live waitlist still fails before Turnstile: HTTP $status / $error_code" >&2
+              exit 1
+              ;;
+            *)
+              echo "Unexpected live waitlist verification response: HTTP $status / $error_code" >&2
+              exit 1
+              ;;
+          esac
+
+          [[ "$cors_origin" == 'https://lythaus.co' ]] || { echo 'Live waitlist response did not preserve the reviewed CORS origin.' >&2; exit 1; }
+          [[ "$cache_control" == *'no-store'* ]] || { echo 'Live waitlist response did not preserve no-store cache control.' >&2; exit 1; }
+
+          jq -n \
+            --arg status "$status" \
+            --arg error "$error_code" \
+            '{status:"pass",httpStatus:$status,probeError:$error,rateLimitPath:"passed",corsOriginVerified:true,cacheControlNoStore:true}' \
+            > "$evidence/live-probe.json"
+          rm -f "$headers" "$body"
+
+      - name: Upload sanitized verification evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: public-waitlist-hyperdrive-verification-${{ github.sha }}
+          path: ${{ runner.temp }}/public-waitlist-hyperdrive-verification
+          if-no-files-found: warn
+          retention-days: 90
