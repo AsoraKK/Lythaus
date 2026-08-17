@@ -128,6 +128,11 @@ async function verifyWaitlistPrivileges(client) {
     throw new Error('post-0013 privilege verification requires canonical PlanetScale role identifiers');
   }
   const result = await client.query(`SELECT
+    has_schema_privilege($1, 'system', 'USAGE') AS runtime_system_usage,
+    has_table_privilege($1, 'system.rate_limit_windows', 'SELECT') AS runtime_rate_select,
+    has_table_privilege($1, 'system.rate_limit_windows', 'INSERT') AS runtime_rate_insert,
+    has_table_privilege($1, 'system.rate_limit_windows', 'UPDATE') AS runtime_rate_update,
+    has_schema_privilege($1, 'marketing', 'USAGE') AS runtime_marketing_usage,
     has_column_privilege($1, 'marketing.waitlist_signups', 'email_lookup_hmac', 'INSERT') AS runtime_insert_hmac,
     has_table_privilege($1, 'marketing.waitlist_signups', 'SELECT') AS runtime_select,
     has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS admin_select_ciphertext,
@@ -139,11 +144,12 @@ async function verifyWaitlistPrivileges(client) {
     has_column_privilege($3, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS privacy_select_ciphertext`,
   [runtime, admin, privacy]);
   const row = result.rows[0];
-  if (!row?.runtime_insert_hmac || row.runtime_select
+  if (!row?.runtime_system_usage || !row.runtime_rate_select || !row.runtime_rate_insert || !row.runtime_rate_update
+    || !row.runtime_marketing_usage || !row.runtime_insert_hmac || row.runtime_select
     || !row.admin_select_ciphertext || row.admin_select_hmac
     || !row.admin_update_status || row.admin_update_ciphertext
     || !row.privacy_delete || !row.privacy_select_purge || row.privacy_select_ciphertext) {
-    throw new Error('production waitlist least-privilege contract failed');
+    throw new Error('production waitlist/runtime least-privilege contract failed');
   }
 }
 
