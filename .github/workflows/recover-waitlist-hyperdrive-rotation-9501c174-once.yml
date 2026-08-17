@@ -1,0 +1,357 @@
+name: Recover waitlist Hyperdrive rotation once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/recover-waitlist-hyperdrive-rotation-9501c174-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-waitlist-hyperdrive-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      EXPECTED_BASE_SHA: 9501c174d81afc625983f773f60ef964cf63ac41
+      HYPERDRIVE_ID: 3e59f07db51345aa896333ca861d1adf
+      HYPERDRIVE_NAME: lythaus-db-app-dev
+      PRODUCTION_PUBLIC_API_BASE_URL: https://api.lythaus.co
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Require recovery merged directly onto expected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || {
+            echo 'Refusing recovery: this run is not current origin/main.' >&2
+            exit 1
+          }
+          test "$(git rev-parse HEAD^1)" = "$EXPECTED_BASE_SHA" || {
+            echo 'Refusing recovery: interrupted-rotation SHA is not the first parent.' >&2
+            exit 1
+          }
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Re-prove canonical runtime grants
+        env:
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import pg from 'pg';
+          const { Client } = pg;
+          const roles = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
+          const runtime = roles.lythaus_runtime ?? '';
+          if (!/^pscale_api_[a-z0-9]+$/.test(runtime)) throw new Error('canonical runtime role identifier unavailable');
+          const raw = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
+          if (!raw) throw new Error('schema-read credential unavailable');
+          const url = new URL(raw);
+          if (url.searchParams.get('sslmode') !== 'verify-full') throw new Error('schema-read credential must use sslmode=verify-full');
+          if (url.searchParams.get('sslrootcert') === 'system') url.searchParams.delete('sslrootcert');
+          const client = new Client({ connectionString: url.toString(), ssl: { rejectUnauthorized: true } });
+          await client.connect();
+          try {
+            await client.query('BEGIN READ ONLY');
+            const result = await client.query(`SELECT
+              has_schema_privilege($1, 'system', 'USAGE') AS system_usage,
+              has_table_privilege($1, 'system.rate_limit_windows', 'SELECT') AS rate_select,
+              has_table_privilege($1, 'system.rate_limit_windows', 'INSERT') AS rate_insert,
+              has_table_privilege($1, 'system.rate_limit_windows', 'UPDATE') AS rate_update`, [runtime]);
+            const row = result.rows[0] ?? {};
+            const ok = row.system_usage === true && row.rate_select === true && row.rate_insert === true && row.rate_update === true;
+            console.log(JSON.stringify({ runtimeRateLimitGrantsReady: ok }));
+            if (!ok) throw new Error('canonical runtime rate-limit grants are not repaired');
+            await client.query('ROLLBACK');
+          } catch (error) {
+            await client.query('ROLLBACK').catch(() => undefined);
+            throw error;
+          } finally {
+            await client.end();
+          }
+          NODE
+
+      - name: Recover canonical runtime credential into existing Hyperdrive
+        shell: bash
+        env:
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "${PLANETSCALE_API_TOKEN:-}" || { echo 'PLANETSCALE_API_TOKEN is unavailable.' >&2; exit 1; }
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'CLOUDFLARE_API_TOKEN is unavailable.' >&2; exit 1; }
+          [[ "${CLOUDFLARE_ACCOUNT_ID:-}" =~ ^[a-f0-9]{32}$ ]] || { echo 'CLOUDFLARE_ACCOUNT_ID is unavailable.' >&2; exit 1; }
+
+          evidence="$RUNNER_TEMP/waitlist-hyperdrive-recovery"
+          mkdir -p "$evidence"
+          expected="$(jq -r '.lythaus_runtime // empty' <<< "$PSCALE_ROLE_IDENTIFIERS")"
+          [[ "$expected" =~ ^pscale_api_[a-z0-9]+$ ]] || { echo 'Canonical runtime role identifier is unavailable.' >&2; exit 1; }
+
+          before="$RUNNER_TEMP/hyperdrive-before.json"
+          noop_body="$RUNNER_TEMP/hyperdrive-noop.json"
+          noop_response="$RUNNER_TEMP/hyperdrive-noop-response.json"
+          roles_file="$RUNNER_TEMP/planetscale-roles.json"
+          reset_file="$RUNNER_TEMP/planetscale-runtime-reset.json"
+          patch_body="$RUNNER_TEMP/hyperdrive-runtime-patch.json"
+          patch_response="$RUNNER_TEMP/hyperdrive-patch-response.json"
+          put_body="$RUNNER_TEMP/hyperdrive-runtime-put.json"
+          put_response="$RUNNER_TEMP/hyperdrive-put-response.json"
+          after="$RUNNER_TEMP/hyperdrive-after.json"
+
+          cleanup_sensitive() {
+            rm -f "$noop_body" "$roles_file" "$reset_file" "$patch_body" "$patch_response" "$put_body" "$put_response"
+          }
+          trap cleanup_sensitive EXIT
+
+          sanitize_cf() {
+            local file="$1"
+            local status="$2"
+            local label="$3"
+            jq -c --arg label "$label" --arg status "$status" '{
+              label:$label,
+              httpStatus:$status,
+              success:(.success // false),
+              errors:[.errors[]? | {code,message,source}],
+              messages:[.messages[]? | {code,message}]
+            }' "$file" 2>/dev/null || jq -n --arg label "$label" --arg status "$status" '{label:$label,httpStatus:$status,success:false,errors:[{message:"non-json Cloudflare response"}]}'
+          }
+
+          cf_code="$(curl --silent --show-error --output "$before" --write-out '%{http_code}' \
+            --url "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/hyperdrive/configs/$HYPERDRIVE_ID" \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            --header 'Accept: application/json')"
+          if [[ "$cf_code" != '200' ]] || ! jq -e '.success == true' "$before" >/dev/null; then
+            sanitize_cf "$before" "$cf_code" 'hyperdrive-get-preflight' | tee "$evidence/cloudflare-error.json" >&2
+            exit 1
+          fi
+          jq -e --arg name "$HYPERDRIVE_NAME" '
+            .result.name == $name
+            and .result.id == env.HYPERDRIVE_ID
+            and .result.caching.disabled == true
+            and .result.mtls.sslmode == "verify-full"
+            and (.result.origin.host | endswith(".psdb.cloud"))
+            and .result.origin.scheme == "postgres"
+          ' "$before" >/dev/null || { echo 'Existing Hyperdrive safety invariants do not match the reviewed configuration.' >&2; exit 1; }
+
+          # Prove Hyperdrive Write before another irreversible PlanetScale password reset.
+          jq -n --arg name "$HYPERDRIVE_NAME" '{name:$name}' > "$noop_body"
+          noop_code="$(curl --silent --show-error --output "$noop_response" --write-out '%{http_code}' \
+            --request PATCH \
+            --url "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/hyperdrive/configs/$HYPERDRIVE_ID" \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data-binary "@$noop_body")"
+          if [[ "$noop_code" != '200' ]] || ! jq -e '.success == true' "$noop_response" >/dev/null; then
+            sanitize_cf "$noop_response" "$noop_code" 'hyperdrive-write-preflight' | tee "$evidence/cloudflare-error.json" >&2
+            echo 'Refusing PlanetScale reset because Hyperdrive Write was not proven.' >&2
+            exit 1
+          fi
+          jq -n --arg status "$noop_code" '{hyperdriveWritePreflight:true,httpStatus:$status}' > "$evidence/cloudflare-write-preflight.json"
+
+          current_matches="$(jq -r --arg expected "$expected" '.result.origin.user == $expected' "$before")"
+          needs_rotation='true'
+          if [[ "$current_matches" == 'true' ]]; then
+            probe_body="$RUNNER_TEMP/pre-rotation-probe.json"
+            probe_status="$(curl --silent --show-error --output "$probe_body" --write-out '%{http_code}' \
+              --request POST \
+              --url "$PRODUCTION_PUBLIC_API_BASE_URL/api/waitlist" \
+              --header 'Origin: https://lythaus.co' \
+              --header 'Content-Type: application/json' \
+              --data '{"email":"runtime-recovery-precheck@example.invalid","turnstileToken":"diagnostic-invalid-turnstile-token","consentVersion":"waitlist-v1","source":"lythaus.co"}')"
+            probe_error="$(jq -r '.error // "none"' "$probe_body" 2>/dev/null || echo non_json)"
+            rm -f "$probe_body"
+            case "$probe_error" in
+              turnstile_failed|turnstile_unavailable|rate_limit_exceeded)
+                needs_rotation='false'
+                ;;
+              request_failed)
+                needs_rotation='true'
+                ;;
+              *)
+                echo "Canonical identity is present but live database health is inconclusive before rotation: HTTP $probe_status / $probe_error" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+          if [[ "$needs_rotation" == 'false' ]]; then
+            echo 'Existing Hyperdrive canonical identity and live database path are already healthy; no second reset is required.'
+            echo 'RUNTIME_ROTATION_PERFORMED=false' >> "$GITHUB_ENV"
+            jq -n '{recoveryAction:"no_rotation_required"}' > "$evidence/recovery-action.json"
+            exit 0
+          fi
+
+          roles_file="$RUNNER_TEMP/planetscale-roles.json"
+          ps_code="$(curl --silent --show-error --output "$roles_file" --write-out '%{http_code}' \
+            --url 'https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-core/branches/main/roles?per_page=100' \
+            --header "Authorization: Bearer $PLANETSCALE_API_TOKEN" \
+            --header 'Accept: application/json')"
+          [[ "$ps_code" == '200' ]] || { echo "PlanetScale role lookup failed with HTTP $ps_code." >&2; exit 1; }
+
+          role_count="$(jq --arg expected "$expected" '[.data[] | select((.username == $expected or .base_username == $expected) and .deleted_at == null and .disabled_at == null and (.expired | not))] | length' "$roles_file")"
+          [[ "$role_count" == '1' ]] || { echo "Expected exactly one active canonical runtime API role; found $role_count." >&2; exit 1; }
+          role_id="$(jq -r --arg expected "$expected" '.data[] | select((.username == $expected or .base_username == $expected) and .deleted_at == null and .disabled_at == null and (.expired | not)) | .id' "$roles_file")"
+          test -n "$role_id" || { echo 'Canonical runtime API role ID could not be resolved.' >&2; exit 1; }
+
+          reset_code="$(curl --silent --show-error --output "$reset_file" --write-out '%{http_code}' \
+            --request POST \
+            --url "https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-core/branches/main/roles/$role_id/reset" \
+            --header "Authorization: Bearer $PLANETSCALE_API_TOKEN" \
+            --header 'Accept: application/json')"
+          [[ "$reset_code" == '200' ]] || { echo "PlanetScale runtime credential reset failed with HTTP $reset_code." >&2; exit 1; }
+          password="$(jq -r '.password // empty' "$reset_file")"
+          returned_matches="$(jq -r --arg expected "$expected" '(.username == $expected) or (.base_username == $expected)' "$reset_file")"
+          [[ "$returned_matches" == 'true' && -n "$password" ]] || { echo 'PlanetScale reset response did not match the canonical runtime role.' >&2; exit 1; }
+          echo "::add-mask::$password"
+
+          jq -n --arg user "$expected" --arg password "$password" '{origin:{user:$user,password:$password}}' > "$patch_body"
+          patched='false'
+          for attempt in 1 2; do
+            patch_code="$(curl --silent --show-error --output "$patch_response" --write-out '%{http_code}' \
+              --request PATCH \
+              --url "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/hyperdrive/configs/$HYPERDRIVE_ID" \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              --header 'Content-Type: application/json' \
+              --data-binary "@$patch_body")"
+            if [[ "$patch_code" == '200' ]] && jq -e --arg expected "$expected" '.success == true and .result.origin.user == $expected' "$patch_response" >/dev/null; then
+              patched='true'
+              echo 'Hyperdrive credential PATCH confirmed.'
+              break
+            fi
+            sanitize_cf "$patch_response" "$patch_code" "credential-patch-attempt-$attempt" | tee "$evidence/cloudflare-error.json" >&2
+            sleep $((attempt * 2))
+          done
+
+          update_method='PATCH'
+          if [[ "$patched" != 'true' ]]; then
+            echo 'Credential PATCH was not confirmed; using documented full Hyperdrive PUT update with preserved reviewed settings.'
+            jq -n --arg user "$expected" --arg password "$password" --slurpfile cfg "$before" '
+              ($cfg[0].result) as $c |
+              {
+                name:$c.name,
+                origin:{
+                  database:$c.origin.database,
+                  host:$c.origin.host,
+                  password:$password,
+                  port:($c.origin.port // 5432),
+                  scheme:$c.origin.scheme,
+                  user:$user
+                },
+                caching:$c.caching,
+                mtls:{sslmode:$c.mtls.sslmode},
+                origin_connection_limit:$c.origin_connection_limit
+              } | with_entries(select(.value != null))
+            ' > "$put_body"
+            put_code="$(curl --silent --show-error --output "$put_response" --write-out '%{http_code}' \
+              --request PUT \
+              --url "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/hyperdrive/configs/$HYPERDRIVE_ID" \
+              --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              --header 'Content-Type: application/json' \
+              --data-binary "@$put_body")"
+            if [[ "$put_code" != '200' ]] || ! jq -e --arg expected "$expected" '.success == true and .result.origin.user == $expected' "$put_response" >/dev/null; then
+              sanitize_cf "$put_response" "$put_code" 'credential-put-fallback' | tee "$evidence/cloudflare-error.json" >&2
+              echo 'CRITICAL: canonical PlanetScale password was reset, but neither credential PATCH nor full Hyperdrive PUT confirmed the runtime identity.' >&2
+              exit 1
+            fi
+            update_method='PUT'
+            echo 'Full Hyperdrive PUT update confirmed.'
+          fi
+
+          after_code="$(curl --silent --show-error --output "$after" --write-out '%{http_code}' \
+            --url "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/hyperdrive/configs/$HYPERDRIVE_ID" \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            --header 'Accept: application/json')"
+          [[ "$after_code" == '200' ]] && jq -e --arg expected "$expected" --arg name "$HYPERDRIVE_NAME" '
+            .success == true
+            and .result.id == env.HYPERDRIVE_ID
+            and .result.name == $name
+            and .result.origin.user == $expected
+            and .result.caching.disabled == true
+            and .result.mtls.sslmode == "verify-full"
+            and (.result.origin.host | endswith(".psdb.cloud"))
+            and .result.origin.scheme == "postgres"
+          ' "$after" >/dev/null || { echo 'Post-update Hyperdrive invariant verification failed.' >&2; exit 1; }
+
+          echo 'RUNTIME_ROTATION_PERFORMED=true' >> "$GITHUB_ENV"
+          jq -n --arg method "$update_method" '{recoveryAction:"credential_rotated",hyperdriveUpdateMethod:$method}' > "$evidence/recovery-action.json"
+          rm -f "$before" "$after"
+          cleanup_sensitive
+          trap - EXIT
+
+      - name: Prove repaired Hyperdrive target and runtime identity
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          PSCALE_BRANCH_NAME: main
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/waitlist-hyperdrive-recovery"
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs > "$RUNNER_TEMP/waitlist-hyperdrive-recovery/hyperdrive.json"
+
+      - name: Prove live pre-Turnstile database path
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/waitlist-hyperdrive-recovery"
+          headers="$RUNNER_TEMP/waitlist-recovery-headers.txt"
+          body="$RUNNER_TEMP/waitlist-recovery-body.json"
+          status="$(curl --silent --show-error \
+            --output "$body" \
+            --dump-header "$headers" \
+            --write-out '%{http_code}' \
+            --request POST \
+            --url "$PRODUCTION_PUBLIC_API_BASE_URL/api/waitlist" \
+            --header 'Origin: https://lythaus.co' \
+            --header 'Content-Type: application/json' \
+            --data '{"email":"runtime-recovery-probe@example.invalid","turnstileToken":"diagnostic-invalid-turnstile-token","consentVersion":"waitlist-v1","source":"lythaus.co"}')"
+          error_code="$(jq -r '.error // "none"' "$body" 2>/dev/null || echo non_json)"
+          cache_control="$(awk 'BEGIN{IGNORECASE=1} /^cache-control:/ {sub(/^[^:]+:[[:space:]]*/, ""); gsub(/\r/, ""); print; exit}' "$headers")"
+          cors="$(awk 'BEGIN{IGNORECASE=1} /^access-control-allow-origin:/ {sub(/^[^:]+:[[:space:]]*/, ""); gsub(/\r/, ""); print; exit}' "$headers")"
+          rate_path='not_proven'
+          case "$error_code" in
+            turnstile_failed|turnstile_unavailable|rate_limit_exceeded) rate_path='passed' ;;
+            request_failed) rate_path='failed_before_turnstile' ;;
+            waitlist_unavailable) rate_path='blocked_before_rate_limit_or_required_secret' ;;
+          esac
+          test "$rate_path" = 'passed'
+          test "$cache_control" = 'private, no-store'
+          test "$cors" = 'https://lythaus.co'
+          jq -n \
+            --argjson httpStatus "$status" \
+            --arg error "$error_code" \
+            --arg ratePath "$rate_path" \
+            --arg rotationPerformed "${RUNTIME_ROTATION_PERFORMED:-unknown}" \
+            '{httpStatus:$httpStatus,error:$error,rateLimitPath:$ratePath,runtimeRotationPerformed:$rotationPerformed}' \
+            > "$RUNNER_TEMP/waitlist-hyperdrive-recovery/live-probe.json"
+          rm -f "$headers" "$body"
+
+      - name: Upload sanitized recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: waitlist-hyperdrive-recovery-${{ github.sha }}
+          path: ${{ runner.temp }}/waitlist-hyperdrive-recovery
+          if-no-files-found: warn
