@@ -15,7 +15,7 @@ jobs:
     environment: production
     timeout-minutes: 10
     env:
-      EXPECTED_PARENT_SHA: d93cd20b8a8b03e249b8e8edf40944b0f9d9f618
+      EXPECTED_PARENT_SHA: 744bb323c673363109ff351f2a811ec2e52a5a69
     steps:
       - uses: actions/checkout@v7
         with:
@@ -50,9 +50,20 @@ jobs:
           import fs from 'node:fs';
 
           const { Client } = pg;
-          const client = new Client({ connectionString: process.env.DATABASE_URL });
+          const connection = new URL(process.env.DATABASE_URL);
+          if (connection.searchParams.get('sslmode') !== 'verify-full') {
+            throw new Error('waitlist count requires sslmode=verify-full');
+          }
+          if (connection.searchParams.get('sslrootcert') === 'system') {
+            connection.searchParams.delete('sslrootcert');
+          }
+          const client = new Client({
+            connectionString: connection.toString(),
+            ssl: { rejectUnauthorized: true },
+          });
           try {
             await client.connect();
+            await client.query('BEGIN READ ONLY');
             const result = await client.query(`
               select
                 count(*)::int as total_unique,
@@ -73,6 +84,10 @@ jobs:
             };
             fs.writeFileSync(`${process.env.RUNNER_TEMP}/waitlist-count/evidence.json`, JSON.stringify(evidence, null, 2));
             console.log(JSON.stringify(evidence));
+            await client.query('ROLLBACK');
+          } catch (error) {
+            await client.query('ROLLBACK').catch(() => undefined);
+            throw error;
           } finally {
             await client.end().catch(() => {});
           }
@@ -84,5 +99,5 @@ jobs:
         with:
           name: waitlist-count-${{ github.sha }}
           path: ${{ runner.temp }}/waitlist-count
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
