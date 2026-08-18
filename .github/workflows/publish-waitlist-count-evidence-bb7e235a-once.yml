@@ -1,0 +1,144 @@
+name: Publish waitlist count evidence bb7e235a once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-waitlist-count-evidence-bb7e235a-once.yml
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      EXPECTED_PARENT_SHA: bb7e235a5879453553b5573e862fe51dcbd43484
+      COUNT_HEAD_SHA: bb7e235a5879453553b5573e862fe51dcbd43484
+      COUNT_WORKFLOW: count-waitlist-unique-once.yml
+      EVIDENCE_ARTIFACT: waitlist-count-bb7e235a5879453553b5573e862fe51dcbd43484
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Require one-use workflow merged directly onto reviewed main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = main
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_PARENT_SHA"
+          CHANGED="$(git diff --name-only HEAD^ HEAD)"
+          test "$CHANGED" = ".github/workflows/publish-waitlist-count-evidence-bb7e235a-once.yml"
+
+      - name: Locate successful count run and sanitized artifact
+        id: locate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/waitlist-count-evidence"
+
+          runs_json="$RUNNER_TEMP/waitlist-count-evidence/runs.json"
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/${COUNT_WORKFLOW}/runs?head_sha=${COUNT_HEAD_SHA}&event=push&status=success&per_page=10" \
+            > "$runs_json"
+
+          run_id="$(jq -r --arg sha "$COUNT_HEAD_SHA" '.workflow_runs | map(select(.head_sha == $sha and .conclusion == "success")) | sort_by(.created_at) | reverse | .[0].id // empty' "$runs_json")"
+          if [[ -z "$run_id" || ! "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "No successful aggregate-count run found for the expected SHA." >&2
+            exit 1
+          fi
+
+          artifacts_json="$RUNNER_TEMP/waitlist-count-evidence/artifacts.json"
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+            > "$artifacts_json"
+
+          artifact_id="$(jq -r --arg name "$EVIDENCE_ARTIFACT" '.artifacts | map(select(.name == $name and .expired == false)) | .[0].id // empty' "$artifacts_json")"
+          if [[ -z "$artifact_id" || ! "$artifact_id" =~ ^[0-9]+$ ]]; then
+            echo "Sanitized aggregate evidence artifact was not found." >&2
+            exit 1
+          fi
+
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "artifact_id=$artifact_id" >> "$GITHUB_OUTPUT"
+          rm -f "$runs_json" "$artifacts_json"
+
+      - name: Download and validate aggregate evidence
+        id: validate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ steps.locate.outputs.artifact_id }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/waitlist-count-evidence"
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip" \
+            > "$work/evidence.zip"
+          unzip -q "$work/evidence.zip" -d "$work/unpacked"
+          evidence="$work/unpacked/evidence.json"
+          test -f "$evidence"
+
+          jq -e '
+            type == "object" and
+            (.schemaVersion == 1) and
+            (.piiReturned == false) and
+            ((keys | sort) == (["last24Hours","last7Days","measuredAt","piiReturned","schemaVersion","totalUnique","waiting"] | sort)) and
+            (.totalUnique | type == "number") and
+            (.waiting | type == "number") and
+            (.last24Hours | type == "number") and
+            (.last7Days | type == "number") and
+            (.totalUnique >= 0) and (.waiting >= 0) and (.last24Hours >= 0) and (.last7Days >= 0)
+          ' "$evidence" >/dev/null
+
+          echo "total_unique=$(jq -r '.totalUnique' "$evidence")" >> "$GITHUB_OUTPUT"
+          echo "waiting=$(jq -r '.waiting' "$evidence")" >> "$GITHUB_OUTPUT"
+          echo "last_24_hours=$(jq -r '.last24Hours' "$evidence")" >> "$GITHUB_OUTPUT"
+          echo "last_7_days=$(jq -r '.last7Days' "$evidence")" >> "$GITHUB_OUTPUT"
+          echo "measured_at=$(jq -r '.measuredAt' "$evidence")" >> "$GITHUB_OUTPUT"
+
+      - name: Publish temporary sanitized GitHub evidence issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.locate.outputs.run_id }}
+          TOTAL_UNIQUE: ${{ steps.validate.outputs.total_unique }}
+          WAITING: ${{ steps.validate.outputs.waiting }}
+          LAST_24_HOURS: ${{ steps.validate.outputs.last_24_hours }}
+          LAST_7_DAYS: ${{ steps.validate.outputs.last_7_days }}
+          MEASURED_AT: ${{ steps.validate.outputs.measured_at }}
+        run: |
+          set -euo pipefail
+          title="Temporary sanitized waitlist count evidence bb7e235a"
+          body="$(cat <<EOF
+          Temporary operational evidence generated from the already-completed protected aggregate-count workflow.
+
+          - source SHA: \`${COUNT_HEAD_SHA}\`
+          - source run ID: \`${RUN_ID}\`
+          - total unique registrations: **${TOTAL_UNIQUE}**
+          - waiting: **${WAITING}**
+          - last 24 hours: **${LAST_24_HOURS}**
+          - last 7 days: **${LAST_7_DAYS}**
+          - measured at: \`${MEASURED_AT}\`
+          - PII returned: **false**
+
+          No emails, HMACs, ciphertext, row IDs, or subscriber records are included. This issue is temporary and may be closed after verification.
+          EOF
+          )"
+
+          gh api \
+            --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/issues" \
+            -f title="$title" \
+            -f body="$body" \
+            >/dev/null
