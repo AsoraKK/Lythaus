@@ -67,8 +67,10 @@ jobs:
             exit 1
           fi
 
-          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
-          echo "artifact_id=$artifact_id" >> "$GITHUB_OUTPUT"
+          {
+            echo "run_id=$run_id"
+            echo "artifact_id=$artifact_id"
+          } >> "$GITHUB_OUTPUT"
           rm -f "$runs_json" "$artifacts_json"
 
       - name: Download and validate aggregate evidence
@@ -100,11 +102,13 @@ jobs:
             (.totalUnique >= 0) and (.waiting >= 0) and (.last24Hours >= 0) and (.last7Days >= 0)
           ' "$evidence" >/dev/null
 
-          echo "total_unique=$(jq -r '.totalUnique' "$evidence")" >> "$GITHUB_OUTPUT"
-          echo "waiting=$(jq -r '.waiting' "$evidence")" >> "$GITHUB_OUTPUT"
-          echo "last_24_hours=$(jq -r '.last24Hours' "$evidence")" >> "$GITHUB_OUTPUT"
-          echo "last_7_days=$(jq -r '.last7Days' "$evidence")" >> "$GITHUB_OUTPUT"
-          echo "measured_at=$(jq -r '.measuredAt' "$evidence")" >> "$GITHUB_OUTPUT"
+          {
+            echo "total_unique=$(jq -r '.totalUnique' "$evidence")"
+            echo "waiting=$(jq -r '.waiting' "$evidence")"
+            echo "last_24_hours=$(jq -r '.last24Hours' "$evidence")"
+            echo "last_7_days=$(jq -r '.last7Days' "$evidence")"
+            echo "measured_at=$(jq -r '.measuredAt' "$evidence")"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish temporary sanitized GitHub evidence issue
         shell: bash
