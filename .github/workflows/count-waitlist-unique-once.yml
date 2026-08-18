@@ -1,0 +1,88 @@
+name: Count unique waitlist registrations once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/count-waitlist-unique-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      EXPECTED_PARENT_SHA: d93cd20b8a8b03e249b8e8edf40944b0f9d9f618
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Require one-use workflow merged directly onto reviewed main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = main
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_PARENT_SHA"
+          CHANGED="$(git diff --name-only HEAD^ HEAD)"
+          test "$CHANGED" = ".github/workflows/count-waitlist-unique-once.yml"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Query aggregate waitlist counts only
+        env:
+          DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DATABASE_URL"
+          mkdir -p "$RUNNER_TEMP/waitlist-count"
+          node --input-type=module <<'NODE'
+          import pg from 'pg';
+          import fs from 'node:fs';
+
+          const { Client } = pg;
+          const client = new Client({ connectionString: process.env.DATABASE_URL });
+          try {
+            await client.connect();
+            const result = await client.query(`
+              select
+                count(*)::int as total_unique,
+                count(*) filter (where status = 'waiting')::int as waiting,
+                count(*) filter (where created_at >= now() - interval '24 hours')::int as last_24_hours,
+                count(*) filter (where created_at >= now() - interval '7 days')::int as last_7_days
+              from marketing.waitlist_signups
+            `);
+            const row = result.rows[0] ?? {};
+            const evidence = {
+              schemaVersion: 1,
+              totalUnique: Number(row.total_unique ?? 0),
+              waiting: Number(row.waiting ?? 0),
+              last24Hours: Number(row.last_24_hours ?? 0),
+              last7Days: Number(row.last_7_days ?? 0),
+              piiReturned: false,
+              measuredAt: new Date().toISOString(),
+            };
+            fs.writeFileSync(`${process.env.RUNNER_TEMP}/waitlist-count/evidence.json`, JSON.stringify(evidence, null, 2));
+            console.log(JSON.stringify(evidence));
+          } finally {
+            await client.end().catch(() => {});
+          }
+          NODE
+
+      - name: Upload sanitized aggregate evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: waitlist-count-${{ github.sha }}
+          path: ${{ runner.temp }}/waitlist-count
+          if-no-files-found: error
+          retention-days: 30
