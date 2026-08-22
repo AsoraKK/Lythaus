@@ -1,0 +1,43 @@
+name: Historical branch reconciliation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/historical-branch-reconciliation.yml'
+      - 'scripts/github/reconcile-historical-branches.mjs'
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: lythaus-historical-branch-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HISTORICAL_EVIDENCE_ISSUE: '598'
+      HISTORICAL_RECONCILIATION_OUTPUT: .artifacts/historical-branch-reconciliation
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Reconcile recorded deleted branch heads against current main
+        run: node scripts/github/reconcile-historical-branches.mjs
+      - name: Upload machine-readable reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: historical-branch-reconciliation-${{ github.sha }}
+          if-no-files-found: error
+          path: .artifacts/historical-branch-reconciliation
