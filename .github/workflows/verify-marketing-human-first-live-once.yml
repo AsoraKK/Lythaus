@@ -101,6 +101,31 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           rm -f "$api_response"
 
+      - name: Capture live desktop and mobile screenshots
+        if: steps.verify.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$chrome"
+          evidence="$RUNNER_TEMP/marketing-live-verification"
+          "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+            --run-all-compositor-stages-before-draw --virtual-time-budget=5200 \
+            --window-size=1440,1000 --screenshot="$evidence/opening-desktop.png" https://lythaus.co/
+          "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+            --run-all-compositor-stages-before-draw --virtual-time-budget=5200 \
+            --window-size=390,844 --screenshot="$evidence/opening-mobile.png" https://lythaus.co/
+          "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+            --run-all-compositor-stages-before-draw --virtual-time-budget=1600 \
+            --window-size=1440,1000 --screenshot="$evidence/problem-desktop.png" https://lythaus.co/#problem
+          "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+            --run-all-compositor-stages-before-draw --virtual-time-budget=1600 \
+            --window-size=1440,1000 --screenshot="$evidence/discovery-desktop.png" https://lythaus.co/#discovery
+          test -s "$evidence/opening-desktop.png"
+          test -s "$evidence/opening-mobile.png"
+          test -s "$evidence/problem-desktop.png"
+          test -s "$evidence/discovery-desktop.png"
+
       - name: Record verification result on PR 594
         if: always()
         env:
@@ -123,6 +148,8 @@ jobs:
           - Deployment URL: $DEPLOYMENT_URL
           - Custom domains verified: https://lythaus.co and https://www.lythaus.co
           - New human-first copy, Turnstile client, waitlist client and required security headers verified.
+          - Live desktop/mobile screenshots captured in workflow artifact \`marketing-live-verification-$GITHUB_SHA\`.
+          - Verification workflow run ID: \`$GITHUB_RUN_ID\`.
           EOF
           )
           else
@@ -142,6 +169,6 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: marketing-live-verification-${{ github.sha }}
-          path: ${{ runner.temp }}/marketing-live-verification/result.json
+          path: ${{ runner.temp }}/marketing-live-verification
           if-no-files-found: warn
           retention-days: 90
