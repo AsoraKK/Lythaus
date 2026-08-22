@@ -10,7 +10,7 @@ const liveProbe = fs.readFileSync('scripts/ci/probe-live-public-waitlist.mjs', '
 const restoreDeployment = fs.readFileSync('scripts/ci/restore-worker-deployment.mjs', 'utf8');
 const hyperdriveProof = fs.readFileSync('scripts/ci/verify-cloudflare-hyperdrive-targets.mjs', 'utf8');
 const cutover = fs.readFileSync('.github/workflows/deploy-public-waitlist.yml', 'utf8');
-const marketing = fs.readFileSync('.github/workflows/deploy-marketing-preview.yml', 'utf8');
+const marketing = fs.readFileSync('.github/workflows/deploy-marketing.yml', 'utf8');
 
 test('waitlist operational helpers parse under the pinned Node runtime', () => {
   for (const path of ['scripts/ci/probe-live-public-waitlist.mjs', 'scripts/ci/restore-worker-deployment.mjs']) {
