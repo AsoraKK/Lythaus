@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: planetscale-account-audit
@@ -27,6 +28,7 @@ jobs:
       PLANETSCALE_ORGANIZATION: lythaus
       PLANETSCALE_DATABASE: lythaus-core
       PLANETSCALE_AUDIT_OUTPUT: .artifacts/provider-inventory/planetscale.json
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -40,6 +42,32 @@ jobs:
           set -euo pipefail
           jq -e '.assertions.mainExists == true' .artifacts/provider-inventory/planetscale.json >/dev/null
           jq -e '.assertions.exactlyOneProductionMain == true' .artifacts/provider-inventory/planetscale.json >/dev/null
+      - name: Persist sanitized audit locator and summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          report='.artifacts/provider-inventory/planetscale.json'
+          branches="$(jq -c '[.branches[] | {name,production,ready,schemaReady,parentBranch,region:(.region.slug // null)}]' "$report")"
+          assertions="$(jq -c '.assertions' "$report")"
+          database_summary="$(jq -c '{name:.database.name,kind:.database.kind,region:.database.region,branchesCount:.database.branchesCount,openSchemaRecommendationsCount:.database.openSchemaRecommendationsCount,schemaLastUpdatedAt:.database.schemaLastUpdatedAt}' "$report")"
+          {
+            echo 'Sanitized read-only PlanetScale inventory evidence.'
+            echo
+            echo "Run ID: ${GITHUB_RUN_ID}"
+            echo "Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "Main SHA: ${GITHUB_SHA}"
+            echo "Captured at: $(jq -r '.capturedAt' "$report")"
+            echo "Database: ${database_summary}"
+            echo "Branches: ${branches}"
+            echo "Assertions: ${assertions}"
+            echo
+            echo 'The complete sanitized inventory is stored in the Actions artifact named below. No provider mutation or DDL is performed by this workflow.'
+            echo "Artifact: planetscale-account-audit-${GITHUB_SHA}"
+          } > .artifacts/provider-inventory/planetscale-issue.md
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "PlanetScale inventory evidence ${GITHUB_SHA:0:12} run ${GITHUB_RUN_ID}" \
+            --body-file .artifacts/provider-inventory/planetscale-issue.md
       - name: Upload sanitized provider evidence
         if: always()
         uses: actions/upload-artifact@v6

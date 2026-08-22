@@ -1,7 +1,13 @@
-name: Retire stale repository branches
+name: Branch disposition and safe retirement
 
 on:
   workflow_dispatch:
+    inputs:
+      apply_safe_deletions:
+        description: Delete only branches proven reachable from main or with zero unique commits
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths:
@@ -15,92 +21,199 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: lythaus-branch-retirement
+  group: lythaus-branch-disposition
   cancel-in-progress: false
 
 jobs:
-  retire:
+  inventory-and-retire:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
-      - name: Inventory and retire closed historical branches
+        with:
+          fetch-depth: 0
+
+      - name: Build machine-readable branch disposition report
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .artifacts/branch-retirement
+          report_dir='.artifacts/branch-retirement'
+          mkdir -p "$report_dir"
+
           repo="$GITHUB_REPOSITORY"
+          git fetch --no-tags --prune origin '+refs/heads/*:refs/remotes/origin/*'
 
-          gh api --paginate "repos/${repo}/branches?per_page=100" --jq '.[] | [.name, .commit.sha] | @tsv' > .artifacts/branch-retirement/all.tsv
-          gh api --paginate "repos/${repo}/pulls?state=open&per_page=100" --jq '.[] | .head.ref' | sort -u > .artifacts/branch-retirement/open-pr-heads.txt
+          gh api --paginate "repos/${repo}/pulls?state=all&per_page=100&sort=updated&direction=desc" \
+            | jq -s 'add' > "$report_dir/prs.json"
 
-          : > .artifacts/branch-retirement/deleted.tsv
-          : > .artifacts/branch-retirement/preserved.tsv
+          : > "$report_dir/dispositions.ndjson"
 
-          while IFS=$'\t' read -r branch sha; do
-            [[ -n "$branch" ]] || continue
-            if [[ "$branch" == "main" ]]; then
-              printf '%s\t%s\t%s\n' "$branch" "$sha" 'canonical-main' >> .artifacts/branch-retirement/preserved.tsv
-              continue
+          while IFS= read -r ref; do
+            branch="${ref#refs/remotes/origin/}"
+            [[ "$branch" != 'HEAD' ]] || continue
+
+            sha="$(git rev-parse "$ref")"
+            last_updated="$(git show -s --format=%cI "$sha")"
+            merge_base="$(git merge-base origin/main "$ref" 2>/dev/null || true)"
+            unique_commits="$(git rev-list --count origin/main.."$ref")"
+
+            if git merge-base --is-ancestor "$sha" origin/main 2>/dev/null; then
+              reachable=true
+            else
+              reachable=false
             fi
-            if grep -Fxq "$branch" .artifacts/branch-retirement/open-pr-heads.txt; then
-              printf '%s\t%s\t%s\n' "$branch" "$sha" 'open-pr' >> .artifacts/branch-retirement/preserved.tsv
-              continue
+
+            patch_unique_commits="$(git cherry origin/main "$ref" 2>/dev/null | awk '$1 == "+" {n++} END {print n+0}')"
+
+            if [[ -n "$merge_base" ]]; then
+              mapfile -t changed_files < <(git diff --name-only "$merge_base"..."$ref" | sort -u)
+            else
+              changed_files=()
             fi
-            if [[ ! "$branch" =~ ^(agent|codex|dependabot|feat|fix|ops|website)/ ]]; then
-              printf '%s\t%s\t%s\n' "$branch" "$sha" 'unclassified-preserved' >> .artifacts/branch-retirement/preserved.tsv
-              continue
+            changed_files_json="$(printf '%s\n' "${changed_files[@]:-}" | jq -Rsc 'split("\n") | map(select(length > 0))')"
+
+            pr_json="$(jq -c --arg b "$branch" --arg repo "$repo" '
+              [.[] | select(.head.repo.full_name == $repo and .head.ref == $b)]
+              | sort_by(.updated_at) | reverse | .[0] // null
+            ' "$report_dir/prs.json")"
+            pr_number="$(jq -r 'if . == null then "" else (.number|tostring) end' <<<"$pr_json")"
+            pr_state="$(jq -r 'if . == null then "none" elif .merged_at != null then "merged" else .state end' <<<"$pr_json")"
+
+            if [[ "$branch" == 'main' ]]; then
+              disposition='canonical-main'
+            elif [[ "$pr_state" == 'open' ]]; then
+              disposition='active-pr-preserve'
+            elif [[ "$reachable" == 'true' ]]; then
+              disposition='safe-delete-reachable-from-main'
+            elif [[ "$unique_commits" -eq 0 ]]; then
+              disposition='safe-delete-zero-unique-commits'
+            elif [[ "$patch_unique_commits" -eq 0 ]]; then
+              disposition='patch-equivalent-review-required'
+            else
+              disposition='unique-work-review-required'
             fi
 
-            gh api -X DELETE "repos/${repo}/git/refs/heads/${branch}"
-            printf '%s\t%s\t%s\n' "$branch" "$sha" 'closed-historical-pattern' >> .artifacts/branch-retirement/deleted.tsv
-          done < .artifacts/branch-retirement/all.tsv
+            jq -cn \
+              --arg branch "$branch" \
+              --arg sha "$sha" \
+              --arg pr "$pr_number" \
+              --arg prState "$pr_state" \
+              --arg mergeBase "$merge_base" \
+              --argjson uniqueCommits "$unique_commits" \
+              --argjson patchUniqueCommits "$patch_unique_commits" \
+              --arg lastUpdated "$last_updated" \
+              --argjson changedFiles "$changed_files_json" \
+              --argjson reachableFromMain "$reachable" \
+              --arg disposition "$disposition" \
+              '{branch:$branch,sha:$sha,pr:(if $pr=="" then null else ($pr|tonumber) end),prState:$prState,mergeBase:(if $mergeBase=="" then null else $mergeBase end),uniqueCommits:$uniqueCommits,patchUniqueCommits:$patchUniqueCommits,lastUpdated:$lastUpdated,changedFiles:$changedFiles,reachableFromMain:$reachableFromMain,disposition:$disposition}' \
+              >> "$report_dir/dispositions.ndjson"
+          done < <(git for-each-ref --format='%(refname)' refs/remotes/origin | sort)
 
-          jq -Rn '[inputs | split("\t") | {name:.[0], sha:.[1], reason:.[2]}]' \
-            < .artifacts/branch-retirement/deleted.tsv > .artifacts/branch-retirement/deleted.json
-          jq -Rn '[inputs | split("\t") | {name:.[0], sha:.[1], reason:.[2]}]' \
-            < .artifacts/branch-retirement/preserved.tsv > .artifacts/branch-retirement/preserved.json
-          jq -n \
-            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --slurpfile deleted .artifacts/branch-retirement/deleted.json \
-            --slurpfile preserved .artifacts/branch-retirement/preserved.json \
-            '{schemaVersion:1,capturedAt:$capturedAt,deleted:$deleted[0],preserved:$preserved[0]}' \
-            > .artifacts/branch-retirement/report.json
+          jq -s --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg mainSha "$(git rev-parse origin/main)" '
+            {
+              schemaVersion: 2,
+              capturedAt: $capturedAt,
+              mainSha: $mainSha,
+              branches: .,
+              summary: {
+                total: length,
+                canonical: ([.[] | select(.disposition == "canonical-main")] | length),
+                activePr: ([.[] | select(.disposition == "active-pr-preserve")] | length),
+                safeDelete: ([.[] | select(.disposition | startswith("safe-delete-"))] | length),
+                patchEquivalentReview: ([.[] | select(.disposition == "patch-equivalent-review-required")] | length),
+                uniqueWorkReview: ([.[] | select(.disposition == "unique-work-review-required")] | length)
+              }
+            }
+          ' "$report_dir/dispositions.ndjson" > "$report_dir/report-before.json"
 
-      - name: Persist retirement evidence as a GitHub issue
+          jq -r '.branches[] | [.branch,.sha,(.pr // ""),.prState,.mergeBase,.uniqueCommits,.patchUniqueCommits,.lastUpdated,.reachableFromMain,.disposition,(.changedFiles|join(","))] | @tsv' \
+            "$report_dir/report-before.json" > "$report_dir/report-before.tsv"
+
+      - name: Delete only objectively safe branches
         shell: bash
         run: |
           set -euo pipefail
-          deleted_count="$(jq '.deleted | length' .artifacts/branch-retirement/report.json)"
-          preserved_count="$(jq '.preserved | length' .artifacts/branch-retirement/report.json)"
-          if [[ "$deleted_count" -eq 0 ]]; then
-            echo 'No stale branches were deleted; skipping evidence issue.'
+          report_dir='.artifacts/branch-retirement'
+          apply='false'
+          if [[ "$GITHUB_EVENT_NAME" == 'push' ]]; then
+            apply='true'
+          elif [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' && '${{ inputs.apply_safe_deletions }}' == 'true' ]]; then
+            apply='true'
+          fi
+
+          : > "$report_dir/deleted.tsv"
+          if [[ "$apply" != 'true' ]]; then
+            echo 'Inventory-only run; no branch refs will be deleted.'
             exit 0
           fi
+
+          jq -r '.branches[] | select(.disposition | startswith("safe-delete-")) | [.branch,.sha,.disposition] | @tsv' \
+            "$report_dir/report-before.json" \
+            | while IFS=$'\t' read -r branch sha disposition; do
+                [[ -n "$branch" && "$branch" != 'main' ]] || continue
+                encoded="$(jq -rn --arg v "$branch" '$v|@uri')"
+                gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${encoded}"
+                printf '%s\t%s\t%s\n' "$branch" "$sha" "$disposition" >> "$report_dir/deleted.tsv"
+              done
+
+      - name: Capture post-retirement state
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir='.artifacts/branch-retirement'
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/branches?per_page=100" \
+            | jq -s 'add | map({branch:.name,sha:.commit.sha})' > "$report_dir/remaining-branches.json"
+          jq -n \
+            --slurpfile before "$report_dir/report-before.json" \
+            --slurpfile remaining "$report_dir/remaining-branches.json" \
+            --rawfile deleted "$report_dir/deleted.tsv" \
+            '{before:$before[0],remaining:$remaining[0],deletedTsv:$deleted}' \
+            > "$report_dir/final-report.json"
+
+      - name: Persist branch-disposition evidence as a GitHub issue
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir='.artifacts/branch-retirement'
+          total="$(jq '.before.summary.total' "$report_dir/final-report.json")"
+          safe="$(jq '.before.summary.safeDelete' "$report_dir/final-report.json")"
+          active="$(jq '.before.summary.activePr' "$report_dir/final-report.json")"
+          patch_review="$(jq '.before.summary.patchEquivalentReview' "$report_dir/final-report.json")"
+          unique_review="$(jq '.before.summary.uniqueWorkReview' "$report_dir/final-report.json")"
+          remaining="$(jq '.remaining | length' "$report_dir/final-report.json")"
+          deleted="$(awk 'NF{n++} END{print n+0}' "$report_dir/deleted.tsv")"
+
           {
-            echo 'Automated Lythaus branch-retirement evidence.'
+            echo 'Controlled Lythaus branch-disposition evidence.'
             echo
-            echo "Deleted branches: ${deleted_count}"
-            echo "Preserved branches: ${preserved_count}"
+            echo "Main SHA: $(jq -r '.before.mainSha' "$report_dir/final-report.json")"
+            echo "Branches inventoried: ${total}"
+            echo "Active PR branches preserved: ${active}"
+            echo "Objectively safe deletion candidates: ${safe}"
+            echo "Branches deleted this run: ${deleted}"
+            echo "Patch-equivalent branches requiring review: ${patch_review}"
+            echo "Branches with unique work requiring review: ${unique_review}"
+            echo "Branches remaining after run: ${remaining}"
             echo
             echo 'Deleted branch refs and recovery SHAs:'
             echo '```text'
-            cat .artifacts/branch-retirement/deleted.tsv
+            cat "$report_dir/deleted.tsv"
             echo '```'
             echo
-            echo 'A deleted branch can be restored from its recorded SHA if required.'
-          } > .artifacts/branch-retirement/issue.md
+            echo 'Full machine-readable evidence is attached to the corresponding Actions run artifact.'
+          } > "$report_dir/issue.md"
+
           gh issue create \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Branch retirement evidence $(date -u +%Y-%m-%d)" \
-            --body-file .artifacts/branch-retirement/issue.md
+            --title "Controlled branch disposition ${GITHUB_SHA:0:12}" \
+            --body-file "$report_dir/issue.md"
 
-      - name: Upload branch-retirement evidence
+      - name: Upload branch-disposition evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: branch-retirement-${{ github.sha }}
+          name: branch-disposition-${{ github.sha }}
           if-no-files-found: error
           path: .artifacts/branch-retirement
