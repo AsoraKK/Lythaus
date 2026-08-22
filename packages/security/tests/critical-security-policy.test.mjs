@@ -5,6 +5,8 @@ import { scrypt } from '@noble/hashes/scrypt';
 import { sha256 } from '@noble/hashes/sha2';
 import { SignJWT, exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import {
+  LYTHAUS_ACCESS_TOKEN_AUDIENCE,
+  LYTHAUS_ACCESS_TOKEN_ISSUER,
   constantTimeEqual,
   decryptField,
   encryptField,
@@ -47,6 +49,15 @@ async function signingFixture() {
   };
 }
 
+function trustedTokenBuilder(payload, subject) {
+  const builder = new SignJWT(payload)
+    .setProtectedHeader({ alg: 'ES256', kid: 'critical-test-key', typ: 'JWT' })
+    .setIssuer(LYTHAUS_ACCESS_TOKEN_ISSUER)
+    .setAudience(LYTHAUS_ACCESS_TOKEN_AUDIENCE);
+  if (subject) builder.setSubject(subject);
+  return builder.setIssuedAt().setExpirationTime('60s');
+}
+
 test('security primitives protect passwords, lookups, and encrypted PII', async () => {
   const pepper = 'pepper-v1';
   const password = hashPassword('correct horse battery staple', pepper, { pepperVersion: 'v2' });
@@ -83,7 +94,7 @@ test('security primitives protect passwords, lookups, and encrypted PII', async 
   await assert.rejects(encryptField('person@example.test', encode(new Uint8Array(31)), 'v2'), /aes256_key_required/);
 });
 
-test('access-token verification rejects malformed, expired, and untrusted claims', async () => {
+test('access-token verification rejects malformed, expired, cross-issuer, cross-audience, and untrusted claims', async () => {
   const fixture = await signingFixture();
   const defaultToken = await signAccessToken({
     userId: 'user-default',
@@ -96,11 +107,7 @@ test('access-token verification rejects malformed, expired, and untrusted claims
     tokenVersion: 1,
   });
 
-  const filteredRoles = await new SignJWT({ roles: ['member', 42, null], tokenVersion: 2.5 })
-    .setProtectedHeader({ alg: 'ES256', kid: 'critical-test-key', typ: 'JWT' })
-    .setSubject('user-filtered')
-    .setIssuedAt()
-    .setExpirationTime('60s')
+  const filteredRoles = await trustedTokenBuilder({ roles: ['member', 42, null], tokenVersion: 2.5 }, 'user-filtered')
     .sign(fixture.privateKey);
   assert.deepEqual(await verifyAccessToken(filteredRoles, fixture.jwksJson), {
     userId: 'user-filtered',
@@ -108,11 +115,7 @@ test('access-token verification rejects malformed, expired, and untrusted claims
     tokenVersion: 1,
   });
 
-  const untypedClaims = await new SignJWT({ roles: 'admin', tokenVersion: 'two' })
-    .setProtectedHeader({ alg: 'ES256', kid: 'critical-test-key', typ: 'JWT' })
-    .setSubject('user-untyped')
-    .setIssuedAt()
-    .setExpirationTime('60s')
+  const untypedClaims = await trustedTokenBuilder({ roles: 'admin', tokenVersion: 'two' }, 'user-untyped')
     .sign(fixture.privateKey);
   assert.deepEqual(await verifyAccessToken(untypedClaims, fixture.jwksJson), {
     userId: 'user-untyped',
@@ -120,14 +123,31 @@ test('access-token verification rejects malformed, expired, and untrusted claims
     tokenVersion: 1,
   });
 
-  const missingSubject = await new SignJWT({ roles: [] })
-    .setProtectedHeader({ alg: 'ES256', kid: 'critical-test-key', typ: 'JWT' })
-    .setIssuedAt()
-    .setExpirationTime('60s')
+  const missingSubject = await trustedTokenBuilder({ roles: [] })
     .sign(fixture.privateKey);
   await assert.rejects(verifyAccessToken(missingSubject, fixture.jwksJson), /token_subject_missing/);
   await assert.rejects(verifyAccessToken(defaultToken, JSON.stringify({ keys: [] })));
   await assert.rejects(verifyAccessToken(defaultToken, 'not-json'));
+
+  const wrongIssuer = await new SignJWT({ roles: [] })
+    .setProtectedHeader({ alg: 'ES256', kid: 'critical-test-key', typ: 'JWT' })
+    .setIssuer('https://attacker.invalid')
+    .setAudience(LYTHAUS_ACCESS_TOKEN_AUDIENCE)
+    .setSubject('user-wrong-issuer')
+    .setIssuedAt()
+    .setExpirationTime('60s')
+    .sign(fixture.privateKey);
+  await assert.rejects(verifyAccessToken(wrongIssuer, fixture.jwksJson));
+
+  const wrongAudience = await new SignJWT({ roles: [] })
+    .setProtectedHeader({ alg: 'ES256', kid: 'critical-test-key', typ: 'JWT' })
+    .setIssuer(LYTHAUS_ACCESS_TOKEN_ISSUER)
+    .setAudience('untrusted-client')
+    .setSubject('user-wrong-audience')
+    .setIssuedAt()
+    .setExpirationTime('60s')
+    .sign(fixture.privateKey);
+  await assert.rejects(verifyAccessToken(wrongAudience, fixture.jwksJson));
 
   const expiredToken = await signAccessToken({
     userId: 'user-expired',
