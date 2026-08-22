@@ -64,9 +64,12 @@ jobs:
             echo 'Turnstile client must not be present while waitlist activation is deferred.' >&2
             exit 1
           fi
-          grep -F 'The internet is changing.' dist/index.html
-          grep -F 'Trust should not disappear with it.' dist/index.html
-          grep -F 'Human authenticity will become more valuable' dist/index.html
+          grep -F 'The human internet is worth protecting.' dist/index.html
+          grep -F 'Built for humans first.' dist/index.html
+          grep -F 'Lythaus is a human-first, public-interest platform built for genuine human interaction.' dist/index.html
+          grep -F 'Algorithms for relevance, not addiction.' dist/index.html
+          grep -F 'Reputation is earned.' dist/index.html
+          grep -F 'Member content is not sold or repurposed to train generative models.' dist/index.html
           if grep -R -n -i 'TURNSTILE_SECRET\|PII_ENCRYPTION_KEY\|PII_HMAC_KEY' dist; then
             echo 'Sensitive binding name leaked into the marketing artifact.' >&2
             exit 1
@@ -96,9 +99,10 @@ jobs:
             headers="$(mktemp)"
             status="$(curl --location --silent --show-error --max-time 30 --retry 6 --retry-delay 3 --dump-header "$headers" --output "$body" --write-out '%{http_code}' "$host/")"
             test "$status" = 200
-            grep -F 'The internet is changing.' "$body"
-            grep -F 'Trust should not disappear with it.' "$body"
-            grep -F 'Human authenticity will become more valuable' "$body"
+            grep -F 'The human internet is worth protecting.' "$body"
+            grep -F 'Built for humans first.' "$body"
+            grep -F 'Algorithms for relevance, not addiction.' "$body"
+            grep -F 'Reputation is earned.' "$body"
             grep -F -i 'X-Content-Type-Options: nosniff' "$headers"
             grep -F -i 'X-Frame-Options: DENY' "$headers"
             rm -f "$body" "$headers"
