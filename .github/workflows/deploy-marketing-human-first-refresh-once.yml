@@ -1,12 +1,10 @@
-name: Deploy Lythaus marketing shell
+name: Deploy human-first marketing refresh once
 
 on:
-  workflow_dispatch:
-    inputs:
-      release_sha:
-        description: Exact reviewed current main SHA to deploy
-        required: true
-        type: string
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/deploy-marketing-human-first-refresh-once.yml
 
 permissions:
   contents: read
@@ -16,31 +14,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-and-validate:
+  deploy-and-verify:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
     env:
+      EXPECTED_BASE_SHA: ce949bf961b8342613839931dfaad2db3dc7f22c
       PAGES_PROJECT: lythaus-marketing
       PUBLIC_API_BASE_URL: https://api.lythaus.co
-      PUBLIC_TURNSTILE_SITE_KEY: ''
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.release_sha }}
-          fetch-depth: 0
+          ref: ${{ github.sha }}
+          fetch-depth: 2
 
-      - name: Require exact reviewed current main SHA
+      - name: Require merge directly onto reviewed current main
         shell: bash
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
-          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "release_sha must be a full 40-character commit SHA" >&2; exit 1; }
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           git fetch --no-tags origin main
-          test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || {
-            echo "Refusing production deployment: release_sha is not current origin/main." >&2
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || {
+            echo 'Refusing deployment: this run is not current origin/main.' >&2
+            exit 1
+          }
+          test "$(git rev-parse HEAD^1)" = "$EXPECTED_BASE_SHA" || {
+            echo 'Refusing deployment: expected reviewed main SHA is not the first parent.' >&2
             exit 1
           }
 
@@ -50,20 +49,24 @@ jobs:
           cache: npm
           cache-dependency-path: apps/marketing-site/package-lock.json
 
-      - name: Build and validate exact marketing shell
+      - name: Resolve production Turnstile sitekey
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cloudflare/waitlist-turnstile.mjs resolve
+
+      - name: Build exact current-main marketing artifact
         working-directory: apps/marketing-site
         shell: bash
         run: |
           set -euo pipefail
           node -e "const url = new URL(process.env.PUBLIC_API_BASE_URL); if (url.protocol !== 'https:' || url.hostname !== 'api.lythaus.co' || url.pathname !== '/') throw new Error('PUBLIC_API_BASE_URL must be https://api.lythaus.co');"
-          test -z "$PUBLIC_TURNSTILE_SITE_KEY"
+          node -e "if (!/^[A-Za-z0-9_-]{20,}$/.test(process.env.PUBLIC_TURNSTILE_SITE_KEY ?? '')) throw new Error('PUBLIC_TURNSTILE_SITE_KEY is invalid');"
           npm ci
           npm run build
           node ../../scripts/cloudflare/validate-marketing-output.mjs dist
-          if grep -R -F 'challenges.cloudflare.com/turnstile/v0/api.js' dist; then
-            echo 'Turnstile client must not be present while waitlist activation is deferred.' >&2
-            exit 1
-          fi
+          grep -F 'challenges.cloudflare.com/turnstile/v0/api.js' dist/index.html
+          grep -F 'waitlist_signup' dist/index.html
           grep -F 'The human internet is worth protecting.' dist/index.html
           grep -F 'Built for humans first.' dist/index.html
           grep -F 'Lythaus is a human-first, public-interest platform built for genuine human interaction.' dist/index.html
@@ -75,11 +78,11 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy exact artifact to Cloudflare Pages production branch
+      - name: Deploy exact current main SHA to Cloudflare Pages production
+        id: deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          RELEASE_SHA: ${{ inputs.release_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -87,13 +90,20 @@ jobs:
           npx --yes wrangler@4.110.0 pages deploy apps/marketing-site/dist \
             --project-name "$PAGES_PROJECT" \
             --branch main \
-            --commit-hash "$RELEASE_SHA" \
-            --commit-dirty=false
+            --commit-hash "$GITHUB_SHA" \
+            --commit-dirty=false | tee "$RUNNER_TEMP/wrangler-marketing-output.txt"
+          preview_url="$(grep -Eo 'https://[a-z0-9-]+\.lythaus-marketing\.pages\.dev' "$RUNNER_TEMP/wrangler-marketing-output.txt" | head -n 1)"
+          test -n "$preview_url"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          rm -f "$RUNNER_TEMP/wrangler-marketing-output.txt"
 
-      - name: Validate production custom domains serve the new homepage
+      - name: Verify custom domains serve deployed production artifact
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/marketing-human-first"
           for host in https://lythaus.co https://www.lythaus.co; do
             body="$(mktemp)"
             headers="$(mktemp)"
@@ -103,13 +113,25 @@ jobs:
             grep -F 'Built for humans first.' "$body"
             grep -F 'Algorithms for relevance, not addiction.' "$body"
             grep -F 'Reputation is earned.' "$body"
+            grep -F 'challenges.cloudflare.com/turnstile/v0/api.js' "$body"
+            grep -F 'waitlist_signup' "$body"
             grep -F -i 'X-Content-Type-Options: nosniff' "$headers"
             grep -F -i 'X-Frame-Options: DENY' "$headers"
             rm -f "$body" "$headers"
           done
+          jq -n \
+            --arg commitSha "$GITHUB_SHA" \
+            --arg project "$PAGES_PROJECT" \
+            --arg previewUrl "$PREVIEW_URL" \
+            --arg verifiedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion:1,status:"pass",commitSha:$commitSha,project:$project,branch:"main",previewUrl:$previewUrl,customDomains:["lythaus.co","www.lythaus.co"],turnstileClientPresent:true,waitlistClientPresent:true,verifiedAt:$verifiedAt}' \
+            > "$RUNNER_TEMP/marketing-human-first/deployment.json"
 
-      - name: Record marketing-shell release state
-        shell: bash
-        run: |
-          echo 'Marketing shell deployed with waitlist submission intentionally fail closed.'
-          echo 'Activate waitlist only after the production Turnstile widget and /api/waitlist Worker route are deployed together.'
+      - name: Upload sanitized deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: marketing-human-first-${{ github.sha }}
+          path: ${{ runner.temp }}/marketing-human-first
+          if-no-files-found: warn
+          retention-days: 90

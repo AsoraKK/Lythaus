@@ -8,6 +8,7 @@ const homepage = fs.readFileSync(path.join(root, 'src/pages/index.astro'), 'utf8
 const layout = fs.readFileSync(path.join(root, 'src/layouts/BaseLayout.astro'), 'utf8');
 const privacy = fs.readFileSync(path.join(root, 'src/pages/privacy/index.astro'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'src/styles/global.css'), 'utf8');
+const homePitchStyles = fs.readFileSync(path.join(root, 'src/styles/home-pitch.css'), 'utf8');
 const headers = fs.readFileSync(path.join(root, 'public/_headers'), 'utf8');
 
 test('homepage uses the approved waitlist submission and accessible states', () => {
@@ -32,14 +33,29 @@ test('homepage uses the approved waitlist submission and accessible states', () 
   assert.doesNotMatch(homepage, /You are on the list\. We will be in touch when a place opens\./);
 });
 
-test('homepage public copy stays restrained and launch safe', () => {
+test('homepage public copy matches the human-first pitch and stays launch safe', () => {
   const publicSource = `${homepage}\n${layout}`;
   const visibleCopy = publicSource.replace(/<script[\s\S]*?<\/script>/giu, '');
   assert.doesNotMatch(visibleCopy, /\u2014/u);
   assert.doesNotMatch(visibleCopy, /lime|neon green|purple gradient|PlanetScale|Hyperdrive|Cloudflare|C2PA|stylometric|confidence score|policy engine|appeal threshold|moderation weight/i);
-  assert.match(homepage, /The internet is changing\.<br \/>Trust should not disappear with it\./);
+  assert.match(homepage, /The human internet is worth protecting\./);
+  assert.match(homepage, /Built for humans first\./);
+  assert.match(homepage, /Lythaus is a human-first, public-interest platform built for genuine human interaction\./);
+  assert.match(homepage, /Algorithms for relevance, not addiction\./);
+  assert.match(homepage, /Reputation is earned\./);
+  assert.match(homepage, /Member content is not sold or repurposed to train generative models\./);
   assert.match(homepage, /Join the waitlist/);
   assert.match(styles, /--accent: #f2c98d/i);
+});
+
+test('homepage opening resolves the Lythaus letters from light without a lighthouse beam', () => {
+  assert.match(homepage, /class="pitch-wordmark"/);
+  assert.match(homepage, /--letter-index: 0/);
+  assert.match(homepage, /--letter-index: 6/);
+  assert.match(homePitchStyles, /@keyframes pitchLetterResolve/);
+  assert.match(homePitchStyles, /@keyframes pitchLightPoint/);
+  assert.doesNotMatch(homePitchStyles, /lighthouse|beam/i);
+  assert.match(homePitchStyles, /prefers-reduced-motion/);
 });
 
 test('shared layout declares the Lythaus favicon assets', () => {
@@ -56,10 +72,10 @@ test('Turnstile CSP is narrowly allowlisted', () => {
 });
 
 test('homepage layout remains bounded at desktop and 390 pixel widths', () => {
-  assert.match(styles, /\.home-waitlist \{[\s\S]*grid-template-columns: minmax\(0, 0\.9fr\) minmax\(380px, 0\.75fr\)/);
-  assert.match(styles, /\.home-waitlist \{[\s\S]*min-width: 0/);
-  assert.match(styles, /@media \(max-width: 700px\) \{[\s\S]*?\.home-waitlist-fields \{[\s\S]*?grid-template-columns: 1fr/);
-  assert.match(styles, /@media \(max-width: 700px\) \{[\s\S]*?\.home-waitlist-fields \.button \{[\s\S]*?width: 100%/);
+  assert.match(homePitchStyles, /\.pitch-waitlist \{[\s\S]*grid-template-columns: minmax\(0, 0\.9fr\) minmax\(380px, 0\.75fr\)/);
+  assert.match(homePitchStyles, /\.pitch-waitlist \{[\s\S]*min-width: 0/);
+  assert.match(homePitchStyles, /@media \(max-width: 700px\) \{[\s\S]*?\.pitch-waitlist \.home-waitlist-fields \{[\s\S]*?grid-template-columns: 1fr/);
+  assert.match(homePitchStyles, /@media \(max-width: 700px\) \{[\s\S]*?\.pitch-waitlist \.home-waitlist-fields \.button \{[\s\S]*?width: 100%/);
 });
 
 test('Privacy Policy states the approved waitlist retention policy', () => {

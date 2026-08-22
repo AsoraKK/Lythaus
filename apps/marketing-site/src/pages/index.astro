@@ -1,120 +1,217 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/home-pitch.css';
 
 const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 ---
 <BaseLayout
-  title="Lythaus | A more trustworthy social platform"
-  description="Lythaus is building a social platform for human contribution, credible discussion and clearer context online. Join the private beta waitlist."
+  title="Lythaus | Human-first public-interest platform"
+  description="Lythaus is a human-first, public-interest platform built for genuine human interaction, transparent Discovery and accountable human contribution."
   canonicalPath="/"
   absoluteTitle={true}
   homePage={true}
 >
-  <section class="home-hero" aria-labelledby="hero-title">
-    <div class="home-hero-copy">
-      <p class="home-eyebrow"><span class="home-status-dot" aria-hidden="true"></span>A different kind of social platform</p>
-      <h1 id="hero-title">The internet is changing.<br />Trust should not disappear with it.</h1>
-      <p class="home-hero-body">Lythaus is building a social platform for people who value human contribution, credible discussion and clearer context online.</p>
-      <div class="home-actions">
-        <a class="button primary" href="#waitlist">Join the waitlist</a>
-        <a class="home-secondary-link" href="#vision">Why Lythaus</a>
+  <section class="pitch-intro" id="top" aria-labelledby="pitch-wordmark">
+    <div class="pitch-intro-inner">
+      <h1 class="pitch-wordmark" id="pitch-wordmark" aria-label="Lythaus">
+        <span class="pitch-letter" style="--letter-index: 0" aria-hidden="true">L</span>
+        <span class="pitch-letter" style="--letter-index: 1" aria-hidden="true">Y</span>
+        <span class="pitch-letter" style="--letter-index: 2" aria-hidden="true">T</span>
+        <span class="pitch-letter" style="--letter-index: 3" aria-hidden="true">H</span>
+        <span class="pitch-letter" style="--letter-index: 4" aria-hidden="true">A</span>
+        <span class="pitch-letter" style="--letter-index: 5" aria-hidden="true">U</span>
+        <span class="pitch-letter" style="--letter-index: 6" aria-hidden="true">S</span>
+      </h1>
+      <p class="pitch-intro-statement">The human internet is worth protecting.</p>
+    </div>
+    <a class="pitch-scroll-cue" href="#problem" aria-label="Continue to the problem section"><span></span></a>
+  </section>
+
+  <section class="pitch-section pitch-problem" id="problem" aria-labelledby="problem-title" data-pitch-reveal>
+    <div class="pitch-section-meta">01 / The Problem</div>
+    <div class="pitch-problem-grid">
+      <div class="pitch-copy-column">
+        <h2 id="problem-title">The internet has changed.</h2>
+        <p class="pitch-lede">Content can now be generated at extraordinary scale due to AI.</p>
+        <p>At the same time, existing social media platforms increasingly reward volume, virality and engagement, creating an environment where these can thrive.</p>
       </div>
-      <p class="home-hero-note">Private beta. Early members will help shape the platform.</p>
-    </div>
-    <aside class="home-hero-rail" aria-label="Lythaus private beta">
-      <span>LYT / 2026</span>
-      <p>A social platform designed around trust, contribution and clearer context.</p>
-    </aside>
-  </section>
-
-  <section class="home-problem home-section" id="vision" aria-labelledby="problem-title">
-    <p class="home-section-index">01 / The problem</p>
-    <div class="home-section-copy">
-      <h2 id="problem-title">We are entering an internet where content is abundant. Certainty is not.</h2>
-      <p>Synthetic content, automated accounts, engagement farming and increasingly opaque feeds are changing the character of online conversation. The question is no longer only what we see. It is whether we understand what stands behind it.</p>
+      <div>
+        <ul class="pitch-signal-list" aria-label="Problems affecting modern social platforms">
+          <li>AI-generated slop.</li>
+          <li>Bot accounts manipulating feeds.</li>
+          <li>Ragebait headlines.</li>
+          <li>Engagement farming.</li>
+          <li>Manufactured attention.</li>
+        </ul>
+        <p class="pitch-result">The result is more noise, greater manipulation and growing uncertainty about what or who is real.</p>
+      </div>
     </div>
   </section>
 
-  <section class="home-thesis home-section" id="principles" aria-labelledby="thesis-title">
-    <div class="home-section-heading">
-      <p class="home-kicker">The Lythaus thesis</p>
-      <h2 id="thesis-title">Social media should become more trustworthy, not more artificial.</h2>
-      <p>We are designing Lythaus around a small number of principles that are deliberately different from the incentives shaping many existing platforms.</p>
+  <section class="pitch-section pitch-human-first" id="human-first" aria-labelledby="human-first-title" data-pitch-reveal>
+    <div class="pitch-section-meta">02 / Built for Humans First</div>
+    <h2 id="human-first-title">Built for humans first.</h2>
+    <div class="pitch-four-lines" aria-label="Lythaus priorities">
+      <span>Human interaction.</span>
+      <span>Public-interest information.</span>
+      <span>Accountable contribution.</span>
+      <span>Clearer context.</span>
     </div>
-    <div class="home-principle-list">
-      <article class="home-principle-row">
-        <span>01</span>
-        <h3>Human contribution should matter</h3>
-        <p>In a world where content can be produced at extraordinary scale, genuine human perspective becomes more valuable. Lythaus is being built to recognise that distinction.</p>
-      </article>
-      <article class="home-principle-row">
-        <span>02</span>
-        <h3>Transparency should be normal</h3>
-        <p>AI is part of the future. Deception does not have to be. Lythaus is pro technology and pro transparency. People should have clearer context about the content they consume.</p>
-      </article>
-      <article class="home-principle-row">
-        <span>03</span>
-        <h3>Quality should beat manipulation</h3>
-        <p>The loudest post should not automatically become the most important post. We want thoughtful contribution, credibility and public value to matter more than outrage or engagement tricks.</p>
-      </article>
-      <article class="home-principle-row">
-        <span>04</span>
-        <h3>Trust has to be earned</h3>
-        <p>Credibility should come from contribution and accountability, not status, follower count or the ability to pay for attention.</p>
-      </article>
+    <p class="pitch-welcome">Welcome to Lythaus.</p>
+  </section>
+
+  <section class="pitch-section pitch-platform" id="lythaus" aria-labelledby="lythaus-title" data-pitch-reveal>
+    <div class="pitch-section-meta">03 / What Lythaus Is</div>
+    <div class="pitch-platform-grid">
+      <div>
+        <h2 id="lythaus-title">Lythaus is a human-first, public-interest platform built for genuine human interaction.</h2>
+        <p class="pitch-lede">Follow people and topics. Share your perspective. Discuss what matters. Discover public-interest information from other humans.</p>
+      </div>
+      <div class="pitch-platform-detail">
+        <h3>Lythaus is different.</h3>
+        <p>Lythaus Authenticity AI actively detects and blocks AI-generated public content, while behavioural signals help identify bot activity, coordinated abuse and manipulation.</p>
+        <p>Our Discovery feed uses simple, transparent algorithms based on interests you choose, your optional general location, previous searches and other signals you control.</p>
+      </div>
+    </div>
+    <div class="pitch-manifesto-line">
+      <strong>Algorithms for relevance, not addiction.</strong>
+      <span>Human contribution, reputation and public-interest value have more influence over what you see than whatever simply generates the most clicks, outrage or time on screen.</span>
     </div>
   </section>
 
-  <section class="home-positioning home-section" aria-labelledby="positioning-title">
-    <p class="home-kicker" id="positioning-title">What Lythaus stands for</p>
-    <div class="home-positioning-grid">
-      <article class="home-positioning-panel home-positioning-positive">
-        <p class="home-panel-label">We are building for</p>
-        <h2>Human authenticity.<br />Better information.<br />Accountable discussion.</h2>
-        <p>A platform designed around trust and signal rather than volume for its own sake.</p>
-      </article>
-      <article class="home-positioning-panel">
-        <p class="home-panel-label">We are not building for</p>
-        <h2>AI spam.<br />Ragebait.<br />Manufactured attention.</h2>
-        <p>Lythaus is not another social feed with a different logo. The product is being designed around a different set of incentives.</p>
-      </article>
+  <section class="pitch-section pitch-experience" id="experience" aria-labelledby="experience-title" data-pitch-reveal>
+    <div class="pitch-section-meta">04 / Experience Lythaus</div>
+    <div class="pitch-experience-grid">
+      <div class="pitch-copy-column">
+        <h2 id="experience-title">Explore the app yourself.</h2>
+        <p class="pitch-lede">Enter a live, read-only version of Lythaus and experience the platform directly.</p>
+        <p>Browse Discovery. Scroll posts. Open discussions. Visit profiles. Explore public-interest topics. Inspect authenticity labels and see how reputation works.</p>
+        <p class="pitch-quiet">Participation remains restricted to registered members.</p>
+      </div>
+      <div class="pitch-preview-shell" aria-label="Guest Preview">
+        <div class="pitch-preview-topbar">
+          <span>Guest Preview</span>
+          <span>Read only</span>
+        </div>
+        <div class="pitch-preview-body">
+          <div class="pitch-preview-nav" aria-hidden="true">
+            <span class="active">Discovery</span>
+            <span>Topics</span>
+            <span>News Board</span>
+          </div>
+          <article class="pitch-preview-post">
+            <div class="pitch-preview-post-head">
+              <span class="pitch-avatar" aria-hidden="true"></span>
+              <div>
+                <strong>Public-interest discussion</strong>
+                <small>Human-authored</small>
+              </div>
+            </div>
+            <p>See the product, the context around each contribution and how reputation is surfaced without taking part as a guest.</p>
+          </article>
+          <article class="pitch-preview-post secondary" aria-hidden="true">
+            <div class="pitch-preview-lines"><span></span><span></span><span></span></div>
+          </article>
+        </div>
+        <div class="pitch-preview-footer">
+          <div>
+            <strong>You've explored Lythaus.</strong>
+            <span>Want to be part of it?</span>
+          </div>
+          <a class="button primary" href="#waitlist">Join the private beta</a>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="home-audience home-section" id="audience" aria-labelledby="audience-title">
-    <div class="home-section-heading">
-      <p class="home-kicker">Who Lythaus is for</p>
-      <h2 id="audience-title">People who want more signal from the internet.</h2>
+  <section class="pitch-section pitch-discovery" id="discovery" aria-labelledby="discovery-title" data-pitch-reveal>
+    <div class="pitch-section-meta">07 / A Different Kind of Feed</div>
+    <div class="pitch-discovery-grid">
+      <div>
+        <h2 id="discovery-title">Algorithms for relevance, not addiction.</h2>
+        <p class="pitch-lede">Personalisation itself is not the problem.</p>
+        <p>The question is what it is optimised for.</p>
+      </div>
+      <div>
+        <p class="pitch-small-heading">Lythaus Discovery can consider</p>
+        <ul class="pitch-clean-list">
+          <li>Your chosen interests</li>
+          <li>General location, optional, or a region of your choice</li>
+          <li>Previous searches</li>
+          <li>Topics you follow</li>
+          <li>Your feed preferences</li>
+          <li>Reputation and contribution signals</li>
+        </ul>
+      </div>
     </div>
-    <div class="home-audience-list">
-      <article>
-        <span>Audience 01</span>
-        <h3>People who follow the world closely</h3>
-        <p>For people interested in news, technology, science, business, policy, culture and the conversations that shape them.</p>
-      </article>
-      <article>
-        <span>Audience 02</span>
-        <h3>Journalists, researchers and analysts</h3>
-        <p>For people whose work depends on credibility, sourcing, context and the ability to have serious public conversations.</p>
-      </article>
-      <article>
-        <span>Audience 03</span>
-        <h3>People tired of low quality feeds</h3>
-        <p>For anyone who feels that more content has not necessarily produced a better internet.</p>
-      </article>
+    <div class="pitch-control-line">
+      <strong>Your interests. Your controls. Your feed.</strong>
+      <span>Members can see and manage the information shaping Discovery.</span>
+    </div>
+    <div class="pitch-no-profile">
+      <h3>No hidden behavioural profile built simply to keep you scrolling.</h3>
+      <p>Personalisation is designed to be transparent, editable and under the member's control.</p>
     </div>
   </section>
 
-  <section class="home-statement home-section" aria-label="A founding principle of Lythaus">
-    <p>Human authenticity will become more valuable as synthetic content becomes easier to create.</p>
-    <span>A founding principle of Lythaus</span>
+  <section class="pitch-section pitch-reputation" id="reputation" aria-labelledby="reputation-title" data-pitch-reveal>
+    <div class="pitch-section-meta">08 / Reputation</div>
+    <p class="pitch-pretitle">Attention is easy to manufacture.</p>
+    <h2 id="reputation-title">Reputation is earned.</h2>
+    <div class="pitch-reputation-grid">
+      <div>
+        <p>Lythaus reputation is designed around contribution and accountability rather than:</p>
+        <ul class="pitch-reputation-rejects">
+          <li>Follower count.</li>
+          <li>Posting volume.</li>
+          <li>Virality.</li>
+          <li>Paid visibility.</li>
+          <li>Engagement manipulation.</li>
+        </ul>
+      </div>
+      <div class="pitch-reputation-copy">
+        <p>Qualifying human-authored contributions can build authorship reputation.</p>
+        <p>Deliberate mislabelling, manipulation, evasion and coordinated abuse can reduce standing.</p>
+        <strong>Who contributes should matter. How they contribute should matter more.</strong>
+      </div>
+    </div>
   </section>
 
-  <section class="home-waitlist home-section" id="waitlist" aria-labelledby="waitlist-title">
+  <section class="pitch-section pitch-ai" id="ai" aria-labelledby="ai-title" data-pitch-reveal>
+    <div class="pitch-section-meta">11 / Lythaus and AI</div>
+    <div class="pitch-ai-grid">
+      <div>
+        <h2 id="ai-title">Lythaus is not anti-AI.</h2>
+        <p class="pitch-lede">AI helped us design and build Lythaus, and it will remain an important part of our lives.</p>
+      </div>
+      <div class="pitch-ai-copy">
+        <p>The distinction is not whether AI should exist, but how and where it should participate.</p>
+        <p>Lythaus prioritises human authorship and human accountability in public-interest discussion.</p>
+        <p class="pitch-emphasis">Technology should assist human participation, not impersonate or quietly replace it.</p>
+        <p class="pitch-data-promise">Member content is not sold or repurposed to train generative models.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pitch-section pitch-principles" id="principles" aria-labelledby="principles-title" data-pitch-reveal>
+    <div class="pitch-section-meta">12 / Principles</div>
+    <h2 id="principles-title" class="sr-only">Lythaus principles</h2>
+    <ol class="pitch-principle-list">
+      <li>Human interaction should remain human.</li>
+      <li>Technology should assist people, not impersonate them.</li>
+      <li>Reputation is earned. Trust is gained.</li>
+      <li>Public-interest conversation deserves better incentives.</li>
+      <li>People should understand why they see what they see.</li>
+      <li>Algorithms should serve relevance, not addiction.</li>
+      <li>The human internet is worth protecting.</li>
+    </ol>
+  </section>
+
+  <section class="home-waitlist pitch-waitlist" id="waitlist" aria-labelledby="waitlist-title" data-pitch-reveal>
     <div class="home-waitlist-copy">
       <p class="home-eyebrow"><span class="home-status-dot" aria-hidden="true"></span>Lythaus private beta</p>
-      <h2 id="waitlist-title">Help shape a more trustworthy social platform.</h2>
+      <h2 id="waitlist-title">The human internet is worth protecting.</h2>
       <p>Join the Lythaus waitlist for early access, product updates and an opportunity to help shape what comes next.</p>
     </div>
     <form class="home-waitlist-form" data-waitlist data-api-base-url={publicApiBaseUrl} data-turnstile-site-key={turnstileSiteKey} novalidate>
@@ -132,6 +229,22 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       <p class="home-form-status" id="waitlist-status" data-waitlist-status aria-live="polite" role="status"></p>
     </form>
   </section>
+
+  <script>
+    const revealTargets = document.querySelectorAll('[data-pitch-reveal]');
+    if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const revealObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.classList.add('is-visible');
+          revealObserver.unobserve(entry.target);
+        }
+      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+      revealTargets.forEach((target) => revealObserver.observe(target));
+    } else {
+      revealTargets.forEach((target) => target.classList.add('is-visible'));
+    }
+  </script>
 
   {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
   <script>

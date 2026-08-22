@@ -17,7 +17,7 @@ import '../styles/global.css';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    <meta name="theme-color" content={homePage ? '#1c1c1a' : '#090a0b'} />
+    <meta name="theme-color" content={homePage ? '#070706' : '#090a0b'} />
     <title>{pageTitle}</title>
     <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -49,9 +49,11 @@ import '../styles/global.css';
       <nav class="site-nav" aria-label="Main navigation">
         {homePage ? (
           <>
-            <a href="#vision">Vision</a>
+            <a href="#problem">Problem</a>
+            <a href="#lythaus">Lythaus</a>
+            <a href="#experience">Experience</a>
+            <a href="#discovery">Discovery</a>
             <a href="#principles">Principles</a>
-            <a href="#audience">Who it is for</a>
           </>
         ) : (
           <>
