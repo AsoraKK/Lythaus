@@ -1,6 +1,6 @@
 {
   "schemaVersion": "lythaus-github-controls-summary-v1",
-  "capturedAt": "2026-08-22T17:48:21Z",
+  "capturedAt": "2026-08-22T21:20:00Z",
   "repository": "AsoraKK/Lythaus",
   "status": "PARTIAL/UNKNOWN",
   "mutationPerformed": false,
@@ -25,7 +25,7 @@
   "actionsPermissions": {
     "enabled": true,
     "allowedActions": "all",
-    "shaPinnedRequiredAtCapture": false,
+    "shaPinnedRequiredAtCapture": true,
     "repositoryValidator": "scripts/validate-workflow-action-pins.mjs"
   },
   "humanReviewRequired": [

@@ -1,6 +1,8 @@
 {
   "schemaVersion": 2,
   "capturedAt": "2026-08-22T17:31:27Z",
+  "evidenceClass": "historical-pre-merge-branch-snapshot",
+  "supersededBy": "Actions artifact historical-branch-reconciliation-a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9",
   "mainSha": "e259181400f3e1561b0c635f4951c13b2460faab",
   "branches": [
     {
