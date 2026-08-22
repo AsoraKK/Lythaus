@@ -130,6 +130,7 @@ jobs:
       - run: npm ci --ignore-scripts --prefix apps/control-panel
       - run: npm ci --ignore-scripts --prefix apps/marketing-site
       - run: npm --prefix apps/control-panel test
+      - run: node --test apps/marketing-site/tests/*.test.mjs
       - run: npm --prefix apps/control-panel run build
       - run: npm --prefix apps/marketing-site run build
 
