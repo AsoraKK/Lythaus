@@ -1,9 +1,9 @@
 {
   "schemaVersion": "lythaus-github-governance-state-v1",
-  "capturedAt": "2026-08-22",
+  "capturedAt": "2026-08-22T21:20:00Z",
   "repository": "AsoraKK/Lythaus",
   "branch": "main",
-  "mainShaAtCapture": "e259181400f3e1561b0c635f4951c13b2460faab",
+  "mainShaAtCapture": "a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9",
   "branchProtection": {
     "status": "ACTIVE",
     "enforceAdmins": true,

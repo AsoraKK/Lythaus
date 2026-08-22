@@ -1,12 +1,13 @@
 {
   "schemaVersion": "lythaus-github-actions-policy-v1",
-  "capturedAt": "2026-08-22",
+  "capturedAt": "2026-08-22T21:20:00Z",
   "repository": "AsoraKK/Lythaus",
   "enabled": true,
   "allowedActions": "all",
-  "shaPinnedRequired": false,
+  "shaPinnedRequired": true,
   "directActionReferencesPinned": true,
-  "reason": "Repository workflows are pinned to immutable commits and CI enforces that contract. GitHub-wide SHA enforcement remains disabled because the pinned subosito/flutter-action composite currently references mutable actions/cache@v5 internally; enabling the repository setting blocks all Flutter workflows before their jobs start.",
+  "transitiveActionReferencesPinned": true,
+  "reason": "Repository workflows and the repository-owned Flutter setup are pinned to immutable action and SDK inputs; GitHub platform SHA enforcement was verified live after the composite action was replaced.",
   "mutationPerformed": true,
-  "rollback": "PUT /repos/AsoraKK/Lythaus/actions/permissions with enabled:true, allowed_actions:all, sha_pinning_required:true after replacing or approving a Flutter setup action with immutable transitive references"
+  "rollback": "PUT /repos/AsoraKK/Lythaus/actions/permissions with enabled:true, allowed_actions:all, sha_pinning_required:false only with explicit owner approval"
 }

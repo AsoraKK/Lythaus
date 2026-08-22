@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "lythaus-post-merge-provider-evidence-v1",
+  "capturedAt": "2026-08-22T21:11:39Z",
+  "reviewedSha": "a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9",
+  "mutationsPerformed": false,
+  "productionStatus": "NO-GO",
+  "githubRuns": {
+    "cloudflareInventory": "https://github.com/AsoraKK/Lythaus/actions/runs/32598853998",
+    "planetscaleInventory": "https://github.com/AsoraKK/Lythaus/actions/runs/32598855426",
+    "historicalBranchReconciliation": "https://github.com/AsoraKK/Lythaus/actions/runs/32598857249"
+  },
+  "cloudflare": {
+    "status": "UNKNOWN/BLOCKED",
+    "complete": false,
+    "failedEndpoints": [
+      "pages",
+      "deployHooks:lythaus-admin-api-development",
+      "deployHooks:lythaus-jobs-development",
+      "deployHooks:lythaus-public-api-development",
+      "deployHooks:nite-owl-web",
+      "deployHooks:nite-owl-web-preview"
+    ],
+    "adminWorkerSettings": "UNKNOWN/BLOCKED",
+    "legacyNamedResourceCount": 1,
+    "artifact": "cloudflare-account-audit-a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9"
+  },
+  "planetscale": {
+    "inventoryStatus": "VERIFIED",
+    "productionContractStatus": "UNKNOWN/BLOCKED",
+    "organization": "lythaus",
+    "database": "lythaus-core",
+    "productionBranch": "main",
+    "branchCount": 1,
+    "productionContractBlocker": "PLANETSCALE_SCHEMA_READ_DATABASE_URL is not configured in the protected production environment",
+    "artifact": "planetscale-account-audit-a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9"
+  },
+  "historicalBranches": {
+    "status": "RECONCILED",
+    "total": 85,
+    "reachable": 47,
+    "patchEquivalent": 4,
+    "reviewedUnique": 34,
+    "unresolvedUnique": 0,
+    "objectUnavailable": 0,
+    "artifact": "historical-branch-reconciliation-a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9"
+  },
+  "blockingReasons": [
+    "Cloudflare inventory is incomplete and admin Worker settings are unreadable.",
+    "PlanetScale production schema, grants, migration checksums, and Hyperdrive origin cannot be accepted without the protected schema-read credential.",
+    "No Access reproduction, DNS cutover, browser smoke, zero-traffic observation, rollback proof, or credential rotation was performed."
+  ]
+}
