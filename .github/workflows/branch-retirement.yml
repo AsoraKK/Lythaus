@@ -1,0 +1,104 @@
+name: Retire stale repository branches
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/branch-retirement.yml'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: lythaus-branch-retirement
+  cancel-in-progress: false
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Inventory and retire closed historical branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/branch-retirement
+          repo="$GITHUB_REPOSITORY"
+
+          gh api --paginate "repos/${repo}/branches?per_page=100" --jq '.[] | [.name, .commit.sha] | @tsv' > .artifacts/branch-retirement/all.tsv
+          gh api --paginate "repos/${repo}/pulls?state=open&per_page=100" --jq '.[] | .head.ref' | sort -u > .artifacts/branch-retirement/open-pr-heads.txt
+
+          : > .artifacts/branch-retirement/deleted.tsv
+          : > .artifacts/branch-retirement/preserved.tsv
+
+          while IFS=$'\t' read -r branch sha; do
+            [[ -n "$branch" ]] || continue
+            if [[ "$branch" == "main" ]]; then
+              printf '%s\t%s\t%s\n' "$branch" "$sha" 'canonical-main' >> .artifacts/branch-retirement/preserved.tsv
+              continue
+            fi
+            if grep -Fxq "$branch" .artifacts/branch-retirement/open-pr-heads.txt; then
+              printf '%s\t%s\t%s\n' "$branch" "$sha" 'open-pr' >> .artifacts/branch-retirement/preserved.tsv
+              continue
+            fi
+            if [[ ! "$branch" =~ ^(agent|codex|dependabot|feat|fix|ops|website)/ ]]; then
+              printf '%s\t%s\t%s\n' "$branch" "$sha" 'unclassified-preserved' >> .artifacts/branch-retirement/preserved.tsv
+              continue
+            fi
+
+            encoded="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$branch")"
+            gh api -X DELETE "repos/${repo}/git/refs/heads/${encoded}"
+            printf '%s\t%s\t%s\n' "$branch" "$sha" 'closed-historical-pattern' >> .artifacts/branch-retirement/deleted.tsv
+          done < .artifacts/branch-retirement/all.tsv
+
+          jq -Rn \
+            --slurpfile dummy /dev/null \
+            '[inputs | split("\t") | {name:.[0], sha:.[1], reason:.[2]}]' \
+            < .artifacts/branch-retirement/deleted.tsv > .artifacts/branch-retirement/deleted.json
+          jq -Rn \
+            '[inputs | split("\t") | {name:.[0], sha:.[1], reason:.[2]}]' \
+            < .artifacts/branch-retirement/preserved.tsv > .artifacts/branch-retirement/preserved.json
+          jq -n \
+            --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --slurpfile deleted .artifacts/branch-retirement/deleted.json \
+            --slurpfile preserved .artifacts/branch-retirement/preserved.json \
+            '{schemaVersion:1,capturedAt:$capturedAt,deleted:$deleted[0],preserved:$preserved[0]}' \
+            > .artifacts/branch-retirement/report.json
+
+      - name: Persist retirement evidence as a GitHub issue
+        shell: bash
+        run: |
+          set -euo pipefail
+          deleted_count="$(jq '.deleted | length' .artifacts/branch-retirement/report.json)"
+          preserved_count="$(jq '.preserved | length' .artifacts/branch-retirement/report.json)"
+          {
+            echo 'Automated Lythaus branch-retirement evidence.'
+            echo
+            echo "Deleted branches: ${deleted_count}"
+            echo "Preserved branches: ${preserved_count}"
+            echo
+            echo 'Deleted branch refs and recovery SHAs:'
+            echo '```text'
+            cat .artifacts/branch-retirement/deleted.tsv
+            echo '```'
+            echo
+            echo 'A deleted branch can be restored from its recorded SHA if required.'
+          } > .artifacts/branch-retirement/issue.md
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Branch retirement evidence $(date -u +%Y-%m-%d)" \
+            --body-file .artifacts/branch-retirement/issue.md
+
+      - name: Upload branch-retirement evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: branch-retirement-${{ github.sha }}
+          if-no-files-found: error
+          path: .artifacts/branch-retirement
