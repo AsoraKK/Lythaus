@@ -217,3 +217,151 @@ jobs:
           name: branch-disposition-${{ github.sha }}
           if-no-files-found: error
           path: .artifacts/branch-retirement
+
+  reconcile-historical-deletions:
+    name: Reconcile recorded historical deletions
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HISTORICAL_EVIDENCE_ISSUE: '598'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Reconcile recorded branch SHAs against current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir='.artifacts/historical-branch-reconciliation'
+          mkdir -p "$report_dir"
+          repo="$GITHUB_REPOSITORY"
+          git fetch --no-tags --prune origin main
+
+          gh issue view "$HISTORICAL_EVIDENCE_ISSUE" --repo "$repo" --json body --jq .body > "$report_dir/evidence-issue.md"
+          awk -F '\t' 'NF >= 3 && $2 ~ /^[0-9a-f]{40}$/ && $3 == "closed-historical-pattern" {print $1 "\t" $2}' \
+            "$report_dir/evidence-issue.md" > "$report_dir/recorded.tsv"
+          test -s "$report_dir/recorded.tsv"
+
+          gh api --paginate "repos/${repo}/pulls?state=all&per_page=100&sort=updated&direction=desc" \
+            | jq -s 'add' > "$report_dir/prs.json"
+          : > "$report_dir/reconciliation.ndjson"
+
+          while IFS=$'\t' read -r branch sha; do
+            object_available=true
+            if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+              if ! git fetch --no-tags origin "$sha" >/dev/null 2>&1; then
+                object_available=false
+              fi
+            fi
+
+            pr_json="$(jq -c --arg b "$branch" --arg repo "$repo" '
+              [.[] | select(.head.repo.full_name == $repo and .head.ref == $b)]
+              | sort_by(.updated_at) | reverse | .[0] // null
+            ' "$report_dir/prs.json")"
+            pr_number="$(jq -r 'if . == null then "" else (.number|tostring) end' <<<"$pr_json")"
+            pr_state="$(jq -r 'if . == null then "none" elif .merged_at != null then "merged" else .state end' <<<"$pr_json")"
+
+            if [[ "$object_available" != 'true' ]]; then
+              jq -cn --arg branch "$branch" --arg sha "$sha" --arg pr "$pr_number" --arg prState "$pr_state" \
+                '{branch:$branch,sha:$sha,pr:(if $pr=="" then null else ($pr|tonumber) end),prState:$prState,objectAvailable:false,mergeBase:null,uniqueCommits:null,patchUniqueCommits:null,lastUpdated:null,changedFiles:[],reachableFromMain:null,disposition:"object-unavailable-review-required"}' \
+                >> "$report_dir/reconciliation.ndjson"
+              continue
+            fi
+
+            last_updated="$(git show -s --format=%cI "$sha")"
+            merge_base="$(git merge-base origin/main "$sha" 2>/dev/null || true)"
+            unique_commits="$(git rev-list --count origin/main.."$sha")"
+            if git merge-base --is-ancestor "$sha" origin/main 2>/dev/null; then reachable=true; else reachable=false; fi
+            patch_unique_commits="$(git cherry origin/main "$sha" 2>/dev/null | awk '$1 == "+" {n++} END {print n+0}')"
+            if [[ -n "$merge_base" ]]; then
+              mapfile -t changed_files < <(git diff --name-only "$merge_base"..."$sha" | sort -u)
+            else
+              changed_files=()
+            fi
+            changed_files_json="$(printf '%s\n' "${changed_files[@]:-}" | jq -Rsc 'split("\n") | map(select(length > 0))')"
+
+            if [[ "$reachable" == 'true' ]]; then
+              disposition='verified-reachable-from-main'
+            elif [[ "$unique_commits" -eq 0 ]]; then
+              disposition='verified-zero-unique-commits'
+            elif [[ "$patch_unique_commits" -eq 0 ]]; then
+              disposition='verified-patch-equivalent'
+            else
+              disposition='unique-work-review-required'
+            fi
+
+            jq -cn \
+              --arg branch "$branch" --arg sha "$sha" --arg pr "$pr_number" --arg prState "$pr_state" \
+              --arg mergeBase "$merge_base" --argjson uniqueCommits "$unique_commits" \
+              --argjson patchUniqueCommits "$patch_unique_commits" --arg lastUpdated "$last_updated" \
+              --argjson changedFiles "$changed_files_json" --argjson reachableFromMain "$reachable" --arg disposition "$disposition" \
+              '{branch:$branch,sha:$sha,pr:(if $pr=="" then null else ($pr|tonumber) end),prState:$prState,objectAvailable:true,mergeBase:(if $mergeBase=="" then null else $mergeBase end),uniqueCommits:$uniqueCommits,patchUniqueCommits:$patchUniqueCommits,lastUpdated:$lastUpdated,changedFiles:$changedFiles,reachableFromMain:$reachableFromMain,disposition:$disposition}' \
+              >> "$report_dir/reconciliation.ndjson"
+          done < "$report_dir/recorded.tsv"
+
+          jq -s --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg mainSha "$(git rev-parse origin/main)" '
+            {
+              schemaVersion:1,
+              capturedAt:$capturedAt,
+              mainSha:$mainSha,
+              sourceIssue:598,
+              branches:.,
+              summary:{
+                total:length,
+                reachable:([.[]|select(.disposition=="verified-reachable-from-main")]|length),
+                zeroUnique:([.[]|select(.disposition=="verified-zero-unique-commits")]|length),
+                patchEquivalent:([.[]|select(.disposition=="verified-patch-equivalent")]|length),
+                uniqueWorkReview:([.[]|select(.disposition=="unique-work-review-required")]|length),
+                objectUnavailable:([.[]|select(.disposition=="object-unavailable-review-required")]|length)
+              }
+            }
+          ' "$report_dir/reconciliation.ndjson" > "$report_dir/report.json"
+
+          jq -r '.branches[] | [.branch,.sha,(.pr // ""),.prState,.objectAvailable,.mergeBase,.uniqueCommits,.patchUniqueCommits,.lastUpdated,.reachableFromMain,.disposition,(.changedFiles|join(","))] | @tsv' \
+            "$report_dir/report.json" > "$report_dir/report.tsv"
+
+      - name: Persist historical reconciliation summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          report='.artifacts/historical-branch-reconciliation/report.json'
+          body='.artifacts/historical-branch-reconciliation/comment.md'
+          {
+            echo 'Historical deletion reconciliation against current `main` completed.'
+            echo
+            echo "Main SHA: $(jq -r '.mainSha' "$report")"
+            echo "Recorded deleted refs: $(jq '.summary.total' "$report")"
+            echo "Reachable from main: $(jq '.summary.reachable' "$report")"
+            echo "Zero unique commits: $(jq '.summary.zeroUnique' "$report")"
+            echo "Patch-equivalent: $(jq '.summary.patchEquivalent' "$report")"
+            echo "Unique work requiring review: $(jq '.summary.uniqueWorkReview' "$report")"
+            echo "Objects unavailable: $(jq '.summary.objectUnavailable' "$report")"
+            echo
+            echo "Actions artifact: historical-branch-reconciliation-${GITHUB_SHA}"
+          } > "$body"
+          gh issue comment "$HISTORICAL_EVIDENCE_ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$body"
+
+      - name: Fail if historical unique work is unresolved
+        shell: bash
+        run: |
+          set -euo pipefail
+          report='.artifacts/historical-branch-reconciliation/report.json'
+          unresolved="$(jq '.summary.uniqueWorkReview + .summary.objectUnavailable' "$report")"
+          if [[ "$unresolved" -ne 0 ]]; then
+            echo "$unresolved historical branch objects require explicit reconciliation; no GO decision is permitted." >&2
+            exit 1
+          fi
+
+      - name: Upload historical reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: historical-branch-reconciliation-${{ github.sha }}
+          if-no-files-found: error
+          path: .artifacts/historical-branch-reconciliation
