@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/branch-retirement.yml'
+  schedule:
+    - cron: '41 4 * * 1'
 
 permissions:
   contents: write
@@ -52,17 +54,13 @@ jobs:
               continue
             fi
 
-            encoded="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$branch")"
-            gh api -X DELETE "repos/${repo}/git/refs/heads/${encoded}"
+            gh api -X DELETE "repos/${repo}/git/refs/heads/${branch}"
             printf '%s\t%s\t%s\n' "$branch" "$sha" 'closed-historical-pattern' >> .artifacts/branch-retirement/deleted.tsv
           done < .artifacts/branch-retirement/all.tsv
 
-          jq -Rn \
-            --slurpfile dummy /dev/null \
-            '[inputs | split("\t") | {name:.[0], sha:.[1], reason:.[2]}]' \
+          jq -Rn '[inputs | split("\t") | {name:.[0], sha:.[1], reason:.[2]}]' \
             < .artifacts/branch-retirement/deleted.tsv > .artifacts/branch-retirement/deleted.json
-          jq -Rn \
-            '[inputs | split("\t") | {name:.[0], sha:.[1], reason:.[2]}]' \
+          jq -Rn '[inputs | split("\t") | {name:.[0], sha:.[1], reason:.[2]}]' \
             < .artifacts/branch-retirement/preserved.tsv > .artifacts/branch-retirement/preserved.json
           jq -n \
             --arg capturedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -77,6 +75,10 @@ jobs:
           set -euo pipefail
           deleted_count="$(jq '.deleted | length' .artifacts/branch-retirement/report.json)"
           preserved_count="$(jq '.preserved | length' .artifacts/branch-retirement/report.json)"
+          if [[ "$deleted_count" -eq 0 ]]; then
+            echo 'No stale branches were deleted; skipping evidence issue.'
+            exit 0
+          fi
           {
             echo 'Automated Lythaus branch-retirement evidence.'
             echo
