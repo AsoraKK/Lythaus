@@ -84,10 +84,6 @@ for (const relative of scannedFiles) {
   }
   if (contents.includes('\0')) continue;
 
-  if (normalized === 'package.json') {
-    contents = contents.replaceAll('https://github.com/AsoraKK/Lythaus', '');
-  }
-
   for (const rule of forbidden) {
     if (rule.pattern.test(contents)) {
       failures.push(`${normalized}: ${rule.name} appears in active content`);

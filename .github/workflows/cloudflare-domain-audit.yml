@@ -1,62 +1,52 @@
-name: Cloudflare Domain Audit
+name: Cloudflare account audit
 
 on:
   workflow_dispatch:
-    inputs:
-      mode:
-        description: Sanitized read-only audit scope
-        required: true
-        default: account_rulesets
-        type: choice
-        options:
-          - account_rulesets
-          - worker_snapshot
-          - full
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/cloudflare/audit-account.mjs'
+      - '.github/workflows/cloudflare-domain-audit.yml'
+      - 'infrastructure/lythaus-resource-registry.json'
+      - 'infrastructure/cloudflare/**'
 
 permissions:
   contents: read
 
 concurrency:
-  group: cloudflare-domain-audit
+  group: cloudflare-account-audit
   cancel-in-progress: false
 
 jobs:
-  recheck-previously-unavailable-endpoints:
-    name: Recheck previously unavailable endpoints
+  inventory:
+    name: Sanitized Cloudflare inventory
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+      CLOUDFLARE_AUDIT_OUTPUT: .artifacts/provider-inventory/cloudflare.json
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Require the audit token
-        shell: bash
-        run: test -n "$CLOUDFLARE_AUDIT_API_TOKEN"
-
-      - name: Install audit prerequisites
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes ripgrep
-
-      - name: Run Cloudflare domain audit
-        shell: pwsh
-        run: |
-          if ('${{ inputs.mode }}' -eq 'account_rulesets') {
-            ./scripts/cloudflare/audit-domains.ps1 -RecheckAccountRulesets
-          } elseif ('${{ inputs.mode }}' -eq 'worker_snapshot') {
-            ./scripts/cloudflare/audit-domains.ps1 -SnapshotWorkerName control-api-proxy
-          } else {
-            ./scripts/cloudflare/audit-domains.ps1
-          }
-
-      - name: Upload sanitized audit evidence
-        if: always()
-        uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          name: cloudflare-domain-audit-${{ github.run_id }}
-          if-no-files-found: warn
-          path: .artifacts/cloudflare-audit/sanitized-cloudflare-audit.json
+          node-version: '22'
+      - name: Capture read-only account inventory
+        run: node scripts/cloudflare/audit-account.mjs
+      - name: Reject active legacy-named Cloudflare resources after cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.resources.pages | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.resources.workers | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.resources.access | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          echo "Legacy-named resource count: $(jq '.legacyNamedResources | length' .artifacts/provider-inventory/cloudflare.json)"
+      - name: Upload sanitized provider evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cloudflare-account-audit-${{ github.sha }}
+          if-no-files-found: error
+          path: .artifacts/provider-inventory/cloudflare.json

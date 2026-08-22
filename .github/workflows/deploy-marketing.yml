@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: lythaus-marketing-preview
+  group: lythaus-marketing-${{ inputs.deployment_class }}
   cancel-in-progress: false
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 20
     env:
       PAGES_PROJECT: lythaus-marketing
-      PAGES_BRANCH: ${{ inputs.deployment_class == 'production' && 'main' || 'codex/lythaus-domain-migration' }}
+      PAGES_BRANCH: ${{ inputs.deployment_class == 'production' && 'main' || 'preview' }}
       PUBLIC_API_BASE_URL: https://api.lythaus.co
       PUBLIC_TURNSTILE_SITE_KEY: ''
     steps:
@@ -67,7 +67,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/cloudflare/waitlist-turnstile.mjs resolve
 
-      - name: Install preview validation prerequisites
+      - name: Install validation prerequisites
         run: |
           sudo apt-get update
           sudo apt-get install --yes ripgrep
@@ -101,7 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
-          npx --yes wrangler@4.110.0 pages deploy apps/marketing-site/dist \
+          npx --yes wrangler@4.123.0 pages deploy apps/marketing-site/dist \
             --project-name "$PAGES_PROJECT" \
             --branch "$PAGES_BRANCH" \
             --commit-hash "$RELEASE_SHA" \
@@ -153,7 +153,22 @@ jobs:
             rg -F 'waitlist_signup' preview-pages/_root.html
           fi
 
-      - name: Write sanitized preview evidence
+      - name: Validate production custom domains
+        if: inputs.deployment_class == 'production'
+        run: |
+          set -euo pipefail
+          for host in https://lythaus.co https://www.lythaus.co; do
+            headers="$(mktemp)"
+            body="$(mktemp)"
+            status="$(curl --location --silent --show-error --max-time 30 --retry 6 --retry-delay 3 --dump-header "$headers" --output "$body" --write-out '%{http_code}' "$host/")"
+            test "$status" = 200
+            rg -F 'The human internet is worth protecting.' "$body"
+            rg -F -i 'X-Content-Type-Options: nosniff' "$headers"
+            rg -F -i 'X-Frame-Options: DENY' "$headers"
+            rm -f "$headers" "$body"
+          done
+
+      - name: Write sanitized deployment evidence
         if: success()
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
@@ -164,15 +179,15 @@ jobs:
             --arg project "$PAGES_PROJECT" \
             --arg branch "$PAGES_BRANCH" \
             --arg previewUrl "$PREVIEW_URL" \
-            --arg turnstileSitekey "$PUBLIC_TURNSTILE_SITE_KEY" \
+            --arg deploymentClass "${{ inputs.deployment_class }}" \
             --arg createdAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{schemaVersion: 1, commitSha: $commitSha, project: $project, branch: $branch, previewUrl: $previewUrl, turnstileSitekey: ($turnstileSitekey | select(length > 0)), routeCount: 10, customDomainsChanged: false, createdAt: $createdAt}' \
-            > marketing-preview-evidence.json
+            '{schemaVersion: 1, commitSha: $commitSha, project: $project, branch: $branch, previewUrl: $previewUrl, deploymentClass: $deploymentClass, routeCount: 10, createdAt: $createdAt}' \
+            > marketing-deployment-evidence.json
 
-      - name: Upload preview evidence
+      - name: Upload deployment evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: marketing-preview-evidence-${{ github.sha }}
+          name: marketing-deployment-evidence-${{ inputs.release_sha }}
           if-no-files-found: warn
-          path: marketing-preview-evidence.json
+          path: marketing-deployment-evidence.json
