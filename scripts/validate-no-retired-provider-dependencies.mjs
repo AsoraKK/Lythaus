@@ -22,6 +22,7 @@ if (allowlist.version !== 1 || !Array.isArray(allowlist.entries)) {
 
 const approvedAllowlistPaths = new Set([
   'docs/history/**',
+  'docs/evidence/**',
   'docs/security/azure-github-secret-removal-2026-08-06.md',
   'docs/security/github-credential-purpose-inventory.md',
   'docs/security/provider-decommission-follow-up.md',
@@ -37,6 +38,7 @@ const approvedAllowlistPaths = new Set([
   'database/planetscale/migrations/0002_core_tables.sql',
   'database/planetscale/migrations/0007_contact_emails.sql',
   'scripts/retired-reference-allowlist.json',
+  'scripts/ci/build-release-manifest.mjs',
   'scripts/validate-no-retired-provider-dependencies.mjs',
 ]);
 

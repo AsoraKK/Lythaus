@@ -2,6 +2,7 @@
   "version": 1,
   "entries": [
     { "path": "docs/history/**", "kind": "historical", "reason": "Historical chronology is retained without changing commit provenance." },
+    { "path": "docs/evidence/**", "kind": "operational-evidence", "reason": "Sanitised provider and repository evidence preserves owner and retired-provider references needed to explain current boundaries." },
     { "path": "docs/security/azure-github-secret-removal-2026-08-06.md", "kind": "historical-evidence", "reason": "Sanitised deletion evidence records retired provider names and scopes only." },
     { "path": "docs/security/github-credential-purpose-inventory.md", "kind": "operational-evidence", "reason": "Sanitised credential-purpose evidence records provider classifications without secret values." },
     { "path": "docs/security/provider-decommission-follow-up.md", "kind": "operational-evidence", "reason": "The provider checklist records gated legacy state and proposed rollback actions." },
@@ -17,6 +18,7 @@
     { "path": "database/planetscale/migrations/0002_core_tables.sql", "kind": "immutable-migration", "reason": "Applied historical migration; checksums and chronology must remain unchanged." },
     { "path": "database/planetscale/migrations/0007_contact_emails.sql", "kind": "immutable-migration", "reason": "Applied historical migration; checksums and chronology must remain unchanged." },
     { "path": "scripts/retired-reference-allowlist.json", "kind": "guard", "reason": "The allowlist necessarily describes its own permitted paths." },
+    { "path": "scripts/ci/build-release-manifest.mjs", "kind": "runtime-identity", "reason": "The release manifest preserves the configured GitHub owner identity while keeping provider evidence explicit." },
     { "path": "scripts/validate-no-retired-provider-dependencies.mjs", "kind": "guard", "reason": "The guard constructs forbidden patterns and reads the allowlist." }
   ]
 }
