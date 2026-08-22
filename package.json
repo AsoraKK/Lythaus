@@ -78,7 +78,7 @@
     "ajv-formats": "^3.0.1",
     "cross-fetch": "^4.1.0",
     "glob": "^13.0.6",
-    "husky": "^8.0.3",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jsonpointer": "^5.0.1",
     "oasdiff": "file:tools/openapi/oasdiff",
