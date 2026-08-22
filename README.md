@@ -1,6 +1,6 @@
 # Lythaus
 
-Lythaus is an invite-only social publishing platform focused on transparent authorship, trustworthy feeds, moderation appeals, and privacy rights.
+Lythaus is a human-first, public-interest social platform built for genuine human interaction, transparent authorship, accountable moderation, useful feeds, and privacy rights.
 
 ## Runtime
 
@@ -10,9 +10,9 @@ The canonical backend is three Cloudflare Workers backed by PlanetScale PostgreS
 - `apps/lythaus-admin-api` — protected administration API
 - `apps/lythaus-jobs` — queue consumers and durable background workflows
 
-Cloudflare R2 stores media, Queues and Workflows run asynchronous work, and Workers AI provides provider-neutral Lythaus Authenticity AI evaluation. Azure was fully deleted on 6 August 2026 and is not a runtime, deployment, recovery, or authentication fallback.
+Cloudflare R2 stores media, Queues and Workflows run asynchronous work, and Workers AI supports provider-neutral Lythaus Authenticity AI evaluation. Azure was fully deleted on 6 August 2026 and is not a runtime, deployment, recovery, or authentication fallback.
 
-Initial authentication supports email and guest access only. Google, Apple, World ID, Entra, Azure B2C, and generic OAuth provider selection are outside the launch surface.
+Initial authentication supports Guest and Email only. Guest access is limited to read-only public browsing. Email is the canonical registered-user authentication path. Google, Apple, World ID, Entra, Azure B2C, and generic OAuth provider selection are outside the launch surface.
 
 ## Repository
 
@@ -30,7 +30,7 @@ Initial authentication supports email and guest access only. Google, Apple, Worl
 | `api/openapi/` | Canonical OpenAPI source and generated contract |
 | `docs/` | Current architecture, policy, runbooks, security, and history |
 
-Historical commits may retain the former product name. Active code, configuration, documentation, artifacts, and deployed systems must use Lythaus.
+Historical commits and explicitly historical evidence may retain retired names. Active code, configuration, documentation, artifacts, package metadata, and deployed systems must use Lythaus.
 
 ## Local development
 
@@ -68,9 +68,11 @@ The source contract is `api/openapi/openapi.yaml`. Generated Dart code is writte
 
 ## Deployment
 
-`.github/workflows/native-workers-deploy.yml` is the only backend deployment workflow. It accepts a reviewed 40-character SHA that must equal current `origin/main`, validates the Cloudflare and PlanetScale production scope, then deploys the public API, admin API, and jobs Worker.
+`main` is the sole long-lived Git branch and the source of production releases. Production workflows accept an exact reviewed 40-character SHA and must refuse deployment when it does not equal current `origin/main`.
 
-Frontend deployments are separate and must target Lythaus Pages projects and `lythaus.co` domains. No workflow may build, package, upload, or deploy an Azure application.
+`.github/workflows/native-workers-deploy.yml` is the canonical backend deployment workflow for the public API, admin API, and jobs Worker. `.github/workflows/deploy-marketing.yml` is the canonical Cloudflare Pages marketing workflow. The control panel and Flutter web application use their dedicated exact-SHA workflows.
+
+Frontend deployments must target approved Lythaus Pages projects and `lythaus.co` domains. No workflow may build, package, upload, or deploy an Azure application.
 
 ## References
 
