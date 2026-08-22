@@ -38,22 +38,6 @@ on:
         description: Cloudflare-protected admin API origin
         required: true
         type: string
-    outputs:
-      pages_deployment_id:
-        description: Exact Pages deployment identifier selected for the release SHA
-        value: ${{ jobs.deploy-and-smoke.outputs.pages_deployment_id }}
-      pages_deployment_url:
-        description: Exact Pages deployment URL selected for the release SHA
-        value: ${{ jobs.deploy-and-smoke.outputs.pages_deployment_url }}
-      pages_project:
-        description: Canonical Flutter web Pages project
-        value: ${{ jobs.deploy-and-smoke.outputs.pages_project }}
-      pages_branch:
-        description: Pages branch used for the release
-        value: ${{ jobs.deploy-and-smoke.outputs.pages_branch }}
-      deployed_sha:
-        description: Pages commit SHA verified after deployment
-        value: ${{ jobs.deploy-and-smoke.outputs.deployed_sha }}
   workflow_call:
     inputs:
       release_sha:
@@ -88,6 +72,22 @@ on:
         description: Cloudflare-protected admin API origin
         required: true
         type: string
+    outputs:
+      pages_deployment_id:
+        description: Exact Pages deployment identifier selected for the release SHA
+        value: ${{ jobs.deploy-and-smoke.outputs.pages_deployment_id }}
+      pages_deployment_url:
+        description: Exact Pages deployment URL selected for the release SHA
+        value: ${{ jobs.deploy-and-smoke.outputs.pages_deployment_url }}
+      pages_project:
+        description: Canonical Flutter web Pages project
+        value: ${{ jobs.deploy-and-smoke.outputs.pages_project }}
+      pages_branch:
+        description: Pages branch used for the release
+        value: ${{ jobs.deploy-and-smoke.outputs.pages_branch }}
+      deployed_sha:
+        description: Pages commit SHA verified after deployment
+        value: ${{ jobs.deploy-and-smoke.outputs.deployed_sha }}
 
 permissions:
   actions: read
