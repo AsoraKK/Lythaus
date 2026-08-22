@@ -1,0 +1,174 @@
+name: Verify human-first marketing live once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-marketing-human-first-live-once.yml
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: lythaus-marketing-production-verification
+  cancel-in-progress: false
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXPECTED_BASE_SHA: 2665224ba3cab1e81f388f46f0f2ec56c0a5ffdd
+      EXPECTED_DEPLOYED_SHA: 2665224ba3cab1e81f388f46f0f2ec56c0a5ffdd
+      PAGES_PROJECT: lythaus-marketing
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Require verification merge directly on reviewed main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD^1)" = "$EXPECTED_BASE_SHA"
+
+      - name: Verify Cloudflare Pages deployment and custom domains
+        id: verify
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+          api_response="$(mktemp)"
+          curl --fail-with-body --silent --show-error --max-time 30 \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}/deployments?env=production&per_page=1" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -o "$api_response"
+
+          jq -e '.success == true' "$api_response" >/dev/null
+          deployed_sha="$(jq -r '.result[0].deployment_trigger.metadata.commit_hash // empty' "$api_response")"
+          deployment_id="$(jq -r '.result[0].id // empty' "$api_response")"
+          deployment_url="$(jq -r '.result[0].url // empty' "$api_response")"
+          deployment_status="$(jq -r '.result[0].latest_stage.status // empty' "$api_response")"
+          test "$deployed_sha" = "$EXPECTED_DEPLOYED_SHA"
+          test -n "$deployment_id"
+          test -n "$deployment_url"
+          test "$deployment_status" = success
+
+          for host in https://lythaus.co https://www.lythaus.co; do
+            body="$(mktemp)"
+            headers="$(mktemp)"
+            status="$(curl --location --silent --show-error --max-time 30 --retry 5 --retry-delay 2 \
+              --dump-header "$headers" --output "$body" --write-out '%{http_code}' "$host/")"
+            test "$status" = 200
+            grep -F 'The human internet is worth protecting.' "$body"
+            grep -F 'Built for humans first.' "$body"
+            grep -F 'Lythaus is a human-first, public-interest platform built for genuine human interaction.' "$body"
+            grep -F 'Algorithms for relevance, not addiction.' "$body"
+            grep -F 'Reputation is earned.' "$body"
+            grep -F 'Member content is not sold or repurposed to train generative models.' "$body"
+            grep -F 'challenges.cloudflare.com/turnstile/v0/api.js' "$body"
+            grep -F 'waitlist_signup' "$body"
+            grep -F -i 'X-Content-Type-Options: nosniff' "$headers"
+            grep -F -i 'X-Frame-Options: DENY' "$headers"
+            rm -f "$body" "$headers"
+          done
+
+          mkdir -p "$RUNNER_TEMP/marketing-live-verification"
+          jq -n \
+            --arg status pass \
+            --arg deployedSha "$deployed_sha" \
+            --arg deploymentId "$deployment_id" \
+            --arg deploymentUrl "$deployment_url" \
+            --arg pagesProject "$PAGES_PROJECT" \
+            --arg verifiedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{schemaVersion:1,status:$status,deployedSha:$deployedSha,deploymentId:$deploymentId,deploymentUrl:$deploymentUrl,pagesProject:$pagesProject,customDomains:["lythaus.co","www.lythaus.co"],verifiedAt:$verifiedAt}' \
+            > "$RUNNER_TEMP/marketing-live-verification/result.json"
+
+          {
+            echo "deployed_sha=$deployed_sha"
+            echo "deployment_id=$deployment_id"
+            echo "deployment_url=$deployment_url"
+          } >> "$GITHUB_OUTPUT"
+          rm -f "$api_response"
+
+      - name: Capture live desktop and mobile screenshots
+        if: steps.verify.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$chrome"
+          evidence="$RUNNER_TEMP/marketing-live-verification"
+          "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+            --run-all-compositor-stages-before-draw --virtual-time-budget=5200 \
+            --window-size=1440,1000 --screenshot="$evidence/opening-desktop.png" https://lythaus.co/
+          "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+            --run-all-compositor-stages-before-draw --virtual-time-budget=5200 \
+            --window-size=390,844 --screenshot="$evidence/opening-mobile.png" https://lythaus.co/
+          "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+            --run-all-compositor-stages-before-draw --virtual-time-budget=1600 \
+            --window-size=1440,1000 --screenshot="$evidence/problem-desktop.png" https://lythaus.co/#problem
+          "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+            --run-all-compositor-stages-before-draw --virtual-time-budget=1600 \
+            --window-size=1440,1000 --screenshot="$evidence/discovery-desktop.png" https://lythaus.co/#discovery
+          test -s "$evidence/opening-desktop.png"
+          test -s "$evidence/opening-mobile.png"
+          test -s "$evidence/problem-desktop.png"
+          test -s "$evidence/discovery-desktop.png"
+
+      - name: Record verification result on PR 594
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          DEPLOYED_SHA: ${{ steps.verify.outputs.deployed_sha }}
+          DEPLOYMENT_ID: ${{ steps.verify.outputs.deployment_id }}
+          DEPLOYMENT_URL: ${{ steps.verify.outputs.deployment_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$VERIFY_OUTCOME" = success ]]; then
+            body=$(cat <<EOF
+          Production verification passed.
+
+          - Cloudflare Pages project: \`$PAGES_PROJECT\`
+          - Deployed marketing SHA: \`$DEPLOYED_SHA\`
+          - Expected marketing SHA: \`$EXPECTED_DEPLOYED_SHA\`
+          - Cloudflare deployment ID: \`$DEPLOYMENT_ID\`
+          - Deployment URL: $DEPLOYMENT_URL
+          - Custom domains verified: https://lythaus.co and https://www.lythaus.co
+          - New human-first copy, Turnstile client, waitlist client and required security headers verified.
+          - Live desktop/mobile screenshots captured in workflow artifact \`marketing-live-verification-$GITHUB_SHA\`.
+          - Verification workflow run ID: \`$GITHUB_RUN_ID\`.
+          EOF
+          )
+          else
+            body=$(cat <<EOF
+          Production verification failed for the human-first marketing refresh.
+
+          Expected Cloudflare Pages production deployment SHA: \`$EXPECTED_DEPLOYED_SHA\`.
+          Inspect workflow run \`$GITHUB_RUN_ID\` before treating the release as verified.
+          EOF
+          )
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/594/comments" -f body="$body"
+          test "$VERIFY_OUTCOME" = success
+
+      - name: Upload sanitized verification evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: marketing-live-verification-${{ github.sha }}
+          path: ${{ runner.temp }}/marketing-live-verification
+          if-no-files-found: warn
+          retention-days: 90
