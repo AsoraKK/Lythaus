@@ -1,5 +1,8 @@
 import { createLocalJWKSet, importPKCS8, jwtVerify, SignJWT, type JSONWebKeySet } from 'jose';
 
+export const LYTHAUS_ACCESS_TOKEN_ISSUER = 'https://api.lythaus.co';
+export const LYTHAUS_ACCESS_TOKEN_AUDIENCE = 'lythaus-app';
+
 export interface Principal {
   userId: string;
   roles: string[];
@@ -18,6 +21,8 @@ export async function signAccessToken(input: {
   const expiresInSeconds = input.expiresInSeconds ?? 900;
   return new SignJWT({ roles: input.roles ?? [], tokenVersion: input.tokenVersion ?? 1 })
     .setProtectedHeader({ alg: 'ES256', kid: input.keyId, typ: 'JWT' })
+    .setIssuer(LYTHAUS_ACCESS_TOKEN_ISSUER)
+    .setAudience(LYTHAUS_ACCESS_TOKEN_AUDIENCE)
     .setSubject(input.userId)
     .setIssuedAt()
     .setExpirationTime(`${expiresInSeconds}s`)
@@ -26,7 +31,11 @@ export async function signAccessToken(input: {
 
 export async function verifyAccessToken(token: string, jwksJson: string): Promise<Principal> {
   const jwks = createLocalJWKSet(JSON.parse(jwksJson) as JSONWebKeySet);
-  const verified = await jwtVerify(token, jwks, { algorithms: ['ES256'] });
+  const verified = await jwtVerify(token, jwks, {
+    algorithms: ['ES256'],
+    issuer: LYTHAUS_ACCESS_TOKEN_ISSUER,
+    audience: LYTHAUS_ACCESS_TOKEN_AUDIENCE,
+  });
   const subject = verified.payload.sub;
   if (!subject) throw new Error('token_subject_missing');
   const roles = Array.isArray(verified.payload.roles)
