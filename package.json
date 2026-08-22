@@ -73,7 +73,7 @@
     "@redocly/cli": "^2.5.0",
     "@stoplight/spectral-cli": "6.15.0",
     "@types/jest": "^30.0.0",
-    "@types/pg": "^8.15.5",
+    "@types/pg": "^8.23.1",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cross-fetch": "^4.1.0",
