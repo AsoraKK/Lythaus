@@ -65,10 +65,19 @@ const publicAccessValues = Object.fromEntries(
 const pages = arrayResult(responses.pages).map((project) => ({
   name: project.name,
   productionBranch: project.production_branch ?? null,
+  sourceIntegration: project.source ? {
+    type: project.source.type ?? null,
+    owner: project.source.config?.owner ?? null,
+    repoName: project.source.config?.repo_name ?? null,
+    repoId: project.source.config?.repo_id ?? null,
+    productionDeploymentsEnabled: project.source.config?.production_deployments_enabled ?? null,
+    previewDeploymentSetting: project.source.config?.preview_deployment_setting ?? null,
+  } : null,
   domains: Array.isArray(project.domains) ? project.domains : [],
   latestDeployment: project.latest_deployment ? {
     id: project.latest_deployment.id ?? null,
     environment: project.latest_deployment.environment ?? null,
+    triggerType: project.latest_deployment.deployment_trigger?.type ?? null,
     commitHash: project.latest_deployment.deployment_trigger?.metadata?.commit_hash ?? null,
   } : null,
 }));
@@ -93,6 +102,25 @@ const turnstile = arrayResult(responses.turnstile).map((widget) => ({ sitekey: w
 const dns = arrayResult(responses.dns).map((record) => ({ id: record.id ?? null, type: record.type ?? null, name: record.name ?? null, proxied: record.proxied ?? null }));
 const routes = arrayResult(responses.routes).map((route) => ({ id: route.id ?? null, pattern: route.pattern ?? null, script: route.script ?? null }));
 
+const deployHookEntries = await Promise.all(
+  workers
+    .map(({ name }) => name)
+    .filter((name) => typeof name === 'string' && name.length > 0)
+    .map(async (name) => [name, await request(`${accountBase}/builds/workers/${encodeURIComponent(name)}/deploy_hooks`)]),
+);
+const deployHooks = Object.fromEntries(deployHookEntries.map(([name, response]) => [
+  name,
+  arrayResult(response).map((hook) => ({
+    id: hook.deploy_hook_uuid ?? hook.id ?? null,
+    name: hook.deploy_hook_name ?? hook.name ?? null,
+    branch: hook.branch ?? null,
+    createdOn: hook.created_on ?? null,
+  })),
+]));
+const integrations = pages
+  .filter(({ sourceIntegration }) => sourceIntegration !== null)
+  .map(({ name, sourceIntegration }) => ({ project: name, ...sourceIntegration }));
+
 const retiredBrand = ['as', 'ora'].join('');
 const legacyPattern = new RegExp(retiredBrand, 'i');
 const legacyNamedResources = [
@@ -109,9 +137,12 @@ const report = {
   capturedAt: new Date().toISOString(),
   accountId,
   zoneId,
-  endpointState: Object.fromEntries(Object.entries(responses).map(([name, response]) => [name, endpointState(response)])),
+  endpointState: {
+    ...Object.fromEntries(Object.entries(responses).map(([name, response]) => [name, endpointState(response)])),
+    deployHooks: Object.fromEntries(deployHookEntries.map(([name, response]) => [name, endpointState(response)])),
+  },
   adminWorkerSettings: { state: endpointState(adminSettings), access: publicAccessValues },
-  resources: { pages, workers, hyperdrives, r2, queues, workflows, kv, access, turnstile, dns, routes },
+  resources: { pages, workers, hyperdrives, r2, queues, workflows, kv, access, turnstile, dns, routes, integrations, deployHooks },
   legacyNamedResources,
 };
 

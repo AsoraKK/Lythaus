@@ -1,0 +1,58 @@
+name: Apply verified Lythaus branch retirement
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Exact non-main branch ref to delete
+        required: true
+        type: string
+      expected_sha:
+        description: Expected current branch SHA from the disposition report
+        required: true
+        type: string
+      confirm_delete:
+        description: Confirm this reviewed branch deletion
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  delete:
+    name: Delete one verified branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TARGET_BRANCH: ${{ inputs.branch }}
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      CONFIRM_DELETE: ${{ inputs.confirm_delete }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Verify reviewed branch state
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CONFIRM_DELETE" == 'true' ]] || { echo 'confirm_delete must be true'; exit 1; }
+          [[ "$TARGET_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo 'branch contains unsupported characters'; exit 1; }
+          [[ "$TARGET_BRANCH" != 'main' ]] || { echo 'main can never be deleted'; exit 1; }
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'expected_sha must be a full commit SHA'; exit 1; }
+          git fetch --no-tags origin "refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}" main
+          actual_sha="$(git rev-parse "refs/remotes/origin/${TARGET_BRANCH}")"
+          [[ "$actual_sha" == "$EXPECTED_SHA" ]] || { echo "branch moved from expected SHA: $actual_sha"; exit 1; }
+          git merge-base --is-ancestor "refs/remotes/origin/${TARGET_BRANCH}" origin/main || {
+            echo 'branch is not fully reachable from current main; refusing deletion';
+            exit 1;
+          }
+      - name: Delete verified branch ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          encoded_branch="$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$TARGET_BRANCH")"
+          gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${encoded_branch}"

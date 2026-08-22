@@ -1,0 +1,42 @@
+name: GitHub controls audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '13 4 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/github/audit-repository-controls.mjs'
+      - '.github/workflows/github-controls-audit.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: github-controls-audit
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    name: Sanitized GitHub controls inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Capture read-only controls inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_CONTROLS_AUDIT_OUTPUT: .artifacts/repository-controls/github.json
+        run: node scripts/github/audit-repository-controls.mjs
+      - name: Upload sanitized controls evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: github-controls-audit-${{ github.sha }}
+          if-no-files-found: error
+          path: .artifacts/repository-controls/github.json

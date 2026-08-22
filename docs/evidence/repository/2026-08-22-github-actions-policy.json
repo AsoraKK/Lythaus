@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "lythaus-github-actions-policy-v1",
+  "capturedAt": "2026-08-22",
+  "repository": "AsoraKK/Lythaus",
+  "enabled": true,
+  "allowedActions": "all",
+  "shaPinnedRequired": true,
+  "mutationPerformed": true,
+  "rollback": "PUT /repos/AsoraKK/Lythaus/actions/permissions with enabled:true, allowed_actions:all, sha_pinning_required:false only with explicit owner approval"
+}

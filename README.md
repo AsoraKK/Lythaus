@@ -68,11 +68,26 @@ The source contract is `api/openapi/openapi.yaml`. Generated Dart code is writte
 
 ## Deployment
 
-`main` is the sole long-lived Git branch and the source of production releases. Production workflows accept an exact reviewed 40-character SHA and must refuse deployment when it does not equal current `origin/main`.
+`main` is the sole long-lived Git branch and the source of production releases. It
+is protected by pull-request review, required CI/security checks, resolved
+conversations, linear history, and no force-push or branch-deletion policy.
+The canonical `.github/workflows/production-release.yml` workflow accepts an
+exact reviewed 40-character SHA and coordinates the marketing, Flutter web,
+control-panel, public API, admin API, and jobs deployments. Every child workflow
+must refuse deployment when its SHA does not equal current `origin/main`.
 
-`.github/workflows/native-workers-deploy.yml` is the canonical backend deployment workflow for the public API, admin API, and jobs Worker. `.github/workflows/deploy-marketing.yml` is the canonical Cloudflare Pages marketing workflow. The control panel and Flutter web application use their dedicated exact-SHA workflows.
+`.github/workflows/native-workers-deploy.yml` remains the canonical backend
+deployment implementation. `.github/workflows/deploy-marketing.yml` is the
+canonical Cloudflare Pages marketing implementation; the control panel and
+Flutter web application use their dedicated exact-SHA implementations. The
+resulting `.artifacts/release/release-manifest.json` is the authoritative
+cross-provider release record and remains blocked until provider evidence is
+complete.
 
 Frontend deployments must target approved Lythaus Pages projects and `lythaus.co` domains. No workflow may build, package, upload, or deploy an Azure application.
+
+Read-only GitHub, Cloudflare, PlanetScale, and branch evidence is stored under
+`docs/evidence/`; unavailable provider state is recorded as `UNKNOWN/BLOCKED`.
 
 ## References
 

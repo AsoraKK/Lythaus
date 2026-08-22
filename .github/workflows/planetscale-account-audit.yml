@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: planetscale-account-audit
@@ -23,6 +22,9 @@ jobs:
     name: Sanitized PlanetScale inventory
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
     env:
       PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
       PLANETSCALE_ORGANIZATION: lythaus
@@ -30,8 +32,8 @@ jobs:
       PLANETSCALE_AUDIT_OUTPUT: .artifacts/provider-inventory/planetscale.json
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
       - name: Capture read-only database and branch inventory
@@ -70,7 +72,7 @@ jobs:
             --body-file .artifacts/provider-inventory/planetscale-issue.md
       - name: Upload sanitized provider evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: planetscale-account-audit-${{ github.sha }}
           if-no-files-found: error

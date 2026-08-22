@@ -2,12 +2,6 @@ name: Branch disposition and safe retirement
 
 on:
   workflow_dispatch:
-    inputs:
-      apply_safe_deletions:
-        description: Delete only branches proven reachable from main or with zero unique commits
-        required: false
-        default: false
-        type: boolean
   push:
     branches: [main]
     paths:
@@ -16,9 +10,7 @@ on:
     - cron: '41 4 * * 1'
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: read
+  contents: read
 
 concurrency:
   group: lythaus-branch-disposition
@@ -28,10 +20,14 @@ jobs:
   inventory-and-retire:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
@@ -131,32 +127,15 @@ jobs:
           jq -r '.branches[] | [.branch,.sha,(.pr // ""),.prState,.mergeBase,.uniqueCommits,.patchUniqueCommits,.lastUpdated,.reachableFromMain,.disposition,(.changedFiles|join(","))] | @tsv' \
             "$report_dir/report-before.json" > "$report_dir/report-before.tsv"
 
-      - name: Delete only objectively safe branches
+      - name: Record objectively safe branch candidates
         shell: bash
         run: |
           set -euo pipefail
           report_dir='.artifacts/branch-retirement'
-          apply='false'
-          if [[ "$GITHUB_EVENT_NAME" == 'push' ]]; then
-            apply='true'
-          elif [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' && '${{ inputs.apply_safe_deletions }}' == 'true' ]]; then
-            apply='true'
-          fi
-
           : > "$report_dir/deleted.tsv"
-          if [[ "$apply" != 'true' ]]; then
-            echo 'Inventory-only run; no branch refs will be deleted.'
-            exit 0
-          fi
-
           jq -r '.branches[] | select(.disposition | startswith("safe-delete-")) | [.branch,.sha,.disposition] | @tsv' \
-            "$report_dir/report-before.json" \
-            | while IFS=$'\t' read -r branch sha disposition; do
-                [[ -n "$branch" && "$branch" != 'main' ]] || continue
-                encoded="$(jq -rn --arg v "$branch" '$v|@uri')"
-                gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${encoded}"
-                printf '%s\t%s\t%s\n' "$branch" "$sha" "$disposition" >> "$report_dir/deleted.tsv"
-              done
+            "$report_dir/report-before.json" > "$report_dir/safe-delete-candidates.tsv"
+          echo 'Inventory-only run; no branch refs will be deleted.'
 
       - name: Capture post-retirement state
         shell: bash
@@ -169,7 +148,8 @@ jobs:
             --slurpfile before "$report_dir/report-before.json" \
             --slurpfile remaining "$report_dir/remaining-branches.json" \
             --rawfile deleted "$report_dir/deleted.tsv" \
-            '{before:$before[0],remaining:$remaining[0],deletedTsv:$deleted}' \
+            --rawfile candidates "$report_dir/safe-delete-candidates.tsv" \
+            '{before:$before[0],remaining:$remaining[0],deletedTsv:$deleted,safeDeleteCandidatesTsv:$candidates}' \
             > "$report_dir/final-report.json"
 
       - name: Persist branch-disposition evidence as a GitHub issue
@@ -212,7 +192,7 @@ jobs:
 
       - name: Upload branch-disposition evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: branch-disposition-${{ github.sha }}
           if-no-files-found: error

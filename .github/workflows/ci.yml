@@ -19,7 +19,7 @@ jobs:
     name: Repository hygiene
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
       - name: Install ripgrep and ShellCheck
@@ -39,7 +39,7 @@ jobs:
     name: Workflow lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Download actionlint
         run: |
           set -euo pipefail
@@ -49,13 +49,21 @@ jobs:
         env:
           SHELLCHECK_OPTS: -e SC2086 -e SC2126
         run: ./bin/actionlint -color
+      - name: Require immutable action pins
+        run: npm run validate:workflow-action-pins
+      - name: Validate production release contract
+        run: npm run validate:production-release-contract
+      - name: Validate read-only Cloudflare audit contract
+        run: node --test scripts/tests/cloudflare-audit-contract.test.mjs
+      - name: Validate read-only GitHub controls audit contract
+        run: node --test scripts/tests/github-controls-audit.test.mjs
 
   native_runtime:
     name: Native Workers and PlanetScale
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
@@ -69,6 +77,10 @@ jobs:
       - run: npm run test:authenticity-foundation
       - run: npm run test:database-identity
       - run: npm run test:budget
+      - name: Validate release manifest contract
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: npm run validate:release-manifest
       - run: npm run validate:native-workers
       - run: npm run validate:native-scope
       - run: npm run validate:no-retired-provider-dependencies
@@ -79,16 +91,16 @@ jobs:
     name: OpenAPI contract
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         with:
           distribution: temurin
           java-version: '17'
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           flutter-version-file: .fvmrc
           channel: stable
@@ -109,8 +121,8 @@ jobs:
     name: Flutter analyze and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           flutter-version-file: .fvmrc
           channel: stable
@@ -124,8 +136,8 @@ jobs:
     name: Web frontends
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
@@ -141,8 +153,8 @@ jobs:
     name: Dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm

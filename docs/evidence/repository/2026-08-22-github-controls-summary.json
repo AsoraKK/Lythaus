@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "lythaus-github-controls-summary-v1",
+  "capturedAt": "2026-08-22T17:48:21Z",
+  "repository": "AsoraKK/Lythaus",
+  "status": "PARTIAL/UNKNOWN",
+  "mutationPerformed": false,
+  "endpointState": {
+    "repositorySecrets": "VERIFIED",
+    "repositoryVariables": "VERIFIED",
+    "environments": "VERIFIED",
+    "deployKeys": "VERIFIED",
+    "hooks": "VERIFIED",
+    "installations": "UNKNOWN/BLOCKED: GitHub API returned 404 for repository installations",
+    "actionsPermissions": "VERIFIED"
+  },
+  "counts": {
+    "repositorySecretNames": 13,
+    "repositoryVariableNames": 5,
+    "environments": 3,
+    "deployKeys": 0,
+    "hooks": 0,
+    "installations": "UNKNOWN/BLOCKED"
+  },
+  "environmentNames": ["dev", "production", "staging"],
+  "actionsPermissions": {
+    "enabled": true,
+    "allowedActions": "all",
+    "shaPinnedRequiredAtCapture": false,
+    "repositoryValidator": "scripts/validate-workflow-action-pins.mjs"
+  },
+  "humanReviewRequired": [
+    "Classify retained secret and variable names without exporting values.",
+    "Review environment controls and obsolete credentials before removal.",
+    "Rotate retained Cloudflare and PlanetScale credentials after approved cutover."
+  ]
+}

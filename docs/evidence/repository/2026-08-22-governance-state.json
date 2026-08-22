@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "lythaus-github-governance-state-v1",
+  "capturedAt": "2026-08-22",
+  "repository": "AsoraKK/Lythaus",
+  "branch": "main",
+  "mainShaAtCapture": "e259181400f3e1561b0c635f4951c13b2460faab",
+  "branchProtection": {
+    "status": "ACTIVE",
+    "enforceAdmins": true,
+    "requiredApprovingReviewCount": 1,
+    "dismissStaleReviews": true,
+    "requireLastPushApproval": true,
+    "requiredConversationResolution": true,
+    "requiredLinearHistory": true,
+    "allowForcePushes": false,
+    "allowDeletions": false,
+    "requiredChecks": [
+      "Repository hygiene",
+      "Workflow lint",
+      "Native Workers and PlanetScale",
+      "OpenAPI contract",
+      "Flutter analyze and test",
+      "Web frontends",
+      "Dependency audit",
+      "Launch blockers summary",
+      "CodeQL JavaScript TypeScript",
+      "dependency-review",
+      "scan"
+    ]
+  },
+  "mutationPerformed": true,
+  "rollback": "DELETE /repos/AsoraKK/Lythaus/branches/main/protection only with explicit owner approval"
+}

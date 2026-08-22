@@ -13,6 +13,16 @@ on:
         default: preview
         type: choice
         options: [preview, production]
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact 40-character commit SHA to build and deploy
+        required: true
+        type: string
+      deployment_class:
+        description: Pages deployment class
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -32,7 +42,7 @@ jobs:
       PUBLIC_API_BASE_URL: https://api.lythaus.co
       PUBLIC_TURNSTILE_SITE_KEY: ''
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
@@ -54,7 +64,7 @@ jobs:
             }
           fi
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
@@ -186,7 +196,7 @@ jobs:
 
       - name: Upload deployment evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: marketing-deployment-evidence-${{ inputs.release_sha }}
           if-no-files-found: warn

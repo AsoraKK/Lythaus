@@ -2,7 +2,7 @@
 
 **Status:** Accepted repository architecture; production launch remains NO-GO pending the gates below.
 
-**Date:** 2026-08-11
+**Date:** 2026-08-22
 
 ## Decision
 
@@ -83,6 +83,13 @@ training and conflict operations are approved; strict feed p95 and cache
 isolation are measured on release-like infrastructure; incident and rollback
 evidence is retained; and any disabled queue enablement receives explicit
 no-cost approval.
+
+The consolidation release chain is `protected main -> reviewed SHA -> canonical
+Cloudflare release -> verified PlanetScale state`. The repository workflow
+`.github/workflows/production-release.yml` coordinates the exact-SHA surface
+deployments, while `docs/evidence/` records sanitized provider and branch
+evidence. A missing provider capability is `UNKNOWN/BLOCKED`; green repository
+CI alone never grants production approval.
 
 ## Supersession
 

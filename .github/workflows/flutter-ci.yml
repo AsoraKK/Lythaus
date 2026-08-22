@@ -13,10 +13,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       
     - name: Setup Flutter
-      uses: subosito/flutter-action@v2
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
       with:
         flutter-version-file: .fvmrc
         cache: true
@@ -44,10 +44,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       
     - name: Setup Flutter
-      uses: subosito/flutter-action@v2
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
       with:
         flutter-version-file: .fvmrc
         cache: true
@@ -68,10 +68,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
     - name: Setup Flutter
-      uses: subosito/flutter-action@v2
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
       with:
         flutter-version-file: .fvmrc
         cache: true
@@ -110,10 +110,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
     - name: Setup Flutter
-      uses: subosito/flutter-action@v2
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
       with:
         flutter-version-file: .fvmrc
         cache: true
@@ -148,10 +148,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
     - name: Setup Node.js
-      uses: actions/setup-node@v7
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
       with:
         node-version: '22'
         cache: 'npm'

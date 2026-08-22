@@ -7,6 +7,21 @@ on:
         description: Exact merged main SHA to build and deploy
         required: true
         type: string
+      pages_project:
+        description: Approved control-panel Pages project name; blank uses the repository variable
+        required: false
+        default: ''
+        type: string
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact merged main SHA to build and deploy
+        required: true
+        type: string
+      pages_project:
+        description: Approved control-panel Pages project name
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,9 +36,9 @@ jobs:
     environment: production
     timeout-minutes: 20
     env:
-      PAGES_PROJECT: ${{ vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
+      PAGES_PROJECT: ${{ inputs.pages_project || vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
@@ -40,7 +55,7 @@ jobs:
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
           test -n "$PAGES_PROJECT"
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
@@ -62,7 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
-          npx --yes wrangler@4.110.0 pages deploy apps/control-panel/dist \
+          npx --yes wrangler@4.123.0 pages deploy apps/control-panel/dist \
             --project-name "$PAGES_PROJECT" \
             --branch main \
             --commit-hash "$RELEASE_SHA" \

@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: cloudflare-account-audit
@@ -23,6 +22,9 @@ jobs:
     name: Sanitized Cloudflare inventory
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
     env:
       CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -31,8 +33,8 @@ jobs:
       CLOUDFLARE_AUDIT_OUTPUT: .artifacts/provider-inventory/cloudflare.json
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
       - name: Capture read-only account inventory
@@ -44,6 +46,8 @@ jobs:
           jq -e '.resources.pages | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           jq -e '.resources.workers | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           jq -e '.resources.access | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.resources.integrations | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.resources.deployHooks | type == "object"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           echo "Legacy-named resource count: $(jq '.legacyNamedResources | length' .artifacts/provider-inventory/cloudflare.json)"
       - name: Persist sanitized audit locator and summary
         shell: bash
@@ -51,7 +55,7 @@ jobs:
           set -euo pipefail
           report='.artifacts/provider-inventory/cloudflare.json'
           mkdir -p .artifacts/provider-inventory
-          counts="$(jq -c '{pages:(.resources.pages|length),workers:(.resources.workers|length),hyperdrives:(.resources.hyperdrives|length),r2:(.resources.r2|length),queues:(.resources.queues|length),workflows:(.resources.workflows|length),kv:(.resources.kv|length),access:(.resources.access|length),turnstile:(.resources.turnstile|length),dns:(.resources.dns|length),routes:(.resources.routes|length)}' "$report")"
+          counts="$(jq -c '{pages:(.resources.pages|length),workers:(.resources.workers|length),hyperdrives:(.resources.hyperdrives|length),r2:(.resources.r2|length),queues:(.resources.queues|length),workflows:(.resources.workflows|length),kv:(.resources.kv|length),access:(.resources.access|length),turnstile:(.resources.turnstile|length),dns:(.resources.dns|length),routes:(.resources.routes|length),integrations:(.resources.integrations|length),deployHooks:([.resources.deployHooks|to_entries[].value[]]|length)}' "$report")"
           endpoint_failures="$(jq -c '[.endpointState | to_entries[] | select(.value.ok != true) | .key]' "$report")"
           legacy_names="$(jq -c '[.legacyNamedResources[] | {type,name}]' "$report")"
           {
@@ -74,7 +78,7 @@ jobs:
             --body-file .artifacts/provider-inventory/cloudflare-issue.md
       - name: Upload sanitized provider evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: cloudflare-account-audit-${{ github.sha }}
           if-no-files-found: error

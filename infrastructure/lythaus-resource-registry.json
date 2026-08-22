@@ -1,6 +1,8 @@
 {
   "schemaVersion": "lythaus-resource-registry-v1",
-  "generatedAt": "2026-07-29",
+  "generatedAt": "2026-08-22",
+  "inventoryStatus": "PARTIAL: PlanetScale verified; Cloudflare UNKNOWN/BLOCKED pending read-only account inventory",
+  "inventoryEvidence": "docs/evidence/production-cutover/2026-08-22-read-only-provider-inventory.json",
   "policy": {
     "cloudflareAccountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
     "activeZone": "lythaus.co",
@@ -262,7 +264,7 @@
       "purpose": "authoritative production branch",
       "workerBinding": "all four role-specific Hyperdrives after validation",
       "authoritativeOwner": "Lythaus data owner",
-      "currentStatus": "authoritative; PostgreSQL 17.10; 78 current relations, including identity.contact_emails; budget migration target is 82",
+      "currentStatus": "authoritative; PostgreSQL 17.11; 307 relations and 85 functions verified on 2026-08-22; migration 0013 is latest",
       "expectedCostClass": "existing branch compute",
       "temporary": false,
       "deletionAllowed": false,
@@ -278,11 +280,11 @@
       "purpose": "synthetic-only migration validation",
       "workerBinding": "temporary validation only",
       "authoritativeOwner": "Lythaus migration owner",
-      "currentStatus": "ready; PostgreSQL 18.4; synthetic schema/state",
+      "currentStatus": "NOT_FOUND in 2026-08-22 read-only inventory; do not recreate without separate approval",
       "expectedCostClass": "existing branch compute; deletion planned after cutover",
       "temporary": true,
-      "deletionAllowed": true,
-      "replacementPolicy": "delete only after main validation and dependency checks"
+      "deletionAllowed": false,
+      "replacementPolicy": "do not recreate or delete; first complete the approved dependency, synthetic-data, recovery, and cost assessment"
     },
     {
       "provider": "cloudflare",

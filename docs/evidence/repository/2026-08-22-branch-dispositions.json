@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 2,
+  "capturedAt": "2026-08-22T17:31:27Z",
+  "mainSha": "e259181400f3e1561b0c635f4951c13b2460faab",
+  "branches": [
+    {
+      "branch": "dependabot/npm_and_yarn/husky-9.1.7",
+      "sha": "1cda6935bc21538e77bda309855cbe34caf899d9",
+      "pr": 536,
+      "prState": "open",
+      "mergeBase": "37f10e6806af75f54930e971778e9f83e83e110f",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-08T21:24:48Z",
+      "changedFiles": ["package-lock.json", "package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/jose-6.2.8",
+      "sha": "448439dcf8db72186dd9d759ec0b2dd76ca1a153",
+      "pr": 537,
+      "prState": "open",
+      "mergeBase": "37f10e6806af75f54930e971778e9f83e83e110f",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-08T21:24:54Z",
+      "changedFiles": ["package-lock.json", "packages/security/package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/multi-ef21fe97ad",
+      "sha": "c3cb17891011973fcf29669299e778234726f582",
+      "pr": 584,
+      "prState": "open",
+      "mergeBase": "e437b2d5d5788302433222278b4b702cdf7c247b",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-17T18:32:30Z",
+      "changedFiles": ["package-lock.json", "package.json", "packages/db/package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/noble/hashes-2.3.0",
+      "sha": "1dc5f0bd23b08fb55e8f3e88eca6cccf5390d8bf",
+      "pr": 541,
+      "prState": "open",
+      "mergeBase": "6c5eb0f0dd6fb361f0ee05d6a3d9069ecca20aa1",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-10T16:15:40Z",
+      "changedFiles": ["package-lock.json", "packages/security/package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/playwright-1.62.1",
+      "sha": "f55f82fd8e740aa12f2a83ec59ce87d0047a8290",
+      "pr": 532,
+      "prState": "open",
+      "mergeBase": "37f10e6806af75f54930e971778e9f83e83e110f",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-08T21:24:15Z",
+      "changedFiles": ["package-lock.json", "package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/redocly/cli-2.46.1",
+      "sha": "e1776c1cdf67c18c593567e95e901692a0c4b23a",
+      "pr": 582,
+      "prState": "open",
+      "mergeBase": "e437b2d5d5788302433222278b4b702cdf7c247b",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-17T18:31:38Z",
+      "changedFiles": ["package-lock.json", "package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/stoplight/spectral-cli-6.16.3",
+      "sha": "c0c5445d597971e0c4bcf49e02d77c150c1880d3",
+      "pr": 534,
+      "prState": "open",
+      "mergeBase": "37f10e6806af75f54930e971778e9f83e83e110f",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-08T21:24:31Z",
+      "changedFiles": ["package-lock.json", "package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/typescript-7.0.2",
+      "sha": "0a4ec888784af643ae733f90dc098fbc30e78a74",
+      "pr": 533,
+      "prState": "open",
+      "mergeBase": "37f10e6806af75f54930e971778e9f83e83e110f",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-08T21:24:24Z",
+      "changedFiles": ["package-lock.json", "package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/wrangler-4.123.0",
+      "sha": "0d55ec9b7e21459df7b91865e0b68ef237ab66f9",
+      "pr": 583,
+      "prState": "open",
+      "mergeBase": "e437b2d5d5788302433222278b4b702cdf7c247b",
+      "uniqueCommits": 1,
+      "patchUniqueCommits": 1,
+      "lastUpdated": "2026-08-17T18:32:12Z",
+      "changedFiles": ["package-lock.json", "package.json"],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "main",
+      "sha": "e259181400f3e1561b0c635f4951c13b2460faab",
+      "pr": null,
+      "prState": "none",
+      "mergeBase": "e259181400f3e1561b0c635f4951c13b2460faab",
+      "uniqueCommits": 0,
+      "patchUniqueCommits": 0,
+      "lastUpdated": "2026-08-22T18:46:22+02:00",
+      "changedFiles": [],
+      "reachableFromMain": true,
+      "disposition": "canonical-main"
+    },
+    {
+      "branch": "ops/historical-branch-reconciliation-2026-08-22",
+      "sha": "549088282e5a1453d429717ca3907ad9f4076e02",
+      "pr": 604,
+      "prState": "open",
+      "mergeBase": "e259181400f3e1561b0c635f4951c13b2460faab",
+      "uniqueCommits": 4,
+      "patchUniqueCommits": 4,
+      "lastUpdated": "2026-08-22T18:58:27+02:00",
+      "changedFiles": [
+        ".github/workflows/historical-branch-reconciliation.yml",
+        "scripts/github/reconcile-historical-branches.mjs"
+      ],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    },
+    {
+      "branch": "ops/provider-evidence-hardening-2026-08-22",
+      "sha": "5f22d471bc221781bb94c8a4dca1d2db5090cab5",
+      "pr": 603,
+      "prState": "open",
+      "mergeBase": "e259181400f3e1561b0c635f4951c13b2460faab",
+      "uniqueCommits": 8,
+      "patchUniqueCommits": 8,
+      "lastUpdated": "2026-08-22T18:56:39+02:00",
+      "changedFiles": [
+        ".github/workflows/cloudflare-domain-audit.yml",
+        ".github/workflows/native-workers-validation.yml",
+        ".github/workflows/planetscale-account-audit.yml",
+        "scripts/cloudflare/audit-account.mjs",
+        "scripts/planetscale/audit-production-contract.mjs",
+        "scripts/tests/provider-audit-contract.test.mjs"
+      ],
+      "reachableFromMain": false,
+      "disposition": "active-pr-preserve"
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "canonical": 1,
+    "activePr": 11,
+    "safeDelete": 0,
+    "patchEquivalentReview": 0,
+    "uniqueWorkReview": 0
+  }
+}

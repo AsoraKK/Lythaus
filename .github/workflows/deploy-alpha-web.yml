@@ -38,6 +38,40 @@ on:
         description: Cloudflare-protected admin API origin
         required: true
         type: string
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact 40-character commit SHA already validated by CI
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful CI workflow run ID for the exact release SHA
+        required: true
+        type: string
+      target_environment:
+        description: Cloudflare deployment class
+        required: true
+        type: string
+      pages_project:
+        description: Cloudflare Pages project name
+        required: true
+        type: string
+      pages_branch:
+        description: Pages branch alias to deploy
+        required: true
+        type: string
+      web_base_url:
+        description: Public HTTPS URL expected to serve this deployment
+        required: true
+        type: string
+      api_base_url:
+        description: Canonical Alpha API HTTPS /api URL
+        required: true
+        type: string
+      admin_api_url:
+        description: Cloudflare-protected admin API origin
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -49,12 +83,12 @@ jobs:
     environment: ${{ inputs.target_environment }}
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
@@ -73,6 +107,8 @@ jobs:
           test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$RELEASE_SHA"
           test "$(jq -r '.name' <<<"$RUN_JSON")" = "CI"
           test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = "success"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
 
           ARTIFACTS_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}/artifacts")
           WEB_DIGEST=$(jq -r '.artifacts[] | select(.name == "flutter-web-release") | .digest' <<<"$ARTIFACTS_JSON")
@@ -97,7 +133,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
-          npx --yes wrangler@4.110.0 pages deploy downloaded/web \
+          npx --yes wrangler@4.123.0 pages deploy downloaded/web \
             --project-name "$PAGES_PROJECT" \
             --branch "$PAGES_BRANCH" \
             --commit-hash "$RELEASE_SHA" \
@@ -146,7 +182,7 @@ jobs:
 
       - name: Upload browser and web deployment evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: alpha-web-evidence-${{ inputs.release_sha }}
           path: |
