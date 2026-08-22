@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
 const zoneId = process.env.CLOUDFLARE_ZONE_ID ?? '7bc572c8b7cd3c00be9c655176c29382';
-const token = process.env.CLOUDFLARE_AUDIT_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
+const token = process.env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_AUDIT_API_TOKEN || '';
 const outputPath = process.env.CLOUDFLARE_AUDIT_OUTPUT ?? '.artifacts/provider-inventory/cloudflare.json';
 
 if (!/^[0-9a-f]{32}$/i.test(accountId)) throw new Error('CLOUDFLARE_ACCOUNT_ID is required');
@@ -11,19 +11,33 @@ if (!/^[0-9a-f]{32}$/i.test(zoneId)) throw new Error('CLOUDFLARE_ZONE_ID is requ
 if (!token) throw new Error('Cloudflare audit token is required');
 
 const headers = { Authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-async function request(url) {
-  const response = await fetch(url, { headers });
-  let payload;
-  try { payload = await response.json(); } catch { payload = {}; }
-  return {
-    status: response.status,
-    ok: response.ok && payload?.success !== false,
-    result: payload?.result,
-    errors: Array.isArray(payload?.errors)
-      ? payload.errors.map(({ code, message }) => ({ code, message: String(message ?? '').slice(0, 240) }))
-      : [],
-  };
+async function request(url, { attempts = 5 } = {}) {
+  let last = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const response = await fetch(url, { headers });
+    let payload;
+    try { payload = await response.json(); } catch { payload = {}; }
+    last = {
+      status: response.status,
+      ok: response.ok && payload?.success !== false,
+      result: payload?.result,
+      errors: Array.isArray(payload?.errors)
+        ? payload.errors.map(({ code, message }) => ({ code, message: String(message ?? '').slice(0, 240) }))
+        : [],
+    };
+    if (last.ok) return last;
+
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt === attempts) return last;
+
+    const retryAfter = Number.parseInt(response.headers.get('retry-after') ?? '', 10);
+    const boundedRetryAfterMs = Number.isFinite(retryAfter) ? Math.min(Math.max(retryAfter, 1), 15) * 1000 : 0;
+    const exponentialMs = Math.min(1000 * (2 ** (attempt - 1)), 8000);
+    await sleep(Math.max(boundedRetryAfterMs, exponentialMs));
+  }
+  return last;
 }
 
 function arrayResult(response) {
@@ -51,8 +65,11 @@ const endpoints = {
   routes: `${zoneBase}/workers/routes?per_page=100`,
 };
 
-const entries = await Promise.all(Object.entries(endpoints).map(async ([name, url]) => [name, await request(url)]));
-const responses = Object.fromEntries(entries);
+const responses = {};
+for (const [name, url] of Object.entries(endpoints)) {
+  responses[name] = await request(url);
+  await sleep(300);
+}
 
 const adminSettings = await request(`${accountBase}/workers/scripts/lythaus-admin-api-development/settings`);
 const adminBindings = adminSettings.ok && Array.isArray(adminSettings.result?.bindings) ? adminSettings.result.bindings : [];
@@ -104,12 +121,17 @@ const legacyNamedResources = [
   ...workflows.filter(({ name }) => legacyPattern.test(name ?? '')).map(({ name }) => ({ type: 'workflow', name })),
 ];
 
+const endpointStates = Object.fromEntries(Object.entries(responses).map(([name, response]) => [name, endpointState(response)]));
+const failedEndpoints = Object.entries(endpointStates).filter(([, state]) => !state.ok).map(([name]) => name);
+
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   capturedAt: new Date().toISOString(),
   accountId,
   zoneId,
-  endpointState: Object.fromEntries(Object.entries(responses).map(([name, response]) => [name, endpointState(response)])),
+  complete: failedEndpoints.length === 0,
+  failedEndpoints,
+  endpointState: endpointStates,
   adminWorkerSettings: { state: endpointState(adminSettings), access: publicAccessValues },
   resources: { pages, workers, hyperdrives, r2, queues, workflows, kv, access, turnstile, dns, routes },
   legacyNamedResources,
@@ -117,4 +139,4 @@ const report = {
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-console.log(`Wrote sanitized Cloudflare inventory to ${outputPath}; legacy-named resources=${legacyNamedResources.length}.`);
+console.log(`Wrote sanitized Cloudflare inventory to ${outputPath}; complete=${report.complete}; failed=${failedEndpoints.length}; legacy-named resources=${legacyNamedResources.length}.`);
