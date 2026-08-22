@@ -3,6 +3,7 @@ name: native-workers-validation
 on:
   workflow_dispatch:
   pull_request:
+    branches: [main]
     paths:
       - 'apps/lythaus-*/**'
       - 'packages/**'
@@ -43,9 +44,9 @@ on:
       - '.github/workflows/native-workers-validation.yml'
       - '.github/workflows/planetscale-production-migrations.yml'
       - '.github/workflows/deploy-public-waitlist.yml'
-      - '.github/workflows/deploy-marketing-preview.yml'
+      - '.github/workflows/deploy-marketing.yml'
   push:
-    branches: [main, development]
+    branches: [main]
     paths:
       - 'apps/lythaus-*/**'
       - 'packages/**'
@@ -84,7 +85,7 @@ on:
       - '.github/workflows/native-workers-validation.yml'
       - '.github/workflows/planetscale-production-migrations.yml'
       - '.github/workflows/deploy-public-waitlist.yml'
-      - '.github/workflows/deploy-marketing-preview.yml'
+      - '.github/workflows/deploy-marketing.yml'
 
 permissions:
   contents: read
