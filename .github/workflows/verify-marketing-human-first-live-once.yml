@@ -94,9 +94,11 @@ jobs:
             '{schemaVersion:1,status:$status,deployedSha:$deployedSha,deploymentId:$deploymentId,deploymentUrl:$deploymentUrl,pagesProject:$pagesProject,customDomains:["lythaus.co","www.lythaus.co"],verifiedAt:$verifiedAt}' \
             > "$RUNNER_TEMP/marketing-live-verification/result.json"
 
-          echo "deployed_sha=$deployed_sha" >> "$GITHUB_OUTPUT"
-          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
-          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+          {
+            echo "deployed_sha=$deployed_sha"
+            echo "deployment_id=$deployment_id"
+            echo "deployment_url=$deployment_url"
+          } >> "$GITHUB_OUTPUT"
           rm -f "$api_response"
 
       - name: Record verification result on PR 594
