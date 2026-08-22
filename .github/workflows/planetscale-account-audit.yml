@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - 'scripts/planetscale/audit-account.mjs'
+      - 'scripts/planetscale/audit-production-contract.mjs'
+      - 'scripts/ci/verify-planetscale-production-schema.mjs'
       - '.github/workflows/planetscale-account-audit.yml'
       - 'database/planetscale/**'
       - 'infrastructure/lythaus-resource-registry.json'
@@ -22,18 +24,25 @@ jobs:
   inventory:
     name: Sanitized PlanetScale inventory
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
       PLANETSCALE_ORGANIZATION: lythaus
       PLANETSCALE_DATABASE: lythaus-core
       PLANETSCALE_AUDIT_OUTPUT: .artifacts/provider-inventory/planetscale.json
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+      PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+      EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+      PLANETSCALE_CONTRACT_AUDIT_OUTPUT: .artifacts/provider-inventory/planetscale-production-contract.json
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
       - name: Capture read-only database and branch inventory
         run: node scripts/planetscale/audit-account.mjs
       - name: Enforce canonical production branch
@@ -42,14 +51,18 @@ jobs:
           set -euo pipefail
           jq -e '.assertions.mainExists == true' .artifacts/provider-inventory/planetscale.json >/dev/null
           jq -e '.assertions.exactlyOneProductionMain == true' .artifacts/provider-inventory/planetscale.json >/dev/null
+      - name: Verify live production contract read-only
+        run: node scripts/planetscale/audit-production-contract.mjs
       - name: Persist sanitized audit locator and summary
         shell: bash
         run: |
           set -euo pipefail
           report='.artifacts/provider-inventory/planetscale.json'
+          contract='.artifacts/provider-inventory/planetscale-production-contract.json'
           branches="$(jq -c '[.branches[] | {name,production,ready,schemaReady,parentBranch,region:(.region.slug // null)}]' "$report")"
           assertions="$(jq -c '.assertions' "$report")"
           database_summary="$(jq -c '{name:.database.name,kind:.database.kind,region:.database.region,branchesCount:.database.branchesCount,openSchemaRecommendationsCount:.database.openSchemaRecommendationsCount,schemaLastUpdatedAt:.database.schemaLastUpdatedAt}' "$report")"
+          contract_summary="$(jq -c '{postgresVersion,verifierPassed,post0013Required,extensions,migrationLedger,visibleGrantMetadata,verifierOutput}' "$contract")"
           {
             echo 'Sanitized read-only PlanetScale inventory evidence.'
             echo
@@ -60,8 +73,9 @@ jobs:
             echo "Database: ${database_summary}"
             echo "Branches: ${branches}"
             echo "Assertions: ${assertions}"
+            echo "Production contract: ${contract_summary}"
             echo
-            echo 'The complete sanitized inventory is stored in the Actions artifact named below. No provider mutation or DDL is performed by this workflow.'
+            echo 'The complete sanitized inventory and production-contract audit are stored in the Actions artifact named below. No provider mutation or DDL is performed by this workflow.'
             echo "Artifact: planetscale-account-audit-${GITHUB_SHA}"
           } > .artifacts/provider-inventory/planetscale-issue.md
           gh issue create \
@@ -74,4 +88,6 @@ jobs:
         with:
           name: planetscale-account-audit-${{ github.sha }}
           if-no-files-found: error
-          path: .artifacts/provider-inventory/planetscale.json
+          path: |
+            .artifacts/provider-inventory/planetscale.json
+            .artifacts/provider-inventory/planetscale-production-contract.json
