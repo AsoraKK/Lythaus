@@ -17,7 +17,9 @@ on:
       - 'scripts/ci/materialize-public-waitlist-deploy.mjs'
       - 'scripts/ci/probe-public-waitlist-candidate.mjs'
       - 'scripts/ci/resolve-latest-worker-version.mjs'
+      - 'scripts/cloudflare/audit-account.mjs'
       - 'scripts/cloudflare/waitlist-turnstile.mjs'
+      - 'scripts/planetscale/audit-production-contract.mjs'
       - 'scripts/validate-production-gates.mjs'
       - 'infrastructure/cloudflare/production-gates.json'
       - 'scripts/validate-planetscale-extensions.mjs'
@@ -32,6 +34,7 @@ on:
       - 'scripts/tests/budget-contract.test.mjs'
       - 'scripts/tests/db-identity-contract.test.mjs'
       - 'scripts/tests/native-architecture-invariants.test.js'
+      - 'scripts/tests/provider-audit-contract.test.mjs'
       - 'scripts/tests/production-gates.test.mjs'
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
       - 'scripts/tests/planetscale-production-migrations.test.mjs'
@@ -42,6 +45,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/native-workers-validation.yml'
+      - '.github/workflows/cloudflare-domain-audit.yml'
+      - '.github/workflows/planetscale-account-audit.yml'
       - '.github/workflows/planetscale-production-migrations.yml'
       - '.github/workflows/deploy-public-waitlist.yml'
       - '.github/workflows/deploy-marketing.yml'
@@ -59,7 +64,9 @@ on:
       - 'scripts/ci/materialize-public-waitlist-deploy.mjs'
       - 'scripts/ci/probe-public-waitlist-candidate.mjs'
       - 'scripts/ci/resolve-latest-worker-version.mjs'
+      - 'scripts/cloudflare/audit-account.mjs'
       - 'scripts/cloudflare/waitlist-turnstile.mjs'
+      - 'scripts/planetscale/audit-production-contract.mjs'
       - 'scripts/validate-production-gates.mjs'
       - 'infrastructure/cloudflare/production-gates.json'
       - 'scripts/validate-planetscale-extensions.mjs'
@@ -73,6 +80,7 @@ on:
       - 'scripts/tests/budget-contract.test.mjs'
       - 'scripts/tests/db-identity-contract.test.mjs'
       - 'scripts/tests/native-architecture-invariants.test.js'
+      - 'scripts/tests/provider-audit-contract.test.mjs'
       - 'scripts/tests/production-gates.test.mjs'
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
       - 'scripts/tests/planetscale-production-migrations.test.mjs'
@@ -83,6 +91,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/native-workers-validation.yml'
+      - '.github/workflows/cloudflare-domain-audit.yml'
+      - '.github/workflows/planetscale-account-audit.yml'
       - '.github/workflows/planetscale-production-migrations.yml'
       - '.github/workflows/deploy-public-waitlist.yml'
       - '.github/workflows/deploy-marketing.yml'
@@ -111,6 +121,7 @@ jobs:
       - run: npm run test:planetscale-production-migrations
       - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
+      - run: node --test scripts/tests/provider-audit-contract.test.mjs
       - run: node --test scripts/tests/production-gates.test.mjs
       - run: npm run test:product-integrity-runtime
       - run: node --test scripts/tests/public-waitlist-cutover.test.mjs
