@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
 const zoneId = process.env.CLOUDFLARE_ZONE_ID ?? '7bc572c8b7cd3c00be9c655176c29382';
-const token = process.env.CLOUDFLARE_AUDIT_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
+const token = process.env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_AUDIT_API_TOKEN || '';
 const outputPath = process.env.CLOUDFLARE_AUDIT_OUTPUT ?? '.artifacts/provider-inventory/cloudflare.json';
 
 if (!/^[0-9a-f]{32}$/i.test(accountId)) throw new Error('CLOUDFLARE_ACCOUNT_ID is required');
@@ -11,19 +11,37 @@ if (!/^[0-9a-f]{32}$/i.test(zoneId)) throw new Error('CLOUDFLARE_ZONE_ID is requ
 if (!token) throw new Error('Cloudflare audit token is required');
 
 const headers = { Authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-async function request(url) {
-  const response = await fetch(url, { headers });
-  let payload;
-  try { payload = await response.json(); } catch { payload = {}; }
-  return {
-    status: response.status,
-    ok: response.ok && payload?.success !== false,
-    result: payload?.result,
-    errors: Array.isArray(payload?.errors)
-      ? payload.errors.map(({ code, message }) => ({ code, message: String(message ?? '').slice(0, 240) }))
-      : [],
-  };
+async function request(url, { attempts = 5 } = {}) {
+  let last = { status: null, ok: false, result: null, errors: [{ code: 'REQUEST_FAILED', message: 'No response received' }] };
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, { headers });
+      let payload;
+      try { payload = await response.json(); } catch { payload = {}; }
+      last = {
+        status: response.status,
+        ok: response.ok && payload?.success !== false,
+        result: payload?.result,
+        errors: Array.isArray(payload?.errors)
+          ? payload.errors.map(({ code, message }) => ({ code, message: String(message ?? '').slice(0, 240) }))
+          : [],
+      };
+      if (last.ok) return last;
+      const retryable = response.status === 429 || response.status >= 500;
+      if (!retryable || attempt === attempts) return last;
+      const retryAfter = Number.parseInt(response.headers.get('retry-after') ?? '', 10);
+      const retryAfterMs = Number.isFinite(retryAfter) ? Math.min(Math.max(retryAfter, 1), 15) * 1000 : 0;
+      const exponentialMs = Math.min(1000 * (2 ** (attempt - 1)), 8000);
+      await sleep(Math.max(retryAfterMs, exponentialMs));
+    } catch (error) {
+      last = { status: null, ok: false, result: null, errors: [{ code: 'REQUEST_FAILED', message: String(error?.message ?? error).slice(0, 240) }] };
+      if (attempt === attempts) return last;
+      await sleep(Math.min(1000 * (2 ** (attempt - 1)), 8000));
+    }
+  }
+  return last;
 }
 
 function arrayResult(response) {
@@ -51,8 +69,11 @@ const endpoints = {
   routes: `${zoneBase}/workers/routes?per_page=100`,
 };
 
-const entries = await Promise.all(Object.entries(endpoints).map(async ([name, url]) => [name, await request(url)]));
-const responses = Object.fromEntries(entries);
+const responses = {};
+for (const [name, url] of Object.entries(endpoints)) {
+  responses[name] = await request(url);
+  await sleep(300);
+}
 
 const adminSettings = await request(`${accountBase}/workers/scripts/lythaus-admin-api-development/settings`);
 const adminBindings = adminSettings.ok && Array.isArray(adminSettings.result?.bindings) ? adminSettings.result.bindings : [];
@@ -102,12 +123,11 @@ const turnstile = arrayResult(responses.turnstile).map((widget) => ({ sitekey: w
 const dns = arrayResult(responses.dns).map((record) => ({ id: record.id ?? null, type: record.type ?? null, name: record.name ?? null, proxied: record.proxied ?? null }));
 const routes = arrayResult(responses.routes).map((route) => ({ id: route.id ?? null, pattern: route.pattern ?? null, script: route.script ?? null }));
 
-const deployHookEntries = await Promise.all(
-  workers
-    .map(({ name }) => name)
-    .filter((name) => typeof name === 'string' && name.length > 0)
-    .map(async (name) => [name, await request(`${accountBase}/builds/workers/${encodeURIComponent(name)}/deploy_hooks`)]),
-);
+const deployHookEntries = [];
+for (const name of workers.map(({ name }) => name).filter((value) => typeof value === 'string' && value.length > 0)) {
+  deployHookEntries.push([name, await request(`${accountBase}/builds/workers/${encodeURIComponent(name)}/deploy_hooks`)]);
+  await sleep(300);
+}
 const deployHooks = Object.fromEntries(deployHookEntries.map(([name, response]) => [
   name,
   arrayResult(response).map((hook) => ({
@@ -132,14 +152,23 @@ const legacyNamedResources = [
   ...workflows.filter(({ name }) => legacyPattern.test(name ?? '')).map(({ name }) => ({ type: 'workflow', name })),
 ];
 
+const endpointStates = Object.fromEntries(Object.entries(responses).map(([name, response]) => [name, endpointState(response)]));
+const deployHookState = Object.fromEntries(deployHookEntries.map(([name, response]) => [name, endpointState(response)]));
+const failedEndpoints = [
+  ...Object.entries(endpointStates).filter(([, state]) => !state.ok).map(([name]) => name),
+  ...Object.entries(deployHookState).filter(([, state]) => !state.ok).map(([name]) => `deployHooks:${name}`),
+];
+
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   capturedAt: new Date().toISOString(),
   accountId,
   zoneId,
+  complete: failedEndpoints.length === 0 && adminSettings.ok,
+  failedEndpoints: adminSettings.ok ? failedEndpoints : [...failedEndpoints, 'adminWorkerSettings'],
   endpointState: {
-    ...Object.fromEntries(Object.entries(responses).map(([name, response]) => [name, endpointState(response)])),
-    deployHooks: Object.fromEntries(deployHookEntries.map(([name, response]) => [name, endpointState(response)])),
+    ...endpointStates,
+    deployHooks: deployHookState,
   },
   adminWorkerSettings: { state: endpointState(adminSettings), access: publicAccessValues },
   resources: { pages, workers, hyperdrives, r2, queues, workflows, kv, access, turnstile, dns, routes, integrations, deployHooks },
@@ -148,4 +177,4 @@ const report = {
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-console.log(`Wrote sanitized Cloudflare inventory to ${outputPath}; legacy-named resources=${legacyNamedResources.length}.`);
+console.log(`Wrote sanitized Cloudflare inventory to ${outputPath}; complete=${report.complete}; failed=${report.failedEndpoints.length}; legacy-named resources=${legacyNamedResources.length}.`);

@@ -15,34 +15,67 @@ const headers = {
   'X-GitHub-Api-Version': '2022-11-28',
 };
 
+function safeText(value, max = 240) {
+  return String(value ?? '').replace(/[^\x20-\x7e]/g, ' ').slice(0, max);
+}
+
+function safeIdentifier(value, max = 160) {
+  const text = safeText(value, max);
+  return /^[A-Za-z0-9._:/@+-]+$/.test(text) ? text : null;
+}
+
+function safeBoolean(value) {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function safeInteger(value) {
+  return Number.isSafeInteger(value) ? value : null;
+}
+
+function safeDate(value) {
+  const text = safeText(value, 40);
+  return /^\d{4}-\d{2}-\d{2}T[^\s]{1,30}$/.test(text) ? text : null;
+}
+
+function safeArray(value, normalizer) {
+  return Array.isArray(value) ? value.map(normalizer).filter((item) => item !== null) : [];
+}
+
+function extractItems(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.secrets)) return payload.secrets;
+  if (Array.isArray(payload?.variables)) return payload.variables;
+  if (Array.isArray(payload?.environments)) return payload.environments;
+  if (Array.isArray(payload?.installations)) return payload.installations;
+  return [];
+}
+
 async function request(endpoint) {
   try {
     const response = await fetch(`${apiBase}${endpoint}`, { headers });
     let payload = {};
-    try { payload = await response.json(); } catch { /* keep an empty sanitized response */ }
+    try { payload = await response.json(); } catch { payload = {}; }
     return {
-      status: response.status,
+      status: safeInteger(response.status),
       ok: response.ok,
-      result: payload,
-      error: response.ok ? null : String(payload?.message ?? `HTTP ${response.status}`).slice(0, 240),
+      items: extractItems(payload),
+      data: payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {},
+      error: response.ok ? null : safeText(payload?.message ?? `HTTP ${response.status}`),
     };
   } catch (error) {
-    return { status: null, ok: false, result: {}, error: String(error?.message ?? error).slice(0, 240) };
+    return { status: null, ok: false, items: [], data: {}, error: safeText(error?.message ?? error) };
   }
 }
 
 async function list(endpoint) {
   const items = [];
   let page = 1;
+  let response = null;
   while (true) {
-    const response = await request(`${endpoint}${endpoint.includes('?') ? '&' : '?'}per_page=100&page=${page}`);
+    response = await request(`${endpoint}${endpoint.includes('?') ? '&' : '?'}per_page=100&page=${page}`);
     if (!response.ok) return { ...response, items };
-    const pageItems = Array.isArray(response.result) ? response.result : Array.isArray(response.result?.secrets)
-      ? response.result.secrets : Array.isArray(response.result?.variables) ? response.result.variables
-        : Array.isArray(response.result?.environments) ? response.result.environments
-          : Array.isArray(response.result?.installations) ? response.result.installations : [];
-    items.push(...pageItems);
-    if (pageItems.length < 100) return { ...response, items };
+    items.push(...response.items);
+    if (response.items.length < 100) return { ...response, items };
     page += 1;
   }
 }
@@ -59,33 +92,38 @@ const hookResponse = await list(`/repos/${repository}/hooks`);
 const installationResponse = await list(`/repos/${repository}/installations`);
 const actionsPermissionResponse = await request(`/repos/${repository}/actions/permissions`);
 
-const environments = await Promise.all(environmentResponse.items.map(async (environment) => {
-  const name = environment.name;
-  if (typeof name !== 'string' || name.length === 0) return { name: null, controls: null };
-  const [secrets, variables] = await Promise.all([
-    list(`/repos/${repository}/environments/${encodeURIComponent(name)}/secrets`),
-    list(`/repos/${repository}/environments/${encodeURIComponent(name)}/variables`),
-  ]);
-  return {
+const environments = [];
+for (const environment of environmentResponse.items) {
+  const name = safeIdentifier(environment?.name);
+  if (!name) {
+    environments.push({ name: null, controls: null });
+    continue;
+  }
+  const secrets = await list(`/repos/${repository}/environments/${encodeURIComponent(name)}/secrets`);
+  const variables = await list(`/repos/${repository}/environments/${encodeURIComponent(name)}/variables`);
+  environments.push({
     name,
     protection: {
-      waitTimer: environment.wait_timer ?? null,
-      reviewersRequired: environment.protection_rules?.length ?? 0,
-      preventSelfReview: environment.prevent_self_review ?? null,
+      waitTimer: safeInteger(environment.wait_timer),
+      reviewersRequired: Array.isArray(environment.protection_rules) ? environment.protection_rules.length : 0,
+      preventSelfReview: safeBoolean(environment.prevent_self_review),
     },
     controls: {
-      secrets: secrets.items.map(({ name: itemName }) => itemName).filter(Boolean).sort(),
-      variables: variables.items.map(({ name: itemName, value }) => ({ name: itemName, valuePresent: value !== undefined })).filter(({ name }) => name).sort((a, b) => a.name.localeCompare(b.name)),
+      secrets: safeArray(secrets.items, (item) => safeIdentifier(item?.name)).sort(),
+      variables: safeArray(variables.items, (item) => {
+        const itemName = safeIdentifier(item?.name);
+        return itemName ? { name: itemName, valuePresent: item?.value !== undefined } : null;
+      }).sort((a, b) => a.name.localeCompare(b.name)),
       endpointState: { secrets: endpointSummary(secrets), variables: endpointSummary(variables) },
     },
-  };
-}));
+  });
+}
 const environmentControlsAvailable = environments.every(({ controls }) => controls?.endpointState?.secrets?.ok && controls?.endpointState?.variables?.ok);
 
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   capturedAt: new Date().toISOString(),
-  repository,
+  repository: safeIdentifier(repository),
   mutationPerformed: false,
   status: [secretResponse, variableResponse, environmentResponse, deployKeyResponse, hookResponse, installationResponse, actionsPermissionResponse].every(({ ok }) => ok) && environmentControlsAvailable ? 'VERIFIED' : 'PARTIAL/UNKNOWN',
   endpointState: {
@@ -98,16 +136,38 @@ const report = {
     actionsPermissions: endpointSummary(actionsPermissionResponse),
   },
   controls: {
-    repositorySecrets: secretResponse.items.map(({ name }) => name).filter(Boolean).sort(),
-    repositoryVariables: variableResponse.items.map(({ name, value }) => ({ name, valuePresent: value !== undefined })).filter(({ name }) => name).sort((a, b) => a.name.localeCompare(b.name)),
+    repositorySecrets: safeArray(secretResponse.items, (item) => safeIdentifier(item?.name)).sort(),
+    repositoryVariables: safeArray(variableResponse.items, (item) => {
+      const name = safeIdentifier(item?.name);
+      return name ? { name, valuePresent: item?.value !== undefined } : null;
+    }).sort((a, b) => a.name.localeCompare(b.name)),
     environments,
-    deployKeys: deployKeyResponse.items.map(({ id, key, title, read_only: readOnly, created_at: createdAt }) => ({ id, keyType: typeof key === 'string' ? key.split(' ')[0] : null, title, readOnly: readOnly ?? null, createdAt: createdAt ?? null })),
-    hooks: hookResponse.items.map(({ id, name, active, events, type, updated_at: updatedAt }) => ({ id, name, active: active ?? null, events: Array.isArray(events) ? events : [], type: type ?? null, updatedAt: updatedAt ?? null })),
-    installations: installationResponse.items.map(({ id, app_id: appId, app_slug: appSlug, target_type: targetType, permissions }) => ({ id, appId, appSlug, targetType, permissionKeys: permissions ? Object.keys(permissions).sort() : [] })),
+    deployKeys: safeArray(deployKeyResponse.items, (item) => ({
+      id: safeInteger(item?.id),
+      keyType: typeof item?.key === 'string' ? safeIdentifier(item.key.split(' ')[0]) : null,
+      title: safeIdentifier(item?.title),
+      readOnly: safeBoolean(item?.read_only),
+      createdAt: safeDate(item?.created_at),
+    })),
+    hooks: safeArray(hookResponse.items, (item) => ({
+      id: safeInteger(item?.id),
+      name: safeIdentifier(item?.name),
+      active: safeBoolean(item?.active),
+      events: safeArray(item?.events, (event) => safeIdentifier(event)),
+      type: safeIdentifier(item?.type),
+      updatedAt: safeDate(item?.updated_at),
+    })),
+    installations: safeArray(installationResponse.items, (item) => ({
+      id: safeInteger(item?.id),
+      appId: safeInteger(item?.app_id),
+      appSlug: safeIdentifier(item?.app_slug),
+      targetType: safeIdentifier(item?.target_type),
+      permissionKeys: safeArray(item?.permissions ? Object.keys(item.permissions) : [], (key) => safeIdentifier(key)).sort(),
+    })),
     actionsPermissions: actionsPermissionResponse.ok ? {
-      enabled: actionsPermissionResponse.result.enabled ?? null,
-      allowedActions: actionsPermissionResponse.result.allowed_actions ?? null,
-      shaPinned: actionsPermissionResponse.result.sha_pinning_required ?? null,
+      enabled: safeBoolean(actionsPermissionResponse.data.enabled),
+      allowedActions: safeIdentifier(actionsPermissionResponse.data.allowed_actions),
+      shaPinned: safeBoolean(actionsPermissionResponse.data.sha_pinning_required),
     } : null,
   },
   humanReviewRequired: [
@@ -119,4 +179,4 @@ const report = {
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-console.log(`Wrote sanitized GitHub controls inventory to ${outputPath}; status=${report.status}.`);
+console.log(`Wrote normalized GitHub controls inventory to ${outputPath}; status=${report.status}.`);

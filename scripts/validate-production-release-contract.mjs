@@ -32,6 +32,9 @@ for (const name of deploymentWorkflows) {
   if (name !== 'native-workers-deploy.yml' && !source.includes('ref: ${{ inputs.release_sha }}')) {
     failures.push(`${name}: checkout does not use release_sha`);
   }
+  if (name !== 'native-workers-deploy.yml' && !source.includes('verify-pages-deployment.mjs')) {
+    failures.push(`${name}: actual Pages deployment evidence is missing`);
+  }
 }
 
 const canonical = readWorkflow('production-release.yml');
@@ -44,16 +47,28 @@ if (canonical) {
   for (const required of ['confirm_production', 'ci_run_id', 'origin/main', "'.conclusion'", 'success']) {
     if (!canonical.includes(required)) failures.push(`production-release.yml: missing ${required} gate`);
   }
+  for (const required of ['provider_evidence', 'CLOUDFLARE_INVENTORY_STATUS', 'PLANETSCALE_INVENTORY_STATUS', 'MARKETING_DEPLOYMENT_ID', 'WEB_DEPLOYMENT_ID', 'ADMIN_DEPLOYMENT_ID']) {
+    if (!canonical.includes(required)) failures.push(`production-release.yml: missing ${required} evidence wiring`);
+  }
+  if (canonical.includes('CLOUDFLARE_INVENTORY_STATUS: PARTIAL') || canonical.includes('PLANETSCALE_INVENTORY_STATUS: VERIFIED')) {
+    failures.push('production-release.yml: provider status must come from exact-run evidence');
+  }
+  const dispatchHeader = canonical.slice(0, canonical.indexOf('\npermissions:'));
+  if (/^\s{6}(admin_pages_project|web_pages_branch):/m.test(dispatchHeader)) {
+    failures.push('production-release.yml: canonical Pages ownership must not be a free-form dispatch input');
+  }
   for (const evidenceOutput of [
     'hyperdrive_verified_main',
     'database_identity_verified',
     'budget_enforcement_verified',
     'authenticated_acceptance_proven',
-    'planetscale_grants_verified',
   ]) {
     if (!canonical.includes(`needs.workers.outputs.${evidenceOutput}`)) {
       failures.push(`production-release.yml: provider evidence must come from workers.${evidenceOutput}`);
     }
+  }
+  if (!canonical.includes('needs.provider_evidence.outputs.planetscale_grants_verified')) {
+    failures.push('production-release.yml: provider evidence must include exact PlanetScale grant verification');
   }
 }
 

@@ -38,6 +38,9 @@ on:
       planetscale_grants_verified:
         description: Exact-run proof that PlanetScale grants passed the production contract
         value: ${{ jobs.deploy.outputs.planetscale_grants_verified }}
+      worker_source_sha:
+        description: Reviewed source SHA used for every activated Worker version
+        value: ${{ jobs.deploy.outputs.worker_source_sha }}
 
 permissions:
   contents: read
@@ -60,6 +63,7 @@ jobs:
       budget_enforcement_verified: ${{ steps.release_metadata.outputs.budget_enforcement_verified }}
       authenticated_acceptance_proven: ${{ steps.release_metadata.outputs.authenticated_acceptance_proven }}
       planetscale_grants_verified: ${{ steps.release_metadata.outputs.planetscale_grants_verified }}
+      worker_source_sha: ${{ steps.release_metadata.outputs.worker_source_sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -306,6 +310,8 @@ jobs:
             lythaus-admin-api-development
       - name: Export activated Worker version metadata
         id: release_metadata
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
           test -n "${PUBLIC_WORKER_VERSION_ID:-}"
@@ -320,6 +326,7 @@ jobs:
             echo "budget_enforcement_verified=${BUDGET_ENFORCEMENT_VERIFIED:-false}"
             echo "authenticated_acceptance_proven=${AUTHENTICATED_ACCEPTANCE_PROVEN:-false}"
             echo "planetscale_grants_verified=${PLANETSCALE_GRANTS_VERIFIED:-false}"
+            echo "worker_source_sha=$RELEASE_SHA"
           } >> "$GITHUB_OUTPUT"
       - name: Roll back partial Worker deployment on failure
         if: failure()
