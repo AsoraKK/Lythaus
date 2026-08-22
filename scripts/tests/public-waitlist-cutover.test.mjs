@@ -121,7 +121,7 @@ test('protected cutover verifies database, preserves secrets, stages at zero tra
   assert.match(stageStep, /\$\{PUBLIC_WORKER_VERSION_ID\}@0/);
   assert.match(stageStep, /rollback_specs\[0\]/);
   const rollbackStep = cutover.slice(rollback, cutover.indexOf('- name: Remove temporary Turnstile secret material'));
-  assert.match(rollbackStep, /wrangler versions deploy/);
+  assert.match(rollbackStep, /wrangler@4\.123\.0 versions deploy/);
   assert.match(rollbackStep, /grep -Eq '10220'/);
   assert.match(rollbackStep, /EXPECTED_CANDIDATE_VERSION_ID="\$PUBLIC_WORKER_VERSION_ID"/);
 
@@ -134,7 +134,7 @@ test('protected cutover verifies database, preserves secrets, stages at zero tra
   assert.match(hyperdriveProof, /expectedConfigName/);
   assert.doesNotMatch(hyperdriveProof, /PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL/);
   assert.doesNotMatch(hyperdriveProof, /PLANETSCALE_API_TOKEN/);
-  const typesCheck = cutover.indexOf('wrangler types --check');
+  const typesCheck = cutover.indexOf('wrangler@4.123.0 types --check');
   const materialize = cutover.indexOf('materialize-public-waitlist-deploy.mjs');
   assert.ok(typesCheck >= 0 && materialize >= 0 && typesCheck < materialize, 'Wrangler types must be checked before deployment-only config materialization');
 });
