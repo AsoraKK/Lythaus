@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: cloudflare-account-audit
@@ -28,6 +29,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
       CLOUDFLARE_AUDIT_OUTPUT: .artifacts/provider-inventory/cloudflare.json
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -43,6 +45,33 @@ jobs:
           jq -e '.resources.workers | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           jq -e '.resources.access | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           echo "Legacy-named resource count: $(jq '.legacyNamedResources | length' .artifacts/provider-inventory/cloudflare.json)"
+      - name: Persist sanitized audit locator and summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          report='.artifacts/provider-inventory/cloudflare.json'
+          mkdir -p .artifacts/provider-inventory
+          counts="$(jq -c '{pages:(.resources.pages|length),workers:(.resources.workers|length),hyperdrives:(.resources.hyperdrives|length),r2:(.resources.r2|length),queues:(.resources.queues|length),workflows:(.resources.workflows|length),kv:(.resources.kv|length),access:(.resources.access|length),turnstile:(.resources.turnstile|length),dns:(.resources.dns|length),routes:(.resources.routes|length)}' "$report")"
+          endpoint_failures="$(jq -c '[.endpointState | to_entries[] | select(.value.ok != true) | .key]' "$report")"
+          legacy_names="$(jq -c '[.legacyNamedResources[] | {type,name}]' "$report")"
+          {
+            echo 'Sanitized read-only Cloudflare inventory evidence.'
+            echo
+            echo "Run ID: ${GITHUB_RUN_ID}"
+            echo "Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "Main SHA: ${GITHUB_SHA}"
+            echo "Captured at: $(jq -r '.capturedAt' "$report")"
+            echo "Endpoint failures: ${endpoint_failures}"
+            echo "Resource counts: ${counts}"
+            echo "Legacy-named resources: ${legacy_names}"
+            echo
+            echo 'The complete sanitized inventory is stored in the Actions artifact named below. No provider mutation is performed by this workflow.'
+            echo "Artifact: cloudflare-account-audit-${GITHUB_SHA}"
+          } > .artifacts/provider-inventory/cloudflare-issue.md
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Cloudflare inventory evidence ${GITHUB_SHA:0:12} run ${GITHUB_RUN_ID}" \
+            --body-file .artifacts/provider-inventory/cloudflare-issue.md
       - name: Upload sanitized provider evidence
         if: always()
         uses: actions/upload-artifact@v6
