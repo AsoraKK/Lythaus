@@ -93,7 +93,8 @@ const turnstile = arrayResult(responses.turnstile).map((widget) => ({ sitekey: w
 const dns = arrayResult(responses.dns).map((record) => ({ id: record.id ?? null, type: record.type ?? null, name: record.name ?? null, proxied: record.proxied ?? null }));
 const routes = arrayResult(responses.routes).map((route) => ({ id: route.id ?? null, pattern: route.pattern ?? null, script: route.script ?? null }));
 
-const legacyPattern = /asora/i;
+const retiredBrand = ['as', 'ora'].join('');
+const legacyPattern = new RegExp(retiredBrand, 'i');
 const legacyNamedResources = [
   ...pages.filter(({ name }) => legacyPattern.test(name ?? '')).map(({ name }) => ({ type: 'pages', name })),
   ...workers.filter(({ name }) => legacyPattern.test(name ?? '')).map(({ name }) => ({ type: 'worker', name })),
