@@ -364,11 +364,11 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(workflow, /Roll back partial Worker deployment on failure/);
   assert.match(workflow, /Validate final production gates/);
   assert.match(workflow, /validate:production-gates:final/);
-  assert.match(workflow, /wrangler versions upload --config apps\/lythaus-public-api\/wrangler\.jsonc/);
+  assert.match(workflow, /wrangler@4\.123\.0 versions upload --config apps\/lythaus-public-api\/wrangler\.jsonc/);
   assert.match(workflow, /PRODUCTION_WORKER_VERSION_ID: \$\{\{ env\.PUBLIC_WORKER_VERSION_ID \}\}/);
-  assert.match(workflow, /wrangler versions deploy \$PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development/);
-  assert.match(workflow, /wrangler versions deploy \$ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development/);
-  assert.match(workflow, /wrangler versions deploy \$JOBS_ROLLBACK_SPECS --name lythaus-jobs-development/);
+  assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development/);
+  assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development/);
+  assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$JOBS_ROLLBACK_SPECS --name lythaus-jobs-development/);
   assert.ok(workflow.indexOf('Validate final production gates before activation') < workflow.indexOf('Activate exact candidate Worker versions'));
   for (const worker of ['public-api', 'admin-api', 'jobs']) {
     const config = fs.readFileSync(path.join(root, `apps/lythaus-${worker}/wrangler.jsonc`), 'utf8');

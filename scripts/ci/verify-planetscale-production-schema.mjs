@@ -176,6 +176,8 @@ try {
       if (contract.relationCount !== post0013Expectation.relationCount) {
         throw new Error(`production post-0013 relation count is ${contract.relationCount}; expected ${post0013Expectation.relationCount}`);
       }
+      console.log(`Observed post-0013 schema fingerprint: ${contract.fingerprint}`);
+      console.log(`Observed post-0013 relation count: ${contract.relationCount}`);
       console.log(`Observed post-0013 catalog SHA-256: ${contract.catalogFingerprint}`);
     }
   }

@@ -7,6 +7,37 @@ on:
         description: Exact merged main SHA to build and deploy
         required: true
         type: string
+      pages_project:
+        description: Approved control-panel Pages project name; blank uses the repository variable
+        required: false
+        default: ''
+        type: string
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact merged main SHA to build and deploy
+        required: true
+        type: string
+      pages_project:
+        description: Approved control-panel Pages project name
+        required: true
+        type: string
+    outputs:
+      pages_deployment_id:
+        description: Exact Pages deployment identifier selected for the release SHA
+        value: ${{ jobs.deploy.outputs.pages_deployment_id }}
+      pages_deployment_url:
+        description: Exact Pages deployment URL selected for the release SHA
+        value: ${{ jobs.deploy.outputs.pages_deployment_url }}
+      pages_project:
+        description: Canonical control-panel Pages project
+        value: ${{ jobs.deploy.outputs.pages_project }}
+      pages_branch:
+        description: Pages branch used for the release
+        value: ${{ jobs.deploy.outputs.pages_branch }}
+      deployed_sha:
+        description: Pages commit SHA verified after deployment
+        value: ${{ jobs.deploy.outputs.deployed_sha }}
 
 permissions:
   contents: read
@@ -20,10 +51,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
+    outputs:
+      pages_deployment_id: ${{ steps.pages_evidence.outputs.deployment_id }}
+      pages_deployment_url: ${{ steps.pages_evidence.outputs.deployment_url }}
+      pages_project: ${{ steps.pages_evidence.outputs.pages_project }}
+      pages_branch: ${{ steps.pages_evidence.outputs.pages_branch }}
+      deployed_sha: ${{ steps.pages_evidence.outputs.deployed_sha }}
     env:
-      PAGES_PROJECT: ${{ vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
+      PAGES_PROJECT: ${{ inputs.pages_project || vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
@@ -40,7 +77,7 @@ jobs:
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
           test -n "$PAGES_PROJECT"
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
@@ -62,8 +99,35 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
-          npx --yes wrangler@4.110.0 pages deploy apps/control-panel/dist \
+          npx --yes wrangler@4.123.0 pages deploy apps/control-panel/dist \
             --project-name "$PAGES_PROJECT" \
             --branch main \
             --commit-hash "$RELEASE_SHA" \
             --commit-dirty=false
+
+      - name: Verify exact Pages deployment evidence
+        id: pages_evidence
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PAGES_BRANCH: main
+          PAGES_DEPLOYMENT_EVIDENCE_OUTPUT: control-panel-pages-deployment-evidence.json
+        run: |
+          set -euo pipefail
+          node scripts/cloudflare/verify-pages-deployment.mjs
+          {
+            echo "deployment_id=$(jq -r '.deploymentId' control-panel-pages-deployment-evidence.json)"
+            echo "deployment_url=$(jq -r '.deploymentUrl' control-panel-pages-deployment-evidence.json)"
+            echo "pages_project=$(jq -r '.project' control-panel-pages-deployment-evidence.json)"
+            echo "pages_branch=$(jq -r '.branch' control-panel-pages-deployment-evidence.json)"
+            echo "deployed_sha=$(jq -r '.commitSha' control-panel-pages-deployment-evidence.json)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload control-panel deployment evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: control-panel-pages-evidence-${{ inputs.release_sha }}
+          if-no-files-found: warn
+          path: control-panel-pages-deployment-evidence.json

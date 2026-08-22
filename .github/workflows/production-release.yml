@@ -1,0 +1,308 @@
+name: Canonical production release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact reviewed 40-character main SHA
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful CI run ID for the exact release SHA
+        required: true
+        type: string
+      confirm_production:
+        description: Confirm the four-surface production deployment
+        required: true
+        default: false
+        type: boolean
+      web_base_url:
+        description: Authenticated Flutter web smoke origin
+        required: true
+        type: string
+      api_base_url:
+        description: Canonical API origin used by web smoke
+        required: true
+        type: string
+      admin_api_url:
+        description: Protected admin API origin used by web smoke
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-canonical-production-release
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Canonical release preflight
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    outputs:
+      admin_pages_project: ${{ steps.canonical_config.outputs.admin_pages_project }}
+      web_pages_branch: ${{ steps.canonical_config.outputs.web_pages_branch }}
+    permissions:
+      actions: read
+      contents: read
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      CI_RUN_ID: ${{ inputs.ci_run_id }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - name: Require explicit production confirmation
+        run: test "${{ inputs.confirm_production }}" = true
+      - name: Resolve canonical Pages configuration from protected production variables
+        id: canonical_config
+        env:
+          ADMIN_PAGES_PROJECT: ${{ vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
+          WEB_PAGES_BRANCH: ${{ vars.LYTHAUS_WEB_PAGES_BRANCH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$ADMIN_PAGES_PROJECT" =~ ^lythaus-[A-Za-z0-9-]+$ ]] || {
+            echo 'LYTHAUS_ADMIN_PAGES_PROJECT is missing or not an approved Lythaus Pages project.' >&2
+            exit 1
+          }
+          [[ "$WEB_PAGES_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || {
+            echo 'LYTHAUS_WEB_PAGES_BRANCH is missing or invalid; provider confirmation is required.' >&2
+            exit 1
+          }
+          echo "admin_pages_project=$ADMIN_PAGES_PROJECT" >> "$GITHUB_OUTPUT"
+          echo "web_pages_branch=$WEB_PAGES_BRANCH" >> "$GITHUB_OUTPUT"
+      - name: Require current reviewed main and successful CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'release_sha must be a full 40-character commit SHA' >&2; exit 1; }
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'ci_run_id must be numeric' >&2; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}")"
+          test "$(jq -r '.name' <<<"$run_json")" = 'CI'
+          test "$(jq -r '.head_sha' <<<"$run_json")" = "$RELEASE_SHA"
+          test "$(jq -r '.conclusion' <<<"$run_json")" = 'success'
+      - name: Validate release manifest contract
+        run: node scripts/ci/build-release-manifest.mjs
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+      - name: Upload preflight manifest
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: canonical-release-preflight-${{ inputs.release_sha }}
+          if-no-files-found: error
+          path: .artifacts/release/release-manifest.json
+
+  provider_evidence:
+    name: Capture exact-SHA provider evidence
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      cloudflare_status: ${{ steps.summary.outputs.cloudflare_status }}
+      planetscale_status: ${{ steps.summary.outputs.planetscale_status }}
+      planetscale_schema_fingerprint: ${{ steps.summary.outputs.planetscale_schema_fingerprint }}
+      planetscale_relation_count: ${{ steps.summary.outputs.planetscale_relation_count }}
+      planetscale_server_version: ${{ steps.summary.outputs.planetscale_server_version }}
+      planetscale_migration_set_sha256: ${{ steps.summary.outputs.planetscale_migration_set_sha256 }}
+      planetscale_grants_verified: ${{ steps.summary.outputs.planetscale_grants_verified }}
+      evidence_run_url: ${{ steps.summary.outputs.evidence_run_url }}
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+      CLOUDFLARE_AUDIT_OUTPUT: .artifacts/release-provider-evidence/cloudflare.json
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+      PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+      EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+      PSCALE_BRANCH_NAME: main
+      REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
+      PLANETSCALE_CONTRACT_AUDIT_OUTPUT: .artifacts/release-provider-evidence/planetscale-production-contract.json
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Capture Cloudflare inventory
+        id: cloudflare_audit
+        continue-on-error: true
+        run: node scripts/cloudflare/audit-account.mjs
+      - name: Capture PlanetScale production contract
+        id: planetscale_audit
+        continue-on-error: true
+        run: node scripts/planetscale/audit-production-contract.mjs
+      - name: Summarize exact-SHA provider evidence
+        id: summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cf_status='UNKNOWN/BLOCKED'
+          ps_status='UNKNOWN/BLOCKED'
+          if [[ -f .artifacts/release-provider-evidence/cloudflare.json ]] \
+            && jq -e '.complete == true and .adminWorkerSettings.state.ok == true' .artifacts/release-provider-evidence/cloudflare.json >/dev/null; then
+            cf_status='VERIFIED'
+          fi
+          if [[ -f .artifacts/release-provider-evidence/planetscale-production-contract.json ]] \
+            && jq -e '.transactionReadOnly == true and .verifierPassed == true and .post0013Required == true' .artifacts/release-provider-evidence/planetscale-production-contract.json >/dev/null; then
+            ps_status='VERIFIED'
+          fi
+          contract='.artifacts/release-provider-evidence/planetscale-production-contract.json'
+          schema_fingerprint=''
+          relation_count=''
+          server_version=''
+          migration_set=''
+          grants_verified='false'
+          if [[ -f "$contract" ]]; then
+            server_version="$(jq -r '.postgresVersion // empty' "$contract")"
+            grants_verified="$(jq -r 'if .verifierPassed == true then "true" else "false" end' "$contract")"
+            schema_fingerprint="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0013 schema fingerprint:")) | sub("^Observed post-0013 schema fingerprint: "; "")' "$contract" | head -n 1)"
+            relation_count="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0013 relation count:")) | sub("^Observed post-0013 relation count: "; "")' "$contract" | head -n 1)"
+            migration_set="$(jq -r '.verifierOutput[]? | select(startswith("Approved migration-set SHA-256:")) | sub("^Approved migration-set SHA-256: "; "")' "$contract" | head -n 1)"
+          fi
+          {
+            echo "cloudflare_status=$cf_status"
+            echo "planetscale_status=$ps_status"
+            echo "planetscale_schema_fingerprint=$schema_fingerprint"
+            echo "planetscale_relation_count=$relation_count"
+            echo "planetscale_server_version=$server_version"
+            echo "planetscale_migration_set_sha256=$migration_set"
+            echo "planetscale_grants_verified=$grants_verified"
+            echo "evidence_run_url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Require provider evidence before deployment
+        env:
+          CLOUDFLARE_STATUS: ${{ steps.summary.outputs.cloudflare_status }}
+          PLANETSCALE_STATUS: ${{ steps.summary.outputs.planetscale_status }}
+        run: |
+          test "$CLOUDFLARE_STATUS" = VERIFIED
+          test "$PLANETSCALE_STATUS" = VERIFIED
+      - name: Upload exact-SHA provider evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: canonical-provider-evidence-${{ inputs.release_sha }}
+          if-no-files-found: warn
+          path: .artifacts/release-provider-evidence
+
+  marketing:
+    name: Deploy marketing
+    needs: [preflight, provider_evidence]
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    uses: ./.github/workflows/deploy-marketing.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      deployment_class: production
+    secrets: inherit
+
+  web:
+    name: Deploy Flutter web
+    needs: [preflight, provider_evidence]
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    uses: ./.github/workflows/deploy-alpha-web.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      target_environment: mvp
+      pages_project: lythaus-web
+      pages_branch: ${{ needs.preflight.outputs.web_pages_branch }}
+      web_base_url: ${{ inputs.web_base_url }}
+      api_base_url: ${{ inputs.api_base_url }}
+      admin_api_url: ${{ inputs.admin_api_url }}
+    secrets: inherit
+
+  admin:
+    name: Deploy control panel
+    needs: [preflight, provider_evidence]
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    uses: ./.github/workflows/deploy-control-panel.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+      pages_project: ${{ needs.preflight.outputs.admin_pages_project }}
+    secrets: inherit
+
+  workers:
+    name: Deploy Workers and jobs
+    needs: [preflight, provider_evidence]
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    uses: ./.github/workflows/native-workers-deploy.yml
+    with:
+      release_sha: ${{ inputs.release_sha }}
+    secrets: inherit
+
+  manifest:
+    name: Publish canonical release manifest
+    needs: [provider_evidence, marketing, web, admin, workers]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      MARKETING_DEPLOYMENT_SHA: ${{ needs.marketing.outputs.deployed_sha }}
+      WEB_DEPLOYMENT_SHA: ${{ needs.web.outputs.deployed_sha }}
+      ADMIN_DEPLOYMENT_SHA: ${{ needs.admin.outputs.deployed_sha }}
+      MARKETING_DEPLOYMENT_ID: ${{ needs.marketing.outputs.pages_deployment_id }}
+      MARKETING_DEPLOYMENT_URL: ${{ needs.marketing.outputs.pages_deployment_url }}
+      MARKETING_PAGES_PROJECT: ${{ needs.marketing.outputs.pages_project }}
+      MARKETING_PAGES_BRANCH: ${{ needs.marketing.outputs.pages_branch }}
+      WEB_DEPLOYMENT_ID: ${{ needs.web.outputs.pages_deployment_id }}
+      WEB_DEPLOYMENT_URL: ${{ needs.web.outputs.pages_deployment_url }}
+      WEB_PAGES_PROJECT: ${{ needs.web.outputs.pages_project }}
+      WEB_PAGES_BRANCH: ${{ needs.web.outputs.pages_branch }}
+      ADMIN_DEPLOYMENT_ID: ${{ needs.admin.outputs.pages_deployment_id }}
+      ADMIN_DEPLOYMENT_URL: ${{ needs.admin.outputs.pages_deployment_url }}
+      LYTHAUS_ADMIN_PAGES_PROJECT: ${{ needs.admin.outputs.pages_project }}
+      ADMIN_PAGES_BRANCH: ${{ needs.admin.outputs.pages_branch }}
+      CLOUDFLARE_INVENTORY_STATUS: ${{ needs.provider_evidence.outputs.cloudflare_status || 'UNKNOWN/BLOCKED' }}
+      PLANETSCALE_INVENTORY_STATUS: ${{ needs.provider_evidence.outputs.planetscale_status || 'UNKNOWN/BLOCKED' }}
+      HYPERDRIVE_VERIFIED_MAIN: ${{ needs.workers.outputs.hyperdrive_verified_main }}
+      DATABASE_IDENTITY_VERIFIED: ${{ needs.workers.outputs.database_identity_verified }}
+      BUDGET_ENFORCEMENT_VERIFIED: ${{ needs.workers.outputs.budget_enforcement_verified }}
+      AUTHENTICATED_ACCEPTANCE_PROVEN: ${{ needs.workers.outputs.authenticated_acceptance_proven }}
+      PLANETSCALE_SCHEMA_FINGERPRINT: ${{ needs.provider_evidence.outputs.planetscale_schema_fingerprint }}
+      PLANETSCALE_RELATION_COUNT: ${{ needs.provider_evidence.outputs.planetscale_relation_count }}
+      PLANETSCALE_SERVER_VERSION: ${{ needs.provider_evidence.outputs.planetscale_server_version }}
+      PLANETSCALE_MIGRATION_SET_SHA256: ${{ needs.provider_evidence.outputs.planetscale_migration_set_sha256 }}
+      PLANETSCALE_GRANTS_VERIFIED: ${{ needs.provider_evidence.outputs.planetscale_grants_verified }}
+      PROVIDER_EVIDENCE_RUN_URL: ${{ needs.provider_evidence.outputs.evidence_run_url }}
+      PUBLIC_API_WORKER_VERSION: ${{ needs.workers.outputs.public_worker_version }}
+      ADMIN_API_WORKER_VERSION: ${{ needs.workers.outputs.admin_worker_version }}
+      JOBS_WORKER_VERSION: ${{ needs.workers.outputs.jobs_worker_version }}
+      WORKER_SOURCE_SHA: ${{ needs.workers.outputs.worker_source_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - name: Require exact manifest SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+      - name: Build canonical release manifest
+        run: node scripts/ci/build-release-manifest.mjs
+      - name: Upload canonical release manifest
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: lythaus-release-manifest-${{ inputs.release_sha }}
+          if-no-files-found: error
+          path: .artifacts/release/release-manifest.json

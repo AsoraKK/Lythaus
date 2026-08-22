@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "lythaus-read-only-provider-inventory-v1",
+  "capturedDate": "2026-08-22",
+  "evidenceClass": "historical-pre-protection-snapshot",
+  "capturedBeforeProtection": true,
+  "supersededByCurrentState": "docs/evidence/repository/2026-08-22-governance-state.json",
+  "status": "partial",
+  "github": {
+    "repository": "AsoraKK/Lythaus",
+    "mainSha": "e259181400f3e1561b0c635f4951c13b2460faab",
+    "branchProtection": "NOT_PROTECTED_AT_CAPTURE",
+    "branchCount": 12,
+    "openPullRequests": [603, 604, 584, 583, 582, 541, 537, 536, 534, 533, 532],
+    "historicalPullRequestsReconciled": [555, 558, 561, 566]
+  },
+  "cloudflare": {
+    "status": "UNKNOWN/BLOCKED",
+    "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+    "zone": "lythaus.co",
+    "reason": "No account-action connector or usable local Wrangler credential was available during this read-only run.",
+    "repositoryAuditWorkflow": ".github/workflows/cloudflare-domain-audit.yml",
+    "mutationPerformed": false
+  },
+  "planetscale": {
+    "status": "VERIFIED",
+    "organization": "lythaus",
+    "database": "lythaus-core",
+    "kind": "postgresql",
+    "region": "eu-central",
+    "defaultBranch": "main",
+    "productionBranches": ["main"],
+    "developmentBranch": "NOT_FOUND",
+    "branchCount": 1,
+    "serverVersion": "17.11 (Debian 17.11-1.pgdg12+2)",
+    "relationCount": 307,
+    "functionCount": 85,
+    "migrationTablePresent": true,
+    "latestMigration": "0013_marketing_waitlist.sql",
+    "migrationCount": 14,
+    "extensions": ["pg_trgm", "pgcrypto", "unaccent"],
+    "schemaFingerprint": "UNKNOWN/BLOCKED: exact application fingerprint was not produced by this MCP query",
+    "grants": "UNKNOWN/BLOCKED: role-grant catalog was not queried in this run",
+    "hyperdriveTarget": "UNKNOWN/BLOCKED: Cloudflare account inventory was unavailable",
+    "openSchemaRecommendations": 1,
+    "openRecommendation": "duplicate_index: postgres.feed.user_inbox.inbox_user_idx is covered by user_inbox_cursor_idx",
+    "openRecommendationAction": "NOT_APPLIED",
+    "mutationPerformed": false
+  },
+  "gates": {
+    "cloudflareMutation": "BLOCKED",
+    "planetscaleMutation": "NOT_PERFORMED",
+    "planetScaleDevelopmentDeletion": "NOT_AUTHORIZED"
+  }
+}

@@ -26,7 +26,7 @@ test('native release verifies schema read-only and deploys only existing Workers
 
 test('native release publishes, verifies, and restores the same-origin admin API route', () => {
   assert.match(workflow, /Capture predeployment same-origin admin API route/);
-  assert.match(workflow, /wrangler triggers deploy --config apps\/lythaus-admin-api\/wrangler\.jsonc --name lythaus-admin-api-development/);
+  assert.match(workflow, /wrangler@4\.123\.0 triggers deploy --config apps\/lythaus-admin-api\/wrangler\.jsonc --name lythaus-admin-api-development/);
   assert.match(workflow, /Publish and verify same-origin admin API route/);
   assert.match(workflow, /manage-cloudflare-worker-route\.mjs verify/);
   assert.match(workflow, /ADMIN_ROUTE_TRIGGER_ATTEMPTED=true/);

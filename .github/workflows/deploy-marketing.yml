@@ -13,6 +13,32 @@ on:
         default: preview
         type: choice
         options: [preview, production]
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact 40-character commit SHA to build and deploy
+        required: true
+        type: string
+      deployment_class:
+        description: Pages deployment class
+        required: true
+        type: string
+    outputs:
+      pages_deployment_id:
+        description: Exact Pages deployment identifier selected for the release SHA
+        value: ${{ jobs.deploy-and-validate.outputs.pages_deployment_id }}
+      pages_deployment_url:
+        description: Exact Pages deployment URL selected for the release SHA
+        value: ${{ jobs.deploy-and-validate.outputs.pages_deployment_url }}
+      pages_project:
+        description: Canonical marketing Pages project
+        value: ${{ jobs.deploy-and-validate.outputs.pages_project }}
+      pages_branch:
+        description: Pages branch used for the release
+        value: ${{ jobs.deploy-and-validate.outputs.pages_branch }}
+      deployed_sha:
+        description: Pages commit SHA verified after deployment
+        value: ${{ jobs.deploy-and-validate.outputs.deployed_sha }}
 
 permissions:
   contents: read
@@ -26,13 +52,19 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
+    outputs:
+      pages_deployment_id: ${{ steps.pages_evidence.outputs.deployment_id }}
+      pages_deployment_url: ${{ steps.pages_evidence.outputs.deployment_url }}
+      pages_project: ${{ steps.pages_evidence.outputs.pages_project }}
+      pages_branch: ${{ steps.pages_evidence.outputs.pages_branch }}
+      deployed_sha: ${{ steps.pages_evidence.outputs.deployed_sha }}
     env:
       PAGES_PROJECT: lythaus-marketing
       PAGES_BRANCH: ${{ inputs.deployment_class == 'production' && 'main' || 'preview' }}
       PUBLIC_API_BASE_URL: https://api.lythaus.co
       PUBLIC_TURNSTILE_SITE_KEY: ''
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
@@ -54,7 +86,7 @@ jobs:
             }
           fi
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
@@ -109,6 +141,24 @@ jobs:
           preview_url="$(grep -Eo 'https://[a-z0-9-]+\.lythaus-marketing\.pages\.dev' wrangler-output.txt | head -n 1)"
           test -n "$preview_url"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Verify exact Pages deployment evidence
+        id: pages_evidence
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PAGES_DEPLOYMENT_EVIDENCE_OUTPUT: marketing-pages-deployment-evidence.json
+        run: |
+          set -euo pipefail
+          node scripts/cloudflare/verify-pages-deployment.mjs
+          {
+            echo "deployment_id=$(jq -r '.deploymentId' marketing-pages-deployment-evidence.json)"
+            echo "deployment_url=$(jq -r '.deploymentUrl' marketing-pages-deployment-evidence.json)"
+            echo "pages_project=$(jq -r '.project' marketing-pages-deployment-evidence.json)"
+            echo "pages_branch=$(jq -r '.branch' marketing-pages-deployment-evidence.json)"
+            echo "deployed_sha=$(jq -r '.commitSha' marketing-pages-deployment-evidence.json)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Validate deployed public surface
         env:
@@ -172,6 +222,8 @@ jobs:
         if: success()
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          PAGES_DEPLOYMENT_ID: ${{ steps.pages_evidence.outputs.deployment_id }}
+          PAGES_DEPLOYMENT_URL: ${{ steps.pages_evidence.outputs.deployment_url }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           jq -n \
@@ -180,14 +232,18 @@ jobs:
             --arg branch "$PAGES_BRANCH" \
             --arg previewUrl "$PREVIEW_URL" \
             --arg deploymentClass "${{ inputs.deployment_class }}" \
+            --arg deploymentId "$PAGES_DEPLOYMENT_ID" \
+            --arg deploymentUrl "$PAGES_DEPLOYMENT_URL" \
             --arg createdAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{schemaVersion: 1, commitSha: $commitSha, project: $project, branch: $branch, previewUrl: $previewUrl, deploymentClass: $deploymentClass, routeCount: 10, createdAt: $createdAt}' \
+            '{schemaVersion: 2, commitSha: $commitSha, project: $project, branch: $branch, previewUrl: $previewUrl, deploymentId: $deploymentId, deploymentUrl: $deploymentUrl, deploymentClass: $deploymentClass, routeCount: 10, createdAt: $createdAt}' \
             > marketing-deployment-evidence.json
 
       - name: Upload deployment evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: marketing-deployment-evidence-${{ inputs.release_sha }}
           if-no-files-found: warn
-          path: marketing-deployment-evidence.json
+          path: |
+            marketing-deployment-evidence.json
+            marketing-pages-deployment-evidence.json

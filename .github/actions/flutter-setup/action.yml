@@ -1,0 +1,41 @@
+name: Lythaus Flutter setup
+description: Install the exact Flutter SDK declared by the repository without nested third-party actions
+inputs:
+  flutter-version-file:
+    description: JSON file containing the Flutter SDK version
+    required: false
+    default: .fvmrc
+  channel:
+    description: Flutter release channel
+    required: false
+    default: stable
+  cache:
+    description: Compatibility input retained for existing workflow callers
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Install exact Flutter SDK
+      shell: bash
+      env:
+        FLUTTER_VERSION_FILE: ${{ inputs.flutter-version-file }}
+        FLUTTER_CHANNEL: ${{ inputs.channel }}
+      run: |
+        set -euo pipefail
+        test -f "$FLUTTER_VERSION_FILE"
+        flutter_version="$(node -e "const fs=require('fs'); const value=JSON.parse(fs.readFileSync(process.argv[1],'utf8')).flutter; if(!/^\\d+\\.\\d+\\.\\d+$/.test(value)) process.exit(2); process.stdout.write(value);" "$FLUTTER_VERSION_FILE")"
+        test "$FLUTTER_CHANNEL" = stable
+        sdk_parent="${RUNNER_TOOL_CACHE}/lythaus-flutter/${flutter_version}/${FLUTTER_CHANNEL}"
+        sdk_root="${sdk_parent}/flutter"
+        if [[ ! -x "$sdk_root/bin/flutter" ]]; then
+          mkdir -p "$sdk_parent"
+          archive="flutter_linux_${flutter_version}-stable.tar.xz"
+          curl --fail --location --retry 4 --retry-delay 2 --output "${RUNNER_TEMP}/${archive}" "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/${archive}"
+          tar -xJf "${RUNNER_TEMP}/${archive}" -C "$sdk_parent"
+          rm -f "${RUNNER_TEMP}/${archive}"
+        fi
+        test -x "$sdk_root/bin/flutter"
+        echo "$sdk_root/bin" >> "$GITHUB_PATH"
+        echo "$sdk_root/bin/cache/dart-sdk/bin" >> "$GITHUB_PATH"
+        "$sdk_root/bin/flutter" --version

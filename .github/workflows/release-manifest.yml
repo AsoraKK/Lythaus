@@ -1,0 +1,39 @@
+name: Lythaus release manifest
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact reviewed 40-character commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  manifest:
+    name: Build release manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha || github.sha }}
+      LYTHAUS_ADMIN_PAGES_PROJECT: ${{ vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+          fetch-depth: 0
+      - name: Require exact checked-out SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+      - name: Build sanitized release manifest
+        run: node scripts/ci/build-release-manifest.mjs
+      - name: Upload release manifest
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: lythaus-release-manifest-${{ env.RELEASE_SHA }}
+          if-no-files-found: error
+          path: .artifacts/release/release-manifest.json

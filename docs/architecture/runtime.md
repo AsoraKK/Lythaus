@@ -17,4 +17,8 @@ allows, blocks, removes, or publishes content. The configured monthly evaluation
 budget is US$25.
 
 Email and guest access are the only initial authentication modes. Backend
-deployments are performed only by `.github/workflows/native-workers-deploy.yml`.
+deployment implementation is `.github/workflows/native-workers-deploy.yml`.
+Production releases are coordinated by `.github/workflows/production-release.yml`
+from one reviewed main SHA. The generated release manifest is the cross-provider
+record; it must remain blocked when Cloudflare inventory or deployment evidence
+is unavailable.

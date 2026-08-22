@@ -38,6 +38,56 @@ on:
         description: Cloudflare-protected admin API origin
         required: true
         type: string
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact 40-character commit SHA already validated by CI
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful CI workflow run ID for the exact release SHA
+        required: true
+        type: string
+      target_environment:
+        description: Cloudflare deployment class
+        required: true
+        type: string
+      pages_project:
+        description: Cloudflare Pages project name
+        required: true
+        type: string
+      pages_branch:
+        description: Pages branch alias to deploy
+        required: true
+        type: string
+      web_base_url:
+        description: Public HTTPS URL expected to serve this deployment
+        required: true
+        type: string
+      api_base_url:
+        description: Canonical Alpha API HTTPS /api URL
+        required: true
+        type: string
+      admin_api_url:
+        description: Cloudflare-protected admin API origin
+        required: true
+        type: string
+    outputs:
+      pages_deployment_id:
+        description: Exact Pages deployment identifier selected for the release SHA
+        value: ${{ jobs.deploy-and-smoke.outputs.pages_deployment_id }}
+      pages_deployment_url:
+        description: Exact Pages deployment URL selected for the release SHA
+        value: ${{ jobs.deploy-and-smoke.outputs.pages_deployment_url }}
+      pages_project:
+        description: Canonical Flutter web Pages project
+        value: ${{ jobs.deploy-and-smoke.outputs.pages_project }}
+      pages_branch:
+        description: Pages branch used for the release
+        value: ${{ jobs.deploy-and-smoke.outputs.pages_branch }}
+      deployed_sha:
+        description: Pages commit SHA verified after deployment
+        value: ${{ jobs.deploy-and-smoke.outputs.deployed_sha }}
 
 permissions:
   actions: read
@@ -48,13 +98,19 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.target_environment }}
     timeout-minutes: 35
+    outputs:
+      pages_deployment_id: ${{ steps.pages_evidence.outputs.deployment_id }}
+      pages_deployment_url: ${{ steps.pages_evidence.outputs.deployment_url }}
+      pages_project: ${{ steps.pages_evidence.outputs.pages_project }}
+      pages_branch: ${{ steps.pages_evidence.outputs.pages_branch }}
+      deployed_sha: ${{ steps.pages_evidence.outputs.deployed_sha }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           cache: npm
@@ -73,6 +129,8 @@ jobs:
           test "$(jq -r '.head_sha' <<<"$RUN_JSON")" = "$RELEASE_SHA"
           test "$(jq -r '.name' <<<"$RUN_JSON")" = "CI"
           test "$(jq -r '.conclusion' <<<"$RUN_JSON")" = "success"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
 
           ARTIFACTS_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}/artifacts")
           WEB_DIGEST=$(jq -r '.artifacts[] | select(.name == "flutter-web-release") | .digest' <<<"$ARTIFACTS_JSON")
@@ -97,11 +155,31 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
-          npx --yes wrangler@4.110.0 pages deploy downloaded/web \
+          npx --yes wrangler@4.123.0 pages deploy downloaded/web \
             --project-name "$PAGES_PROJECT" \
             --branch "$PAGES_BRANCH" \
             --commit-hash "$RELEASE_SHA" \
             --commit-dirty=false
+
+      - name: Verify exact Pages deployment evidence
+        id: pages_evidence
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PAGES_PROJECT: ${{ inputs.pages_project }}
+          PAGES_BRANCH: ${{ inputs.pages_branch }}
+          PAGES_DEPLOYMENT_EVIDENCE_OUTPUT: alpha-web-pages-deployment-evidence.json
+        run: |
+          set -euo pipefail
+          node scripts/cloudflare/verify-pages-deployment.mjs
+          {
+            echo "deployment_id=$(jq -r '.deploymentId' alpha-web-pages-deployment-evidence.json)"
+            echo "deployment_url=$(jq -r '.deploymentUrl' alpha-web-pages-deployment-evidence.json)"
+            echo "pages_project=$(jq -r '.project' alpha-web-pages-deployment-evidence.json)"
+            echo "pages_branch=$(jq -r '.branch' alpha-web-pages-deployment-evidence.json)"
+            echo "deployed_sha=$(jq -r '.commitSha' alpha-web-pages-deployment-evidence.json)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Install browser smoke tooling
         run: |
@@ -133,6 +211,8 @@ jobs:
           CI_RUN_ID: ${{ inputs.ci_run_id }}
           WEB_BASE_URL: ${{ inputs.web_base_url }}
           TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+          PAGES_DEPLOYMENT_ID: ${{ steps.pages_evidence.outputs.deployment_id }}
+          PAGES_DEPLOYMENT_URL: ${{ steps.pages_evidence.outputs.deployment_url }}
         run: |
           jq -n \
             --arg commitSha "$RELEASE_SHA" \
@@ -140,16 +220,19 @@ jobs:
             --arg ciRunId "$CI_RUN_ID" \
             --arg webBaseUrl "$WEB_BASE_URL" \
             --arg environment "$TARGET_ENVIRONMENT" \
+            --arg deploymentId "$PAGES_DEPLOYMENT_ID" \
+            --arg deploymentUrl "$PAGES_DEPLOYMENT_URL" \
             --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{schemaVersion: 1, commitSha: $commitSha, webGithubArtifactDigest: $webGithubArtifactDigest, ciRunId: $ciRunId, webBaseUrl: $webBaseUrl, environment: $environment, deployedAt: $date, browserSmoke: "passed"}' \
+            '{schemaVersion: 2, commitSha: $commitSha, webGithubArtifactDigest: $webGithubArtifactDigest, ciRunId: $ciRunId, webBaseUrl: $webBaseUrl, environment: $environment, deploymentId: $deploymentId, deploymentUrl: $deploymentUrl, browserSmoke: "passed", deployedAt: $date}' \
             > alpha-web-deployment-evidence.json
 
       - name: Upload browser and web deployment evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: alpha-web-evidence-${{ inputs.release_sha }}
           path: |
             ${{ runner.temp }}/alpha-web-smoke-report.json
             alpha-web-deployment-evidence.json
+            alpha-web-pages-deployment-evidence.json
           if-no-files-found: warn

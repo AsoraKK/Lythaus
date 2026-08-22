@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: cloudflare-account-audit
@@ -22,7 +21,10 @@ jobs:
   inventory:
     name: Sanitized Cloudflare inventory
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
     env:
       CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -31,19 +33,21 @@ jobs:
       CLOUDFLARE_AUDIT_OUTPUT: .artifacts/provider-inventory/cloudflare.json
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
       - name: Capture read-only account inventory
         run: node scripts/cloudflare/audit-account.mjs
-      - name: Reject active legacy-named Cloudflare resources after cutover
+      - name: Validate inventory shape
         shell: bash
         run: |
           set -euo pipefail
           jq -e '.resources.pages | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           jq -e '.resources.workers | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           jq -e '.resources.access | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.resources.integrations | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.resources.deployHooks | type == "object"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           echo "Legacy-named resource count: $(jq '.legacyNamedResources | length' .artifacts/provider-inventory/cloudflare.json)"
       - name: Persist sanitized audit locator and summary
         shell: bash
@@ -51,8 +55,9 @@ jobs:
           set -euo pipefail
           report='.artifacts/provider-inventory/cloudflare.json'
           mkdir -p .artifacts/provider-inventory
-          counts="$(jq -c '{pages:(.resources.pages|length),workers:(.resources.workers|length),hyperdrives:(.resources.hyperdrives|length),r2:(.resources.r2|length),queues:(.resources.queues|length),workflows:(.resources.workflows|length),kv:(.resources.kv|length),access:(.resources.access|length),turnstile:(.resources.turnstile|length),dns:(.resources.dns|length),routes:(.resources.routes|length)}' "$report")"
-          endpoint_failures="$(jq -c '[.endpointState | to_entries[] | select(.value.ok != true) | .key]' "$report")"
+          counts="$(jq -c '{pages:(.resources.pages|length),workers:(.resources.workers|length),hyperdrives:(.resources.hyperdrives|length),r2:(.resources.r2|length),queues:(.resources.queues|length),workflows:(.resources.workflows|length),kv:(.resources.kv|length),access:(.resources.access|length),turnstile:(.resources.turnstile|length),dns:(.resources.dns|length),routes:(.resources.routes|length),integrations:(.resources.integrations|length),deployHooks:([.resources.deployHooks|to_entries[].value[]]|length)}' "$report")"
+          endpoint_failures="$(jq -c '.failedEndpoints' "$report")"
+          admin_settings_ok="$(jq -r '.adminWorkerSettings.state.ok' "$report")"
           legacy_names="$(jq -c '[.legacyNamedResources[] | {type,name}]' "$report")"
           {
             echo 'Sanitized read-only Cloudflare inventory evidence.'
@@ -61,7 +66,9 @@ jobs:
             echo "Run URL: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo "Main SHA: ${GITHUB_SHA}"
             echo "Captured at: $(jq -r '.capturedAt' "$report")"
+            echo "Inventory complete: $(jq -r '.complete' "$report")"
             echo "Endpoint failures: ${endpoint_failures}"
+            echo "Admin Worker settings readable: ${admin_settings_ok}"
             echo "Resource counts: ${counts}"
             echo "Legacy-named resources: ${legacy_names}"
             echo
@@ -72,9 +79,22 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "Cloudflare inventory evidence ${GITHUB_SHA:0:12} run ${GITHUB_RUN_ID}" \
             --body-file .artifacts/provider-inventory/cloudflare-issue.md
+      - name: Require complete provider evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          report='.artifacts/provider-inventory/cloudflare.json'
+          jq -e '.complete == true' "$report" >/dev/null || {
+            echo 'Cloudflare inventory is incomplete; provider state remains UNKNOWN/BLOCKED.' >&2
+            exit 1
+          }
+          jq -e '.adminWorkerSettings.state.ok == true' "$report" >/dev/null || {
+            echo 'Cloudflare admin Worker settings are unreadable; admin cutover evidence remains UNKNOWN/BLOCKED.' >&2
+            exit 1
+          }
       - name: Upload sanitized provider evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: cloudflare-account-audit-${{ github.sha }}
           if-no-files-found: error

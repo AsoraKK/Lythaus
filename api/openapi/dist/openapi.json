@@ -3,7 +3,7 @@
   "info": {
     "title": "Lythaus API",
     "version": "v6",
-    "description": "HTTP contract for the Lythaus API.",
+    "description": "HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication is Guest plus Email only. Production releases are coordinated from one reviewed main SHA; the release manifest and provider evidence remain outside this HTTP contract.\n",
     "license": {
       "name": "MIT",
       "url": "https://opensource.org/licenses/MIT"
@@ -10764,5 +10764,14 @@
         }
       }
     }
+  },
+  "x-lythaus-release": {
+    "workflow": ".github/workflows/production-release.yml",
+    "manifest": "scripts/ci/build-release-manifest.mjs",
+    "migrationBaseline": "0013_marketing_waitlist.sql",
+    "authenticationModes": [
+      "guest",
+      "email"
+    ]
   }
 }

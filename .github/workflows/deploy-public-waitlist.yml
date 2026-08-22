@@ -24,7 +24,7 @@ jobs:
       PUBLIC_WORKER: lythaus-public-api-development
       PRODUCTION_PUBLIC_API_BASE_URL: https://api.lythaus.co
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
@@ -43,7 +43,7 @@ jobs:
             exit 1
           }
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
           cache: npm
@@ -63,7 +63,7 @@ jobs:
           npm run validate:planetscale-migrations
           npm run validate:planetscale-extensions
           npm run validate:no-retired-provider-dependencies
-          npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
+          npx --yes wrangler@4.123.0 types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
           node scripts/ci/materialize-public-waitlist-deploy.mjs
 
       - name: Prove Hyperdrive targets PlanetScale main
@@ -95,7 +95,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx wrangler secret list --name "$PUBLIC_WORKER" --format json > "$RUNNER_TEMP/public-worker-secrets.json"
+          npx --yes wrangler@4.123.0 secret list --name "$PUBLIC_WORKER" --format json > "$RUNNER_TEMP/public-worker-secrets.json"
           for required in PII_ENCRYPTION_KEY_V1 PII_HMAC_KEY_V1; do
             jq -e --arg name "$required" 'any(.[]; .name == $name and .type == "secret_text")' "$RUNNER_TEMP/public-worker-secrets.json" >/dev/null || {
               echo "Required public Worker secret is missing: $required" >&2
@@ -112,7 +112,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/waitlist-cutover"
-          npx wrangler deployments status --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-before.json"
+          npx --yes wrangler@4.123.0 deployments status --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-before.json"
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/waitlist-cutover/public-before.json" unused PUBLIC
           echo 'PUBLIC_ROLLBACK_CAPTURED=true' >> "$GITHUB_ENV"
 
@@ -132,7 +132,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx wrangler versions upload \
+          npx --yes wrangler@4.123.0 versions upload \
             --config apps/lythaus-public-api/wrangler.jsonc \
             --env="" \
             --tag "$RELEASE_SHA" \
@@ -140,7 +140,7 @@ jobs:
             --secrets-file "$RUNNER_TEMP/waitlist-turnstile-secret.json" \
             --strict
           rm -f "$RUNNER_TEMP/waitlist-turnstile-secret.json"
-          npx wrangler versions list --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-versions.json"
           node scripts/ci/resolve-latest-worker-version.mjs "$RUNNER_TEMP/waitlist-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
 
       - name: Stage public Worker candidate at zero traffic
@@ -157,7 +157,7 @@ jobs:
             exit 1
           fi
           rollback_version="${rollback_specs[0]%%@*}"
-          npx wrangler versions deploy \
+          npx --yes wrangler@4.123.0 versions deploy \
             "${rollback_specs[0]}" \
             "${PUBLIC_WORKER_VERSION_ID}@0" \
             --name "$PUBLIC_WORKER" \
@@ -165,7 +165,7 @@ jobs:
             --yes \
             --message "Stage reviewed Lythaus public waitlist $RELEASE_SHA at zero traffic"
           echo 'PUBLIC_WORKER_DEPLOYED=true' >> "$GITHUB_ENV"
-          npx wrangler deployments status --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-staged.json"
+          npx --yes wrangler@4.123.0 deployments status --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-staged.json"
           jq -e \
             --arg rollback "$rollback_version" \
             --arg candidate "$PUBLIC_WORKER_VERSION_ID" \
@@ -204,7 +204,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx wrangler versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" \
+          npx --yes wrangler@4.123.0 versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" \
             --name "$PUBLIC_WORKER" \
             --env="" \
             --yes \
@@ -219,7 +219,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx wrangler deployments status --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-active.json"
+          npx --yes wrangler@4.123.0 deployments status --name "$PUBLIC_WORKER" --json > "$RUNNER_TEMP/waitlist-cutover/public-active.json"
           jq -e \
             --arg candidate "$PUBLIC_WORKER_VERSION_ID" \
             '(.versions | length) == 1
@@ -256,7 +256,7 @@ jobs:
           set +e
           read -r -a rollback_specs <<< "$PUBLIC_ROLLBACK_SPECS"
           rollback_log="$RUNNER_TEMP/public-waitlist-rollback.log"
-          npx wrangler versions deploy "${rollback_specs[@]}" \
+          npx --yes wrangler@4.123.0 versions deploy "${rollback_specs[@]}" \
             --name "$PUBLIC_WORKER" \
             --env="" \
             --yes \
@@ -276,7 +276,7 @@ jobs:
 
           set -euo pipefail
           current_path="$RUNNER_TEMP/waitlist-cutover/public-rollback-current.json"
-          npx wrangler deployments status --name "$PUBLIC_WORKER" --json > "$current_path"
+          npx --yes wrangler@4.123.0 deployments status --name "$PUBLIC_WORKER" --json > "$current_path"
           PRODUCTION_WORKER_SCOPE="$PUBLIC_WORKER" \
           EXPECTED_CANDIDATE_VERSION_ID="$PUBLIC_WORKER_VERSION_ID" \
           ROLLBACK_SPECS="$PUBLIC_ROLLBACK_SPECS" \
@@ -290,7 +290,7 @@ jobs:
 
       - name: Upload sanitized waitlist cutover evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: public-waitlist-cutover-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/waitlist-cutover

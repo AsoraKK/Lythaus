@@ -7,6 +7,40 @@ on:
         description: Exact reviewed commit SHA to deploy
         required: true
         type: string
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact reviewed commit SHA to deploy
+        required: true
+        type: string
+    outputs:
+      public_worker_version:
+        description: Activated public API Worker version ID
+        value: ${{ jobs.deploy.outputs.public_worker_version }}
+      admin_worker_version:
+        description: Activated admin API Worker version ID
+        value: ${{ jobs.deploy.outputs.admin_worker_version }}
+      jobs_worker_version:
+        description: Activated jobs Worker version ID
+        value: ${{ jobs.deploy.outputs.jobs_worker_version }}
+      hyperdrive_verified_main:
+        description: Exact-run proof that production Hyperdrive targets PlanetScale main
+        value: ${{ jobs.deploy.outputs.hyperdrive_verified_main }}
+      database_identity_verified:
+        description: Exact-run proof that the production database identity passed verification
+        value: ${{ jobs.deploy.outputs.database_identity_verified }}
+      budget_enforcement_verified:
+        description: Exact-run proof that budget enforcement passed acceptance
+        value: ${{ jobs.deploy.outputs.budget_enforcement_verified }}
+      authenticated_acceptance_proven:
+        description: Exact-run proof that authenticated acceptance passed
+        value: ${{ jobs.deploy.outputs.authenticated_acceptance_proven }}
+      planetscale_grants_verified:
+        description: Exact-run proof that PlanetScale grants passed the production contract
+        value: ${{ jobs.deploy.outputs.planetscale_grants_verified }}
+      worker_source_sha:
+        description: Reviewed source SHA used for every activated Worker version
+        value: ${{ jobs.deploy.outputs.worker_source_sha }}
 
 permissions:
   contents: read
@@ -20,8 +54,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 35
+    outputs:
+      public_worker_version: ${{ steps.release_metadata.outputs.public_worker_version }}
+      admin_worker_version: ${{ steps.release_metadata.outputs.admin_worker_version }}
+      jobs_worker_version: ${{ steps.release_metadata.outputs.jobs_worker_version }}
+      hyperdrive_verified_main: ${{ steps.release_metadata.outputs.hyperdrive_verified_main }}
+      database_identity_verified: ${{ steps.release_metadata.outputs.database_identity_verified }}
+      budget_enforcement_verified: ${{ steps.release_metadata.outputs.budget_enforcement_verified }}
+      authenticated_acceptance_proven: ${{ steps.release_metadata.outputs.authenticated_acceptance_proven }}
+      planetscale_grants_verified: ${{ steps.release_metadata.outputs.planetscale_grants_verified }}
+      worker_source_sha: ${{ steps.release_metadata.outputs.worker_source_sha }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
           fetch-depth: 0
@@ -46,7 +90,7 @@ jobs:
             echo "Refusing deployment: checked-out main is not current origin/main." >&2
             exit 1
           fi
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
           cache: npm
@@ -72,9 +116,9 @@ jobs:
           npm run validate:planetscale-extensions
           npm run validate:no-retired-provider-dependencies
           npm run validate:ai-gateway-paths
-          npx wrangler types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
-          npx wrangler types --check apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc
-          npx wrangler types --check apps/lythaus-jobs/src/worker-configuration.d.ts --config apps/lythaus-jobs/wrangler.jsonc
+          npx --yes wrangler@4.123.0 types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
+          npx --yes wrangler@4.123.0 types --check apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc
+          npx --yes wrangler@4.123.0 types --check apps/lythaus-jobs/src/worker-configuration.d.ts --config apps/lythaus-jobs/wrangler.jsonc
       - name: Materialize approved post-0013 deployment identity
         env:
           PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
@@ -109,9 +153,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           mkdir -p "$RUNNER_TEMP/production-cutover"
-          npx wrangler deployments status --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before.json"
-          npx wrangler deployments status --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before.json"
-          npx wrangler deployments status --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-before.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-before.json"
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/public-before.json" unused PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/admin-before.json" unused ADMIN
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/jobs-before.json" unused JOBS
@@ -139,12 +183,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          npx wrangler versions upload --config apps/lythaus-public-api/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA"
-          npx wrangler versions upload --config apps/lythaus-admin-api/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA"
-          npx wrangler versions upload --config apps/lythaus-jobs/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA"
-          npx wrangler versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
-          npx wrangler versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
-          npx wrangler versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
+          npx --yes wrangler@4.123.0 versions upload --config apps/lythaus-public-api/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA"
+          npx --yes wrangler@4.123.0 versions upload --config apps/lythaus-admin-api/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA"
+          npx --yes wrangler@4.123.0 versions upload --config apps/lythaus-jobs/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/admin-versions.json" "$RELEASE_SHA" ADMIN
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/jobs-versions.json" "$RELEASE_SHA" JOBS
@@ -226,6 +270,7 @@ jobs:
             echo "DATABASE_IDENTITY_VERIFIED=true"
             echo "BUDGET_ENFORCEMENT_VERIFIED=true"
             echo "AUTHENTICATED_ACCEPTANCE_PROVEN=true"
+            echo "PLANETSCALE_GRANTS_VERIFIED=true"
           } >> "$GITHUB_ENV"
       - name: Reverify production schema before activation
         env:
@@ -244,11 +289,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx wrangler versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" --name lythaus-public-api-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
+          npx --yes wrangler@4.123.0 versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" --name lythaus-public-api-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
           echo "PUBLIC_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
-          npx wrangler versions deploy "${ADMIN_WORKER_VERSION_ID}@100" --name lythaus-admin-api-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
+          npx --yes wrangler@4.123.0 versions deploy "${ADMIN_WORKER_VERSION_ID}@100" --name lythaus-admin-api-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
           echo "ADMIN_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
-          npx wrangler versions deploy "${JOBS_WORKER_VERSION_ID}@100" --name lythaus-jobs-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
+          npx --yes wrangler@4.123.0 versions deploy "${JOBS_WORKER_VERSION_ID}@100" --name lythaus-jobs-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
           echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
       - name: Publish and verify same-origin admin API route
         env:
@@ -257,12 +302,32 @@ jobs:
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
         run: |
           echo "ADMIN_ROUTE_TRIGGER_ATTEMPTED=true" >> "$GITHUB_ENV"
-          npx wrangler triggers deploy --config apps/lythaus-admin-api/wrangler.jsonc --name lythaus-admin-api-development
+          npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-admin-api/wrangler.jsonc --name lythaus-admin-api-development
           echo "ADMIN_ROUTE_TRIGGER_DEPLOYED=true" >> "$GITHUB_ENV"
           node scripts/ci/manage-cloudflare-worker-route.mjs verify \
             "$RUNNER_TEMP/production-cutover/admin-api-route-after.json" \
             'admin.lythaus.co/api/admin/*' \
             lythaus-admin-api-development
+      - name: Export activated Worker version metadata
+        id: release_metadata
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test -n "${PUBLIC_WORKER_VERSION_ID:-}"
+          test -n "${ADMIN_WORKER_VERSION_ID:-}"
+          test -n "${JOBS_WORKER_VERSION_ID:-}"
+          {
+            echo "public_worker_version=$PUBLIC_WORKER_VERSION_ID"
+            echo "admin_worker_version=$ADMIN_WORKER_VERSION_ID"
+            echo "jobs_worker_version=$JOBS_WORKER_VERSION_ID"
+            echo "hyperdrive_verified_main=${HYPERDRIVE_VERIFIED_MAIN:-false}"
+            echo "database_identity_verified=${DATABASE_IDENTITY_VERIFIED:-false}"
+            echo "budget_enforcement_verified=${BUDGET_ENFORCEMENT_VERIFIED:-false}"
+            echo "authenticated_acceptance_proven=${AUTHENTICATED_ACCEPTANCE_PROVEN:-false}"
+            echo "planetscale_grants_verified=${PLANETSCALE_GRANTS_VERIFIED:-false}"
+            echo "worker_source_sha=$RELEASE_SHA"
+          } >> "$GITHUB_OUTPUT"
       - name: Roll back partial Worker deployment on failure
         if: failure()
         env:
@@ -278,18 +343,18 @@ jobs:
               'admin.lythaus.co/api/admin/*' || rollback_failed=1
           fi
           if [[ "${JOBS_WORKER_DEPLOYED:-false}" == "true" ]]; then
-            npx wrangler versions deploy $JOBS_ROLLBACK_SPECS --name lythaus-jobs-development --yes --message "Restore exact predeployment Lythaus jobs versions" || rollback_failed=1
+            npx --yes wrangler@4.123.0 versions deploy $JOBS_ROLLBACK_SPECS --name lythaus-jobs-development --yes --message "Restore exact predeployment Lythaus jobs versions" || rollback_failed=1
           fi
           if [[ "${ADMIN_WORKER_DEPLOYED:-false}" == "true" ]]; then
-            npx wrangler versions deploy $ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development --yes --message "Restore exact predeployment Lythaus admin versions" || rollback_failed=1
+            npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development --yes --message "Restore exact predeployment Lythaus admin versions" || rollback_failed=1
           fi
           if [[ "${PUBLIC_WORKER_DEPLOYED:-false}" == "true" ]]; then
-            npx wrangler versions deploy $PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development --yes --message "Restore exact predeployment Lythaus public versions" || rollback_failed=1
+            npx --yes wrangler@4.123.0 versions deploy $PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development --yes --message "Restore exact predeployment Lythaus public versions" || rollback_failed=1
           fi
           exit "$rollback_failed"
       - name: Upload sanitized production cutover evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: production-cutover-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/production-cutover
