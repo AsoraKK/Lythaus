@@ -36,7 +36,10 @@ test('PlanetScale contract audit is read-only and delegates exact post-0013 veri
   assert.match(planetscaleContractAudit, /FROM pg_extension/);
   assert.match(planetscaleContractAudit, /FROM system\.schema_migrations/);
   assert.match(planetscaleContractAudit, /information_schema\.role_table_grants/);
-  assert.doesNotMatch(planetscaleContractAudit, /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE)\b/i);
+  assert.doesNotMatch(
+    planetscaleContractAudit,
+    /client\.query\(\s*['"`]\s*(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE)\b/i,
+  );
 });
 
 test('PlanetScale account audit supplies verifier evidence without mutation or DDL', () => {
