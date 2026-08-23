@@ -43,8 +43,11 @@ const approvedAllowlistPaths = new Set([
   'scripts/cloudflare/audit-account.mjs',
   'scripts/cloudflare/execute-lythaus-pages-cutover.mjs',
   'scripts/cloudflare/rotate-lythaus-access-service-token.mjs',
+  'scripts/cloudflare/execute-lythaus-web-source-hygiene.mjs',
   '.github/workflows/cloudflare-lythaus-pages-cutover.yml',
+  '.github/workflows/cloudflare-lythaus-web-source-hygiene.yml',
   'scripts/tests/cloudflare-pages-cutover.test.mjs',
+  'scripts/tests/cloudflare-web-source-hygiene.test.mjs',
   'scripts/validate-no-retired-provider-dependencies.mjs',
 ]);
 

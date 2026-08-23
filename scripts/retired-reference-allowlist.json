@@ -23,8 +23,11 @@
     { "path": "scripts/cloudflare/audit-account.mjs", "kind": "retirement-inventory", "reason": "The read-only Cloudflare inventory must recognize legacy Lythaus resources and explicitly ignore external resources; it records no credentials and performs no mutations." },
     { "path": "scripts/cloudflare/execute-lythaus-pages-cutover.mjs", "kind": "retirement-control", "reason": "The permanent, fail-closed cutover control names only the known legacy Lythaus Pages project and preview Access application so it can retire them without touching external resources." },
     { "path": "scripts/cloudflare/rotate-lythaus-access-service-token.mjs", "kind": "retirement-control", "reason": "The protected Access rotation control recognizes and retires only the Lythaus legacy service-token path while preserving explicit Nite Owl exclusion." },
+    { "path": "scripts/cloudflare/execute-lythaus-web-source-hygiene.mjs", "kind": "retirement-control", "reason": "The protected web hygiene control names only the known retired Lythaus Pages domain and disables its historical Git deployment path without exposing credentials." },
     { "path": ".github/workflows/cloudflare-lythaus-pages-cutover.yml", "kind": "retirement-gate", "reason": "The protected cutover workflow carries exact-SHA, Access, DNS, rollback, and narrowly scoped legacy-resource retirement gates." },
+    { "path": ".github/workflows/cloudflare-lythaus-web-source-hygiene.yml", "kind": "retirement-gate", "reason": "The protected web hygiene workflow carries exact-SHA, canonical-domain, mutation-confirmation, and rollback-evidence gates." },
     { "path": "scripts/tests/cloudflare-pages-cutover.test.mjs", "kind": "retirement-test", "reason": "Regression tests assert that legacy-resource handling stays exact-SHA, rollback-capable, and outside the Nite Owl scope." },
+    { "path": "scripts/tests/cloudflare-web-source-hygiene.test.mjs", "kind": "retirement-test", "reason": "Regression tests assert that the web cleanup remains allowlisted, exact-SHA, mutation-safe, and outside the Nite Owl scope." },
     { "path": "scripts/validate-no-retired-provider-dependencies.mjs", "kind": "guard", "reason": "The guard constructs forbidden patterns and reads the allowlist." }
   ]
 }
