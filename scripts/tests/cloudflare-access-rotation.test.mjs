@@ -34,6 +34,9 @@ test('Access rotation is protected, Lythaus-scoped, and sanitized', () => {
   assert.match(script, /clearedExplicitly/);
   assert.match(script, /legacyScimApps/);
   assert.match(script, /updatedScimApps/);
+  assert.match(script, /credentialCommitted/);
+  assert.match(script, /if \(!credentialCommitted\)/);
+  assert.match(script, /credentialRotationCommitted: credentialCommitted/);
   assert.match(script, /precedence: 0/);
   assert.match(script, /Lythaus control-panel CI service token/);
   assert.match(script, /gh', \['secret', 'set'/);
