@@ -135,14 +135,13 @@ async function rotateServiceToken(tokenId) {
   });
 }
 
-async function createPolicy(appId, tokenId, precedence) {
+async function createPolicy(appId, tokenId) {
   return cloudflare(`/access/apps/${appId}/policies`, {
     method: 'POST',
     body: JSON.stringify({
       name: 'Lythaus control-panel CI service token',
       decision: 'non_identity',
       include: [{ service_token: { token_id: tokenId } }],
-      precedence,
     }),
   });
 }
@@ -192,7 +191,7 @@ async function rotateCredentials() {
   try {
     const uiPolicies = await listPolicies(adminUiAppId);
     if (!uiPolicies.some((policy) => serviceTokenPolicy(policy, previous.id))) {
-      const uiPolicy = await createPolicy(adminUiAppId, previous.id, 2);
+      const uiPolicy = await createPolicy(adminUiAppId, previous.id);
       addedPolicies.push([adminUiAppId, uiPolicy.id]);
     }
 
