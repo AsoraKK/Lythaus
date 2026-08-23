@@ -19,6 +19,8 @@ content_matches="$({
     --glob '!cloudflare/audit-account.mjs' \
     --glob '!scripts/cloudflare/execute-lythaus-pages-cutover.mjs' \
     --glob '!cloudflare/execute-lythaus-pages-cutover.mjs' \
+    --glob '!scripts/cloudflare/rotate-lythaus-access-service-token.mjs' \
+    --glob '!cloudflare/rotate-lythaus-access-service-token.mjs' \
     --glob '!.github/workflows/cloudflare-lythaus-pages-cutover.yml' \
     --glob '!workflows/cloudflare-lythaus-pages-cutover.yml' \
     --glob '!scripts/tests/cloudflare-pages-cutover.test.mjs' \
