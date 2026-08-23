@@ -116,7 +116,7 @@ function writeEvidence(value) {
 function setGitHubSecret(name, value) {
   requireEnv('GITHUB_REPOSITORY', repository);
   requireEnv('GH_TOKEN', githubToken);
-  const result = spawnSync('gh', ['secret', 'set', name, '--repo', repository, '--body-file', '-'], {
+  const result = spawnSync('gh', ['secret', 'set', name, '--repo', repository], {
     env: { ...process.env, GH_TOKEN: githubToken },
     input: value,
     encoding: 'utf8',
