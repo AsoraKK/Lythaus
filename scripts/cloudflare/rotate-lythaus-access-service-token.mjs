@@ -35,26 +35,40 @@ function safeError(value) {
 }
 
 async function cloudflare(path, options = {}) {
-  const response = await fetch(`${apiBase}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${cloudflareToken}`,
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
-    },
-  });
-  const text = await response.text();
-  let payload = {};
-  try {
-    payload = text ? JSON.parse(text) : {};
-  } catch {
-    throw new Error(`Cloudflare ${options.method ?? 'GET'} ${path} returned non-JSON HTTP ${response.status}`);
+  const method = options.method ?? 'GET';
+  const retryReads = method === 'GET';
+  const maxAttempts = retryReads ? 5 : 1;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const response = await fetch(`${apiBase}${path}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${cloudflareToken}`,
+        'Content-Type': 'application/json',
+        ...(options.headers ?? {}),
+      },
+    });
+    const text = await response.text();
+    let payload = {};
+    try {
+      payload = text ? JSON.parse(text) : {};
+    } catch {
+      if (retryReads && (response.status === 429 || response.status >= 500) && attempt + 1 < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (2 ** attempt)));
+        continue;
+      }
+      throw new Error(`Cloudflare ${method} ${path} returned non-JSON HTTP ${response.status}`);
+    }
+    if (!response.ok || payload.success === false) {
+      const details = (payload.errors ?? []).map((error) => `${error.code ?? 'unknown'}:${error.message ?? 'error'}`).join('; ');
+      if (retryReads && (response.status === 429 || response.status >= 500) && attempt + 1 < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (2 ** attempt)));
+        continue;
+      }
+      throw new Error(`Cloudflare ${method} ${path} failed HTTP ${response.status}${details ? ` (${safeError(details)})` : ''}`);
+    }
+    return payload.result;
   }
-  if (!response.ok || payload.success === false) {
-    const details = (payload.errors ?? []).map((error) => `${error.code ?? 'unknown'}:${error.message ?? 'error'}`).join('; ');
-    throw new Error(`Cloudflare ${options.method ?? 'GET'} ${path} failed HTTP ${response.status}${details ? ` (${safeError(details)})` : ''}`);
-  }
-  return payload.result;
+  throw new Error(`Cloudflare ${method} ${path} exhausted read retries`);
 }
 
 async function listServiceTokens() {

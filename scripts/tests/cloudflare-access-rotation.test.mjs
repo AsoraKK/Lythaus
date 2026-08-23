@@ -13,6 +13,9 @@ test('Access rotation is protected, Lythaus-scoped, and sanitized', () => {
   assert.match(workflow, /actions\/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f/);
   assert.match(script, /access\/service_tokens\/\$\{tokenId\}\/rotate/);
   assert.match(script, /previous_client_secret_expires_at/);
+  assert.match(script, /response\.status === 429/);
+  assert.match(script, /response\.status >= 500/);
+  assert.match(script, /maxAttempts = retryReads \? 5 : 1/);
   assert.match(script, /service_token: \{ token_id: tokenId \}/);
   assert.match(script, /policyPayloadForServiceToken/);
   assert.match(script, /probeAdminWithRetry/);
