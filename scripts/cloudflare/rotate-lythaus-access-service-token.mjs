@@ -142,6 +142,7 @@ async function createPolicy(appId, tokenId) {
       name: 'Lythaus control-panel CI service token',
       decision: 'non_identity',
       include: [{ service_token: { token_id: tokenId } }],
+      precedence: 0,
     }),
   });
 }
