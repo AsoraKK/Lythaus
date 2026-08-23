@@ -67,7 +67,9 @@ async function listPolicies(appId) {
 }
 
 function serviceTokenPolicy(policy, tokenId) {
-  return (policy.include ?? []).some((rule) => rule.service_token?.id === tokenId);
+  return (policy.include ?? []).some((rule) => (
+    rule.service_token?.token_id === tokenId || rule.service_token?.id === tokenId
+  ));
 }
 
 function isAccessLoginPage(body) {
@@ -139,7 +141,7 @@ async function createPolicy(appId, tokenId, precedence) {
     body: JSON.stringify({
       name: 'Lythaus control-panel CI service token',
       decision: 'non_identity',
-      include: [{ service_token: { id: tokenId } }],
+      include: [{ service_token: { token_id: tokenId } }],
       precedence,
     }),
   });
