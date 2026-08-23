@@ -12,6 +12,7 @@ const outputPath = process.env.ACCESS_ROTATION_EVIDENCE_PATH ?? '.artifacts/clou
 const rotate = process.env.ROTATE_LYTHAUS_ACCESS_TOKEN === 'true';
 const adminUiAppId = process.env.LYTHAUS_ADMIN_UI_ACCESS_APP_ID ?? '2d440b64-6cde-48d7-b3cb-132129ee036f';
 const adminApiAppId = process.env.LYTHAUS_ADMIN_API_ACCESS_APP_ID ?? 'fa6906cc-3daf-4beb-82b5-143e708eca0d';
+const legacyPreviewAppId = process.env.LYTHAUS_LEGACY_PREVIEW_ACCESS_APP_ID ?? '6152f491-9f60-4c0b-8c0c-a3ddacdf9270';
 
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}`;
 
@@ -242,7 +243,7 @@ async function rotateCredentials() {
     const legacyTokens = tokens.filter((token) => token.id !== previous.id && /asora/i.test(token.name ?? ''));
     const legacyPolicies = [];
     for (const legacyToken of legacyTokens) {
-      for (const appId of [adminUiAppId, adminApiAppId]) {
+      for (const appId of [adminUiAppId, adminApiAppId, legacyPreviewAppId]) {
         const policies = await listPolicies(appId);
         for (const policy of policies.filter((candidate) => serviceTokenPolicy(candidate, legacyToken.id))) {
           await deletePolicy(appId, policy.id);
