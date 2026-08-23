@@ -67,6 +67,11 @@ async function listPolicies(appId) {
   return Array.isArray(result) ? result : [];
 }
 
+async function listAccessGroups() {
+  const result = await cloudflare('/access/groups?page=1&per_page=100');
+  return Array.isArray(result) ? result : [];
+}
+
 function serviceTokenPolicy(policy, tokenId) {
   return (policy.include ?? []).some((rule) => (
     rule.service_token?.token_id === tokenId || rule.service_token?.id === tokenId
@@ -167,6 +172,23 @@ async function updatePolicy(appId, policy, tokenId, name) {
   });
 }
 
+function groupPayloadWithoutServiceToken(group, tokenId) {
+  const payload = { name: group.name };
+  for (const key of ['include', 'exclude', 'require']) {
+    if (Array.isArray(group[key])) {
+      payload[key] = group[key].filter((rule) => !serviceTokenPolicy({ include: [rule] }, tokenId));
+    }
+  }
+  return payload;
+}
+
+async function updateGroupWithoutServiceToken(group, tokenId) {
+  return cloudflare(`/access/groups/${group.id}`, {
+    method: 'PUT',
+    body: JSON.stringify(groupPayloadWithoutServiceToken(group, tokenId)),
+  });
+}
+
 async function deletePolicy(appId, policyId) {
   await cloudflare(`/access/apps/${appId}/policies/${policyId}`, { method: 'DELETE' });
 }
@@ -207,6 +229,7 @@ async function rotateCredentials() {
 
   const addedPolicies = [];
   const updatedPolicies = [];
+  const updatedGroups = [];
   let secretsUpdated = [];
   let rotated = null;
   let lastProbe = null;
@@ -250,6 +273,17 @@ async function rotateCredentials() {
           legacyPolicies.push({ appId, policyId: policy.id, tokenId: legacyToken.id });
         }
       }
+      const groups = await listAccessGroups();
+      for (const group of groups) {
+        if (/nite[-_ ]?owl/i.test(group.name ?? '')) continue;
+        const referencesToken = ['include', 'exclude', 'require'].some((key) => (
+          Array.isArray(group[key]) && group[key].some((rule) => serviceTokenPolicy({ include: [rule] }, legacyToken.id))
+        ));
+        if (referencesToken) {
+          await updateGroupWithoutServiceToken(group, legacyToken.id);
+          updatedGroups.push({ group, tokenId: legacyToken.id });
+        }
+      }
     }
     for (const legacyToken of legacyTokens) await deleteServiceToken(legacyToken.id);
 
@@ -264,6 +298,7 @@ async function rotateCredentials() {
       rotatedExistingServiceToken: true,
       legacyServiceTokensRevoked: legacyTokens.map((token) => ({ id: token.id, name: token.name, revoked: true })),
       legacyPoliciesRemoved: legacyPolicies,
+      legacyGroupsUpdated: updatedGroups.map(({ group, tokenId }) => ({ groupId: group.id, name: group.name, tokenId })),
       previousCredentialMatched: true,
       githubSecretsUpdated: secretsUpdated,
       credentialRotationCompleted: true,
@@ -283,6 +318,19 @@ async function rotateCredentials() {
         ?? (policy.include ?? []).find((rule) => rule.service_token?.id)?.service_token?.id;
       try { if (legacyTokenId) await updatePolicy(appId, policy, legacyTokenId, policy.name); } catch { /* best effort rollback */ }
     }
+    for (const { group } of updatedGroups.reverse()) {
+      try {
+        await cloudflare(`/access/groups/${group.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: group.name,
+            include: group.include,
+            exclude: group.exclude,
+            require: group.require,
+          }),
+        });
+      } catch { /* best effort rollback */ }
+    }
     writeEvidence({
       schemaVersion: 1,
       capturedAt: new Date().toISOString(),
@@ -292,6 +340,7 @@ async function rotateCredentials() {
       rotatedServiceToken: rotated ? { id: rotated.id, duration: rotated.duration, enabled: rotated.enabled } : null,
       newPolicies: addedPolicies.map(([appId, policyId]) => ({ appId, policyId })),
       updatedPolicies: updatedPolicies.map(({ appId, policy }) => ({ appId, policyId: policy.id, replacedLegacyName: policy.name })),
+      updatedGroups: updatedGroups.map(({ group, tokenId }) => ({ groupId: group.id, name: group.name, tokenId })),
       lastProbe,
       githubSecretsUpdated: secretsUpdated,
       rollbackAttempted: true,
