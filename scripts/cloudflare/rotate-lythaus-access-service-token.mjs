@@ -322,7 +322,19 @@ async function rotateCredentials() {
     for (const listedApp of accessApplications) {
       if (!listedApp?.id || isNiteOwlApplication(listedApp)) continue;
       const app = await getAccessApplication(listedApp.id);
-      accessApplicationInventory.push(accessApplicationEvidence(app, legacyClientIds));
+      const appEvidence = accessApplicationEvidence(app, legacyClientIds);
+      accessApplicationInventory.push(appEvidence);
+      if (appEvidence.legacyServiceTokenReferencePaths.length > 0 && !isLegacyLythausApplication(app)) {
+        throw new Error(`Legacy Access service token is still referenced by an unclassified Access application ${app.name ?? app.id}`);
+      }
+    }
+    const legacyPreviewListedApp = accessApplications.find((app) => app?.id === legacyPreviewAppId);
+    if (legacyPreviewListedApp) {
+      const legacyPreviewApp = await getAccessApplication(legacyPreviewAppId);
+      const references = legacyTokens.flatMap((token) => findClientIdReferences(legacyPreviewApp.scim_config, token.client_id, 'scim_config'));
+      await updateApplicationScimConfig(legacyPreviewApp, null);
+      updatedScimApps.push({ app: legacyPreviewApp, tokenId: null });
+      legacyScimApps.push({ appId: legacyPreviewApp.id, name: legacyPreviewApp.name, references, clearedExplicitly: true });
     }
     for (const legacyToken of legacyTokens) {
       for (const appId of [adminUiAppId, adminApiAppId, legacyPreviewAppId]) {
@@ -342,18 +354,6 @@ async function rotateCredentials() {
           await updateGroupWithoutServiceToken(group, legacyToken.id);
           updatedGroups.push({ group, tokenId: legacyToken.id });
         }
-      }
-      for (const listedApp of accessApplications) {
-        if (!listedApp?.id || isNiteOwlApplication(listedApp)) continue;
-        const app = await getAccessApplication(listedApp.id);
-        const references = findClientIdReferences(app.scim_config, legacyToken.client_id, 'scim_config');
-        if (references.length === 0) continue;
-        if (!isLegacyLythausApplication(app)) {
-          throw new Error(`Legacy Access service token is still referenced by an unclassified Access application ${app.name ?? app.id}`);
-        }
-        await updateApplicationScimConfig(app, null);
-        updatedScimApps.push({ app, tokenId: legacyToken.id });
-        legacyScimApps.push({ appId: app.id, name: app.name, references });
       }
     }
     for (const legacyToken of legacyTokens) await deleteServiceToken(legacyToken.id);
