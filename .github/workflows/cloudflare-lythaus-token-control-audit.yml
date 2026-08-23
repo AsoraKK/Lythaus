@@ -1,0 +1,43 @@
+name: Cloudflare Lythaus token-control audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-lythaus-token-control-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Sanitized Cloudflare token-control audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_TOKEN_CONTROL_OUTPUT: .artifacts/provider-inventory/cloudflare-token-control.json
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Capture read-only token-control capability
+        run: node scripts/cloudflare/audit-lythaus-token-control.mjs
+      - name: Require sanitized evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .artifacts/provider-inventory/cloudflare-token-control.json
+          jq -e '.mutationPerformed == false and .capabilities.githubSecretWriteAttempted == false' .artifacts/provider-inventory/cloudflare-token-control.json >/dev/null
+      - name: Upload sanitized token-control evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: cloudflare-lythaus-token-control-${{ github.sha }}
+          if-no-files-found: error
+          path: .artifacts/provider-inventory/cloudflare-token-control.json
