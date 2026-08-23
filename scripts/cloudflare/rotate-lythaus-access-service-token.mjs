@@ -100,6 +100,20 @@ function isLegacyLythausApplication(app) {
   return app.id === legacyPreviewAppId || /asora|legacy|preview/i.test(`${app.name ?? ''} ${app.domain ?? ''}`);
 }
 
+function accessApplicationEvidence(app, legacyClientIds) {
+  const references = legacyClientIds.flatMap((clientId) => findClientIdReferences(app.scim_config, clientId, 'scim_config'));
+  return {
+    id: app.id,
+    name: app.name,
+    domain: app.domain,
+    type: app.type,
+    niteOwl: isNiteOwlApplication(app),
+    scimConfigured: Boolean(app.scim_config),
+    scimEnabled: app.scim_config?.enabled ?? null,
+    legacyServiceTokenReferencePaths: references,
+  };
+}
+
 function serviceTokenPolicy(policy, tokenId) {
   return (policy.include ?? []).some((rule) => (
     rule.service_token?.token_id === tokenId || rule.service_token?.id === tokenId
@@ -269,6 +283,7 @@ async function rotateCredentials() {
   let secretsUpdated = [];
   let rotated = null;
   let lastProbe = null;
+  let accessApplicationInventory = [];
   try {
     rotated = await rotateServiceToken(previous.id);
     if (!rotated?.id || !rotated.client_id || !rotated.client_secret) throw new Error('Cloudflare rotated a service token without complete credential metadata');
@@ -303,6 +318,12 @@ async function rotateCredentials() {
     const legacyPolicies = [];
     const legacyScimApps = [];
     const accessApplications = await listAccessApplications();
+    const legacyClientIds = legacyTokens.map((token) => token.client_id);
+    for (const listedApp of accessApplications) {
+      if (!listedApp?.id || isNiteOwlApplication(listedApp)) continue;
+      const app = await getAccessApplication(listedApp.id);
+      accessApplicationInventory.push(accessApplicationEvidence(app, legacyClientIds));
+    }
     for (const legacyToken of legacyTokens) {
       for (const appId of [adminUiAppId, adminApiAppId, legacyPreviewAppId]) {
         const policies = await listPolicies(appId);
@@ -350,6 +371,7 @@ async function rotateCredentials() {
       legacyPoliciesRemoved: legacyPolicies,
       legacyGroupsUpdated: updatedGroups.map(({ group, tokenId }) => ({ groupId: group.id, name: group.name, tokenId })),
       legacyScimAppsCleared: legacyScimApps,
+      accessApplicationInventory,
       previousCredentialMatched: true,
       githubSecretsUpdated: secretsUpdated,
       credentialRotationCompleted: true,
@@ -396,6 +418,7 @@ async function rotateCredentials() {
       updatedPolicies: updatedPolicies.map(({ appId, policy }) => ({ appId, policyId: policy.id, replacedLegacyName: policy.name })),
       updatedGroups: updatedGroups.map(({ group, tokenId }) => ({ groupId: group.id, name: group.name, tokenId })),
       updatedScimApps: updatedScimApps.map(({ app, tokenId }) => ({ appId: app.id, name: app.name, tokenId })),
+      accessApplicationInventory,
       lastProbe,
       githubSecretsUpdated: secretsUpdated,
       rollbackAttempted: true,
