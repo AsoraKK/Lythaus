@@ -20,8 +20,9 @@ test('Cloudflare inventory prefers canonical deployment token and throttles acco
 });
 
 test('Cloudflare inventory cannot pass as empty when provider evidence is incomplete', () => {
-  assert.match(cloudflareAudit, /complete: failedEndpoints\.length === 0/);
+  assert.match(cloudflareAudit, /complete: requiredLythausFailures\.length === 0/);
   assert.match(cloudflareAudit, /failedEndpoints/);
+  assert.match(cloudflareAudit, /requiredLythausFailures/);
   assert.match(cloudflareWorkflow, /Require complete provider evidence/);
   assert.match(cloudflareWorkflow, /\.complete == true/);
   assert.match(cloudflareWorkflow, /adminWorkerSettings\.state\.ok == true/);

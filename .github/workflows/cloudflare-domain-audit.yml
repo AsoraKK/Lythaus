@@ -24,14 +24,12 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      issues: write
     env:
       CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
       CLOUDFLARE_AUDIT_OUTPUT: .artifacts/provider-inventory/cloudflare.json
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -48,6 +46,9 @@ jobs:
           jq -e '.resources.access | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           jq -e '.resources.integrations | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           jq -e '.resources.deployHooks | type == "object"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.resourceClassifications.pages | type == "array"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.classificationPolicy.niteOwlHandling | type == "string"' .artifacts/provider-inventory/cloudflare.json >/dev/null
+          jq -e '.deployHookInventory.status == "NOT_ENUMERABLE_READ_ONLY"' .artifacts/provider-inventory/cloudflare.json >/dev/null
           echo "Legacy-named resource count: $(jq '.legacyNamedResources | length' .artifacts/provider-inventory/cloudflare.json)"
       - name: Persist sanitized audit locator and summary
         shell: bash
@@ -57,6 +58,7 @@ jobs:
           mkdir -p .artifacts/provider-inventory
           counts="$(jq -c '{pages:(.resources.pages|length),workers:(.resources.workers|length),hyperdrives:(.resources.hyperdrives|length),r2:(.resources.r2|length),queues:(.resources.queues|length),workflows:(.resources.workflows|length),kv:(.resources.kv|length),access:(.resources.access|length),turnstile:(.resources.turnstile|length),dns:(.resources.dns|length),routes:(.resources.routes|length),integrations:(.resources.integrations|length),deployHooks:([.resources.deployHooks|to_entries[].value[]]|length)}' "$report")"
           endpoint_failures="$(jq -c '.failedEndpoints' "$report")"
+          ignored_external="$(jq -c '.ignoredExternalResources' "$report")"
           admin_settings_ok="$(jq -r '.adminWorkerSettings.state.ok' "$report")"
           legacy_names="$(jq -c '[.legacyNamedResources[] | {type,name}]' "$report")"
           {
@@ -71,14 +73,11 @@ jobs:
             echo "Admin Worker settings readable: ${admin_settings_ok}"
             echo "Resource counts: ${counts}"
             echo "Legacy-named resources: ${legacy_names}"
+            echo "Ignored external Nite Owl resources: ${ignored_external}"
             echo
-            echo 'The complete sanitized inventory is stored in the Actions artifact named below. No provider mutation is performed by this workflow.'
+            echo 'The complete sanitized inventory is stored in the Actions artifact named below. No provider mutation or GitHub issue write is performed by this workflow.'
             echo "Artifact: cloudflare-account-audit-${GITHUB_SHA}"
-          } > .artifacts/provider-inventory/cloudflare-issue.md
-          gh issue create \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Cloudflare inventory evidence ${GITHUB_SHA:0:12} run ${GITHUB_RUN_ID}" \
-            --body-file .artifacts/provider-inventory/cloudflare-issue.md
+          } > .artifacts/provider-inventory/cloudflare-summary.md
       - name: Require complete provider evidence
         shell: bash
         run: |
@@ -86,6 +85,10 @@ jobs:
           report='.artifacts/provider-inventory/cloudflare.json'
           jq -e '.complete == true' "$report" >/dev/null || {
             echo 'Cloudflare inventory is incomplete; provider state remains UNKNOWN/BLOCKED.' >&2
+            exit 1
+          }
+          jq -e '(.requiredLythausFailures | length) == 0' "$report" >/dev/null || {
+            echo 'A required Lythaus Cloudflare inventory endpoint is incomplete; provider state remains UNKNOWN/BLOCKED.' >&2
             exit 1
           }
           jq -e '.adminWorkerSettings.state.ok == true' "$report" >/dev/null || {
@@ -98,4 +101,4 @@ jobs:
         with:
           name: cloudflare-account-audit-${{ github.sha }}
           if-no-files-found: error
-          path: .artifacts/provider-inventory/cloudflare.json
+          path: .artifacts/provider-inventory/
