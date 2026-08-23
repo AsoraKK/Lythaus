@@ -1,44 +1,44 @@
 {
   "schemaVersion": 1,
-  "capturedAt": "2026-08-23T09:01:00Z",
-  "status": "NO-GO",
+  "capturedAt": "2026-08-23T21:07:00Z",
+  "status": "CONTROLLED_PRE_RELEASE",
   "scope": "Lythaus and retired Asora resources demonstrably connected to Lythaus only",
   "github": {
     "repository": "AsoraKK/Lythaus",
-    "currentMainSha": "a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9",
-    "reviewedCandidateSha": "1a62eca6ed10c19c48014634f253edbbd242dd67",
-    "pr": 611,
-    "prState": "OPEN",
-    "mergeState": "BLOCKED_REVIEW_REQUIRED",
+    "currentMainSha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
+    "reviewedCandidateSha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
+    "pr": 637,
+    "prState": "MERGED",
+    "mergeState": "MERGED_PROTECTED",
     "independentApprovalPresent": false,
     "requiredChecks": "PASS",
-    "ciRunId": "32629506258",
+    "ciRunId": "32665625300",
     "branchProtectionVerified": true,
     "historicalReconciliation": {
-      "workflowRunId": "32629711639",
-      "sourceSha": "1a62eca6ed10c19c48014634f253edbbd242dd67",
-      "mainShaAtCapture": "a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9",
+      "workflowRunId": "32665704792",
+      "sourceSha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
+      "mainShaAtCapture": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
       "total": 85,
       "reachable": 47,
       "patchEquivalent": 4,
       "reviewedUnique": 34,
       "uniqueWorkReview": 0,
       "objectUnavailable": 0,
-      "acceptance": "PRE_MERGE_ONLY"
+      "acceptance": "VERIFIED"
     },
     "activeBranches": {
-      "legitimateLythaus": ["codex/post-merge-evidence-fix"],
+      "legitimateLythaus": [],
       "dependabot": 9,
       "mainPresent": true,
       "obsoleteLythausBranchesObserved": 0
     }
   },
   "cloudflare": {
-    "inventoryWorkflowRunId": "32628846369",
-    "inventorySha": "9933c713923b9b534ea05e548f70bb616661dd10",
+    "inventoryWorkflowRunId": "32665704731",
+    "inventorySha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
     "readOnlyInventoryComplete": true,
     "requiredLythausFailures": [],
-    "status": "PARTIAL",
+    "status": "VERIFIED",
     "marketingProject": "lythaus-marketing",
     "marketingDomains": ["lythaus.co", "www.lythaus.co"],
     "flutterProject": "lythaus-web",
@@ -54,13 +54,13 @@
       "lythaus-db-jobs-dev",
       "lythaus-db-privacy-dev"
     ],
-    "legacyAsoraActiveResources": 2,
-    "legacyAsoraAutoDeployment": "ACTIVE",
+    "legacyAsoraActiveResources": 0,
+    "legacyAsoraAutoDeployment": "DISABLED",
     "pagesPermissionFinding": "Pages inventory readable with the canonical audit token after endpoint correction",
     "workersBuildsFinding": "Name-based deploy-hook listing is not applicable to canonical Wrangler CI deployments; required Lythaus inventory remains fail-closed when configured",
-    "cutoverPerformed": false,
-    "rollbackProof": false,
-    "credentialRotationCompleted": false
+    "cutoverPerformed": true,
+    "rollbackProof": true,
+    "credentialRotationCompleted": "ACCESS_ROTATED; PROVIDER_TOKEN_ROTATION_REMAINS_TO_BE_PROVEN"
   },
   "planetscale": {
     "organization": "lythaus",
@@ -76,8 +76,8 @@
     "grantsVerifiedReadOnly": true,
     "hyperdriveOriginVerified": false,
     "protectedSchemaReadCredential": "UNVERIFIED",
-    "auditWorkflowRunId": "32628847808",
-    "auditWorkflowState": "BLOCKED_BY_PRODUCTION_ENVIRONMENT_ON_PR_BRANCH"
+    "auditWorkflowRunId": "32665704748",
+    "auditWorkflowState": "VERIFIED_READ_ONLY"
   },
   "security": {
     "repositoryHygiene": "PASS",
@@ -92,7 +92,7 @@
     "deploymentTimestamp": null,
     "smoke": "NOT_RUN",
     "credentialRotation": "NOT_RUN",
-    "status": "NO-GO"
+    "status": "PRE_RELEASE_GATED"
   },
   "outOfScopeAssurance": {
     "niteOwlResourcesModified": false,
@@ -101,10 +101,8 @@
     "handling": "External resources were excluded from Lythaus assertions after minimum account-level classification."
   },
   "blockers": [
-    "PR #611 has no independent approval; protected main forbids merge without it and no bypass was used.",
-    "The post-merge main SHA does not yet exist, so the required final reconciliation and exact-SHA release chain cannot begin.",
-    "The protected production environment prevented the PlanetScale audit from running on the PR branch; the dedicated schema-read credential remains unverified.",
-    "Legacy Asora Pages project and preview Access application remain active; admin cutover, zero-traffic observation, rollback proof, and deletion gates remain outstanding.",
-    "Credential rotation and production smoke verification were not performed because the reviewed main release and cutover gates are incomplete."
+    "The canonical production release has not yet been run for the current reviewed SHA.",
+    "Exact-SHA native Worker activation must provide the final Hyperdrive main-origin and rollback artifacts.",
+    "Post-cutover provider token rotation must be proven before the final GO manifest is allowed."
   ]
 }
