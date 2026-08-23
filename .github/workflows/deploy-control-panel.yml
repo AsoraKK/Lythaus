@@ -59,6 +59,7 @@ jobs:
       deployed_sha: ${{ steps.pages_evidence.outputs.deployed_sha }}
     env:
       PAGES_PROJECT: ${{ inputs.pages_project || vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
+      APPROVED_PAGES_PROJECT: ${{ vars.LYTHAUS_ADMIN_PAGES_PROJECT }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -76,6 +77,12 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
           test -n "$PAGES_PROJECT"
+          test -n "$APPROVED_PAGES_PROJECT"
+          [[ "$PAGES_PROJECT" =~ ^lythaus-[A-Za-z0-9-]+$ ]]
+          test "$PAGES_PROJECT" = "$APPROVED_PAGES_PROJECT" || {
+            echo 'Refusing control-panel deployment to a Pages project other than the protected canonical project.' >&2
+            exit 1
+          }
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
