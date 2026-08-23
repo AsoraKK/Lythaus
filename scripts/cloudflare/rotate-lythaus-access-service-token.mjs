@@ -124,23 +124,11 @@ function setGitHubSecret(name, value) {
   }
 }
 
-function deleteGitHubSecret(name) {
-  const result = spawnSync('gh', ['secret', 'delete', name, '--repo', repository], {
-    env: { ...process.env, GH_TOKEN: githubToken },
-    encoding: 'utf8',
-  });
-  if (result.status !== 0 && !/not found|404/i.test(result.stderr || result.stdout || '')) {
-    throw new Error(`GitHub secret deletion for ${name} failed: ${safeError(result.stderr || result.stdout)}`);
-  }
-}
-
-async function createToken() {
-  return cloudflare('/access/service_tokens', {
+async function rotateServiceToken(tokenId) {
+  return cloudflare(`/access/service_tokens/${tokenId}/rotate`, {
     method: 'POST',
     body: JSON.stringify({
-      name: `Lythaus control-panel CI ${new Date().toISOString().replaceAll(/[^0-9]/g, '').slice(0, 14)}`,
-      duration: '8760h',
-      enabled: true,
+      previous_client_secret_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
     }),
   });
 }
@@ -193,52 +181,57 @@ async function rotateCredentials() {
   requireEnv('GH_TOKEN', githubToken);
   const tokens = await listServiceTokens();
   const previous = tokens.find((token) => token.client_id === currentClientId);
-  const created = await createToken();
-  if (!created?.id || !created.client_id || !created.client_secret) throw new Error('Cloudflare created a service token without complete credential metadata');
+  if (!previous?.id) throw new Error('The configured Lythaus Access credential does not match an enumerated service token');
+  const rotated = await rotateServiceToken(previous.id);
+  if (!rotated?.id || !rotated.client_id || !rotated.client_secret) throw new Error('Cloudflare rotated a service token without complete credential metadata');
 
   const addedPolicies = [];
   let secretsUpdated = [];
   try {
-    const uiPolicy = await createPolicy(adminUiAppId, created.id, 2);
-    addedPolicies.push([adminUiAppId, uiPolicy.id]);
-    const apiPolicy = await createPolicy(adminApiAppId, created.id, 2);
-    addedPolicies.push([adminApiAppId, apiPolicy.id]);
+    const uiPolicies = await listPolicies(adminUiAppId);
+    if (!uiPolicies.some((policy) => serviceTokenPolicy(policy, previous.id))) {
+      const uiPolicy = await createPolicy(adminUiAppId, previous.id, 2);
+      addedPolicies.push([adminUiAppId, uiPolicy.id]);
+    }
 
-    const probe = await probeAdmin(created.client_id, created.client_secret);
+    const probe = await probeAdmin(rotated.client_id, rotated.client_secret);
     requireValidAdminProbe(probe, 'New Access service token');
 
-    setGitHubSecret('CF_ACCESS_CLIENT_ID', created.client_id);
+    setGitHubSecret('CF_ACCESS_CLIENT_ID', rotated.client_id);
     secretsUpdated.push('CF_ACCESS_CLIENT_ID');
-    setGitHubSecret('CF_ACCESS_CLIENT_SECRET', created.client_secret);
+    setGitHubSecret('CF_ACCESS_CLIENT_SECRET', rotated.client_secret);
     secretsUpdated.push('CF_ACCESS_CLIENT_SECRET');
 
-    const previousPolicies = previous ? [
-      ...(await listPolicies(adminUiAppId)).filter((policy) => serviceTokenPolicy(policy, previous.id)).map((policy) => [adminUiAppId, policy.id]),
-      ...(await listPolicies(adminApiAppId)).filter((policy) => serviceTokenPolicy(policy, previous.id)).map((policy) => [adminApiAppId, policy.id]),
-    ] : [];
-    for (const [appId, policyId] of previousPolicies) await deletePolicy(appId, policyId);
-    let previousRevoked = false;
-    if (previous && previousPolicies.length >= 1) {
-      await deleteServiceToken(previous.id);
-      previousRevoked = true;
+    const legacyTokens = tokens.filter((token) => token.id !== previous.id && /asora/i.test(token.name ?? ''));
+    const legacyPolicies = [];
+    for (const legacyToken of legacyTokens) {
+      for (const appId of [adminUiAppId, adminApiAppId]) {
+        const policies = await listPolicies(appId);
+        for (const policy of policies.filter((candidate) => serviceTokenPolicy(candidate, legacyToken.id))) {
+          await deletePolicy(appId, policy.id);
+          legacyPolicies.push({ appId, policyId: policy.id, tokenId: legacyToken.id });
+        }
+      }
     }
+    for (const legacyToken of legacyTokens) await deleteServiceToken(legacyToken.id);
 
     const evidence = {
       schemaVersion: 1,
       capturedAt: new Date().toISOString(),
       mode: 'rotate',
       status: 'verified',
-      newServiceToken: { id: created.id, name: created.name, duration: created.duration, enabled: created.enabled },
+      newServiceToken: { id: rotated.id, name: previous.name, duration: rotated.duration, enabled: rotated.enabled },
       newPolicies: addedPolicies.map(([appId, policyId]) => ({ appId, policyId })),
-      previousServiceToken: previous ? { id: previous.id, name: previous.name, revoked: previousRevoked } : null,
-      previousCredentialMatched: Boolean(previous),
-      previousPoliciesRemoved: previous ? previousPolicies.length : 0,
+      rotatedExistingServiceToken: true,
+      legacyServiceTokensRevoked: legacyTokens.map((token) => ({ id: token.id, name: token.name, revoked: true })),
+      legacyPoliciesRemoved: legacyPolicies,
+      previousCredentialMatched: true,
       githubSecretsUpdated: secretsUpdated,
       credentialRotationCompleted: true,
       adminProbe: probe,
     };
     writeEvidence(evidence);
-    console.log(JSON.stringify({ status: evidence.status, credentialRotationCompleted: true, previousCredentialRevoked: previousRevoked, newPolicyCount: addedPolicies.length }));
+    console.log(JSON.stringify({ status: evidence.status, credentialRotationCompleted: true, rotatedExistingServiceToken: true, legacyServiceTokensRevoked: legacyTokens.length, newPolicyCount: addedPolicies.length }));
   } catch (error) {
     for (const name of secretsUpdated) {
       try { setGitHubSecret(name, name === 'CF_ACCESS_CLIENT_ID' ? currentClientId : currentClientSecret); } catch { /* best effort restore */ }
@@ -246,7 +239,6 @@ async function rotateCredentials() {
     for (const [appId, policyId] of addedPolicies.reverse()) {
       try { await deletePolicy(appId, policyId); } catch { /* best effort rollback */ }
     }
-    try { await deleteServiceToken(created.id); } catch { /* best effort rollback */ }
     throw error;
   }
 }
