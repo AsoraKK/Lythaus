@@ -147,6 +147,25 @@ async function createPolicy(appId, tokenId) {
   });
 }
 
+function policyPayloadForServiceToken(policy, tokenId, name = policy.name) {
+  const payload = {
+    name,
+    decision: policy.decision,
+    include: [{ service_token: { token_id: tokenId } }],
+  };
+  if (Number.isInteger(policy.precedence)) payload.precedence = policy.precedence;
+  if (Array.isArray(policy.exclude)) payload.exclude = policy.exclude;
+  if (Array.isArray(policy.require)) payload.require = policy.require;
+  return payload;
+}
+
+async function updatePolicy(appId, policy, tokenId, name) {
+  return cloudflare(`/access/apps/${appId}/policies/${policy.id}`, {
+    method: 'PUT',
+    body: JSON.stringify(policyPayloadForServiceToken(policy, tokenId, name)),
+  });
+}
+
 async function deletePolicy(appId, policyId) {
   await cloudflare(`/access/apps/${appId}/policies/${policyId}`, { method: 'DELETE' });
 }
@@ -184,18 +203,32 @@ async function rotateCredentials() {
   const tokens = await listServiceTokens();
   const previous = tokens.find((token) => token.client_id === currentClientId);
   if (!previous?.id) throw new Error('The configured Lythaus Access credential does not match an enumerated service token');
-  const rotated = await rotateServiceToken(previous.id);
-  if (!rotated?.id || !rotated.client_id || !rotated.client_secret) throw new Error('Cloudflare rotated a service token without complete credential metadata');
 
   const addedPolicies = [];
+  const updatedPolicies = [];
   let secretsUpdated = [];
   try {
     const uiPolicies = await listPolicies(adminUiAppId);
     if (!uiPolicies.some((policy) => serviceTokenPolicy(policy, previous.id))) {
-      const uiPolicy = await createPolicy(adminUiAppId, previous.id);
-      addedPolicies.push([adminUiAppId, uiPolicy.id]);
+      const legacyUiPolicy = uiPolicies.find((policy) => (
+        policy.decision === 'non_identity' && /asora/i.test(policy.name ?? '') && policy.id
+      ));
+      if (legacyUiPolicy) {
+        await updatePolicy(
+          adminUiAppId,
+          legacyUiPolicy,
+          previous.id,
+          'Lythaus control-panel CI service token',
+        );
+        updatedPolicies.push({ appId: adminUiAppId, policy: legacyUiPolicy });
+      } else {
+        const uiPolicy = await createPolicy(adminUiAppId, previous.id);
+        addedPolicies.push([adminUiAppId, uiPolicy.id]);
+      }
     }
 
+    const rotated = await rotateServiceToken(previous.id);
+    if (!rotated?.id || !rotated.client_id || !rotated.client_secret) throw new Error('Cloudflare rotated a service token without complete credential metadata');
     const probe = await probeAdmin(rotated.client_id, rotated.client_secret);
     requireValidAdminProbe(probe, 'New Access service token');
 
@@ -224,6 +257,7 @@ async function rotateCredentials() {
       status: 'verified',
       newServiceToken: { id: rotated.id, name: previous.name, duration: rotated.duration, enabled: rotated.enabled },
       newPolicies: addedPolicies.map(([appId, policyId]) => ({ appId, policyId })),
+      updatedPolicies: updatedPolicies.map(({ appId, policy }) => ({ appId, policyId: policy.id, replacedLegacyName: policy.name })),
       rotatedExistingServiceToken: true,
       legacyServiceTokensRevoked: legacyTokens.map((token) => ({ id: token.id, name: token.name, revoked: true })),
       legacyPoliciesRemoved: legacyPolicies,
@@ -240,6 +274,11 @@ async function rotateCredentials() {
     }
     for (const [appId, policyId] of addedPolicies.reverse()) {
       try { await deletePolicy(appId, policyId); } catch { /* best effort rollback */ }
+    }
+    for (const { appId, policy } of updatedPolicies.reverse()) {
+      const legacyTokenId = (policy.include ?? []).find((rule) => rule.service_token?.token_id || rule.service_token?.id)?.service_token?.token_id
+        ?? (policy.include ?? []).find((rule) => rule.service_token?.id)?.service_token?.id;
+      try { if (legacyTokenId) await updatePolicy(appId, policy, legacyTokenId, policy.name); } catch { /* best effort rollback */ }
     }
     throw error;
   }
