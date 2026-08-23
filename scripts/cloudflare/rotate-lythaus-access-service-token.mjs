@@ -234,7 +234,12 @@ async function updateGroupWithoutServiceToken(group, tokenId) {
 async function updateApplicationScimConfig(app, scimConfig) {
   return cloudflare(`/access/apps/${app.id}`, {
     method: 'PUT',
-    body: JSON.stringify({ name: app.name, scim_config: scimConfig }),
+    body: JSON.stringify({
+      name: app.name,
+      domain: app.domain,
+      type: app.type,
+      scim_config: scimConfig,
+    }),
   });
 }
 

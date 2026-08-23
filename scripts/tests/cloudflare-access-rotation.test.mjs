@@ -24,6 +24,8 @@ test('Access rotation is protected, Lythaus-scoped, and sanitized', () => {
   assert.match(script, /updatedGroups/);
   assert.match(script, /access\/apps\/\$\{appId\}/);
   assert.match(script, /findClientIdReferences/);
+  assert.match(script, /domain: app\.domain/);
+  assert.match(script, /type: app\.type/);
   assert.match(script, /listAccessApplications/);
   assert.match(script, /isNiteOwlApplication/);
   assert.match(script, /isLegacyLythausApplication/);
