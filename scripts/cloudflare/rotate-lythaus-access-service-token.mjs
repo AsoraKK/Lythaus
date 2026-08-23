@@ -72,6 +72,11 @@ async function listAccessGroups() {
   return Array.isArray(result) ? result : [];
 }
 
+async function listAccessApplications() {
+  const result = await cloudflare('/access/apps?page=1&per_page=100');
+  return Array.isArray(result) ? result : [];
+}
+
 async function getAccessApplication(appId) {
   return cloudflare(`/access/apps/${appId}`);
 }
@@ -85,6 +90,14 @@ function findClientIdReferences(value, clientId, path = 'root') {
     else if (key !== 'client_secret') references.push(...findClientIdReferences(child, clientId, `${path}.${key}`));
   }
   return references;
+}
+
+function isNiteOwlApplication(app) {
+  return /nite[-_ ]?owl/i.test(`${app.name ?? ''} ${app.domain ?? ''}`);
+}
+
+function isLegacyLythausApplication(app) {
+  return app.id === legacyPreviewAppId || /asora|legacy|preview/i.test(`${app.name ?? ''} ${app.domain ?? ''}`);
 }
 
 function serviceTokenPolicy(policy, tokenId) {
@@ -289,6 +302,7 @@ async function rotateCredentials() {
     const legacyTokens = tokens.filter((token) => token.id !== previous.id && /asora/i.test(token.name ?? ''));
     const legacyPolicies = [];
     const legacyScimApps = [];
+    const accessApplications = await listAccessApplications();
     for (const legacyToken of legacyTokens) {
       for (const appId of [adminUiAppId, adminApiAppId, legacyPreviewAppId]) {
         const policies = await listPolicies(appId);
@@ -308,16 +322,17 @@ async function rotateCredentials() {
           updatedGroups.push({ group, tokenId: legacyToken.id });
         }
       }
-      for (const appId of [adminUiAppId, adminApiAppId, legacyPreviewAppId]) {
-        const app = await getAccessApplication(appId);
+      for (const listedApp of accessApplications) {
+        if (!listedApp?.id || isNiteOwlApplication(listedApp)) continue;
+        const app = await getAccessApplication(listedApp.id);
         const references = findClientIdReferences(app.scim_config, legacyToken.client_id, 'scim_config');
         if (references.length === 0) continue;
-        if (appId !== legacyPreviewAppId) {
-          throw new Error(`Legacy Access service token is still referenced by canonical Access application ${app.name ?? appId}`);
+        if (!isLegacyLythausApplication(app)) {
+          throw new Error(`Legacy Access service token is still referenced by an unclassified Access application ${app.name ?? app.id}`);
         }
         await updateApplicationScimConfig(app, null);
         updatedScimApps.push({ app, tokenId: legacyToken.id });
-        legacyScimApps.push({ appId, name: app.name, references });
+        legacyScimApps.push({ appId: app.id, name: app.name, references });
       }
     }
     for (const legacyToken of legacyTokens) await deleteServiceToken(legacyToken.id);
