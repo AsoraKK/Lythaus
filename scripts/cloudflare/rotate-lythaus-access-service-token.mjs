@@ -77,8 +77,15 @@ async function listServiceTokens() {
 }
 
 async function listPolicies(appId) {
-  const result = await cloudflare(`/access/apps/${appId}/policies?page=1&per_page=100`);
-  return Array.isArray(result) ? result : [];
+  try {
+    const result = await cloudflare(`/access/apps/${appId}/policies?page=1&per_page=100`);
+    return Array.isArray(result) ? result : [];
+  } catch (error) {
+    if (appId === legacyPreviewAppId && /failed HTTP 404 \(11021:access\.api\.error\.unknown_application/.test(error.message ?? '')) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 async function listAccessGroups() {
