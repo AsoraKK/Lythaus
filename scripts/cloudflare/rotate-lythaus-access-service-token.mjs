@@ -288,6 +288,7 @@ async function rotateCredentials() {
   let secretsUpdated = [];
   let rotated = null;
   let lastProbe = null;
+  let credentialCommitted = false;
   let accessApplicationInventory = [];
   try {
     rotated = await rotateServiceToken(previous.id);
@@ -318,6 +319,7 @@ async function rotateCredentials() {
     secretsUpdated.push('CF_ACCESS_CLIENT_ID');
     setGitHubSecret('CF_ACCESS_CLIENT_SECRET', rotated.client_secret);
     secretsUpdated.push('CF_ACCESS_CLIENT_SECRET');
+    credentialCommitted = true;
 
     const legacyTokens = tokens.filter((token) => token.id !== previous.id && /asora/i.test(token.name ?? ''));
     const legacyPolicies = [];
@@ -385,32 +387,34 @@ async function rotateCredentials() {
     writeEvidence(evidence);
     console.log(JSON.stringify({ status: evidence.status, credentialRotationCompleted: true, rotatedExistingServiceToken: true, legacyServiceTokensRevoked: legacyTokens.length, newPolicyCount: addedPolicies.length }));
   } catch (error) {
-    for (const name of secretsUpdated) {
-      try { setGitHubSecret(name, name === 'CF_ACCESS_CLIENT_ID' ? currentClientId : currentClientSecret); } catch { /* best effort restore */ }
-    }
-    for (const [appId, policyId] of addedPolicies.reverse()) {
-      try { await deletePolicy(appId, policyId); } catch { /* best effort rollback */ }
-    }
-    for (const { appId, policy } of updatedPolicies.reverse()) {
-      const legacyTokenId = (policy.include ?? []).find((rule) => rule.service_token?.token_id || rule.service_token?.id)?.service_token?.token_id
-        ?? (policy.include ?? []).find((rule) => rule.service_token?.id)?.service_token?.id;
-      try { if (legacyTokenId) await updatePolicy(appId, policy, legacyTokenId, policy.name); } catch { /* best effort rollback */ }
-    }
-    for (const { group } of updatedGroups.reverse()) {
-      try {
-        await cloudflare(`/access/groups/${group.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            name: group.name,
-            include: group.include,
-            exclude: group.exclude,
-            require: group.require,
-          }),
-        });
-      } catch { /* best effort rollback */ }
-    }
-    for (const { app } of updatedScimApps.reverse()) {
-      try { await updateApplicationScimConfig(app, app.scim_config); } catch { /* best effort rollback */ }
+    if (!credentialCommitted) {
+      for (const name of secretsUpdated) {
+        try { setGitHubSecret(name, name === 'CF_ACCESS_CLIENT_ID' ? currentClientId : currentClientSecret); } catch { /* best effort restore */ }
+      }
+      for (const [appId, policyId] of addedPolicies.reverse()) {
+        try { await deletePolicy(appId, policyId); } catch { /* best effort rollback */ }
+      }
+      for (const { appId, policy } of updatedPolicies.reverse()) {
+        const legacyTokenId = (policy.include ?? []).find((rule) => rule.service_token?.token_id || rule.service_token?.id)?.service_token?.token_id
+          ?? (policy.include ?? []).find((rule) => rule.service_token?.id)?.service_token?.id;
+        try { if (legacyTokenId) await updatePolicy(appId, policy, legacyTokenId, policy.name); } catch { /* best effort rollback */ }
+      }
+      for (const { group } of updatedGroups.reverse()) {
+        try {
+          await cloudflare(`/access/groups/${group.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              name: group.name,
+              include: group.include,
+              exclude: group.exclude,
+              require: group.require,
+            }),
+          });
+        } catch { /* best effort rollback */ }
+      }
+      for (const { app } of updatedScimApps.reverse()) {
+        try { await updateApplicationScimConfig(app, app.scim_config); } catch { /* best effort rollback */ }
+      }
     }
     writeEvidence({
       schemaVersion: 1,
@@ -426,7 +430,8 @@ async function rotateCredentials() {
       accessApplicationInventory,
       lastProbe,
       githubSecretsUpdated: secretsUpdated,
-      rollbackAttempted: true,
+      credentialRotationCommitted: credentialCommitted,
+      rollbackAttempted: !credentialCommitted,
     });
     throw error;
   }
