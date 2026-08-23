@@ -24,9 +24,9 @@ jobs:
     name: Sanitized PlanetScale inventory
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: production
     permissions:
       contents: read
-      issues: write
     env:
       PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
       PLANETSCALE_ORGANIZATION: lythaus
@@ -37,7 +37,6 @@ jobs:
       EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
       EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
       PLANETSCALE_CONTRACT_AUDIT_OUTPUT: .artifacts/provider-inventory/planetscale-production-contract.json
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -83,14 +82,11 @@ jobs:
             echo "Assertions: ${assertions}"
             echo "Production contract outcome: ${{ steps.production_contract.outcome }}"
             echo "Production contract: ${contract_summary}"
+            echo "No provider mutation or GitHub issue write is performed by this workflow."
             echo
             echo 'The sanitized evidence produced by this run is stored in the Actions artifact named below. No provider mutation or DDL is performed by this workflow.'
             echo "Artifact: planetscale-account-audit-${GITHUB_SHA}"
-          } > .artifacts/provider-inventory/planetscale-issue.md
-          gh issue create \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "PlanetScale inventory evidence ${GITHUB_SHA:0:12} run ${GITHUB_RUN_ID}" \
-            --body-file .artifacts/provider-inventory/planetscale-issue.md
+          } > .artifacts/provider-inventory/planetscale-summary.md
       - name: Require complete production contract evidence
         env:
           CONTRACT_OUTCOME: ${{ steps.production_contract.outcome }}
@@ -108,4 +104,4 @@ jobs:
         with:
           name: planetscale-account-audit-${{ github.sha }}
           if-no-files-found: error
-          path: .artifacts/provider-inventory/planetscale*.json
+          path: .artifacts/provider-inventory/planetscale*

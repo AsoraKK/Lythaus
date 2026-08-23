@@ -183,18 +183,15 @@ fs.writeFileSync(path.join(outputDir, 'report.tsv'), `${branches.map((branch) =>
 const runId = safeText(process.env.GITHUB_RUN_ID ?? 'unknown', 64);
 const server = safeText(process.env.GITHUB_SERVER_URL ?? 'https://github.com', 120).replace(/[^A-Za-z0-9:/._-]/g, '');
 const sha = safeSha(process.env.GITHUB_SHA) ?? report.mainSha;
-const comment = [
-  'Historical deletion reconciliation against current `main` completed.', '', `Run ID: ${runId}`,
+const evidenceLocator = [
+  `Historical deletion reconciliation completed for ${repo}.`, `Run ID: ${runId}`,
   `Run URL: ${server}/${repo}/actions/runs/${runId}`, `Main SHA: ${report.mainSha}`,
   `Recorded deleted refs: ${report.summary.total}`, `Reachable from main: ${report.summary.reachable}`,
   `Zero unique commits: ${report.summary.zeroUnique}`, `Patch-equivalent: ${report.summary.patchEquivalent}`,
   `Unique work requiring review: ${report.summary.uniqueWorkReview}`, `Objects unavailable: ${report.summary.objectUnavailable}`,
-  '', `Actions artifact: historical-branch-reconciliation-${sha}`,
-].join('\n');
-
-await github(`/issues/${issueNumber}/comments`, {
-  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body: comment }),
-});
+  `Actions artifact: historical-branch-reconciliation-${sha}`,
+].join(' | ');
+console.log(evidenceLocator);
 
 const unresolved = report.summary.uniqueWorkReview + report.summary.objectUnavailable;
 if (unresolved !== 0) {

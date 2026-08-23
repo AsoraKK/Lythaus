@@ -5,6 +5,7 @@ const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
 const zoneId = process.env.CLOUDFLARE_ZONE_ID ?? '7bc572c8b7cd3c00be9c655176c29382';
 const token = process.env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_AUDIT_API_TOKEN || '';
 const outputPath = process.env.CLOUDFLARE_AUDIT_OUTPUT ?? '.artifacts/provider-inventory/cloudflare.json';
+const workersBuildsRequired = process.env.CLOUDFLARE_WORKERS_BUILDS_REQUIRED === 'true';
 
 if (!/^[0-9a-f]{32}$/i.test(accountId)) throw new Error('CLOUDFLARE_ACCOUNT_ID is required');
 if (!/^[0-9a-f]{32}$/i.test(zoneId)) throw new Error('CLOUDFLARE_ZONE_ID is required');
@@ -153,7 +154,7 @@ const accountBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}`
 const zoneBase = `https://api.cloudflare.com/client/v4/zones/${zoneId}`;
 
 const endpoints = {
-  pages: `${accountBase}/pages/projects?per_page=100`,
+  pages: `${accountBase}/pages/projects`,
   workers: `${accountBase}/workers/scripts`,
   hyperdrives: `${accountBase}/hyperdrive/configs`,
   r2: `${accountBase}/r2/buckets`,
@@ -351,11 +352,18 @@ for (const worker of lythausWorkers) {
   if (worker.tag) {
     const triggers = await request(`${accountBase}/builds/workers/${encodeURIComponent(worker.tag)}/triggers`);
     const builds = await request(`${accountBase}/builds/workers/${encodeURIComponent(worker.tag)}/builds?per_page=20`);
-    const buildsUnsupported = [400, 404, 405].includes(triggers.status) && [400, 404, 405].includes(builds.status);
+    const endpointUnsupported = [400, 404, 405].includes(triggers.status) && [400, 404, 405].includes(builds.status);
+    const userScopedBuildsTokenUnavailable = [401, 403].includes(triggers.status)
+      && [401, 403].includes(builds.status)
+      && [...(triggers.errors ?? []), ...(builds.errors ?? [])].some(({ code }) => String(code) === '10000');
+    const buildsNotApplicable = !workersBuildsRequired && (endpointUnsupported || userScopedBuildsTokenUnavailable);
+    const buildsClassification = buildsNotApplicable
+      ? 'NON_APPLICABLE_CANONICAL_CI_DEPLOYMENT'
+      : 'REQUIRED';
     workerBuildStates[worker.name] = {
       tag: worker.tag,
-      triggers: endpointState(triggers, { classification: buildsUnsupported ? 'NOT_APPLICABLE_OR_UNSUPPORTED' : 'REQUIRED' }),
-      builds: endpointState(builds, { classification: buildsUnsupported ? 'NOT_APPLICABLE_OR_UNSUPPORTED' : 'REQUIRED' }),
+      triggers: endpointState(triggers, { classification: buildsClassification }),
+      builds: endpointState(builds, { classification: buildsClassification }),
     };
     workerBuilds[worker.name] = {
       tag: worker.tag,
@@ -443,7 +451,9 @@ const report = {
   controlPlanes: {
     cloudflareRestApi: 'AVAILABLE',
     cloudflareMcp: 'NOT_USED_IN_WORKFLOW',
-    workersBuildsApi: Object.values(workerBuildStates).some((state) => state.triggers.classification === 'REQUIRED') ? 'AVAILABLE_OR_PERMISSION_CHECKED' : 'NOT_CONFIGURED',
+    workersBuildsApi: workersBuildsRequired
+      ? 'REQUIRED_AND_PERMISSION_CHECKED'
+      : 'NON_APPLICABLE_CANONICAL_CI_DEPLOYMENT',
   },
   classificationPolicy: {
     canonical: 'CANONICAL LYTHAUS',
