@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 2,
+  "capturedAt": "2026-08-23T20:52:19Z",
+  "reviewedSha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
+  "status": "VERIFIED_INVENTORY_PRE_RELEASE",
+  "github": {
+    "cloudflareRunId": 32665704731,
+    "planetscaleRunId": 32665704748,
+    "historicalReconciliationRunId": 32665704792
+  },
+  "cloudflare": {
+    "status": "VERIFIED",
+    "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+    "zone": "lythaus.co",
+    "zoneId": "7bc572c8b7cd3c00be9c655176c29382",
+    "inventoryComplete": true,
+    "requiredLythausFailures": [],
+    "pages": {
+      "marketing": { "project": "lythaus-marketing", "domains": ["lythaus.co", "www.lythaus.co"] },
+      "flutterWeb": { "project": "lythaus-web", "domains": ["app.lythaus.co"], "productionBranch": "main", "automaticDeployments": false },
+      "admin": { "project": "lythaus-control-panel", "domains": ["admin.lythaus.co"], "productionBranch": "main", "automaticDeployments": false, "accessApplication": "Lythaus Admin UI" }
+    },
+    "workers": ["lythaus-public-api-development", "lythaus-admin-api-development", "lythaus-jobs-development"],
+    "hyperdrives": ["lythaus-db-app-dev", "lythaus-db-admin-dev", "lythaus-db-jobs-dev", "lythaus-db-privacy-dev"],
+    "legacyNamedResources": 0,
+    "legacyProviderExceptions": 2,
+    "ignoredExternalResources": 5,
+    "hyperdriveOriginVerification": "Exact-SHA native Worker release gate required before production activation"
+  },
+  "planetscale": {
+    "status": "VERIFIED_READ_ONLY",
+    "organization": "lythaus",
+    "database": "lythaus-core",
+    "branch": "main",
+    "productionBranchCount": 1,
+    "postgresVersion": "17.11",
+    "latestMigration": "0013_marketing_waitlist.sql",
+    "relationCount": 94,
+    "schemaFingerprint": "672dc746e50b868d4997e3cb9fca47b5426747bc992db2bdc3a33f8d2671415c",
+    "migrationLedgerSha256": "ceb640515cbe9d0317a815e8704484a1b3458a69c23923914a88cebbfef332ca",
+    "approvedMigrationSetSha256": "c84eea921fe89f85ac6ab4e7ac107014778abca320e524f6450c159eea5754e1",
+    "transactionReadOnly": true,
+    "verifierPassed": true,
+    "grantsVerified": true
+  },
+  "historicalBranches": {
+    "status": "VERIFIED",
+    "total": 85,
+    "reachable": 47,
+    "patchEquivalent": 4,
+    "reviewedUnique": 34,
+    "uniqueWorkReview": 0,
+    "objectUnavailable": 0
+  },
+  "externalOutOfScopePolicy": "Account-level Nite Owl names were classified only as EXTERNAL / OUT OF SCOPE; no per-resource mutation or credential action is included."
+}
