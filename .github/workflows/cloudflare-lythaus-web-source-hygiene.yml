@@ -1,0 +1,66 @@
+name: Cloudflare Lythaus web source hygiene
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact reviewed current main SHA for the approved hygiene operation
+        required: true
+        type: string
+      confirm_cleanup:
+        description: Confirm disabling web auto-deployments and detaching the retired Asora-era domain
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-web-source-hygiene
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Clean the canonical Flutter Pages bindings
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      CONFIRM_CLEANUP: ${{ inputs.confirm_cleanup }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      WEB_SOURCE_HYGIENE_EVIDENCE_PATH: .artifacts/cloudflare/lythaus-web-source-hygiene.json
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Require exact reviewed current main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'release_sha must be a full 40-character SHA' >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+          test "$CONFIRM_CLEANUP" = true
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+
+      - name: Disable legacy automatic deployment and detach obsolete domain
+        run: node scripts/cloudflare/execute-lythaus-web-source-hygiene.mjs
+
+      - name: Upload sanitized hygiene and rollback evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: lythaus-web-source-hygiene-${{ inputs.release_sha }}
+          if-no-files-found: warn
+          path: .artifacts/cloudflare
