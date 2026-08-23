@@ -93,6 +93,11 @@ async function listAccessGroups() {
   return Array.isArray(result) ? result : [];
 }
 
+async function listAccountPolicies() {
+  const result = await cloudflare('/access/policies?page=1&per_page=100');
+  return Array.isArray(result) ? result : [];
+}
+
 async function listAccessApplications() {
   const result = await cloudflare('/access/apps?page=1&per_page=100');
   return Array.isArray(result) ? result : [];
@@ -268,6 +273,10 @@ async function deletePolicy(appId, policyId) {
   await cloudflare(`/access/apps/${appId}/policies/${policyId}`, { method: 'DELETE' });
 }
 
+async function deleteAccountPolicy(policyId) {
+  await cloudflare(`/access/policies/${policyId}`, { method: 'DELETE' });
+}
+
 async function deleteServiceToken(tokenId) {
   await cloudflare(`/access/service_tokens/${tokenId}`, { method: 'DELETE' });
 }
@@ -275,7 +284,11 @@ async function deleteServiceToken(tokenId) {
 async function inspect() {
   const tokens = await listServiceTokens();
   const current = tokens.find((token) => token.client_id === currentClientId);
-  const [uiPolicies, apiPolicies] = await Promise.all([listPolicies(adminUiAppId), listPolicies(adminApiAppId)]);
+  const [uiPolicies, apiPolicies, accountPolicies] = await Promise.all([
+    listPolicies(adminUiAppId),
+    listPolicies(adminApiAppId),
+    listAccountPolicies(),
+  ]);
   const probe = await probeAdmin(currentClientId, currentClientSecret);
   const evidence = {
     schemaVersion: 1,
@@ -287,6 +300,7 @@ async function inspect() {
     serviceTokenCount: tokens.length,
     adminUiPolicyCount: uiPolicies.length,
     adminApiPolicyCount: apiPolicies.length,
+    accountPolicyCount: accountPolicies.length,
     adminUiServiceTokenPolicyNames: uiPolicies.filter((policy) => policy.decision === 'non_identity').map((policy) => policy.name),
     adminApiServiceTokenPolicyNames: apiPolicies.filter((policy) => policy.decision === 'non_identity').map((policy) => policy.name),
     currentCredentialAdminProbe: probe,
@@ -346,6 +360,7 @@ async function rotateCredentials() {
     const legacyPolicies = [];
     const legacyScimApps = [];
     const accessApplications = await listAccessApplications();
+    const accountPolicies = await listAccountPolicies();
     const legacyClientIds = legacyTokens.map((token) => token.client_id);
     for (const listedApp of accessApplications) {
       if (!listedApp?.id || isNiteOwlApplication(listedApp)) continue;
@@ -365,6 +380,14 @@ async function rotateCredentials() {
       legacyScimApps.push({ appId: legacyPreviewApp.id, name: legacyPreviewApp.name, references, clearedExplicitly: true });
     }
     for (const legacyToken of legacyTokens) {
+      for (const policy of accountPolicies.filter((candidate) => serviceTokenPolicy(candidate, legacyToken.id))) {
+        if (/nite[-_ ]?owl/i.test(policy.name ?? '')) continue;
+        if (!isLegacyLythausApplication({ name: policy.name, domain: policy.domain })) {
+          throw new Error(`Legacy Access service token is still referenced by an unclassified account policy ${policy.name ?? policy.id}`);
+        }
+        await deleteAccountPolicy(policy.id);
+        legacyPolicies.push({ appId: 'account', policyId: policy.id, tokenId: legacyToken.id });
+      }
       for (const appId of [adminUiAppId, adminApiAppId, legacyPreviewAppId]) {
         const policies = await listPolicies(appId);
         for (const policy of policies.filter((candidate) => serviceTokenPolicy(candidate, legacyToken.id))) {
