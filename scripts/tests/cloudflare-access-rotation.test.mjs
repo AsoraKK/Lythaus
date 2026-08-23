@@ -16,6 +16,8 @@ test('Access rotation is protected, Lythaus-scoped, and sanitized', () => {
   assert.match(script, /response\.status === 429/);
   assert.match(script, /response\.status >= 500/);
   assert.match(script, /maxAttempts = retryReads \? 5 : 1/);
+  assert.match(script, /unknown_application/);
+  assert.match(script, /appId === legacyPreviewAppId/);
   assert.match(script, /service_token: \{ token_id: tokenId \}/);
   assert.match(script, /policyPayloadForServiceToken/);
   assert.match(script, /probeAdminWithRetry/);
