@@ -17,6 +17,12 @@ content_matches="$({
     --glob '!node_modules/**' --glob '!build/**' --glob '!.dart_tool/**' \
     --glob '!scripts/cloudflare/audit-account.mjs' \
     --glob '!cloudflare/audit-account.mjs' \
+    --glob '!scripts/cloudflare/execute-lythaus-pages-cutover.mjs' \
+    --glob '!cloudflare/execute-lythaus-pages-cutover.mjs' \
+    --glob '!.github/workflows/cloudflare-lythaus-pages-cutover.yml' \
+    --glob '!workflows/cloudflare-lythaus-pages-cutover.yml' \
+    --glob '!scripts/tests/cloudflare-pages-cutover.test.mjs' \
+    --glob '!scripts/tests/cloudflare-pages-cutover.test.mjs' \
     --glob '!scripts/ci/build-release-manifest.mjs' \
     --glob '!ci/build-release-manifest.mjs' \
     --glob '!.github/workflows/production-release.yml' \
