@@ -32,5 +32,7 @@ test('legacy retirement is narrowly scoped to the known Lythaus preview Access a
   assert.match(script, /\*\.asora-6bi\.pages\.dev/);
   assert.match(script, /DELETE.*access\/apps/);
   assert.match(script, /legacyAsoraActiveResources: 0/);
+  assert.match(script, /Access service-token headers returned the Cloudflare login page/);
+  assert.match(script, /Lythaus Control Panel<\\\/title>/);
   assert.doesNotMatch(script, /nite-owl.*DELETE|DELETE.*nite-owl/i);
 });

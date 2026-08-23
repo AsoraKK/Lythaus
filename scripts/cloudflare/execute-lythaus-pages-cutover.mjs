@@ -121,6 +121,10 @@ function safeProject(project) {
   };
 }
 
+function isAccessLoginPage(body) {
+  return /cloudflareaccess\.com\/cdn-cgi\/access\/(?:login|verify-code)|AuthFormLogin/i.test(body);
+}
+
 async function getProject(name) {
   const result = await request('GET', `${accountBase}/pages/projects/${encodeURIComponent(name)}`, undefined, { allow404: true });
   if (result.status === 404) return null;
@@ -313,6 +317,8 @@ async function verify() {
   if (authenticated.status !== 200) throw new Error(`Authenticated admin access returned HTTP ${authenticated.status}`);
   if (!authenticated.headers.get('content-security-policy')) throw new Error('Authenticated admin response omitted Content-Security-Policy');
   const body = (await authenticated.text()).slice(0, 2_000_000);
+  if (isAccessLoginPage(body)) throw new Error('Access service-token headers returned the Cloudflare login page instead of the Lythaus control panel');
+  if (!/<title[^>]*>Lythaus Control Panel<\/title>/i.test(body)) throw new Error('Authenticated admin response did not contain the Lythaus control-panel shell');
   if (/asora|asora-/i.test(body)) throw new Error('Active Asora branding was found in authenticated admin output');
 
   const next = {
