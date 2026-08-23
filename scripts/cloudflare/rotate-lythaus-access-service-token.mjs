@@ -72,6 +72,21 @@ async function listAccessGroups() {
   return Array.isArray(result) ? result : [];
 }
 
+async function getAccessApplication(appId) {
+  return cloudflare(`/access/apps/${appId}`);
+}
+
+function findClientIdReferences(value, clientId, path = 'root') {
+  if (Array.isArray(value)) return value.flatMap((item, index) => findClientIdReferences(item, clientId, `${path}[${index}]`));
+  if (!value || typeof value !== 'object') return [];
+  const references = [];
+  for (const [key, child] of Object.entries(value)) {
+    if (key === 'client_id' && child === clientId) references.push(`${path}.${key}`);
+    else if (key !== 'client_secret') references.push(...findClientIdReferences(child, clientId, `${path}.${key}`));
+  }
+  return references;
+}
+
 function serviceTokenPolicy(policy, tokenId) {
   return (policy.include ?? []).some((rule) => (
     rule.service_token?.token_id === tokenId || rule.service_token?.id === tokenId
@@ -189,6 +204,13 @@ async function updateGroupWithoutServiceToken(group, tokenId) {
   });
 }
 
+async function updateApplicationScimConfig(app, scimConfig) {
+  return cloudflare(`/access/apps/${app.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name: app.name, scim_config: scimConfig }),
+  });
+}
+
 async function deletePolicy(appId, policyId) {
   await cloudflare(`/access/apps/${appId}/policies/${policyId}`, { method: 'DELETE' });
 }
@@ -230,6 +252,7 @@ async function rotateCredentials() {
   const addedPolicies = [];
   const updatedPolicies = [];
   const updatedGroups = [];
+  const updatedScimApps = [];
   let secretsUpdated = [];
   let rotated = null;
   let lastProbe = null;
@@ -265,6 +288,7 @@ async function rotateCredentials() {
 
     const legacyTokens = tokens.filter((token) => token.id !== previous.id && /asora/i.test(token.name ?? ''));
     const legacyPolicies = [];
+    const legacyScimApps = [];
     for (const legacyToken of legacyTokens) {
       for (const appId of [adminUiAppId, adminApiAppId, legacyPreviewAppId]) {
         const policies = await listPolicies(appId);
@@ -284,6 +308,17 @@ async function rotateCredentials() {
           updatedGroups.push({ group, tokenId: legacyToken.id });
         }
       }
+      for (const appId of [adminUiAppId, adminApiAppId, legacyPreviewAppId]) {
+        const app = await getAccessApplication(appId);
+        const references = findClientIdReferences(app.scim_config, legacyToken.client_id, 'scim_config');
+        if (references.length === 0) continue;
+        if (appId !== legacyPreviewAppId) {
+          throw new Error(`Legacy Access service token is still referenced by canonical Access application ${app.name ?? appId}`);
+        }
+        await updateApplicationScimConfig(app, null);
+        updatedScimApps.push({ app, tokenId: legacyToken.id });
+        legacyScimApps.push({ appId, name: app.name, references });
+      }
     }
     for (const legacyToken of legacyTokens) await deleteServiceToken(legacyToken.id);
 
@@ -299,6 +334,7 @@ async function rotateCredentials() {
       legacyServiceTokensRevoked: legacyTokens.map((token) => ({ id: token.id, name: token.name, revoked: true })),
       legacyPoliciesRemoved: legacyPolicies,
       legacyGroupsUpdated: updatedGroups.map(({ group, tokenId }) => ({ groupId: group.id, name: group.name, tokenId })),
+      legacyScimAppsCleared: legacyScimApps,
       previousCredentialMatched: true,
       githubSecretsUpdated: secretsUpdated,
       credentialRotationCompleted: true,
@@ -331,6 +367,9 @@ async function rotateCredentials() {
         });
       } catch { /* best effort rollback */ }
     }
+    for (const { app } of updatedScimApps.reverse()) {
+      try { await updateApplicationScimConfig(app, app.scim_config); } catch { /* best effort rollback */ }
+    }
     writeEvidence({
       schemaVersion: 1,
       capturedAt: new Date().toISOString(),
@@ -341,6 +380,7 @@ async function rotateCredentials() {
       newPolicies: addedPolicies.map(([appId, policyId]) => ({ appId, policyId })),
       updatedPolicies: updatedPolicies.map(({ appId, policy }) => ({ appId, policyId: policy.id, replacedLegacyName: policy.name })),
       updatedGroups: updatedGroups.map(({ group, tokenId }) => ({ groupId: group.id, name: group.name, tokenId })),
+      updatedScimApps: updatedScimApps.map(({ app, tokenId }) => ({ appId: app.id, name: app.name, tokenId })),
       lastProbe,
       githubSecretsUpdated: secretsUpdated,
       rollbackAttempted: true,
