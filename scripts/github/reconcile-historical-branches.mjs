@@ -6,6 +6,8 @@ const repo = process.env.GITHUB_REPOSITORY ?? '';
 const token = process.env.GH_TOKEN ?? '';
 const issueNumber = Number.parseInt(process.env.HISTORICAL_EVIDENCE_ISSUE ?? '598', 10);
 const outputDir = process.env.HISTORICAL_RECONCILIATION_OUTPUT ?? '.artifacts/historical-branch-reconciliation';
+const reviewPath = process.env.HISTORICAL_BRANCH_REVIEW_FILE
+  ?? 'docs/evidence/repository/2026-08-22-historical-branch-review.json';
 
 if (!/^[^/]+\/[^/]+$/.test(repo)) throw new Error('GITHUB_REPOSITORY is required');
 if (!token) throw new Error('GH_TOKEN is required');
@@ -61,14 +63,47 @@ function branchPr(prs, branch) {
     .sort((left, right) => safeText(right.updated_at).localeCompare(safeText(left.updated_at)))[0] ?? null;
 }
 
+const acceptedReviewDispositions = new Set([
+  'integrated-by-main',
+  'salvaged-to-main',
+  'superseded-by-main',
+  'obsolete-operational-evidence',
+]);
+
+function loadReviewDecisions() {
+  if (!fs.existsSync(reviewPath)) return new Map();
+  const document = JSON.parse(fs.readFileSync(reviewPath, 'utf8'));
+  if (document?.schemaVersion !== 1 || !Array.isArray(document.decisions)) {
+    throw new Error(`historical branch review file has an unsupported shape: ${reviewPath}`);
+  }
+  const decisions = new Map();
+  for (const decision of document.decisions) {
+    const branch = safeBranch(decision?.branch);
+    const sha = safeSha(decision?.sha);
+    const disposition = safeText(decision?.disposition, 64);
+    const rationale = safeText(decision?.rationale, 500);
+    if (!branch || !sha || !acceptedReviewDispositions.has(disposition) || !rationale) {
+      throw new Error(`invalid historical branch review decision in ${reviewPath}`);
+    }
+    decisions.set(`${branch}:${sha}`, { disposition, rationale });
+  }
+  return decisions;
+}
+
 fs.mkdirSync(outputDir, { recursive: true });
 git(['fetch', '--no-tags', '--prune', 'origin', 'main']);
 
 const issue = await github(`/issues/${issueNumber}`);
-const recorded = safeText(issue?.body, 500000)
+const reviewDecisions = loadReviewDecisions();
+const issueBody = typeof issue?.body === 'string' ? issue.body.slice(0, 500000) : '';
+const recorded = issueBody
   .split(/\r?\n/)
   .map((line) => line.split('\t'))
-  .map(([branch, sha, marker]) => ({ branch: safeBranch(branch), sha: safeSha(sha), marker }))
+  .map(([branch, sha, marker]) => ({
+    branch: safeBranch(branch),
+    sha: safeSha(sha),
+    marker: safeText(marker, 64),
+  }))
   .filter(({ branch, sha, marker }) => branch && sha && marker === 'closed-historical-pattern');
 
 if (recorded.length === 0) throw new Error(`issue #${issueNumber} contains no recorded historical deletion evidence`);
@@ -107,12 +142,16 @@ for (const { branch, sha } of recorded) {
     ? gitText(['diff', '--name-only', `${mergeBase}...${sha}`], { allowFailure: true }).split(/\r?\n/).filter(Boolean).map((file) => safeText(file, 240)).sort()
     : [];
   const lastUpdated = safeText(gitText(['show', '-s', '--format=%cI', sha]), 40) || null;
-  const disposition = reachableFromMain ? 'verified-reachable-from-main'
+  const automatedDisposition = reachableFromMain ? 'verified-reachable-from-main'
     : uniqueCommits === 0 ? 'verified-zero-unique-commits'
       : patchUniqueCommits === 0 ? 'verified-patch-equivalent' : 'unique-work-review-required';
+  const review = reviewDecisions.get(`${branch}:${sha}`);
+  const disposition = review && automatedDisposition === 'unique-work-review-required'
+    ? review.disposition : automatedDisposition;
 
   branches.push({ branch, sha, pr: Number.isInteger(pr?.number) ? pr.number : null, prState, objectAvailable: true,
-    mergeBase, uniqueCommits, patchUniqueCommits, lastUpdated, changedFiles, reachableFromMain, disposition });
+    mergeBase, uniqueCommits, patchUniqueCommits, lastUpdated, changedFiles, reachableFromMain,
+    automatedDisposition, disposition, reviewRationale: review?.rationale ?? null });
 }
 
 const count = (disposition) => branches.filter((branch) => branch.disposition === disposition).length;
@@ -129,6 +168,8 @@ const report = {
     patchEquivalent: count('verified-patch-equivalent'),
     uniqueWorkReview: count('unique-work-review-required'),
     objectUnavailable: count('object-unavailable-review-required'),
+    reviewedUnique: branches.filter((branch) => branch.automatedDisposition === 'unique-work-review-required'
+      && branch.disposition !== 'unique-work-review-required').length,
   },
 };
 
@@ -142,18 +183,15 @@ fs.writeFileSync(path.join(outputDir, 'report.tsv'), `${branches.map((branch) =>
 const runId = safeText(process.env.GITHUB_RUN_ID ?? 'unknown', 64);
 const server = safeText(process.env.GITHUB_SERVER_URL ?? 'https://github.com', 120).replace(/[^A-Za-z0-9:/._-]/g, '');
 const sha = safeSha(process.env.GITHUB_SHA) ?? report.mainSha;
-const comment = [
-  'Historical deletion reconciliation against current `main` completed.', '', `Run ID: ${runId}`,
+const evidenceLocator = [
+  `Historical deletion reconciliation completed for ${repo}.`, `Run ID: ${runId}`,
   `Run URL: ${server}/${repo}/actions/runs/${runId}`, `Main SHA: ${report.mainSha}`,
   `Recorded deleted refs: ${report.summary.total}`, `Reachable from main: ${report.summary.reachable}`,
   `Zero unique commits: ${report.summary.zeroUnique}`, `Patch-equivalent: ${report.summary.patchEquivalent}`,
   `Unique work requiring review: ${report.summary.uniqueWorkReview}`, `Objects unavailable: ${report.summary.objectUnavailable}`,
-  '', `Actions artifact: historical-branch-reconciliation-${sha}`,
-].join('\n');
-
-await github(`/issues/${issueNumber}/comments`, {
-  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body: comment }),
-});
+  `Actions artifact: historical-branch-reconciliation-${sha}`,
+].join(' | ');
+console.log(evidenceLocator);
 
 const unresolved = report.summary.uniqueWorkReview + report.summary.objectUnavailable;
 if (unresolved !== 0) {

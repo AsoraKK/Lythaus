@@ -1,8 +1,9 @@
 {
   "schemaVersion": "lythaus-resource-registry-v1",
-  "generatedAt": "2026-08-22",
+  "generatedAt": "2026-08-22T21:11:39Z",
   "inventoryStatus": "PARTIAL: PlanetScale verified; Cloudflare UNKNOWN/BLOCKED pending read-only account inventory",
-  "inventoryEvidence": "docs/evidence/production-cutover/2026-08-22-read-only-provider-inventory.json",
+  "reviewedSha": "a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9",
+  "inventoryEvidence": "docs/evidence/production-cutover/2026-08-22-post-merge-provider-evidence.json",
   "policy": {
     "cloudflareAccountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
     "activeZone": "lythaus.co",

@@ -145,6 +145,17 @@ jobs:
           bash scripts/check-web-security-headers.sh downloaded/web/_headers
           echo "web_digest=$WEB_DIGEST" >> "$GITHUB_OUTPUT"
 
+      - name: Require canonical Flutter Pages project
+        env:
+          PAGES_PROJECT: ${{ inputs.pages_project }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$PAGES_PROJECT" = 'lythaus-web' || {
+            echo 'Refusing Flutter web deployment to a non-canonical Pages project.' >&2
+            exit 1
+          }
+
       - name: Deploy immutable Pages artifact
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

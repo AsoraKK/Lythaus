@@ -18,7 +18,8 @@ test('release manifest records partial provider evidence without inventing live 
   });
   const manifest = JSON.parse(fs.readFileSync(output, 'utf8'));
   assert.equal(manifest.schemaVersion, 'lythaus-release-manifest-v2');
-  assert.equal(manifest.status, 'blocked');
+  assert.equal(manifest.status, 'NO-GO');
+  assert.equal(manifest.productionStatus, 'NO-GO');
   assert.equal(manifest.repository.releaseSha, releaseSha);
   assert.equal(manifest.cloudflare.inventoryStatus, 'UNKNOWN/BLOCKED');
   assert.equal(manifest.planetscale.inventoryStatus, 'UNKNOWN/BLOCKED');

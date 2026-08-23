@@ -41,6 +41,9 @@ on:
       worker_source_sha:
         description: Reviewed source SHA used for every activated Worker version
         value: ${{ jobs.deploy.outputs.worker_source_sha }}
+      rollback_artifacts_proven:
+        description: Exact predeployment Worker and route snapshots were captured for rollback
+        value: ${{ jobs.deploy.outputs.rollback_artifacts_proven }}
 
 permissions:
   contents: read
@@ -64,6 +67,7 @@ jobs:
       authenticated_acceptance_proven: ${{ steps.release_metadata.outputs.authenticated_acceptance_proven }}
       planetscale_grants_verified: ${{ steps.release_metadata.outputs.planetscale_grants_verified }}
       worker_source_sha: ${{ steps.release_metadata.outputs.worker_source_sha }}
+      rollback_artifacts_proven: ${{ steps.release_metadata.outputs.rollback_artifacts_proven }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -317,6 +321,10 @@ jobs:
           test -n "${PUBLIC_WORKER_VERSION_ID:-}"
           test -n "${ADMIN_WORKER_VERSION_ID:-}"
           test -n "${JOBS_WORKER_VERSION_ID:-}"
+          test -s "$RUNNER_TEMP/production-cutover/public-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/admin-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/jobs-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
           {
             echo "public_worker_version=$PUBLIC_WORKER_VERSION_ID"
             echo "admin_worker_version=$ADMIN_WORKER_VERSION_ID"
@@ -327,6 +335,7 @@ jobs:
             echo "authenticated_acceptance_proven=${AUTHENTICATED_ACCEPTANCE_PROVEN:-false}"
             echo "planetscale_grants_verified=${PLANETSCALE_GRANTS_VERIFIED:-false}"
             echo "worker_source_sha=$RELEASE_SHA"
+            echo "rollback_artifacts_proven=true"
           } >> "$GITHUB_OUTPUT"
       - name: Roll back partial Worker deployment on failure
         if: failure()

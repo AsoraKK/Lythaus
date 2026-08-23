@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-22T21:20:00Z",
+  "sourceIssue": 598,
+  "reviewedAgainstMain": "a7ea3f0b75da3daf5593688cd133a7c3ac22c2c9",
+  "decisions": [
+    {
+      "branch": "agent/dependency-gate-remediation",
+      "sha": "a0d5441831babc3e552931a3e1fca04342c123b8",
+      "disposition": "integrated-by-main",
+      "rationale": "The dependency remediation is present in current main; the historical branch also referenced a removed Functions tree."
+    },
+    {
+      "branch": "agent/wp001-foundation",
+      "sha": "050643730615d139a42cac1cf651ca34e80164af",
+      "disposition": "integrated-by-main",
+      "rationale": "The reviewed authenticity foundation is present in current main under packages/authenticity and remains shadow-only."
+    },
+    {
+      "branch": "codex/fresh-actions-checkout-v7-final-main",
+      "sha": "5dcaab6f2984581b60dd916a0f56362ae50f4d65",
+      "disposition": "integrated-by-main",
+      "rationale": "Current main has the retained workflow action updates and the consolidated immutable action-pin policy."
+    },
+    {
+      "branch": "fix/planetscale-function-contracts",
+      "sha": "9c30bd470f5c3d69e7d591396c52c61d482f8a7d",
+      "disposition": "superseded-by-main",
+      "rationale": "The historical fingerprint refresh is superseded by the canonical migration contract and semantic function checks already in main."
+    },
+    {
+      "branch": "fix/planetscale-reconciliation-missing-columns",
+      "sha": "89ce5c2543b380d87a0c01d95d722e3ab978d04f",
+      "disposition": "integrated-by-main",
+      "rationale": "The fail-closed undefined-schema handling and regression coverage are present in the current migration reconciler."
+    },
+    {
+      "branch": "fix/planetscale-system-ca-node",
+      "sha": "e67ab0718a07024860d494ce6785dfd055f2e0ae",
+      "disposition": "integrated-by-main",
+      "rationale": "The node-postgres system CA normalization is already present in the current PlanetScale verification paths."
+    },
+    {
+      "branch": "fix/waitlist-wrangler-types",
+      "sha": "a385f3031146776cbd964728fd7acdf1ced78f7f",
+      "disposition": "salvaged-to-main",
+      "rationale": "Current main validates committed Worker types before production materialization and retains the regression assertion."
+    },
+    {
+      "branch": "ops/cloudflare-token-diagnostic-3af90f4f",
+      "sha": "f0c8497c756fdb7d7cbc22bad7982eedfc569688",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time provider diagnostic; no runtime or canonical deployment functionality is retained."
+    },
+    {
+      "branch": "ops/custom-domain-fingerprint-89e00774",
+      "sha": "1b1877aae30fe803d92fabcdb8f0cf734856d616",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time custom-domain evidence branch; canonical domain verification is now part of the release contract."
+    },
+    {
+      "branch": "ops/dispatch-marketing-production-89e00774",
+      "sha": "1412d3da24f97651ba5411c6afb8711b32167096",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical production dispatch branch; the canonical exact-SHA coordinator replaces it."
+    },
+    {
+      "branch": "ops/dispatch-marketing-production-a83799ca",
+      "sha": "4d9e62b3cb09cf3623e785ecd07931401148ef54",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical production dispatch branch; the canonical exact-SHA coordinator replaces it."
+    },
+    {
+      "branch": "ops/dispatch-planetscale-runtime-grant-67f9afff",
+      "sha": "dc9665939ad0de5b6750283bbaa9d527be1ecaa2",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time PlanetScale grant evidence branch; no production DDL or runtime change is carried forward."
+    },
+    {
+      "branch": "ops/dispatch-planetscale-verifier-4d6b2581",
+      "sha": "1d0c4236ca122ede84f50488d565be22e25d4009",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time PlanetScale verifier dispatch branch; the permanent read-only audit now owns this evidence."
+    },
+    {
+      "branch": "ops/dispatch-planetscale-verifier-cf895387",
+      "sha": "675795d427bea302c436b2c45d3f8603c18b05a5",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time PlanetScale verifier dispatch branch; the permanent read-only audit now owns this evidence."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-3af90f4f",
+      "sha": "45fbe9211783270cb60ae63b0e4ea431e1ada06c",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-3af90f4f-v2",
+      "sha": "8204fb5c14fa25be481c48533f8defcc5ff61e28",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-4d6b2581",
+      "sha": "6d9e49a5cce43027739336f4228648615e01c997",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-2461db3f",
+      "sha": "5e893d496e5682cbf1f503e9fb249f84b74ea030",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-32303bff",
+      "sha": "8b63add8cfb3360e443a4d2de05acf360efdb8b3",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-a691f30c",
+      "sha": "9a786507b207757a25fbb3111b3bc171ffa1a7e6",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-a83799ca",
+      "sha": "0297f2c424988d8af72d5320701f1a9957510c24",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-aaf1937f",
+      "sha": "0e927922065093d1a0f45bacb31a368e97494ee8",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-public-waitlist-c2db65cb",
+      "sha": "b0935ed935119a57c2dbc490dc598be47e168951",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical waitlist dispatch branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/dispatch-waitlist-diagnostic-133c65fd",
+      "sha": "8a7d498fcb207a67c1e945c3481a5b57d9ca0c6a",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time waitlist diagnostic; it is not a canonical runtime or deployment path."
+    },
+    {
+      "branch": "ops/hyperdrive-token-recheck-4d6b2581",
+      "sha": "52ddbbc80cf264613c254e4e14cd7684750d54f8",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time Hyperdrive token recheck; the permanent read-only target verifier replaces it."
+    },
+    {
+      "branch": "ops/live-acceptance-89e00774",
+      "sha": "17fdcb329308e7b765f4d948b086b86d38b78808",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical live acceptance branch; production approval remains gated by current provider and rollback evidence."
+    },
+    {
+      "branch": "ops/live-waitlist-diagnostic-c2db65cb",
+      "sha": "89325f543b3ed8c1b0be3aa3bb40b8786848c131",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time live waitlist diagnostic; current protected workflows provide the supported evidence path."
+    },
+    {
+      "branch": "ops/marketing-c2895b41",
+      "sha": "38aef70427b1b897c4ec51678be93fac8cecda43",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical marketing release branch; the canonical marketing workflow now requires the reviewed main SHA."
+    },
+    {
+      "branch": "ops/marketing-c9929ead",
+      "sha": "998deb812d6fb46101691b82c2e5e3a41886fefe",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical marketing release branch; the canonical marketing workflow now requires the reviewed main SHA."
+    },
+    {
+      "branch": "ops/public-waitlist-b5c64c9a",
+      "sha": "bdfe08cb5296450c60366ce312257105a2fe783d",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical public waitlist release branch; the protected release and rollback workflow replaces it."
+    },
+    {
+      "branch": "ops/release-e19c5ac4",
+      "sha": "d1469589e936366f7988c53f29028bb48931b327",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time release and Access discovery workflow; canonical provider inventory and release orchestration replace it."
+    },
+    {
+      "branch": "ops/release-marketing-b5c64c9a",
+      "sha": "6293d2731339726136fb44839b8c9dd2b284706b",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "Historical marketing release branch; the canonical exact-SHA coordinator replaces it."
+    },
+    {
+      "branch": "ops/turnstile-token-diagnostic-4d6b2581",
+      "sha": "c8644692590c22507126becc8e89ef73f643011b",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time Turnstile diagnostic; no supported runtime or deployment functionality is retained."
+    },
+    {
+      "branch": "ops/verify-recent-waitlist-signup",
+      "sha": "db698e5ea81e5defa68d2f45dd87524b34ea4ce9",
+      "disposition": "obsolete-operational-evidence",
+      "rationale": "One-time production signup verification; the branch explicitly recorded no query or live mutation."
+    }
+  ]
+}

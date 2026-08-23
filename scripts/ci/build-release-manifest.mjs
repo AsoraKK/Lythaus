@@ -52,6 +52,12 @@ const relationCountOrNull = (name) => {
   return value === null ? null : Number.parseInt(value, 10);
 };
 const statusOrUnknown = (name) => process.env[name] || 'UNKNOWN/BLOCKED';
+const legacyCountOrNull = (name) => {
+  const value = valueOrNull(name);
+  if (value !== null && !/^\d+$/.test(value)) throw new Error(`${name} must be a non-negative integer when provided`);
+  return value === null ? null : Number.parseInt(value, 10);
+};
+const passOrBlocked = (name) => process.env[name] === 'true' ? 'PASS' : 'BLOCKED';
 
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'lythaus-resource-registry.json'), 'utf8'));
 const hyperdrive = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json'), 'utf8'));
@@ -59,7 +65,7 @@ const migration = loadApprovedMigrations({ root, committedOnly: true });
 
 const surfaces = {
   marketing: {
-    project: 'lythaus-marketing',
+    project: valueOrNull('MARKETING_PAGES_PROJECT') ?? 'lythaus-marketing',
     branch: valueOrNull('MARKETING_PAGES_BRANCH'),
     deploymentId: deploymentIdOrNull('MARKETING_DEPLOYMENT_ID'),
     deploymentUrl: urlOrNull('MARKETING_DEPLOYMENT_URL'),
@@ -67,7 +73,7 @@ const surfaces = {
     deployedSha: shaOrNull('MARKETING_DEPLOYMENT_SHA'),
   },
   web: {
-    project: 'lythaus-web',
+    project: valueOrNull('WEB_PAGES_PROJECT') ?? 'lythaus-web',
     branch: valueOrNull('WEB_PAGES_BRANCH'),
     deploymentId: deploymentIdOrNull('WEB_DEPLOYMENT_ID'),
     deploymentUrl: urlOrNull('WEB_DEPLOYMENT_URL'),
@@ -90,8 +96,28 @@ const surfaces = {
 
 const cloudflareStatus = statusOrUnknown('CLOUDFLARE_INVENTORY_STATUS');
 const planetscaleStatus = statusOrUnknown('PLANETSCALE_INVENTORY_STATUS');
+const legacyAsoraActiveResources = legacyCountOrNull('CLOUDFLARE_LEGACY_ASORA_ACTIVE_RESOURCES');
+const productionSmoke = {
+  'lythaus.co': statusOrUnknown('PRODUCTION_SMOKE_MARKETING'),
+  'www.lythaus.co': statusOrUnknown('PRODUCTION_SMOKE_WWW'),
+  'admin.lythaus.co': statusOrUnknown('PRODUCTION_SMOKE_ADMIN_UI'),
+  flutterWeb: statusOrUnknown('PRODUCTION_SMOKE_FLUTTER_WEB'),
+  publicApi: statusOrUnknown('PRODUCTION_SMOKE_PUBLIC_API'),
+  adminApi: statusOrUnknown('PRODUCTION_SMOKE_ADMIN_API'),
+  jobs: statusOrUnknown('PRODUCTION_SMOKE_JOBS'),
+};
+const security = {
+  codeql: passOrBlocked('SECURITY_CHECKS_VERIFIED'),
+  dependencyReview: passOrBlocked('SECURITY_CHECKS_VERIFIED'),
+  secretScan: passOrBlocked('SECURITY_CHECKS_VERIFIED'),
+};
 const requiredEvidence = [
+  process.env.BRANCH_PROTECTION_VERIFIED === 'true',
+  process.env.HISTORICAL_BRANCHES_RECONCILED === 'true',
+  process.env.SECURITY_CHECKS_VERIFIED === 'true',
   cloudflareStatus === 'VERIFIED',
+  process.env.CLOUDFLARE_PAGES_INVENTORY_VERIFIED === 'true',
+  legacyAsoraActiveResources === 0,
   planetscaleStatus === 'VERIFIED',
   process.env.HYPERDRIVE_VERIFIED_MAIN === 'true',
   process.env.DATABASE_IDENTITY_VERIFIED === 'true',
@@ -119,18 +145,32 @@ const requiredEvidence = [
   /^17\./.test(valueOrNull('PLANETSCALE_SERVER_VERSION') ?? ''),
   /^[0-9a-f]{64}$/.test(valueOrNull('PLANETSCALE_MIGRATION_SET_SHA256') ?? ''),
   urlOrNull('PROVIDER_EVIDENCE_RUN_URL') !== null,
+  Object.values(productionSmoke).every((value) => value === 'PASS'),
+  process.env.ROLLBACK_ARTIFACTS_PROVEN === 'true',
+  process.env.CREDENTIAL_ROTATION_COMPLETED === 'true',
 ];
-const status = requiredEvidence.every(Boolean)
+const readinessStatus = requiredEvidence.every(Boolean)
   ? 'ready'
   : [cloudflareStatus, planetscaleStatus].some((value) => value === 'UNKNOWN/BLOCKED' || value === 'BLOCKED')
     ? 'blocked'
     : 'partial';
+const productionStatus = readinessStatus === 'ready' ? 'GO' : 'NO-GO';
 
 const manifest = {
   schemaVersion: 'lythaus-release-manifest-v2',
-  status,
+  status: productionStatus,
+  productionStatus,
+  readinessStatus,
   capturedAt: new Date().toISOString(),
+  releaseSha,
   repository: { owner: 'AsoraKK', name: 'Lythaus', releaseSha },
+  github: {
+    mainSha: releaseSha,
+    ciRunId: valueOrNull('CI_RUN_ID'),
+    historicalReconciliationRunId: valueOrNull('HISTORICAL_RECONCILIATION_RUN_ID'),
+    branchProtectionVerified: process.env.BRANCH_PROTECTION_VERIFIED === 'true',
+    historicalBranchesReconciled: process.env.HISTORICAL_BRANCHES_RECONCILED === 'true',
+  },
   surfaces,
   deploymentEvidence: {
     databaseIdentityVerified: process.env.DATABASE_IDENTITY_VERIFIED === 'true',
@@ -140,7 +180,19 @@ const manifest = {
   cloudflare: {
     accountId: registry.policy.cloudflareAccountId,
     zone: registry.policy.activeZone,
+    status: cloudflareStatus,
     inventoryStatus: cloudflareStatus,
+    marketingProject: surfaces.marketing.project,
+    marketingDomains: surfaces.marketing.domains,
+    flutterProject: surfaces.web.project,
+    adminProject: surfaces.admin.project,
+    workers: {
+      publicApi: surfaces.workers.publicApi.name,
+      adminApi: surfaces.workers.adminApi.name,
+      jobs: surfaces.workers.jobs.name,
+    },
+    legacyAsoraActiveResources,
+    pagesInventoryVerified: process.env.CLOUDFLARE_PAGES_INVENTORY_VERIFIED === 'true',
     hyperdrive: {
       manifestPath: 'infrastructure/cloudflare/native-hyperdrive-production.json',
       targetBranch: hyperdrive.productionTargetBranch,
@@ -150,6 +202,7 @@ const manifest = {
     },
   },
   planetscale: {
+    status: planetscaleStatus,
     organization: hyperdrive.planetScaleOrganization,
     database: hyperdrive.planetScaleDatabase,
     branch: hyperdrive.productionTargetBranch,
@@ -164,7 +217,17 @@ const manifest = {
     schemaFingerprint: fingerprintOrNull('PLANETSCALE_SCHEMA_FINGERPRINT'),
     grantsVerified: process.env.PLANETSCALE_GRANTS_VERIFIED === 'true',
     migrationCount: migration.migrations.length,
+    migrationLedgerVerified: process.env.PLANETSCALE_GRANTS_VERIFIED === 'true'
+      && /^[0-9a-f]{64}$/.test(valueOrNull('PLANETSCALE_MIGRATION_SET_SHA256') ?? ''),
   },
+  security,
+  credentialRotation: {
+    completed: process.env.CREDENTIAL_ROTATION_COMPLETED === 'true',
+  },
+  rollback: {
+    artifactsProven: process.env.ROLLBACK_ARTIFACTS_PROVEN === 'true',
+  },
+  productionSmoke,
   evidence: {
     source: 'exact reviewed main SHA and sanitized provider evidence',
     unknowns: [
@@ -181,6 +244,13 @@ const manifest = {
       /^[0-9a-f]{64}$/.test(valueOrNull('PLANETSCALE_MIGRATION_SET_SHA256') ?? '') ? null : 'PlanetScale observed migration-set fingerprint is unavailable',
       process.env.BUDGET_ENFORCEMENT_VERIFIED === 'true' ? null : 'Budget enforcement proof is unavailable',
       process.env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true' ? null : 'Authenticated acceptance proof is unavailable',
+      process.env.BRANCH_PROTECTION_VERIFIED === 'true' ? null : 'Protected main governance proof is unavailable',
+      process.env.HISTORICAL_BRANCHES_RECONCILED === 'true' ? null : 'Historical branch reconciliation proof is unavailable',
+      process.env.CLOUDFLARE_PAGES_INVENTORY_VERIFIED === 'true' ? null : 'Cloudflare Pages inventory proof is unavailable',
+      legacyAsoraActiveResources === 0 ? null : 'Active Lythaus-related legacy Asora resources remain',
+      Object.values(productionSmoke).every((value) => value === 'PASS') ? null : 'One or more canonical production smoke checks are unavailable',
+      process.env.CREDENTIAL_ROTATION_COMPLETED === 'true' ? null : 'Post-cutover credential rotation is not attested',
+      process.env.ROLLBACK_ARTIFACTS_PROVEN === 'true' ? null : 'Rollback snapshots are not proven',
     ].filter(Boolean),
   },
 };

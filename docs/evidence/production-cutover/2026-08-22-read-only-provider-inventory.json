@@ -8,6 +8,8 @@
   "github": {
     "repository": "AsoraKK/Lythaus",
     "mainSha": "e259181400f3e1561b0c635f4951c13b2460faab",
+    "snapshotKind": "HISTORICAL_PRE_PROTECTION",
+    "currentState": "SUPERSEDED_BY_2026_08_22_GOVERNANCE_STATE",
     "branchProtection": "NOT_PROTECTED_AT_CAPTURE",
     "branchCount": 12,
     "openPullRequests": [603, 604, 584, 583, 582, 541, 537, 536, 534, 533, 532],

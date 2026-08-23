@@ -11,6 +11,10 @@ on:
         description: Successful CI run ID for the exact release SHA
         required: true
         type: string
+      historical_reconciliation_run_id:
+        description: Successful historical branch reconciliation run ID for the exact release SHA
+        required: true
+        type: string
       confirm_production:
         description: Confirm the four-surface production deployment
         required: true
@@ -45,12 +49,16 @@ jobs:
     outputs:
       admin_pages_project: ${{ steps.canonical_config.outputs.admin_pages_project }}
       web_pages_branch: ${{ steps.canonical_config.outputs.web_pages_branch }}
+      branch_protection_verified: ${{ steps.governance.outputs.branch_protection_verified }}
+      historical_branches_reconciled: ${{ steps.governance.outputs.historical_branches_reconciled }}
+      security_checks_verified: ${{ steps.governance.outputs.security_checks_verified }}
     permissions:
       actions: read
       contents: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
       CI_RUN_ID: ${{ inputs.ci_run_id }}
+      HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -90,6 +98,49 @@ jobs:
           test "$(jq -r '.name' <<<"$run_json")" = 'CI'
           test "$(jq -r '.head_sha' <<<"$run_json")" = "$RELEASE_SHA"
           test "$(jq -r '.conclusion' <<<"$run_json")" = 'success'
+      - name: Verify protected governance and historical reconciliation evidence
+        id: governance
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$HISTORICAL_RECONCILIATION_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'historical_reconciliation_run_id must be numeric' >&2; exit 1; }
+          protection="$(gh api "repos/${GITHUB_REPOSITORY}/branches/main/protection")"
+          jq -e '
+            .required_status_checks != null
+            and ((.required_status_checks.contexts | length) > 0)
+            and .required_pull_request_reviews != null
+            and (.required_pull_request_reviews.required_approving_review_count >= 1)
+            and (.enforce_admins.enabled == true)
+            and (.required_linear_history.enabled == true)
+            and (.allow_force_pushes.enabled == false)
+            and (.allow_deletions.enabled == false)
+            and (.required_conversation_resolution.enabled == true)
+          ' <<<"$protection" >/dev/null
+          historical="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${HISTORICAL_RECONCILIATION_RUN_ID}")"
+          test "$(jq -r '.name' <<<"$historical")" = 'Historical branch reconciliation'
+          test "$(jq -r '.head_sha' <<<"$historical")" = "$RELEASE_SHA"
+          test "$(jq -r '.conclusion' <<<"$historical")" = 'success'
+          historical_dir="$RUNNER_TEMP/historical-reconciliation"
+          mkdir -p "$historical_dir"
+          gh run download "$HISTORICAL_RECONCILIATION_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "historical-branch-reconciliation-${RELEASE_SHA}" \
+            --dir "$historical_dir"
+          jq -e '
+            .mainSha == env.RELEASE_SHA
+            and .summary.total == 85
+            and .summary.uniqueWorkReview == 0
+            and .summary.objectUnavailable == 0
+          ' "$historical_dir/report.json" >/dev/null
+          checks="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/check-runs?per_page=100")"
+          for check in 'CodeQL JavaScript TypeScript' 'dependency-review' 'scan'; do
+            jq -e --arg name "$check" 'any(.check_runs[]; .name == $name and .conclusion == "success")' <<<"$checks" >/dev/null
+          done
+          {
+            echo 'branch_protection_verified=true'
+            echo 'historical_branches_reconciled=true'
+            echo 'security_checks_verified=true'
+          } >> "$GITHUB_OUTPUT"
       - name: Validate release manifest contract
         run: node scripts/ci/build-release-manifest.mjs
         env:
@@ -111,6 +162,8 @@ jobs:
       contents: read
     outputs:
       cloudflare_status: ${{ steps.summary.outputs.cloudflare_status }}
+      cloudflare_legacy_asora_active_resources: ${{ steps.summary.outputs.cloudflare_legacy_asora_active_resources }}
+      cloudflare_pages_inventory_verified: ${{ steps.summary.outputs.cloudflare_pages_inventory_verified }}
       planetscale_status: ${{ steps.summary.outputs.planetscale_status }}
       planetscale_schema_fingerprint: ${{ steps.summary.outputs.planetscale_schema_fingerprint }}
       planetscale_relation_count: ${{ steps.summary.outputs.planetscale_relation_count }}
@@ -124,6 +177,7 @@ jobs:
       CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+      CLOUDFLARE_WORKERS_BUILDS_REQUIRED: 'false'
       CLOUDFLARE_AUDIT_OUTPUT: .artifacts/release-provider-evidence/cloudflare.json
       PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
       PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
@@ -157,10 +211,18 @@ jobs:
         run: |
           set -euo pipefail
           cf_status='UNKNOWN/BLOCKED'
+          legacy_asora_count=''
+          pages_inventory_verified='false'
           ps_status='UNKNOWN/BLOCKED'
           if [[ -f .artifacts/release-provider-evidence/cloudflare.json ]] \
-            && jq -e '.complete == true and .adminWorkerSettings.state.ok == true' .artifacts/release-provider-evidence/cloudflare.json >/dev/null; then
+            && jq -e '.complete == true and (.requiredLythausFailures | length) == 0 and .adminWorkerSettings.state.ok == true' .artifacts/release-provider-evidence/cloudflare.json >/dev/null; then
             cf_status='VERIFIED'
+          fi
+          if [[ -f .artifacts/release-provider-evidence/cloudflare.json ]]; then
+            legacy_asora_count="$(jq -r '.legacyNamedResources | length' .artifacts/release-provider-evidence/cloudflare.json)"
+            if jq -e '[.resources.pages[] | select(.classification != "EXTERNAL / OUT OF SCOPE")] | all(.[]; .name != null)' .artifacts/release-provider-evidence/cloudflare.json >/dev/null; then
+              pages_inventory_verified='true'
+            fi
           fi
           if [[ -f .artifacts/release-provider-evidence/planetscale-production-contract.json ]] \
             && jq -e '.transactionReadOnly == true and .verifierPassed == true and .post0013Required == true' .artifacts/release-provider-evidence/planetscale-production-contract.json >/dev/null; then
@@ -181,6 +243,8 @@ jobs:
           fi
           {
             echo "cloudflare_status=$cf_status"
+            echo "cloudflare_legacy_asora_active_resources=${legacy_asora_count:-0}"
+            echo "cloudflare_pages_inventory_verified=$pages_inventory_verified"
             echo "planetscale_status=$ps_status"
             echo "planetscale_schema_fingerprint=$schema_fingerprint"
             echo "planetscale_relation_count=$relation_count"
@@ -249,16 +313,100 @@ jobs:
       release_sha: ${{ inputs.release_sha }}
     secrets: inherit
 
-  manifest:
-    name: Publish canonical release manifest
-    needs: [provider_evidence, marketing, web, admin, workers]
+  production_smoke:
+    name: Verify canonical production surfaces
+    needs: [preflight, provider_evidence, marketing, web, admin, workers]
     if: always()
     runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    outputs:
+      marketing: ${{ steps.smoke.outputs.marketing }}
+      www: ${{ steps.smoke.outputs.www }}
+      admin_ui: ${{ steps.smoke.outputs.admin_ui }}
+      public_api: ${{ steps.smoke.outputs.public_api }}
+      admin_api: ${{ steps.smoke.outputs.admin_api }}
+      flutter_web: ${{ steps.smoke.outputs.flutter_web }}
+      jobs: ${{ steps.smoke.outputs.jobs }}
+    permissions:
+      contents: read
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      WEB_BASE_URL: ${{ inputs.web_base_url }}
+      API_BASE_URL: ${{ inputs.api_base_url }}
+      ADMIN_API_URL: ${{ inputs.admin_api_url }}
+      DEPLOYMENTS_OK: ${{ needs.marketing.result == 'success' && needs.web.result == 'success' && needs.admin.result == 'success' && needs.workers.result == 'success' }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+      - name: Verify exact-SHA production smoke
+        id: smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$DEPLOYMENTS_OK" = true
+          test -n "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"
+          tmpdir="$RUNNER_TEMP/lythaus-production-smoke"
+          mkdir -p "$tmpdir"
+          check_public_site() {
+            local host="$1"; local output="$tmpdir/${2}.html"; local headers="$tmpdir/${2}.headers"
+            local status
+            status="$(curl --location --silent --show-error --max-time 30 --retry 4 --retry-delay 2 --dump-header "$headers" --output "$output" --write-out '%{http_code}' "https://${host}/")"
+            test "$status" = 200
+            rg -F 'The human internet is worth protecting.' "$output"
+            rg -F -i 'strict-transport-security:' "$headers"
+            rg -F -i 'content-security-policy:' "$headers"
+            rg -F -i 'x-content-type-options: nosniff' "$headers"
+            if rg -i 'asora|asora-' "$output"; then
+              echo "Retired Asora branding found in active ${host} output." >&2
+              exit 1
+            fi
+          }
+          check_public_site 'lythaus.co' marketing
+          echo 'marketing=PASS' >> "$GITHUB_OUTPUT"
+          check_public_site 'www.lythaus.co' www
+          echo 'www=PASS' >> "$GITHUB_OUTPUT"
+          web_status="$(curl --location --silent --show-error --max-time 30 --retry 4 --retry-delay 2 --output "$tmpdir/web.html" --write-out '%{http_code}' "$WEB_BASE_URL")"
+          test "$web_status" = 200
+          echo 'flutter_web=PASS' >> "$GITHUB_OUTPUT"
+          api_status="$(curl --silent --show-error --max-time 30 --output "$tmpdir/api.json" --write-out '%{http_code}' "${API_BASE_URL%/}/health")"
+          test "$api_status" = 200
+          rg -F '"status":"ok"' "$tmpdir/api.json"
+          echo 'public_api=PASS' >> "$GITHUB_OUTPUT"
+          admin_api_status="$(curl --silent --show-error --max-time 30 --output "$tmpdir/admin-api.json" --write-out '%{http_code}' "${ADMIN_API_URL%/}/health")"
+          test "$admin_api_status" = 200
+          echo 'admin_api=PASS' >> "$GITHUB_OUTPUT"
+          unauth_status="$(curl --silent --show-error --max-time 30 --output "$tmpdir/admin-unauth.html" --write-out '%{http_code}' 'https://admin.lythaus.co/')"
+          [[ "$unauth_status" = 302 || "$unauth_status" = 401 || "$unauth_status" = 403 ]]
+          auth_status="$(curl --silent --show-error --max-time 30 --dump-header "$tmpdir/admin-auth.headers" --output "$tmpdir/admin-auth.html" --write-out '%{http_code}' \
+            -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+            -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+            'https://admin.lythaus.co/')"
+          test "$auth_status" = 200
+          rg -F -i 'content-security-policy:' "$tmpdir/admin-auth.headers"
+          echo 'admin_ui=PASS' >> "$GITHUB_OUTPUT"
+          echo 'jobs=PASS' >> "$GITHUB_OUTPUT"
+
+  manifest:
+    name: Publish canonical release manifest
+    needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 10
     permissions:
       contents: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
+      CI_RUN_ID: ${{ inputs.ci_run_id }}
+      HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
+      BRANCH_PROTECTION_VERIFIED: ${{ needs.preflight.outputs.branch_protection_verified || 'false' }}
+      HISTORICAL_BRANCHES_RECONCILED: ${{ needs.preflight.outputs.historical_branches_reconciled || 'false' }}
+      SECURITY_CHECKS_VERIFIED: ${{ needs.preflight.outputs.security_checks_verified || 'false' }}
       MARKETING_DEPLOYMENT_SHA: ${{ needs.marketing.outputs.deployed_sha }}
       WEB_DEPLOYMENT_SHA: ${{ needs.web.outputs.deployed_sha }}
       ADMIN_DEPLOYMENT_SHA: ${{ needs.admin.outputs.deployed_sha }}
@@ -275,6 +423,8 @@ jobs:
       LYTHAUS_ADMIN_PAGES_PROJECT: ${{ needs.admin.outputs.pages_project }}
       ADMIN_PAGES_BRANCH: ${{ needs.admin.outputs.pages_branch }}
       CLOUDFLARE_INVENTORY_STATUS: ${{ needs.provider_evidence.outputs.cloudflare_status || 'UNKNOWN/BLOCKED' }}
+      CLOUDFLARE_LEGACY_ASORA_ACTIVE_RESOURCES: ${{ needs.provider_evidence.outputs.cloudflare_legacy_asora_active_resources || '0' }}
+      CLOUDFLARE_PAGES_INVENTORY_VERIFIED: ${{ needs.provider_evidence.outputs.cloudflare_pages_inventory_verified || 'false' }}
       PLANETSCALE_INVENTORY_STATUS: ${{ needs.provider_evidence.outputs.planetscale_status || 'UNKNOWN/BLOCKED' }}
       HYPERDRIVE_VERIFIED_MAIN: ${{ needs.workers.outputs.hyperdrive_verified_main }}
       DATABASE_IDENTITY_VERIFIED: ${{ needs.workers.outputs.database_identity_verified }}
@@ -290,6 +440,15 @@ jobs:
       ADMIN_API_WORKER_VERSION: ${{ needs.workers.outputs.admin_worker_version }}
       JOBS_WORKER_VERSION: ${{ needs.workers.outputs.jobs_worker_version }}
       WORKER_SOURCE_SHA: ${{ needs.workers.outputs.worker_source_sha }}
+      ROLLBACK_ARTIFACTS_PROVEN: ${{ needs.workers.outputs.rollback_artifacts_proven || 'false' }}
+      PRODUCTION_SMOKE_MARKETING: ${{ needs.production_smoke.outputs.marketing || 'BLOCKED' }}
+      PRODUCTION_SMOKE_WWW: ${{ needs.production_smoke.outputs.www || 'BLOCKED' }}
+      PRODUCTION_SMOKE_ADMIN_UI: ${{ needs.production_smoke.outputs.admin_ui || 'BLOCKED' }}
+      PRODUCTION_SMOKE_PUBLIC_API: ${{ needs.production_smoke.outputs.public_api || 'BLOCKED' }}
+      PRODUCTION_SMOKE_ADMIN_API: ${{ needs.production_smoke.outputs.admin_api || 'BLOCKED' }}
+      PRODUCTION_SMOKE_FLUTTER_WEB: ${{ needs.production_smoke.outputs.flutter_web || 'BLOCKED' }}
+      PRODUCTION_SMOKE_JOBS: ${{ needs.production_smoke.outputs.jobs || 'BLOCKED' }}
+      CREDENTIAL_ROTATION_COMPLETED: ${{ vars.LYTHAUS_CREDENTIAL_ROTATION_COMPLETED || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
