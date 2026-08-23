@@ -15,6 +15,8 @@ fi
 content_matches="$({
   rg -n -i --hidden --glob '!.git/**' --glob '!docs/history/**' --glob '!docs/archive/**' \
     --glob '!node_modules/**' --glob '!build/**' --glob '!.dart_tool/**' \
+    --glob '!scripts/cloudflare/audit-account.mjs' \
+    --glob '!.github/workflows/production-release.yml' \
     --glob '!.codex-*/**' -- "$RETIRED_BRAND" \
     "$ROOT/lib" "$ROOT/test" "$ROOT/integration_test" "$ROOT/android" "$ROOT/ios" \
     "$ROOT/macos" "$ROOT/linux" "$ROOT/windows" "$ROOT/web" "$ROOT/apps" "$ROOT/api" \

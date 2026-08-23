@@ -19,6 +19,8 @@
     { "path": "database/planetscale/migrations/0007_contact_emails.sql", "kind": "immutable-migration", "reason": "Applied historical migration; checksums and chronology must remain unchanged." },
     { "path": "scripts/retired-reference-allowlist.json", "kind": "guard", "reason": "The allowlist necessarily describes its own permitted paths." },
     { "path": "scripts/ci/build-release-manifest.mjs", "kind": "runtime-identity", "reason": "The release manifest preserves the configured GitHub owner identity while keeping provider evidence explicit." },
+    { "path": ".github/workflows/production-release.yml", "kind": "retirement-gate", "reason": "The production gate rejects retired-brand output and carries the sanitized legacy-resource count; it does not deploy or depend on the retired provider." },
+    { "path": "scripts/cloudflare/audit-account.mjs", "kind": "retirement-inventory", "reason": "The read-only Cloudflare inventory must recognize legacy Lythaus resources and explicitly ignore external resources; it records no credentials and performs no mutations." },
     { "path": "scripts/validate-no-retired-provider-dependencies.mjs", "kind": "guard", "reason": "The guard constructs forbidden patterns and reads the allowlist." }
   ]
 }

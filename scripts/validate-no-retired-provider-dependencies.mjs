@@ -39,6 +39,8 @@ const approvedAllowlistPaths = new Set([
   'database/planetscale/migrations/0007_contact_emails.sql',
   'scripts/retired-reference-allowlist.json',
   'scripts/ci/build-release-manifest.mjs',
+  '.github/workflows/production-release.yml',
+  'scripts/cloudflare/audit-account.mjs',
   'scripts/validate-no-retired-provider-dependencies.mjs',
 ]);
 

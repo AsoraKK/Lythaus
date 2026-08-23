@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-23T08:39:59.093Z",
+  "sourceWorkflowRunId": "32628846369",
+  "sourceSha": "9933c713923b9b534ea05e548f70bb616661dd10",
+  "scope": {
+    "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
+    "zone": "lythaus.co",
+    "zoneId": "7bc572c8b7cd3c00be9c655176c29382"
+  },
+  "status": "PARTIAL",
+  "readOnlyInventory": {
+    "complete": true,
+    "requiredLythausFailures": [],
+    "pagesReadable": true,
+    "workersReadable": true,
+    "accessReadable": true,
+    "dnsReadable": true,
+    "hyperdriveReadable": true,
+    "externalOutOfScopeResourceCount": 5,
+    "externalResourcePolicy": "Nite Owl resources are classified during account-level enumeration only; no per-resource detail, mutation, deletion, or credential rotation is part of this Lythaus inventory."
+  },
+  "canonicalOwnershipObserved": {
+    "marketingProject": "lythaus-marketing",
+    "marketingDomains": [
+      "lythaus.co",
+      "www.lythaus.co"
+    ],
+    "flutterProject": "lythaus-web",
+    "flutterCanonicalDomain": "app.lythaus.co",
+    "adminAccessApplication": "Lythaus Admin UI",
+    "adminDomain": "admin.lythaus.co",
+    "workers": [
+      "lythaus-public-api-development",
+      "lythaus-admin-api-development",
+      "lythaus-jobs-development"
+    ],
+    "hyperdrives": [
+      "lythaus-db-app-dev",
+      "lythaus-db-admin-dev",
+      "lythaus-db-jobs-dev",
+      "lythaus-db-privacy-dev"
+    ]
+  },
+  "legacyLythausResourcesObserved": [
+    {
+      "type": "pages",
+      "name": "asora",
+      "classification": "LEGACY ASORA FOR LYTHAUS",
+      "customDomains": ["admin.lythaus.co"],
+      "previewDomain": "*.asora-6bi.pages.dev",
+      "automaticDeployment": "ACTIVE",
+      "disposition": "CUTOVER_AND_DEPENDENCY_PROOF_REQUIRED"
+    },
+    {
+      "type": "access",
+      "name": "Lythaus Control Panel Preview",
+      "classification": "LEGACY ASORA FOR LYTHAUS",
+      "domain": "*.asora-6bi.pages.dev",
+      "disposition": "ACCESS_REPRODUCTION_AND_RETIREMENT_REQUIRED"
+    }
+  ],
+  "unresolvedCutoverGates": [
+    "Canonical control-panel Pages destination is not yet proven for admin.lythaus.co.",
+    "Legacy Pages Git integration remains active and must be detached only after cutover evidence.",
+    "Hyperdrive origin fingerprint still requires credential-backed verification.",
+    "Zero-traffic observation, rollback proof, and post-cutover credential rotation are outstanding."
+  ]
+}
