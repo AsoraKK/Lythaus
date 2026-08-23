@@ -207,9 +207,14 @@ async function rotateCredentials() {
   const addedPolicies = [];
   const updatedPolicies = [];
   let secretsUpdated = [];
+  let rotated = null;
+  let lastProbe = null;
   try {
+    rotated = await rotateServiceToken(previous.id);
+    if (!rotated?.id || !rotated.client_id || !rotated.client_secret) throw new Error('Cloudflare rotated a service token without complete credential metadata');
+
     const uiPolicies = await listPolicies(adminUiAppId);
-    if (!uiPolicies.some((policy) => serviceTokenPolicy(policy, previous.id))) {
+    if (!uiPolicies.some((policy) => serviceTokenPolicy(policy, rotated.id))) {
       const legacyUiPolicy = uiPolicies.find((policy) => (
         policy.decision === 'non_identity' && /asora/i.test(policy.name ?? '') && policy.id
       ));
@@ -217,20 +222,17 @@ async function rotateCredentials() {
         await updatePolicy(
           adminUiAppId,
           legacyUiPolicy,
-          previous.id,
+          rotated.id,
           'Lythaus control-panel CI service token',
         );
         updatedPolicies.push({ appId: adminUiAppId, policy: legacyUiPolicy });
       } else {
-        const uiPolicy = await createPolicy(adminUiAppId, previous.id);
+        const uiPolicy = await createPolicy(adminUiAppId, rotated.id);
         addedPolicies.push([adminUiAppId, uiPolicy.id]);
       }
     }
 
-    const rotated = await rotateServiceToken(previous.id);
-    if (!rotated?.id || !rotated.client_id || !rotated.client_secret) throw new Error('Cloudflare rotated a service token without complete credential metadata');
-    const probe = await probeAdmin(rotated.client_id, rotated.client_secret);
-    requireValidAdminProbe(probe, 'New Access service token');
+    lastProbe = await probeAdminWithRetry(rotated.client_id, rotated.client_secret, 'New Access service token');
 
     setGitHubSecret('CF_ACCESS_CLIENT_ID', rotated.client_id);
     secretsUpdated.push('CF_ACCESS_CLIENT_ID');
@@ -264,7 +266,7 @@ async function rotateCredentials() {
       previousCredentialMatched: true,
       githubSecretsUpdated: secretsUpdated,
       credentialRotationCompleted: true,
-      adminProbe: probe,
+      adminProbe: lastProbe,
     };
     writeEvidence(evidence);
     console.log(JSON.stringify({ status: evidence.status, credentialRotationCompleted: true, rotatedExistingServiceToken: true, legacyServiceTokensRevoked: legacyTokens.length, newPolicyCount: addedPolicies.length }));
@@ -280,8 +282,37 @@ async function rotateCredentials() {
         ?? (policy.include ?? []).find((rule) => rule.service_token?.id)?.service_token?.id;
       try { if (legacyTokenId) await updatePolicy(appId, policy, legacyTokenId, policy.name); } catch { /* best effort rollback */ }
     }
+    writeEvidence({
+      schemaVersion: 1,
+      capturedAt: new Date().toISOString(),
+      mode: 'rotate',
+      status: 'failed',
+      error: safeError(error?.message ?? error),
+      rotatedServiceToken: rotated ? { id: rotated.id, duration: rotated.duration, enabled: rotated.enabled } : null,
+      newPolicies: addedPolicies.map(([appId, policyId]) => ({ appId, policyId })),
+      updatedPolicies: updatedPolicies.map(({ appId, policy }) => ({ appId, policyId: policy.id, replacedLegacyName: policy.name })),
+      lastProbe,
+      githubSecretsUpdated: secretsUpdated,
+      rollbackAttempted: true,
+    });
     throw error;
   }
+}
+
+async function probeAdminWithRetry(clientId, clientSecret, label) {
+  let lastProbe = null;
+  let lastError = null;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      lastProbe = await probeAdmin(clientId, clientSecret);
+      requireValidAdminProbe(lastProbe, label);
+      return lastProbe;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 1000 * (2 ** attempt)));
+    }
+  }
+  throw lastError ?? new Error(`${label} probe failed without a response`);
 }
 
 if (rotate) await rotateCredentials();

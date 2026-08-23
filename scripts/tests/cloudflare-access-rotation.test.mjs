@@ -13,6 +13,8 @@ test('Access rotation is protected, Lythaus-scoped, and sanitized', () => {
   assert.match(script, /previous_client_secret_expires_at/);
   assert.match(script, /service_token: \{ token_id: tokenId \}/);
   assert.match(script, /policyPayloadForServiceToken/);
+  assert.match(script, /probeAdminWithRetry/);
+  assert.match(script, /status: 'failed'/);
   assert.match(script, /replacedLegacyName/);
   assert.match(script, /precedence: 0/);
   assert.match(script, /Lythaus control-panel CI service token/);
