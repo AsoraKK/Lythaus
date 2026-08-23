@@ -7,7 +7,7 @@ test('Cloudflare audit remains read-only and covers scoped integrations and curr
   for (const forbidden of ['method: \'POST\'', 'method: \'PUT\'', 'method: \'PATCH\'', 'method: \'DELETE\'']) {
     if (source.includes(forbidden)) throw new Error(`mutating request found: ${forbidden}`);
   }
-  for (const required of ['sourceIntegration', 'triggerType', '/builds/workers/', 'deployHookInventory', 'const integrations', 'resources: resourceCollections', 'classificationPolicy', 'EXTERNAL / OUT OF SCOPE', 'NITE_OWL_MARKERS']) {
+  for (const required of ['sourceIntegration', 'triggerType', '/builds/workers/', 'deployHookInventory', 'const integrations', 'resources: resourceCollections', 'classificationPolicy', 'legacyProviderExceptions', 'EXTERNAL / OUT OF SCOPE', 'NITE_OWL_MARKERS']) {
     if (!source.includes(required)) throw new Error(`missing Cloudflare inventory contract: ${required}`);
   }
   for (const forbidden of ['hook.url', 'hook.secret', 'publicAccessValues', 'gh issue create', 'issues: write']) {

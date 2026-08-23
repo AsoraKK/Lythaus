@@ -189,6 +189,7 @@ const pages = rawPages.map((project) => {
   });
   return {
     name,
+    id: project.id ?? null,
     classification,
     productionBranch: project.production_branch ?? null,
     sourceIntegration: project.source ? {
@@ -292,6 +293,52 @@ for (const page of pages.filter(({ classification }) => classification !== 'EXTE
       : [],
   };
   await sleep(300);
+}
+
+function classifyPageLegacyState(page) {
+  const detail = pageDetails[page.name] ?? {};
+  const source = detail.detail?.sourceIntegration ?? page.sourceIntegration ?? null;
+  const domains = [
+    ...(Array.isArray(page.domains) ? page.domains : []),
+    ...(Array.isArray(detail.customDomains) ? detail.customDomains.map(({ name }) => name) : []),
+  ].filter(Boolean);
+  const normalisedDomains = domains.map(normalise);
+  const legacyCustomDomains = normalisedDomains.filter((domain) => (
+    domain.includes('asora') && domain !== 'asora-6bi.pages.dev'
+  ));
+  const renamedRepositoryAlias = normalise(source?.owner) === 'asorakk'
+    && normalise(source?.repoName) === 'asora';
+  const automaticDeploymentsEnabled = source?.productionDeploymentsEnabled !== false
+    || (source?.previewDeploymentSetting ?? 'all') !== 'none';
+  const activeLegacyReferences = [
+    ...legacyCustomDomains.map((domain) => `custom-domain:${domain}`),
+    ...(renamedRepositoryAlias && automaticDeploymentsEnabled ? ['github-repository-rename-alias-with-automatic-deployments'] : []),
+  ];
+  const providerExceptions = [];
+  if (normalisedDomains.includes('asora-6bi.pages.dev')) {
+    providerExceptions.push('Cloudflare Pages default hostname is immutable after the in-place project rename; the Lythaus custom domain is authoritative.');
+  }
+  if (renamedRepositoryAlias && !automaticDeploymentsEnabled) {
+    providerExceptions.push('Cloudflare retains the historical GitHub repository rename alias in disabled source metadata; direct exact-SHA CI deployments are authoritative.');
+  }
+  return {
+    classification: activeLegacyReferences.length > 0 ? 'LEGACY ASORA FOR LYTHAUS' : 'CANONICAL LYTHAUS',
+    activeLegacyReferences,
+    providerExceptions,
+  };
+}
+
+for (const page of pages.filter(({ classification }) => classification !== 'EXTERNAL / OUT OF SCOPE')) {
+  const legacyState = classifyPageLegacyState(page);
+  page.classification = legacyState.classification;
+  page.legacyReferences = {
+    active: legacyState.activeLegacyReferences,
+    providerExceptions: legacyState.providerExceptions,
+  };
+  if (pageDetails[page.name]) {
+    pageDetails[page.name].classification = page.classification;
+    pageDetails[page.name].legacyReferences = page.legacyReferences;
+  }
 }
 
 const access = [];
@@ -401,7 +448,7 @@ const adminSettingsAccess = adminSettings.bindings.filter(({ name }) => [
 
 const integrations = pages
   .filter(({ sourceIntegration }) => sourceIntegration !== null)
-  .map(({ name, sourceIntegration, classification }) => ({ project: name, classification, ...sourceIntegration }));
+  .map(({ name, sourceIntegration, classification, legacyReferences }) => ({ project: name, classification, legacyReferences, ...sourceIntegration }));
 
 const legacyNamedResources = [];
 for (const [type, entries] of Object.entries({ pages, workers, hyperdrives, r2, queues, workflows, kv, access, turnstile, dns, routes })) {
@@ -420,6 +467,14 @@ for (const [type, entries] of Object.entries({ pages, workers, hyperdrives, r2, 
     }
   }
 }
+
+const legacyProviderExceptions = pages
+  .filter(({ legacyReferences }) => Array.isArray(legacyReferences?.providerExceptions) && legacyReferences.providerExceptions.length > 0)
+  .map(({ name, legacyReferences }) => ({
+    type: 'pages',
+    name,
+    exceptions: legacyReferences.providerExceptions,
+  }));
 
 const endpointStates = Object.fromEntries(Object.entries(responses).map(([name, response]) => [name, endpointState(response)]));
 const requiredLythausFailures = [
@@ -474,6 +529,7 @@ const report = {
   resources: resourceCollections,
   resourceClassifications: resourceCollections,
   ignoredExternalResources,
+  legacyProviderExceptions,
   legacyNamedResources,
 };
 

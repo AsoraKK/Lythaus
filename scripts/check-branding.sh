@@ -21,10 +21,15 @@ content_matches="$({
     --glob '!cloudflare/execute-lythaus-pages-cutover.mjs' \
     --glob '!scripts/cloudflare/rotate-lythaus-access-service-token.mjs' \
     --glob '!cloudflare/rotate-lythaus-access-service-token.mjs' \
+    --glob '!scripts/cloudflare/execute-lythaus-web-source-hygiene.mjs' \
+    --glob '!cloudflare/execute-lythaus-web-source-hygiene.mjs' \
     --glob '!.github/workflows/cloudflare-lythaus-pages-cutover.yml' \
     --glob '!workflows/cloudflare-lythaus-pages-cutover.yml' \
+    --glob '!.github/workflows/cloudflare-lythaus-web-source-hygiene.yml' \
+    --glob '!workflows/cloudflare-lythaus-web-source-hygiene.yml' \
     --glob '!scripts/tests/cloudflare-pages-cutover.test.mjs' \
     --glob '!scripts/tests/cloudflare-pages-cutover.test.mjs' \
+    --glob '!scripts/tests/cloudflare-web-source-hygiene.test.mjs' \
     --glob '!scripts/ci/build-release-manifest.mjs' \
     --glob '!ci/build-release-manifest.mjs' \
     --glob '!.github/workflows/production-release.yml' \
