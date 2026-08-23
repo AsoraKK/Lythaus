@@ -129,7 +129,7 @@ async function getProject(name) {
 }
 
 async function listDeployments(name) {
-  const result = await request('GET', `${accountBase}/pages/projects/${encodeURIComponent(name)}/deployments?per_page=100`);
+  const result = await request('GET', `${accountBase}/pages/projects/${encodeURIComponent(name)}/deployments?per_page=25`);
   assertSuccess(`Pages deployments ${name} lookup`, result);
   return Array.isArray(result.result) ? result.result : [];
 }
