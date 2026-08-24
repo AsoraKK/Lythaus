@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
 const webWorkflow = readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
+const workersWorkflow = readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesVerifier = readFileSync('scripts/cloudflare/verify-pages-deployment.mjs', 'utf8');
 
@@ -119,10 +120,19 @@ test('the exact CI run publishes the immutable artifact consumed by production r
 
 test('production Pages deployment is protected separately from dev-scoped synthetic smoke credentials', () => {
   assert.match(workflow, /target_environment: production/);
+  assert.match(workflow, /api_base_url: https:\/\/api\.lythaus\.co\/api/);
   assert.match(webWorkflow, /deploy-and-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
   assert.match(webWorkflow, /browser-smoke:[\s\S]*environment: dev/);
   assert.match(webWorkflow, /RUNTIME_AUTH_EMAIL: \$\{\{ secrets\.MVP_SMOKE_EMAIL \}\}/);
   assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ secrets\.MVP_SMOKE_PASSWORD \}\}/);
+});
+
+test('Worker readiness secrets are included in each immutable candidate upload', () => {
+  assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 secret put DATABASE_READINESS_TOKEN/);
+  assert.match(workersWorkflow, /DATABASE_READINESS_TOKEN: \$\{\{ secrets\.DATABASE_READINESS_TOKEN \}\}/);
+  assert.match(workersWorkflow, /secrets_file="\$RUNNER_TEMP\/production-cutover\/worker-secrets\.json"/);
+  assert.match(workersWorkflow, /--secrets-file "\$secrets_file"/);
+  assert.match(workersWorkflow, /trap 'rm -f "\$secrets_file"' EXIT/);
 });
 
 test('production smoke authenticates the Access-protected admin API health check', () => {

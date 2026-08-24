@@ -444,7 +444,7 @@ jobs:
       pages_project: lythaus-web
       pages_branch: ${{ needs.preflight.outputs.web_pages_branch }}
       web_base_url: https://app.lythaus.co
-      api_base_url: https://api.lythaus.co
+      api_base_url: https://api.lythaus.co/api
       admin_api_url: https://admin-api.lythaus.co
     secrets: inherit
 
