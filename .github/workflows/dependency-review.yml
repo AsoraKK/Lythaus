@@ -20,3 +20,15 @@ jobs:
           deny-licenses: GPL-3.0, AGPL-3.0
           base-ref: ${{ github.event_name == 'pull_request' && github.base_ref || github.event.before }}
           head-ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+      - name: Write exact-SHA security evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/security-run-evidence
+          printf '{"workflow":"Dependency review","headSha":"%s","conclusion":"success"}\n' "$GITHUB_SHA" > .artifacts/security-run-evidence/run.json
+      - name: Upload exact-SHA security evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: security-run-evidence-Dependency-review-${{ github.sha }}
+          if-no-files-found: error
+          path: .artifacts/security-run-evidence/run.json

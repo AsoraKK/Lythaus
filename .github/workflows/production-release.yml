@@ -124,6 +124,38 @@ jobs:
           test "$(jq -r '.name' <<<"$run_json")" = 'CI'
           test "$(jq -r '.head_sha' <<<"$run_json")" = "$RELEASE_SHA"
           test "$(jq -r '.conclusion' <<<"$run_json")" = 'success'
+      - name: Download exact historical reconciliation evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: historical-branch-reconciliation-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/historical-reconciliation
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.historical_reconciliation_run_id }}
+      - name: Download exact security evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: security-run-evidence-CodeQL-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/security-evidence/CodeQL
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.codeql_run_id }}
+      - name: Download exact dependency review evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: security-run-evidence-Dependency-review-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/security-evidence/Dependency-review
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.dependency_review_run_id }}
+      - name: Download exact secret scan evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: security-run-evidence-Native-secret-scan-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/security-evidence/Native-secret-scan
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.secret_scan_run_id }}
       - name: Verify protected governance and historical reconciliation evidence
         id: governance
         shell: bash
@@ -132,32 +164,7 @@ jobs:
           [[ "$HISTORICAL_RECONCILIATION_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'historical_reconciliation_run_id must be numeric' >&2; exit 1; }
           test "$GITHUB_REF" = 'refs/heads/main'
           test "$REF_PROTECTED" = 'true'
-          get_public_run() {
-            curl --fail --silent --show-error --retry 3 --retry-delay 2 \
-              -H 'Accept: application/vnd.github+json' \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              -H 'User-Agent: Lythaus-production-release' \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$1"
-          }
-          historical="$(get_public_run "$HISTORICAL_RECONCILIATION_RUN_ID")"
-          test "$(jq -r '.name' <<<"$historical")" = 'Historical branch reconciliation'
-          test "$(jq -r '.head_sha' <<<"$historical")" = "$RELEASE_SHA"
-          test "$(jq -r '.conclusion' <<<"$historical")" = 'success'
           historical_dir="$RUNNER_TEMP/historical-reconciliation"
-          mkdir -p "$historical_dir"
-          artifact_name="historical-branch-reconciliation-${RELEASE_SHA}"
-          artifacts="$(curl --fail --silent --show-error --retry 3 --retry-delay 2 \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            -H 'User-Agent: Lythaus-production-release' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${HISTORICAL_RECONCILIATION_RUN_ID}/artifacts?per_page=100")"
-          artifact_id="$(jq -r --arg artifact_name "$artifact_name" '.artifacts[] | select(.name == $artifact_name and .expired == false) | .id' <<<"$artifacts")"
-          [[ "$artifact_id" =~ ^[0-9]+$ ]] || { echo "historical reconciliation artifact not found" >&2; exit 1; }
-          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
-            -H 'User-Agent: Lythaus-production-release' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
-            --output "$RUNNER_TEMP/historical-reconciliation.zip"
-          unzip -q "$RUNNER_TEMP/historical-reconciliation.zip" -d "$historical_dir"
           jq -e '
             .mainSha == env.RELEASE_SHA
             and .summary.total == 85
@@ -170,10 +177,17 @@ jobs:
             "Native secret scan|${SECRET_SCAN_RUN_ID}"; do
             IFS='|' read -r workflow run_id <<<"$security_check"
             [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "${workflow} run ID must be numeric" >&2; exit 1; }
-            security_run="$(get_public_run "$run_id")"
-            test "$(jq -r '.name' <<<"$security_run")" = "$workflow"
-            test "$(jq -r '.head_sha' <<<"$security_run")" = "$RELEASE_SHA"
-            test "$(jq -r '.conclusion' <<<"$security_run")" = 'success'
+            case "$workflow" in
+              'CodeQL') evidence_dir="$RUNNER_TEMP/security-evidence/CodeQL" ;;
+              'Dependency review') evidence_dir="$RUNNER_TEMP/security-evidence/Dependency-review" ;;
+              'Native secret scan') evidence_dir="$RUNNER_TEMP/security-evidence/Native-secret-scan" ;;
+              *) echo "unexpected security workflow: $workflow" >&2; exit 1 ;;
+            esac
+            jq -e --arg workflow "$workflow" --arg release_sha "$RELEASE_SHA" '
+              .workflow == $workflow
+              and .headSha == $release_sha
+              and .conclusion == "success"
+            ' "$evidence_dir/run.json" >/dev/null
           done
           {
             echo 'branch_protection_verified=true'
