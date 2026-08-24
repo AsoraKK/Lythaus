@@ -15,7 +15,7 @@ on:
         description: Cloudflare deployment class
         required: true
         type: choice
-        options: [preview, mvp]
+        options: [preview, mvp, production]
       pages_project:
         description: Cloudflare Pages project name
         required: true
@@ -96,7 +96,7 @@ permissions:
 jobs:
   deploy-and-smoke:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.target_environment }}
+    environment: ${{ inputs.target_environment == 'production' && 'production' || inputs.target_environment }}
     timeout-minutes: 35
     outputs:
       pages_deployment_id: ${{ steps.pages_evidence.outputs.deployment_id }}
@@ -192,28 +192,6 @@ jobs:
             echo "deployed_sha=$(jq -r '.commitSha' alpha-web-pages-deployment-evidence.json)"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Install browser smoke tooling
-        run: |
-          npm ci --ignore-scripts
-          npx playwright install --with-deps chromium
-
-      - name: Run required web Alpha browser smoke
-        env:
-          WEB_BASE_URL: ${{ inputs.web_base_url }}
-          API_BASE_URL: ${{ inputs.api_base_url }}
-          ADMIN_API_URL: ${{ inputs.admin_api_url }}
-          RUNTIME_AUTH_API_BASE_URL: ${{ inputs.api_base_url }}
-          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_SMOKE_EMAIL }}
-          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_SMOKE_PASSWORD }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_Access_Client_Id }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_Access_Client_Secret }}
-          BETA_SMOKE_REPORT_PATH: ${{ runner.temp }}/alpha-web-smoke-report.json
-        run: |
-          set -euo pipefail
-          curl -fsSIL --max-time 20 "$WEB_BASE_URL"
-          node scripts/release/runtime-authenticated-command.mjs \
-            --token-env LYTHAUS_RUNTIME_ACCESS_TOKEN -- node scripts/beta-smoke.mjs
-
       - name: Write web deployment evidence
         if: success()
         env:
@@ -234,16 +212,62 @@ jobs:
             --arg deploymentId "$PAGES_DEPLOYMENT_ID" \
             --arg deploymentUrl "$PAGES_DEPLOYMENT_URL" \
             --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{schemaVersion: 2, commitSha: $commitSha, webGithubArtifactDigest: $webGithubArtifactDigest, ciRunId: $ciRunId, webBaseUrl: $webBaseUrl, environment: $environment, deploymentId: $deploymentId, deploymentUrl: $deploymentUrl, browserSmoke: "passed", deployedAt: $date}' \
+            '{schemaVersion: 2, commitSha: $commitSha, webGithubArtifactDigest: $webGithubArtifactDigest, ciRunId: $ciRunId, webBaseUrl: $webBaseUrl, environment: $environment, deploymentId: $deploymentId, deploymentUrl: $deploymentUrl, deployedAt: $date}' \
             > alpha-web-deployment-evidence.json
 
       - name: Upload browser and web deployment evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
-          name: alpha-web-evidence-${{ inputs.release_sha }}
+          name: alpha-web-deployment-evidence-${{ inputs.release_sha }}
           path: |
-            ${{ runner.temp }}/alpha-web-smoke-report.json
             alpha-web-deployment-evidence.json
             alpha-web-pages-deployment-evidence.json
+          if-no-files-found: warn
+
+  browser-smoke:
+    name: Run authenticated web browser smoke
+    needs: deploy-and-smoke
+    runs-on: ubuntu-latest
+    environment: dev
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install browser smoke tooling
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+
+      - name: Run required web Alpha browser smoke
+        env:
+          WEB_BASE_URL: ${{ inputs.web_base_url }}
+          API_BASE_URL: ${{ inputs.api_base_url }}
+          ADMIN_API_URL: ${{ inputs.admin_api_url }}
+          RUNTIME_AUTH_API_BASE_URL: ${{ inputs.api_base_url }}
+          RUNTIME_AUTH_EMAIL: ${{ secrets.MVP_SMOKE_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ secrets.MVP_SMOKE_PASSWORD }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          BETA_SMOKE_REPORT_PATH: ${{ runner.temp }}/alpha-web-smoke-report.json
+        run: |
+          set -euo pipefail
+          curl -fsSIL --max-time 20 "$WEB_BASE_URL"
+          node scripts/release/runtime-authenticated-command.mjs \
+            --token-env LYTHAUS_RUNTIME_ACCESS_TOKEN -- node scripts/beta-smoke.mjs
+
+      - name: Upload browser smoke evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: alpha-web-smoke-evidence-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/alpha-web-smoke-report.json
           if-no-files-found: warn
