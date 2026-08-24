@@ -1,12 +1,13 @@
 {
   "schemaVersion": 2,
-  "capturedAt": "2026-08-23T20:52:19Z",
-  "reviewedSha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
+  "capturedAt": "2026-08-24T06:04:23.915Z",
+  "reviewedSha": "6f7177eee0c8df7194aa78ea19156e6b1b9920c7",
   "status": "VERIFIED_INVENTORY_PRE_RELEASE",
   "github": {
-    "cloudflareRunId": 32665704731,
-    "planetscaleRunId": 32665704748,
-    "historicalReconciliationRunId": 32665704792
+    "cloudflareRunId": 32695785842,
+    "planetscaleRunId": 32667557380,
+    "historicalReconciliationRunId": 32667557398,
+    "cloudflareTokenControlRunId": 32695910664
   },
   "cloudflare": {
     "status": "VERIFIED",
@@ -25,7 +26,8 @@
     "legacyNamedResources": 0,
     "legacyProviderExceptions": 2,
     "ignoredExternalResources": 5,
-    "hyperdriveOriginVerification": "Exact-SHA native Worker release gate required before production activation"
+    "hyperdriveOriginVerification": "Exact-SHA native Worker release gate required before production activation",
+    "credentialRotation": "VERIFIED: Access credentials rotated; canonical user token rolled and validated; temporary account token removed; obsolete audit secret removed"
   },
   "planetscale": {
     "status": "VERIFIED_READ_ONLY",

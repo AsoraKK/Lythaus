@@ -1,23 +1,23 @@
 {
   "schemaVersion": 1,
-  "capturedAt": "2026-08-23T21:07:00Z",
+  "capturedAt": "2026-08-24T06:06:27.969Z",
   "status": "CONTROLLED_PRE_RELEASE",
   "scope": "Lythaus and retired Asora resources demonstrably connected to Lythaus only",
   "github": {
     "repository": "AsoraKK/Lythaus",
-    "currentMainSha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
-    "reviewedCandidateSha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
-    "pr": 637,
+    "currentMainSha": "6f7177eee0c8df7194aa78ea19156e6b1b9920c7",
+    "reviewedCandidateSha": "6f7177eee0c8df7194aa78ea19156e6b1b9920c7",
+    "pr": 639,
     "prState": "MERGED",
     "mergeState": "MERGED_PROTECTED",
     "independentApprovalPresent": false,
     "requiredChecks": "PASS",
-    "ciRunId": "32665625300",
+    "ciRunId": "32667503375",
     "branchProtectionVerified": true,
     "historicalReconciliation": {
-      "workflowRunId": "32665704792",
-      "sourceSha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
-      "mainShaAtCapture": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
+      "workflowRunId": "32667557398",
+      "sourceSha": "6f7177eee0c8df7194aa78ea19156e6b1b9920c7",
+      "mainShaAtCapture": "6f7177eee0c8df7194aa78ea19156e6b1b9920c7",
       "total": 85,
       "reachable": 47,
       "patchEquivalent": 4,
@@ -34,8 +34,8 @@
     }
   },
   "cloudflare": {
-    "inventoryWorkflowRunId": "32665704731",
-    "inventorySha": "c2e9ed23e7d97f9d8d0e32dc1ab8c45f49bbf29c",
+    "inventoryWorkflowRunId": "32695785842",
+    "inventorySha": "6f7177eee0c8df7194aa78ea19156e6b1b9920c7",
     "readOnlyInventoryComplete": true,
     "requiredLythausFailures": [],
     "status": "VERIFIED",
@@ -60,7 +60,8 @@
     "workersBuildsFinding": "Name-based deploy-hook listing is not applicable to canonical Wrangler CI deployments; required Lythaus inventory remains fail-closed when configured",
     "cutoverPerformed": true,
     "rollbackProof": true,
-    "credentialRotationCompleted": "ACCESS_ROTATED; PROVIDER_TOKEN_ROTATION_REMAINS_TO_BE_PROVEN"
+    "credentialRotationCompleted": "VERIFIED: ACCESS_ROTATED; CANONICAL_USER_TOKEN_ROLLED_AND_VALIDATED; TEMPORARY_ACCOUNT_TOKEN_REMOVED; OBSOLETE_AUDIT_SECRET_REMOVED",
+    "tokenControlWorkflowRunId": "32695910664"
   },
   "planetscale": {
     "organization": "lythaus",
@@ -75,8 +76,8 @@
     "approvedMigrationSetSha256": "c84eea921fe89f85ac6ab4e7ac107014778abca320e524f6450c159eea5754e1",
     "grantsVerifiedReadOnly": true,
     "hyperdriveOriginVerified": false,
-    "protectedSchemaReadCredential": "UNVERIFIED",
-    "auditWorkflowRunId": "32665704748",
+    "protectedSchemaReadCredential": "VERIFIED_READ_ONLY_GITHUB_PRODUCTION_SECRET",
+    "auditWorkflowRunId": "32667557380",
     "auditWorkflowState": "VERIFIED_READ_ONLY"
   },
   "security": {
