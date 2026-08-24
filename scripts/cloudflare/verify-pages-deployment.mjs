@@ -15,12 +15,17 @@ if (!/^[A-Za-z0-9._/-]+$/.test(branch)) throw new Error('PAGES_BRANCH is invalid
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be a full 40-character SHA');
 
 const response = await fetch(
-  `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${encodeURIComponent(project)}/deployments?per_page=100`,
+  `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${encodeURIComponent(project)}/deployments?per_page=25`,
   { headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' } },
 );
 let payload = {};
 try { payload = await response.json(); } catch { payload = {}; }
-if (!response.ok || payload.success === false) throw new Error(`Cloudflare Pages deployment inventory failed with HTTP ${response.status}`);
+if (!response.ok || payload.success === false) {
+  const error = Array.isArray(payload.errors) ? payload.errors[0] : null;
+  const code = error?.code == null ? 'unknown' : String(error.code).replace(/[^0-9A-Za-z_-]/g, '');
+  const message = error?.message == null ? 'unknown' : String(error.message).replace(/[^0-9A-Za-z ._:/-]/g, '').slice(0, 240);
+  throw new Error(`Cloudflare Pages deployment inventory failed with HTTP ${response.status}, code=${code}, message=${message}`);
+}
 
 const deployments = Array.isArray(payload.result) ? payload.result : [];
 const match = deployments.find((deployment) => {
