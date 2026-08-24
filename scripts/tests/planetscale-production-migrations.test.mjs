@@ -165,6 +165,8 @@ test('production runner preserves immutable registry history', async () => {
 test('runtime grant template includes system schema access for rate limiting', async () => {
   const grants = await (await import('node:fs/promises')).readFile('database/planetscale/grants/roles.sql', 'utf8');
   assert.match(grants, /GRANT USAGE ON SCHEMA identity, content, social, feed, moderation, trust, media, system TO lythaus_runtime;/);
+  assert.match(grants, /GRANT SELECT ON system\.schema_migrations TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;/);
+  assert.match(grants, /GRANT SELECT ON feed\.discovery_candidates TO lythaus_runtime;/);
   assert.match(grants, /GRANT SELECT, INSERT, UPDATE ON system\.rate_limit_windows TO lythaus_runtime;/);
 });
 
