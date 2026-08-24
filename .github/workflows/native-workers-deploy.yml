@@ -206,6 +206,21 @@ jobs:
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/admin-versions.json" "$RELEASE_SHA" ADMIN
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/jobs-versions.json" "$RELEASE_SHA" JOBS
+      - name: Stage candidate Worker versions at zero traffic
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+        run: |
+          set -euo pipefail
+          echo "PUBLIC_WORKER_STAGED=true" >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 versions deploy $PUBLIC_ROLLBACK_SPECS "${PUBLIC_WORKER_VERSION_ID}@0" \
+            --name lythaus-public-api-development --yes --message "Stage reviewed Lythaus public candidate at zero traffic"
+          echo "ADMIN_WORKER_STAGED=true" >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS "${ADMIN_WORKER_VERSION_ID}@0" \
+            --name lythaus-admin-api-development --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"
+          echo "JOBS_WORKER_STAGED=true" >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 versions deploy $JOBS_ROLLBACK_SPECS "${JOBS_WORKER_VERSION_ID}@0" \
+            --name lythaus-jobs-development --yes --message "Stage reviewed Lythaus jobs candidate at zero traffic"
       - name: Probe public candidate without production traffic
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -362,13 +377,13 @@ jobs:
               "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
               'admin.lythaus.co/api/admin/*' || rollback_failed=1
           fi
-          if [[ "${JOBS_WORKER_DEPLOYED:-false}" == "true" ]]; then
+          if [[ "${JOBS_WORKER_DEPLOYED:-false}" == "true" || "${JOBS_WORKER_STAGED:-false}" == "true" ]]; then
             npx --yes wrangler@4.123.0 versions deploy $JOBS_ROLLBACK_SPECS --name lythaus-jobs-development --yes --message "Restore exact predeployment Lythaus jobs versions" || rollback_failed=1
           fi
-          if [[ "${ADMIN_WORKER_DEPLOYED:-false}" == "true" ]]; then
+          if [[ "${ADMIN_WORKER_DEPLOYED:-false}" == "true" || "${ADMIN_WORKER_STAGED:-false}" == "true" ]]; then
             npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development --yes --message "Restore exact predeployment Lythaus admin versions" || rollback_failed=1
           fi
-          if [[ "${PUBLIC_WORKER_DEPLOYED:-false}" == "true" ]]; then
+          if [[ "${PUBLIC_WORKER_DEPLOYED:-false}" == "true" || "${PUBLIC_WORKER_STAGED:-false}" == "true" ]]; then
             npx --yes wrangler@4.123.0 versions deploy $PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development --yes --message "Restore exact predeployment Lythaus public versions" || rollback_failed=1
           fi
           exit "$rollback_failed"

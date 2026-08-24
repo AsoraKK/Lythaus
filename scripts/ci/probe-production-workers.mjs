@@ -27,16 +27,19 @@ if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is
 const allTargets = [
   {
     worker: 'lythaus-public-api-development',
+    probe: true,
     baseUrl: process.env.PRODUCTION_PUBLIC_API_BASE_URL || 'https://api.lythaus.co',
     anonymousPaths: ['/health', '/ready'],
   },
   {
     worker: 'lythaus-admin-api-development',
+    probe: true,
     baseUrl: process.env.PRODUCTION_ADMIN_API_BASE_URL || 'https://admin-api.lythaus.co',
     anonymousPaths: ['/health'],
   },
   {
     worker: 'lythaus-jobs-development',
+    probe: false,
     baseUrl: process.env.PRODUCTION_JOBS_API_BASE_URL || '',
     anonymousPaths: [],
   },
@@ -47,7 +50,9 @@ const targets = requestedWorker === 'all'
   : allTargets.filter(({ worker }) => worker === requestedWorker);
 if (targets.length === 0) throw new Error(`Unknown PRODUCTION_WORKER_SCOPE: ${requestedWorker}`);
 
-if (targets.some(({ baseUrl }) => !baseUrl)) throw new Error('PRODUCTION_JOBS_API_BASE_URL is required; jobs must have an explicit protected probe route');
+if (targets.some(({ probe, baseUrl }) => probe && !baseUrl)) {
+  throw new Error('public and admin Workers require explicit protected probe routes');
+}
 
 async function fetchJson(url, options = {}) {
   const headers = new Headers(options.headers);
@@ -95,6 +100,19 @@ const evidence = {
 };
 
 for (const target of targets) {
+  if (!target.probe) {
+    evidence.workers.push({
+      worker: target.worker,
+      workerVersionId: expectedWorkerVersionId,
+      releaseTag: releaseSha,
+      baseUrl: null,
+      databaseCount: 0,
+      readiness: 'not_applicable_no_public_route',
+      branchFingerprint: expectedBranch,
+      readyForAuthentication: authenticatedAcceptanceProven,
+    });
+    continue;
+  }
   const base = new URL(target.baseUrl).origin;
   for (const path of target.anonymousPaths) await fetchJson(`${base}${path}`);
   const body = await fetchJson(`${base}/internal/readiness/database-identity`, {
