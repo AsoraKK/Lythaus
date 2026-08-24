@@ -126,10 +126,13 @@ for (const { branch, sha } of recorded) {
 
   const pr = branchPr(prs, branch);
   const prState = !pr ? 'none' : pr.merged_at ? 'merged' : pr.state === 'open' ? 'open' : 'closed';
+  const review = reviewDecisions.get(`${branch}:${sha}`);
   if (!objectAvailable) {
     branches.push({ branch, sha, pr: Number.isInteger(pr?.number) ? pr.number : null, prState, objectAvailable: false,
       mergeBase: null, uniqueCommits: null, patchUniqueCommits: null, lastUpdated: null, changedFiles: [],
-      reachableFromMain: null, disposition: 'object-unavailable-review-required' });
+      reachableFromMain: null, automatedDisposition: 'object-unavailable-review-required',
+      disposition: review?.disposition ?? 'object-unavailable-review-required',
+      reviewRationale: review?.rationale ?? null });
     continue;
   }
 
@@ -145,7 +148,6 @@ for (const { branch, sha } of recorded) {
   const automatedDisposition = reachableFromMain ? 'verified-reachable-from-main'
     : uniqueCommits === 0 ? 'verified-zero-unique-commits'
       : patchUniqueCommits === 0 ? 'verified-patch-equivalent' : 'unique-work-review-required';
-  const review = reviewDecisions.get(`${branch}:${sha}`);
   const disposition = review && automatedDisposition === 'unique-work-review-required'
     ? review.disposition : automatedDisposition;
 
@@ -168,8 +170,11 @@ const report = {
     patchEquivalent: count('verified-patch-equivalent'),
     uniqueWorkReview: count('unique-work-review-required'),
     objectUnavailable: count('object-unavailable-review-required'),
+    rawObjectUnavailable: branches.filter((branch) => !branch.objectAvailable).length,
     reviewedUnique: branches.filter((branch) => branch.automatedDisposition === 'unique-work-review-required'
       && branch.disposition !== 'unique-work-review-required').length,
+    reviewedUnavailable: branches.filter((branch) => branch.automatedDisposition === 'object-unavailable-review-required'
+      && branch.disposition !== 'object-unavailable-review-required').length,
   },
 };
 
@@ -188,7 +193,10 @@ const evidenceLocator = [
   `Run URL: ${server}/${repo}/actions/runs/${runId}`, `Main SHA: ${report.mainSha}`,
   `Recorded deleted refs: ${report.summary.total}`, `Reachable from main: ${report.summary.reachable}`,
   `Zero unique commits: ${report.summary.zeroUnique}`, `Patch-equivalent: ${report.summary.patchEquivalent}`,
-  `Unique work requiring review: ${report.summary.uniqueWorkReview}`, `Objects unavailable: ${report.summary.objectUnavailable}`,
+  `Unique work requiring review: ${report.summary.uniqueWorkReview}`,
+  `Unavailable objects requiring review: ${report.summary.objectUnavailable}`,
+  `Unavailable objects with explicit historical review: ${report.summary.reviewedUnavailable}`,
+  `Raw unavailable object count: ${report.summary.rawObjectUnavailable}`,
   `Actions artifact: historical-branch-reconciliation-${sha}`,
 ].join(' | ');
 console.log(evidenceLocator);
