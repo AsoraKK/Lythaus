@@ -125,6 +125,13 @@ test('production Pages deployment is protected separately from dev-scoped synthe
   assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ secrets\.MVP_SMOKE_PASSWORD \}\}/);
 });
 
+test('production smoke authenticates the Access-protected admin API health check', () => {
+  const smokeSection = workflow.match(/\n  production_smoke:[\s\S]*?\n  manifest:/)?.[0] ?? '';
+  assert.match(smokeSection, /ADMIN_API_URL%\/\}\}\/health|ADMIN_API_URL%\/\}\/health/);
+  assert.match(smokeSection, /CF-Access-Client-Id: \$\{CF_ACCESS_CLIENT_ID\}/);
+  assert.match(smokeSection, /CF-Access-Client-Secret: \$\{CF_ACCESS_CLIENT_SECRET\}/);
+});
+
 test('Pages deployment verification uses the supported inventory page size', () => {
   assert.match(pagesVerifier, /\/deployments\?per_page=25/);
   assert.doesNotMatch(pagesVerifier, /\/deployments\?per_page=100/);

@@ -530,7 +530,10 @@ jobs:
           test "$api_status" = 200
           rg -F '"status":"ok"' "$tmpdir/api.json"
           echo 'public_api=PASS' >> "$GITHUB_OUTPUT"
-          admin_api_status="$(curl --silent --show-error --max-time 30 --output "$tmpdir/admin-api.json" --write-out '%{http_code}' "${ADMIN_API_URL%/}/health")"
+          admin_api_status="$(curl --silent --show-error --max-time 30 --output "$tmpdir/admin-api.json" --write-out '%{http_code}' \
+            -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+            -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+            "${ADMIN_API_URL%/}/health")"
           test "$admin_api_status" = 200
           echo 'admin_api=PASS' >> "$GITHUB_OUTPUT"
           unauth_status="$(curl --silent --show-error --max-time 30 --output "$tmpdir/admin-unauth.html" --write-out '%{http_code}' 'https://admin.lythaus.co/')"
