@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
+const webWorkflow = readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesVerifier = readFileSync('scripts/cloudflare/verify-pages-deployment.mjs', 'utf8');
 
@@ -104,6 +105,14 @@ test('the exact CI run publishes the immutable artifact consumed by production r
   assert.match(ciWorkflow, /name: flutter-web-release/);
   assert.match(ciWorkflow, /path: build\/web/);
   assert.match(ciWorkflow, /if-no-files-found: error/);
+});
+
+test('production Pages deployment is protected separately from dev-scoped synthetic smoke credentials', () => {
+  assert.match(workflow, /target_environment: production/);
+  assert.match(webWorkflow, /deploy-and-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
+  assert.match(webWorkflow, /browser-smoke:[\s\S]*environment: dev/);
+  assert.match(webWorkflow, /RUNTIME_AUTH_EMAIL: \$\{\{ secrets\.MVP_SMOKE_EMAIL \}\}/);
+  assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ secrets\.MVP_SMOKE_PASSWORD \}\}/);
 });
 
 test('Pages deployment verification uses the supported inventory page size', () => {

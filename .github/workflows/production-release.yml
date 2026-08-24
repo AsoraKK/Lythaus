@@ -339,7 +339,7 @@ jobs:
     with:
       release_sha: ${{ inputs.release_sha }}
       ci_run_id: ${{ inputs.ci_run_id }}
-      target_environment: mvp
+      target_environment: production
       pages_project: lythaus-web
       pages_branch: ${{ needs.preflight.outputs.web_pages_branch }}
       web_base_url: ${{ inputs.web_base_url }}
