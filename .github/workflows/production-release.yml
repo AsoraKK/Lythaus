@@ -11,6 +11,18 @@ on:
         description: Successful CI run ID for the exact release SHA
         required: true
         type: string
+      codeql_run_id:
+        description: Successful CodeQL run ID for the exact release SHA
+        required: true
+        type: string
+      dependency_review_run_id:
+        description: Successful dependency review run ID for the exact release SHA
+        required: true
+        type: string
+      secret_scan_run_id:
+        description: Successful native secret scan run ID for the exact release SHA
+        required: true
+        type: string
       historical_reconciliation_run_id:
         description: Successful historical branch reconciliation run ID for the exact release SHA
         required: true
@@ -61,6 +73,9 @@ jobs:
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
       CI_RUN_ID: ${{ inputs.ci_run_id }}
+      CODEQL_RUN_ID: ${{ inputs.codeql_run_id }}
+      DEPENDENCY_REVIEW_RUN_ID: ${{ inputs.dependency_review_run_id }}
+      SECRET_SCAN_RUN_ID: ${{ inputs.secret_scan_run_id }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -136,11 +151,16 @@ jobs:
             and .summary.uniqueWorkReview == 0
             and .summary.objectUnavailable == 0
           ' "$historical_dir/report.json" >/dev/null
-          security_runs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${RELEASE_SHA}&per_page=100")"
-          for workflow in 'CodeQL' 'Dependency review' 'Native secret scan'; do
-            jq -e --arg name "$workflow" --arg sha "$RELEASE_SHA" \
-              'any(.workflow_runs[]; .name == $name and .head_sha == $sha and .conclusion == "success")' \
-              <<<"$security_runs" >/dev/null
+          for security_check in \
+            "CodeQL|${CODEQL_RUN_ID}" \
+            "Dependency review|${DEPENDENCY_REVIEW_RUN_ID}" \
+            "Native secret scan|${SECRET_SCAN_RUN_ID}"; do
+            IFS='|' read -r workflow run_id <<<"$security_check"
+            [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "${workflow} run ID must be numeric" >&2; exit 1; }
+            security_run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
+            test "$(jq -r '.name' <<<"$security_run")" = "$workflow"
+            test "$(jq -r '.head_sha' <<<"$security_run")" = "$RELEASE_SHA"
+            test "$(jq -r '.conclusion' <<<"$security_run")" = 'success'
           done
           {
             echo 'branch_protection_verified=true'
