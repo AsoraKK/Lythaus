@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
-const flutterWorkflow = readFileSync('.github/workflows/flutter-ci.yml', 'utf8');
+const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 
 const satisfiesGovernance = (protection) => (
   protection.required_status_checks !== null
@@ -98,9 +98,9 @@ test('release preflight uses readable Actions evidence and fail-closed fanout', 
   assert.doesNotMatch(manifestSection, /if: always\(\)/);
 });
 
-test('Flutter CI publishes the immutable artifact consumed by production release', () => {
-  assert.match(flutterWorkflow, /actions\/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f/);
-  assert.match(flutterWorkflow, /name: flutter-web-release/);
-  assert.match(flutterWorkflow, /path: build\/web/);
-  assert.match(flutterWorkflow, /if-no-files-found: error/);
+test('the exact CI run publishes the immutable artifact consumed by production release', () => {
+  assert.match(ciWorkflow, /actions\/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f/);
+  assert.match(ciWorkflow, /name: flutter-web-release/);
+  assert.match(ciWorkflow, /path: build\/web/);
+  assert.match(ciWorkflow, /if-no-files-found: error/);
 });

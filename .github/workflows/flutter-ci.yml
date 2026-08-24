@@ -103,14 +103,6 @@ jobs:
           exit 1
         fi
 
-    - name: Publish immutable web release artifact
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-      with:
-        name: flutter-web-release
-        path: build/web
-        if-no-files-found: error
-        retention-days: 7
-
   # Web smoke tests — browser-critical paths
   web-smoke:
     runs-on: ubuntu-latest
