@@ -145,6 +145,12 @@ test('jobs remain probeable by version evidence without requiring a public hostn
   assert.match(probe, /probe && !baseUrl/);
 });
 
+test('candidate probes pin the production database role contract and name mismatches', () => {
+  assert.equal((workersWorkflow.match(/EXPECTED_DATABASE_TARGET: main/g) ?? []).length, 3);
+  assert.equal((workersWorkflow.match(/EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser/g) ?? []).length, 3);
+  assert.match(readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8'), /structural identity probe failed: \$\{mismatches\.join\('\,'\)\}/);
+});
+
 test('production smoke authenticates the Access-protected admin API health check', () => {
   const smokeSection = workflow.match(/\n  production_smoke:[\s\S]*?\n  manifest:/)?.[0] ?? '';
   assert.match(smokeSection, /ADMIN_API_URL%\/\}\}\/health|ADMIN_API_URL%\/\}\/health/);
