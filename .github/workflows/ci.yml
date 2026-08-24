@@ -131,6 +131,29 @@ jobs:
       - run: flutter analyze
       - run: bash scripts/test-with-coverage.sh
       - run: bash scripts/check_coverage_gates.sh
+      - name: Build immutable web release artifact
+        run: |
+          set -euo pipefail
+          source cloudflare/pages-release.sh
+          bash scripts/cf-pages-build.sh
+          test -f build/web/_headers
+          test -f build/web/_redirects
+          test -f build/web/index.html
+          bash scripts/check-web-security-headers.sh build/web/_headers
+          bash scripts/check-web-release-hosts.sh
+          if rg -n 'package:dio/io.dart|IOHttpClientAdapter|dart:io' \
+            lib/core/network/dio_client.dart \
+            lib/core/security/cert_pinning.dart; then
+            echo "Web-incompatible import found in shared web runtime files"
+            exit 1
+          fi
+      - name: Publish immutable web release artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: flutter-web-release
+          path: build/web
+          if-no-files-found: error
+          retention-days: 7
 
   frontends:
     name: Web frontends
