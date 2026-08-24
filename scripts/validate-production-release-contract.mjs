@@ -44,7 +44,7 @@ if (canonical) {
       failures.push(`production-release.yml: missing ${name} child workflow`);
     }
   }
-  for (const required of ['confirm_production', 'ci_run_id', 'origin/main', "'.conclusion'", 'success']) {
+  for (const required of ['confirm_production', 'ci_run_id', 'previous_production_sha', 'origin/main', '.conclusion', 'success']) {
     if (!canonical.includes(required)) failures.push(`production-release.yml: missing ${required} gate`);
   }
   for (const required of ['provider_evidence', 'CLOUDFLARE_INVENTORY_STATUS', 'PLANETSCALE_INVENTORY_STATUS', 'MARKETING_DEPLOYMENT_ID', 'WEB_DEPLOYMENT_ID', 'ADMIN_DEPLOYMENT_ID']) {
@@ -69,6 +69,12 @@ if (canonical) {
   }
   if (!canonical.includes('needs.provider_evidence.outputs.planetscale_grants_verified')) {
     failures.push('production-release.yml: provider evidence must include exact PlanetScale grant verification');
+  }
+  for (const required of ['release_governance_compensating_controls', 'candidate_merged_pr_number', 'reviewThreads', 'git rev-list --min-parents=2', 'git merge-base --is-ancestor', 'release-manifest.sha256']) {
+    if (!canonical.includes(required)) failures.push(`production-release.yml: missing compensating governance control ${required}`);
+  }
+  if (canonical.includes('github.ref_protected') || canonical.includes('REF_PROTECTED')) {
+    failures.push('production-release.yml: paid-plan native branch protection must not be an absolute release gate');
   }
 }
 

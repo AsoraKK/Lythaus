@@ -7,6 +7,11 @@ on:
         description: Exact reviewed 40-character main SHA
         required: true
         type: string
+      previous_production_sha:
+        description: Previous canonical production SHA, or NONE for the first canonical release
+        required: true
+        default: NONE
+        type: string
       ci_run_id:
         description: Successful CI run ID for the exact release SHA
         required: true
@@ -32,23 +37,12 @@ on:
         required: true
         default: false
         type: boolean
-      web_base_url:
-        description: Authenticated Flutter web smoke origin
-        required: true
-        type: string
-      api_base_url:
-        description: Canonical API origin used by web smoke
-        required: true
-        type: string
-      admin_api_url:
-        description: Protected admin API origin used by web smoke
-        required: true
-        type: string
 
 permissions:
   actions: read
   checks: read
   contents: read
+  pull-requests: read
 
 concurrency:
   group: lythaus-canonical-production-release
@@ -63,21 +57,28 @@ jobs:
     outputs:
       admin_pages_project: ${{ steps.canonical_config.outputs.admin_pages_project }}
       web_pages_branch: ${{ steps.canonical_config.outputs.web_pages_branch }}
-      branch_protection_verified: ${{ steps.governance.outputs.branch_protection_verified }}
+      native_branch_protection_status: ${{ steps.governance.outputs.native_branch_protection_status }}
+      release_governance_compensating_controls: ${{ steps.governance.outputs.release_governance_compensating_controls }}
+      candidate_merged_pr_number: ${{ steps.governance.outputs.candidate_merged_pr_number }}
+      candidate_merged_pr_verified: ${{ steps.governance.outputs.candidate_merged_pr_verified }}
+      unresolved_review_conversations_verified: ${{ steps.governance.outputs.unresolved_review_conversations_verified }}
+      linear_history_verified: ${{ steps.governance.outputs.linear_history_verified }}
+      previous_release_ancestry_verified: ${{ steps.governance.outputs.previous_release_ancestry_verified }}
       historical_branches_reconciled: ${{ steps.governance.outputs.historical_branches_reconciled }}
       security_checks_verified: ${{ steps.governance.outputs.security_checks_verified }}
     permissions:
       actions: read
       checks: read
       contents: read
+      pull-requests: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
+      PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
       CI_RUN_ID: ${{ inputs.ci_run_id }}
       CODEQL_RUN_ID: ${{ inputs.codeql_run_id }}
       DEPENDENCY_REVIEW_RUN_ID: ${{ inputs.dependency_review_run_id }}
       SECRET_SCAN_RUN_ID: ${{ inputs.secret_scan_run_id }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
-      REF_PROTECTED: ${{ github.ref_protected }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -104,12 +105,15 @@ jobs:
           }
           echo "admin_pages_project=$ADMIN_PAGES_PROJECT" >> "$GITHUB_OUTPUT"
           echo "web_pages_branch=$WEB_PAGES_BRANCH" >> "$GITHUB_OUTPUT"
-      - name: Require current reviewed main and successful CI
+      - name: Require current main and exact successful evidence runs
         shell: bash
         run: |
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'release_sha must be a full 40-character commit SHA' >&2; exit 1; }
-          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'ci_run_id must be numeric' >&2; exit 1; }
+          [[ "$PREVIOUS_PRODUCTION_SHA" == 'NONE' || "$PREVIOUS_PRODUCTION_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo 'previous_production_sha must be a full 40-character SHA or NONE' >&2
+            exit 1
+          }
           git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
@@ -121,10 +125,26 @@ jobs:
               -H "Authorization: Bearer ${GH_TOKEN}" \
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$1"
           }
-          run_json="$(get_run "$CI_RUN_ID")"
-          test "$(jq -r '.name' <<<"$run_json")" = 'CI'
-          test "$(jq -r '.head_sha' <<<"$run_json")" = "$RELEASE_SHA"
-          test "$(jq -r '.conclusion' <<<"$run_json")" = 'success'
+          require_successful_run() {
+            local expected_name="$1"
+            local run_id="$2"
+            [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "${expected_name} run ID must be numeric" >&2; exit 1; }
+            local run_json
+            run_json="$(get_run "$run_id")"
+            jq -e --arg expected_name "$expected_name" --arg release_sha "$RELEASE_SHA" '
+              .name == $expected_name
+              and .head_sha == $release_sha
+              and .conclusion == "success"
+            ' <<<"$run_json" >/dev/null || {
+              echo "${expected_name} must be a successful run for the exact release SHA" >&2
+              exit 1
+            }
+          }
+          require_successful_run 'CI' "$CI_RUN_ID"
+          require_successful_run 'CodeQL' "$CODEQL_RUN_ID"
+          require_successful_run 'Dependency review' "$DEPENDENCY_REVIEW_RUN_ID"
+          require_successful_run 'Native secret scan' "$SECRET_SCAN_RUN_ID"
+          require_successful_run 'Historical branch reconciliation' "$HISTORICAL_RECONCILIATION_RUN_ID"
       - name: Download exact historical reconciliation evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
@@ -157,14 +177,86 @@ jobs:
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: ${{ inputs.secret_scan_run_id }}
-      - name: Verify protected governance and historical reconciliation evidence
+      - name: Verify compensating release governance and historical reconciliation evidence
         id: governance
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$HISTORICAL_RECONCILIATION_RUN_ID" =~ ^[0-9]+$ ]] || { echo 'historical_reconciliation_run_id must be numeric' >&2; exit 1; }
           test "$GITHUB_REF" = 'refs/heads/main'
-          test "$REF_PROTECTED" = 'true'
+          if [[ "$PREVIOUS_PRODUCTION_SHA" != 'NONE' ]]; then
+            git cat-file -e "${PREVIOUS_PRODUCTION_SHA}^{commit}"
+            git merge-base --is-ancestor "$PREVIOUS_PRODUCTION_SHA" "$RELEASE_SHA"
+            test -z "$(git rev-list --min-parents=2 "${PREVIOUS_PRODUCTION_SHA}..${RELEASE_SHA}")"
+          fi
+          test "$(git rev-list --parents -n 1 "$RELEASE_SHA" | awk '{print NF}')" = 2
+
+          api_get() {
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              -H 'User-Agent: Lythaus-production-release' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/$1"
+          }
+          associated_prs="$(api_get "commits/${RELEASE_SHA}/pulls?per_page=100")"
+          merged_pr="$(jq -c --arg repository "$GITHUB_REPOSITORY" --arg release_sha "$RELEASE_SHA" '
+            [.[]
+              | select(.state == "closed")
+              | select(.merged_at != null)
+              | select(.base.ref == "main")
+              | select(.base.repo.full_name == $repository)
+              | select(.merge_commit_sha == $release_sha)]
+            | if length == 1 then .[0] else empty end
+          ' <<<"$associated_prs")"
+          test -n "$merged_pr" || {
+            echo 'The release SHA must be the merge commit of exactly one merged PR into main.' >&2
+            exit 1
+          }
+          merged_pr_number="$(jq -r '.number' <<<"$merged_pr")"
+
+          owner="${GITHUB_REPOSITORY%%/*}"
+          repository="${GITHUB_REPOSITORY##*/}"
+          graphql_query="query(\$owner:String!,\$repo:String!,\$number:Int!,\$cursor:String){repository(owner:\$owner,name:\$repo){pullRequest(number:\$number){state,mergedAt,baseRefName,mergeCommit{oid},reviewThreads(first:100,after:\$cursor){nodes{isResolved}pageInfo{hasNextPage,endCursor}}}}}"
+          cursor='null'
+          for page in $(seq 1 10); do
+            graphql_payload="$(jq -n \
+              --arg query "$graphql_query" \
+              --arg owner "$owner" \
+              --arg repo "$repository" \
+              --argjson number "$merged_pr_number" \
+              --argjson cursor "$cursor" \
+              '{query:$query,variables:{owner:$owner,repo:$repo,number:$number,cursor:$cursor}}')"
+            graphql_json="$(curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'Content-Type: application/json' \
+              -H 'User-Agent: Lythaus-production-release' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              "${GITHUB_API_URL}/graphql" \
+              --data "$graphql_payload")"
+            jq -e --arg release_sha "$RELEASE_SHA" '
+              .errors == null
+              and .data.repository.pullRequest.state == "MERGED"
+              and .data.repository.pullRequest.baseRefName == "main"
+              and .data.repository.pullRequest.mergeCommit.oid == $release_sha
+            ' <<<"$graphql_json" >/dev/null || {
+              echo 'Merged PR provenance could not be verified.' >&2
+              exit 1
+            }
+            unresolved="$(jq '[.data.repository.pullRequest.reviewThreads.nodes[]? | select(.isResolved != true)] | length' <<<"$graphql_json")"
+            test "$unresolved" = 0 || {
+              echo 'The merged PR contains unresolved review conversations.' >&2
+              exit 1
+            }
+            has_next="$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' <<<"$graphql_json")"
+            [[ "$has_next" == 'true' ]] || break
+            [[ "$page" -lt 10 ]] || {
+              echo 'Review-thread pagination exceeded the fail-closed limit.' >&2
+              exit 1
+            }
+            cursor="$(jq -c '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor' <<<"$graphql_json")"
+            [[ "$cursor" != 'null' ]] || { echo 'Review-thread pagination returned no cursor.' >&2; exit 1; }
+          done
+
           historical_dir="$RUNNER_TEMP/historical-reconciliation"
           jq -e '
             .mainSha == env.RELEASE_SHA
@@ -172,12 +264,10 @@ jobs:
             and .summary.uniqueWorkReview == 0
             and .summary.objectUnavailable == 0
           ' "$historical_dir/report.json" >/dev/null
-          for security_check in \
-            "CodeQL|${CODEQL_RUN_ID}" \
-            "Dependency review|${DEPENDENCY_REVIEW_RUN_ID}" \
-            "Native secret scan|${SECRET_SCAN_RUN_ID}"; do
-            IFS='|' read -r workflow run_id <<<"$security_check"
-            [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "${workflow} run ID must be numeric" >&2; exit 1; }
+          for workflow in \
+            'CodeQL' \
+            'Dependency review' \
+            'Native secret scan'; do
             case "$workflow" in
               'CodeQL') evidence_dir="$RUNNER_TEMP/security-evidence/CodeQL" ;;
               'Dependency review') evidence_dir="$RUNNER_TEMP/security-evidence/Dependency-review" ;;
@@ -191,7 +281,13 @@ jobs:
             ' "$evidence_dir/run.json" >/dev/null
           done
           {
-            echo 'branch_protection_verified=true'
+            echo 'native_branch_protection_status=UNAVAILABLE_BY_PLAN'
+            echo 'release_governance_compensating_controls=VERIFIED'
+            echo "candidate_merged_pr_number=$merged_pr_number"
+            echo 'candidate_merged_pr_verified=true'
+            echo 'unresolved_review_conversations_verified=true'
+            echo 'linear_history_verified=true'
+            echo 'previous_release_ancestry_verified=true'
             echo 'historical_branches_reconciled=true'
             echo 'security_checks_verified=true'
           } >> "$GITHUB_OUTPUT"
@@ -199,12 +295,16 @@ jobs:
         run: node scripts/ci/build-release-manifest.mjs
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+      - name: Create sanitized manifest integrity digest
+        run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256
       - name: Upload preflight manifest
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: canonical-release-preflight-${{ inputs.release_sha }}
           if-no-files-found: error
-          path: .artifacts/release/release-manifest.json
+          path: |
+            .artifacts/release/release-manifest.json
+            .artifacts/release/release-manifest.sha256
 
   provider_evidence:
     name: Capture exact-SHA provider evidence
@@ -343,9 +443,9 @@ jobs:
       target_environment: production
       pages_project: lythaus-web
       pages_branch: ${{ needs.preflight.outputs.web_pages_branch }}
-      web_base_url: ${{ inputs.web_base_url }}
-      api_base_url: ${{ inputs.api_base_url }}
-      admin_api_url: ${{ inputs.admin_api_url }}
+      web_base_url: https://app.lythaus.co
+      api_base_url: https://api.lythaus.co
+      admin_api_url: https://admin-api.lythaus.co
     secrets: inherit
 
   admin:
@@ -385,9 +485,9 @@ jobs:
       contents: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
-      WEB_BASE_URL: ${{ inputs.web_base_url }}
-      API_BASE_URL: ${{ inputs.api_base_url }}
-      ADMIN_API_URL: ${{ inputs.admin_api_url }}
+      WEB_BASE_URL: https://app.lythaus.co
+      API_BASE_URL: https://api.lythaus.co
+      ADMIN_API_URL: https://admin-api.lythaus.co
       DEPLOYMENTS_OK: ${{ needs.marketing.result == 'success' && needs.web.result == 'success' && needs.admin.result == 'success' && needs.workers.result == 'success' }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
@@ -455,8 +555,15 @@ jobs:
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
       CI_RUN_ID: ${{ inputs.ci_run_id }}
+      PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
-      BRANCH_PROTECTION_VERIFIED: ${{ needs.preflight.outputs.branch_protection_verified || 'false' }}
+      NATIVE_BRANCH_PROTECTION_STATUS: ${{ needs.preflight.outputs.native_branch_protection_status || 'UNAVAILABLE_BY_PLAN' }}
+      RELEASE_GOVERNANCE_COMPENSATING_CONTROLS: ${{ needs.preflight.outputs.release_governance_compensating_controls || 'BLOCKED' }}
+      CANDIDATE_MERGED_PR_NUMBER: ${{ needs.preflight.outputs.candidate_merged_pr_number }}
+      CANDIDATE_MERGED_PR_VERIFIED: ${{ needs.preflight.outputs.candidate_merged_pr_verified || 'false' }}
+      UNRESOLVED_REVIEW_CONVERSATIONS_VERIFIED: ${{ needs.preflight.outputs.unresolved_review_conversations_verified || 'false' }}
+      LINEAR_HISTORY_VERIFIED: ${{ needs.preflight.outputs.linear_history_verified || 'false' }}
+      PREVIOUS_RELEASE_ANCESTRY_VERIFIED: ${{ needs.preflight.outputs.previous_release_ancestry_verified || 'false' }}
       HISTORICAL_BRANCHES_RECONCILED: ${{ needs.preflight.outputs.historical_branches_reconciled || 'false' }}
       SECURITY_CHECKS_VERIFIED: ${{ needs.preflight.outputs.security_checks_verified || 'false' }}
       MARKETING_DEPLOYMENT_SHA: ${{ needs.marketing.outputs.deployed_sha }}
@@ -511,9 +618,13 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
       - name: Build canonical release manifest
         run: node scripts/ci/build-release-manifest.mjs
+      - name: Create sanitized manifest integrity digest
+        run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256
       - name: Upload canonical release manifest
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: lythaus-release-manifest-${{ inputs.release_sha }}
           if-no-files-found: error
-          path: .artifacts/release/release-manifest.json
+          path: |
+            .artifacts/release/release-manifest.json
+            .artifacts/release/release-manifest.sha256

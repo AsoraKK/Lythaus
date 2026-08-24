@@ -20,10 +20,12 @@ const satisfiesGovernance = (protection) => (
   && protection.required_conversation_resolution.enabled === true
 );
 
-test('production release models solo-founder branch protection', () => {
-  assert.match(workflow, /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}/);
-  assert.match(workflow, /test "\$REF_PROTECTED" = 'true'/);
+test('production release models private-plan compensating governance', () => {
+  assert.doesNotMatch(workflow, /REF_PROTECTED/);
+  assert.match(workflow, /test "\$GITHUB_REF" = 'refs\/heads\/main'/);
   assert.doesNotMatch(workflow, /required_approving_review_count\s*>=\s*1/);
+  assert.match(workflow, /UNAVAILABLE_BY_PLAN/);
+  assert.match(workflow, /release_governance_compensating_controls=VERIFIED/);
 });
 
 test('zero approvals pass while approval or last-push requirements fail', () => {
@@ -74,20 +76,28 @@ test('zero approvals pass while approval or last-push requirements fail', () => 
 
 test('governance retains required checks and destructive-action protections', () => {
   assert.match(workflow, /test "\$GITHUB_REF" = 'refs\/heads\/main'/);
-  assert.match(workflow, /branch_protection_verified=true/);
+  assert.match(workflow, /require_successful_run 'CI'/);
+  assert.match(workflow, /require_successful_run 'CodeQL'/);
+  assert.match(workflow, /require_successful_run 'Dependency review'/);
+  assert.match(workflow, /require_successful_run 'Native secret scan'/);
+  assert.match(workflow, /git rev-list --min-parents=2/);
+  assert.match(workflow, /git merge-base --is-ancestor/);
+  assert.match(workflow, /commits\/\$\{RELEASE_SHA\}\/pulls/);
+  assert.match(workflow, /reviewThreads/);
+  assert.match(workflow, /previous_production_sha/);
+  assert.match(workflow, /release-manifest\.sha256/);
 });
 
 test('release preflight uses readable Actions evidence and fail-closed fanout', () => {
-  assert.match(workflow, /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}/);
-  assert.match(workflow, /test "\$REF_PROTECTED" = 'true'/);
-  assert.match(workflow, /get_public_run\(\)/);
+  assert.doesNotMatch(workflow, /REF_PROTECTED/);
+  assert.match(workflow, /get_run\(\)/);
   assert.match(workflow, /actions\/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093/);
   assert.match(workflow, /security-run-evidence-CodeQL-\$\{\{ inputs\.release_sha \}\}/);
   assert.match(workflow, /security-run-evidence-Dependency-review-\$\{\{ inputs\.release_sha \}\}/);
   assert.match(workflow, /security-run-evidence-Native-secret-scan-\$\{\{ inputs\.release_sha \}\}/);
-  assert.match(workflow, /CodeQL\|\$\{CODEQL_RUN_ID\}/);
-  assert.match(workflow, /Dependency review\|\$\{DEPENDENCY_REVIEW_RUN_ID\}/);
-  assert.match(workflow, /Native secret scan\|\$\{SECRET_SCAN_RUN_ID\}/);
+  assert.match(workflow, /require_successful_run 'CodeQL' "\$CODEQL_RUN_ID"/);
+  assert.match(workflow, /require_successful_run 'Dependency review' "\$DEPENDENCY_REVIEW_RUN_ID"/);
+  assert.match(workflow, /require_successful_run 'Native secret scan' "\$SECRET_SCAN_RUN_ID"/);
   assert.doesNotMatch(workflow, /actions\/runs\/\$\{HISTORICAL_RECONCILIATION_RUN_ID\}\/artifacts/);
   assert.doesNotMatch(workflow, /actions\/artifacts\/\$\{artifact_id\}\/zip/);
   assert.doesNotMatch(workflow, /gh run download/);

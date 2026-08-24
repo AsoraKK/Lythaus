@@ -84,12 +84,15 @@ isolation are measured on release-like infrastructure; incident and rollback
 evidence is retained; and any disabled queue enablement receives explicit
 no-cost approval.
 
-The consolidation release chain is `protected main -> reviewed SHA -> canonical
-Cloudflare release -> verified PlanetScale state`. The repository workflow
-`.github/workflows/production-release.yml` coordinates the exact-SHA surface
-deployments, while `docs/evidence/` records sanitized provider and branch
-evidence. A missing provider capability is `UNKNOWN/BLOCKED`; green repository
-CI alone never grants production approval.
+The consolidation release chain is `main with verified release governance ->
+reviewed SHA -> canonical Cloudflare release -> verified PlanetScale state`.
+GitHub native branch protection is recorded as `UNAVAILABLE_BY_PLAN` for the
+private repository, so `.github/workflows/production-release.yml` enforces the
+compensating controls: merged-PR provenance, resolved conversations, linear
+history, prior-release ancestry, exact-SHA CI/security, and provider evidence.
+The workflow coordinates exact-SHA surface deployments, while `docs/evidence/`
+records sanitized provider and branch evidence. A missing provider capability is
+`UNKNOWN/BLOCKED`; green repository CI alone never grants production approval.
 
 ## Supersession
 

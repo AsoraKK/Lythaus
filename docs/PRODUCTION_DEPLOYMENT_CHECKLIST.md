@@ -4,6 +4,10 @@ Production releases are coordinated by
 `.github/workflows/production-release.yml` from one reviewed 40-character main
 SHA. The workflow delegates to the exact-SHA marketing, Flutter web,
 control-panel, and Workers/jobs workflows, then uploads the release manifest.
+For the private GitHub Free repository, native branch protection is recorded as
+`UNAVAILABLE_BY_PLAN`; the release workflow must instead verify merged-PR
+provenance, resolved review conversations, linear history, previous-release
+ancestry, and exact-SHA security evidence.
 
 Use `docs/runbooks/release-manifest.md` for the manifest contract and
 `infrastructure/cloudflare/production-gates.json` for the provider and rollback

@@ -51,6 +51,11 @@ const relationCountOrNull = (name) => {
   if (value !== null && !/^\d+$/.test(value)) throw new Error(`${name} must be a non-negative integer when provided`);
   return value === null ? null : Number.parseInt(value, 10);
 };
+const integerOrNull = (name) => {
+  const value = valueOrNull(name);
+  if (value !== null && !/^\d+$/.test(value)) throw new Error(`${name} must be a non-negative integer when provided`);
+  return value === null ? null : Number.parseInt(value, 10);
+};
 const statusOrUnknown = (name) => process.env[name] || 'UNKNOWN/BLOCKED';
 const legacyCountOrNull = (name) => {
   const value = valueOrNull(name);
@@ -58,6 +63,15 @@ const legacyCountOrNull = (name) => {
   return value === null ? null : Number.parseInt(value, 10);
 };
 const passOrBlocked = (name) => process.env[name] === 'true' ? 'PASS' : 'BLOCKED';
+const booleanValue = (name) => process.env[name] === 'true';
+const previousProductionSha = valueOrNull('PREVIOUS_PRODUCTION_SHA') ?? 'NONE';
+if (previousProductionSha !== 'NONE' && !/^[0-9a-f]{40}$/.test(previousProductionSha)) {
+  throw new Error('PREVIOUS_PRODUCTION_SHA must be a full 40-character SHA or NONE');
+}
+const nativeBranchProtectionStatus = valueOrNull('NATIVE_BRANCH_PROTECTION_STATUS') ?? 'UNAVAILABLE_BY_PLAN';
+if (!['ACTIVE', 'UNAVAILABLE_BY_PLAN'].includes(nativeBranchProtectionStatus)) {
+  throw new Error('NATIVE_BRANCH_PROTECTION_STATUS must be ACTIVE or UNAVAILABLE_BY_PLAN');
+}
 
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'lythaus-resource-registry.json'), 'utf8'));
 const hyperdrive = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json'), 'utf8'));
@@ -106,13 +120,19 @@ const productionSmoke = {
   adminApi: statusOrUnknown('PRODUCTION_SMOKE_ADMIN_API'),
   jobs: statusOrUnknown('PRODUCTION_SMOKE_JOBS'),
 };
+const releaseGovernanceCompensatingControls = process.env.RELEASE_GOVERNANCE_COMPENSATING_CONTROLS === 'VERIFIED';
 const security = {
   codeql: passOrBlocked('SECURITY_CHECKS_VERIFIED'),
   dependencyReview: passOrBlocked('SECURITY_CHECKS_VERIFIED'),
   secretScan: passOrBlocked('SECURITY_CHECKS_VERIFIED'),
+  actionPinning: passOrBlocked('SECURITY_CHECKS_VERIFIED'),
 };
 const requiredEvidence = [
-  process.env.BRANCH_PROTECTION_VERIFIED === 'true',
+  releaseGovernanceCompensatingControls,
+  booleanValue('CANDIDATE_MERGED_PR_VERIFIED'),
+  booleanValue('UNRESOLVED_REVIEW_CONVERSATIONS_VERIFIED'),
+  booleanValue('LINEAR_HISTORY_VERIFIED'),
+  booleanValue('PREVIOUS_RELEASE_ANCESTRY_VERIFIED'),
   process.env.HISTORICAL_BRANCHES_RECONCILED === 'true',
   process.env.SECURITY_CHECKS_VERIFIED === 'true',
   cloudflareStatus === 'VERIFIED',
@@ -168,8 +188,16 @@ const manifest = {
     mainSha: releaseSha,
     ciRunId: valueOrNull('CI_RUN_ID'),
     historicalReconciliationRunId: valueOrNull('HISTORICAL_RECONCILIATION_RUN_ID'),
-    branchProtectionVerified: process.env.BRANCH_PROTECTION_VERIFIED === 'true',
+    nativeBranchProtectionStatus,
+    releaseGovernanceCompensatingControls,
+    candidateMergedPullRequest: integerOrNull('CANDIDATE_MERGED_PR_NUMBER'),
+    candidateMergedPrVerified: booleanValue('CANDIDATE_MERGED_PR_VERIFIED'),
+    unresolvedReviewConversationsVerified: booleanValue('UNRESOLVED_REVIEW_CONVERSATIONS_VERIFIED'),
+    linearHistoryVerified: booleanValue('LINEAR_HISTORY_VERIFIED'),
+    previousProductionSha,
+    previousProductionShaAncestorVerified: booleanValue('PREVIOUS_RELEASE_ANCESTRY_VERIFIED'),
     historicalBranchesReconciled: process.env.HISTORICAL_BRANCHES_RECONCILED === 'true',
+    securityChecksVerified: process.env.SECURITY_CHECKS_VERIFIED === 'true',
   },
   surfaces,
   deploymentEvidence: {
@@ -230,6 +258,12 @@ const manifest = {
   productionSmoke,
   evidence: {
     source: 'exact reviewed main SHA and sanitized provider evidence',
+    platformLimitations: [
+      nativeBranchProtectionStatus === 'UNAVAILABLE_BY_PLAN'
+        ? 'GitHub native branch protection is unavailable for this private repository plan; compensating release governance is required.'
+        : null,
+      'GitHub artifact attestations are unavailable for private repositories on the current plan; the sanitized manifest is accompanied by a SHA-256 integrity digest.',
+    ].filter(Boolean),
     unknowns: [
       cloudflareStatus === 'VERIFIED' ? null : `Cloudflare live inventory status is ${cloudflareStatus}`,
       planetscaleStatus === 'VERIFIED' ? null : `PlanetScale live inventory status is ${planetscaleStatus}`,
@@ -244,7 +278,11 @@ const manifest = {
       /^[0-9a-f]{64}$/.test(valueOrNull('PLANETSCALE_MIGRATION_SET_SHA256') ?? '') ? null : 'PlanetScale observed migration-set fingerprint is unavailable',
       process.env.BUDGET_ENFORCEMENT_VERIFIED === 'true' ? null : 'Budget enforcement proof is unavailable',
       process.env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true' ? null : 'Authenticated acceptance proof is unavailable',
-      process.env.BRANCH_PROTECTION_VERIFIED === 'true' ? null : 'Protected main governance proof is unavailable',
+      releaseGovernanceCompensatingControls ? null : 'Compensating release governance proof is unavailable',
+      booleanValue('CANDIDATE_MERGED_PR_VERIFIED') ? null : 'Merged PR provenance is unavailable',
+      booleanValue('UNRESOLVED_REVIEW_CONVERSATIONS_VERIFIED') ? null : 'Resolved review-conversation proof is unavailable',
+      booleanValue('LINEAR_HISTORY_VERIFIED') ? null : 'Linear-history proof is unavailable',
+      booleanValue('PREVIOUS_RELEASE_ANCESTRY_VERIFIED') ? null : 'Previous production ancestry proof is unavailable',
       process.env.HISTORICAL_BRANCHES_RECONCILED === 'true' ? null : 'Historical branch reconciliation proof is unavailable',
       process.env.CLOUDFLARE_PAGES_INVENTORY_VERIFIED === 'true' ? null : 'Cloudflare Pages inventory proof is unavailable',
       legacyAsoraActiveResources === 0 ? null : 'Active Lythaus-related legacy Asora resources remain',
