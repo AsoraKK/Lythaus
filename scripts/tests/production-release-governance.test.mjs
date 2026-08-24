@@ -118,13 +118,13 @@ test('the exact CI run publishes the immutable artifact consumed by production r
   assert.match(ciWorkflow, /if-no-files-found: error/);
 });
 
-test('production Pages deployment is protected separately from dev-scoped synthetic smoke credentials', () => {
+test('production browser smoke uses production acceptance credentials', () => {
   assert.match(workflow, /target_environment: production/);
   assert.match(workflow, /api_base_url: https:\/\/api\.lythaus\.co\/api/);
   assert.match(webWorkflow, /deploy-and-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
-  assert.match(webWorkflow, /browser-smoke:[\s\S]*environment: dev/);
-  assert.match(webWorkflow, /RUNTIME_AUTH_EMAIL: \$\{\{ secrets\.MVP_SMOKE_EMAIL \}\}/);
-  assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ secrets\.MVP_SMOKE_PASSWORD \}\}/);
+  assert.match(webWorkflow, /browser-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
+  assert.match(webWorkflow, /RUNTIME_AUTH_EMAIL: \$\{\{ inputs\.target_environment == 'production' && secrets\.ADR003_TEST_EMAIL \|\| secrets\.MVP_SMOKE_EMAIL \}\}/);
+  assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ inputs\.target_environment == 'production' && secrets\.ADR003_TEST_PASSWORD \|\| secrets\.MVP_SMOKE_PASSWORD \}\}/);
 });
 
 test('Worker readiness secrets are included in each immutable candidate upload', () => {
@@ -133,6 +133,16 @@ test('Worker readiness secrets are included in each immutable candidate upload',
   assert.match(workersWorkflow, /secrets_file="\$RUNNER_TEMP\/production-cutover\/worker-secrets\.json"/);
   assert.match(workersWorkflow, /--secrets-file "\$secrets_file"/);
   assert.match(workersWorkflow, /trap 'rm -f "\$secrets_file"' EXIT/);
+  assert.match(workersWorkflow, /Stage candidate Worker versions at zero traffic/);
+  assert.match(workersWorkflow, /versions deploy \$PUBLIC_ROLLBACK_SPECS "\$\{PUBLIC_WORKER_VERSION_ID\}@0"/);
+  assert.match(workersWorkflow, /WORKER_STAGED/);
+});
+
+test('jobs remain probeable by version evidence without requiring a public hostname', () => {
+  const probe = readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8');
+  assert.match(probe, /worker: 'lythaus-jobs-development',[\s\S]*probe: false/);
+  assert.match(probe, /not_applicable_no_public_route/);
+  assert.match(probe, /probe && !baseUrl/);
 });
 
 test('production smoke authenticates the Access-protected admin API health check', () => {
