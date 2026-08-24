@@ -19,10 +19,12 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, 
 
 GRANT USAGE ON SCHEMA identity, content, social, feed, moderation, trust, media, system TO lythaus_runtime;
 GRANT USAGE ON SCHEMA privacy TO lythaus_runtime;
+GRANT SELECT ON system.schema_migrations TO lythaus_runtime, lythaus_admin, lythaus_jobs, lythaus_privacy;
 GRANT SELECT, INSERT, UPDATE ON identity.users, identity.handles, identity.email_credentials, identity.contact_emails, identity.auth_sessions, identity.refresh_token_families, identity.provider_links, identity.consent_records, identity.user_region_preferences, identity.email_verification_tokens, identity.password_reset_tokens, identity.account_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON content.posts, content.comments, content.content_declarations, content.places, content.post_locations TO lythaus_runtime;
 GRANT SELECT, INSERT, DELETE ON social.follows, social.reactions, social.blocks, social.mutes, social.bookmarks TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON social.profiles, social.profile_private_fields, social.custom_feeds, social.custom_feed_rules TO lythaus_runtime;
+GRANT SELECT ON feed.discovery_candidates TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON feed.user_inbox, feed.feed_events, feed.notifications, feed.notification_preferences, feed.notification_devices TO lythaus_runtime;
 GRANT SELECT, INSERT ON media.upload_sessions, media.objects, media.storage_ledger TO lythaus_runtime;
 GRANT SELECT, INSERT ON moderation.content_flags, moderation.cases, moderation.appeals TO lythaus_runtime;

@@ -304,7 +304,10 @@ test('production database identity and budget controls are explicit', () => {
   assert.doesNotMatch(verifier, /PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL/);
   assert.doesNotMatch(verifier, /PLANETSCALE_API_TOKEN/);
   assert.match(verifier, /caching\?\.disabled === true/);
-  assert.match(identity, /information_schema\.tables/);
+  assert.match(identity, /pg_catalog\.pg_class/);
+  assert.match(identity, /pg_catalog\.pg_namespace/);
+  assert.match(identity, /relkind IN \('r', 'p', 'v'\)/);
+  assert.doesNotMatch(identity, /information_schema\.tables/);
   assert.match(identity, /identity.*contact_emails/);
   assert.match(budget, /SERIALIZABLE/);
   assert.match(budget, /cost_budget_reservations/);

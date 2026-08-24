@@ -88,3 +88,12 @@ test('database identity readiness requires every structural gate', () => {
     transactionSucceeded: true,
   }, expected), false);
 });
+
+test('database identity relation inventory is not privilege-filtered', async () => {
+  const source = await (await import('node:fs/promises')).readFile('packages/db/src/identity.ts', 'utf8');
+  assert.match(source, /FROM pg_catalog\.pg_class c/);
+  assert.match(source, /JOIN pg_catalog\.pg_namespace n/);
+  assert.match(source, /c\.relkind IN \('r', 'p', 'v'\)/);
+  assert.match(source, /n\.nspname IN \('identity', 'content', 'social', 'feed', 'moderation', 'privacy'/);
+  assert.doesNotMatch(source, /FROM information_schema\.tables/);
+});

@@ -151,9 +151,14 @@ export async function inspectDatabaseIdentity(
           WHERE r.rolname = current_user`
       );
       const relationResult = await client.query<RelationRow>(
-        `SELECT table_type, table_schema, table_name
-           FROM information_schema.tables
-          WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+        `SELECT CASE WHEN c.relkind = 'v' THEN 'VIEW' ELSE 'BASE TABLE' END AS table_type,
+                n.nspname AS table_schema,
+                c.relname AS table_name
+           FROM pg_catalog.pg_class c
+           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname IN ('identity', 'content', 'social', 'feed', 'moderation', 'privacy',
+                              'trust', 'media', 'editorial', 'marketing', 'system')
+            AND c.relkind IN ('r', 'p', 'v')
           ORDER BY table_type, table_schema, table_name`
       );
       const migrationResult = await client.query<MigrationRow>(
