@@ -9,7 +9,6 @@ never recorded.
 | Name or group | Scope | Current consumer and purpose | Decision |
 | --- | --- | --- | --- |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Repository Actions | Native Worker and Lythaus Pages deployment workflows for the approved Cloudflare account | Retain |
-| `CLOUDFLARE_AUDIT_API_TOKEN` | Repository Actions | Read-only Cloudflare domain/resource audit workflow | Retain |
 | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | Repository Actions | Cloudflare Access-protected admin/API acceptance smoke checks | Retain |
 | `PLANETSCALE_SCHEMA_READ_DATABASE_URL` | Production environment | Read-only PlanetScale schema and migration gate verification | Retain |
 | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Repository Actions | Android release signing and keystore validation | Retain |
@@ -32,3 +31,9 @@ variants. Delete them only after owner approval.
 
 No values were read. Valid non-Azure credentials are not deleted by this
 repository PR merely because their names are unfamiliar.
+
+## Retired credentials
+
+| Name | Scope | Decision |
+| --- | --- | --- |
+| `CLOUDFLARE_AUDIT_API_TOKEN` | Repository Actions | Removed on 2026-08-24; the canonical read-only audit uses `CLOUDFLARE_API_TOKEN` and the fallback secret had no remaining consumer. |
