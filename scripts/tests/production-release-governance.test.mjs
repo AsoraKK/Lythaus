@@ -18,11 +18,8 @@ const satisfiesGovernance = (protection) => (
 );
 
 test('production release models solo-founder branch protection', () => {
-  assert.match(workflow, /\.required_status_checks != null/);
-  assert.match(workflow, /\(\(\.required_status_checks\.contexts \| length\) > 0\)/);
-  assert.match(workflow, /\.required_pull_request_reviews != null/);
-  assert.match(workflow, /\.required_pull_request_reviews\.required_approving_review_count == 0/);
-  assert.match(workflow, /\(\(\.required_pull_request_reviews\.require_last_push_approval \/\/ false\) == false\)/);
+  assert.match(workflow, /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}/);
+  assert.match(workflow, /test "\$REF_PROTECTED" = 'true'/);
   assert.doesNotMatch(workflow, /required_approving_review_count\s*>=\s*1/);
 });
 
@@ -61,21 +58,25 @@ test('zero approvals pass while approval or last-push requirements fail', () => 
     }),
     false,
   );
+  for (const [field, value] of [
+    ['enforce_admins', { enabled: false }],
+    ['required_linear_history', { enabled: false }],
+    ['allow_force_pushes', { enabled: true }],
+    ['allow_deletions', { enabled: true }],
+    ['required_conversation_resolution', { enabled: false }],
+  ]) {
+    assert.equal(satisfiesGovernance({ ...base, [field]: value }), false, `${field} must remain enforced`);
+  }
 });
 
 test('governance retains required checks and destructive-action protections', () => {
-  const requiredExpressions = [
-    /\.enforce_admins\.enabled == true/,
-    /\.required_linear_history\.enabled == true/,
-    /\.allow_force_pushes\.enabled == false/,
-    /\.allow_deletions\.enabled == false/,
-    /\.required_conversation_resolution\.enabled == true/,
-  ];
-
-  for (const expression of requiredExpressions) assert.match(workflow, expression);
+  assert.match(workflow, /test "\$GITHUB_REF" = 'refs\/heads\/main'/);
+  assert.match(workflow, /branch_protection_verified=true/);
 });
 
 test('release preflight uses readable Actions evidence and fail-closed fanout', () => {
+  assert.match(workflow, /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}/);
+  assert.match(workflow, /test "\$REF_PROTECTED" = 'true'/);
   assert.match(workflow, /get_public_run\(\)/);
   assert.match(workflow, /actions\/runs\/\$\{HISTORICAL_RECONCILIATION_RUN_ID\}\/artifacts/);
   assert.match(workflow, /actions\/artifacts\/\$\{artifact_id\}\/zip/);
@@ -84,6 +85,7 @@ test('release preflight uses readable Actions evidence and fail-closed fanout', 
   assert.match(workflow, /Dependency review\|\$\{DEPENDENCY_REVIEW_RUN_ID\}/);
   assert.match(workflow, /Native secret scan\|\$\{SECRET_SCAN_RUN_ID\}/);
   assert.doesNotMatch(workflow, /gh api "repos\/\$\{GITHUB_REPOSITORY\}\/actions\/runs/);
+  assert.doesNotMatch(workflow, /branches\/main\/protection/);
   assert.doesNotMatch(workflow, /gh run download/);
   assert.doesNotMatch(workflow, /actions\/runs\?head_sha=/);
   assert.doesNotMatch(workflow, /commits\/\$\{RELEASE_SHA\}\/check-runs/);
