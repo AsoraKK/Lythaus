@@ -112,7 +112,14 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
-          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}")"
+          get_public_run() {
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              -H 'User-Agent: Lythaus-production-release' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$1"
+          }
+          run_json="$(get_public_run "$CI_RUN_ID")"
           test "$(jq -r '.name' <<<"$run_json")" = 'CI'
           test "$(jq -r '.head_sha' <<<"$run_json")" = "$RELEASE_SHA"
           test "$(jq -r '.conclusion' <<<"$run_json")" = 'success'
@@ -135,16 +142,25 @@ jobs:
             and (.allow_deletions.enabled == false)
             and (.required_conversation_resolution.enabled == true)
           ' <<<"$protection" >/dev/null
-          historical="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${HISTORICAL_RECONCILIATION_RUN_ID}")"
+          historical="$(get_public_run "$HISTORICAL_RECONCILIATION_RUN_ID")"
           test "$(jq -r '.name' <<<"$historical")" = 'Historical branch reconciliation'
           test "$(jq -r '.head_sha' <<<"$historical")" = "$RELEASE_SHA"
           test "$(jq -r '.conclusion' <<<"$historical")" = 'success'
           historical_dir="$RUNNER_TEMP/historical-reconciliation"
           mkdir -p "$historical_dir"
-          gh run download "$HISTORICAL_RECONCILIATION_RUN_ID" \
-            --repo "$GITHUB_REPOSITORY" \
-            --name "historical-branch-reconciliation-${RELEASE_SHA}" \
-            --dir "$historical_dir"
+          artifact_name="historical-branch-reconciliation-${RELEASE_SHA}"
+          artifacts="$(curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -H 'User-Agent: Lythaus-production-release' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${HISTORICAL_RECONCILIATION_RUN_ID}/artifacts?per_page=100")"
+          artifact_id="$(jq -r --arg artifact_name "$artifact_name" '.artifacts[] | select(.name == $artifact_name and .expired == false) | .id' <<<"$artifacts")"
+          [[ "$artifact_id" =~ ^[0-9]+$ ]] || { echo "historical reconciliation artifact not found" >&2; exit 1; }
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+            -H 'User-Agent: Lythaus-production-release' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+            --output "$RUNNER_TEMP/historical-reconciliation.zip"
+          unzip -q "$RUNNER_TEMP/historical-reconciliation.zip" -d "$historical_dir"
           jq -e '
             .mainSha == env.RELEASE_SHA
             and .summary.total == 85
@@ -157,7 +173,7 @@ jobs:
             "Native secret scan|${SECRET_SCAN_RUN_ID}"; do
             IFS='|' read -r workflow run_id <<<"$security_check"
             [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "${workflow} run ID must be numeric" >&2; exit 1; }
-            security_run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
+            security_run="$(get_public_run "$run_id")"
             test "$(jq -r '.name' <<<"$security_run")" = "$workflow"
             test "$(jq -r '.head_sha' <<<"$security_run")" = "$RELEASE_SHA"
             test "$(jq -r '.conclusion' <<<"$security_run")" = 'success'

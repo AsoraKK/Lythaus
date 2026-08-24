@@ -76,10 +76,15 @@ test('governance retains required checks and destructive-action protections', ()
 });
 
 test('release preflight uses readable Actions evidence and fail-closed fanout', () => {
-  assert.match(workflow, /actions\/runs\/\$\{run_id\}/);
+  assert.match(workflow, /get_public_run\(\)/);
+  assert.match(workflow, /actions\/runs\/\$\{HISTORICAL_RECONCILIATION_RUN_ID\}\/artifacts/);
+  assert.match(workflow, /actions\/artifacts\/\$\{artifact_id\}\/zip/);
+  assert.match(workflow, /artifact_name="historical-branch-reconciliation-\$\{RELEASE_SHA\}"/);
   assert.match(workflow, /CodeQL\|\$\{CODEQL_RUN_ID\}/);
   assert.match(workflow, /Dependency review\|\$\{DEPENDENCY_REVIEW_RUN_ID\}/);
   assert.match(workflow, /Native secret scan\|\$\{SECRET_SCAN_RUN_ID\}/);
+  assert.doesNotMatch(workflow, /gh api "repos\/\$\{GITHUB_REPOSITORY\}\/actions\/runs/);
+  assert.doesNotMatch(workflow, /gh run download/);
   assert.doesNotMatch(workflow, /actions\/runs\?head_sha=/);
   assert.doesNotMatch(workflow, /commits\/\$\{RELEASE_SHA\}\/check-runs/);
 
