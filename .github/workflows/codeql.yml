@@ -26,3 +26,15 @@ jobs:
           languages: javascript-typescript
           queries: security-extended
       - uses: github/codeql-action/analyze@42947a340483f03ba47bb1a039b2c519aab3df85
+      - name: Write exact-SHA security evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/security-run-evidence
+          printf '{"workflow":"CodeQL","headSha":"%s","conclusion":"success"}\n' "$GITHUB_SHA" > .artifacts/security-run-evidence/run.json
+      - name: Upload exact-SHA security evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: security-run-evidence-CodeQL-${{ github.sha }}
+          if-no-files-found: error
+          path: .artifacts/security-run-evidence/run.json
