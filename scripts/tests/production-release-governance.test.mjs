@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+const pagesVerifier = readFileSync('scripts/cloudflare/verify-pages-deployment.mjs', 'utf8');
 
 const satisfiesGovernance = (protection) => (
   protection.required_status_checks !== null
@@ -103,4 +104,9 @@ test('the exact CI run publishes the immutable artifact consumed by production r
   assert.match(ciWorkflow, /name: flutter-web-release/);
   assert.match(ciWorkflow, /path: build\/web/);
   assert.match(ciWorkflow, /if-no-files-found: error/);
+});
+
+test('Pages deployment verification uses the supported inventory page size', () => {
+  assert.match(pagesVerifier, /\/deployments\?per_page=25/);
+  assert.doesNotMatch(pagesVerifier, /\/deployments\?per_page=100/);
 });
