@@ -74,3 +74,16 @@ test('governance retains required checks and destructive-action protections', ()
 
   for (const expression of requiredExpressions) assert.match(workflow, expression);
 });
+
+test('release preflight uses readable Actions evidence and fail-closed fanout', () => {
+  assert.match(workflow, /actions\/runs\?head_sha=\$\{RELEASE_SHA\}/);
+  assert.match(workflow, /'CodeQL'/);
+  assert.match(workflow, /'Dependency review'/);
+  assert.match(workflow, /'Native secret scan'/);
+  assert.doesNotMatch(workflow, /commits\/\$\{RELEASE_SHA\}\/check-runs/);
+
+  const smokeSection = workflow.match(/\n  production_smoke:[\s\S]*?\n  manifest:/)?.[0] ?? '';
+  const manifestSection = workflow.match(/\n  manifest:[\s\S]*/)?.[0] ?? '';
+  assert.doesNotMatch(smokeSection, /if: always\(\)/);
+  assert.doesNotMatch(manifestSection, /if: always\(\)/);
+});

@@ -136,9 +136,11 @@ jobs:
             and .summary.uniqueWorkReview == 0
             and .summary.objectUnavailable == 0
           ' "$historical_dir/report.json" >/dev/null
-          checks="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/check-runs?per_page=100")"
-          for check in 'CodeQL JavaScript TypeScript' 'dependency-review' 'scan'; do
-            jq -e --arg name "$check" 'any(.check_runs[]; .name == $name and .conclusion == "success")' <<<"$checks" >/dev/null
+          security_runs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${RELEASE_SHA}&per_page=100")"
+          for workflow in 'CodeQL' 'Dependency review' 'Native secret scan'; do
+            jq -e --arg name "$workflow" --arg sha "$RELEASE_SHA" \
+              'any(.workflow_runs[]; .name == $name and .head_sha == $sha and .conclusion == "success")' \
+              <<<"$security_runs" >/dev/null
           done
           {
             echo 'branch_protection_verified=true'
@@ -320,7 +322,6 @@ jobs:
   production_smoke:
     name: Verify canonical production surfaces
     needs: [preflight, provider_evidence, marketing, web, admin, workers]
-    if: always()
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
@@ -398,7 +399,6 @@ jobs:
   manifest:
     name: Publish canonical release manifest
     needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke]
-    if: always()
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 10
