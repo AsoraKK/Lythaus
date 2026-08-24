@@ -1,16 +1,16 @@
 {
   "schemaVersion": "lythaus-resource-registry-v1",
-  "generatedAt": "2026-08-24T06:06:27.969Z",
+  "generatedAt": "2026-08-24T10:52:44Z",
   "inventoryStatus": "VERIFIED: exact-SHA Cloudflare and PlanetScale read-only inventories; no active Lythaus legacy provider resource",
-  "reviewedSha": "6f7177eee0c8df7194aa78ea19156e6b1b9920c7",
-  "inventoryEvidence": "Actions runs 32695785842 (Cloudflare), 32667557380 (PlanetScale), 32667557398 (historical reconciliation), and 32695910664 (Cloudflare token control), all for the reviewed SHA",
+  "reviewedSha": "3b4edba9fbf789531452ecbf7b5bf188775bfbbf",
+  "inventoryEvidence": "Actions runs 32718983059 (Cloudflare), 32718986116 (PlanetScale), 32718989058 (historical reconciliation), and 32718991525 (Cloudflare token control), all for the reviewed SHA",
   "liveInventory": {
     "cloudflare": {
       "accountId": "e5b7ae46e04698f507b7e4b3d4ef1af0",
       "zone": "lythaus.co",
       "zoneId": "7bc572c8b7cd3c00be9c655176c29382",
       "status": "VERIFIED",
-      "inventoryRunId": 32695785842,
+      "inventoryRunId": 32718983059,
       "legacyNamedResources": 0,
       "pages": {
         "marketing": { "name": "lythaus-marketing", "id": "d91f8bb3-fd6b-4a9b-b308-f400fdd9e460", "domains": ["lythaus.co", "www.lythaus.co"] },
@@ -33,11 +33,11 @@
       "schemaFingerprint": "672dc746e50b868d4997e3cb9fca47b5426747bc992db2bdc3a33f8d2671415c",
       "migrationLedgerSha256": "ceb640515cbe9d0317a815e8704484a1b3458a69c23923914a88cebbfef332ca",
       "approvedMigrationSetSha256": "c84eea921fe89f85ac6ab4e7ac107014778abca320e524f6450c159eea5754e1",
-      "auditRunId": 32667557380,
+      "auditRunId": 32718986116,
       "status": "VERIFIED_READ_ONLY"
     },
     "historicalBranches": {
-      "reconciliationRunId": 32667557398,
+      "reconciliationRunId": 32718989058,
       "total": 85,
       "reachable": 47,
       "patchEquivalent": 4,
