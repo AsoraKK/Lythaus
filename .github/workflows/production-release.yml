@@ -113,14 +113,15 @@ jobs:
           git fetch --no-tags origin main
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
-          get_public_run() {
+          get_run() {
             curl --fail --silent --show-error --retry 3 --retry-delay 2 \
               -H 'Accept: application/vnd.github+json' \
               -H 'X-GitHub-Api-Version: 2022-11-28' \
               -H 'User-Agent: Lythaus-production-release' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$1"
           }
-          run_json="$(get_public_run "$CI_RUN_ID")"
+          run_json="$(get_run "$CI_RUN_ID")"
           test "$(jq -r '.name' <<<"$run_json")" = 'CI'
           test "$(jq -r '.head_sha' <<<"$run_json")" = "$RELEASE_SHA"
           test "$(jq -r '.conclusion' <<<"$run_json")" = 'success'
