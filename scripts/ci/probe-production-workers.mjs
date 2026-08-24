@@ -71,14 +71,16 @@ function assertDatabaseReport(report, worker, label) {
     if (!(field in report)) throw new Error(`${worker}/${label} readiness is missing ${field}`);
   }
   if (report.branchFingerprint !== 'unknown') throw new Error(`${worker}/${label} must not self-assert a PlanetScale branch`);
-  if (report.schemaFingerprint !== expectedSchemaFingerprint
-    || report.relationCount !== expectedRelationCount
-    || report.identityContactEmails !== true
-    || report.budgetLedgerApplied !== expectedBudgetLedgerApplied
-    || report.schemaVersion !== expectedSchemaVersion
-    || report.roleClass !== 'login_non_superuser'
-    || report.readiness !== 'pass') {
-    throw new Error(`${worker}/${label} structural identity probe failed`);
+  const mismatches = [];
+  if (report.schemaFingerprint !== expectedSchemaFingerprint) mismatches.push('schemaFingerprint');
+  if (report.relationCount !== expectedRelationCount) mismatches.push('relationCount');
+  if (report.identityContactEmails !== true) mismatches.push('identityContactEmails');
+  if (report.budgetLedgerApplied !== expectedBudgetLedgerApplied) mismatches.push('budgetLedgerApplied');
+  if (report.schemaVersion !== expectedSchemaVersion) mismatches.push('schemaVersion');
+  if (report.roleClass !== 'login_non_superuser') mismatches.push('roleClass');
+  if (report.readiness !== 'pass') mismatches.push('readiness');
+  if (mismatches.length > 0) {
+    throw new Error(`${worker}/${label} structural identity probe failed: ${mismatches.join(',')}`);
   }
   if (report.readyForAuthentication !== authenticatedAcceptanceProven) {
     throw new Error(`${worker}/${label} authentication readiness assertion is inconsistent`);
