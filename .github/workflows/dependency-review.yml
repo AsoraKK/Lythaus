@@ -31,13 +31,17 @@ jobs:
             "https://api.github.com/repos/$GITHUB_REPOSITORY" || true)"
           supported="$(REPOSITORY_RESPONSE="$response" node -e 'try { const repository = JSON.parse(process.env.REPOSITORY_RESPONSE || "{}"); const security = repository.security_and_analysis ?? {}; const supported = security.advanced_security?.status === "enabled" && security.dependency_graph?.status === "enabled"; process.stdout.write(supported ? "true" : "false"); } catch { process.stdout.write("false"); }' 2>/dev/null || printf 'false')"
           if [[ "$supported" == "true" ]]; then
-            echo "supported=true" >> "$GITHUB_OUTPUT"
-            echo "mode=native" >> "$GITHUB_OUTPUT"
-            echo "reason=github_dependency_graph_enabled" >> "$GITHUB_OUTPUT"
+            {
+              echo "supported=true"
+              echo "mode=native"
+              echo "reason=github_dependency_graph_enabled"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "supported=false" >> "$GITHUB_OUTPUT"
-            echo "mode=local-fallback" >> "$GITHUB_OUTPUT"
-            echo "reason=github_advanced_security_unavailable" >> "$GITHUB_OUTPUT"
+            {
+              echo "supported=false"
+              echo "mode=local-fallback"
+              echo "reason=github_advanced_security_unavailable"
+            } >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48
         if: steps.dependency_graph.outputs.supported == 'true'
