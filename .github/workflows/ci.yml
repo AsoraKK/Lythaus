@@ -175,6 +175,8 @@ jobs:
   dependency_audit:
     name: Dependency audit
     runs-on: ubuntu-latest
+    if: always()
+    needs: [repository_hygiene, workflow_lint, native_runtime, openapi, flutter, frontends]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -190,14 +192,8 @@ jobs:
         run: node scripts/check-npm-audit.js apps/control-panel
       - name: Audit marketing site dependencies
         run: node scripts/check-npm-audit.js apps/marketing-site
-
-  launch_blockers_summary:
-    name: Launch blockers summary
-    runs-on: ubuntu-latest
-    if: always()
-    needs: [repository_hygiene, workflow_lint, native_runtime, openapi, flutter, frontends, dependency_audit]
-    steps:
       - name: Write launch blockers summary
+        if: always()
         shell: bash
         env:
           REPOSITORY_HYGIENE: ${{ needs.repository_hygiene.result }}
@@ -206,7 +202,7 @@ jobs:
           OPENAPI: ${{ needs.openapi.result }}
           FLUTTER: ${{ needs.flutter.result }}
           FRONTENDS: ${{ needs.frontends.result }}
-          DEPENDENCY_AUDIT: ${{ needs.dependency_audit.result }}
+          DEPENDENCY_AUDIT: ${{ job.status }}
         run: |
           set -euo pipefail
           blockers=0
