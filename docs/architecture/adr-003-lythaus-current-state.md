@@ -86,10 +86,10 @@ no-cost approval.
 
 The consolidation release chain is `main with verified release governance ->
 reviewed SHA -> canonical Cloudflare release -> verified PlanetScale state`.
-GitHub native branch protection is recorded as `UNAVAILABLE_BY_PLAN` for the
-private repository, so `.github/workflows/production-release.yml` enforces the
-compensating controls: merged-PR provenance, resolved conversations, linear
-history, prior-release ancestry, exact-SHA CI/security, and provider evidence.
+GitHub native branch protection is active for the private repository, and
+`.github/workflows/production-release.yml` verifies it alongside the additional
+controls: merged-PR provenance, resolved conversations, linear history,
+prior-release ancestry, exact-SHA CI/security, and provider evidence.
 The workflow coordinates exact-SHA surface deployments, while `docs/evidence/`
 records sanitized provider and branch evidence. A missing provider capability is
 `UNKNOWN/BLOCKED`; green repository CI alone never grants production approval.

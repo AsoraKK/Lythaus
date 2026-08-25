@@ -73,8 +73,14 @@ if (canonical) {
   for (const required of ['release_governance_compensating_controls', 'candidate_merged_pr_number', 'reviewThreads', 'git rev-list --min-parents=2', 'git merge-base --is-ancestor', 'release-manifest.sha256']) {
     if (!canonical.includes(required)) failures.push(`production-release.yml: missing compensating governance control ${required}`);
   }
-  if (canonical.includes('github.ref_protected') || canonical.includes('REF_PROTECTED')) {
-    failures.push('production-release.yml: paid-plan native branch protection must not be an absolute release gate');
+  if (!canonical.includes('REF_PROTECTED')) {
+    failures.push('production-release.yml: native branch protection verification is missing');
+  }
+  if (!canonical.includes('native_branch_protection_status=ACTIVE')) {
+    failures.push('production-release.yml: active native branch protection evidence is missing');
+  }
+  if (canonical.includes('UNAVAILABLE_BY_PLAN')) {
+    failures.push('production-release.yml: stale unavailable-by-plan metadata remains');
   }
 }
 

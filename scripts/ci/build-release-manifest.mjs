@@ -68,9 +68,9 @@ const previousProductionSha = valueOrNull('PREVIOUS_PRODUCTION_SHA') ?? 'NONE';
 if (previousProductionSha !== 'NONE' && !/^[0-9a-f]{40}$/.test(previousProductionSha)) {
   throw new Error('PREVIOUS_PRODUCTION_SHA must be a full 40-character SHA or NONE');
 }
-const nativeBranchProtectionStatus = valueOrNull('NATIVE_BRANCH_PROTECTION_STATUS') ?? 'UNAVAILABLE_BY_PLAN';
-if (!['ACTIVE', 'UNAVAILABLE_BY_PLAN'].includes(nativeBranchProtectionStatus)) {
-  throw new Error('NATIVE_BRANCH_PROTECTION_STATUS must be ACTIVE or UNAVAILABLE_BY_PLAN');
+const nativeBranchProtectionStatus = valueOrNull('NATIVE_BRANCH_PROTECTION_STATUS') ?? 'ACTIVE';
+if (nativeBranchProtectionStatus !== 'ACTIVE') {
+  throw new Error('NATIVE_BRANCH_PROTECTION_STATUS must be ACTIVE');
 }
 
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'lythaus-resource-registry.json'), 'utf8'));
@@ -129,6 +129,7 @@ const security = {
 };
 const requiredEvidence = [
   releaseGovernanceCompensatingControls,
+  nativeBranchProtectionStatus === 'ACTIVE',
   booleanValue('CANDIDATE_MERGED_PR_VERIFIED'),
   booleanValue('UNRESOLVED_REVIEW_CONVERSATIONS_VERIFIED'),
   booleanValue('LINEAR_HISTORY_VERIFIED'),
@@ -259,9 +260,6 @@ const manifest = {
   evidence: {
     source: 'exact reviewed main SHA and sanitized provider evidence',
     platformLimitations: [
-      nativeBranchProtectionStatus === 'UNAVAILABLE_BY_PLAN'
-        ? 'GitHub native branch protection is unavailable for this private repository plan; compensating release governance is required.'
-        : null,
       'GitHub artifact attestations are unavailable for private repositories on the current plan; the sanitized manifest is accompanied by a SHA-256 integrity digest.',
     ].filter(Boolean),
     unknowns: [
