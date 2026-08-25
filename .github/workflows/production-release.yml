@@ -80,6 +80,7 @@ jobs:
       SECRET_SCAN_RUN_ID: ${{ inputs.secret_scan_run_id }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
       GH_TOKEN: ${{ github.token }}
+      REF_PROTECTED: ${{ github.ref_protected }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -177,12 +178,13 @@ jobs:
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: ${{ inputs.secret_scan_run_id }}
-      - name: Verify compensating release governance and historical reconciliation evidence
+      - name: Verify native branch protection and release governance evidence
         id: governance
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
+          test "$REF_PROTECTED" = 'true'
           if [[ "$PREVIOUS_PRODUCTION_SHA" != 'NONE' ]]; then
             git cat-file -e "${PREVIOUS_PRODUCTION_SHA}^{commit}"
             git merge-base --is-ancestor "$PREVIOUS_PRODUCTION_SHA" "$RELEASE_SHA"
@@ -281,7 +283,7 @@ jobs:
             ' "$evidence_dir/run.json" >/dev/null
           done
           {
-            echo 'native_branch_protection_status=UNAVAILABLE_BY_PLAN'
+            echo 'native_branch_protection_status=ACTIVE'
             echo 'release_governance_compensating_controls=VERIFIED'
             echo "candidate_merged_pr_number=$merged_pr_number"
             echo 'candidate_merged_pr_verified=true'
@@ -560,7 +562,7 @@ jobs:
       CI_RUN_ID: ${{ inputs.ci_run_id }}
       PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
-      NATIVE_BRANCH_PROTECTION_STATUS: ${{ needs.preflight.outputs.native_branch_protection_status || 'UNAVAILABLE_BY_PLAN' }}
+      NATIVE_BRANCH_PROTECTION_STATUS: ${{ needs.preflight.outputs.native_branch_protection_status || 'ACTIVE' }}
       RELEASE_GOVERNANCE_COMPENSATING_CONTROLS: ${{ needs.preflight.outputs.release_governance_compensating_controls || 'BLOCKED' }}
       CANDIDATE_MERGED_PR_NUMBER: ${{ needs.preflight.outputs.candidate_merged_pr_number }}
       CANDIDATE_MERGED_PR_VERIFIED: ${{ needs.preflight.outputs.candidate_merged_pr_verified || 'false' }}

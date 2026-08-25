@@ -253,8 +253,8 @@ jobs:
           API_BASE_URL: ${{ inputs.api_base_url }}
           ADMIN_API_URL: ${{ inputs.admin_api_url }}
           RUNTIME_AUTH_API_BASE_URL: ${{ inputs.api_base_url }}
-          RUNTIME_AUTH_EMAIL: ${{ inputs.target_environment == 'production' && secrets.ADR003_TEST_EMAIL || secrets.MVP_SMOKE_EMAIL }}
-          RUNTIME_AUTH_PASSWORD: ${{ inputs.target_environment == 'production' && secrets.ADR003_TEST_PASSWORD || secrets.MVP_SMOKE_PASSWORD }}
+          RUNTIME_AUTH_EMAIL: ${{ inputs.target_environment == 'production' && secrets.CODEX_TEST_EMAIL || secrets.MVP_SMOKE_EMAIL }}
+          RUNTIME_AUTH_PASSWORD: ${{ inputs.target_environment == 'production' && secrets.CODEX_TEST_PASSWORD || secrets.MVP_SMOKE_PASSWORD }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           BETA_SMOKE_REPORT_PATH: ${{ runner.temp }}/alpha-web-smoke-report.json

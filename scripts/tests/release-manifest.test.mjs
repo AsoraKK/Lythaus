@@ -21,17 +21,17 @@ test('release manifest records partial provider evidence without inventing live 
   assert.equal(manifest.status, 'NO-GO');
   assert.equal(manifest.productionStatus, 'NO-GO');
   assert.equal(manifest.repository.releaseSha, releaseSha);
-  assert.equal(manifest.github.nativeBranchProtectionStatus, 'UNAVAILABLE_BY_PLAN');
+  assert.equal(manifest.github.nativeBranchProtectionStatus, 'ACTIVE');
   assert.equal(manifest.github.releaseGovernanceCompensatingControls, false);
   assert.equal(manifest.github.previousProductionSha, 'NONE');
-  assert.ok(manifest.evidence.platformLimitations.some((value) => value.includes('native branch protection')));
+  assert.ok(manifest.evidence.platformLimitations.every((value) => !value.includes('native branch protection')));
   assert.equal(manifest.cloudflare.inventoryStatus, 'UNKNOWN/BLOCKED');
   assert.equal(manifest.planetscale.inventoryStatus, 'UNKNOWN/BLOCKED');
   assert.equal(manifest.planetscale.latestMigration, '0013_marketing_waitlist.sql');
   assert.match(manifest.planetscale.migrationSetSha256, /^[a-f0-9]{64}$/);
 });
 
-test('release manifest records compensating governance independently of native protection', () => {
+test('release manifest records native and release governance independently', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-release-governance-'));
   const output = path.join(directory, 'release-manifest.json');
   execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], {
@@ -39,7 +39,7 @@ test('release manifest records compensating governance independently of native p
     env: {
       ...process.env,
       RELEASE_SHA: releaseSha,
-      NATIVE_BRANCH_PROTECTION_STATUS: 'UNAVAILABLE_BY_PLAN',
+      NATIVE_BRANCH_PROTECTION_STATUS: 'ACTIVE',
       RELEASE_GOVERNANCE_COMPENSATING_CONTROLS: 'VERIFIED',
       CANDIDATE_MERGED_PR_NUMBER: '661',
       CANDIDATE_MERGED_PR_VERIFIED: 'true',
@@ -51,7 +51,7 @@ test('release manifest records compensating governance independently of native p
     stdio: 'pipe',
   });
   const manifest = JSON.parse(fs.readFileSync(output, 'utf8'));
-  assert.equal(manifest.github.nativeBranchProtectionStatus, 'UNAVAILABLE_BY_PLAN');
+  assert.equal(manifest.github.nativeBranchProtectionStatus, 'ACTIVE');
   assert.equal(manifest.github.releaseGovernanceCompensatingControls, true);
   assert.equal(manifest.github.candidateMergedPullRequest, 661);
   assert.equal(manifest.github.candidateMergedPrVerified, true);

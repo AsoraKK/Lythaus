@@ -296,8 +296,8 @@ jobs:
           EXPECTED_DATABASE_SCHEMA_VERSION: 0013_marketing_waitlist.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
-          ADR003_TEST_EMAIL: ${{ secrets.ADR003_TEST_EMAIL }}
-          ADR003_TEST_PASSWORD: ${{ secrets.ADR003_TEST_PASSWORD }}
+          ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
+          ADR003_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
         run: npm run acceptance:adr003
       - name: Record candidate evidence assertions
         run: |

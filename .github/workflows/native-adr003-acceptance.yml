@@ -15,6 +15,7 @@ permissions:
 jobs:
   acceptance:
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -64,8 +65,8 @@ jobs:
           EXPECTED_DATABASE_SCHEMA_VERSION: 0013_marketing_waitlist.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
-          ADR003_TEST_EMAIL: ${{ secrets.ADR003_TEST_EMAIL }}
-          ADR003_TEST_PASSWORD: ${{ secrets.ADR003_TEST_PASSWORD }}
+          ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
+          ADR003_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
         run: npm run acceptance:adr003
       - name: Upload sanitized ADR-003 evidence
         if: always()

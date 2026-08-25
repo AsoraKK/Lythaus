@@ -21,11 +21,13 @@ const satisfiesGovernance = (protection) => (
   && protection.required_conversation_resolution.enabled === true
 );
 
-test('production release models private-plan compensating governance', () => {
-  assert.doesNotMatch(workflow, /REF_PROTECTED/);
+test('production release requires native branch protection and release governance', () => {
+  assert.match(workflow, /REF_PROTECTED/);
   assert.match(workflow, /test "\$GITHUB_REF" = 'refs\/heads\/main'/);
+  assert.match(workflow, /test "\$REF_PROTECTED" = 'true'/);
   assert.doesNotMatch(workflow, /required_approving_review_count\s*>=\s*1/);
-  assert.match(workflow, /UNAVAILABLE_BY_PLAN/);
+  assert.doesNotMatch(workflow, /UNAVAILABLE_BY_PLAN/);
+  assert.match(workflow, /native_branch_protection_status=ACTIVE/);
   assert.match(workflow, /release_governance_compensating_controls=VERIFIED/);
 });
 
@@ -90,7 +92,7 @@ test('governance retains required checks and destructive-action protections', ()
 });
 
 test('release preflight uses readable Actions evidence and fail-closed fanout', () => {
-  assert.doesNotMatch(workflow, /REF_PROTECTED/);
+  assert.match(workflow, /REF_PROTECTED/);
   assert.match(workflow, /get_run\(\)/);
   assert.match(workflow, /actions\/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093/);
   assert.match(workflow, /security-run-evidence-CodeQL-\$\{\{ inputs\.release_sha \}\}/);
@@ -123,8 +125,8 @@ test('production browser smoke uses production acceptance credentials', () => {
   assert.match(workflow, /api_base_url: https:\/\/api\.lythaus\.co\/api/);
   assert.match(webWorkflow, /deploy-and-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
   assert.match(webWorkflow, /browser-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
-  assert.match(webWorkflow, /RUNTIME_AUTH_EMAIL: \$\{\{ inputs\.target_environment == 'production' && secrets\.ADR003_TEST_EMAIL \|\| secrets\.MVP_SMOKE_EMAIL \}\}/);
-  assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ inputs\.target_environment == 'production' && secrets\.ADR003_TEST_PASSWORD \|\| secrets\.MVP_SMOKE_PASSWORD \}\}/);
+  assert.match(webWorkflow, /RUNTIME_AUTH_EMAIL: \$\{\{ inputs\.target_environment == 'production' && secrets\.CODEX_TEST_EMAIL \|\| secrets\.MVP_SMOKE_EMAIL \}\}/);
+  assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ inputs\.target_environment == 'production' && secrets\.CODEX_TEST_PASSWORD \|\| secrets\.MVP_SMOKE_PASSWORD \}\}/);
 });
 
 test('Worker readiness secrets are included in each immutable candidate upload', () => {
