@@ -34,6 +34,7 @@ void main() {
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('Sign in with email'), findsOneWidget);
+    expect(find.text('Create account'), findsOneWidget);
     expect(find.text('Continue as guest'), findsOneWidget);
   });
 }

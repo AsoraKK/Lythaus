@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
@@ -22,6 +23,7 @@ class AuthChoiceScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
+  static final _signupUri = Uri.parse('https://lythaus.co/signup');
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   late final AnalyticsClient _analyticsClient;
@@ -107,6 +109,18 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     );
   }
 
+  Future<void> _openSignup() async {
+    final opened = await launchUrl(
+      _signupUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open account creation.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
@@ -135,7 +149,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Browse as a guest or sign in with your verified email.',
+                      'Create a verified email account, sign in, or browse as a guest.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -197,6 +211,12 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                       onPressed: authState.isLoading
                           ? null
                           : _handleEmailSignIn,
+                    ),
+                    const SizedBox(height: 12),
+                    LythButton.secondary(
+                      label: 'Create account',
+                      icon: Icons.person_add_alt_1,
+                      onPressed: authState.isLoading ? null : _openSignup,
                     ),
                     const SizedBox(height: 12),
                     LythButton.secondary(

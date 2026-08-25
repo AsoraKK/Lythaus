@@ -1,0 +1,191 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+---
+
+<BaseLayout
+  title="Create your account"
+  description="Create a verified Lythaus account."
+  canonicalPath="/signup"
+>
+  <section class="auth-page" aria-labelledby="signup-title">
+    <div class="auth-intro">
+      <span class="pill">Lythaus account</span>
+      <h1 id="signup-title">Create your account.</h1>
+      <p>Join Lythaus with a verified email address. We will send you a confirmation link before you enter the app.</p>
+    </div>
+
+    <form
+      class="auth-form"
+      data-signup-form
+      data-api-base-url={publicApiBaseUrl}
+      data-turnstile-site-key={turnstileSiteKey}
+      novalidate
+    >
+      <label for="signup-email">Email address</label>
+      <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="320" required />
+
+      <label for="signup-password">Password</label>
+      <input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+      <p class="auth-field-note">Use at least 12 characters.</p>
+
+      <label for="signup-password-confirmation">Confirm password</label>
+      <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+
+      <div class="auth-turnstile-shell" id="signup-turnstile" role="group" aria-label="Bot verification"></div>
+      <button class="button primary" type="submit" data-signup-submit>Create account</button>
+      <p class="auth-status" data-signup-status aria-live="polite" role="status"></p>
+      <p class="auth-footnote">Already have an account? <a href="https://app.lythaus.co/login">Sign in to Lythaus</a>.</p>
+    </form>
+  </section>
+
+  {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
+  <script is:inline>
+    const form = document.querySelector('[data-signup-form]');
+    if (form instanceof HTMLFormElement) {
+      const email = form.querySelector('#signup-email');
+      const password = form.querySelector('#signup-password');
+      const confirmation = form.querySelector('#signup-password-confirmation');
+      const button = form.querySelector('[data-signup-submit]');
+      const status = form.querySelector('[data-signup-status]');
+      const turnstileContainer = form.querySelector('#signup-turnstile');
+      const apiBaseUrl = form.dataset.apiBaseUrl?.replace(/\/$/u, '') ?? '';
+      const siteKey = form.dataset.turnstileSiteKey ?? '';
+      let widgetId;
+      let tokenResolve;
+      let tokenReject;
+
+      const setStatus = (message, state = 'idle') => {
+        if (status instanceof HTMLElement) {
+          status.textContent = message;
+          status.dataset.state = state;
+        }
+      };
+      const resetVerification = () => {
+        tokenReject?.(new Error('turnstile_failed'));
+        tokenResolve = undefined;
+        tokenReject = undefined;
+        if (widgetId !== undefined && window.turnstile) window.turnstile.reset(widgetId);
+      };
+      const renderTurnstile = () => {
+        if (!window.turnstile || !turnstileContainer || !siteKey || widgetId !== undefined) return false;
+        widgetId = window.turnstile.render(turnstileContainer, {
+          sitekey: siteKey,
+          action: 'account_signup',
+          appearance: 'interaction-only',
+          execution: 'execute',
+          callback: (value) => {
+            tokenResolve?.(value);
+            tokenResolve = undefined;
+            tokenReject = undefined;
+          },
+          'expired-callback': resetVerification,
+          'error-callback': resetVerification,
+        });
+        return true;
+      };
+      let attempts = 0;
+      const renderTimer = window.setInterval(() => {
+        attempts += 1;
+        if (renderTurnstile() || attempts >= 100) window.clearInterval(renderTimer);
+      }, 100);
+      const requestToken = async () => {
+        const rendered = widgetId !== undefined || renderTurnstile();
+        if (!siteKey || !rendered || widgetId === undefined || !window.turnstile) throw new Error('turnstile_unavailable');
+        return new Promise((resolve, reject) => {
+          tokenResolve = resolve;
+          tokenReject = reject;
+          window.turnstile.execute(widgetId);
+        });
+      };
+      const messageFor = (code) => {
+        if (code === 'account_exists') return 'An account with this email already exists. Sign in instead.';
+        if (code === 'email_verification_required') return 'Check your email and click the verification link before signing in.';
+        if (code === 'invalid_email') return 'Enter a valid email address.';
+        if (code === 'invalid_password') return 'Use a password between 12 and 128 characters.';
+        if (code === 'turnstile_failed' || code === 'turnstile_required' || code === 'turnstile_unavailable') return 'We could not verify this request. Please try again.';
+        if (code === 'email_delivery_not_configured' || code === 'email_delivery_failed') return 'We could not send the verification email. Please try again later.';
+        return 'We could not create your account. Please try again.';
+      };
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(confirmation instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
+        if (!email.validity.valid) {
+          email.reportValidity();
+          setStatus('Enter a valid email address.', 'error');
+          return;
+        }
+        if (!password.validity.valid || password.value !== confirmation.value) {
+          setStatus('Passwords must match and contain at least 12 characters.', 'error');
+          return;
+        }
+        button.disabled = true;
+        button.textContent = 'Creating account...';
+        setStatus('', 'submitting');
+        try {
+          const turnstileToken = await requestToken();
+          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ mode: 'register', email: email.value, password: password.value, turnstileToken }),
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
+          form.reset();
+          setStatus('Account created. Check your email and click the verification link before signing in.', 'success');
+        } catch (error) {
+          setStatus(messageFor(error instanceof Error ? error.message : 'account_creation_failed'), 'error');
+        } finally {
+          resetVerification();
+          button.disabled = false;
+          button.textContent = 'Create account';
+        }
+      });
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .auth-page {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.7fr);
+    gap: clamp(48px, 10vw, 140px);
+    align-items: start;
+    padding: clamp(82px, 13vw, 150px) 0 120px;
+  }
+  .auth-intro h1 { margin-top: 22px; }
+  .auth-intro p { max-width: 520px; color: var(--muted); font-size: 18px; line-height: 1.7; }
+  .auth-form {
+    display: grid;
+    gap: 10px;
+    padding: 30px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .auth-form label { color: var(--muted); font-size: 13px; }
+  .auth-form input {
+    width: 100%;
+    min-height: 50px;
+    padding: 0 15px;
+    color: var(--text);
+    background: #0d0f10;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    outline: none;
+  }
+  .auth-form input:focus { border-color: rgba(223,231,220,.7); box-shadow: 0 0 0 3px rgba(223,231,220,.08); }
+  .auth-field-note, .auth-footnote { margin: 0 0 8px; color: var(--quiet); font-size: 12px; line-height: 1.5; }
+  .auth-turnstile-shell { min-height: 65px; margin: 8px 0; }
+  .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .auth-status[data-state='error'] { color: #f1a7a0; }
+  .auth-status[data-state='success'] { color: #b8d5b5; }
+  .auth-footnote { margin-top: 4px; }
+  @media (max-width: 760px) {
+    .auth-page { grid-template-columns: 1fr; padding-top: 72px; }
+    .auth-form { padding: 22px; }
+  }
+</style>
