@@ -166,7 +166,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p preview-pages
-          routes=(/ /about /ai-moderation /contact /features /guidelines /invite /pricing /privacy /terms)
+          routes=(/ /about /ai-moderation /contact /features /guidelines /invite /pricing /privacy /signup /terms)
           for route in "${routes[@]}"; do
             if [[ "$route" = "/" ]]; then
               name="_root"
@@ -235,7 +235,7 @@ jobs:
             --arg deploymentId "$PAGES_DEPLOYMENT_ID" \
             --arg deploymentUrl "$PAGES_DEPLOYMENT_URL" \
             --arg createdAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{schemaVersion: 2, commitSha: $commitSha, project: $project, branch: $branch, previewUrl: $previewUrl, deploymentId: $deploymentId, deploymentUrl: $deploymentUrl, deploymentClass: $deploymentClass, routeCount: 10, createdAt: $createdAt}' \
+            '{schemaVersion: 2, commitSha: $commitSha, project: $project, branch: $branch, previewUrl: $previewUrl, deploymentId: $deploymentId, deploymentUrl: $deploymentUrl, deploymentClass: $deploymentClass, routeCount: 11, createdAt: $createdAt}' \
             > marketing-deployment-evidence.json
 
       - name: Upload deployment evidence
