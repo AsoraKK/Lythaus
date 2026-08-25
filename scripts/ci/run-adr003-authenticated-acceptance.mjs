@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
 const apiBase = required('ADR003_API_BASE_URL').replace(/\/$/, '');
+if (!apiBase.endsWith('/api')) throw new Error('ADR003_API_BASE_URL must end with /api');
+const apiOrigin = apiBase.slice(0, -'/api'.length);
 const readinessToken = required('DATABASE_READINESS_TOKEN');
 const expected = {
   relationCount: Number(required('EXPECTED_DATABASE_RELATION_COUNT')),
@@ -46,6 +48,7 @@ function correlationId(response, body) {
 }
 
 async function requestJson(route, options = {}) {
+  const baseUrl = options.baseUrl ?? apiBase;
   const headers = new Headers(options.headers ?? {});
   if (candidateWorkerName || candidateWorkerVersionId) {
     if (!/^[a-z0-9-]+$/.test(candidateWorkerName) || !/^[0-9a-f-]{36}$/.test(candidateWorkerVersionId)) {
@@ -58,7 +61,7 @@ async function requestJson(route, options = {}) {
     headers.set('content-type', typeof options.body === 'string' ? 'application/x-www-form-urlencoded' : 'application/json');
   }
   const body = options.body === undefined || typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-  const response = await fetch(`${apiBase}${route}`, {
+  const response = await fetch(`${baseUrl}${route}`, {
     method: options.method ?? 'GET',
     headers,
     body,
@@ -165,6 +168,7 @@ function parseSanitizedJson(value, label) {
 await runCase('GATE-ROUTING', async () => {
   expect(hyperdriveVerifiedMain, 'hyperdrive_main_proof_missing');
   const result = await requestJson('/internal/readiness/database-identity', {
+    baseUrl: apiOrigin,
     headers: { authorization: `Bearer ${readinessToken}` },
   });
   expectStatus(result, [200], 'database_probe');
