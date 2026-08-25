@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildSchemaFingerprint,
+  classifyDatabaseIdentityError,
   classifyRole,
   databaseExpectationsFromEnv,
   isDatabaseIdentityReady,
@@ -87,6 +88,13 @@ test('database identity readiness requires every structural gate', () => {
     roleClass: 'login_non_superuser',
     transactionSucceeded: true,
   }, expected), false);
+});
+
+test('database identity errors expose only an allowlisted diagnostic code', () => {
+  assert.equal(classifyDatabaseIdentityError({ code: '42501' }), 'insufficient_privilege');
+  assert.equal(classifyDatabaseIdentityError({ code: '42P01' }), 'undefined_table');
+  assert.equal(classifyDatabaseIdentityError({ code: '08006' }), 'connection_failure');
+  assert.equal(classifyDatabaseIdentityError(new Error('secret database detail')), 'database_identity_query_failed');
 });
 
 test('database identity relation inventory is not privilege-filtered', async () => {
