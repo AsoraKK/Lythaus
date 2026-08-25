@@ -6,7 +6,7 @@ on:
       api_base_url:
         description: Production public API base URL
         required: true
-        default: https://api.lythaus.co
+        default: https://api.lythaus.co/api
         type: string
 
 permissions:
