@@ -83,6 +83,7 @@ function assertDatabaseReport(report, worker, label) {
     const observed = Object.fromEntries([
       'databaseEnvironment', 'schemaFingerprint', 'relationCount', 'identityContactEmails',
       'budgetLedgerApplied', 'schemaVersion', 'roleClass', 'readiness', 'readyForAuthentication',
+      'diagnosticCode',
     ].map((field) => [field, report[field]]));
     throw new Error(`${worker}/${label} structural identity probe failed: ${mismatches.join(',')}; observed=${JSON.stringify(observed)}`);
   }

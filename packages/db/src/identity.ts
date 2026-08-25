@@ -21,7 +21,18 @@ export interface DatabaseIdentityReport {
   roleClass: string;
   transactionSucceeded: boolean;
   readiness: 'pass' | 'fail';
+  diagnosticCode?: DatabaseIdentityDiagnosticCode;
 }
+
+export type DatabaseIdentityDiagnosticCode =
+  | 'connection_failure'
+  | 'database_identity_query_failed'
+  | 'insufficient_privilege'
+  | 'invalid_catalog'
+  | 'invalid_password'
+  | 'query_canceled'
+  | 'undefined_column'
+  | 'undefined_table';
 
 export interface DatabaseReadinessResponse {
   databaseEnvironment: string;
@@ -34,6 +45,7 @@ export interface DatabaseReadinessResponse {
   roleClass: string;
   readiness: 'pass' | 'fail';
   readyForAuthentication: boolean;
+  diagnosticCode?: DatabaseIdentityDiagnosticCode;
 }
 
 export function databaseReadinessResponse(
@@ -51,6 +63,7 @@ export function databaseReadinessResponse(
     roleClass: report.roleClass,
     readiness: report.readiness,
     readyForAuthentication: authenticatedAcceptanceProven && report.readiness === 'pass' && report.budgetLedgerApplied,
+    ...(report.diagnosticCode ? { diagnosticCode: report.diagnosticCode } : {}),
   };
 }
 
@@ -123,7 +136,37 @@ export function isDatabaseIdentityReady(report: Omit<DatabaseIdentityReport, 're
     && report.transactionSucceeded;
 }
 
-function unavailableReport(): DatabaseIdentityReport {
+export function classifyDatabaseIdentityError(error: unknown): DatabaseIdentityDiagnosticCode {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    && typeof error.code === 'string'
+    ? error.code
+    : '';
+  switch (code) {
+    case '08001':
+    case '08003':
+    case '08006':
+    case '08004':
+    case '08007':
+    case '08P01':
+      return 'connection_failure';
+    case '28P01':
+      return 'invalid_password';
+    case '3D000':
+      return 'invalid_catalog';
+    case '42501':
+      return 'insufficient_privilege';
+    case '42703':
+      return 'undefined_column';
+    case '42P01':
+      return 'undefined_table';
+    case '57014':
+      return 'query_canceled';
+    default:
+      return 'database_identity_query_failed';
+  }
+}
+
+function unavailableReport(diagnosticCode: DatabaseIdentityDiagnosticCode): DatabaseIdentityReport {
   return {
     databaseEnvironment: 'unknown',
     branchFingerprint: 'unknown',
@@ -135,6 +178,7 @@ function unavailableReport(): DatabaseIdentityReport {
     roleClass: 'unknown',
     transactionSucceeded: false,
     readiness: 'fail',
+    diagnosticCode,
   };
 }
 
@@ -201,7 +245,7 @@ export async function inspectDatabaseIdentity(
       return { ...partial, readiness: isDatabaseIdentityReady(partial, expected) ? 'pass' : 'fail' } satisfies DatabaseIdentityReport;
     });
     return report;
-  } catch {
-    return unavailableReport();
+  } catch (error) {
+    return unavailableReport(classifyDatabaseIdentityError(error));
   }
 }
