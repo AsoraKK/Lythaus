@@ -22,11 +22,34 @@ if (mode === 'candidate') {
   if (!expectedTag || !/^[0-9a-f]{40}$/.test(expectedTag)) throw new Error('candidate tag must be the exact release SHA');
   if (!Array.isArray(source)) throw new Error('Worker version list must be an array');
   const matches = source.filter((version) => version?.annotations?.['workers/tag'] === expectedTag);
-  if (matches.length !== 1 || !uuid.test(matches[0]?.id ?? '')) {
-    throw new Error(`expected exactly one candidate Worker version tagged ${expectedTag}`);
+  if (matches.length === 0) {
+    throw new Error(`no candidate Worker version tagged ${expectedTag}`);
   }
-  append(`${variablePrefix}_WORKER_VERSION_ID`, matches[0].id);
-  console.log(JSON.stringify({ mode, variablePrefix, versionId: matches[0].id, releaseSha: expectedTag }));
+  if (matches.some((version) => !uuid.test(version?.id ?? ''))) {
+    throw new Error(`candidate Worker version tagged ${expectedTag} has an invalid version id`);
+  }
+
+  const ranked = matches.map((version) => ({
+    version,
+    createdAt: Date.parse(version?.created_on ?? version?.createdAt ?? version?.created_at ?? ''),
+  }));
+  if (ranked.length > 1 && ranked.some(({ createdAt }) => !Number.isFinite(createdAt))) {
+    throw new Error(`duplicate candidate Worker versions tagged ${expectedTag} lack comparable creation timestamps`);
+  }
+  ranked.sort((left, right) => right.createdAt - left.createdAt);
+  if (ranked.length > 1 && ranked[0].createdAt === ranked[1].createdAt) {
+    throw new Error(`duplicate candidate Worker versions tagged ${expectedTag} are ambiguous`);
+  }
+
+  const candidate = ranked[0].version;
+  append(`${variablePrefix}_WORKER_VERSION_ID`, candidate.id);
+  console.log(JSON.stringify({
+    mode,
+    variablePrefix,
+    versionId: candidate.id,
+    releaseSha: expectedTag,
+    matchingVersions: matches.length,
+  }));
 } else {
   const versions = source?.versions;
   if (!Array.isArray(versions) || versions.length === 0) throw new Error('deployment state has no rollback versions');
