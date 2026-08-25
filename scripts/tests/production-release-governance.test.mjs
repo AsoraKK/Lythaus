@@ -5,6 +5,8 @@ import test from 'node:test';
 const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
 const webWorkflow = readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
 const workersWorkflow = readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
+const adr003Workflow = readFileSync('.github/workflows/native-adr003-acceptance.yml', 'utf8');
+const adr003Harness = readFileSync('scripts/ci/run-adr003-authenticated-acceptance.mjs', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesVerifier = readFileSync('scripts/cloudflare/verify-pages-deployment.mjs', 'utf8');
 
@@ -127,6 +129,16 @@ test('production browser smoke uses production acceptance credentials', () => {
   assert.match(webWorkflow, /browser-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
   assert.match(webWorkflow, /RUNTIME_AUTH_EMAIL: \$\{\{ inputs\.target_environment == 'production' && secrets\.CODEX_TEST_EMAIL \|\| secrets\.MVP_SMOKE_EMAIL \}\}/);
   assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ inputs\.target_environment == 'production' && secrets\.CODEX_TEST_PASSWORD \|\| secrets\.MVP_SMOKE_PASSWORD \}\}/);
+});
+
+test('ADR-003 uses the canonical API base and keeps mobile acceptance separate', () => {
+  assert.match(adr003Workflow, /default: https:\/\/api\.lythaus\.co\/api/);
+  assert.match(adr003Workflow, /ADR003_TEST_EMAIL: \$\{\{ secrets\.CODEX_TEST_EMAIL \}\}/);
+  assert.match(adr003Workflow, /ADR003_TEST_PASSWORD: \$\{\{ secrets\.CODEX_TEST_PASSWORD \}\}/);
+  const a20 = adr003Harness.match(/await runCase\('A20',[\s\S]*?\n\}\);/)?.[0] ?? '';
+  assert.match(a20, /ADR003_WEB_EMAIL_ACCEPTED/);
+  assert.doesNotMatch(a20, /ADR003_MOBILE_EMAIL_ACCEPTED/);
+  assert.match(adr003Harness, /mobileEmailFlow: process\.env\.ADR003_MOBILE_EMAIL_ACCEPTED === 'true'/);
 });
 
 test('Worker readiness secrets are included in each immutable candidate upload', () => {

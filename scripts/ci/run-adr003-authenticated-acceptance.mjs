@@ -352,7 +352,6 @@ await runCase('A19', async () => {
 await runCase('A20', async () => {
   await webSecurityCheck();
   manualFlag('ADR003_WEB_EMAIL_ACCEPTED', 'web_email_flow_kyle_owned');
-  manualFlag('ADR003_MOBILE_EMAIL_ACCEPTED', 'mobile_email_flow_kyle_owned');
 });
 
 const evidence = await writeEvidence(readiness ?? { branchFingerprint: hyperdriveVerifiedMain ? 'main' : 'unknown', readiness: 'blocked' });
