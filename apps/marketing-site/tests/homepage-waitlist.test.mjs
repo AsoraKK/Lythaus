@@ -45,7 +45,58 @@ test('homepage public copy matches the human-first pitch and stays launch safe',
   assert.match(homepage, /Reputation is earned\./);
   assert.match(homepage, /Member content is not sold or repurposed to train generative models\./);
   assert.match(homepage, /Join the waitlist/);
+  assert.match(homepage, /Join Lythaus early\./);
+  assert.match(homepage, /Preview how Lythaus works\./);
+  assert.match(homepage, /Illustrative UI only\. No account actions or live content are available here\./);
+  assert.match(homepage, /Human-authored/);
+  assert.match(homepage, /AI-assisted/);
+  assert.match(homepage, /Under review/);
+  assert.doesNotMatch(homepage, /Enter a live, read-only version of Lythaus/);
+  assert.doesNotMatch(homepage, /app\.lythaus\.co|Guest Preview|News Board/i);
+  const retiredUserFacingNames = [String.fromCharCode(65, 115, 111, 114, 97), String.fromCharCode(65, 122, 117, 114, 101)];
+  assert.doesNotMatch(visibleCopy, new RegExp(retiredUserFacingNames.join('|'), 'i'));
+  assert.equal((homepage.match(/The human internet is worth protecting\./g) ?? []).length, 1);
+  assert.equal((homepage.match(/Algorithms for relevance, not addiction\./g) ?? []).length, 1);
   assert.match(styles, /--accent: #f2c98d/i);
+});
+
+test('homepage section numbering is sequential and the waitlist is unnumbered', () => {
+  const numbers = [...homepage.matchAll(/(?:pitch-intro-meta|pitch-section-meta)[^>]*>(\d{2}) \/ /g)].map((match) => match[1]);
+  assert.deepEqual(numbers, ['00', '01', '02', '03', '04', '05', '06', '07', '08']);
+  assert.doesNotMatch(homepage, /09 \/|10 \/|11 \/|12 \/|13 \//);
+  assert.doesNotMatch(homepage, /pitch-waitlist[^>]*>[\s\S]*?\d{2} \/ /);
+});
+
+test('Experience is an explicit local preview with keyboard-oriented controls', () => {
+  assert.match(homepage, /data-preview/);
+  assert.match(homepage, /role="tablist"/);
+  assert.match(homepage, /data-preview-tab="discovery"/);
+  assert.match(homepage, /data-preview-tab="authorship"/);
+  assert.match(homepage, /data-preview-tab="controls"/);
+  assert.match(homepage, /data-preview-control aria-pressed/);
+  assert.match(homepage, /No feed request is made\./);
+  assert.match(homepage, /ArrowRight.*ArrowLeft.*Home.*End/s);
+  assert.doesNotMatch(homepage, /href="https?:\/\/app\.lythaus\.co/);
+});
+
+test('homepage reveal enhancement has a visible-content fallback', () => {
+  assert.match(homepage, /pitch-reveal-pending/);
+  assert.match(homepage, /pitch-opening-resolved/);
+  assert.match(homepage, /IntersectionObserver/);
+  assert.match(homepage, /prefers-reduced-motion/);
+  assert.match(homePitchStyles, /\.pitch-section\.pitch-reveal-pending/);
+  assert.doesNotMatch(homePitchStyles, /\.pitch-section\[data-pitch-reveal\],[\s\S]{0,120}opacity: 0/);
+});
+
+test('shared layout provides an accessible mobile navigation fallback', () => {
+  assert.match(layout, /data-mobile-nav-toggle/);
+  assert.match(layout, /aria-controls="mobile-nav-panel"/);
+  assert.match(layout, /data-mobile-nav-panel/);
+  assert.match(layout, /aria-label="Mobile navigation"/);
+  assert.match(layout, /event\.key === 'Escape'/);
+  assert.match(layout, /mobile-nav-open/);
+  assert.match(styles, /html:not\(\.js-enabled\) \.mobile-nav-panel/);
+  assert.match(styles, /min-height: 44px/);
 });
 
 test('homepage opening resolves the Lythaus letters from light without a lighthouse beam', () => {
@@ -56,6 +107,9 @@ test('homepage opening resolves the Lythaus letters from light without a lightho
   assert.match(homePitchStyles, /@keyframes pitchLightPoint/);
   assert.doesNotMatch(homePitchStyles, /lighthouse|beam/i);
   assert.match(homePitchStyles, /prefers-reduced-motion/);
+  assert.match(homePitchStyles, /animation-delay: calc\(90ms \+ \(var\(--letter-index\) \* 120ms\)\)/);
+  assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
+  assert.match(homePitchStyles, /animation: none/);
 });
 
 test('shared layout declares the Lythaus favicon assets', () => {
@@ -76,6 +130,9 @@ test('homepage layout remains bounded at desktop and 390 pixel widths', () => {
   assert.match(homePitchStyles, /\.pitch-waitlist \{[\s\S]*min-width: 0/);
   assert.match(homePitchStyles, /@media \(max-width: 700px\) \{[\s\S]*?\.pitch-waitlist \.home-waitlist-fields \{[\s\S]*?grid-template-columns: 1fr/);
   assert.match(homePitchStyles, /@media \(max-width: 700px\) \{[\s\S]*?\.pitch-waitlist \.home-waitlist-fields \.button \{[\s\S]*?width: 100%/);
+  assert.match(homePitchStyles, /padding: clamp\(90px, 10vw, 145px\) 0/);
+  assert.match(homePitchStyles, /\.pitch-section \{\s*padding: 78px 0/);
+  assert.doesNotMatch(homePitchStyles, /font-size: 9px/);
 });
 
 test('Privacy Policy states the approved waitlist retention policy', () => {

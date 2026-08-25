@@ -49,11 +49,12 @@ import '../styles/global.css';
       <nav class="site-nav" aria-label="Main navigation">
         {homePage ? (
           <>
-            <a href="#problem">Problem</a>
-            <a href="#lythaus">Lythaus</a>
-            <a href="#experience">Experience</a>
-            <a href="#discovery">Discovery</a>
-            <a href="#principles">Principles</a>
+            <a href="#problem" data-nav-link="problem">Problem</a>
+            <a href="#lythaus" data-nav-link="lythaus">Lythaus</a>
+            <a href="#experience" data-nav-link="experience">Experience</a>
+            <a href="#discovery" data-nav-link="discovery">Discovery</a>
+            <a href="#reputation" data-nav-link="reputation">Reputation</a>
+            <a href="#principles" data-nav-link="principles">Principles</a>
           </>
         ) : (
           <>
@@ -63,7 +64,32 @@ import '../styles/global.css';
           </>
         )}
       </nav>
-      <a class="header-cta" href="/#waitlist">{homePage ? 'Join waitlist' : 'Request invite'}</a>
+      <div class="mobile-nav-panel" id="mobile-nav-panel" data-mobile-nav-panel>
+        <nav aria-label="Mobile navigation">
+          {homePage ? (
+            <>
+              <a href="#problem" data-nav-link="problem">Problem</a>
+              <a href="#lythaus" data-nav-link="lythaus">Lythaus</a>
+              <a href="#experience" data-nav-link="experience">Experience</a>
+              <a href="#discovery" data-nav-link="discovery">Discovery</a>
+              <a href="#reputation" data-nav-link="reputation">Reputation</a>
+              <a href="#principles" data-nav-link="principles">Principles</a>
+            </>
+          ) : (
+            <>
+              <a href="/features">Features</a>
+              <a href="/about">About</a>
+              <a href="/pricing">Pricing</a>
+            </>
+          )}
+        </nav>
+      </div>
+      <div class="header-actions">
+        <button class="mobile-nav-toggle" type="button" data-mobile-nav-toggle aria-controls="mobile-nav-panel" aria-expanded="false">
+          Menu
+        </button>
+        <a class="header-cta" href="/#waitlist">{homePage ? 'Join waitlist' : 'Request invite'}</a>
+      </div>
     </header>
 
     <main class="page">
@@ -93,5 +119,73 @@ import '../styles/global.css';
         </div>
       </footer>
     )}
+
+    <script is:inline>
+      (() => {
+        const toggle = document.querySelector('[data-mobile-nav-toggle]');
+        const panel = document.querySelector('[data-mobile-nav-panel]');
+
+        if (!(toggle instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) return;
+
+        const links = Array.from(panel.querySelectorAll('a'));
+        const setOpen = (open, restoreFocus = false) => {
+          panel.hidden = !open;
+          panel.classList.toggle('is-open', open);
+          toggle.setAttribute('aria-expanded', String(open));
+          document.body.classList.toggle('mobile-nav-open', open);
+          if (restoreFocus) toggle.focus();
+          if (open) links[0]?.focus();
+        };
+
+        document.documentElement.classList.add('js-enabled');
+        setOpen(false);
+
+        toggle.addEventListener('click', () => setOpen(!panel.classList.contains('is-open')));
+        links.forEach((link) => link.addEventListener('click', () => setOpen(false)));
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && panel.classList.contains('is-open')) {
+            event.preventDefault();
+            setOpen(false, true);
+            return;
+          }
+
+          if (event.key !== 'Tab' || !panel.classList.contains('is-open')) return;
+          const focusable = [toggle, ...links];
+          const currentIndex = focusable.indexOf(document.activeElement);
+          if (event.shiftKey && currentIndex <= 0) {
+            event.preventDefault();
+            focusable.at(-1)?.focus();
+          } else if (!event.shiftKey && currentIndex === focusable.length - 1) {
+            event.preventDefault();
+            focusable[0]?.focus();
+          }
+        });
+
+        window.addEventListener('resize', () => {
+          if (window.innerWidth > 900 && panel.classList.contains('is-open')) setOpen(false);
+        });
+
+        const navLinks = Array.from(document.querySelectorAll('[data-nav-link]'));
+        const sections = navLinks
+          .map((link) => document.getElementById(link.getAttribute('data-nav-link') ?? ''))
+          .filter((section) => section instanceof HTMLElement);
+
+        if ('IntersectionObserver' in window && navLinks.length && sections.length) {
+          const sectionObserver = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              navLinks.forEach((link) => {
+                const active = link.getAttribute('data-nav-link') === entry.target.id;
+                link.classList.toggle('is-active', active);
+                if (active) link.setAttribute('aria-current', 'location');
+                else link.removeAttribute('aria-current');
+              });
+            }
+          }, { rootMargin: '-34% 0px -56% 0px', threshold: 0 });
+          sections.forEach((section) => sectionObserver.observe(section));
+        }
+      })();
+    </script>
   </body>
 </html>

@@ -14,6 +14,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 >
   <section class="pitch-intro" id="top" aria-labelledby="pitch-wordmark">
     <div class="pitch-intro-inner">
+      <p class="pitch-intro-meta">00 / Opening</p>
       <h1 class="pitch-wordmark" id="pitch-wordmark" aria-label="Lythaus">
         <span class="pitch-letter" style="--letter-index: 0" aria-hidden="true">L</span>
         <span class="pitch-letter" style="--letter-index: 1" aria-hidden="true">Y</span>
@@ -74,59 +75,81 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         <p>Our Discovery feed uses simple, transparent algorithms based on interests you choose, your optional general location, previous searches and other signals you control.</p>
       </div>
     </div>
-    <div class="pitch-manifesto-line">
-      <strong>Algorithms for relevance, not addiction.</strong>
-      <span>Human contribution, reputation and public-interest value have more influence over what you see than whatever simply generates the most clicks, outrage or time on screen.</span>
-    </div>
   </section>
 
   <section class="pitch-section pitch-experience" id="experience" aria-labelledby="experience-title" data-pitch-reveal>
     <div class="pitch-section-meta">04 / Experience Lythaus</div>
     <div class="pitch-experience-grid">
       <div class="pitch-copy-column">
-        <h2 id="experience-title">Explore the app yourself.</h2>
-        <p class="pitch-lede">Enter a live, read-only version of Lythaus and experience the platform directly.</p>
-        <p>Browse Discovery. Scroll posts. Open discussions. Visit profiles. Explore public-interest topics. Inspect authenticity labels and see how reputation works.</p>
-        <p class="pitch-quiet">Participation remains restricted to registered members.</p>
+        <h2 id="experience-title">Preview how Lythaus works.</h2>
+        <p class="pitch-lede">A lightweight, illustrative view of Discovery, authorship disclosure and member controls.</p>
+        <p>See how the product makes human contribution, context and accountability visible without pretending this preview is a live guest app.</p>
+        <p class="pitch-quiet">Illustrative UI only. No account actions or live content are available here.</p>
       </div>
-      <div class="pitch-preview-shell" aria-label="Guest Preview">
+      <div class="pitch-preview-shell" data-preview aria-label="Illustrative Lythaus product preview" role="region">
         <div class="pitch-preview-topbar">
-          <span>Guest Preview</span>
-          <span>Read only</span>
+          <span>Illustrative product preview</span>
+          <span>Preview only</span>
         </div>
         <div class="pitch-preview-body">
-          <div class="pitch-preview-nav" aria-hidden="true">
-            <span class="active">Discovery</span>
-            <span>Topics</span>
-            <span>News Board</span>
+          <div class="pitch-preview-tabs" role="tablist" aria-label="Preview states">
+            <button type="button" role="tab" id="preview-tab-discovery" aria-selected="true" aria-controls="preview-panel-discovery" data-preview-tab="discovery">Discovery</button>
+            <button type="button" role="tab" id="preview-tab-authorship" aria-selected="false" aria-controls="preview-panel-authorship" data-preview-tab="authorship">Authorship</button>
+            <button type="button" role="tab" id="preview-tab-controls" aria-selected="false" aria-controls="preview-panel-controls" data-preview-tab="controls">Controls</button>
           </div>
-          <article class="pitch-preview-post">
-            <div class="pitch-preview-post-head">
-              <span class="pitch-avatar" aria-hidden="true"></span>
-              <div>
-                <strong>Public-interest discussion</strong>
-                <small>Human-authored</small>
+          <div class="pitch-preview-panels">
+            <section class="pitch-preview-panel" id="preview-panel-discovery" role="tabpanel" aria-labelledby="preview-tab-discovery" data-preview-panel="discovery">
+              <p class="pitch-preview-panel-label">Illustrative contribution</p>
+              <article class="pitch-preview-post">
+                <div class="pitch-preview-post-head">
+                  <span class="pitch-avatar" aria-hidden="true"></span>
+                  <div>
+                    <strong>A human contribution</strong>
+                    <small>Human-authored</small>
+                  </div>
+                </div>
+                <p>A considered contribution with context around the topic, the person sharing it and the signals that help others understand what they are seeing.</p>
+                <div class="pitch-preview-post-meta">
+                  <span>Public-interest discussion</span>
+                  <strong>Contribution + accountability</strong>
+                </div>
+              </article>
+            </section>
+            <section class="pitch-preview-panel" id="preview-panel-authorship" role="tabpanel" aria-labelledby="preview-tab-authorship" data-preview-panel="authorship">
+              <p class="pitch-preview-panel-label">Clear authorship context</p>
+              <article class="pitch-preview-state">
+                <div><strong>AI-assisted</strong><span>Disclosed at contribution</span></div>
+                <p>When AI assists a public contribution, the context stays visible instead of being presented as something it is not.</p>
+              </article>
+              <article class="pitch-preview-state is-review">
+                <div><strong>Under review</strong><span>Separate explanatory state</span></div>
+                <p>Unclear or conflicting authorship information can remain under review. AI-generated public content is not shown as published.</p>
+              </article>
+            </section>
+            <section class="pitch-preview-panel" id="preview-panel-controls" role="tabpanel" aria-labelledby="preview-tab-controls" data-preview-panel="controls">
+              <p class="pitch-preview-panel-label">Transparent feed controls</p>
+              <div class="pitch-preview-controls" aria-label="Illustrative member-controlled Discovery inputs">
+                <button type="button" data-preview-control aria-pressed="true"><span>Your chosen interests</span><strong>Included</strong></button>
+                <button type="button" data-preview-control aria-pressed="false"><span>Optional general location</span><strong>Off</strong></button>
+                <button type="button" data-preview-control aria-pressed="true"><span>Your feed preferences</span><strong>Included</strong></button>
               </div>
-            </div>
-            <p>See the product, the context around each contribution and how reputation is surfaced without taking part as a guest.</p>
-          </article>
-          <article class="pitch-preview-post secondary" aria-hidden="true">
-            <div class="pitch-preview-lines"><span></span><span></span><span></span></div>
-          </article>
+              <p class="pitch-preview-control-status" data-preview-control-status aria-live="polite">Preview controls only. No feed request is made.</p>
+            </section>
+          </div>
         </div>
         <div class="pitch-preview-footer">
           <div>
-            <strong>You've explored Lythaus.</strong>
-            <span>Want to be part of it?</span>
+            <strong>Product proof without a live-app claim.</strong>
+            <span>Want to help shape what comes next?</span>
           </div>
-          <a class="button primary" href="#waitlist">Join the private beta</a>
+          <a class="button primary" href="#waitlist">Join Lythaus early</a>
         </div>
       </div>
     </div>
   </section>
 
   <section class="pitch-section pitch-discovery" id="discovery" aria-labelledby="discovery-title" data-pitch-reveal>
-    <div class="pitch-section-meta">07 / A Different Kind of Feed</div>
+    <div class="pitch-section-meta">05 / A Different Kind of Feed</div>
     <div class="pitch-discovery-grid">
       <div>
         <h2 id="discovery-title">Algorithms for relevance, not addiction.</h2>
@@ -149,6 +172,11 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       <strong>Your interests. Your controls. Your feed.</strong>
       <span>Members can see and manage the information shaping Discovery.</span>
     </div>
+    <div class="pitch-discovery-controls" aria-label="Illustrative Discovery controls">
+      <div><span>Chosen interests</span><strong>Selected by you</strong><em>Editable</em></div>
+      <div><span>General location</span><strong>Optional by design</strong><em>Editable</em></div>
+      <div><span>Feed preferences</span><strong>Managed by you</strong><em>Editable</em></div>
+    </div>
     <div class="pitch-no-profile">
       <h3>No hidden behavioural profile built simply to keep you scrolling.</h3>
       <p>Personalisation is designed to be transparent, editable and under the member's control.</p>
@@ -156,7 +184,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   </section>
 
   <section class="pitch-section pitch-reputation" id="reputation" aria-labelledby="reputation-title" data-pitch-reveal>
-    <div class="pitch-section-meta">08 / Reputation</div>
+    <div class="pitch-section-meta">06 / Reputation</div>
     <p class="pitch-pretitle">Attention is easy to manufacture.</p>
     <h2 id="reputation-title">Reputation is earned.</h2>
     <div class="pitch-reputation-grid">
@@ -173,13 +201,18 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       <div class="pitch-reputation-copy">
         <p>Qualifying human-authored contributions can build authorship reputation.</p>
         <p>Deliberate mislabelling, manipulation, evasion and coordinated abuse can reduce standing.</p>
+        <div class="pitch-reputation-signal" aria-label="Illustrative reputation signal">
+          <span>Reputation signal</span>
+          <strong>Contribution + accountability</strong>
+          <small>Not follower count or virality.</small>
+        </div>
         <strong>Who contributes should matter. How they contribute should matter more.</strong>
       </div>
     </div>
   </section>
 
   <section class="pitch-section pitch-ai" id="ai" aria-labelledby="ai-title" data-pitch-reveal>
-    <div class="pitch-section-meta">11 / Lythaus and AI</div>
+    <div class="pitch-section-meta">07 / Lythaus and AI</div>
     <div class="pitch-ai-grid">
       <div>
         <h2 id="ai-title">Lythaus is not anti-AI.</h2>
@@ -195,23 +228,20 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   </section>
 
   <section class="pitch-section pitch-principles" id="principles" aria-labelledby="principles-title" data-pitch-reveal>
-    <div class="pitch-section-meta">12 / Principles</div>
+    <div class="pitch-section-meta">08 / Principles</div>
     <h2 id="principles-title" class="sr-only">Lythaus principles</h2>
     <ol class="pitch-principle-list">
       <li>Human interaction should remain human.</li>
       <li>Technology should assist people, not impersonate them.</li>
-      <li>Reputation is earned. Trust is gained.</li>
       <li>Public-interest conversation deserves better incentives.</li>
       <li>People should understand why they see what they see.</li>
-      <li>Algorithms should serve relevance, not addiction.</li>
-      <li>The human internet is worth protecting.</li>
     </ol>
   </section>
 
   <section class="home-waitlist pitch-waitlist" id="waitlist" aria-labelledby="waitlist-title" data-pitch-reveal>
     <div class="home-waitlist-copy">
       <p class="home-eyebrow"><span class="home-status-dot" aria-hidden="true"></span>Lythaus private beta</p>
-      <h2 id="waitlist-title">The human internet is worth protecting.</h2>
+      <h2 id="waitlist-title">Join Lythaus early.</h2>
       <p>Join the Lythaus waitlist for early access, product updates and an opportunity to help shape what comes next.</p>
     </div>
     <form class="home-waitlist-form" data-waitlist data-api-base-url={publicApiBaseUrl} data-turnstile-site-key={turnstileSiteKey} novalidate>
@@ -231,19 +261,75 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   </section>
 
   <script>
-    const revealTargets = document.querySelectorAll('[data-pitch-reveal]');
-    if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const revealObserver = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          entry.target.classList.add('is-visible');
-          revealObserver.unobserve(entry.target);
-        }
-      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-      revealTargets.forEach((target) => revealObserver.observe(target));
-    } else {
-      revealTargets.forEach((target) => target.classList.add('is-visible'));
-    }
+    (() => {
+      const revealTargets = Array.from(document.querySelectorAll('[data-pitch-reveal]'));
+      const preview = document.querySelector('[data-preview]');
+      const previewTabs = Array.from(document.querySelectorAll('[data-preview-tab]'));
+      const previewPanels = Array.from(document.querySelectorAll('[data-preview-panel]'));
+      const previewControls = Array.from(document.querySelectorAll('[data-preview-control]'));
+      const previewControlStatus = document.querySelector('[data-preview-control-status]');
+
+      const activatePreview = (name, moveFocus = false) => {
+        previewTabs.forEach((tab) => {
+          const active = tab.getAttribute('data-preview-tab') === name;
+          tab.setAttribute('aria-selected', String(active));
+          tab.tabIndex = active ? 0 : -1;
+          if (moveFocus && active) tab.focus();
+        });
+        previewPanels.forEach((panel) => {
+          const active = panel.getAttribute('data-preview-panel') === name;
+          panel.hidden = !active;
+          panel.classList.toggle('is-active', active);
+        });
+      };
+
+      if (preview instanceof HTMLElement && previewTabs.length && previewPanels.length) {
+        preview.dataset.previewEnhanced = 'true';
+        activatePreview('discovery');
+        previewTabs.forEach((tab, index) => {
+          tab.addEventListener('click', () => activatePreview(tab.getAttribute('data-preview-tab') ?? 'discovery'));
+          tab.addEventListener('keydown', (event) => {
+            if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const nextIndex = event.key === 'Home'
+              ? 0
+              : event.key === 'End'
+                ? previewTabs.length - 1
+                : (index + (event.key === 'ArrowRight' ? 1 : -1) + previewTabs.length) % previewTabs.length;
+            const nextTab = previewTabs[nextIndex];
+            activatePreview(nextTab.getAttribute('data-preview-tab') ?? 'discovery', true);
+          });
+        });
+      }
+
+      previewControls.forEach((control) => {
+        control.addEventListener('click', () => {
+          const active = control.getAttribute('aria-pressed') !== 'true';
+          control.setAttribute('aria-pressed', String(active));
+          const state = control.querySelector('strong');
+          if (state) state.textContent = active ? 'Included' : 'Off';
+          if (previewControlStatus) previewControlStatus.textContent = 'Preview controls only. No feed request is made.';
+        });
+      });
+
+      if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        revealTargets.forEach((target) => target.classList.add('pitch-reveal-pending'));
+        const revealObserver = new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            entry.target.classList.add('is-visible');
+            revealObserver.unobserve(entry.target);
+          }
+        }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+        revealTargets.forEach((target) => revealObserver.observe(target));
+      }
+
+      const resolveOpening = () => document.documentElement.classList.add('pitch-opening-resolved');
+      ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach((eventName) => {
+        window.addEventListener(eventName, resolveOpening, { once: true, passive: eventName !== 'keydown' });
+      });
+      window.setTimeout(resolveOpening, 1800);
+    })();
   </script>
 
   {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
