@@ -80,7 +80,11 @@ function assertDatabaseReport(report, worker, label) {
   if (report.roleClass !== 'login_non_superuser') mismatches.push('roleClass');
   if (report.readiness !== 'pass') mismatches.push('readiness');
   if (mismatches.length > 0) {
-    throw new Error(`${worker}/${label} structural identity probe failed: ${mismatches.join(',')}`);
+    const observed = Object.fromEntries([
+      'databaseEnvironment', 'schemaFingerprint', 'relationCount', 'identityContactEmails',
+      'budgetLedgerApplied', 'schemaVersion', 'roleClass', 'readiness', 'readyForAuthentication',
+    ].map((field) => [field, report[field]]));
+    throw new Error(`${worker}/${label} structural identity probe failed: ${mismatches.join(',')}; observed=${JSON.stringify(observed)}`);
   }
   if (report.readyForAuthentication !== authenticatedAcceptanceProven) {
     throw new Error(`${worker}/${label} authentication readiness assertion is inconsistent`);

@@ -48,7 +48,13 @@ try {
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) {
-    throw new Error(`Runtime authentication failed with status ${response.status}`);
+    const text = await response.text();
+    let body = null;
+    try { body = JSON.parse(text); } catch { /* provider error details are not evidence */ }
+    const code = typeof body?.error === 'string' && /^[a-z0-9_.-]+$/.test(body.error) ? body.error : '';
+    const state = typeof body?.state === 'string' && /^[a-z0-9_.-]+$/.test(body.state) ? body.state : '';
+    const detail = [code, state].filter(Boolean).join(',');
+    throw new Error(`Runtime authentication failed with status ${response.status}${detail ? ` (${detail})` : ''}`);
   }
   const body = await response.json();
   accessToken = body?.data?.access_token || '';
