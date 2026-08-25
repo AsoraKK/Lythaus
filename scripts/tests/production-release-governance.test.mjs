@@ -141,6 +141,12 @@ test('ADR-003 uses the canonical API base and keeps mobile acceptance separate',
   assert.match(adr003Harness, /mobileEmailFlow: process\.env\.ADR003_MOBILE_EMAIL_ACCEPTED === 'true'/);
 });
 
+test('ADR-003 routes root-scoped readiness separately from public API routes', () => {
+  assert.match(adr003Harness, /ADR003_API_BASE_URL must end with \/api/);
+  assert.match(adr003Harness, /const apiOrigin = apiBase\.slice\(0, -'\/api'\.length\)/);
+  assert.match(adr003Harness, /requestJson\('\/internal\/readiness\/database-identity', \{[\s\S]*baseUrl: apiOrigin/);
+});
+
 test('Worker readiness secrets are included in each immutable candidate upload', () => {
   assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 secret put DATABASE_READINESS_TOKEN/);
   assert.match(workersWorkflow, /DATABASE_READINESS_TOKEN: \$\{\{ secrets\.DATABASE_READINESS_TOKEN \}\}/);
