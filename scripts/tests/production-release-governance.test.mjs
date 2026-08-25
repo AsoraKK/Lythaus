@@ -171,6 +171,15 @@ test('candidate probes pin the production database role contract and name mismat
   assert.match(readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8'), /structural identity probe failed: \$\{mismatches\.join\('\,'\)\}/);
 });
 
+test('admin candidate probe authenticates the Access-protected API route', () => {
+  const probe = readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8');
+  assert.match(probe, /CF-Access-Client-Id/);
+  assert.match(probe, /CF-Access-Client-Secret/);
+  const adminProbe = workersWorkflow.match(/- name: Probe admin candidate[\s\S]*?run: node scripts\/ci\/probe-production-workers\.mjs/)?.[0] ?? '';
+  assert.match(adminProbe, /CF_ACCESS_CLIENT_ID: \$\{\{ secrets\.CF_ACCESS_CLIENT_ID \}\}/);
+  assert.match(adminProbe, /CF_ACCESS_CLIENT_SECRET: \$\{\{ secrets\.CF_ACCESS_CLIENT_SECRET \}\}/);
+});
+
 test('production smoke authenticates the Access-protected admin API health check', () => {
   const smokeSection = workflow.match(/\n  production_smoke:[\s\S]*?\n  manifest:/)?.[0] ?? '';
   assert.match(smokeSection, /ADMIN_API_URL%\/\}\}\/health|ADMIN_API_URL%\/\}\/health/);

@@ -16,6 +16,8 @@ const authenticatedAcceptanceProven = process.env.AUTHENTICATED_ACCEPTANCE_PROVE
 const requestedWorker = process.env.PRODUCTION_WORKER_SCOPE ?? 'all';
 const releaseSha = process.env.RELEASE_SHA ?? '';
 const expectedWorkerVersionId = process.env.PRODUCTION_WORKER_VERSION_ID ?? '';
+const accessClientId = process.env.CF_ACCESS_CLIENT_ID ?? '';
+const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET ?? '';
 
 if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
@@ -49,6 +51,9 @@ const targets = requestedWorker === 'all'
   ? allTargets
   : allTargets.filter(({ worker }) => worker === requestedWorker);
 if (targets.length === 0) throw new Error(`Unknown PRODUCTION_WORKER_SCOPE: ${requestedWorker}`);
+if (requestedWorker === 'lythaus-admin-api-development' && (!accessClientId || !accessClientSecret)) {
+  throw new Error('CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET are required for the admin candidate probe');
+}
 
 if (targets.some(({ probe, baseUrl }) => probe && !baseUrl)) {
   throw new Error('public and admin Workers require explicit protected probe routes');
@@ -57,6 +62,10 @@ if (targets.some(({ probe, baseUrl }) => probe && !baseUrl)) {
 async function fetchJson(url, options = {}) {
   const headers = new Headers(options.headers);
   headers.set('Cloudflare-Workers-Version-Overrides', `${requestedWorker}="${expectedWorkerVersionId}"`);
+  if (requestedWorker === 'lythaus-admin-api-development') {
+    headers.set('CF-Access-Client-Id', accessClientId);
+    headers.set('CF-Access-Client-Secret', accessClientSecret);
+  }
   const response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15_000) });
   const text = await response.text();
   let body = null;
