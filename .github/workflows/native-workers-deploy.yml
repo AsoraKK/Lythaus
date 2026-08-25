@@ -300,7 +300,15 @@ jobs:
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
           ADR003_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
-        run: npm run acceptance:adr003
+        run: |
+          set -euo pipefail
+          api_base="${ADR003_API_BASE_URL%/}"
+          test -n "$api_base"
+          if [[ "$api_base" != */api ]]; then
+            api_base="$api_base/api"
+          fi
+          export ADR003_API_BASE_URL="$api_base"
+          npm run acceptance:adr003
       - name: Record candidate evidence assertions
         run: |
           {
