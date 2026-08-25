@@ -147,6 +147,13 @@ test('ADR-003 routes root-scoped readiness separately from public API routes', (
   assert.match(adr003Harness, /requestJson\('\/internal\/readiness\/database-identity', \{[\s\S]*baseUrl: apiOrigin/);
 });
 
+test('candidate ADR-003 acceptance normalizes the protected production API base', () => {
+  const candidateAcceptance = workersWorkflow.match(/- name: Run authenticated acceptance against public candidate[\s\S]*?npm run acceptance:adr003/)?.[0] ?? '';
+  assert.match(candidateAcceptance, /api_base="\$\{ADR003_API_BASE_URL%\//);
+  assert.match(candidateAcceptance, /api_base="\$api_base\/api"/);
+  assert.match(candidateAcceptance, /export ADR003_API_BASE_URL="\$api_base"/);
+});
+
 test('Worker readiness secrets are included in each immutable candidate upload', () => {
   assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 secret put DATABASE_READINESS_TOKEN/);
   assert.match(workersWorkflow, /DATABASE_READINESS_TOKEN: \$\{\{ secrets\.DATABASE_READINESS_TOKEN \}\}/);
