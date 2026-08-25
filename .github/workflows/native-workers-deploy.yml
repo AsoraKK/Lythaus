@@ -253,6 +253,8 @@ jobs:
           PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
           PRODUCTION_WORKER_VERSION_ID: ${{ env.ADMIN_WORKER_VERSION_ID }}
           PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/admin-candidate-probe.json
         run: node scripts/ci/probe-production-workers.mjs
       - name: Probe jobs candidate without production traffic
