@@ -95,6 +95,11 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
   assert.match(layout, /aria-label="Mobile navigation"/);
   assert.match(layout, /event\.key === 'Escape'/);
   assert.match(layout, /mobile-nav-open/);
+  assert.match(layout, /focusable\[focusable\.length - 1\]/);
+  assert.match(layout, /window\.scrollTo\(\{ top, behavior \}/);
+  assert.match(layout, /document\.fonts\?\.ready/);
+  assert.match(layout, /window\.history\.pushState/);
+  assert.match(layout, /event\.preventDefault\(\)/);
   assert.match(styles, /html:not\(\.js-enabled\) \.mobile-nav-panel/);
   assert.match(styles, /min-height: 44px/);
 });
@@ -107,9 +112,22 @@ test('homepage opening resolves the Lythaus letters from light without a lightho
   assert.match(homePitchStyles, /@keyframes pitchLightPoint/);
   assert.doesNotMatch(homePitchStyles, /lighthouse|beam/i);
   assert.match(homePitchStyles, /prefers-reduced-motion/);
-  assert.match(homePitchStyles, /animation-delay: calc\(90ms \+ \(var\(--letter-index\) \* 120ms\)\)/);
+  assert.match(homePitchStyles, /animation-delay: var\(--letter-delay\)/);
+  assert.match(homePitchStyles, /animation-delay: var\(--light-delay\)/);
+  assert.match(homepage, /--light-delay: 110ms/);
+  assert.match(homepage, /--light-delay: 950ms/);
+  assert.match(homePitchStyles, /pitchLightPoint 320ms/);
+  assert.match(homePitchStyles, /42% \{\s*opacity: 0\.86/);
   assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
   assert.match(homePitchStyles, /animation: none/);
+});
+
+test('homepage navigation and preview tabs have stable cross-browser hit areas', () => {
+  assert.match(homePitchStyles, /grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);
+  assert.match(homePitchStyles, /\.home-page \.site-header::after[\s\S]*pointer-events: none/);
+  assert.match(homePitchStyles, /\.home-page \.site-nav a[\s\S]*display: inline-flex[\s\S]*min-height: 44px/);
+  assert.match(homePitchStyles, /\.pitch-preview-tabs button[\s\S]*min-height: 44px/);
+  assert.match(homePitchStyles, /touch-action: manipulation/);
 });
 
 test('shared layout declares the Lythaus favicon assets', () => {
