@@ -938,21 +938,21 @@
   38% {
     opacity: 0.56;
     transform: scale(0.98);
-    filter: blur(3.8px) brightness(2.2);
+    filter: blur(3.8px) brightness(2.6);
     text-shadow:
-      0 0 20px rgba(255, 250, 238, 0.8),
-      0 0 56px rgba(242, 201, 141, 0.64),
-      0 0 110px rgba(242, 201, 141, 0.3);
+      0 0 20px rgba(255, 250, 238, 0.92),
+      0 0 56px rgba(242, 201, 141, 0.76),
+      0 0 110px rgba(242, 201, 141, 0.38);
     animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
   }
   50% {
     opacity: 1;
     transform: scale(1.008);
-    filter: blur(1.6px) brightness(1.85);
+    filter: blur(1.6px) brightness(2.1);
     text-shadow:
-      0 0 20px rgba(255, 250, 238, 0.78),
-      0 0 52px rgba(242, 201, 141, 0.58),
-      0 0 104px rgba(242, 201, 141, 0.28);
+      0 0 20px rgba(255, 250, 238, 0.9),
+      0 0 52px rgba(242, 201, 141, 0.68),
+      0 0 104px rgba(242, 201, 141, 0.36);
     animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
   }
   68% {
@@ -1221,18 +1221,18 @@
   38% {
     opacity: 0.56;
     transform: scale(0.98);
-    filter: blur(2.5px) brightness(1.95);
+    filter: blur(2.5px) brightness(2.25);
     text-shadow:
-      0 0 18px rgba(255, 250, 238, 0.52),
-      0 0 46px rgba(242, 201, 141, 0.38),
-      0 0 88px rgba(242, 201, 141, 0.18);
+      0 0 18px rgba(255, 250, 238, 0.62),
+      0 0 46px rgba(242, 201, 141, 0.48),
+      0 0 88px rgba(242, 201, 141, 0.24);
     animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
   }
   50% {
     opacity: 1;
     transform: scale(1.006);
-    filter: blur(0.9px) brightness(1.62);
-    text-shadow: 0 0 18px rgba(242, 201, 141, 0.42);
+    filter: blur(0.9px) brightness(1.82);
+    text-shadow: 0 0 18px rgba(242, 201, 141, 0.5);
     animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
   }
   68% {

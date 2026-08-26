@@ -127,10 +127,10 @@ test('homepage opening resolves the Lythaus letters without a separate point lig
   assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
   assert.doesNotMatch(homePitchStyles, /pitchLighthouseSweep|pitchLighthouseCore|pitchWordmarkHit|pitch-beam-blur|pitch-core-blur/);
   assert.doesNotMatch(homePitchStyles, /\.pitch-wordmark::after/);
-  assert.match(homePitchStyles, /filter: blur\(3\.8px\) brightness\(2\.2\)/);
-  assert.match(homePitchStyles, /filter: blur\(1\.6px\) brightness\(1\.85\)/);
-  assert.match(homePitchStyles, /filter: blur\(2\.5px\) brightness\(1\.95\)/);
-  assert.match(homePitchStyles, /filter: blur\(0\.9px\) brightness\(1\.62\)/);
+  assert.match(homePitchStyles, /filter: blur\(3\.8px\) brightness\(2\.6\)/);
+  assert.match(homePitchStyles, /filter: blur\(1\.6px\) brightness\(2\.1\)/);
+  assert.match(homePitchStyles, /filter: blur\(2\.5px\) brightness\(2\.25\)/);
+  assert.match(homePitchStyles, /filter: blur\(0\.9px\) brightness\(1\.82\)/);
   assert.match(homePitchStyles, /animation: none/);
   assert.match(homePitchStyles, /filter: none;\s*text-shadow: none;/);
   assert.doesNotMatch(homepage, /pitch-scroll-cue|pitchCueReveal|pitchCueMove/);
