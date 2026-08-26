@@ -180,7 +180,7 @@
     0 0 12px rgba(255, 250, 238, 0.62),
     0 0 34px rgba(242, 201, 141, 0.42),
     0 0 70px rgba(242, 201, 141, 0.16);
-  animation: pitchLetterResolve 540ms cubic-bezier(0.2, 0.72, 0.2, 1) forwards;
+  animation: pitchLetterResolve 540ms linear forwards;
   animation-delay: var(--letter-delay);
 }
 
@@ -927,25 +927,30 @@
     opacity: 0;
     transform: scale(0.82);
     filter: blur(10px) brightness(2.8);
+    animation-timing-function: cubic-bezier(0.7, 0, 1, 1);
   }
   18% {
-    opacity: 0.72;
-    transform: scale(0.94);
-    filter: blur(6px) brightness(2.35);
+    opacity: 0.26;
+    transform: scale(0.88);
+    filter: blur(8px) brightness(2.6);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  38% {
+  50% {
     opacity: 1;
     transform: scale(1.008);
-    filter: blur(2px) brightness(1.5);
+    filter: blur(1.4px) brightness(1.28);
     text-shadow:
-      0 0 9px rgba(255, 250, 238, 0.34),
-      0 0 25px rgba(242, 201, 141, 0.24);
+      0 0 13px rgba(255, 250, 238, 0.5),
+      0 0 34px rgba(242, 201, 141, 0.36),
+      0 0 70px rgba(242, 201, 141, 0.16);
+    animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
   }
-  60% {
+  64% {
     opacity: 1;
-    transform: scale(1);
-    filter: blur(0.6px) brightness(1.1);
-    text-shadow: 0 0 8px rgba(242, 201, 141, 0.14);
+    transform: scale(1.002);
+    filter: blur(0.45px) brightness(1.05);
+    text-shadow: 0 0 7px rgba(242, 201, 141, 0.12);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
   100% {
     opacity: 1;
@@ -1195,17 +1200,27 @@
     opacity: 0;
     transform: scale(0.9);
     filter: blur(4px) brightness(2);
+    animation-timing-function: cubic-bezier(0.7, 0, 1, 1);
   }
-  30% {
-    opacity: 0.8;
-    transform: scale(0.98);
-    filter: blur(2.2px) brightness(1.55);
+  20% {
+    opacity: 0.24;
+    transform: scale(0.93);
+    filter: blur(3.5px) brightness(1.9);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  58% {
+  50% {
     opacity: 1;
-    transform: scale(1.005);
-    filter: blur(0.6px) brightness(1.1);
-    text-shadow: 0 0 8px rgba(242, 201, 141, 0.14);
+    transform: scale(1.006);
+    filter: blur(0.8px) brightness(1.22);
+    text-shadow: 0 0 12px rgba(242, 201, 141, 0.24);
+    animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
+  }
+  64% {
+    opacity: 1;
+    transform: scale(1.002);
+    filter: blur(0.35px) brightness(1.05);
+    text-shadow: 0 0 6px rgba(242, 201, 141, 0.1);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
   100% {
     opacity: 1;
