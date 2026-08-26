@@ -145,6 +145,10 @@ test('ADR-003 routes root-scoped readiness separately from public API routes', (
   assert.match(adr003Harness, /ADR003_API_BASE_URL must end with \/api/);
   assert.match(adr003Harness, /const apiOrigin = apiBase\.slice\(0, -'\/api'\.length\)/);
   assert.match(adr003Harness, /requestJson\('\/internal\/readiness\/database-identity', \{[\s\S]*baseUrl: apiOrigin/);
+  assert.match(adr003Harness, /function requestUrl\(baseUrl, route\)/);
+  assert.match(adr003Harness, /normalizedBase\.endsWith\(apiPrefix\)/);
+  assert.match(adr003Harness, /normalizedRoute\.slice\(apiPrefix\.length\)/);
+  assert.match(adr003Harness, /fetch\(requestUrl\(baseUrl, route\)/);
 });
 
 test('candidate ADR-003 acceptance normalizes the protected production API base', () => {
