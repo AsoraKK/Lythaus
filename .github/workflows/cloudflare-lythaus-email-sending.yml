@@ -29,7 +29,7 @@ jobs:
       CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
       SENDING_DOMAIN: mail.lythaus.co
       CONFIRM_ONBOARD: ${{ inputs.confirm_onboard }}
-      EVIDENCE_DIR: ${{ runner.temp }}/lythaus-email-sending
+      EVIDENCE_DIR: ${{ github.workspace }}/.artifacts/lythaus-email-sending
     steps:
       - name: Inspect current Lythaus sending subdomain
         shell: bash
@@ -120,8 +120,8 @@ jobs:
           {
             echo '### Lythaus Email Sending'
             echo
-            echo '- Target: `mail.lythaus.co`'
-            echo '- Status: `VERIFIED`'
+            echo '- Target: mail.lythaus.co'
+            echo '- Status: VERIFIED'
             echo "- Mutation performed: \`$(jq -r '.state.mutationPerformed' "$EVIDENCE_DIR/email-sending.json")\`"
             echo "- DNS records captured: \`$(jq '.dns | length' "$EVIDENCE_DIR/email-sending.json")\`"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -131,5 +131,5 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: cloudflare-lythaus-email-sending-${{ github.run_id }}
-          path: ${{ runner.temp }}/lythaus-email-sending
+          path: ${{ github.workspace }}/.artifacts/lythaus-email-sending
           if-no-files-found: ignore
