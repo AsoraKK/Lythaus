@@ -58,11 +58,14 @@ test('public API dispatch awaits rejection-prone async handlers', () => {
   }
 });
 
-test('email registration retries recover accounts waiting for verification', () => {
+test('email registration retries recover accounts waiting for verification or legacy relink', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   assert.match(source, /planEmailRegistration/);
   assert.match(source, /registrationPlan === 'resend_verification'/);
   assert.match(source, /sendAccountVerificationEmail\(request, env, account\.id, email\)/);
+  assert.match(source, /registrationPlan === 'attach_email_credential'/);
+  assert.match(source, /FROM identity\.contact_emails c JOIN identity\.users u/);
+  assert.match(source, /status = 'active'.*status = 'relink_required'/);
   assert.match(source, /registrationPlan === 'account_exists'/);
 });
 

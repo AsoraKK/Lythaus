@@ -65,8 +65,11 @@ test('normalizes email authentication attempts and preserves safe mode defaults'
   assert.throws(() => prepareEmailAuthAttempt({ mode: 'register', email: 'person@example.test', password: 'x'.repeat(129) }), /invalid_password/);
 });
 
-test('recovers interrupted registrations without changing verified accounts', () => {
+test('recovers interrupted and migrated registrations without changing verified accounts', () => {
   assert.equal(planEmailRegistration(undefined), 'create_account');
+  assert.equal(planEmailRegistration(undefined, { status: 'relink_required' }), 'attach_email_credential');
+  assert.equal(planEmailRegistration(undefined, { status: 'active' }), 'attach_email_credential');
+  assert.equal(planEmailRegistration(undefined, { status: 'locked' }), 'account_exists');
   assert.equal(planEmailRegistration({ verifiedAt: null }), 'resend_verification');
   assert.equal(planEmailRegistration({ verifiedAt: '2026-08-26T10:00:00.000Z' }), 'account_exists');
 });
