@@ -47,6 +47,16 @@ function correlationId(response, body) {
   return typeof value === 'string' && /^[A-Za-z0-9._:-]{1,160}$/.test(value) ? value : undefined;
 }
 
+function requestUrl(baseUrl, route) {
+  const normalizedBase = baseUrl.replace(/\/$/u, '');
+  const normalizedRoute = route.startsWith('/') ? route : `/${route}`;
+  const apiPrefix = '/api';
+  if (normalizedBase.endsWith(apiPrefix) && normalizedRoute.startsWith(`${apiPrefix}/`)) {
+    return `${normalizedBase}${normalizedRoute.slice(apiPrefix.length)}`;
+  }
+  return `${normalizedBase}${normalizedRoute}`;
+}
+
 async function requestJson(route, options = {}) {
   const baseUrl = options.baseUrl ?? apiBase;
   const headers = new Headers(options.headers ?? {});
@@ -61,7 +71,7 @@ async function requestJson(route, options = {}) {
     headers.set('content-type', typeof options.body === 'string' ? 'application/x-www-form-urlencoded' : 'application/json');
   }
   const body = options.body === undefined || typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-  const response = await fetch(`${baseUrl}${route}`, {
+  const response = await fetch(requestUrl(baseUrl, route), {
     method: options.method ?? 'GET',
     headers,
     body,
