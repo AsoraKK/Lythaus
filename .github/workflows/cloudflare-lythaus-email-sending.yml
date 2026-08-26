@@ -1,0 +1,135 @@
+name: Cloudflare Lythaus Email Sending onboarding
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_onboard:
+        description: Explicitly authorize onboarding mail.lythaus.co for Lythaus transactional email
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-lythaus-email-sending
+  cancel-in-progress: false
+
+jobs:
+  onboard:
+    name: Onboard Lythaus transactional sender
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+      SENDING_DOMAIN: mail.lythaus.co
+      CONFIRM_ONBOARD: ${{ inputs.confirm_onboard }}
+      EVIDENCE_DIR: ${{ github.workspace }}/.artifacts/lythaus-email-sending
+    steps:
+      - name: Inspect current Lythaus sending subdomain
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          endpoint="https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/email/sending/subdomains"
+          response="$(curl --silent --show-error --retry 3 --retry-all-errors \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header 'Accept: application/json' \
+            "$endpoint")"
+          printf '%s' "$response" | jq -e '.success == true' >/dev/null || {
+            printf '%s' "$response" | jq '{success, errors: [.errors[]? | {code, message}]}' >&2
+            exit 1
+          }
+          printf '%s' "$response" | jq --arg domain "$SENDING_DOMAIN" \
+            '{status: "READ", target: $domain, matching: [.result[]? | select(.name == $domain) | {enabled, name, tag, created, modified, dkim_selector, preview_enabled, return_path_domain}]}' \
+            > "$EVIDENCE_DIR/preflight.json"
+          jq -e '.target == "mail.lythaus.co"' "$EVIDENCE_DIR/preflight.json" >/dev/null
+
+      - name: Onboard or re-enable the Lythaus sending subdomain
+        if: ${{ inputs.confirm_onboard == true }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/email/sending/subdomains"
+          existing_enabled="$(jq -r '.matching[0].enabled // false' "$EVIDENCE_DIR/preflight.json")"
+          if [[ "$existing_enabled" == "true" ]]; then
+            jq '. + {mutationPerformed: false}' "$EVIDENCE_DIR/preflight.json" > "$EVIDENCE_DIR/state.json"
+            exit 0
+          fi
+          jq -n --arg name "$SENDING_DOMAIN" '{name: $name}' > "$EVIDENCE_DIR/mutation-request.json"
+          response="$(curl --silent --show-error --retry 3 --retry-all-errors \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --header 'Accept: application/json' \
+            --data @"$EVIDENCE_DIR/mutation-request.json" \
+            "$endpoint")"
+          printf '%s' "$response" | jq '{success, errors: [.errors[]? | {code, message}], result: (.result // null)}' \
+            > "$EVIDENCE_DIR/mutation-response.json"
+          printf '%s' "$response" | jq -e '.success == true and .result.name == "mail.lythaus.co" and .result.enabled == true' >/dev/null || {
+            cat "$EVIDENCE_DIR/mutation-response.json" >&2
+            exit 1
+          }
+          jq '. + {mutationPerformed: true}' "$EVIDENCE_DIR/mutation-response.json" > "$EVIDENCE_DIR/state.json"
+
+      - name: Refuse unapproved provider mutation
+        if: ${{ inputs.confirm_onboard != true }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.matching[0].enabled == true' "$EVIDENCE_DIR/preflight.json" >/dev/null || {
+            echo 'mail.lythaus.co is not enabled; rerun with confirm_onboard=true to perform the approved Lythaus-only onboarding.' >&2
+            exit 1
+          }
+          jq '. + {mutationPerformed: false}' "$EVIDENCE_DIR/preflight.json" > "$EVIDENCE_DIR/state.json"
+
+      - name: Capture generated DNS proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/email/sending/subdomains"
+          response="$(curl --silent --show-error --retry 3 --retry-all-errors \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header 'Accept: application/json' \
+            "$endpoint")"
+          printf '%s' "$response" | jq -e '.success == true' >/dev/null
+          tag="$(printf '%s' "$response" | jq -r --arg domain "$SENDING_DOMAIN" '.result[]? | select(.name == $domain and .enabled == true) | .tag' | head -n 1)"
+          test -n "$tag" && test "$tag" != 'null'
+          dns_endpoint="${endpoint}/${tag}/dns"
+          dns_response="$(curl --silent --show-error --retry 3 --retry-all-errors \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header 'Accept: application/json' \
+            "$dns_endpoint")"
+          printf '%s' "$dns_response" | jq -e '.success == true' >/dev/null || {
+            printf '%s' "$dns_response" | jq '{success, errors: [.errors[]? | {code, message}]}' >&2
+            exit 1
+          }
+          jq -n \
+            --arg domain "$SENDING_DOMAIN" \
+            --arg tag "$tag" \
+            --argjson state "$(cat "$EVIDENCE_DIR/state.json")" \
+            --argjson dns "$(printf '%s' "$dns_response" | jq '[.result[]? | {type, name, value, priority, ttl}]')" \
+            '{status: "VERIFIED", target: $domain, tag: $tag, state: $state, dns: $dns}' \
+            > "$EVIDENCE_DIR/email-sending.json"
+          jq -e '.status == "VERIFIED" and .target == "mail.lythaus.co" and (.dns | length) > 0' "$EVIDENCE_DIR/email-sending.json" >/dev/null
+          {
+            echo '### Lythaus Email Sending'
+            echo
+            echo '- Target: mail.lythaus.co'
+            echo '- Status: VERIFIED'
+            echo "- Mutation performed: \`$(jq -r '.state.mutationPerformed' "$EVIDENCE_DIR/email-sending.json")\`"
+            echo "- DNS records captured: \`$(jq '.dns | length' "$EVIDENCE_DIR/email-sending.json")\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sanitized Email Service evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cloudflare-lythaus-email-sending-${{ github.run_id }}
+          path: ${{ github.workspace }}/.artifacts/lythaus-email-sending
+          if-no-files-found: ignore
