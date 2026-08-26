@@ -1069,6 +1069,7 @@
   opacity: 1;
   transform: none;
   filter: none;
+  text-shadow: none;
 }
 
 .pitch-opening-resolved .pitch-letter::before { display: none; }
