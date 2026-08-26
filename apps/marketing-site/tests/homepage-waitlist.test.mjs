@@ -111,25 +111,24 @@ test('homepage opening resolves the Lythaus letters without a separate point lig
   assert.match(homepage, /class="pitch-wordmark"/);
   assert.match(homepage, /--letter-index: 0/);
   assert.match(homepage, /--letter-index: 6/);
+  for (const delay of ['90ms', '225ms', '360ms', '495ms', '630ms', '765ms', '900ms']) {
+    assert.match(homepage, new RegExp(`--letter-delay: ${delay}`));
+  }
   assert.match(homePitchStyles, /@keyframes pitchLetterResolve/);
   assert.doesNotMatch(homepage, /--light-delay/);
   assert.doesNotMatch(homePitchStyles, /pitchLightPoint|\.pitch-letter::before/);
   assert.match(homePitchStyles, /prefers-reduced-motion/);
   assert.match(homePitchStyles, /animation-delay: var\(--letter-delay\)/);
-  assert.match(homePitchStyles, /animation: pitchLetterResolve 720ms linear forwards/);
+  assert.match(homePitchStyles, /animation: pitchLetterResolve 840ms linear forwards/);
   assert.match(homePitchStyles, /@keyframes pitchLetterResolve[\s\S]*?24%[\s\S]*?50%[\s\S]*?68%[\s\S]*?100%/);
   assert.match(homePitchStyles, /@keyframes pitchLetterResolveMobile[\s\S]*?24%[\s\S]*?50%[\s\S]*?68%[\s\S]*?100%/);
   assert.match(homePitchStyles, /animation-timing-function: cubic-bezier\(0\.8, 0, 1, 1\)/);
   assert.match(homePitchStyles, /animation-timing-function: cubic-bezier\(0\.4, 0, 0\.2, 1\)/);
   assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
-  assert.match(homePitchStyles, /\.pitch-intro::after[\s\S]*border-radius: 50%/);
-  assert.match(homePitchStyles, /animation: pitchLighthouseSweep 1700ms linear forwards/);
-  assert.match(homePitchStyles, /@keyframes pitchLighthouseSweep[\s\S]*?66%[\s\S]*?100%/);
-  assert.match(homePitchStyles, /\.pitch-wordmark::after[\s\S]*animation: pitchLighthouseCore 1700ms linear forwards/);
-  assert.match(homePitchStyles, /@keyframes pitchWordmarkHit[\s\S]*?64%[\s\S]*?71%[\s\S]*?100%/);
-  assert.match(homePitchStyles, /--pitch-beam-blur-0: 12px/);
-  assert.match(homePitchStyles, /--pitch-core-blur-0: 6px/);
-  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-intro::after/);
+  assert.doesNotMatch(homePitchStyles, /pitchLighthouseSweep|pitchLighthouseCore|pitchWordmarkHit|pitch-beam-blur|pitch-core-blur/);
+  assert.doesNotMatch(homePitchStyles, /\.pitch-wordmark::after/);
+  assert.match(homePitchStyles, /filter: blur\(1\.35px\) brightness\(1\.5\)/);
+  assert.match(homePitchStyles, /filter: blur\(0\.8px\) brightness\(1\.38\)/);
   assert.match(homePitchStyles, /animation: none/);
   assert.match(homePitchStyles, /filter: none;\s*text-shadow: none;/);
   assert.doesNotMatch(homepage, /pitch-scroll-cue|pitchCueReveal|pitchCueMove/);
