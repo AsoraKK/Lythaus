@@ -155,7 +155,7 @@ import '../styles/global.css';
           const currentIndex = focusable.indexOf(document.activeElement);
           if (event.shiftKey && currentIndex <= 0) {
             event.preventDefault();
-            focusable.at(-1)?.focus();
+            focusable[focusable.length - 1]?.focus();
           } else if (!event.shiftKey && currentIndex === focusable.length - 1) {
             event.preventDefault();
             focusable[0]?.focus();
@@ -170,6 +170,36 @@ import '../styles/global.css';
         const sections = navLinks
           .map((link) => document.getElementById(link.getAttribute('data-nav-link') ?? ''))
           .filter((section) => section instanceof HTMLElement);
+
+        const scrollToSection = (event) => {
+          const link = event.currentTarget;
+          if (!(link instanceof HTMLAnchorElement)) return;
+          const targetId = link.getAttribute('data-nav-link');
+          const target = targetId ? document.getElementById(targetId) : null;
+          if (!(target instanceof HTMLElement)) return;
+
+          event.preventDefault();
+          const hash = `#${targetId}`;
+          if (window.location.hash !== hash) window.history.pushState(null, '', hash);
+          const scrollToTarget = () => {
+            const header = document.querySelector('.site-header');
+            const headerOffset = header instanceof HTMLElement ? header.getBoundingClientRect().height + 18 : 96;
+            const top = Math.max(0, target.getBoundingClientRect().top + window.scrollY - headerOffset);
+            const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+            try {
+              window.scrollTo({ top, behavior });
+            } catch {
+              window.scrollTo(0, top);
+            }
+          };
+          if (document.fonts?.ready) {
+            void document.fonts.ready.then(scrollToTarget, scrollToTarget);
+          } else {
+            scrollToTarget();
+          }
+          setOpen(false);
+        };
+        navLinks.forEach((link) => link.addEventListener('click', scrollToSection));
 
         if ('IntersectionObserver' in window && navLinks.length && sections.length) {
           const sectionObserver = new IntersectionObserver((entries) => {
