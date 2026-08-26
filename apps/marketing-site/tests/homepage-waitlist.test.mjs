@@ -116,6 +116,11 @@ test('homepage opening resolves the Lythaus letters without a separate point lig
   assert.doesNotMatch(homePitchStyles, /pitchLightPoint|\.pitch-letter::before/);
   assert.match(homePitchStyles, /prefers-reduced-motion/);
   assert.match(homePitchStyles, /animation-delay: var\(--letter-delay\)/);
+  assert.match(homePitchStyles, /animation: pitchLetterResolve 540ms linear forwards/);
+  assert.match(homePitchStyles, /@keyframes pitchLetterResolve[\s\S]*?18%[\s\S]*?50%[\s\S]*?64%[\s\S]*?100%/);
+  assert.match(homePitchStyles, /@keyframes pitchLetterResolveMobile[\s\S]*?20%[\s\S]*?50%[\s\S]*?64%[\s\S]*?100%/);
+  assert.match(homePitchStyles, /animation-timing-function: cubic-bezier\(0\.7, 0, 1, 1\)/);
+  assert.match(homePitchStyles, /animation-timing-function: cubic-bezier\(0\.4, 0, 0\.2, 1\)/);
   assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
   assert.match(homePitchStyles, /animation: none/);
   assert.match(homePitchStyles, /filter: none;\s*text-shadow: none;/);
