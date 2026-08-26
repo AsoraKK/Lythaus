@@ -127,6 +127,8 @@ test('homepage opening resolves the Lythaus letters without a separate point lig
   assert.match(homePitchStyles, /@keyframes pitchLighthouseSweep[\s\S]*?66%[\s\S]*?100%/);
   assert.match(homePitchStyles, /\.pitch-wordmark::after[\s\S]*animation: pitchLighthouseCore 1700ms linear forwards/);
   assert.match(homePitchStyles, /@keyframes pitchWordmarkHit[\s\S]*?64%[\s\S]*?71%[\s\S]*?100%/);
+  assert.match(homePitchStyles, /--pitch-beam-blur-0: 12px/);
+  assert.match(homePitchStyles, /--pitch-core-blur-0: 6px/);
   assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-intro::after/);
   assert.match(homePitchStyles, /animation: none/);
   assert.match(homePitchStyles, /filter: none;\s*text-shadow: none;/);
