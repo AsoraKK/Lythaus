@@ -111,7 +111,10 @@ jobs:
       - run: npm run openapi:bundle
       - run: npm run openapi:check:bundle
       - run: npm run openapi:validate:examples
-      - run: npx openapi-generator-cli version-manager set 7.7.0
+      - name: Pin OpenAPI generator version
+        env:
+          OPENAPI_GENERATOR_CLI_SEARCH_URL: DEFAULT
+        run: npx openapi-generator-cli version-manager set 7.7.0
       - run: npm run openapi:gen:dart
       - run: npm run openapi:check:dart
       - run: npm run openapi:test:dart

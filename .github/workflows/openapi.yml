@@ -75,7 +75,10 @@ jobs:
           node -e "const parse=(value)=>{const match=String(value).trim().match(/^v?(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?$/i);if(!match)return null;return [Number(match[1]),Number(match[2]||0),Number(match[3]||0)];};const prevRaw=process.argv[1];const currRaw=process.argv[2];const prev=parse(prevRaw);const curr=parse(currRaw);if(!prev||!curr){console.error(\`Unable to compare versions: Prev=\${prevRaw} Curr=\${currRaw}\`);process.exit(1);}const greater=curr[0]>prev[0]||(curr[0]===prev[0]&&(curr[1]>prev[1]||(curr[1]===prev[1]&&curr[2]>prev[2])));process.exit(greater ? 0 : 1);" "$PREV" "$CURR"
       - name: Validate OpenAPI examples
         run: npm run openapi:validate:examples
-      - run: npx openapi-generator-cli version-manager set 7.7.0
+      - name: Pin OpenAPI generator version
+        env:
+          OPENAPI_GENERATOR_CLI_SEARCH_URL: DEFAULT
+        run: npx openapi-generator-cli version-manager set 7.7.0
       - run: npm run openapi:gen:dart
       - name: Fail if generated Dart client drifted
         run: npm run openapi:check:dart
