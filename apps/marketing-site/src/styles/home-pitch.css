@@ -198,40 +198,6 @@
   animation: pitchCopyReveal 520ms ease 860ms forwards;
 }
 
-.pitch-scroll-cue {
-  position: absolute;
-  left: 50%;
-  bottom: 34px;
-  width: 28px;
-  height: 44px;
-  transform: translateX(-50%);
-  opacity: 0;
-  animation: pitchCueReveal 420ms ease 1.35s forwards;
-}
-
-.pitch-scroll-cue::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 1px;
-  height: 38px;
-  transform: translateX(-50%);
-  background: linear-gradient(to bottom, transparent, rgba(242, 238, 227, 0.58), transparent);
-}
-
-.pitch-scroll-cue span {
-  position: absolute;
-  left: 50%;
-  top: 6px;
-  width: 3px;
-  height: 7px;
-  border-radius: 999px;
-  transform: translateX(-50%);
-  background: var(--pitch-text);
-  animation: pitchCueMove 1.8s ease-in-out 1.75s infinite;
-}
-
 .pitch-section {
   position: relative;
   padding: clamp(90px, 10vw, 145px) 0;
@@ -997,31 +963,17 @@
   }
 }
 
-@keyframes pitchCueReveal {
-  to { opacity: 1; }
-}
-
-@keyframes pitchCueMove {
-  0% { transform: translate(-50%, 0); opacity: 0; }
-  20% { opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: translate(-50%, 23px); opacity: 0; }
-}
-
 @keyframes pitchHeaderReveal {
   to { opacity: 1; }
 }
 
 .pitch-opening-resolved .pitch-letter,
-.pitch-opening-resolved .pitch-intro-statement,
-.pitch-opening-resolved .pitch-scroll-cue,
-.pitch-opening-resolved .pitch-scroll-cue span {
+.pitch-opening-resolved .pitch-intro-statement {
   animation: none !important;
 }
 
 .pitch-opening-resolved .pitch-letter,
-.pitch-opening-resolved .pitch-intro-statement,
-.pitch-opening-resolved .pitch-scroll-cue {
+.pitch-opening-resolved .pitch-intro-statement {
   opacity: 1;
   transform: none;
   filter: none;
@@ -1218,8 +1170,6 @@
   .home-page .site-header,
   .pitch-letter,
   .pitch-intro-statement,
-  .pitch-scroll-cue,
-  .pitch-scroll-cue span,
   .pitch-section[data-pitch-reveal],
   .pitch-waitlist[data-pitch-reveal],
   .pitch-section.pitch-reveal-pending,
@@ -1231,7 +1181,6 @@
   .home-page .site-header,
   .pitch-letter,
   .pitch-intro-statement,
-  .pitch-scroll-cue,
   .pitch-section[data-pitch-reveal],
   .pitch-waitlist[data-pitch-reveal] {
     opacity: 1;

@@ -119,6 +119,8 @@ test('homepage opening resolves the Lythaus letters without a separate point lig
   assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
   assert.match(homePitchStyles, /animation: none/);
   assert.match(homePitchStyles, /filter: none;\s*text-shadow: none;/);
+  assert.doesNotMatch(homepage, /pitch-scroll-cue|pitchCueReveal|pitchCueMove/);
+  assert.doesNotMatch(homePitchStyles, /pitch-scroll-cue|pitchCueReveal|pitchCueMove/);
 });
 
 test('homepage navigation and preview tabs have stable cross-browser hit areas', () => {
