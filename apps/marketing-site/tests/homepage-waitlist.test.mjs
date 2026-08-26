@@ -10,6 +10,7 @@ const privacy = fs.readFileSync(path.join(root, 'src/pages/privacy/index.astro')
 const styles = fs.readFileSync(path.join(root, 'src/styles/global.css'), 'utf8');
 const homePitchStyles = fs.readFileSync(path.join(root, 'src/styles/home-pitch.css'), 'utf8');
 const headers = fs.readFileSync(path.join(root, 'public/_headers'), 'utf8');
+const manifest = fs.readFileSync(path.join(root, 'public/site.webmanifest'), 'utf8');
 
 test('homepage uses the approved waitlist submission and accessible states', () => {
   assert.match(homepage, /aria-live="polite"/);
@@ -145,11 +146,37 @@ test('homepage navigation and preview tabs have stable cross-browser hit areas',
   assert.match(homePitchStyles, /touch-action: manipulation/);
 });
 
-test('shared layout declares the Lythaus favicon assets', () => {
+test('shared layout declares Lythaus browser and home-screen assets', () => {
   assert.match(layout, /<link rel="icon" href="\/favicon\.ico" sizes="any" \/>/);
   assert.match(layout, /<link rel="icon" type="image\/png" href="\/favicon\.png" sizes="64x64" \/>/);
+  assert.match(layout, /<link rel="manifest" href="\/site\.webmanifest" \/>/);
+  assert.match(layout, /<link rel="apple-touch-icon" type="image\/png" href="\/apple-touch-icon\.png" sizes="180x180" \/>/);
   assert.ok(fs.existsSync(path.join(root, 'public/favicon.ico')));
   assert.ok(fs.existsSync(path.join(root, 'public/favicon.png')));
+  assert.ok(fs.existsSync(path.join(root, 'public/apple-touch-icon.png')));
+
+  const appManifest = JSON.parse(manifest);
+  assert.equal(appManifest.name, 'Lythaus');
+  assert.equal(appManifest.short_name, 'Lythaus');
+  assert.equal(appManifest.start_url, '/');
+  assert.equal(appManifest.scope, '/');
+  assert.equal(appManifest.display, 'standalone');
+  assert.equal(appManifest.theme_color, '#070706');
+  assert.equal(appManifest.background_color, '#070706');
+  assert.deepEqual(appManifest.icons, [
+    { src: '/icons/lythaus-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icons/lythaus-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icons/lythaus-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  ]);
+  for (const [file, size] of [
+    ['public/icons/lythaus-192.png', 192],
+    ['public/icons/lythaus-512.png', 512],
+    ['public/icons/lythaus-512-maskable.png', 512],
+  ]) {
+    const png = fs.readFileSync(path.join(root, file));
+    assert.equal(png.readUInt32BE(16), size);
+    assert.equal(png.readUInt32BE(20), size);
+  }
 });
 
 test('Turnstile CSP is narrowly allowlisted', () => {
