@@ -53,6 +53,8 @@ jobs:
         run: npm run openapi:validate:examples
 
       - name: Pin OpenAPI generator version
+        env:
+          OPENAPI_GENERATOR_CLI_SEARCH_URL: DEFAULT
         run: npx openapi-generator-cli version-manager set 7.7.0
 
       - name: Generate Dart client
