@@ -7,6 +7,8 @@ export interface EmailAuthAttempt {
   turnstileToken: unknown;
 }
 
+export type EmailRegistrationPlan = 'create_account' | 'resend_verification' | 'account_exists';
+
 export interface AuthSecrets {
   pepper: string;
   encryptionKey: string;
@@ -115,6 +117,11 @@ export function prepareEmailAuthAttempt(input: {
     password,
     turnstileToken: input.turnstileToken,
   };
+}
+
+export function planEmailRegistration(account: { verifiedAt: string | null } | undefined): EmailRegistrationPlan {
+  if (!account) return 'create_account';
+  return account.verifiedAt ? 'account_exists' : 'resend_verification';
 }
 
 export function requireAuthSecrets(input: {

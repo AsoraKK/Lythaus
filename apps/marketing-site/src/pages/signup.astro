@@ -106,14 +106,24 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         });
       };
       const messageFor = (code) => {
-        if (code === 'account_exists') return 'An account with this email already exists. Sign in instead.';
+        if (code === 'account_exists') return 'This email is already registered. Sign in, or resend verification if setup was interrupted.';
         if (code === 'email_verification_required') return 'Check your email and click the verification link before signing in.';
         if (code === 'invalid_email') return 'Enter a valid email address.';
         if (code === 'invalid_password') return 'Use a password between 12 and 128 characters.';
+        if (code === 'rate_limit_exceeded') return 'Too many signup attempts. Please wait before trying again.';
         if (code === 'turnstile_failed' || code === 'turnstile_required' || code === 'turnstile_unavailable') return 'We could not verify this request. Please try again.';
-        if (code === 'email_delivery_not_configured' || /^email_delivery_failed(?:_[1-5][0-9]{2})?$/u.test(code)) return 'We could not send the verification email. Please try again later.';
-        return 'We could not create your account. Please try again.';
+        if (code === 'email_delivery_not_configured' || /^email_delivery_failed(?:_[1-5][0-9]{2})?$/u.test(code)) return 'Your account may be waiting for verification, but we could not send the email. Retry below.';
+        return 'We could not finish the signup request. If this was a retry, resend the verification email below.';
       };
+      const shouldOfferResend = (code) => ![
+        'invalid_email', 'invalid_password', 'rate_limit_exceeded',
+        'turnstile_failed', 'turnstile_required', 'turnstile_unavailable',
+      ].includes(code);
+      const withSupportReference = (message, code, reference) => (
+        reference && (code === 'request_failed' || code === 'account_creation_failed')
+          ? `${message} Reference: ${reference}.`
+          : message
+      );
 
       const resendVerification = async () => {
         if (!(email instanceof HTMLInputElement) || !(resendButton instanceof HTMLButtonElement)) return;
@@ -159,6 +169,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         button.textContent = 'Creating account...';
         setResendVisible(false);
         setStatus('', 'submitting');
+        let failureReference = '';
         try {
           const turnstileToken = await requestToken();
           const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
@@ -167,13 +178,16 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
             body: JSON.stringify({ mode: 'register', email: email.value, password: password.value, turnstileToken }),
           });
           const body = await response.json().catch(() => ({}));
+          failureReference = typeof body.correlationId === 'string'
+            ? body.correlationId
+            : response.headers.get('x-correlation-id') ?? '';
           if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
           form.reset();
-          setStatus('Account created. Check your email and click the verification link before signing in.', 'success');
+          setStatus('Signup received. Check your email and click the verification link before signing in.', 'success');
         } catch (error) {
           const code = error instanceof Error ? error.message : 'account_creation_failed';
-          setStatus(messageFor(code), 'error');
-          if (code === 'account_exists' || code === 'email_delivery_not_configured' || /^email_delivery_failed(?:_[1-5][0-9]{2})?$/u.test(code)) setResendVisible(true);
+          setStatus(withSupportReference(messageFor(code), code, failureReference), 'error');
+          setResendVisible(shouldOfferResend(code));
         } finally {
           resetVerification();
           button.disabled = false;

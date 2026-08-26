@@ -58,6 +58,14 @@ test('public API dispatch awaits rejection-prone async handlers', () => {
   }
 });
 
+test('email registration retries recover accounts waiting for verification', () => {
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  assert.match(source, /planEmailRegistration/);
+  assert.match(source, /registrationPlan === 'resend_verification'/);
+  assert.match(source, /sendAccountVerificationEmail\(request, env, account\.id, email\)/);
+  assert.match(source, /registrationPlan === 'account_exists'/);
+});
+
 test('admin API dispatch awaits rejection-prone mutations', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
   assert.match(source, /return cors\(await decideModeration\(/);

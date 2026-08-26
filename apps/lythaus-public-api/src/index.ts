@@ -4,7 +4,7 @@ import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
-import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
+import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
@@ -274,6 +274,24 @@ async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'passw
   return provider.sendSecurityNotice({ to: input.to, reason: input.reason ?? 'Account security event' });
 }
 
+async function sendAccountVerificationEmail(request: Request, env: Env, userId: string, email: string): Promise<void> {
+  const verificationToken = randomToken(32);
+  const sourceEventId = uuidv7();
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(
+      `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
+      [uuidv7(), userId, hashResetToken(verificationToken)]);
+    await writeActivity(client, request, { userId }, sourceEventId, {
+      eventType: 'account.email_verification_requested', category: 'account',
+      title: 'You requested another verification email',
+      explanation: 'A new time-limited verification message was requested. The token is not stored in this log.',
+      objectType: 'account', objectId: userId, retentionClass: 'security',
+      metadata: { authenticationMethod: 'email' },
+    });
+  });
+  await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+}
+
 async function emailAuth(request: Request, env: Env): Promise<Response> {
   const input = await readJson<EmailAuthInput>(request, 16 * 1024);
   const attempt = prepareEmailAuthAttempt(input);
@@ -288,25 +306,17 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   const account = existing.rows[0];
   if (mode === 'resend_verification') {
     if (!account || account.verified_at) return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
-    const verificationToken = randomToken(32);
-    const sourceEventId = uuidv7();
-    await transaction(env.DB_APP_FRESH, async (client) => {
-      await client.query(
-        `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-        [uuidv7(), account.id, hashResetToken(verificationToken)]);
-      await writeActivity(client, request, { userId: account.id }, sourceEventId, {
-        eventType: 'account.email_verification_requested', category: 'account',
-        title: 'You requested another verification email',
-        explanation: 'A new time-limited verification message was requested. The token is not stored in this log.',
-        objectType: 'account', objectId: account.id, retentionClass: 'security',
-        metadata: { authenticationMethod: 'email' },
-      });
-    });
-    await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+    await sendAccountVerificationEmail(request, env, account.id, email);
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
   if (mode === 'register') {
-    if (account) throw new Error('account_exists');
+    const registrationPlan = planEmailRegistration(account ? { verifiedAt: account.verified_at } : undefined);
+    if (registrationPlan === 'resend_verification') {
+      if (!account) throw new Error('account_unavailable');
+      await sendAccountVerificationEmail(request, env, account.id, email);
+      return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
+    }
+    if (registrationPlan === 'account_exists') throw new Error('account_exists');
     const userId = uuidv7();
     const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
     const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
