@@ -37,6 +37,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       <div class="auth-turnstile-shell" id="signup-turnstile" role="group" aria-label="Bot verification"></div>
       <button class="button primary" type="submit" data-signup-submit>Create account</button>
       <p class="auth-status" data-signup-status aria-live="polite" role="status"></p>
+      <button class="auth-resend" type="button" data-signup-resend hidden>Resend verification email</button>
       <p class="auth-footnote">Already have an account? <a href="https://app.lythaus.co/login">Sign in to Lythaus</a>.</p>
     </form>
   </section>
@@ -50,6 +51,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       const confirmation = form.querySelector('#signup-password-confirmation');
       const button = form.querySelector('[data-signup-submit]');
       const status = form.querySelector('[data-signup-status]');
+      const resendButton = form.querySelector('[data-signup-resend]');
       const turnstileContainer = form.querySelector('#signup-turnstile');
       const apiBaseUrl = form.dataset.apiBaseUrl?.replace(/\/$/u, '') ?? '';
       const siteKey = form.dataset.turnstileSiteKey ?? '';
@@ -62,6 +64,9 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           status.textContent = message;
           status.dataset.state = state;
         }
+      };
+      const setResendVisible = (visible) => {
+        if (resendButton instanceof HTMLButtonElement) resendButton.hidden = !visible;
       };
       const resetVerification = () => {
         tokenReject?.(new Error('turnstile_failed'));
@@ -106,9 +111,37 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         if (code === 'invalid_email') return 'Enter a valid email address.';
         if (code === 'invalid_password') return 'Use a password between 12 and 128 characters.';
         if (code === 'turnstile_failed' || code === 'turnstile_required' || code === 'turnstile_unavailable') return 'We could not verify this request. Please try again.';
-        if (code === 'email_delivery_not_configured' || code === 'email_delivery_failed') return 'We could not send the verification email. Please try again later.';
+        if (code === 'email_delivery_not_configured' || /^email_delivery_failed(?:_[1-5][0-9]{2})?$/u.test(code)) return 'We could not send the verification email. Please try again later.';
         return 'We could not create your account. Please try again.';
       };
+
+      const resendVerification = async () => {
+        if (!(email instanceof HTMLInputElement) || !(resendButton instanceof HTMLButtonElement)) return;
+        if (!email.validity.valid) {
+          email.reportValidity();
+          setStatus('Enter a valid email address.', 'error');
+          return;
+        }
+        resendButton.disabled = true;
+        setStatus('Sending a new verification email...', 'submitting');
+        try {
+          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ mode: 'resend_verification', email: email.value }),
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'email_delivery_failed');
+          setStatus('If this account is waiting for verification, a new email is on its way.', 'success');
+          setResendVisible(false);
+        } catch (error) {
+          setStatus(messageFor(error instanceof Error ? error.message : 'email_delivery_failed'), 'error');
+        } finally {
+          resendButton.disabled = false;
+        }
+      };
+
+      resendButton?.addEventListener('click', resendVerification);
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -124,6 +157,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         }
         button.disabled = true;
         button.textContent = 'Creating account...';
+        setResendVisible(false);
         setStatus('', 'submitting');
         try {
           const turnstileToken = await requestToken();
@@ -137,7 +171,9 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           form.reset();
           setStatus('Account created. Check your email and click the verification link before signing in.', 'success');
         } catch (error) {
-          setStatus(messageFor(error instanceof Error ? error.message : 'account_creation_failed'), 'error');
+          const code = error instanceof Error ? error.message : 'account_creation_failed';
+          setStatus(messageFor(code), 'error');
+          if (code === 'account_exists' || code === 'email_delivery_not_configured' || /^email_delivery_failed(?:_[1-5][0-9]{2})?$/u.test(code)) setResendVisible(true);
         } finally {
           resetVerification();
           button.disabled = false;
@@ -183,6 +219,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
   .auth-status[data-state='error'] { color: #f1a7a0; }
   .auth-status[data-state='success'] { color: #b8d5b5; }
+  .auth-resend { justify-self: start; border: 0; padding: 0; color: var(--muted); background: transparent; text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
+  .auth-resend[hidden] { display: none; }
   .auth-footnote { margin-top: 4px; }
   @media (max-width: 760px) {
     .auth-page { grid-template-columns: 1fr; padding-top: 72px; }

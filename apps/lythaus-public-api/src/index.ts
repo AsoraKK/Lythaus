@@ -211,14 +211,18 @@ async function sendEmailTransport(env: Env, input: { to: string; subject: string
   if (providerMode === 'disabled') throw new Error('provider_unavailable');
   if (providerMode === 'cloudflare') {
     if (!env.EMAIL || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
-    const delivery = await env.EMAIL.send({
-      to: input.to,
-      from: { email: env.EMAIL_FROM, name: 'Lythaus' },
-      subject: input.subject,
-      html: input.html,
-      text: input.text,
-    });
-    return { provider: 'cloudflare-email', messageId: delivery.messageId, acceptedAt: new Date().toISOString() };
+    try {
+      const delivery = await env.EMAIL.send({
+        to: input.to,
+        from: { email: env.EMAIL_FROM, name: 'Lythaus' },
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+      });
+      return { provider: 'cloudflare-email', messageId: delivery.messageId, acceptedAt: new Date().toISOString() };
+    } catch {
+      throw new Error('email_delivery_failed');
+    }
   }
   if (providerMode !== 'fallback') throw new Error('email_provider_mode_invalid');
   if (!env.EMAIL_PROVIDER_URL || !env.EMAIL_PROVIDER_TOKEN || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');

@@ -33,6 +33,7 @@ test('classifies public runtime errors into stable safe responses', () => {
   assert.equal(classifyPublicError(new Error('idempotency_key_conflict')).status, 409);
   assert.equal(classifyPublicError(new Error('request_too_large')).status, 413);
   assert.equal(classifyPublicError(new Error('post_daily_limit_reached')).status, 429);
+  assert.equal(classifyPublicError(new Error('email_delivery_failed')).status, 502);
   assert.equal(classifyPublicError(new Error('email_delivery_failed_503')).status, 502);
   assert.equal(classifyPublicError(new Error('turnstile_unavailable')).status, 503);
   assert.equal(classifyPublicError(new Error('waitlist_unavailable')).status, 503);
