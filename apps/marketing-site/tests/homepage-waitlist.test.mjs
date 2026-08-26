@@ -107,20 +107,15 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
   assert.match(styles, /min-height: 44px/);
 });
 
-test('homepage opening resolves the Lythaus letters from light without a lighthouse beam', () => {
+test('homepage opening resolves the Lythaus letters without a separate point light', () => {
   assert.match(homepage, /class="pitch-wordmark"/);
   assert.match(homepage, /--letter-index: 0/);
   assert.match(homepage, /--letter-index: 6/);
   assert.match(homePitchStyles, /@keyframes pitchLetterResolve/);
-  assert.match(homePitchStyles, /@keyframes pitchLightPoint/);
-  assert.doesNotMatch(homePitchStyles, /lighthouse|beam/i);
+  assert.doesNotMatch(homepage, /--light-delay/);
+  assert.doesNotMatch(homePitchStyles, /pitchLightPoint|\.pitch-letter::before/);
   assert.match(homePitchStyles, /prefers-reduced-motion/);
   assert.match(homePitchStyles, /animation-delay: var\(--letter-delay\)/);
-  assert.match(homePitchStyles, /animation-delay: var\(--light-delay\)/);
-  assert.match(homepage, /--light-delay: 110ms/);
-  assert.match(homepage, /--light-delay: 950ms/);
-  assert.match(homePitchStyles, /pitchLightPoint 320ms/);
-  assert.match(homePitchStyles, /42% \{\s*opacity: 0\.86/);
   assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
   assert.match(homePitchStyles, /animation: none/);
   assert.match(homePitchStyles, /filter: none;\s*text-shadow: none;/);
