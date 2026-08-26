@@ -35,7 +35,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'appeal_statement_required', 'appeal_vote_invalid', 'appeal_vote_locked',
   'appeal_vote_not_allowed', 'authentication_not_configured', 'authentication_required',
   'case_id_required', 'checksum_required', 'comment_not_found',
-  'custom_feed_limit_reached', 'custom_feed_not_found', 'email_delivery_not_configured',
+  'custom_feed_limit_reached', 'custom_feed_not_found', 'email_delivery_failed', 'email_delivery_not_configured',
   'email_provider_mode_invalid', 'email_verification_required', 'export_not_configured',
   'export_cooldown_active', 'export_not_found', 'export_unavailable', 'feature_disabled',
   'idempotency_in_progress', 'idempotency_outcome_unknown',
@@ -85,7 +85,7 @@ export function classifyPublicError(error: unknown): { exposedCode: string; inte
                   || exposedCode === 'relationship_change_limit_reached'
                   || exposedCode === 'export_cooldown_active'
                   || exposedCode === 'privacy_request_active' ? 429
-                : /^email_delivery_failed_/.test(exposedCode) ? 502
+                : /^email_delivery_failed(?:_[1-5][0-9]{2})?$/.test(exposedCode) ? 502
                   : exposedCode.endsWith('_unavailable') || exposedCode.endsWith('_not_configured') ? 503 : 400;
   return { exposedCode, internalCode, status };
 }

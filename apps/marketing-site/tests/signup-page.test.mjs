@@ -14,6 +14,8 @@ test('signup page exposes the real production email registration flow', () => {
   assert.match(signup, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js/);
   assert.match(signup, /email_verification_required/);
   assert.match(signup, /account_exists/);
+  assert.match(signup, /email_delivery_failed\(\?:_\[1-5\]\[0-9\]\{2\}\)\?/);
+  assert.match(signup, /resend_verification/);
   assert.match(signup, /autocomplete="new-password"/);
   assert.doesNotMatch(signup, /CLOUDFLARE_API_TOKEN|TURNSTILE_SECRET_KEY/);
 });
