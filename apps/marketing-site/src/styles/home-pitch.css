@@ -134,11 +134,44 @@
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
   background: radial-gradient(circle at 50% 47%, rgba(242, 201, 141, 0.035), transparent 34%);
 }
 
+.pitch-intro::after {
+  --pitch-beam-strength: 1;
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: auto;
+  bottom: -26%;
+  left: 50%;
+  width: clamp(340px, 46vw, 720px);
+  height: 150%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(-50%, 0, 0) rotate(-58deg) scaleX(0.58);
+  transform-origin: 50% 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(242, 201, 141, 0.02) 23%,
+    rgba(242, 201, 141, 0.11) 39%,
+    rgba(255, 250, 238, 0.22) 50%,
+    rgba(242, 201, 141, 0.11) 61%,
+    rgba(242, 201, 141, 0.02) 77%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  filter: blur(24px);
+  mix-blend-mode: screen;
+  animation: pitchLighthouseSweep 1700ms linear forwards;
+}
+
 .pitch-intro-inner {
+  position: relative;
+  z-index: 1;
   display: grid;
   justify-items: center;
   gap: clamp(34px, 5vh, 58px);
@@ -156,6 +189,8 @@
 }
 
 .pitch-wordmark {
+  position: relative;
+  isolation: isolate;
   display: flex;
   justify-content: center;
   gap: clamp(7px, 1.3vw, 20px);
@@ -166,6 +201,31 @@
   font-weight: 500;
   line-height: 0.88;
   letter-spacing: -0.05em;
+  filter: none;
+  animation: pitchWordmarkHit 1700ms linear forwards;
+}
+
+.pitch-wordmark::after {
+  --pitch-core-strength: 1;
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: -42% -36%;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(242, 201, 141, 0.02) 22%,
+    rgba(255, 250, 238, 0.14) 44%,
+    rgba(255, 250, 238, 0.24) 50%,
+    rgba(242, 201, 141, 0.12) 58%,
+    transparent 80%
+  );
+  border-radius: 50%;
+  filter: blur(14px);
+  mix-blend-mode: screen;
+  animation: pitchLighthouseCore 1700ms linear forwards;
 }
 
 .pitch-letter {
@@ -961,6 +1021,119 @@
   }
 }
 
+@keyframes pitchLighthouseSweep {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 0, 0) rotate(-58deg) scaleX(0.58);
+    filter: blur(24px);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.86, 0.35);
+  }
+  20% {
+    opacity: calc(0.05 * var(--pitch-beam-strength));
+    transform: translate3d(-50%, 0, 0) rotate(-46deg) scaleX(0.68);
+    filter: blur(22px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.25, 1);
+  }
+  42% {
+    opacity: calc(0.18 * var(--pitch-beam-strength));
+    transform: translate3d(-50%, 0, 0) rotate(-24deg) scaleX(0.84);
+    filter: blur(19px);
+    animation-timing-function: cubic-bezier(0.15, 0.85, 0.2, 1);
+  }
+  58% {
+    opacity: calc(0.42 * var(--pitch-beam-strength));
+    transform: translate3d(-50%, 0, 0) rotate(-7deg) scaleX(0.98);
+    filter: blur(15px);
+    animation-timing-function: cubic-bezier(0.15, 0, 0.2, 1);
+  }
+  66% {
+    opacity: calc(0.58 * var(--pitch-beam-strength));
+    transform: translate3d(-50%, 0, 0) rotate(0deg) scaleX(1.04);
+    filter: blur(12px);
+    animation-timing-function: cubic-bezier(0.35, 0, 0.2, 1);
+  }
+  74% {
+    opacity: calc(0.43 * var(--pitch-beam-strength));
+    transform: translate3d(-50%, 0, 0) rotate(12deg) scaleX(0.98);
+    filter: blur(14px);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  87% {
+    opacity: calc(0.14 * var(--pitch-beam-strength));
+    transform: translate3d(-50%, 0, 0) rotate(36deg) scaleX(0.76);
+    filter: blur(19px);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.8, 1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, 0, 0) rotate(58deg) scaleX(0.58);
+    filter: blur(24px);
+  }
+}
+
+@keyframes pitchLighthouseCore {
+  0% {
+    opacity: 0;
+    transform: translate3d(-120%, 0, 0) rotate(-12deg) scaleX(0.72);
+    filter: blur(10px);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.86, 0.35);
+  }
+  22% {
+    opacity: calc(0.02 * var(--pitch-core-strength));
+    transform: translate3d(-96%, 0, 0) rotate(-10deg) scaleX(0.78);
+    filter: blur(10px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.25, 1);
+  }
+  48% {
+    opacity: calc(0.09 * var(--pitch-core-strength));
+    transform: translate3d(-52%, 0, 0) rotate(-7deg) scaleX(0.88);
+    filter: blur(9px);
+    animation-timing-function: cubic-bezier(0.15, 0.85, 0.2, 1);
+  }
+  64% {
+    opacity: calc(0.28 * var(--pitch-core-strength));
+    transform: translate3d(-8%, 0, 0) rotate(-2deg) scaleX(1);
+    filter: blur(7px);
+    animation-timing-function: cubic-bezier(0.15, 0, 0.2, 1);
+  }
+  70% {
+    opacity: calc(0.22 * var(--pitch-core-strength));
+    transform: translate3d(18%, 0, 0) rotate(3deg) scaleX(0.98);
+    filter: blur(8px);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  84% {
+    opacity: calc(0.08 * var(--pitch-core-strength));
+    transform: translate3d(70%, 0, 0) rotate(10deg) scaleX(0.82);
+    filter: blur(10px);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.8, 1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(126%, 0, 0) rotate(14deg) scaleX(0.72);
+    filter: blur(10px);
+  }
+}
+
+@keyframes pitchWordmarkHit {
+  0%,
+  48% {
+    filter: brightness(1);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.86, 0.35);
+  }
+  64% {
+    filter: brightness(1.28) drop-shadow(0 0 32px rgba(242, 201, 141, 0.24));
+    animation-timing-function: cubic-bezier(0.15, 0, 0.2, 1);
+  }
+  71% {
+    filter: brightness(1.12) drop-shadow(0 0 18px rgba(242, 201, 141, 0.14));
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  100% {
+    filter: none;
+  }
+}
+
 @keyframes pitchCopyReveal {
   to {
     opacity: 1;
@@ -977,12 +1150,24 @@
   animation: none !important;
 }
 
+.pitch-opening-resolved .pitch-intro::after,
+.pitch-opening-resolved .pitch-wordmark::after,
+.pitch-opening-resolved .pitch-wordmark {
+  animation: none !important;
+}
+
 .pitch-opening-resolved .pitch-letter,
-.pitch-opening-resolved .pitch-intro-statement {
+.pitch-opening-resolved .pitch-intro-statement,
+.pitch-opening-resolved .pitch-wordmark {
   opacity: 1;
   transform: none;
   filter: none;
   text-shadow: none;
+}
+
+.pitch-opening-resolved .pitch-intro::after,
+.pitch-opening-resolved .pitch-wordmark::after {
+  opacity: 0;
 }
 
 .home-page [id] { scroll-margin-top: 96px; }
@@ -1065,6 +1250,22 @@
     gap: 2px;
     font-size: clamp(52px, 18vw, 88px);
     letter-spacing: -0.075em;
+  }
+
+  .pitch-intro::after {
+    --pitch-beam-strength: 0.62;
+    width: clamp(190px, 70vw, 340px);
+    filter: blur(10px);
+  }
+
+  .pitch-wordmark {
+    animation-name: pitchWordmarkHitMobile;
+  }
+
+  .pitch-wordmark::after {
+    --pitch-core-strength: 0.58;
+    inset: -32% -42%;
+    filter: blur(9px);
   }
 
   .pitch-letter {
@@ -1174,6 +1375,9 @@
 @media (prefers-reduced-motion: reduce) {
   .home-page .site-header,
   .pitch-letter,
+  .pitch-intro::after,
+  .pitch-wordmark,
+  .pitch-wordmark::after,
   .pitch-intro-statement,
   .pitch-section[data-pitch-reveal],
   .pitch-waitlist[data-pitch-reveal],
@@ -1185,6 +1389,7 @@
 
   .home-page .site-header,
   .pitch-letter,
+  .pitch-wordmark,
   .pitch-intro-statement,
   .pitch-section[data-pitch-reveal],
   .pitch-waitlist[data-pitch-reveal] {
@@ -1193,6 +1398,31 @@
     filter: none;
   }
 
+  .pitch-intro::after,
+  .pitch-wordmark::after {
+    opacity: 0 !important;
+    animation: none !important;
+  }
+
+}
+
+@keyframes pitchWordmarkHitMobile {
+  0%,
+  48% {
+    filter: brightness(1);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.86, 0.35);
+  }
+  64% {
+    filter: brightness(1.14) drop-shadow(0 0 20px rgba(242, 201, 141, 0.16));
+    animation-timing-function: cubic-bezier(0.15, 0, 0.2, 1);
+  }
+  71% {
+    filter: brightness(1.07) drop-shadow(0 0 12px rgba(242, 201, 141, 0.1));
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  100% {
+    filter: none;
+  }
 }
 
 @keyframes pitchLetterResolveMobile {
