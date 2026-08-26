@@ -96,6 +96,9 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
   assert.match(layout, /event\.key === 'Escape'/);
   assert.match(layout, /mobile-nav-open/);
   assert.match(layout, /focusable\[focusable\.length - 1\]/);
+  assert.match(layout, /const getLayoutTop = \(element\) =>/);
+  assert.match(layout, /target\.classList\.add\('is-visible'\)/);
+  assert.match(layout, /getLayoutTop\(target\) - headerOffset/);
   assert.match(layout, /window\.scrollTo\(\{ top, behavior \}/);
   assert.match(layout, /document\.fonts\?\.ready/);
   assert.match(layout, /window\.history\.pushState/);
@@ -120,6 +123,7 @@ test('homepage opening resolves the Lythaus letters from light without a lightho
   assert.match(homePitchStyles, /42% \{\s*opacity: 0\.86/);
   assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
   assert.match(homePitchStyles, /animation: none/);
+  assert.match(homePitchStyles, /filter: none;\s*text-shadow: none;/);
 });
 
 test('homepage navigation and preview tabs have stable cross-browser hit areas', () => {

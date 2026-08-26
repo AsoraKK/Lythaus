@@ -171,6 +171,16 @@ import '../styles/global.css';
           .map((link) => document.getElementById(link.getAttribute('data-nav-link') ?? ''))
           .filter((section) => section instanceof HTMLElement);
 
+        const getLayoutTop = (element) => {
+          const rect = element.getBoundingClientRect();
+          const transform = getComputedStyle(element).transform;
+          if (transform === 'none') return rect.top + window.scrollY;
+
+          const values = transform.slice(transform.indexOf('(') + 1, -1).split(',').map(Number);
+          const translateY = transform.startsWith('matrix3d(') ? values[13] : values[5];
+          return rect.top + window.scrollY - (Number.isFinite(translateY) ? translateY : 0);
+        };
+
         const scrollToSection = (event) => {
           const link = event.currentTarget;
           if (!(link instanceof HTMLAnchorElement)) return;
@@ -181,10 +191,12 @@ import '../styles/global.css';
           event.preventDefault();
           const hash = `#${targetId}`;
           if (window.location.hash !== hash) window.history.pushState(null, '', hash);
+          target.classList.add('is-visible');
+          setOpen(false);
           const scrollToTarget = () => {
             const header = document.querySelector('.site-header');
             const headerOffset = header instanceof HTMLElement ? header.getBoundingClientRect().height + 18 : 96;
-            const top = Math.max(0, target.getBoundingClientRect().top + window.scrollY - headerOffset);
+            const top = Math.max(0, getLayoutTop(target) - headerOffset);
             const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
             try {
               window.scrollTo({ top, behavior });
@@ -197,7 +209,6 @@ import '../styles/global.css';
           } else {
             scrollToTarget();
           }
-          setOpen(false);
         };
         navLinks.forEach((link) => link.addEventListener('click', scrollToSection));
 
