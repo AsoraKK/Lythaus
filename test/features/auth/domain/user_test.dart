@@ -69,6 +69,23 @@ void main() {
       expect(user.createdAt.month, 6);
     });
 
+    test('fromJson accepts canonical userinfo response without legacy fields', () {
+      final user = User.fromJson({
+        'id': 'user-uuid-456',
+        'email': 'api@example.com',
+        'role': 'user',
+        'subscription_tier': 'free',
+        'reputation_level': 7,
+        'created_at': '2026-08-27T15:14:58.735Z',
+        'last_login_at': '2026-08-27T16:35:28.697Z',
+      });
+
+      expect(user.id, 'user-uuid-456');
+      expect(user.subscriptionTier.value, 'free');
+      expect(user.tier, UserTier.bronze);
+      expect(user.reputationScore, 7);
+    });
+
     test('fromJson prefers camelCase over snake_case', () {
       // When both formats are present (shouldn't happen, but test the priority)
       final mixedJson = {
