@@ -61,11 +61,22 @@ test('homepage public copy matches the human-first pitch and stays launch safe',
   assert.match(styles, /--accent: #f2c98d/i);
 });
 
-test('homepage section numbering is sequential and the waitlist is unnumbered', () => {
-  const numbers = [...homepage.matchAll(/(?:pitch-intro-meta|pitch-section-meta)[^>]*>(\d{2}) \/ /g)].map((match) => match[1]);
-  assert.deepEqual(numbers, ['00', '01', '02', '03', '04', '05', '06', '07', '08']);
-  assert.doesNotMatch(homepage, /09 \/|10 \/|11 \/|12 \/|13 \//);
-  assert.doesNotMatch(homepage, /pitch-waitlist[^>]*>[\s\S]*?\d{2} \/ /);
+test('homepage editorial section labels are unnumbered and non-redundant', () => {
+  assert.doesNotMatch(homepage, /pitch-intro-meta/);
+  assert.doesNotMatch(homepage, /pitch-section-meta[^>]*>\d{2} \/ /);
+  for (const label of [
+    'The Problem',
+    'What Lythaus Is',
+    'Experience Lythaus',
+    'A Different Kind of Feed',
+    'Reputation',
+    'Lythaus and AI',
+    'Principles',
+  ]) {
+    assert.match(homepage, new RegExp(`<div class="pitch-section-meta">${label}<\\/div>`));
+  }
+  assert.doesNotMatch(homepage, /<div class="pitch-section-meta">Built for Humans First<\/div>/);
+  assert.match(homepage, /<section class="pitch-section pitch-human-first"[\s\S]*?<h2 id="human-first-title">Built for humans first\.<\/h2>/);
 });
 
 test('Experience is an explicit local preview with keyboard-oriented controls', () => {
