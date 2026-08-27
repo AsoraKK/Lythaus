@@ -194,6 +194,16 @@ test('candidate ADR-003 acceptance consumes the exact proven readiness artifact'
   assert.match(adr003Harness, /worker\.readyForAuthentication === true/);
 });
 
+test('ADR-003 repeat runs verify existing privacy requests without weakening limits', () => {
+  assert.match(adr003Harness, /async function existingPrivacyRequestAcceptance/);
+  assert.match(adr003Harness, /result\.response\.status !== 429/);
+  assert.match(adr003Harness, /privacy_request_active/);
+  assert.match(adr003Harness, /export_cooldown_active/);
+  assert.match(adr003Harness, /privacy\/requests\?requestType=/);
+  assert.match(adr003Harness, /request\?\.requestType === requestType/);
+  assert.match(adr003Harness, /acceptanceNote/);
+});
+
 test('Worker readiness secrets are included in each immutable candidate upload', () => {
   assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 secret put DATABASE_READINESS_TOKEN/);
   assert.match(workersWorkflow, /DATABASE_READINESS_TOKEN: \$\{\{ secrets\.DATABASE_READINESS_TOKEN \}\}/);
