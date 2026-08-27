@@ -4,7 +4,7 @@ import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
-import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
+import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
@@ -274,6 +274,24 @@ async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'passw
   return provider.sendSecurityNotice({ to: input.to, reason: input.reason ?? 'Account security event' });
 }
 
+async function sendAccountVerificationEmail(request: Request, env: Env, userId: string, email: string): Promise<void> {
+  const verificationToken = randomToken(32);
+  const sourceEventId = uuidv7();
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(
+      `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
+      [uuidv7(), userId, hashResetToken(verificationToken)]);
+    await writeActivity(client, request, { userId }, sourceEventId, {
+      eventType: 'account.email_verification_requested', category: 'account',
+      title: 'You requested another verification email',
+      explanation: 'A new time-limited verification message was requested. The token is not stored in this log.',
+      objectType: 'account', objectId: userId, retentionClass: 'security',
+      metadata: { authenticationMethod: 'email' },
+    });
+  });
+  await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+}
+
 async function emailAuth(request: Request, env: Env): Promise<Response> {
   const input = await readJson<EmailAuthInput>(request, 16 * 1024);
   const attempt = prepareEmailAuthAttempt(input);
@@ -286,32 +304,55 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
        FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id
       WHERE c.email_lookup_hmac = decode($1, 'base64')`, [lookup]);
   const account = existing.rows[0];
+  const contactOwner = account ? undefined : (await query<{ id: string; status: string }>(env.DB_APP_FRESH,
+    `SELECT u.id, u.status
+       FROM identity.contact_emails c JOIN identity.users u ON u.id = c.user_id
+      WHERE c.email_lookup_hmac = decode($1, 'base64')`, [lookup])).rows[0];
   if (mode === 'resend_verification') {
     if (!account || account.verified_at) return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
-    const verificationToken = randomToken(32);
-    const sourceEventId = uuidv7();
-    await transaction(env.DB_APP_FRESH, async (client) => {
-      await client.query(
-        `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-        [uuidv7(), account.id, hashResetToken(verificationToken)]);
-      await writeActivity(client, request, { userId: account.id }, sourceEventId, {
-        eventType: 'account.email_verification_requested', category: 'account',
-        title: 'You requested another verification email',
-        explanation: 'A new time-limited verification message was requested. The token is not stored in this log.',
-        objectType: 'account', objectId: account.id, retentionClass: 'security',
-        metadata: { authenticationMethod: 'email' },
-      });
-    });
-    await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+    await sendAccountVerificationEmail(request, env, account.id, email);
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
   if (mode === 'register') {
-    if (account) throw new Error('account_exists');
-    const userId = uuidv7();
+    const registrationPlan = planEmailRegistration(
+      account ? { verifiedAt: account.verified_at } : undefined,
+      contactOwner ? { status: contactOwner.status } : undefined,
+    );
+    if (registrationPlan === 'resend_verification') {
+      if (!account) throw new Error('account_unavailable');
+      await sendAccountVerificationEmail(request, env, account.id, email);
+      return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
+    }
+    if (registrationPlan === 'account_exists') throw new Error('account_exists');
     const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
     const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
     const verificationToken = randomToken(32);
     const sourceEventId = uuidv7();
+    if (registrationPlan === 'attach_email_credential') {
+      if (!contactOwner) throw new Error('account_unavailable');
+      await transaction(env.DB_APP_FRESH, async (client) => {
+        await client.query(
+          `INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
+           VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`,
+          [contactOwner.id, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
+        await client.query(
+          `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
+          [uuidv7(), contactOwner.id, hashResetToken(verificationToken)]);
+        await client.query(
+          `INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_relink_started', '{"source":"contact_email"}'::jsonb)`,
+          [uuidv7(), contactOwner.id]);
+        await writeActivity(client, request, { userId: contactOwner.id }, sourceEventId, {
+          eventType: 'account.email_verification_requested', category: 'account',
+          title: 'You started email account recovery',
+          explanation: 'A password credential was attached to your preserved account and awaits email verification.',
+          result: 'pending', objectType: 'account', objectId: contactOwner.id, retentionClass: 'security',
+          metadata: { authenticationMethod: 'email', recoveryMethod: 'verified_contact_email' },
+        });
+      });
+      await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+      return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
+    }
+    const userId = uuidv7();
     await transaction(env.DB_APP_FRESH, async (client) => {
       await client.query(`INSERT INTO identity.users (id) VALUES ($1)`, [userId]);
       await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
@@ -360,6 +401,7 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
     await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
     await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.contact_emails SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
+    await client.query(`UPDATE identity.users SET status = 'active', updated_at = now() WHERE id = $1 AND status = 'relink_required'`, [found.rows[0].user_id]);
     await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_verified', '{}'::jsonb)`, [uuidv7(), found.rows[0].user_id]);
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
