@@ -152,7 +152,12 @@ function failureReason(error) {
 async function runCase(id, action) {
   try {
     const result = await action();
-    results.push({ id, outcome: 'passed', ...(result?.correlationId ? { correlationId: result.correlationId } : {}) });
+    results.push({
+      id,
+      outcome: 'passed',
+      ...(result?.correlationId ? { correlationId: result.correlationId } : {}),
+      ...(result?.acceptanceNote ? { acceptanceNote: result.acceptanceNote } : {}),
+    });
   } catch (error) {
     results.push({ id, outcome: error instanceof BlockedCase ? 'blocked' : 'failed', reason: failureReason(error) });
   }
@@ -166,6 +171,27 @@ async function runAuthenticatedCase(action) {
 
 function bearer() {
   return { authorization: `Bearer ${accessToken}` };
+}
+
+async function existingPrivacyRequestAcceptance(result, requestType, allowedErrors) {
+  const body = unwrap(result.body);
+  if (result.response.status !== 429 || !allowedErrors.includes(body?.error)) return null;
+  const statusResult = await requestJson(
+    `/api/privacy/requests?requestType=${encodeURIComponent(requestType)}`,
+    { headers: bearer() },
+  );
+  expectStatus(statusResult, [200], `${requestType}_status`);
+  const statusBody = unwrap(statusResult.body);
+  const request = statusBody?.request;
+  const allowedStates = requestType === 'delete'
+    ? new Set(['received', 'processing', 'blocked'])
+    : new Set(['received', 'processing', 'blocked', 'completed']);
+  expect(request?.requestType === requestType, `${requestType}_request_missing`);
+  expect(allowedStates.has(request?.state), `${requestType}_request_state_invalid`);
+  return {
+    correlationId: result.correlationId,
+    acceptanceNote: `${requestType}_limit_enforced_for_existing_request`,
+  };
 }
 
 async function webSecurityCheck() {
@@ -343,6 +369,12 @@ await runCase('A14', () => runAuthenticatedCase(async () => {
     headers: { ...bearer(), 'idempotency-key': randomUUID() },
     body: { requestType: 'export' },
   });
+  const existingRequest = await existingPrivacyRequestAcceptance(
+    result,
+    'export',
+    ['privacy_request_active', 'export_cooldown_active'],
+  );
+  if (existingRequest) return existingRequest;
   expectStatus(result, [202], 'privacy_request_submission');
   return result;
 }));
@@ -355,6 +387,8 @@ await runCase('A15', async () => {
       headers: { ...bearer(), 'idempotency-key': randomUUID() },
       body: { requestType: 'delete' },
     });
+    const existingRequest = await existingPrivacyRequestAcceptance(result, 'delete', ['privacy_request_active']);
+    if (existingRequest) return existingRequest;
     expectStatus(result, [202], 'account_deletion_request');
     return result;
   });
