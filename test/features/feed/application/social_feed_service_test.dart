@@ -48,7 +48,7 @@ void main() {
   test('cursor feeds parse posts and cursors', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/feed/discover',
+        '/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
@@ -56,12 +56,12 @@ void main() {
       (_) async => _response({
         'items': [_postJson('p1')],
         'nextCursor': 'next',
-      }, '/api/feed/discover'),
+      }, '/feed/discover'),
     );
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/feed/news',
+        '/feed/news',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
@@ -69,12 +69,12 @@ void main() {
       (_) async => _response({
         'items': [_postJson('p2')],
         'nextCursor': null,
-      }, '/api/feed/news'),
+      }, '/feed/news'),
     );
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/feed/user/user-1',
+        '/feed/user/user-1',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
@@ -82,7 +82,7 @@ void main() {
       (_) async => _response({
         'items': [_postJson('p3')],
         'nextCursor': 'next-user',
-      }, '/api/feed/user/user-1'),
+      }, '/feed/user/user-1'),
     );
 
     final discover = await service.getDiscoverFeed(
@@ -107,7 +107,7 @@ void main() {
     final captured =
         verify(
               () => dio.get<Map<String, dynamic>>(
-                '/api/feed/user/user-1',
+                '/feed/user/user-1',
                 queryParameters: captureAny(named: 'queryParameters'),
                 options: any(named: 'options'),
               ),
@@ -155,7 +155,7 @@ void main() {
   test('cursor feeds accept an envelope and continuation token', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/feed/discover',
+        '/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
@@ -173,7 +173,7 @@ void main() {
           ],
           'continuationToken': 'cursor-2',
         },
-      }, '/api/feed/discover'),
+      }, '/feed/discover'),
     );
 
     final page = await service.getDiscoverFeed(token: 'token');
@@ -337,11 +337,11 @@ void main() {
   test('throws on invalid response and network error', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/api/feed/discover',
+        '/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
-    ).thenAnswer((_) async => _response('bad', '/api/feed/discover'));
+    ).thenAnswer((_) async => _response('bad', '/feed/discover'));
 
     expect(
       () => service.getDiscoverFeed(),

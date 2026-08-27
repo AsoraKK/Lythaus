@@ -96,6 +96,36 @@ async function waitForAnyText(page, worker, texts, timeout = 20_000) {
   throw new Error(`Timed out waiting for text: ${texts.join(', ')}. OCR: ${lastOcrText.slice(0, 1200) || '<empty>'}`);
 }
 
+function ocrLines(data) {
+  const lines = Array.isArray(data?.lines) ? [...data.lines] : [];
+  for (const block of data?.blocks ?? []) {
+    for (const paragraph of block?.paragraphs ?? []) {
+      lines.push(...(paragraph?.lines ?? []));
+    }
+  }
+  return lines;
+}
+
+async function clickVisibleText(page, worker, text) {
+  const candidates = page.getByText(text, { exact: false });
+  for (let index = (await candidates.count()) - 1; index >= 0; index -= 1) {
+    const candidate = candidates.nth(index);
+    if (await candidate.isVisible().catch(() => false)) {
+      await candidate.click();
+      return;
+    }
+  }
+
+  const image = await page.screenshot({ type: 'png' });
+  const { data } = await worker.recognize(image, {}, { blocks: true });
+  const line = ocrLines(data).find((item) => textMatches(item?.text ?? '', [text]));
+  const box = line?.bbox;
+  if (!box || ![box.x0, box.y0, box.x1, box.y1].every(Number.isFinite)) {
+    throw new Error(`Could not locate visible text: ${text}`);
+  }
+  await page.mouse.click((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2);
+}
+
 async function fetchWithBody(url, init = {}) {
   const response = await fetch(url, init);
   const body = await response.text();
@@ -349,8 +379,7 @@ try {
     const response = await page.goto(loginUrl, { waitUntil: 'domcontentloaded' });
     assert(response, `Login request failed for guest smoke at ${loginUrl}`);
     await waitForAnyText(page, ocrWorker, ['Continue as guest']);
-    const viewport = page.viewportSize() || { width: 1280, height: 900 };
-    await page.mouse.click(Math.round(viewport.width / 2), Math.round(viewport.height / 2 - 14));
+    await clickVisibleText(page, ocrWorker, 'Continue as guest');
     await waitForAnyText(page, ocrWorker, ['Discover calm, trustworthy updates tailored to you.', 'No posts yet']);
     recordCheck('app shell loads', 'passed', { path: page.url() });
     recordCheck('guest discovery feed loads or empty-states', 'passed', { path: page.url() });

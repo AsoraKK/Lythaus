@@ -132,6 +132,14 @@ async function verifyWaitlistPrivileges(client) {
     has_table_privilege($1, 'system.rate_limit_windows', 'SELECT') AS runtime_rate_select,
     has_table_privilege($1, 'system.rate_limit_windows', 'INSERT') AS runtime_rate_insert,
     has_table_privilege($1, 'system.rate_limit_windows', 'UPDATE') AS runtime_rate_update,
+    has_table_privilege($1, 'identity.admin_memberships', 'SELECT') AS runtime_admin_memberships_select,
+    has_table_privilege($1, 'identity.admin_memberships', 'INSERT') AS runtime_admin_memberships_insert,
+    has_table_privilege($1, 'identity.user_entitlements', 'SELECT') AS runtime_user_entitlements_select,
+    has_table_privilege($1, 'identity.user_entitlements', 'INSERT') AS runtime_user_entitlements_insert,
+    has_table_privilege($1, 'privacy.requests', 'SELECT') AS runtime_privacy_requests_select,
+    has_table_privilege($1, 'privacy.requests', 'INSERT') AS runtime_privacy_requests_insert,
+    has_table_privilege($1, 'trust.user_activity_events', 'SELECT') AS runtime_activity_select,
+    has_table_privilege($1, 'trust.user_activity_events', 'INSERT') AS runtime_activity_insert,
     has_schema_privilege($1, 'marketing', 'USAGE') AS runtime_marketing_usage,
     has_column_privilege($1, 'marketing.waitlist_signups', 'email_lookup_hmac', 'INSERT') AS runtime_insert_hmac,
     has_table_privilege($1, 'marketing.waitlist_signups', 'SELECT') AS runtime_select,
@@ -145,6 +153,10 @@ async function verifyWaitlistPrivileges(client) {
   [runtime, admin, privacy]);
   const row = result.rows[0];
   if (!row?.runtime_system_usage || !row.runtime_rate_select || !row.runtime_rate_insert || !row.runtime_rate_update
+    || !row.runtime_admin_memberships_select || row.runtime_admin_memberships_insert
+    || !row.runtime_user_entitlements_select || row.runtime_user_entitlements_insert
+    || !row.runtime_privacy_requests_select || !row.runtime_privacy_requests_insert
+    || !row.runtime_activity_select || !row.runtime_activity_insert
     || !row.runtime_marketing_usage || !row.runtime_insert_hmac || row.runtime_select
     || !row.admin_select_ciphertext || row.admin_select_hmac
     || !row.admin_update_status || row.admin_update_ciphertext
