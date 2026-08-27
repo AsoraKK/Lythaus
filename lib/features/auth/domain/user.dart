@@ -39,7 +39,7 @@ class User {
       id: json['id'] as String? ?? json['sub'] as String,
       email: json['email'] as String,
       role: UserRole.fromString(json['role'] as String),
-      tier: UserTier.fromString(json['tier'] as String),
+      tier: UserTier.fromString(json['tier'] as String? ?? 'bronze'),
       subscriptionTier: SubscriptionTier.fromString(
         json['subscriptionTier'] as String? ??
             json['subscription_tier'] as String?,
@@ -48,6 +48,7 @@ class User {
       reputationScore:
           json['reputation_score'] as int? ??
           json['reputationScore'] as int? ??
+          json['reputation_level'] as int? ??
           0,
       createdAt: DateTime.parse(
         json['created_at'] as String? ?? json['createdAt'] as String,
