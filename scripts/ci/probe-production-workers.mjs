@@ -31,18 +31,21 @@ const allTargets = [
     worker: 'lythaus-public-api-development',
     probe: true,
     baseUrl: process.env.PRODUCTION_PUBLIC_API_BASE_URL || 'https://api.lythaus.co',
+    routePrefix: '/api',
     anonymousPaths: ['/health', '/ready'],
   },
   {
     worker: 'lythaus-admin-api-development',
     probe: true,
     baseUrl: process.env.PRODUCTION_ADMIN_API_BASE_URL || 'https://admin-api.lythaus.co',
+    routePrefix: '',
     anonymousPaths: ['/health'],
   },
   {
     worker: 'lythaus-jobs-development',
     probe: false,
     baseUrl: process.env.PRODUCTION_JOBS_API_BASE_URL || '',
+    routePrefix: '',
     anonymousPaths: [],
   },
 ];
@@ -129,7 +132,7 @@ for (const target of targets) {
     });
     continue;
   }
-  const base = new URL(target.baseUrl).origin;
+  const base = `${new URL(target.baseUrl).origin}${target.routePrefix}`;
   for (const path of target.anonymousPaths) await fetchJson(`${base}${path}`);
   const body = await fetchJson(`${base}/internal/readiness/database-identity`, {
     headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
