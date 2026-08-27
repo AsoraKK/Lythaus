@@ -197,15 +197,19 @@ jobs:
           trap 'rm -f "$secrets_file"' EXIT
           jq -n --arg readiness_token "$DATABASE_READINESS_TOKEN" \
             '{DATABASE_READINESS_TOKEN: $readiness_token}' > "$secrets_file"
-          npx --yes wrangler@4.123.0 versions upload --config apps/lythaus-public-api/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA" --secrets-file "$secrets_file"
-          npx --yes wrangler@4.123.0 versions upload --config apps/lythaus-admin-api/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA" --secrets-file "$secrets_file"
-          npx --yes wrangler@4.123.0 versions upload --config apps/lythaus-jobs/wrangler.jsonc --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA" --secrets-file "$secrets_file"
+          upload_candidate() {
+            local config="$1"
+            local prefix="$2"
+            local output="$3"
+            npx --yes wrangler@4.123.0 versions upload --config "$config" --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA" --secrets-file "$secrets_file" 2>&1 | tee "$output"
+            node scripts/ci/resolve-worker-version-state.mjs upload "$output" "$RELEASE_SHA" "$prefix"
+          }
+          upload_candidate apps/lythaus-public-api/wrangler.jsonc PUBLIC "$RUNNER_TEMP/production-cutover/public-upload.log"
+          upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log"
+          upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log"
           npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/admin-versions.json" "$RELEASE_SHA" ADMIN
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/jobs-versions.json" "$RELEASE_SHA" JOBS
       - name: Stage candidate Worker versions at zero traffic
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

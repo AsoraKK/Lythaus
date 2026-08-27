@@ -378,7 +378,8 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(workflow, /Roll back partial Worker deployment on failure/);
   assert.match(workflow, /Validate final production gates/);
   assert.match(workflow, /validate:production-gates:final/);
-  assert.match(workflow, /wrangler@4\.123\.0 versions upload --config apps\/lythaus-public-api\/wrangler\.jsonc/);
+  assert.match(workflow, /versions upload --config "\$config" --tag "\$RELEASE_SHA"/);
+  assert.match(workflow, /upload_candidate apps\/lythaus-public-api\/wrangler\.jsonc PUBLIC/);
   assert.match(workflow, /PRODUCTION_WORKER_VERSION_ID: \$\{\{ env\.PUBLIC_WORKER_VERSION_ID \}\}/);
   assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development/);
   assert.match(workflow, /wrangler@4\.123\.0 versions deploy \$ADMIN_ROLLBACK_SPECS --name lythaus-admin-api-development/);
