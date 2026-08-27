@@ -165,6 +165,15 @@ test('production browser authentication accepts canonical and legacy token keys'
   assert.match(runtimeAuth, /session\?\.refreshToken \|\| session\?\.refresh_token/);
 });
 
+test('production acceptance follows current API semantics and visible guest controls', () => {
+  const browserSmoke = readFileSync('scripts/beta-smoke.mjs', 'utf8');
+  assert.match(adr003Harness, /expectStatus\(result, \[400, 401\], 'refresh_replay'\)/);
+  assert.match(adr003Harness, /body\?\.postId[\s\S]*body\?\.id/);
+  assert.match(browserSmoke, /clickVisibleText\(page, ocrWorker, 'Continue as guest'\)/);
+  assert.match(browserSmoke, /worker\.recognize\(image, \{\}, \{ blocks: true \}\)/);
+  assert.doesNotMatch(browserSmoke, /viewport\.width \/ 2/);
+});
+
 test('candidate ADR-003 acceptance consumes the exact proven readiness artifact', () => {
   assert.match(adr003Harness, /ADR003_DATABASE_READINESS_EVIDENCE_PATH/);
   assert.match(adr003Harness, /report\.releaseSha === releaseSha/);

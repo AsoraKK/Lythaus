@@ -103,7 +103,7 @@ class SocialFeedService implements SocialFeedRepository {
   }) {
     return _fetchCursorFeed(
       operation: 'getDiscoverFeed',
-      urlPath: '/api/feed/discover',
+      urlPath: '/feed/discover',
       cursor: cursor,
       limit: limit,
       token: token,
@@ -118,7 +118,7 @@ class SocialFeedService implements SocialFeedRepository {
   }) {
     return _fetchCursorFeed(
       operation: 'getNewsFeed',
-      urlPath: '/api/feed/news',
+      urlPath: '/feed/news',
       cursor: cursor,
       limit: limit,
       token: token,
@@ -136,7 +136,7 @@ class SocialFeedService implements SocialFeedRepository {
     final extra = includeReplies ? {'includeReplies': 'true'} : null;
     return _fetchCursorFeed(
       operation: 'getUserFeed',
-      urlPath: '/api/feed/user/$userId',
+      urlPath: '/feed/user/$userId',
       cursor: cursor,
       limit: limit,
       token: token,
