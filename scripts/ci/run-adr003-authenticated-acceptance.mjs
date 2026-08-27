@@ -16,6 +16,7 @@ const expected = {
 const hyperdriveVerifiedMain = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true';
 const candidateWorkerName = process.env.ADR003_WORKER_NAME?.trim() ?? '';
 const candidateWorkerVersionId = process.env.ADR003_WORKER_VERSION_ID?.trim() ?? '';
+const candidateReadinessEvidencePath = process.env.ADR003_DATABASE_READINESS_EVIDENCE_PATH?.trim() ?? '';
 const evidencePath = process.env.ADR003_EVIDENCE_PATH;
 const results = [];
 let readiness = null;
@@ -101,6 +102,45 @@ function manualFlag(name, code) {
   if (process.env[name] !== 'true') throw new BlockedCase(code);
 }
 
+function candidateReadinessEvidence() {
+  if (!candidateReadinessEvidencePath) return null;
+  const report = JSON.parse(fs.readFileSync(candidateReadinessEvidencePath, 'utf8'));
+  const releaseSha = required('RELEASE_SHA');
+  expect(report && typeof report === 'object' && !Array.isArray(report), 'candidate_readiness_evidence_invalid');
+  expect(report.releaseSha === releaseSha, 'candidate_readiness_release_sha_mismatch');
+  expect(report.branchFingerprint === 'main', 'candidate_readiness_branch_mismatch');
+  expect(report.expected?.schemaFingerprint === expected.schemaFingerprint, 'candidate_readiness_schema_fingerprint_mismatch');
+  expect(report.expected?.relationCount === expected.relationCount, 'candidate_readiness_relation_count_mismatch');
+  expect(report.expected?.schemaVersion === expected.schemaVersion, 'candidate_readiness_schema_version_mismatch');
+  expect(report.expected?.budgetLedgerApplied === expected.budgetLedgerApplied, 'candidate_readiness_budget_ledger_mismatch');
+  const worker = Array.isArray(report.workers)
+    ? report.workers.find((item) => item?.worker === candidateWorkerName)
+    : undefined;
+  expect(worker && typeof worker === 'object', 'candidate_readiness_worker_missing');
+  expect(worker.workerVersionId === candidateWorkerVersionId, 'candidate_readiness_worker_version_mismatch');
+  expect(worker.releaseTag === releaseSha, 'candidate_readiness_worker_release_mismatch');
+  expect(worker.branchFingerprint === 'main', 'candidate_readiness_worker_branch_mismatch');
+  expect(worker.schemaFingerprint === expected.schemaFingerprint, 'candidate_readiness_worker_schema_fingerprint_mismatch');
+  expect(worker.relationCount === expected.relationCount, 'candidate_readiness_worker_relation_count_mismatch');
+  expect(worker.identityContactEmails === true, 'candidate_readiness_contact_emails_missing');
+  expect(worker.budgetLedgerApplied === expected.budgetLedgerApplied, 'candidate_readiness_worker_budget_ledger_mismatch');
+  expect(worker.schemaVersion === expected.schemaVersion, 'candidate_readiness_worker_schema_version_mismatch');
+  expect(worker.roleClass === 'login_non_superuser', 'candidate_readiness_worker_role_invalid');
+  expect(worker.readiness === 'pass', 'candidate_readiness_worker_not_ready');
+  expect(worker.readyForAuthentication === true, 'candidate_readiness_authentication_not_ready');
+  return {
+    databaseEnvironment: worker.databaseEnvironment,
+    branchFingerprint: 'main',
+    schemaFingerprint: worker.schemaFingerprint,
+    relationCount: worker.relationCount,
+    identityContactEmails: worker.identityContactEmails,
+    budgetLedgerApplied: worker.budgetLedgerApplied,
+    schemaVersion: worker.schemaVersion,
+    roleClass: worker.roleClass,
+    readiness: worker.readiness,
+  };
+}
+
 function failureReason(error) {
   if (error instanceof BlockedCase) return error.message;
   const message = error instanceof Error ? error.message : '';
@@ -177,6 +217,11 @@ function parseSanitizedJson(value, label) {
 
 await runCase('GATE-ROUTING', async () => {
   expect(hyperdriveVerifiedMain, 'hyperdrive_main_proof_missing');
+  const recordedCandidateReadiness = candidateReadinessEvidence();
+  if (recordedCandidateReadiness) {
+    readiness = recordedCandidateReadiness;
+    return;
+  }
   const result = await requestJson('/internal/readiness/database-identity', {
     baseUrl: apiOrigin,
     headers: { authorization: `Bearer ${readinessToken}` },
