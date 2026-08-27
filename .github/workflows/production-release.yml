@@ -436,7 +436,7 @@ jobs:
 
   web:
     name: Deploy Flutter web
-    needs: [preflight, provider_evidence]
+    needs: [preflight, provider_evidence, workers]
     if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
     uses: ./.github/workflows/deploy-alpha-web.yml
     with:
