@@ -5,13 +5,14 @@ import fs from 'node:fs';
 const [mode, inputPath, expectedTag, variablePrefix] = process.argv.slice(2);
 const githubEnv = process.env.GITHUB_ENV;
 
-if (!['candidate', 'rollback'].includes(mode)) throw new Error('mode must be candidate or rollback');
+if (!['candidate', 'upload', 'rollback'].includes(mode)) throw new Error('mode must be candidate, upload, or rollback');
 if (!inputPath || !variablePrefix || !/^[A-Z][A-Z0-9_]*$/.test(variablePrefix)) {
   throw new Error('input path and uppercase variable prefix are required');
 }
 if (!githubEnv) throw new Error('GITHUB_ENV is required');
 
-const source = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+const sourceText = fs.readFileSync(inputPath, 'utf8');
+const source = mode === 'upload' ? sourceText : JSON.parse(sourceText);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function append(name, value) {
@@ -49,6 +50,22 @@ if (mode === 'candidate') {
     versionId: candidate.id,
     releaseSha: expectedTag,
     matchingVersions: matches.length,
+  }));
+} else if (mode === 'upload') {
+  if (!expectedTag || !/^[0-9a-f]{40}$/.test(expectedTag)) throw new Error('upload tag must be the exact release SHA');
+  const output = source.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '');
+  const matches = [...output.matchAll(/Worker Version ID:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/gi)]
+    .map((match) => match[1]);
+  if (matches.length === 0) throw new Error(`Worker upload did not return a version id for ${expectedTag}`);
+  if (matches.length > 1) throw new Error(`Worker upload returned multiple version ids for ${expectedTag}`);
+  append(`${variablePrefix}_WORKER_VERSION_ID`, matches[0]);
+  console.log(JSON.stringify({
+    mode,
+    variablePrefix,
+    versionId: matches[0],
+    releaseSha: expectedTag,
+    matchingVersions: 1,
+    source: 'upload_output',
   }));
 } else {
   const versions = source?.versions;
