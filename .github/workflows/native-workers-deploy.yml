@@ -280,6 +280,7 @@ jobs:
           ADR003_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
           ADR003_WORKER_NAME: lythaus-public-api-development
           ADR003_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
+          ADR003_DATABASE_READINESS_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/public-candidate-probe.json
           ADR003_WEB_HEALTH_URL: ${{ vars.ADR003_WEB_HEALTH_URL }}
           ADR003_WEB_ORIGIN: ${{ vars.ADR003_WEB_ORIGIN }}
           ADR003_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/adr003-candidate-acceptance.json

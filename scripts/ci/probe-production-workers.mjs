@@ -141,6 +141,8 @@ for (const target of targets) {
     ? Object.entries(body.databases)
     : [['primary', body]];
   for (const [label, report] of reports) assertDatabaseReport(report, target.worker, label);
+  const primaryReport = reports[0]?.[1];
+  if (!primaryReport) throw new Error(`${target.worker} candidate probe returned no database report`);
   if (body.branchFingerprint !== 'unknown') throw new Error(`${target.worker} top-level probe must not self-assert a branch`);
   if (body.readyForAuthentication !== authenticatedAcceptanceProven) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
   evidence.workers.push({
@@ -149,6 +151,13 @@ for (const target of targets) {
     releaseTag: body.releaseTag,
     baseUrl: base,
     databaseCount: reports.length,
+    databaseEnvironment: primaryReport.databaseEnvironment,
+    schemaFingerprint: primaryReport.schemaFingerprint,
+    relationCount: primaryReport.relationCount,
+    identityContactEmails: primaryReport.identityContactEmails,
+    budgetLedgerApplied: primaryReport.budgetLedgerApplied,
+    schemaVersion: primaryReport.schemaVersion,
+    roleClass: primaryReport.roleClass,
     readiness: body.readiness,
     branchFingerprint: expectedBranch,
     readyForAuthentication: body.readyForAuthentication === true,

@@ -7,6 +7,7 @@ const webWorkflow = readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8
 const workersWorkflow = readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
 const adr003Workflow = readFileSync('.github/workflows/native-adr003-acceptance.yml', 'utf8');
 const adr003Harness = readFileSync('scripts/ci/run-adr003-authenticated-acceptance.mjs', 'utf8');
+const runtimeAuth = readFileSync('scripts/release/runtime-authenticated-command.mjs', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesVerifier = readFileSync('scripts/cloudflare/verify-pages-deployment.mjs', 'utf8');
 
@@ -153,9 +154,24 @@ test('ADR-003 routes root-scoped readiness separately from public API routes', (
 
 test('candidate ADR-003 acceptance normalizes the protected production API base', () => {
   const candidateAcceptance = workersWorkflow.match(/- name: Run authenticated acceptance against public candidate[\s\S]*?npm run acceptance:adr003/)?.[0] ?? '';
+  assert.match(candidateAcceptance, /ADR003_DATABASE_READINESS_EVIDENCE_PATH: \$\{\{ runner\.temp \}\}\/production-cutover\/public-candidate-probe\.json/);
   assert.match(candidateAcceptance, /api_base="\$\{ADR003_API_BASE_URL%\//);
   assert.match(candidateAcceptance, /api_base="\$api_base\/api"/);
   assert.match(candidateAcceptance, /export ADR003_API_BASE_URL="\$api_base"/);
+});
+
+test('production browser authentication accepts canonical and legacy token keys', () => {
+  assert.match(runtimeAuth, /session\?\.accessToken \|\| session\?\.access_token/);
+  assert.match(runtimeAuth, /session\?\.refreshToken \|\| session\?\.refresh_token/);
+});
+
+test('candidate ADR-003 acceptance consumes the exact proven readiness artifact', () => {
+  assert.match(adr003Harness, /ADR003_DATABASE_READINESS_EVIDENCE_PATH/);
+  assert.match(adr003Harness, /report\.releaseSha === releaseSha/);
+  assert.match(adr003Harness, /worker\.workerVersionId === candidateWorkerVersionId/);
+  assert.match(adr003Harness, /worker\.schemaFingerprint === expected\.schemaFingerprint/);
+  assert.match(adr003Harness, /worker\.roleClass === 'login_non_superuser'/);
+  assert.match(adr003Harness, /worker\.readyForAuthentication === true/);
 });
 
 test('Worker readiness secrets are included in each immutable candidate upload', () => {

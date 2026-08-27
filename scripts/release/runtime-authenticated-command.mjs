@@ -57,8 +57,9 @@ try {
     throw new Error(`Runtime authentication failed with status ${response.status}${detail ? ` (${detail})` : ''}`);
   }
   const body = await response.json();
-  accessToken = body?.data?.access_token || '';
-  refreshToken = body?.data?.refresh_token || '';
+  const session = body?.data && typeof body.data === 'object' ? body.data : body;
+  accessToken = session?.accessToken || session?.access_token || '';
+  refreshToken = session?.refreshToken || session?.refresh_token || '';
   if (!accessToken || !refreshToken) {
     throw new Error('Runtime authentication response omitted required tokens');
   }
