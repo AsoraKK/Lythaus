@@ -512,11 +512,11 @@ jobs:
             local status
             status="$(curl --location --silent --show-error --max-time 30 --retry 4 --retry-delay 2 --dump-header "$headers" --output "$output" --write-out '%{http_code}' "https://${host}/")"
             test "$status" = 200
-            rg -F 'The human internet is worth protecting.' "$output"
-            rg -F -i 'strict-transport-security:' "$headers"
-            rg -F -i 'content-security-policy:' "$headers"
-            rg -F -i 'x-content-type-options: nosniff' "$headers"
-            if rg -i 'asora|asora-' "$output"; then
+            grep -F 'The human internet is worth protecting.' "$output" >/dev/null
+            grep -F -i 'strict-transport-security:' "$headers" >/dev/null
+            grep -F -i 'content-security-policy:' "$headers" >/dev/null
+            grep -F -i 'x-content-type-options: nosniff' "$headers" >/dev/null
+            if grep -Eiq 'asora|asora-' "$output"; then
               echo "Retired Asora branding found in active ${host} output." >&2
               exit 1
             fi
@@ -530,7 +530,7 @@ jobs:
           echo 'flutter_web=PASS' >> "$GITHUB_OUTPUT"
           api_status="$(curl --silent --show-error --max-time 30 --output "$tmpdir/api.json" --write-out '%{http_code}' "${API_BASE_URL%/}/health")"
           test "$api_status" = 200
-          rg -F '"status":"ok"' "$tmpdir/api.json"
+          grep -F '"status":"ok"' "$tmpdir/api.json" >/dev/null
           echo 'public_api=PASS' >> "$GITHUB_OUTPUT"
           admin_api_status="$(curl --silent --show-error --max-time 30 --output "$tmpdir/admin-api.json" --write-out '%{http_code}' \
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
@@ -545,7 +545,7 @@ jobs:
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
             'https://admin.lythaus.co/')"
           test "$auth_status" = 200
-          rg -F -i 'content-security-policy:' "$tmpdir/admin-auth.headers"
+          grep -F -i 'content-security-policy:' "$tmpdir/admin-auth.headers" >/dev/null
           echo 'admin_ui=PASS' >> "$GITHUB_OUTPUT"
           echo 'jobs=PASS' >> "$GITHUB_OUTPUT"
 
