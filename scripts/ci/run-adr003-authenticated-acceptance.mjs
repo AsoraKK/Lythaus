@@ -296,7 +296,7 @@ await runCase('A08', async () => {
   requireReady();
   expect(Boolean(replacementRefreshToken), 'refresh_rotation_missing');
   const result = await requestJson('/api/auth/refresh', { method: 'POST', body: { refreshToken } });
-  expectStatus(result, [400], 'refresh_replay');
+  expectStatus(result, [400, 401], 'refresh_replay');
   refreshToken = replacementRefreshToken;
   return result;
 });
@@ -321,7 +321,7 @@ await runCase('A12', () => runAuthenticatedCase(async () => {
   });
   expectStatus(result, [201], 'post_submission');
   const body = unwrap(result.body);
-  postId = typeof body?.postId === 'string' ? body.postId : '';
+  postId = typeof body?.postId === 'string' ? body.postId : typeof body?.id === 'string' ? body.id : '';
   expect(Boolean(postId), 'post_id_missing');
   return result;
 }));

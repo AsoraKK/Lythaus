@@ -178,8 +178,10 @@ export function sanitizeActivityMetadata(
   const safeEntries: Array<[string, ActivityMetadataValue]> = [];
 
   for (const [key, value] of Object.entries(metadata)) {
-    if (FORBIDDEN_METADATA_KEY.test(key)) throw new Error('activity_metadata_sensitive_key');
-    if (!allowedKeys.has(key)) throw new Error('activity_metadata_key_not_allowed');
+    if (!allowedKeys.has(key)) {
+      if (FORBIDDEN_METADATA_KEY.test(key)) throw new Error('activity_metadata_sensitive_key');
+      throw new Error('activity_metadata_key_not_allowed');
+    }
     if (!isMetadataValue(value)) throw new Error('activity_metadata_value_not_allowed');
     if (typeof value === 'string' && value.length > 160) throw new Error('activity_metadata_value_too_long');
     safeEntries.push([key, value]);

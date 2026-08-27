@@ -41,3 +41,16 @@ test('runtime rate-limit access requires system schema usage and is verified in 
   assert.match(verifier, /has_table_privilege\(\$1, 'system\.rate_limit_windows', 'UPDATE'\) AS runtime_rate_update/);
   assert.match(verifier, /!row\?\.runtime_system_usage/);
 });
+
+test('runtime identity and acceptance reads are least-privilege and verified in production', async () => {
+  const grants = await fs.readFile('database/planetscale/grants/roles.sql', 'utf8');
+  const verifier = await fs.readFile('scripts/ci/verify-planetscale-production-schema.mjs', 'utf8');
+
+  assert.match(grants, /GRANT SELECT ON identity\.admin_memberships, identity\.user_entitlements TO lythaus_runtime;/);
+  assert.match(verifier, /runtime_admin_memberships_select/);
+  assert.match(verifier, /runtime_admin_memberships_insert/);
+  assert.match(verifier, /runtime_user_entitlements_select/);
+  assert.match(verifier, /runtime_user_entitlements_insert/);
+  assert.match(verifier, /runtime_privacy_requests_insert/);
+  assert.match(verifier, /runtime_activity_insert/);
+});

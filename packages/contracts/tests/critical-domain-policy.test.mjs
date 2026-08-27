@@ -103,7 +103,10 @@ test('activity ledger sanitizes private metadata and records declaration selecti
     changedField: 1,
     sessionAction: false,
   }), { authenticationMethod: 'email', changedField: 1, sessionAction: false });
-  assert.deepEqual(sanitizeActivityMetadata('privacy'), {});
+  assert.deepEqual(sanitizeActivityMetadata('privacy', {
+    requestType: 'export',
+    requestState: 'received',
+  }), { requestType: 'export', requestState: 'received' });
   assert.throws(() => sanitizeActivityMetadata('privacy', { token: 'secret' }), /activity_metadata_sensitive_key/);
   assert.throws(() => sanitizeActivityMetadata('content', { rawText: 'private post' }), /activity_metadata_key_not_allowed/);
   assert.throws(() => sanitizeActivityMetadata('content', { contentType: { nested: true } }), /activity_metadata_value_not_allowed/);
