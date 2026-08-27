@@ -133,6 +133,11 @@ test('production browser smoke uses production acceptance credentials', () => {
   assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ inputs\.target_environment == 'production' && secrets\.CODEX_TEST_PASSWORD \|\| secrets\.MVP_SMOKE_PASSWORD \}\}/);
 });
 
+test('web authenticated smoke waits for Worker activation', () => {
+  assert.match(workflow, /\r?\n  web:\r?\n[\s\S]*?needs: \[preflight, provider_evidence, workers\]/);
+  assert.match(workflow, /\r?\n  workers:\r?\n[\s\S]*?needs: \[preflight, provider_evidence\]/);
+});
+
 test('ADR-003 uses the canonical API base and keeps mobile acceptance separate', () => {
   assert.match(adr003Workflow, /default: https:\/\/api\.lythaus\.co\/api/);
   assert.match(adr003Workflow, /ADR003_TEST_EMAIL: \$\{\{ secrets\.CODEX_TEST_EMAIL \}\}/);
