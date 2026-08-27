@@ -2724,7 +2724,7 @@ export default {
       const url = new URL(request.url);
       if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode' } });
       if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) return response(request, env, { status: 'ok', service: 'lythaus-public-api', environment: env.ENVIRONMENT ?? 'unknown' });
-      if (request.method === 'GET' && url.pathname === '/internal/readiness/database-identity') {
+      if (request.method === 'GET' && (url.pathname === '/internal/readiness/database-identity' || url.pathname === '/api/internal/readiness/database-identity')) {
         if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
         const identity = await inspectDatabaseIdentity(env.DB_APP_FRESH, databaseExpectationsFromEnv(env));
         return privateResponse(request, env, {

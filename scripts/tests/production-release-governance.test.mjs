@@ -10,6 +10,7 @@ const adr003Harness = readFileSync('scripts/ci/run-adr003-authenticated-acceptan
 const runtimeAuth = readFileSync('scripts/release/runtime-authenticated-command.mjs', 'utf8');
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesVerifier = readFileSync('scripts/cloudflare/verify-pages-deployment.mjs', 'utf8');
+const publicApiRuntime = readFileSync('apps/lythaus-public-api/src/index.ts', 'utf8');
 
 const satisfiesGovernance = (protection) => (
   protection.required_status_checks !== null
@@ -167,10 +168,15 @@ test('production browser authentication accepts canonical and legacy token keys'
 
 test('production acceptance follows current API semantics and visible guest controls', () => {
   const browserSmoke = readFileSync('scripts/beta-smoke.mjs', 'utf8');
+  const workerProbe = readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8');
   assert.match(adr003Harness, /expectStatus\(result, \[400, 401\], 'refresh_replay'\)/);
   assert.match(adr003Harness, /body\?\.postId[\s\S]*body\?\.id/);
   assert.match(browserSmoke, /clickVisibleText\(page, ocrWorker, 'Continue as guest'\)/);
   assert.match(browserSmoke, /worker\.recognize\(image, \{\}, \{ blocks: true \}\)/);
+  assert.equal((browserSmoke.match(/Array\.isArray\(parsed\.items\)/g) ?? []).length, 2);
+  assert.doesNotMatch(browserSmoke, /parsed\.success === true/);
+  assert.match(workerProbe, /routePrefix: '\/api'/);
+  assert.match(publicApiRuntime, /url\.pathname === '\/api\/internal\/readiness\/database-identity'/);
   assert.doesNotMatch(browserSmoke, /viewport\.width \/ 2/);
 });
 
