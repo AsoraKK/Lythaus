@@ -148,6 +148,12 @@ test('ADR-003 uses the canonical API base and keeps mobile acceptance separate',
   assert.match(adr003Harness, /mobileEmailFlow: process\.env\.ADR003_MOBILE_EMAIL_ACCEPTED === 'true'/);
 });
 
+test('production ADR-003 preserves its login fixture', () => {
+  assert.match(workersWorkflow, /ADR003_RUN_DESTRUCTIVE_ACCOUNT_DELETION: 'false'/);
+  assert.match(adr003Harness, /outcome: 'skipped', reason: 'account_deletion_not_run_in_production_release'/);
+  assert.match(adr003Harness, /results\.every\(\(item\) => item\.outcome === 'passed' \|\| item\.outcome === 'skipped'\)/);
+});
+
 test('ADR-003 routes root-scoped readiness separately from public API routes', () => {
   assert.match(adr003Harness, /ADR003_API_BASE_URL must end with \/api/);
   assert.match(adr003Harness, /const apiOrigin = apiBase\.slice\(0, -'\/api'\.length\)/);
