@@ -1,0 +1,97 @@
+name: Production auth incident audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-auth-incident-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit production signup and email delivery
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+      CODEX_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
+      AUTH_EMAIL_SENDING_DOMAIN: mail.lythaus.co
+      AUTH_EMAIL_FROM: no-reply@mail.lythaus.co
+      AUTH_INCIDENT_AUDIT_OUTPUT: .artifacts/auth-incident/production-auth-incident.json
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run sanitized production auth incident audit
+        id: incident_audit
+        continue-on-error: true
+        run: node scripts/ci/audit-production-auth-incident.mjs
+
+      - name: Summarize sanitized evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$AUTH_INCIDENT_AUDIT_OUTPUT"
+          if [[ ! -f "$report" ]]; then
+            echo '### Production auth incident audit' >> "$GITHUB_STEP_SUMMARY"
+            echo >> "$GITHUB_STEP_SUMMARY"
+            echo '- Status: NO EVIDENCE PRODUCED' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo '### Production auth incident audit'
+            echo
+            echo "- Auth status: \`$(jq -r '.productionAuthStatus' "$report")\`"
+            echo "- Audit result: \`$(jq -r '.status' "$report")\`"
+            echo "- PlanetScale: \`$(jq -r '.planetscale.status // "UNKNOWN"' "$report")\`"
+            echo "- Cloudflare sending domain enabled: \`$(jq -r '.cloudflare.subdomainApi.enabled // false' "$report")\`"
+            echo "- Cloudflare analytics available: \`$(jq -r '.cloudflare.analytics.available // false' "$report")\`"
+            echo "- Arbitrary-recipient provider probe accepted: \`$(jq -r '.cloudflare.arbitraryRecipientProbe.success // false' "$report")\`"
+            echo "- Arbitrary-recipient provider HTTP status: \`$(jq -r '.cloudflare.arbitraryRecipientProbe.httpStatus // "unknown"' "$report")\`"
+            echo "- Failures: \`$(jq -c '.failures // []' "$report")\`"
+            echo
+            echo 'The artifact contains only aggregate/sanitized data. It intentionally excludes email addresses, tokens, HMACs, password hashes, message content, and database row identifiers.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sanitized incident evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: production-auth-incident-${{ github.sha }}
+          path: .artifacts/auth-incident
+          if-no-files-found: error
+
+      - name: Fail closed on incomplete production auth evidence
+        if: always()
+        env:
+          AUDIT_OUTCOME: ${{ steps.incident_audit.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$AUDIT_OUTCOME" = 'success' || {
+            echo 'Production auth remains NO-GO: provider/database incident audit failed.' >&2
+            exit 1
+          }
+          jq -e '.status == "DIAGNOSTIC_PASS" and .failures == []' "$AUTH_INCIDENT_AUDIT_OUTPUT" >/dev/null || {
+            echo 'Production auth remains NO-GO: incident evidence did not pass all gates.' >&2
+            exit 1
+          }
