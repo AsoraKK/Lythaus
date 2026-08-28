@@ -29,6 +29,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   late final AnalyticsClient _analyticsClient;
   bool _screenViewLogged = false;
   bool _obscurePassword = true;
+  bool _isRecoveryActionLoading = false;
 
   @override
   void initState() {
@@ -109,6 +110,76 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     );
   }
 
+  bool _isValidEmail(String value) {
+    return value.length <= 320 &&
+        RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value);
+  }
+
+  Future<void> _openPasswordReset() async {
+    final email = _emailController.text.trim();
+    final uri = Uri.https(
+      'lythaus.co',
+      '/forgot-password',
+      email.isEmpty ? null : {'email': email},
+    );
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open password recovery.')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open password recovery.')),
+      );
+    }
+  }
+
+  Future<void> _openResendVerification() async {
+    final email = _emailController.text.trim();
+    final uri = Uri.https(
+      'lythaus.co',
+      '/resend-verification',
+      email.isEmpty ? null : {'email': email},
+    );
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open email verification.')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open email verification.')),
+      );
+    }
+  }
+
+  Future<void> _handleResendVerificationEmail() async {
+    final email = _emailController.text.trim();
+    if (!_isValidEmail(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email address first.')),
+      );
+      return;
+    }
+
+    setState(() => _isRecoveryActionLoading = true);
+    await _analyticsClient.logEvent(
+      AnalyticsEvents.authStarted,
+      properties: {AnalyticsEvents.propMethod: 'resend_verification'},
+    );
+    try {
+      await _openResendVerification();
+    } finally {
+      if (mounted) setState(() => _isRecoveryActionLoading = false);
+    }
+  }
+
   Future<void> _openSignup() async {
     final opened = await launchUrl(
       _signupUri,
@@ -125,6 +196,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final error = authState.hasError ? authState.error.toString() : null;
+    final isBusy = authState.isLoading || _isRecoveryActionLoading;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -156,7 +228,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                     const SizedBox(height: 28),
                     TextField(
                       controller: _emailController,
-                      enabled: !authState.isLoading,
+                      enabled: !isBusy,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
                       textInputAction: TextInputAction.next,
@@ -169,7 +241,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _passwordController,
-                      enabled: !authState.isLoading,
+                      enabled: !isBusy,
                       obscureText: _obscurePassword,
                       autofillHints: const [AutofillHints.password],
                       onSubmitted: (_) => _handleEmailSignIn(),
@@ -208,22 +280,30 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                           ? 'Signing in…'
                           : 'Sign in with email',
                       icon: Icons.login,
-                      onPressed: authState.isLoading
-                          ? null
-                          : _handleEmailSignIn,
+                      onPressed: isBusy ? null : _handleEmailSignIn,
+                    ),
+                    const SizedBox(height: 12),
+                    LythButton.tertiary(
+                      label: 'Forgot password?',
+                      icon: Icons.lock_reset,
+                      onPressed: isBusy ? null : _openPasswordReset,
+                    ),
+                    LythButton.tertiary(
+                      label: _isRecoveryActionLoading
+                          ? 'Opening verification…'
+                          : 'Resend verification email',
+                      onPressed: isBusy ? null : _handleResendVerificationEmail,
                     ),
                     const SizedBox(height: 12),
                     LythButton.secondary(
                       label: 'Create account',
                       icon: Icons.person_add_alt_1,
-                      onPressed: authState.isLoading ? null : _openSignup,
+                      onPressed: isBusy ? null : _openSignup,
                     ),
                     const SizedBox(height: 12),
                     LythButton.secondary(
                       label: 'Continue as guest',
-                      onPressed: authState.isLoading
-                          ? null
-                          : _handleGuestContinue,
+                      onPressed: isBusy ? null : _handleGuestContinue,
                     ),
                     const SizedBox(height: 20),
                     LythButton.tertiary(

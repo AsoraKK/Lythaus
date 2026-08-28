@@ -105,6 +105,7 @@ test('rejects stale access claims', () => {
 
 test('selects bounded rate limits and idempotency replay state', () => {
   assert.deepEqual(rateLimitPlan('/api/auth/refresh'), { scope: 'auth', limit: 10 });
+  assert.deepEqual(rateLimitPlan('/api/auth/email'), { scope: 'auth', limit: 10 });
   assert.deepEqual(rateLimitPlan('/api/posts'), { scope: 'public-api', limit: 120 });
   assert.equal(idempotencyKey(null), undefined);
   assert.equal(idempotencyKey(' abcdefgh '), 'abcdefgh');

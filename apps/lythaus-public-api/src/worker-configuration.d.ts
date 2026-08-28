@@ -21,7 +21,7 @@ interface __BaseEnv_Env {
 	EMAIL_PROVIDER_MODE: "fallback" | "cloudflare";
 	EMAIL_FROM: "no-reply@localhost" | "no-reply@mail.lythaus.co";
 	EMAIL_VERIFICATION_BASE_URL: "http://localhost:8787/api/auth/email/verify?token=" | "https://api.lythaus.co/api/auth/email/verify?token=";
-	EMAIL_PASSWORD_RESET_BASE_URL: "http://localhost:8787/api/auth/password/reset/complete?token=" | "https://api.lythaus.co/api/auth/password/reset/complete?token=";
+	EMAIL_PASSWORD_RESET_BASE_URL: "http://localhost:4321/reset-password?token=" | "https://lythaus.co/reset-password?token=";
 	TURNSTILE_REQUIRED: "false" | "true";
 	TURNSTILE_EXPECTED_HOSTNAMES: "localhost,127.0.0.1" | "lythaus.co,www.lythaus.co";
 	PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK: "true" | "false";
@@ -61,7 +61,7 @@ declare namespace Cloudflare {
 		EMAIL_PROVIDER_MODE: "fallback";
 		EMAIL_FROM: "no-reply@localhost";
 		EMAIL_VERIFICATION_BASE_URL: "http://localhost:8787/api/auth/email/verify?token=";
-		EMAIL_PASSWORD_RESET_BASE_URL: "http://localhost:8787/api/auth/password/reset/complete?token=";
+		EMAIL_PASSWORD_RESET_BASE_URL: "http://localhost:4321/reset-password?token=";
 		TURNSTILE_REQUIRED: "false";
 		TURNSTILE_EXPECTED_HOSTNAMES: "localhost,127.0.0.1";
 		PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK: "true";

@@ -69,6 +69,15 @@ test('email registration retries recover accounts waiting for verification or le
   assert.match(source, /registrationPlan === 'account_exists'/);
 });
 
+test('email recovery is Turnstile-protected, neutral, and atomically single-use', () => {
+  const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  assert.match(source, /mode === 'register' \|\| mode === 'resend_verification'/);
+  assert.match(source, /event: 'auth_email_delivery_failed'/);
+  assert.match(source, /UPDATE identity\.password_reset_tokens[\s\S]*consumed_at IS NULL[\s\S]*expires_at > now\(\)[\s\S]*RETURNING user_id/);
+  assert.match(source, /revokeAllAuthSessions/);
+  assert.match(source, /rateLimitPlan\(url\.pathname\)/);
+});
+
 test('admin API dispatch awaits rejection-prone mutations', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-admin-api/src/index.ts'), 'utf8');
   assert.match(source, /return cors\(await decideModeration\(/);

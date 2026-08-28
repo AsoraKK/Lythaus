@@ -104,6 +104,47 @@ class AuthService {
     }
   }
 
+  /// Request another verification email without revealing account state.
+  Future<void> resendVerificationEmail(
+    String email, {
+    required String turnstileToken,
+  }) async {
+    final normalizedEmail = email.trim();
+    if (normalizedEmail.isEmpty) {
+      throw AuthFailure.invalidCredentials('Email cannot be empty');
+    }
+    if (turnstileToken.trim().isEmpty) {
+      throw AuthFailure.invalidCredentials('Verification is required');
+    }
+
+    try {
+      final response = await _httpClient.post(
+        Uri.parse('$_authUrl/auth/email'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'mode': 'resend_verification',
+          'email': normalizedEmail,
+          'turnstileToken': turnstileToken,
+        }),
+      );
+      if (response.statusCode != 202 && response.statusCode != 200) {
+        throw AuthFailure.serverError(_errorMessage(response));
+      }
+    } on AuthFailure {
+      rethrow;
+    } catch (error, stackTrace) {
+      dev.log(
+        'Verification email resend failed',
+        name: 'auth',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      throw AuthFailure.serverError(
+        'Unable to resend verification email. Please try again.',
+      );
+    }
+  }
+
   Future<User?> getCurrentUser() async {
     final token = await getJwtToken();
     if (token == null) return null;

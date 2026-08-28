@@ -73,4 +73,48 @@ void main() {
       throwsA(isA<AuthFailure>()),
     );
   });
+
+  test('resend verification email uses the neutral auth mode', () async {
+    final client = MockClient((request) async {
+      expect(request.url.path, '/api/auth/email');
+      expect(jsonDecode(request.body), {
+        'mode': 'resend_verification',
+        'email': 'person@example.com',
+        'turnstileToken': 'turnstile-token',
+      });
+      return http.Response(
+        jsonEncode({
+          'data': {'state': 'verification_required'},
+        }),
+        202,
+      );
+    });
+    final service = AuthService(
+      httpClient: client,
+      authUrl: 'https://api.lythaus.co/api',
+    );
+
+    await service.resendVerificationEmail(
+      ' person@example.com ',
+      turnstileToken: 'turnstile-token',
+    );
+  });
+
+  test(
+    'resend verification rejects an empty email before network access',
+    () async {
+      final service = AuthService(
+        httpClient: MockClient((_) async => throw StateError('not called')),
+        authUrl: 'https://api.lythaus.co/api',
+      );
+
+      expect(
+        () => service.resendVerificationEmail(
+          ' ',
+          turnstileToken: 'turnstile-token',
+        ),
+        throwsA(isA<AuthFailure>()),
+      );
+    },
+  );
 }
