@@ -292,11 +292,29 @@ async function sendAccountVerificationEmail(request: Request, env: Env, userId: 
   await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
 }
 
+function logAuthEmailDeliveryFailure(
+  request: Request,
+  action: 'verification_resend' | 'password_reset',
+  error: unknown,
+): void {
+  const internalCode = error instanceof Error ? error.message : '';
+  const errorCode = /^(?:email_delivery_not_configured|email_delivery_failed(?:_[1-5][0-9]{2})?|email_provider_mode_invalid)$/.test(internalCode)
+    ? internalCode
+    : 'email_delivery_failed';
+  logEvent({
+    service: 'lythaus-public-api',
+    event: 'auth_email_delivery_failed',
+    action,
+    errorCode,
+    correlationId: correlationId(request),
+  });
+}
+
 async function emailAuth(request: Request, env: Env): Promise<Response> {
   const input = await readJson<EmailAuthInput>(request, 16 * 1024);
   const attempt = prepareEmailAuthAttempt(input);
   const { email, password, mode } = attempt;
-  if (mode === 'register') await verifyTurnstile(env, attempt.turnstileToken);
+  if (mode === 'register' || mode === 'resend_verification') await verifyTurnstile(env, attempt.turnstileToken);
   const secrets = requireAuthSecrets(env);
   const lookup = hmacLookup(email, secrets.hmacKey);
   const existing = await query<{ id: string; status: string; password_hash: PasswordHash; verified_at: string | null }>(env.DB_APP_FRESH,
@@ -309,8 +327,13 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
        FROM identity.contact_emails c JOIN identity.users u ON u.id = c.user_id
       WHERE c.email_lookup_hmac = decode($1, 'base64')`, [lookup])).rows[0];
   if (mode === 'resend_verification') {
-    if (!account || account.verified_at) return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
-    await sendAccountVerificationEmail(request, env, account.id, email);
+    if (account && !account.verified_at) {
+      try {
+        await sendAccountVerificationEmail(request, env, account.id, email);
+      } catch (error) {
+        logAuthEmailDeliveryFailure(request, 'verification_resend', error);
+      }
+    }
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
   if (mode === 'register') {
@@ -509,7 +532,11 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
         metadata: { authenticationMethod: 'email' },
       });
     });
-    await deliverAuthEmail(env, { type: 'password_reset', to: email, token });
+    try {
+      await deliverAuthEmail(env, { type: 'password_reset', to: email, token });
+    } catch (error) {
+      logAuthEmailDeliveryFailure(request, 'password_reset', error);
+    }
   }
   return response(request, env, { state: 'reset_if_eligible' }, { status: 202 });
 }
@@ -523,9 +550,8 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
   const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
-    const found = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.password_reset_tokens WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now()`, [hashResetToken(token)]);
+    const found = await client.query<{ user_id: string }>(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now() RETURNING user_id`, [hashResetToken(token)]);
     if (!found.rows[0]) throw new Error('reset_token_invalid');
-    await client.query(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
     await client.query(`UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`, [JSON.stringify(passwordHash), found.rows[0].user_id]);
     await revokeAllAuthSessions({
       revokeAllSessions: async (subjectId) => { await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
