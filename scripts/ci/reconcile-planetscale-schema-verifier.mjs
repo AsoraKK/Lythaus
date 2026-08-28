@@ -26,6 +26,17 @@ function quoteIdentifier(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
 
+const incidentAggregateColumns = [
+  { schema: 'identity', table: 'users', columns: ['status'] },
+  { schema: 'identity', table: 'email_credentials', columns: ['verified_at'] },
+  {
+    schema: 'identity',
+    table: 'email_verification_tokens',
+    columns: ['created_at', 'consumed_at', 'expires_at'],
+  },
+  { schema: 'identity', table: 'account_events', columns: ['event_type', 'created_at'] },
+];
+
 const adminConnection = verifiedConnection(adminDatabaseUrl, 'admin database URL');
 const verifierConnection = verifiedConnection(verifierDatabaseUrl, 'schema verifier database URL');
 
@@ -65,6 +76,7 @@ try {
 
   const roleSql = quoteIdentifier(verifierRole);
   const schemaSql = APPLICATION_SCHEMAS.map(quoteIdentifier).join(', ');
+  const relationKeys = new Set(relations.rows.map((row) => `${row.schema_name}.${row.relation_name}`));
   await admin.query('BEGIN');
   try {
     await admin.query("SET LOCAL lock_timeout = '10s'");
@@ -78,6 +90,13 @@ try {
       await admin.query(`GRANT REFERENCES ON TABLE ${relationSql} TO ${roleSql}`);
     }
     await admin.query(`GRANT SELECT ON TABLE system.schema_migrations TO ${roleSql}`);
+    for (const aggregate of incidentAggregateColumns) {
+      const key = `${aggregate.schema}.${aggregate.table}`;
+      if (!relationKeys.has(key)) throw new Error(`required incident aggregate relation is missing: ${key}`);
+      const relationSql = `${quoteIdentifier(aggregate.schema)}.${quoteIdentifier(aggregate.table)}`;
+      const columnsSql = aggregate.columns.map(quoteIdentifier).join(', ');
+      await admin.query(`GRANT SELECT (${columnsSql}) ON TABLE ${relationSql} TO ${roleSql}`);
+    }
     await admin.query('COMMIT');
   } catch (error) {
     await admin.query('ROLLBACK').catch(() => undefined);
@@ -96,6 +115,13 @@ try {
     has_table_privilege(current_user, 'marketing.waitlist_signups', 'REFERENCES') AS waitlist_metadata,
     has_table_privilege(current_user, 'media.storage_ledgers', 'REFERENCES') AS storage_ledgers_metadata,
     has_table_privilege(current_user, 'system.schema_migrations', 'SELECT') AS migration_registry_read,
+    has_column_privilege(current_user, 'identity.users', 'status', 'SELECT') AS incident_users_status_read,
+    has_column_privilege(current_user, 'identity.email_credentials', 'verified_at', 'SELECT') AS incident_credentials_verified_at_read,
+    has_column_privilege(current_user, 'identity.email_verification_tokens', 'created_at', 'SELECT') AS incident_tokens_created_at_read,
+    has_column_privilege(current_user, 'identity.email_verification_tokens', 'consumed_at', 'SELECT') AS incident_tokens_consumed_at_read,
+    has_column_privilege(current_user, 'identity.email_verification_tokens', 'expires_at', 'SELECT') AS incident_tokens_expires_at_read,
+    has_column_privilege(current_user, 'identity.account_events', 'event_type', 'SELECT') AS incident_events_type_read,
+    has_column_privilege(current_user, 'identity.account_events', 'created_at', 'SELECT') AS incident_events_created_at_read,
     EXISTS (
       SELECT 1 FROM information_schema.tables
       WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND table_type = 'BASE TABLE'
@@ -110,11 +136,14 @@ try {
     ) AS waitlist_columns_visible`);
   const row = checks.rows[0];
   if (!row?.marketing_usage || !row.waitlist_metadata || !row.storage_ledgers_metadata
-    || !row.migration_registry_read || !row.waitlist_visible || !row.storage_ledgers_visible
-    || !row.waitlist_columns_visible) {
-    throw new Error('dedicated schema verifier metadata grant contract failed');
+    || !row.migration_registry_read || !row.incident_users_status_read
+    || !row.incident_credentials_verified_at_read || !row.incident_tokens_created_at_read
+    || !row.incident_tokens_consumed_at_read || !row.incident_tokens_expires_at_read
+    || !row.incident_events_type_read || !row.incident_events_created_at_read
+    || !row.waitlist_visible || !row.storage_ledgers_visible || !row.waitlist_columns_visible) {
+    throw new Error('dedicated schema verifier metadata and aggregate evidence grant contract failed');
   }
-  console.log(`Reconciled dedicated PlanetScale schema verifier metadata grants across ${APPLICATION_SCHEMAS.length} application schemas.`);
+  console.log(`Reconciled dedicated PlanetScale schema verifier metadata and aggregate evidence grants across ${APPLICATION_SCHEMAS.length} application schemas.`);
 } finally {
   await proof.end();
 }

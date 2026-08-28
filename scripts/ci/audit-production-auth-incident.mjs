@@ -71,25 +71,28 @@ async function capturePlanetScale(report) {
     }
 
     const users = await client.query(`
-      SELECT status, COUNT(*)::int AS count
+      SELECT status, COUNT(status)::int AS count
         FROM identity.users
        GROUP BY status
        ORDER BY status`);
     const credentials = await client.query(`
-      SELECT CASE WHEN verified_at IS NULL THEN 'unverified' ELSE 'verified' END AS verification_state,
-             COUNT(*)::int AS count
-        FROM identity.email_credentials
+      SELECT verification_state,
+             COUNT(verification_state)::int AS count
+        FROM (
+          SELECT CASE WHEN verified_at IS NULL THEN 'unverified' ELSE 'verified' END AS verification_state
+            FROM identity.email_credentials
+        ) categorized
        GROUP BY verification_state
        ORDER BY verification_state`);
     const verificationTokens = await client.query(`
       SELECT
-        COUNT(*) FILTER (WHERE created_at >= now() - interval '24 hours')::int AS created_24h,
-        COUNT(*) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NULL AND expires_at > now())::int AS active_unconsumed_24h,
-        COUNT(*) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NULL AND expires_at <= now())::int AS expired_unconsumed_24h,
-        COUNT(*) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NOT NULL)::int AS consumed_24h
+        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours')::int AS created_24h,
+        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NULL AND expires_at > now())::int AS active_unconsumed_24h,
+        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NULL AND expires_at <= now())::int AS expired_unconsumed_24h,
+        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NOT NULL)::int AS consumed_24h
       FROM identity.email_verification_tokens`);
     const recentEvents = await client.query(`
-      SELECT event_type, COUNT(*)::int AS count
+      SELECT event_type, COUNT(event_type)::int AS count
         FROM identity.account_events
        WHERE created_at >= now() - interval '24 hours'
          AND event_type IN ('email_registration_started', 'email_relink_started', 'email_verified', 'email_login', 'password_reset_completed')

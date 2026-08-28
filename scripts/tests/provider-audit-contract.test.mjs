@@ -10,6 +10,7 @@ const cloudflareAudit = read('scripts/cloudflare/audit-account.mjs');
 const cloudflareWorkflow = read('.github/workflows/cloudflare-domain-audit.yml');
 const planetscaleContractAudit = read('scripts/planetscale/audit-production-contract.mjs');
 const planetscaleWorkflow = read('.github/workflows/planetscale-account-audit.yml');
+const authIncidentAudit = read('scripts/ci/audit-production-auth-incident.mjs');
 
 test('Cloudflare inventory prefers canonical deployment token and throttles account reads', () => {
   assert.match(cloudflareAudit, /CLOUDFLARE_API_TOKEN \|\| process\.env\.CLOUDFLARE_AUDIT_API_TOKEN/);
@@ -52,4 +53,12 @@ test('PlanetScale account audit supplies verifier evidence without mutation or D
   assert.match(planetscaleWorkflow, /audit-production-contract\.mjs/);
   assert.match(planetscaleWorkflow, /No provider mutation or DDL is performed/);
   assert.doesNotMatch(planetscaleWorkflow, /--request\s+(?:POST|PUT|PATCH|DELETE)/i);
+});
+
+test('production auth incident audit uses only aggregate-safe verifier columns', () => {
+  assert.match(authIncidentAudit, /COUNT\(status\)/);
+  assert.match(authIncidentAudit, /COUNT\(verification_state\)/);
+  assert.match(authIncidentAudit, /COUNT\(created_at\)/);
+  assert.match(authIncidentAudit, /COUNT\(event_type\)/);
+  assert.doesNotMatch(authIncidentAudit, /email_ciphertext|password_hash|email_lookup_hmac/);
 });
