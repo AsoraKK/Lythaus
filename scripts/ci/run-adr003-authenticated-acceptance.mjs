@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { parseRealEmailAcceptanceEvidence } from './real-email-acceptance-evidence.mjs';
 
 const apiBase = required('ADR003_API_BASE_URL').replace(/\/$/, '');
 if (!apiBase.endsWith('/api')) throw new Error('ADR003_API_BASE_URL must end with /api');
@@ -17,6 +18,7 @@ const hyperdriveVerifiedMain = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true';
 const candidateWorkerName = process.env.ADR003_WORKER_NAME?.trim() ?? '';
 const candidateWorkerVersionId = process.env.ADR003_WORKER_VERSION_ID?.trim() ?? '';
 const candidateReadinessEvidencePath = process.env.ADR003_DATABASE_READINESS_EVIDENCE_PATH?.trim() ?? '';
+const realEmailEvidenceJson = process.env.ADR003_REAL_EMAIL_EVIDENCE_JSON?.trim() ?? '';
 const evidencePath = process.env.ADR003_EVIDENCE_PATH;
 const results = [];
 let readiness = null;
@@ -24,6 +26,7 @@ let accessToken = '';
 let refreshToken = '';
 let replacementRefreshToken = '';
 let postId = '';
+let cachedRealEmailEvidence = null;
 
 class BlockedCase extends Error {
   constructor(code) {
@@ -100,6 +103,26 @@ function requireReady() {
 
 function manualFlag(name, code) {
   if (process.env[name] !== 'true') throw new BlockedCase(code);
+}
+
+function realEmailEvidence() {
+  if (cachedRealEmailEvidence) return cachedRealEmailEvidence;
+  const releaseSha = process.env.RELEASE_SHA ?? process.env.GITHUB_SHA ?? 'local';
+  try {
+    cachedRealEmailEvidence = parseRealEmailAcceptanceEvidence(realEmailEvidenceJson, releaseSha);
+  } catch (error) {
+    throw new BlockedCase(error instanceof Error ? error.message : 'real_email_acceptance_evidence_invalid');
+  }
+  return cachedRealEmailEvidence;
+}
+
+function realEmailEvidenceForOutput() {
+  if (!realEmailEvidenceJson) return { status: 'required' };
+  try {
+    return realEmailEvidence();
+  } catch (error) {
+    return { status: 'blocked', reason: error instanceof Error ? error.message : 'real_email_acceptance_evidence_invalid' };
+  }
 }
 
 function candidateReadinessEvidence() {
@@ -226,11 +249,9 @@ async function writeEvidence(databaseReport) {
     hyperdriveIds: parseSanitizedJson(process.env.ADR003_HYPERDRIVE_IDS_JSON, 'hyperdriveIds'),
     manualAcceptance: {
       guestBrowse: process.env.ADR003_GUEST_ACCEPTED === 'true',
-      emailDelivery: process.env.ADR003_EMAIL_DELIVERY_ACCEPTED === 'true',
-      emailLinkReplay: process.env.ADR003_EMAIL_LINK_REPLAY_VERIFIED === 'true',
-      webEmailFlow: process.env.ADR003_WEB_EMAIL_ACCEPTED === 'true',
       mobileEmailFlow: process.env.ADR003_MOBILE_EMAIL_ACCEPTED === 'true',
     },
+    realEmailAcceptance: realEmailEvidenceForOutput(),
     destructiveAccountDeletion: process.env.ADR003_RUN_DESTRUCTIVE_ACCOUNT_DELETION === 'true' ? 'REQUESTED' : 'NOT_RUN',
     cases: results,
   };
@@ -283,7 +304,7 @@ await runCase('GATE-ROUTING', async () => {
 });
 
 await runCase('A01', async () => manualFlag('ADR003_GUEST_ACCEPTED', 'guest_browse_kyle_owned'));
-await runCase('A02', async () => manualFlag('ADR003_NEW_USER_ACCEPTED', 'new_user_creation_kyle_owned'));
+await runCase('A02', async () => ({ acceptanceNote: `fresh_signup:${realEmailEvidence().freshSignup.requested ? 'proven' : 'missing'}` }));
 
 await runCase('A03', async () => {
   requireReady();
@@ -298,7 +319,7 @@ await runCase('A03', async () => {
   return result;
 });
 
-await runCase('A04', async () => manualFlag('ADR003_EMAIL_DELIVERY_ACCEPTED', 'email_delivery_kyle_owned'));
+await runCase('A04', async () => ({ acceptanceNote: `email_delivery:${realEmailEvidence().freshSignup.messageObserved ? 'proven' : 'missing'}` }));
 
 await runCase('A05', () => runAuthenticatedCase(async () => {
   const result = await requestJson('/api/auth/userinfo', { headers: bearer() });
@@ -432,7 +453,7 @@ await runCase('A17', async () => {
   return result;
 });
 
-await runCase('A18', async () => manualFlag('ADR003_EMAIL_LINK_REPLAY_VERIFIED', 'email_link_replay_kyle_owned'));
+await runCase('A18', async () => ({ acceptanceNote: `email_link_replay:${realEmailEvidence().verification.replayRejected ? 'proven' : 'missing'}` }));
 
 await runCase('A19', async () => {
   const origin = required('ADR003_WEB_ORIGIN');
@@ -451,8 +472,12 @@ await runCase('A19', async () => {
 
 await runCase('A20', async () => {
   await webSecurityCheck();
-  manualFlag('ADR003_WEB_EMAIL_ACCEPTED', 'web_email_flow_kyle_owned');
+  expect(realEmailEvidence().verification.completed === true, 'web_email_flow_real_acceptance_missing');
 });
+
+await runCase('A21', async () => ({ acceptanceNote: `password_reset:${realEmailEvidence().passwordReset.completed ? 'proven' : 'missing'}` }));
+await runCase('A22', async () => ({ acceptanceNote: `password_reset_replay:${realEmailEvidence().passwordReset.replayRejected ? 'proven' : 'missing'}` }));
+await runCase('A23', async () => ({ acceptanceNote: `resend_verification:${realEmailEvidence().resendVerification.completed ? 'proven' : 'missing'}` }));
 
 const evidence = await writeEvidence(readiness ?? { branchFingerprint: hyperdriveVerifiedMain ? 'main' : 'unknown', readiness: 'blocked' });
 const summary = Object.fromEntries(results.map((item) => [item.id, item.outcome]));

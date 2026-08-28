@@ -8,6 +8,10 @@ on:
         required: true
         default: https://api.lythaus.co/api
         type: string
+      real_email_evidence_json:
+        description: Sanitized mailbox evidence for real signup, verification, reset, and resend acceptance
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -56,10 +60,7 @@ jobs:
           ADR003_WORKER_VERSIONS_JSON: ${{ vars.ADR003_WORKER_VERSIONS_JSON }}
           ADR003_HYPERDRIVE_IDS_JSON: ${{ vars.ADR003_HYPERDRIVE_IDS_JSON }}
           ADR003_GUEST_ACCEPTED: ${{ vars.ADR003_GUEST_ACCEPTED }}
-          ADR003_NEW_USER_ACCEPTED: ${{ vars.ADR003_NEW_USER_ACCEPTED }}
-          ADR003_EMAIL_DELIVERY_ACCEPTED: ${{ vars.ADR003_EMAIL_DELIVERY_ACCEPTED }}
-          ADR003_EMAIL_LINK_REPLAY_VERIFIED: ${{ vars.ADR003_EMAIL_LINK_REPLAY_VERIFIED }}
-          ADR003_WEB_EMAIL_ACCEPTED: ${{ vars.ADR003_WEB_EMAIL_ACCEPTED }}
+          ADR003_REAL_EMAIL_EVIDENCE_JSON: ${{ inputs.real_email_evidence_json }}
           ADR003_MOBILE_EMAIL_ACCEPTED: ${{ vars.ADR003_MOBILE_EMAIL_ACCEPTED }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}

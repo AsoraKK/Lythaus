@@ -4,7 +4,7 @@ import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
-import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
+import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
@@ -206,6 +206,51 @@ async function issueSession(
   }, { userId, roles });
 }
 
+type AuthEmailAction = 'verification_registration' | 'verification_relink' | 'verification_resend' | 'password_reset';
+
+interface EmailProviderErrorShape {
+  code?: unknown;
+  errorCode?: unknown;
+  status?: unknown;
+  statusCode?: unknown;
+  response?: { status?: unknown };
+}
+
+class EmailDeliveryFailure extends Error {
+  readonly providerCode?: string;
+  readonly providerStatus?: number;
+
+  constructor(providerStatus?: number, providerCode?: string) {
+    const suffix = providerStatus && providerStatus >= 100 && providerStatus <= 599 ? `_${providerStatus}` : '';
+    super(`email_delivery_failed${suffix}`);
+    this.name = 'EmailDeliveryFailure';
+    this.providerCode = providerCode;
+    this.providerStatus = providerStatus;
+  }
+}
+
+function safeEmailProviderCode(value: unknown): string | undefined {
+  const code = typeof value === 'string' ? value.trim() : '';
+  return /^[A-Z][A-Z0-9_]{2,63}$/.test(code) ? code : undefined;
+}
+
+function emailProviderFailureDetails(error: unknown): { status?: number; code?: string } {
+  const shape = error && typeof error === 'object' ? error as EmailProviderErrorShape : {};
+  const statusValue = shape.status ?? shape.statusCode ?? shape.response?.status;
+  const numericStatus = Number(statusValue);
+  const message = error instanceof Error ? error.message : '';
+  const messageCode = message.match(/\bE_[A-Z0-9_]{2,63}\b/)?.[0];
+  return {
+    status: Number.isInteger(numericStatus) && numericStatus >= 100 && numericStatus <= 599 ? numericStatus : undefined,
+    code: safeEmailProviderCode(shape.code) ?? safeEmailProviderCode(shape.errorCode) ?? messageCode,
+  };
+}
+
+function asEmailDeliveryFailure(error: unknown): EmailDeliveryFailure {
+  const details = emailProviderFailureDetails(error);
+  return new EmailDeliveryFailure(details.status, details.code);
+}
+
 async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string; text: string }): Promise<EmailDeliveryReference> {
   const providerMode = env.EMAIL_PROVIDER_MODE ?? (env.ENVIRONMENT === 'production' ? 'cloudflare' : 'fallback');
   if (providerMode === 'disabled') throw new Error('provider_unavailable');
@@ -220,8 +265,8 @@ async function sendEmailTransport(env: Env, input: { to: string; subject: string
         text: input.text,
       });
       return { provider: 'cloudflare-email', messageId: delivery.messageId, acceptedAt: new Date().toISOString() };
-    } catch {
-      throw new Error('email_delivery_failed');
+    } catch (error) {
+      throw asEmailDeliveryFailure(error);
     }
   }
   if (providerMode !== 'fallback') throw new Error('email_provider_mode_invalid');
@@ -231,7 +276,7 @@ async function sendEmailTransport(env: Env, input: { to: string; subject: string
     headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
     body: JSON.stringify({ from: env.EMAIL_FROM, to: input.to, subject: input.subject, html: input.html, text: input.text }),
   });
-  if (!response.ok) throw new Error(`email_delivery_failed_${response.status}`);
+  if (!response.ok) throw new EmailDeliveryFailure(response.status);
   const payload = await response.json().catch(() => ({})) as { messageId?: string };
   return { provider: 'fallback-email', messageId: payload.messageId ?? 'accepted', acceptedAt: new Date().toISOString() };
 }
@@ -267,17 +312,41 @@ function createTransactionalEmailProvider(env: Env): TransactionalEmailProvider 
   };
 }
 
-async function deliverAuthEmail(env: Env, input: { type: 'verification' | 'password_reset' | 'security'; to: string; token?: string; reason?: string }): Promise<EmailDeliveryReference> {
+async function deliverAuthEmail(
+  request: Request,
+  env: Env,
+  input: { type: 'verification' | 'password_reset' | 'security'; to: string; token?: string; reason?: string },
+  action: AuthEmailAction,
+): Promise<EmailDeliveryReference> {
   const provider = createTransactionalEmailProvider(env);
-  if (input.type === 'verification' && input.token) return provider.sendVerification({ to: input.to, token: input.token });
-  if (input.type === 'password_reset' && input.token) return provider.sendPasswordReset({ to: input.to, token: input.token });
-  return provider.sendSecurityNotice({ to: input.to, reason: input.reason ?? 'Account security event' });
+  try {
+    const delivery = input.type === 'verification' && input.token
+      ? await provider.sendVerification({ to: input.to, token: input.token })
+      : input.type === 'password_reset' && input.token
+        ? await provider.sendPasswordReset({ to: input.to, token: input.token })
+        : await provider.sendSecurityNotice({ to: input.to, reason: input.reason ?? 'Account security event' });
+    logEvent({
+      service: 'lythaus-public-api',
+      event: 'auth_email_delivery_accepted',
+      action,
+      provider: delivery.provider,
+      messageIdPresent: Boolean(delivery.messageId),
+      correlationId: correlationId(request),
+    });
+    return delivery;
+  } catch (error) {
+    logAuthEmailDeliveryFailure(request, action, error);
+    throw error;
+  }
 }
 
-async function sendAccountVerificationEmail(request: Request, env: Env, userId: string, email: string): Promise<void> {
+async function sendAccountVerificationEmail(request: Request, env: Env, userId: string, email: string, action: AuthEmailAction): Promise<void> {
   const verificationToken = randomToken(32);
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(
+      `UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`,
+      [userId]);
     await client.query(
       `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
       [uuidv7(), userId, hashResetToken(verificationToken)]);
@@ -289,15 +358,16 @@ async function sendAccountVerificationEmail(request: Request, env: Env, userId: 
       metadata: { authenticationMethod: 'email' },
     });
   });
-  await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+  await deliverAuthEmail(request, env, { type: 'verification', to: email, token: verificationToken }, action);
 }
 
 function logAuthEmailDeliveryFailure(
   request: Request,
-  action: 'verification_resend' | 'password_reset',
+  action: AuthEmailAction,
   error: unknown,
 ): void {
   const internalCode = error instanceof Error ? error.message : '';
+  const failure = error instanceof EmailDeliveryFailure ? error : undefined;
   const errorCode = /^(?:email_delivery_not_configured|email_delivery_failed(?:_[1-5][0-9]{2})?|email_provider_mode_invalid)$/.test(internalCode)
     ? internalCode
     : 'email_delivery_failed';
@@ -306,6 +376,8 @@ function logAuthEmailDeliveryFailure(
     event: 'auth_email_delivery_failed',
     action,
     errorCode,
+    providerCode: failure?.providerCode,
+    providerStatus: failure?.providerStatus,
     correlationId: correlationId(request),
   });
 }
@@ -329,10 +401,8 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   if (mode === 'resend_verification') {
     if (account && !account.verified_at) {
       try {
-        await sendAccountVerificationEmail(request, env, account.id, email);
-      } catch (error) {
-        logAuthEmailDeliveryFailure(request, 'verification_resend', error);
-      }
+        await sendAccountVerificationEmail(request, env, account.id, email, 'verification_resend');
+      } catch { /* Keep resend enumeration-safe; provider failure is logged internally. */ }
     }
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
@@ -343,7 +413,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     );
     if (registrationPlan === 'resend_verification') {
       if (!account) throw new Error('account_unavailable');
-      await sendAccountVerificationEmail(request, env, account.id, email);
+      await sendAccountVerificationEmail(request, env, account.id, email, 'verification_resend');
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     if (registrationPlan === 'account_exists') throw new Error('account_exists');
@@ -354,6 +424,9 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     if (registrationPlan === 'attach_email_credential') {
       if (!contactOwner) throw new Error('account_unavailable');
       await transaction(env.DB_APP_FRESH, async (client) => {
+        await client.query(
+          `UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`,
+          [contactOwner.id]);
         await client.query(
           `INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
            VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`,
@@ -372,7 +445,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
           metadata: { authenticationMethod: 'email', recoveryMethod: 'verified_contact_email' },
         });
       });
-      await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+      await deliverAuthEmail(request, env, { type: 'verification', to: email, token: verificationToken }, 'verification_relink');
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     const userId = uuidv7();
@@ -389,11 +462,16 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
         metadata: { authenticationMethod: 'email' },
       });
     });
-    await deliverAuthEmail(env, { type: 'verification', to: email, token: verificationToken });
+    await deliverAuthEmail(request, env, { type: 'verification', to: email, token: verificationToken }, 'verification_registration');
     return privateResponse(request, env, { userId, state: 'verification_required' }, { status: 202 });
   }
-  if (!account || account.status !== 'active' || !verifyPassword(password, account.password_hash, secrets.pepper)) throw new Error('invalid_credentials');
-  if (!account.verified_at) throw new Error('email_verification_required');
+  const loginPlan = planEmailLogin(account ? {
+    status: account.status,
+    verifiedAt: account.verified_at,
+    passwordMatches: verifyPassword(password, account.password_hash, secrets.pepper),
+  } : undefined);
+  if (loginPlan === 'invalid_credentials') throw new Error('invalid_credentials');
+  if (loginPlan === 'email_verification_required') throw new Error('email_verification_required');
   if (needsPasswordRehash(account.password_hash, 'v1')) {
     const upgradedHash = hashConfiguredPassword(env, password, secrets.pepper);
     await query(env.DB_APP_FRESH,
@@ -419,9 +497,9 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
   const token = requireToken(url.searchParams.get('token') ?? (await readJson<{ token?: string }>(request, 8 * 1024)).token, 'verification_token_invalid');
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
-    const found = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.email_verification_tokens WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now()`, [hashResetToken(token)]);
+    const found = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.email_verification_tokens WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now() FOR UPDATE`, [hashResetToken(token)]);
     if (!found.rows[0]) throw new Error('verification_token_invalid');
-    await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL`, [hashResetToken(token)]);
+    await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.contact_emails SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.users SET status = 'active', updated_at = now() WHERE id = $1 AND status = 'relink_required'`, [found.rows[0].user_id]);
@@ -523,6 +601,9 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
     const sourceEventId = uuidv7();
     await transaction(env.DB_APP_FRESH, async (client) => {
       await client.query(
+        `UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`,
+        [account.rows[0].id]);
+      await client.query(
         `INSERT INTO identity.password_reset_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
         [uuidv7(), account.rows[0].id, hashResetToken(token)]);
       await writeActivity(client, request, { userId: account.rows[0].id }, sourceEventId, {
@@ -533,10 +614,8 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
       });
     });
     try {
-      await deliverAuthEmail(env, { type: 'password_reset', to: email, token });
-    } catch (error) {
-      logAuthEmailDeliveryFailure(request, 'password_reset', error);
-    }
+      await deliverAuthEmail(request, env, { type: 'password_reset', to: email, token }, 'password_reset');
+    } catch { /* Reset remains enumeration-safe; provider failure is logged internally. */ }
   }
   return response(request, env, { state: 'reset_if_eligible' }, { status: 202 });
 }
@@ -552,6 +631,7 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
   await transaction(env.DB_APP_FRESH, async (client) => {
     const found = await client.query<{ user_id: string }>(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now() RETURNING user_id`, [hashResetToken(token)]);
     if (!found.rows[0]) throw new Error('reset_token_invalid');
+    await client.query(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`, [JSON.stringify(passwordHash), found.rows[0].user_id]);
     await revokeAllAuthSessions({
       revokeAllSessions: async (subjectId) => { await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
