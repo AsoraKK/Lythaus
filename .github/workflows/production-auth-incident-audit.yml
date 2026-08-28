@@ -52,9 +52,11 @@ jobs:
           set -euo pipefail
           report="$AUTH_INCIDENT_AUDIT_OUTPUT"
           if [[ ! -f "$report" ]]; then
-            echo '### Production auth incident audit' >> "$GITHUB_STEP_SUMMARY"
-            echo >> "$GITHUB_STEP_SUMMARY"
-            echo '- Status: NO EVIDENCE PRODUCED' >> "$GITHUB_STEP_SUMMARY"
+            {
+              echo '### Production auth incident audit'
+              echo
+              echo '- Status: NO EVIDENCE PRODUCED'
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           {
