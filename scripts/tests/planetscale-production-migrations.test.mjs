@@ -192,12 +192,16 @@ test('migration data preconditions reject unresolved open-appeal conflicts only'
   assert.throws(() => assertMigrationDataPreconditions({ duplicate_open_appeal_keys: 1 }), /open-appeal reconciliation/);
 });
 
-test('dedicated schema verifier grants are metadata-only and fail closed', async () => {
+test('dedicated schema verifier grants metadata and aggregate-safe evidence columns only', async () => {
   const source = await (await import('node:fs/promises')).readFile('scripts/ci/reconcile-planetscale-schema-verifier.mjs', 'utf8');
   assert.match(source, /PLANETSCALE_VERIFIER_DATABASE_URL/);
   assert.match(source, /GRANT USAGE ON SCHEMA/);
   assert.match(source, /GRANT REFERENCES ON TABLE/);
   assert.match(source, /GRANT SELECT ON TABLE system\.schema_migrations/);
+  assert.match(source, /table: 'users', columns: \['status'\]/);
+  assert.match(source, /table: 'email_credentials', columns: \['verified_at'\]/);
+  assert.match(source, /table: 'email_verification_tokens'[\s\S]*columns: \['created_at', 'consumed_at', 'expires_at'\]/);
+  assert.match(source, /table: 'account_events', columns: \['event_type', 'created_at'\]/);
   assert.match(source, /REVOKE CREATE ON DATABASE postgres/);
   assert.match(source, /REVOKE CREATE ON SCHEMA/);
   assert.match(source, /SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY/);
