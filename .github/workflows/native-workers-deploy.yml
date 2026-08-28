@@ -7,10 +7,18 @@ on:
         description: Exact reviewed commit SHA to deploy
         required: true
         type: string
+      real_email_evidence_json:
+        description: Sanitized mailbox evidence for real signup, verification, reset, and resend acceptance
+        required: true
+        type: string
   workflow_call:
     inputs:
       release_sha:
         description: Exact reviewed commit SHA to deploy
+        required: true
+        type: string
+      real_email_evidence_json:
+        description: Sanitized mailbox evidence for real signup, verification, reset, and resend acceptance
         required: true
         type: string
     outputs:
@@ -236,7 +244,7 @@ jobs:
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
           REQUIRE_BUDGET_MIGRATION: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
-          AUTHENTICATED_ACCEPTANCE_PROVEN: 'true'
+          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
           PRODUCTION_WORKER_SCOPE: lythaus-public-api-development
           PRODUCTION_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
           PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
@@ -253,7 +261,7 @@ jobs:
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
           REQUIRE_BUDGET_MIGRATION: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
-          AUTHENTICATED_ACCEPTANCE_PROVEN: 'true'
+          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
           PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
           PRODUCTION_WORKER_VERSION_ID: ${{ env.ADMIN_WORKER_VERSION_ID }}
           PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
@@ -272,7 +280,7 @@ jobs:
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
           REQUIRE_BUDGET_MIGRATION: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
-          AUTHENTICATED_ACCEPTANCE_PROVEN: 'true'
+          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
           PRODUCTION_WORKER_SCOPE: lythaus-jobs-development
           PRODUCTION_WORKER_VERSION_ID: ${{ env.JOBS_WORKER_VERSION_ID }}
           PRODUCTION_JOBS_API_BASE_URL: ${{ vars.PRODUCTION_JOBS_API_BASE_URL }}
@@ -291,10 +299,7 @@ jobs:
           ADR003_WORKER_VERSIONS_JSON: ${{ vars.ADR003_WORKER_VERSIONS_JSON }}
           ADR003_HYPERDRIVE_IDS_JSON: ${{ vars.ADR003_HYPERDRIVE_IDS_JSON }}
           ADR003_GUEST_ACCEPTED: ${{ vars.ADR003_GUEST_ACCEPTED }}
-          ADR003_NEW_USER_ACCEPTED: ${{ vars.ADR003_NEW_USER_ACCEPTED }}
-          ADR003_EMAIL_DELIVERY_ACCEPTED: ${{ vars.ADR003_EMAIL_DELIVERY_ACCEPTED }}
-          ADR003_EMAIL_LINK_REPLAY_VERIFIED: ${{ vars.ADR003_EMAIL_LINK_REPLAY_VERIFIED }}
-          ADR003_WEB_EMAIL_ACCEPTED: ${{ vars.ADR003_WEB_EMAIL_ACCEPTED }}
+          ADR003_REAL_EMAIL_EVIDENCE_JSON: ${{ inputs.real_email_evidence_json }}
           ADR003_MOBILE_EMAIL_ACCEPTED: ${{ vars.ADR003_MOBILE_EMAIL_ACCEPTED }}
           ADR003_RUN_DESTRUCTIVE_ACCOUNT_DELETION: 'false'
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
@@ -316,6 +321,7 @@ jobs:
           npm run acceptance:adr003
       - name: Record candidate evidence assertions
         run: |
+          jq -e '.status == "PASSED"' "$RUNNER_TEMP/production-cutover/adr003-candidate-acceptance.json" >/dev/null
           {
             echo "DATABASE_IDENTITY_VERIFIED=true"
             echo "BUDGET_ENFORCEMENT_VERIFIED=true"

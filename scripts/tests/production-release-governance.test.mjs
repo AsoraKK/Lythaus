@@ -140,10 +140,12 @@ test('web authenticated smoke waits for Worker activation', () => {
 
 test('ADR-003 uses the canonical API base and keeps mobile acceptance separate', () => {
   assert.match(adr003Workflow, /default: https:\/\/api\.lythaus\.co\/api/);
-  assert.match(adr003Workflow, /ADR003_TEST_EMAIL: \$\{\{ secrets\.CODEX_TEST_EMAIL \}\}/);
-  assert.match(adr003Workflow, /ADR003_TEST_PASSWORD: \$\{\{ secrets\.CODEX_TEST_PASSWORD \}\}/);
+  assert.match(adr003Workflow, /ADR003_REAL_EMAIL_EVIDENCE_JSON: \$\{\{ inputs\.real_email_evidence_json \}\}/);
+  assert.match(adr003Harness, /parseRealEmailAcceptanceEvidence/);
+  assert.doesNotMatch(adr003Harness, /manualFlag\('ADR003_EMAIL_DELIVERY_ACCEPTED'/);
+  assert.doesNotMatch(adr003Harness, /manualFlag\('ADR003_EMAIL_LINK_REPLAY_VERIFIED'/);
   const a20 = adr003Harness.match(/await runCase\('A20',[\s\S]*?\n\}\);/)?.[0] ?? '';
-  assert.match(a20, /ADR003_WEB_EMAIL_ACCEPTED/);
+  assert.match(a20, /realEmailEvidence/);
   assert.doesNotMatch(a20, /ADR003_MOBILE_EMAIL_ACCEPTED/);
   assert.match(adr003Harness, /mobileEmailFlow: process\.env\.ADR003_MOBILE_EMAIL_ACCEPTED === 'true'/);
 });

@@ -6,6 +6,7 @@ import {
   idempotencyKey,
   isCurrentActivePrincipal,
   normalizeEmailAddress,
+  planEmailLogin,
   planEmailRegistration,
   planExistingIdempotencyRecord,
   prepareEmailAuthAttempt,
@@ -72,6 +73,16 @@ test('recovers interrupted and migrated registrations without changing verified 
   assert.equal(planEmailRegistration(undefined, { status: 'locked' }), 'account_exists');
   assert.equal(planEmailRegistration({ verifiedAt: null }), 'resend_verification');
   assert.equal(planEmailRegistration({ verifiedAt: '2026-08-26T10:00:00.000Z' }), 'account_exists');
+});
+
+test('returns verification-required only after a valid password for pending email accounts', () => {
+  assert.equal(planEmailLogin(undefined), 'invalid_credentials');
+  assert.equal(planEmailLogin({ status: 'active', verifiedAt: null, passwordMatches: false }), 'invalid_credentials');
+  assert.equal(planEmailLogin({ status: 'active', verifiedAt: null, passwordMatches: true }), 'email_verification_required');
+  assert.equal(planEmailLogin({ status: 'relink_required', verifiedAt: null, passwordMatches: true }), 'email_verification_required');
+  assert.equal(planEmailLogin({ status: 'suspended', verifiedAt: null, passwordMatches: true }), 'invalid_credentials');
+  assert.equal(planEmailLogin({ status: 'active', verifiedAt: '2026-08-26T10:00:00.000Z', passwordMatches: true }), 'authenticated');
+  assert.equal(planEmailLogin({ status: 'relink_required', verifiedAt: '2026-08-26T10:00:00.000Z', passwordMatches: true }), 'invalid_credentials');
 });
 
 test('enforces auth configuration, Turnstile, and credential boundaries', () => {

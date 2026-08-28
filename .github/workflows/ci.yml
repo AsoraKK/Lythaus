@@ -71,6 +71,7 @@ jobs:
       - run: npm run typecheck:native
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
       - run: npm run test:native-architecture
+      - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
       - run: npm run test:product-integrity-runtime
       - run: npm run test:product-contracts
       - run: npm run test:critical-coverage

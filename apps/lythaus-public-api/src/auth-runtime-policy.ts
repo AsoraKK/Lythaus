@@ -9,6 +9,8 @@ export interface EmailAuthAttempt {
 
 export type EmailRegistrationPlan = 'create_account' | 'attach_email_credential' | 'resend_verification' | 'account_exists';
 
+export type EmailLoginPlan = 'invalid_credentials' | 'email_verification_required' | 'authenticated';
+
 export interface AuthSecrets {
   pepper: string;
   encryptionKey: string;
@@ -126,6 +128,16 @@ export function planEmailRegistration(
   if (!account && (contactAccount?.status === 'active' || contactAccount?.status === 'relink_required')) return 'attach_email_credential';
   if (!account) return contactAccount ? 'account_exists' : 'create_account';
   return account.verifiedAt ? 'account_exists' : 'resend_verification';
+}
+
+export function planEmailLogin(
+  account: { status: string; verifiedAt: string | null; passwordMatches: boolean } | undefined,
+): EmailLoginPlan {
+  if (!account || !account.passwordMatches) return 'invalid_credentials';
+  if (!account.verifiedAt && (account.status === 'active' || account.status === 'relink_required')) {
+    return 'email_verification_required';
+  }
+  return account.status === 'active' ? 'authenticated' : 'invalid_credentials';
 }
 
 export function requireAuthSecrets(input: {

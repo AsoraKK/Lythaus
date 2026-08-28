@@ -35,15 +35,20 @@ function buildArbitraryRecipientProbe(email) {
   return `${baseLocal}+${probeTag}@${domain}`;
 }
 
-async function cloudflareJson(url, init = {}) {
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${cloudflareToken}`,
-      Accept: 'application/json',
-      ...(init.headers ?? {}),
-    },
-  });
+async function cloudflareJson(url, init = {}, { retryTransient = true } = {}) {
+  let response;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    response = await fetch(url, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${cloudflareToken}`,
+        Accept: 'application/json',
+        ...(init.headers ?? {}),
+      },
+    });
+    if (!retryTransient || ![429, 500, 502, 503, 504].includes(response.status) || attempt === 2) break;
+    await new Promise((resolve) => setTimeout(resolve, 250 * (2 ** attempt)));
+  }
   const body = await response.json().catch(() => ({}));
   return { httpStatus: response.status, body };
 }
@@ -188,12 +193,13 @@ async function captureCloudflare(report) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: sendingFrom,
+      from: { address: sendingFrom, name: 'Lythaus' },
       to: probeRecipient,
       subject: 'Lythaus production email entitlement probe',
+      html: '<p>This is an automated Lythaus production email entitlement probe. No action is required.</p>',
       text: 'This is an automated Lythaus production email entitlement probe. No action is required.',
     }),
-  });
+  }, { retryTransient: false });
   const sendResult = sendResponse.body?.result ?? {};
   report.cloudflare.arbitraryRecipientProbe = {
     attempted: true,

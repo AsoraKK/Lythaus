@@ -37,6 +37,10 @@ on:
         required: true
         default: false
         type: boolean
+      real_email_evidence_json:
+        description: Sanitized mailbox evidence for real signup, verification, reset, and resend acceptance
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -467,6 +471,7 @@ jobs:
     uses: ./.github/workflows/native-workers-deploy.yml
     with:
       release_sha: ${{ inputs.release_sha }}
+      real_email_evidence_json: ${{ inputs.real_email_evidence_json }}
     secrets: inherit
 
   production_smoke:

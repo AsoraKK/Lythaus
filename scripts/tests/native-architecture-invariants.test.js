@@ -62,7 +62,7 @@ test('email registration retries recover accounts waiting for verification or le
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   assert.match(source, /planEmailRegistration/);
   assert.match(source, /registrationPlan === 'resend_verification'/);
-  assert.match(source, /sendAccountVerificationEmail\(request, env, account\.id, email\)/);
+  assert.match(source, /sendAccountVerificationEmail\(request, env, account\.id, email, 'verification_resend'\)/);
   assert.match(source, /registrationPlan === 'attach_email_credential'/);
   assert.match(source, /FROM identity\.contact_emails c JOIN identity\.users u/);
   assert.match(source, /status = 'active'.*status = 'relink_required'/);
@@ -76,6 +76,10 @@ test('email recovery is Turnstile-protected, neutral, and atomically single-use'
   assert.match(source, /UPDATE identity\.password_reset_tokens[\s\S]*consumed_at IS NULL[\s\S]*expires_at > now\(\)[\s\S]*RETURNING user_id/);
   assert.match(source, /revokeAllAuthSessions/);
   assert.match(source, /rateLimitPlan\(url\.pathname\)/);
+  assert.match(source, /UPDATE identity\.email_verification_tokens[\s\S]*WHERE user_id = \$1 AND consumed_at IS NULL/);
+  assert.match(source, /UPDATE identity\.password_reset_tokens[\s\S]*WHERE user_id = \$1 AND consumed_at IS NULL/);
+  assert.match(source, /FOR UPDATE/);
+  assert.match(source, /planEmailLogin/);
 });
 
 test('admin API dispatch awaits rejection-prone mutations', () => {
