@@ -302,16 +302,16 @@ export async function applyTransactionalEmailLifecycle(
   return known.rowCount === 1;
 }
 
-interface TransactionalEmailEvidenceRow {
+interface TransactionalEmailEvidenceGroupRow {
   purpose: TransactionalEmailPurpose;
-  challenge_id: string | null;
-  correlation_id: string;
   provider: string;
-  provider_message_id: string;
   state: 'provider_accepted' | 'delivered';
-  created_at: string;
-  accepted_at: string | null;
-  delivered_at: string | null;
+  provider_error_category: string | null;
+  row_count: number | string;
+  provider_message_id_count: number | string;
+  distinct_provider_message_id_count: number | string;
+  accepted_count: number | string;
+  delivered_count: number | string;
 }
 
 export interface TransactionalEmailDeliveryEvidenceFilter {
@@ -322,27 +322,19 @@ export interface TransactionalEmailDeliveryEvidenceFilter {
 }
 
 export interface TransactionalEmailDeliveryEvidence {
-  evidenceStatus: 'delivered_rows_available' | 'provider_accepted_only' | 'no_matching_rows' | 'incomplete';
-  deliveryConfirmation: 'cloudflare_lifecycle_queue';
-  limitation: 'lifecycle_webhook_required' | 'evidence_truncated' | 'no_matching_rows' | null;
-  filters: TransactionalEmailDeliveryEvidenceFilter;
-  aggregate: {
-    totalRows: number;
-    deliveredRows: number;
-    providerAcceptedRows: number;
-    deliveredDistinctProviderIds: number;
-    byPurpose: Record<TransactionalEmailPurpose, { delivered: number; providerAccepted: number }>;
-  };
-  deliveredRows: Array<{
+  status: 'delivered_rows_available' | 'provider_accepted_only' | 'no_matching_rows';
+  capturedAt: string;
+  lifecycleSource: 'cloudflare_email_sending_queue';
+  groups: Array<{
     purpose: TransactionalEmailPurpose;
-    challengeId: string | null;
-    correlationId: string;
     provider: string;
-    providerMessageId: string;
-    state: 'delivered';
-    createdAt: string;
-    acceptedAt: string | null;
-    deliveredAt: string | null;
+    state: 'provider_accepted' | 'delivered';
+    providerErrorCategory: string | null;
+    rowCount: number;
+    providerMessageIdCount: number;
+    distinctProviderMessageIdCount: number;
+    acceptedCount: number;
+    deliveredCount: number;
   }>;
 }
 
@@ -369,62 +361,55 @@ export async function readTransactionalEmailDeliveryEvidence(
   const challengePredicate = validated.challengeIds
     ? (() => { values.push(validated.challengeIds); return ' AND challenge_id = ANY($4::uuid[])'; })()
     : '';
-  const result = await query<TransactionalEmailEvidenceRow>(
+  const result = await query<TransactionalEmailEvidenceGroupRow>(
     env.DB_JOBS_FRESH,
-    `SELECT purpose, challenge_id, correlation_id, provider, provider_message_id, state,
-            created_at, accepted_at, delivered_at
+    `SELECT purpose, state, provider, provider_error_category,
+            count(*)::bigint AS row_count,
+            count(provider_message_id)::bigint AS provider_message_id_count,
+            count(DISTINCT provider_message_id)::bigint AS distinct_provider_message_id_count,
+            count(*) FILTER (WHERE accepted_at IS NOT NULL)::bigint AS accepted_count,
+            count(*) FILTER (WHERE delivered_at IS NOT NULL)::bigint AS delivered_count
        FROM system.transactional_email_outbox
       WHERE provider = 'cloudflare-email'
         AND correlation_id = $1
         AND created_at >= $2::timestamptz AND created_at < $3::timestamptz
         AND state IN ('provider_accepted', 'delivered')
         AND provider_message_id IS NOT NULL${challengePredicate}
-      ORDER BY created_at ASC
-      LIMIT 129`,
+      GROUP BY purpose, state, provider, provider_error_category
+      ORDER BY purpose, state`,
     values,
   );
-  const truncated = result.rows.length > 128;
-  const rows = result.rows.slice(0, 128);
-  const byPurpose: Record<TransactionalEmailPurpose, { delivered: number; providerAccepted: number }> = {
-    verification: { delivered: 0, providerAccepted: 0 },
-    password_reset: { delivered: 0, providerAccepted: 0 },
-    invite: { delivered: 0, providerAccepted: 0 },
-    email_change: { delivered: 0, providerAccepted: 0 },
-  };
-  const deliveredRows = rows.filter((row) => row.state === 'delivered').map((row) => ({
+  return summarizeTransactionalEmailDeliveryEvidence(result.rows);
+}
+
+function evidenceCount(value: number | string): number {
+  const count = Number(value);
+  return Number.isSafeInteger(count) && count >= 0 ? count : 0;
+}
+
+export function summarizeTransactionalEmailDeliveryEvidence(
+  rows: readonly TransactionalEmailEvidenceGroupRow[],
+  capturedAt = new Date().toISOString(),
+): TransactionalEmailDeliveryEvidence {
+  const groups = rows.map((row) => ({
     purpose: row.purpose,
-    challengeId: row.challenge_id,
-    correlationId: row.correlation_id,
     provider: row.provider,
-    providerMessageId: row.provider_message_id,
-    state: 'delivered' as const,
-    createdAt: row.created_at,
-    acceptedAt: row.accepted_at,
-    deliveredAt: row.delivered_at,
+    state: row.state,
+    providerErrorCategory: row.provider_error_category,
+    rowCount: evidenceCount(row.row_count),
+    providerMessageIdCount: evidenceCount(row.provider_message_id_count),
+    distinctProviderMessageIdCount: evidenceCount(row.distinct_provider_message_id_count),
+    acceptedCount: evidenceCount(row.accepted_count),
+    deliveredCount: evidenceCount(row.delivered_count),
   }));
-  for (const row of rows) byPurpose[row.purpose][row.state === 'delivered' ? 'delivered' : 'providerAccepted'] += 1;
-  const deliveredProviderIds = new Set(deliveredRows.map((row) => row.providerMessageId));
-  const deliveredCount = deliveredRows.length;
-  const acceptedCount = rows.filter((row) => row.state === 'provider_accepted').length;
-  const evidenceStatus = truncated ? 'incomplete' : deliveredCount > 0 ? 'delivered_rows_available' : acceptedCount > 0 ? 'provider_accepted_only' : 'no_matching_rows';
+  const deliveredCount = groups.reduce((total, row) => total + row.deliveredCount, 0);
+  const acceptedCount = groups.reduce((total, row) => total + row.acceptedCount, 0);
+  const status = deliveredCount > 0 ? 'delivered_rows_available' : acceptedCount > 0 ? 'provider_accepted_only' : 'no_matching_rows';
   return {
-    evidenceStatus,
-    deliveryConfirmation: 'cloudflare_lifecycle_queue',
-    limitation: evidenceStatus === 'delivered_rows_available' ? null : evidenceStatus === 'incomplete' ? 'evidence_truncated' : evidenceStatus === 'provider_accepted_only' ? 'lifecycle_webhook_required' : 'no_matching_rows',
-    filters: {
-      correlationId: filter.correlationId,
-      windowStart: validated.start.toISOString(),
-      windowEnd: validated.end.toISOString(),
-      ...(validated.challengeIds ? { challengeIds: validated.challengeIds } : {}),
-    },
-    aggregate: {
-      totalRows: rows.length,
-      deliveredRows: deliveredCount,
-      providerAcceptedRows: acceptedCount,
-      deliveredDistinctProviderIds: deliveredProviderIds.size,
-      byPurpose,
-    },
-    deliveredRows,
+    status,
+    capturedAt,
+    lifecycleSource: 'cloudflare_email_sending_queue',
+    groups,
   };
 }
 

@@ -103,7 +103,8 @@ test('native auth outbox and scanner-safe verification contracts are explicit', 
   assert.match(jobsConfig, /lythaus-email-lifecycle-dev/);
   assert.match(jobsConfig, /lythaus-email-lifecycle-dlq-dev/);
   assert.match(jobs, /provider_accepted_only/);
-  assert.match(jobs, /lifecycle_webhook_required/);
+  assert.match(jobs, /GROUP BY purpose, state, provider, provider_error_category/);
+  assert.doesNotMatch(jobs, /deliveredRows:/);
   assert.match(migration, /CREATE TABLE system\.transactional_email_outbox/);
   assert.match(migration, /secret_ciphertext text/);
   assert.doesNotMatch(migration, /recipient_email|plain_email/);

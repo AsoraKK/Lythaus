@@ -6,6 +6,7 @@ import {
   emailProviderFailureCategory,
   authorizedEmailLifecycleRequest,
   parseTransactionalEmailLifecycleQueueEvent,
+  summarizeTransactionalEmailDeliveryEvidence,
 } from '../src/transactional-email-runtime.ts';
 
 test('provider failures distinguish retryable outages from permanent rejection', () => {
@@ -81,4 +82,42 @@ test('strict lifecycle parsing rejects unsupported or unsafe provider payloads',
   assert.equal(parseTransactionalEmailLifecycleQueueEvent({ type: 'cf.email.sending.message.delivered', payload: {} }), undefined);
   assert.equal(parseTransactionalEmailLifecycleQueueEvent('{"type":"cf.email.sending.message.delivered","payload":{"messageId":"provider-message-1\u0000"}}'), undefined);
   assert.equal(parseTransactionalEmailLifecycleQueueEvent('not-json'), undefined);
+});
+
+test('delivery evidence is grouped and never exposes correlation, challenge, or provider IDs', () => {
+  const evidence = summarizeTransactionalEmailDeliveryEvidence([
+    {
+      purpose: 'verification', provider: 'cloudflare-email', state: 'delivered', provider_error_category: null,
+      row_count: '2', provider_message_id_count: '2', distinct_provider_message_id_count: '2', accepted_count: '2', delivered_count: '2',
+    },
+    {
+      purpose: 'password_reset', provider: 'cloudflare-email', state: 'delivered', provider_error_category: null,
+      row_count: '1', provider_message_id_count: '1', distinct_provider_message_id_count: '1', accepted_count: '1', delivered_count: '1',
+    },
+  ], '2026-08-29T12:00:00.000Z');
+  assert.deepEqual(evidence, {
+    status: 'delivered_rows_available',
+    capturedAt: '2026-08-29T12:00:00.000Z',
+    lifecycleSource: 'cloudflare_email_sending_queue',
+    groups: [
+      {
+        purpose: 'verification', provider: 'cloudflare-email', state: 'delivered', providerErrorCategory: null,
+        rowCount: 2, providerMessageIdCount: 2, distinctProviderMessageIdCount: 2, acceptedCount: 2, deliveredCount: 2,
+      },
+      {
+        purpose: 'password_reset', provider: 'cloudflare-email', state: 'delivered', providerErrorCategory: null,
+        rowCount: 1, providerMessageIdCount: 1, distinctProviderMessageIdCount: 1, acceptedCount: 1, deliveredCount: 1,
+      },
+    ],
+  });
+  assert.doesNotMatch(JSON.stringify(evidence), /challenge|correlation|provider-message/);
+});
+
+test('delivery evidence remains provider-accepted-only until lifecycle reconciliation', () => {
+  const evidence = summarizeTransactionalEmailDeliveryEvidence([{
+    purpose: 'verification', provider: 'cloudflare-email', state: 'provider_accepted', provider_error_category: null,
+    row_count: 2, provider_message_id_count: 2, distinct_provider_message_id_count: 2, accepted_count: 2, delivered_count: 0,
+  }], '2026-08-29T12:00:00.000Z');
+  assert.equal(evidence.status, 'provider_accepted_only');
+  assert.equal(evidence.groups[0].deliveredCount, 0);
 });
