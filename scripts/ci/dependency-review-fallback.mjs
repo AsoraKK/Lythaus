@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { dependencyGraphChanged } from './dependency-review-policy.mjs';
 
 const baseSha = process.env.BASE_SHA?.trim();
 const headSha = process.env.HEAD_SHA?.trim() || 'HEAD';
@@ -25,13 +26,26 @@ const changedNpmManifests = changedFiles.filter((file) => npmManifests.has(file)
 const changedNpmLocks = changedFiles.filter((file) => npmLocks.has(file));
 const changedOtherDependencies = changedFiles.filter((file) => otherDependencyFiles.has(file));
 
+function manifestAt(sha, manifest) {
+  try {
+    return JSON.parse(execFileSync('git', ['show', `${sha}:${manifest}`], { encoding: 'utf8' }));
+  } catch {
+    return null;
+  }
+}
+
+const changedNpmDependencyManifests = changedNpmManifests.filter((manifest) => dependencyGraphChanged(
+  manifestAt(baseSha, manifest),
+  manifestAt(headSha, manifest),
+));
+
 if (changedOtherDependencies.length > 0) {
   throw new Error(
     `GitHub dependency graph is unavailable; refusing unreviewed non-npm dependency changes: ${changedOtherDependencies.join(', ')}`,
   );
 }
 
-for (const manifest of changedNpmManifests) {
+for (const manifest of changedNpmDependencyManifests) {
   const lock = manifest.replace(/package\.json$/, 'package-lock.json');
   if (!changedNpmLocks.includes(lock)) {
     throw new Error(`Dependency manifest changed without its lockfile: ${manifest}`);
@@ -53,6 +67,7 @@ console.log(JSON.stringify({
   status: 'pass',
   mode: 'local-fallback',
   changedNpmManifests,
+  changedNpmDependencyManifests,
   changedNpmLocks,
   auditedPackageRoots: packageRoots,
 }));
