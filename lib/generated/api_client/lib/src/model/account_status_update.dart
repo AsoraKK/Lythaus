@@ -14,6 +14,7 @@ part 'account_status_update.g.dart';
 /// Properties:
 /// * [status]
 /// * [reasonCode]
+/// * [confirmation]
 @BuiltValue()
 abstract class AccountStatusUpdate implements Built<AccountStatusUpdate, AccountStatusUpdateBuilder> {
   @BuiltValueField(wireName: r'status')
@@ -22,6 +23,10 @@ abstract class AccountStatusUpdate implements Built<AccountStatusUpdate, Account
 
   @BuiltValueField(wireName: r'reasonCode')
   String get reasonCode;
+
+  @BuiltValueField(wireName: r'confirmation')
+  AccountStatusUpdateConfirmationEnum get confirmation;
+  // enum confirmationEnum {  REACTIVATE ACCOUNT,  SUSPEND ACCOUNT,  LOCK ACCOUNT,  };
 
   AccountStatusUpdate._();
 
@@ -55,6 +60,11 @@ class _$AccountStatusUpdateSerializer implements PrimitiveSerializer<AccountStat
     yield serializers.serialize(
       object.reasonCode,
       specifiedType: const FullType(String),
+    );
+    yield r'confirmation';
+    yield serializers.serialize(
+      object.confirmation,
+      specifiedType: const FullType(AccountStatusUpdateConfirmationEnum),
     );
   }
 
@@ -92,6 +102,13 @@ class _$AccountStatusUpdateSerializer implements PrimitiveSerializer<AccountStat
             specifiedType: const FullType(String),
           ) as String;
           result.reasonCode = valueDes;
+          break;
+        case r'confirmation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AccountStatusUpdateConfirmationEnum),
+          ) as AccountStatusUpdateConfirmationEnum;
+          result.confirmation = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -137,4 +154,21 @@ class AccountStatusUpdateStatusEnum extends EnumClass {
 
   static BuiltSet<AccountStatusUpdateStatusEnum> get values => _$accountStatusUpdateStatusEnumValues;
   static AccountStatusUpdateStatusEnum valueOf(String name) => _$accountStatusUpdateStatusEnumValueOf(name);
+}
+
+class AccountStatusUpdateConfirmationEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'REACTIVATE ACCOUNT')
+  static const AccountStatusUpdateConfirmationEnum rEACTIVATEACCOUNT = _$accountStatusUpdateConfirmationEnum_rEACTIVATEACCOUNT;
+  @BuiltValueEnumConst(wireName: r'SUSPEND ACCOUNT')
+  static const AccountStatusUpdateConfirmationEnum sUSPENDACCOUNT = _$accountStatusUpdateConfirmationEnum_sUSPENDACCOUNT;
+  @BuiltValueEnumConst(wireName: r'LOCK ACCOUNT')
+  static const AccountStatusUpdateConfirmationEnum lOCKACCOUNT = _$accountStatusUpdateConfirmationEnum_lOCKACCOUNT;
+
+  static Serializer<AccountStatusUpdateConfirmationEnum> get serializer => _$accountStatusUpdateConfirmationEnumSerializer;
+
+  const AccountStatusUpdateConfirmationEnum._(String name): super(name);
+
+  static BuiltSet<AccountStatusUpdateConfirmationEnum> get values => _$accountStatusUpdateConfirmationEnumValues;
+  static AccountStatusUpdateConfirmationEnum valueOf(String name) => _$accountStatusUpdateConfirmationEnumValueOf(name);
 }

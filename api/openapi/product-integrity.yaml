@@ -1290,7 +1290,7 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/IdempotencyConflict' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /admin/waitlist/{waitlistId}:
     servers:
@@ -1339,7 +1339,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/IdempotencyConflict' }
   /admin/waitlist/{waitlistId}/status:
     servers:
       - url: https://admin.lythaus.co/api
@@ -1562,7 +1562,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/IdempotencyConflict' }
   /admin/users/{userId}/resend-verification:
     servers: [{ url: https://admin-api.lythaus.co/api }]
     post:
@@ -3714,43 +3714,6 @@ paths:
                 $ref: '#/components/schemas/ApiError'
 
   /auth/email/verify:
-    get:
-      operationId: authEmailVerifyGet
-      summary: Verify an email address with a query token
-      description: Consumes a single-use email-verification token and returns only a private verification state.
-      tags: [Auth]
-      security: []
-      parameters:
-        - name: token
-          in: query
-          required: true
-          schema: { type: string, minLength: 32 }
-      responses:
-        '200':
-          description: Email address verified.
-          headers:
-            Cache-Control:
-              description: Verification responses are private and never cacheable.
-              schema: { type: string, example: 'private, no-store' }
-            X-Correlation-ID:
-              description: Request correlation identifier.
-              schema: { type: string }
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EmailVerificationResponse'
-        '400':
-          description: 'verification_token_invalid.'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-        '404':
-          description: 'provider_unavailable when email sign-in is disabled.'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
     post:
       operationId: authEmailVerifyPost
       summary: Verify an email address with a JSON token

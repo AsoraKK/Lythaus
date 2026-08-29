@@ -17,5 +17,10 @@ void main() {
       // TODO
     });
 
+    // String confirmation
+    test('to test the property `confirmation`', () async {
+      // TODO
+    });
+
   });
 }

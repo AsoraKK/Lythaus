@@ -20,8 +20,20 @@ import 'package:lythaus_api_client/src/model/account_tier_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_update.dart';
 import 'package:lythaus_api_client/src/model/activity_event.dart';
 import 'package:lythaus_api_client/src/model/activity_page.dart';
+import 'package:lythaus_api_client/src/model/admin_auth_summary.dart';
+import 'package:lythaus_api_client/src/model/admin_email_health.dart';
 import 'package:lythaus_api_client/src/model/admin_health.dart';
 import 'package:lythaus_api_client/src/model/admin_items.dart';
+import 'package:lythaus_api_client/src/model/admin_mutation_confirmation.dart';
+import 'package:lythaus_api_client/src/model/admin_user.dart';
+import 'package:lythaus_api_client/src/model/admin_user_deletion_response.dart';
+import 'package:lythaus_api_client/src/model/admin_user_detail200_response.dart';
+import 'package:lythaus_api_client/src/model/admin_user_invite.dart';
+import 'package:lythaus_api_client/src/model/admin_user_mutation_response.dart';
+import 'package:lythaus_api_client/src/model/admin_user_page.dart';
+import 'package:lythaus_api_client/src/model/admin_user_profile_patch.dart';
+import 'package:lythaus_api_client/src/model/admin_waitlist_create.dart';
+import 'package:lythaus_api_client/src/model/admin_waitlist_patch.dart';
 import 'package:lythaus_api_client/src/model/api_error.dart';
 import 'package:lythaus_api_client/src/model/appeal_adjudication_request.dart';
 import 'package:lythaus_api_client/src/model/appeal_adjudication_response.dart';
@@ -164,6 +176,7 @@ import 'package:lythaus_api_client/src/model/validation_error_response.dart';
 import 'package:lythaus_api_client/src/model/validation_error_response_error.dart';
 import 'package:lythaus_api_client/src/model/validation_error_response_error_fields_inner.dart';
 import 'package:lythaus_api_client/src/model/waitlist_admin_item.dart';
+import 'package:lythaus_api_client/src/model/waitlist_admin_item_linked_account.dart';
 import 'package:lythaus_api_client/src/model/waitlist_admin_response.dart';
 import 'package:lythaus_api_client/src/model/waitlist_admin_response_summary.dart';
 import 'package:lythaus_api_client/src/model/waitlist_error.dart';
@@ -183,8 +196,20 @@ part 'serializers.g.dart';
   AccountTierUpdate,
   ActivityEvent,
   ActivityPage,
+  AdminAuthSummary,
+  AdminEmailHealth,
   AdminHealth,
   AdminItems,
+  AdminMutationConfirmation,
+  AdminUser,
+  AdminUserDeletionResponse,
+  AdminUserDetail200Response,
+  AdminUserInvite,
+  AdminUserMutationResponse,
+  AdminUserPage,
+  AdminUserProfilePatch,
+  AdminWaitlistCreate,
+  AdminWaitlistPatch,
   ApiError,
   AppealAdjudicationRequest,
   AppealAdjudicationResponse,
@@ -327,6 +352,7 @@ part 'serializers.g.dart';
   ValidationErrorResponseError,
   ValidationErrorResponseErrorFieldsInner,
   WaitlistAdminItem,
+  WaitlistAdminItemLinkedAccount,
   WaitlistAdminResponse,
   WaitlistAdminResponseSummary,
   WaitlistError,

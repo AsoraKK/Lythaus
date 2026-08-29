@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:lythaus_api_client/src/model/waitlist_admin_item_linked_account.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -17,7 +18,11 @@ part 'waitlist_admin_item.g.dart';
 /// * [status]
 /// * [source_]
 /// * [createdAt]
+/// * [invitedAt]
+/// * [convertedAt]
+/// * [unsubscribedAt]
 /// * [retentionHold] - Whether a retention hold prevents automatic waitlist-record purging.
+/// * [linkedAccount]
 @BuiltValue()
 abstract class WaitlistAdminItem implements Built<WaitlistAdminItem, WaitlistAdminItemBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -36,9 +41,21 @@ abstract class WaitlistAdminItem implements Built<WaitlistAdminItem, WaitlistAdm
   @BuiltValueField(wireName: r'createdAt')
   DateTime get createdAt;
 
+  @BuiltValueField(wireName: r'invitedAt')
+  DateTime? get invitedAt;
+
+  @BuiltValueField(wireName: r'convertedAt')
+  DateTime? get convertedAt;
+
+  @BuiltValueField(wireName: r'unsubscribedAt')
+  DateTime? get unsubscribedAt;
+
   /// Whether a retention hold prevents automatic waitlist-record purging.
   @BuiltValueField(wireName: r'retentionHold')
   bool get retentionHold;
+
+  @BuiltValueField(wireName: r'linkedAccount')
+  WaitlistAdminItemLinkedAccount? get linkedAccount;
 
   WaitlistAdminItem._();
 
@@ -88,11 +105,39 @@ class _$WaitlistAdminItemSerializer implements PrimitiveSerializer<WaitlistAdmin
       object.createdAt,
       specifiedType: const FullType(DateTime),
     );
+    if (object.invitedAt != null) {
+      yield r'invitedAt';
+      yield serializers.serialize(
+        object.invitedAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    if (object.convertedAt != null) {
+      yield r'convertedAt';
+      yield serializers.serialize(
+        object.convertedAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    if (object.unsubscribedAt != null) {
+      yield r'unsubscribedAt';
+      yield serializers.serialize(
+        object.unsubscribedAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
     yield r'retentionHold';
     yield serializers.serialize(
       object.retentionHold,
       specifiedType: const FullType(bool),
     );
+    if (object.linkedAccount != null) {
+      yield r'linkedAccount';
+      yield serializers.serialize(
+        object.linkedAccount,
+        specifiedType: const FullType.nullable(WaitlistAdminItemLinkedAccount),
+      );
+    }
   }
 
   @override
@@ -151,12 +196,44 @@ class _$WaitlistAdminItemSerializer implements PrimitiveSerializer<WaitlistAdmin
           ) as DateTime;
           result.createdAt = valueDes;
           break;
+        case r'invitedAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.invitedAt = valueDes;
+          break;
+        case r'convertedAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.convertedAt = valueDes;
+          break;
+        case r'unsubscribedAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.unsubscribedAt = valueDes;
+          break;
         case r'retentionHold':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(bool),
           ) as bool;
           result.retentionHold = valueDes;
+          break;
+        case r'linkedAccount':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(WaitlistAdminItemLinkedAccount),
+          ) as WaitlistAdminItemLinkedAccount?;
+          if (valueDes == null) continue;
+          result.linkedAccount.replace(valueDes);
           break;
         default:
           unhandled.add(key);

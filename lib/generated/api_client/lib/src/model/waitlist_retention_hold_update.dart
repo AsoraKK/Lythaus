@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,11 +13,20 @@ part 'waitlist_retention_hold_update.g.dart';
 ///
 /// Properties:
 /// * [active] - Whether the retention hold is active.
+/// * [reasonCode]
+/// * [confirmation]
 @BuiltValue()
 abstract class WaitlistRetentionHoldUpdate implements Built<WaitlistRetentionHoldUpdate, WaitlistRetentionHoldUpdateBuilder> {
   /// Whether the retention hold is active.
   @BuiltValueField(wireName: r'active')
   bool get active;
+
+  @BuiltValueField(wireName: r'reasonCode')
+  String get reasonCode;
+
+  @BuiltValueField(wireName: r'confirmation')
+  WaitlistRetentionHoldUpdateConfirmationEnum get confirmation;
+  // enum confirmationEnum {  PLACE RETENTION HOLD,  RELEASE RETENTION HOLD,  };
 
   WaitlistRetentionHoldUpdate._();
 
@@ -45,6 +55,16 @@ class _$WaitlistRetentionHoldUpdateSerializer implements PrimitiveSerializer<Wai
     yield serializers.serialize(
       object.active,
       specifiedType: const FullType(bool),
+    );
+    yield r'reasonCode';
+    yield serializers.serialize(
+      object.reasonCode,
+      specifiedType: const FullType(String),
+    );
+    yield r'confirmation';
+    yield serializers.serialize(
+      object.confirmation,
+      specifiedType: const FullType(WaitlistRetentionHoldUpdateConfirmationEnum),
     );
   }
 
@@ -76,6 +96,20 @@ class _$WaitlistRetentionHoldUpdateSerializer implements PrimitiveSerializer<Wai
           ) as bool;
           result.active = valueDes;
           break;
+        case r'reasonCode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.reasonCode = valueDes;
+          break;
+        case r'confirmation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(WaitlistRetentionHoldUpdateConfirmationEnum),
+          ) as WaitlistRetentionHoldUpdateConfirmationEnum;
+          result.confirmation = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -103,4 +137,19 @@ class _$WaitlistRetentionHoldUpdateSerializer implements PrimitiveSerializer<Wai
     );
     return result.build();
   }
+}
+
+class WaitlistRetentionHoldUpdateConfirmationEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PLACE RETENTION HOLD')
+  static const WaitlistRetentionHoldUpdateConfirmationEnum pLACERETENTIONHOLD = _$waitlistRetentionHoldUpdateConfirmationEnum_pLACERETENTIONHOLD;
+  @BuiltValueEnumConst(wireName: r'RELEASE RETENTION HOLD')
+  static const WaitlistRetentionHoldUpdateConfirmationEnum rELEASERETENTIONHOLD = _$waitlistRetentionHoldUpdateConfirmationEnum_rELEASERETENTIONHOLD;
+
+  static Serializer<WaitlistRetentionHoldUpdateConfirmationEnum> get serializer => _$waitlistRetentionHoldUpdateConfirmationEnumSerializer;
+
+  const WaitlistRetentionHoldUpdateConfirmationEnum._(String name): super(name);
+
+  static BuiltSet<WaitlistRetentionHoldUpdateConfirmationEnum> get values => _$waitlistRetentionHoldUpdateConfirmationEnumValues;
+  static WaitlistRetentionHoldUpdateConfirmationEnum valueOf(String name) => _$waitlistRetentionHoldUpdateConfirmationEnumValueOf(name);
 }

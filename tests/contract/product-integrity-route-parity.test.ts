@@ -25,7 +25,6 @@ const workers: Record<WorkerName, string> = {
 
 const runtimeRoutes: RuntimeRoute[] = [
   { path: '/waitlist', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/waitlist'" },
-  { path: '/auth/email/verify', method: 'get', worker: 'public', dispatcherNeedle: "url.pathname === '/api/auth/email/verify'" },
   { path: '/auth/email/verify', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/auth/email/verify'" },
   { path: '/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/flags'" },
   { path: '/content/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/content/flags'" },
@@ -104,8 +103,20 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/admin/moderation/cases', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/moderation/cases'" },
   { path: '/admin/audit', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/audit'" },
   { path: '/admin/waitlist', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/waitlist'" },
+  { path: '/admin/waitlist', method: 'post', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/waitlist'" },
+  { path: '/admin/waitlist/{waitlistId}', method: 'patch', worker: 'admin', dispatcherNeedle: 'const waitlistEntry =' },
+  { path: '/admin/waitlist/{waitlistId}', method: 'delete', worker: 'admin', dispatcherNeedle: 'const waitlistEntry =' },
   { path: '/admin/waitlist/{waitlistId}/status', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistStatus =' },
   { path: '/admin/waitlist/{waitlistId}/retention-hold', method: 'post', worker: 'admin', dispatcherNeedle: 'const waitlistRetentionHold =' },
+  { path: '/admin/auth/summary', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/auth/summary'" },
+  { path: '/admin/email-health', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/email-health'" },
+  { path: '/admin/users', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/users'" },
+  { path: '/admin/users', method: 'post', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/users'" },
+  { path: '/admin/users/{userId}', method: 'get', worker: 'admin', dispatcherNeedle: 'const adminUser =' },
+  { path: '/admin/users/{userId}', method: 'patch', worker: 'admin', dispatcherNeedle: 'const adminUser =' },
+  { path: '/admin/users/{userId}', method: 'delete', worker: 'admin', dispatcherNeedle: 'const deleteUser =' },
+  { path: '/admin/users/{userId}/resend-verification', method: 'post', worker: 'admin', dispatcherNeedle: 'const resendVerification =' },
+  { path: '/admin/users/{userId}/revoke-sessions', method: 'post', worker: 'admin', dispatcherNeedle: 'const revokeSessions =' },
   { path: '/admin/users/search', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/users/search'" },
   { path: '/admin/privacy/legal-holds', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/privacy/legal-holds'" },
   { path: '/admin/privacy/legal-holds', method: 'post', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/privacy/legal-holds'" },
@@ -166,8 +177,8 @@ describe('product-integrity OpenAPI parity', () => {
     }
 
     expect(spec.paths['/admin/waitlist/{waitlistId}/status'].post.responses['409']).toBeDefined();
-    expect(spec.components.schemas.WaitlistStatusUpdate.required).toEqual(['status']);
-    expect(spec.components.schemas.WaitlistRetentionHoldUpdate.required).toEqual(['active']);
+    expect(spec.components.schemas.WaitlistStatusUpdate.required).toEqual(['status', 'reasonCode', 'confirmation']);
+    expect(spec.components.schemas.WaitlistRetentionHoldUpdate.required).toEqual(['active', 'reasonCode', 'confirmation']);
   });
 
   test('retired duplicate product-integrity routes are absent', () => {
@@ -244,16 +255,13 @@ describe('product-integrity OpenAPI parity', () => {
 
   test('privacy export and email verification remain private non-envelope responses', () => {
     const exportDownload = spec.paths?.['/privacy/requests/{requestId}/export']?.get;
-    const emailVerifyGet = spec.paths?.['/auth/email/verify']?.get;
     const emailVerifyPost = spec.paths?.['/auth/email/verify']?.post;
     expect(exportDownload.responses['200'].content['application/json'].schema.$ref).toContain('PrivacyExportDocument');
     expect(exportDownload.responses['200'].headers['Cache-Control'].schema.example).toBe('private, no-store');
     expect(exportDownload.responses['404'].description).toContain('export_not_found');
     expect(exportDownload.responses['503'].description).toContain('export_unavailable');
-    for (const operation of [emailVerifyGet, emailVerifyPost]) {
-      expect(operation.responses['200'].content['application/json'].schema.$ref).toContain('EmailVerificationResponse');
-      expect(operation.responses['200'].headers['Cache-Control'].schema.example).toBe('private, no-store');
-    }
+    expect(emailVerifyPost.responses['200'].content['application/json'].schema.$ref).toContain('EmailVerificationResponse');
+    expect(emailVerifyPost.responses['200'].headers['Cache-Control'].schema.example).toBe('private, no-store');
     expect(spec.components.schemas.EmailVerificationResponse.properties.state.enum).toEqual(['verified']);
   });
 
@@ -293,7 +301,6 @@ describe('product-integrity OpenAPI parity', () => {
     expect(generated('api/moderation_api.dart')).toContain('Future<Response<FlagCreateResponse>> flagsCreate(');
     expect(generated('api/media_api.dart')).toContain('Future<Response<MediaUploadSessionCreated>> mediaUploadsCreate(');
     expect(generated('api/privacy_api.dart')).toContain('Future<Response<BuiltMap<String, JsonObject>>> privacyRequestExportDownload(');
-    expect(generated('api/auth_api.dart')).toContain('Future<Response<EmailVerificationResponse>> authEmailVerifyGet(');
     expect(generated('api/auth_api.dart')).toContain('Future<Response<EmailVerificationResponse>> authEmailVerifyPost(');
     const admin = generated('api/admin_api.dart');
     expect(admin).toContain('Future<Response<PendingAppealAdjudicationList>> adminAppealsPendingAdjudicationList(');
