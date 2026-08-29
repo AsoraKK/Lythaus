@@ -49,6 +49,7 @@ const runUpload = (output) => {
 test('resolves the only exact-SHA candidate', () => {
   const result = run([version('11111111-1111-4111-8111-111111111111', '2026-08-25T10:00:00Z')]);
   assert.match(result.env, /PUBLIC_WORKER_VERSION_ID=11111111-1111-4111-8111-111111111111/);
+  assert.match(result.env, /PUBLIC_WORKER_CREATED_AT=2026-08-25T10:00:00.000Z/);
   assert.match(result.output, /"matchingVersions":1/);
 });
 
@@ -85,13 +86,13 @@ test('fails closed when duplicate exact-SHA candidates are ambiguous', () => {
   );
 });
 
-test('fails closed when a duplicate lacks a comparable creation timestamp', () => {
+test('fails closed when a candidate lacks a comparable creation timestamp', () => {
   assert.throws(
     () => run([
       version('11111111-1111-4111-8111-111111111111', '2026-08-25T10:00:00Z'),
       version('22222222-2222-4222-8222-222222222222', undefined),
     ]),
-    /lack comparable creation timestamps/,
+    /lack valid creation timestamps/,
   );
 });
 

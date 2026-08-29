@@ -8,8 +8,16 @@ on:
         required: true
         default: https://api.lythaus.co/api
         type: string
-      real_email_evidence_json:
-        description: Sanitized mailbox evidence for real signup, verification, reset, and resend acceptance
+      release_sha:
+        description: Exact candidate commit SHA already staged at zero traffic
+        required: true
+        type: string
+      worker_version_id:
+        description: Exact public candidate Worker version ID already staged at zero traffic
+        required: true
+        type: string
+      acceptance_run_id:
+        description: UUID assigned to the candidate acceptance attempt
         required: true
         type: string
 
@@ -51,6 +59,20 @@ jobs:
         run: node scripts/ci/verify-planetscale-production-schema.mjs
       - name: Mark external routing proof for the harness
         run: echo "HYPERDRIVE_VERIFIED_MAIN=true" >> "$GITHUB_ENV"
+      - name: Collect generated candidate auth acceptance evidence
+        id: auth_acceptance_observation
+        continue-on-error: true
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          ADR003_API_BASE_URL: ${{ inputs.api_base_url }}
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: protected_probe
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_URL: ${{ vars.PRODUCTION_AUTH_ACCEPTANCE_EVIDENCE_URL }}
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ runner.temp }}/adr003-auth-acceptance-observation.json
+          ADR003_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          ADR003_WORKER_NAME: lythaus-public-api-development
+          ADR003_WORKER_VERSION_ID: ${{ inputs.worker_version_id }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+        run: node scripts/ci/collect-auth-acceptance-evidence.mjs
       - name: Run sanitized ADR-003 acceptance
         env:
           ADR003_API_BASE_URL: ${{ inputs.api_base_url }}
@@ -60,7 +82,11 @@ jobs:
           ADR003_WORKER_VERSIONS_JSON: ${{ vars.ADR003_WORKER_VERSIONS_JSON }}
           ADR003_HYPERDRIVE_IDS_JSON: ${{ vars.ADR003_HYPERDRIVE_IDS_JSON }}
           ADR003_GUEST_ACCEPTED: ${{ vars.ADR003_GUEST_ACCEPTED }}
-          ADR003_REAL_EMAIL_EVIDENCE_JSON: ${{ inputs.real_email_evidence_json }}
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ runner.temp }}/adr003-auth-acceptance-observation.json
+          ADR003_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          ADR003_WORKER_NAME: lythaus-public-api-development
+          ADR003_WORKER_VERSION_ID: ${{ inputs.worker_version_id }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
           ADR003_MOBILE_EMAIL_ACCEPTED: ${{ vars.ADR003_MOBILE_EMAIL_ACCEPTED }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
@@ -71,6 +97,31 @@ jobs:
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
           ADR003_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
         run: npm run acceptance:adr003
+      - name: Require generated candidate auth acceptance
+        if: always()
+        env:
+          OBSERVER_OUTCOME: ${{ steps.auth_acceptance_observation.outcome }}
+        run: |
+          set -euo pipefail
+          test "$OBSERVER_OUTCOME" = success || {
+            status="$(jq -r '.status // "BLOCKED"' "$RUNNER_TEMP/adr003-auth-acceptance-observation.json" 2>/dev/null || echo BLOCKED)"
+            if [[ "$status" = HUMAN_ACCEPTANCE_REQUIRED ]]; then
+              echo 'HUMAN_ACCEPTANCE_REQUIRED: complete the real Turnstile and mailbox interaction, then rerun the observer.' >&2
+            elif [[ "$status" = BLOCKED ]] && jq -e '.reason == "provider_configuration_missing"' "$RUNNER_TEMP/adr003-auth-acceptance-observation.json" >/dev/null 2>&1; then
+              echo 'Provider configuration failure: the enabled mail.lythaus.co Cloudflare Email Sending queue subscription was not independently observed for the required lifecycle events.' >&2
+            else
+              echo "Candidate auth acceptance is not independently proven: $status" >&2
+            fi
+            exit 1
+          }
+          jq -e '.status == "PASSED"' "$RUNNER_TEMP/adr003-auth-acceptance-observation.json" >/dev/null
+          jq -e '
+            .status == "PASSED" and
+            .lifecycleSubscription.source == "cloudflare_email_sending_queue_subscription_observation" and
+            .lifecycleSubscription.domain == "mail.lythaus.co" and
+            .lifecycleSubscription.status == "enabled" and
+            ((.lifecycleSubscription.events | sort) == ["bounced", "complained", "deferred", "delivered", "failed", "rejected"])
+          ' "$RUNNER_TEMP/adr003-auth-acceptance-observation.json" >/dev/null
       - name: Upload sanitized ADR-003 evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
