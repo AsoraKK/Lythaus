@@ -22,10 +22,11 @@ export const APPROVED_MIGRATIONS = [
   { name: '0011_email_guest_auth_only.sql', repositorySha256: '427afd1ad035b35f998ab2316a47f73556a1a49e66a2f92fce1c05926236f72d', lfOnlyBreaks: [], appliedBytes: 606, appliedSha256: '0536054f579e4f0bad3f459a19abeae3706b45d1c488a205aa8a1274632f356e' },
   { name: '0012_product_integrity_v2.sql', repositorySha256: 'b2d4b02030333494b9959b5de040530845a7a97cbef746cb02cb931e7fdbb725', lfOnlyBreaks: [[1, 623]], appliedBytes: 28_673, appliedSha256: 'b2d4b02030333494b9959b5de040530845a7a97cbef746cb02cb931e7fdbb725' },
   { name: '0013_marketing_waitlist.sql', repositorySha256: 'a31d54931bf93bcc7a3518ea77753390a7a7768924de073e6e5711f087bda7e7', lfOnlyBreaks: [[1, 9999]], appliedBytes: 1_434, appliedSha256: 'a31d54931bf93bcc7a3518ea77753390a7a7768924de073e6e5711f087bda7e7' },
+  { name: '0014_transactional_email_outbox.sql', repositorySha256: '7d4352cc6f74d8216a9ece9b8e2c5bcef53088b1000e53d1f3303ef09c121222', lfOnlyBreaks: [[1, 9999]], appliedBytes: 2_634, appliedSha256: '7d4352cc6f74d8216a9ece9b8e2c5bcef53088b1000e53d1f3303ef09c121222' },
 ];
 
-export const EXPECTED_MIGRATION_BYTES = 81_213;
-export const EXPECTED_MIGRATION_SET_SHA256 = 'c84eea921fe89f85ac6ab4e7ac107014778abca320e524f6450c159eea5754e1';
+export const EXPECTED_MIGRATION_BYTES = 83_848;
+export const EXPECTED_MIGRATION_SET_SHA256 = 'dc744710952ea618ef1bc00fdc5042c4bac59d5c8bef127441140a5d5937cfbd';
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');

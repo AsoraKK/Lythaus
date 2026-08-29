@@ -1,9 +1,9 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
-import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, normalizeUserTier, type ActivityCategory, type ActivityEventType, type CreatePostInput, type EmailDeliveryReference, type ReputationEffect, type TransactionalEmailProvider, type UserTier } from '@lythaus/contracts';
+import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, normalizeUserTier, validateTurnstileResponse, type ActivityCategory, type ActivityEventType, type CreatePostInput, type ReputationEffect, type UserTier } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
-import { constantTimeEqual, decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
+import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
@@ -170,14 +170,28 @@ function hashConfiguredPassword(env: Env, password: string, pepper: string): Pas
 
 async function verifyTurnstile(env: Env, token: unknown): Promise<void> {
   if (!requiresTurnstileVerification(env.TURNSTILE_REQUIRED, env.TURNSTILE_SECRET_KEY, token)) return;
-  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ secret: env.TURNSTILE_SECRET_KEY, response: token }),
-  });
+  let response: Response;
+  try {
+    response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        secret: env.TURNSTILE_SECRET_KEY,
+        response: token,
+        idempotency_key: randomToken(16),
+      }),
+    });
+  } catch {
+    throw new Error('turnstile_unavailable');
+  }
   if (!response.ok) throw new Error('turnstile_unavailable');
-  const result = await response.json() as { success?: boolean };
-  if (result.success !== true) throw new Error('turnstile_failed');
+  let result: { success?: boolean; hostname?: string; action?: string; 'error-codes'?: unknown };
+  try {
+    result = await response.json() as typeof result;
+  } catch {
+    throw new Error('turnstile_unavailable');
+  }
+  validateTurnstileResponse(result, env.TURNSTILE_EXPECTED_HOSTNAMES, env.TURNSTILE_EXPECTED_ACTION);
 }
 
 async function issueSession(
@@ -206,150 +220,64 @@ async function issueSession(
   }, { userId, roles });
 }
 
-type AuthEmailAction = 'verification_registration' | 'verification_relink' | 'verification_resend' | 'password_reset';
-
-interface EmailProviderErrorShape {
-  code?: unknown;
-  errorCode?: unknown;
-  status?: unknown;
-  statusCode?: unknown;
-  response?: { status?: unknown };
-}
-
-class EmailDeliveryFailure extends Error {
-  readonly providerCode?: string;
-  readonly providerStatus?: number;
-
-  constructor(providerStatus?: number, providerCode?: string) {
-    const suffix = providerStatus && providerStatus >= 100 && providerStatus <= 599 ? `_${providerStatus}` : '';
-    super(`email_delivery_failed${suffix}`);
-    this.name = 'EmailDeliveryFailure';
-    this.providerCode = providerCode;
-    this.providerStatus = providerStatus;
-  }
-}
-
-function safeEmailProviderCode(value: unknown): string | undefined {
-  const code = typeof value === 'string' ? value.trim() : '';
-  return /^[A-Z][A-Z0-9_]{2,63}$/.test(code) ? code : undefined;
-}
-
-function emailProviderFailureDetails(error: unknown): { status?: number; code?: string } {
-  const shape = error && typeof error === 'object' ? error as EmailProviderErrorShape : {};
-  const statusValue = shape.status ?? shape.statusCode ?? shape.response?.status;
-  const numericStatus = Number(statusValue);
-  const message = error instanceof Error ? error.message : '';
-  const messageCode = message.match(/\bE_[A-Z0-9_]{2,63}\b/)?.[0];
-  return {
-    status: Number.isInteger(numericStatus) && numericStatus >= 100 && numericStatus <= 599 ? numericStatus : undefined,
-    code: safeEmailProviderCode(shape.code) ?? safeEmailProviderCode(shape.errorCode) ?? messageCode,
-  };
-}
-
-function asEmailDeliveryFailure(error: unknown): EmailDeliveryFailure {
-  const details = emailProviderFailureDetails(error);
-  return new EmailDeliveryFailure(details.status, details.code);
-}
-
-async function sendEmailTransport(env: Env, input: { to: string; subject: string; html: string; text: string }): Promise<EmailDeliveryReference> {
-  const providerMode = env.EMAIL_PROVIDER_MODE ?? (env.ENVIRONMENT === 'production' ? 'cloudflare' : 'fallback');
-  if (providerMode === 'disabled') throw new Error('provider_unavailable');
-  if (providerMode === 'cloudflare') {
-    if (!env.EMAIL || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
-    try {
-      const delivery = await env.EMAIL.send({
-        to: input.to,
-        from: { email: env.EMAIL_FROM, name: 'Lythaus' },
-        subject: input.subject,
-        html: input.html,
-        text: input.text,
-      });
-      return { provider: 'cloudflare-email', messageId: delivery.messageId, acceptedAt: new Date().toISOString() };
-    } catch (error) {
-      throw asEmailDeliveryFailure(error);
-    }
-  }
-  if (providerMode !== 'fallback') throw new Error('email_provider_mode_invalid');
-  if (!env.EMAIL_PROVIDER_URL || !env.EMAIL_PROVIDER_TOKEN || !env.EMAIL_FROM) throw new Error('email_delivery_not_configured');
-  const response = await fetch(env.EMAIL_PROVIDER_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
-    body: JSON.stringify({ from: env.EMAIL_FROM, to: input.to, subject: input.subject, html: input.html, text: input.text }),
+async function queueTransactionalEmail(
+  client: DatabaseClient,
+  input: {
+    userId: string;
+    purpose: 'verification' | 'password_reset' | 'invite' | 'email_change';
+    challengeId: string;
+    token: string;
+    encryptionKey: string;
+    correlationId: string;
+  },
+): Promise<void> {
+  const encryptedSecret = await encryptField(input.token, input.encryptionKey, 'v1');
+  await enqueueTransactionalEmailIntent(client, {
+    id: uuidv7(),
+    userId: input.userId,
+    contactEmailUserId: input.userId,
+    purpose: input.purpose,
+    challengeId: input.challengeId,
+    templateVersion: 'v1',
+    secretCiphertext: encryptedSecret.ciphertext,
+    secretEncryptionKeyVersion: encryptedSecret.encryptionKeyVersion,
+    correlationId: input.correlationId,
   });
-  if (!response.ok) throw new EmailDeliveryFailure(response.status);
-  const payload = await response.json().catch(() => ({})) as { messageId?: string };
-  return { provider: 'fallback-email', messageId: payload.messageId ?? 'accepted', acceptedAt: new Date().toISOString() };
 }
 
-function createTransactionalEmailProvider(env: Env): TransactionalEmailProvider {
-  const link = (baseUrl: string | undefined, token: string): string => baseUrl
-    ? `<p><a href="${baseUrl}${encodeURIComponent(token)}">Continue securely</a></p>`
-    : '';
-  return {
-    async sendVerification(input) {
-      const subject = 'Verify your Lythaus email';
-      const url = env.EMAIL_VERIFICATION_BASE_URL ? `${env.EMAIL_VERIFICATION_BASE_URL}${encodeURIComponent(input.token)}` : '';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
-    },
-    async sendPasswordReset(input) {
-      const subject = 'Reset your Lythaus password';
-      const url = env.EMAIL_PASSWORD_RESET_BASE_URL ? `${env.EMAIL_PASSWORD_RESET_BASE_URL}${encodeURIComponent(input.token)}` : '';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_PASSWORD_RESET_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
-    },
-    async sendSecurityNotice(input) {
-      const subject = 'Lythaus security notice';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>${input.reason.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value))}</p>`, text: `${subject}. ${input.reason}` });
-    },
-    async sendEmailChangeNotice(input) {
-      const subject = 'Confirm your Lythaus email change';
-      const url = env.EMAIL_VERIFICATION_BASE_URL ? `${env.EMAIL_VERIFICATION_BASE_URL}${encodeURIComponent(input.token)}` : '';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p>${link(env.EMAIL_VERIFICATION_BASE_URL, input.token)}`, text: `${subject}.${url ? ` ${url}` : ''}` });
-    },
-    async sendAccountDeletionNotice(input) {
-      const subject = 'Lythaus account deletion requested';
-      return sendEmailTransport(env, { to: input.to, subject, html: `<p>${subject}.</p><p>Request reference: ${input.requestId}</p>`, text: `${subject}. Request reference: ${input.requestId}` });
-    },
-  };
-}
-
-async function deliverAuthEmail(
-  request: Request,
-  env: Env,
-  input: { type: 'verification' | 'password_reset' | 'security'; to: string; token?: string; reason?: string },
-  action: AuthEmailAction,
-): Promise<EmailDeliveryReference> {
-  const provider = createTransactionalEmailProvider(env);
-  try {
-    const delivery = input.type === 'verification' && input.token
-      ? await provider.sendVerification({ to: input.to, token: input.token })
-      : input.type === 'password_reset' && input.token
-        ? await provider.sendPasswordReset({ to: input.to, token: input.token })
-        : await provider.sendSecurityNotice({ to: input.to, reason: input.reason ?? 'Account security event' });
-    logEvent({
-      service: 'lythaus-public-api',
-      event: 'auth_email_delivery_accepted',
-      action,
-      provider: delivery.provider,
-      messageIdPresent: Boolean(delivery.messageId),
-      correlationId: correlationId(request),
-    });
-    return delivery;
-  } catch (error) {
-    logAuthEmailDeliveryFailure(request, action, error);
-    throw error;
-  }
-}
-
-async function sendAccountVerificationEmail(request: Request, env: Env, userId: string, email: string, action: AuthEmailAction): Promise<void> {
+async function queueAccountVerificationEmail(request: Request, env: Env, userId: string): Promise<void> {
   const verificationToken = randomToken(32);
+  const challengeId = uuidv7();
   const sourceEventId = uuidv7();
+  const secrets = requireAuthSecrets(env);
   await transaction(env.DB_APP_FRESH, async (client) => {
+    const account = await client.query<{ id: string; status: string; verified_at: string | null }>(
+      `SELECT u.id, u.status, c.verified_at
+         FROM identity.users u
+         JOIN identity.email_credentials c ON c.user_id = u.id
+        WHERE u.id = $1
+        FOR UPDATE`,
+      [userId],
+    );
+    if (!account.rows[0] || account.rows[0].verified_at || !['active', 'relink_required'].includes(account.rows[0].status)) {
+      throw new Error('account_unavailable');
+    }
     await client.query(
-      `UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`,
+      `UPDATE identity.email_verification_tokens
+          SET superseded_at = now()
+        WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
       [userId]);
     await client.query(
       `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-      [uuidv7(), userId, hashResetToken(verificationToken)]);
+      [challengeId, userId, hashAuthToken(verificationToken, 'verification')]);
+    await queueTransactionalEmail(client, {
+      userId,
+      purpose: 'verification',
+      challengeId,
+      token: verificationToken,
+      encryptionKey: secrets.encryptionKey,
+      correlationId: correlationId(request),
+    });
     await writeActivity(client, request, { userId }, sourceEventId, {
       eventType: 'account.email_verification_requested', category: 'account',
       title: 'You requested another verification email',
@@ -357,28 +285,6 @@ async function sendAccountVerificationEmail(request: Request, env: Env, userId: 
       objectType: 'account', objectId: userId, retentionClass: 'security',
       metadata: { authenticationMethod: 'email' },
     });
-  });
-  await deliverAuthEmail(request, env, { type: 'verification', to: email, token: verificationToken }, action);
-}
-
-function logAuthEmailDeliveryFailure(
-  request: Request,
-  action: AuthEmailAction,
-  error: unknown,
-): void {
-  const internalCode = error instanceof Error ? error.message : '';
-  const failure = error instanceof EmailDeliveryFailure ? error : undefined;
-  const errorCode = /^(?:email_delivery_not_configured|email_delivery_failed(?:_[1-5][0-9]{2})?|email_provider_mode_invalid)$/.test(internalCode)
-    ? internalCode
-    : 'email_delivery_failed';
-  logEvent({
-    service: 'lythaus-public-api',
-    event: 'auth_email_delivery_failed',
-    action,
-    errorCode,
-    providerCode: failure?.providerCode,
-    providerStatus: failure?.providerStatus,
-    correlationId: correlationId(request),
   });
 }
 
@@ -401,31 +307,36 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   if (mode === 'resend_verification') {
     if (account && !account.verified_at) {
       try {
-        await sendAccountVerificationEmail(request, env, account.id, email, 'verification_resend');
-      } catch { /* Keep resend enumeration-safe; provider failure is logged internally. */ }
+        await queueAccountVerificationEmail(request, env, account.id);
+      } catch { /* Keep resend enumeration-safe when queueing fails. */ }
     }
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
   if (mode === 'register') {
     const registrationPlan = planEmailRegistration(
-      account ? { verifiedAt: account.verified_at } : undefined,
+      account ? { status: account.status, verifiedAt: account.verified_at } : undefined,
       contactOwner ? { status: contactOwner.status } : undefined,
     );
     if (registrationPlan === 'resend_verification') {
       if (!account) throw new Error('account_unavailable');
-      await sendAccountVerificationEmail(request, env, account.id, email, 'verification_resend');
+      await queueAccountVerificationEmail(request, env, account.id);
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
-    if (registrationPlan === 'account_exists') throw new Error('account_exists');
+    if (registrationPlan === 'neutral_existing_account') {
+      return privateResponse(request, env, { state: 'check_email' }, { status: 202 });
+    }
     const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
     const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
     const verificationToken = randomToken(32);
+    const challengeId = uuidv7();
     const sourceEventId = uuidv7();
     if (registrationPlan === 'attach_email_credential') {
       if (!contactOwner) throw new Error('account_unavailable');
       await transaction(env.DB_APP_FRESH, async (client) => {
         await client.query(
-          `UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`,
+          `UPDATE identity.email_verification_tokens
+              SET superseded_at = now()
+            WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
           [contactOwner.id]);
         await client.query(
           `INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
@@ -433,7 +344,15 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
           [contactOwner.id, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
         await client.query(
           `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-          [uuidv7(), contactOwner.id, hashResetToken(verificationToken)]);
+          [challengeId, contactOwner.id, hashAuthToken(verificationToken, 'verification')]);
+        await queueTransactionalEmail(client, {
+          userId: contactOwner.id,
+          purpose: 'verification',
+          challengeId,
+          token: verificationToken,
+          encryptionKey: secrets.encryptionKey,
+          correlationId: correlationId(request),
+        });
         await client.query(
           `INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_relink_started', '{"source":"contact_email"}'::jsonb)`,
           [uuidv7(), contactOwner.id]);
@@ -445,7 +364,6 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
           metadata: { authenticationMethod: 'email', recoveryMethod: 'verified_contact_email' },
         });
       });
-      await deliverAuthEmail(request, env, { type: 'verification', to: email, token: verificationToken }, 'verification_relink');
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     const userId = uuidv7();
@@ -453,7 +371,15 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
       await client.query(`INSERT INTO identity.users (id) VALUES ($1)`, [userId]);
       await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
       await client.query(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`, [userId, encrypted.ciphertext, lookup]);
-      await client.query(`INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`, [uuidv7(), userId, hashResetToken(verificationToken)]);
+      await client.query(`INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`, [challengeId, userId, hashAuthToken(verificationToken, 'verification')]);
+      await queueTransactionalEmail(client, {
+        userId,
+        purpose: 'verification',
+        challengeId,
+        token: verificationToken,
+        encryptionKey: secrets.encryptionKey,
+        correlationId: correlationId(request),
+      });
       await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_registration_started', '{}'::jsonb)`, [uuidv7(), userId]);
       await writeActivity(client, request, { userId }, sourceEventId, {
         eventType: 'account.registered', category: 'account', title: 'You registered an account',
@@ -462,8 +388,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
         metadata: { authenticationMethod: 'email' },
       });
     });
-    await deliverAuthEmail(request, env, { type: 'verification', to: email, token: verificationToken }, 'verification_registration');
-    return privateResponse(request, env, { userId, state: 'verification_required' }, { status: 202 });
+    return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
   const loginPlan = planEmailLogin(account ? {
     status: account.status,
@@ -492,27 +417,78 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character] ?? character));
+}
+
+async function verificationPreview(request: Request, env: Env, rawToken: string | null): Promise<Response> {
+  const token = typeof rawToken === 'string' && rawToken.length >= 32 ? rawToken : undefined;
+  const valid = token
+    ? (await query<{ id: string }>(env.DB_APP_FRESH,
+      `SELECT id FROM identity.email_verification_tokens
+        WHERE token_hash = decode($1, 'base64')
+          AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at > now()` ,
+      [hashAuthToken(token, 'verification')])).rows.length === 1
+    : false;
+  const action = `${new URL(request.url).origin}/api/auth/email/verify`;
+  const body = valid
+    ? `<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Confirm your email</title></head><body><main><h1>Confirm your email</h1><p>Continue to verify this Lythaus email address.</p><form method="post" action="${escapeHtml(action)}"><input type="hidden" name="token" value="${escapeHtml(token ?? '')}"><button type="submit">Continue / Verify</button></form></main></body></html>`
+    : '<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Verification link unavailable</title></head><body><main><h1>Verification link unavailable</h1><p>This link is invalid or expired.</p></main></body></html>';
+  return new Response(body, {
+    status: valid ? 200 : 400,
+    headers: {
+      'cache-control': 'private, no-store',
+      'content-security-policy': "default-src 'none'; form-action 'self'; base-uri 'none'; style-src 'unsafe-inline'",
+      'content-type': 'text/html; charset=utf-8',
+      'referrer-policy': 'no-referrer',
+      'x-correlation-id': correlationId(request),
+    },
+  });
+}
+
 async function verifyEmail(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  const token = requireToken(url.searchParams.get('token') ?? (await readJson<{ token?: string }>(request, 8 * 1024)).token, 'verification_token_invalid');
+  if (request.method === 'GET') return verificationPreview(request, env, url.searchParams.get('token'));
+  if (request.method !== 'POST') throw new Error('method_not_allowed');
+  const input = await readJson<{ token?: string }>(request, 8 * 1024);
+  const token = requireToken(url.searchParams.get('token') ?? input.token, 'verification_token_invalid');
+  const tokenHash = hashAuthToken(token, 'verification');
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
-    const found = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.email_verification_tokens WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now() FOR UPDATE`, [hashResetToken(token)]);
+    const owner = await client.query<{ user_id: string }>(
+      `SELECT user_id FROM identity.email_verification_tokens WHERE token_hash = decode($1, 'base64')`,
+      [tokenHash],
+    );
+    if (!owner.rows[0]) throw new Error('verification_token_invalid');
+    const userId = owner.rows[0].user_id;
+    const account = await client.query<{ status: string }>(
+      `SELECT status FROM identity.users WHERE id = $1 FOR UPDATE`,
+      [userId],
+    );
+    if (!account.rows[0] || !['active', 'relink_required'].includes(account.rows[0].status)) throw new Error('verification_token_invalid');
+    const found = await client.query<{ id: string }>(
+      `SELECT id FROM identity.email_verification_tokens
+        WHERE token_hash = decode($1, 'base64')
+          AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at > now()
+        FOR UPDATE`,
+      [tokenHash],
+    );
     if (!found.rows[0]) throw new Error('verification_token_invalid');
-    await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`, [found.rows[0].user_id]);
-    await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
-    await client.query(`UPDATE identity.contact_emails SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [found.rows[0].user_id]);
-    await client.query(`UPDATE identity.users SET status = 'active', updated_at = now() WHERE id = $1 AND status = 'relink_required'`, [found.rows[0].user_id]);
-    await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_verified', '{}'::jsonb)`, [uuidv7(), found.rows[0].user_id]);
+    await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE id = $1`, [found.rows[0].id]);
+    await client.query(`UPDATE identity.email_verification_tokens SET superseded_at = now() WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`, [userId]);
+    await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [userId]);
+    await client.query(`UPDATE identity.contact_emails SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [userId]);
+    await client.query(`UPDATE identity.users SET status = 'active', updated_at = now() WHERE id = $1 AND status = 'relink_required'`, [userId]);
+    await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_verified', '{}'::jsonb)`, [uuidv7(), userId]);
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'identity.email.verified', 'user', $2, $2, $3::jsonb)`,
-      [sourceEventId, found.rows[0].user_id, JSON.stringify({ userId: found.rows[0].user_id })],
+      [sourceEventId, userId, JSON.stringify({ userId })],
     );
-    await writeActivity(client, request, { userId: found.rows[0].user_id }, sourceEventId, {
+    await writeActivity(client, request, { userId }, sourceEventId, {
       eventType: 'account.email_verified', category: 'account', title: 'You verified your email',
       explanation: 'Your registered email was verified. The email address is not copied into this log.',
-      objectType: 'account', objectId: found.rows[0].user_id, retentionClass: 'security',
+      objectType: 'account', objectId: userId, retentionClass: 'security',
       metadata: { authenticationMethod: 'email' },
     });
   });
@@ -591,21 +567,33 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
   const input = await readJson<{ email?: string; turnstileToken?: string }>(request, 8 * 1024);
   await verifyTurnstile(env, input.turnstileToken);
   const email = normalizeEmailAddress(input.email);
-  if (!env.PII_HMAC_KEY_V1) throw new Error('authentication_not_configured');
+  if (!env.PII_HMAC_KEY_V1 || !env.PII_ENCRYPTION_KEY_V1) throw new Error('authentication_not_configured');
+  const encryptionKey = env.PII_ENCRYPTION_KEY_V1;
   const lookup = hmacLookup(email, env.PII_HMAC_KEY_V1);
   const account = await query<{ id: string }>(env.DB_APP_FRESH,
     `SELECT u.id FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id
       WHERE c.email_lookup_hmac = decode($1, 'base64') AND u.status = 'active'`, [lookup]);
   if (account.rows[0]) {
     const token = randomToken(32);
+    const challengeId = uuidv7();
     const sourceEventId = uuidv7();
     await transaction(env.DB_APP_FRESH, async (client) => {
+      const locked = await client.query<{ id: string; status: string }>(`SELECT id, status FROM identity.users WHERE id = $1 FOR UPDATE`, [account.rows[0].id]);
+      if (!locked.rows[0] || locked.rows[0].status !== 'active') return;
       await client.query(
-        `UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`,
+        `UPDATE identity.password_reset_tokens SET superseded_at = now() WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
         [account.rows[0].id]);
       await client.query(
         `INSERT INTO identity.password_reset_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-        [uuidv7(), account.rows[0].id, hashResetToken(token)]);
+        [challengeId, account.rows[0].id, hashAuthToken(token, 'password_reset')]);
+      await queueTransactionalEmail(client, {
+        userId: account.rows[0].id,
+        purpose: 'password_reset',
+        challengeId,
+        token,
+        encryptionKey,
+        correlationId: correlationId(request),
+      });
       await writeActivity(client, request, { userId: account.rows[0].id }, sourceEventId, {
         eventType: 'account.password_reset_requested', category: 'account', title: 'A password reset was requested',
         explanation: 'A time-limited reset message was issued. No password or reset token is stored in this log.',
@@ -613,9 +601,6 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
         metadata: { authenticationMethod: 'email' },
       });
     });
-    try {
-      await deliverAuthEmail(request, env, { type: 'password_reset', to: email, token }, 'password_reset');
-    } catch { /* Reset remains enumeration-safe; provider failure is logged internally. */ }
   }
   return response(request, env, { state: 'reset_if_eligible' }, { status: 202 });
 }
@@ -629,9 +614,19 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
   const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
-    const found = await client.query<{ user_id: string }>(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND expires_at > now() RETURNING user_id`, [hashResetToken(token)]);
+    const owner = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.password_reset_tokens WHERE token_hash = decode($1, 'base64')`, [hashAuthToken(token, 'password_reset')]);
+    if (!owner.rows[0]) throw new Error('reset_token_invalid');
+    const account = await client.query<{ status: string }>(`SELECT status FROM identity.users WHERE id = $1 FOR UPDATE`, [owner.rows[0].user_id]);
+    if (!account.rows[0] || account.rows[0].status !== 'active') throw new Error('reset_token_invalid');
+    const found = await client.query<{ id: string; user_id: string }>(
+      `SELECT id, user_id FROM identity.password_reset_tokens
+        WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at > now()
+        FOR UPDATE`,
+      [hashAuthToken(token, 'password_reset')],
+    );
     if (!found.rows[0]) throw new Error('reset_token_invalid');
-    await client.query(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`, [found.rows[0].user_id]);
+    await client.query(`UPDATE identity.password_reset_tokens SET consumed_at = now() WHERE id = $1`, [found.rows[0].id]);
+    await client.query(`UPDATE identity.password_reset_tokens SET superseded_at = now() WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`, [found.rows[0].user_id]);
     await client.query(`UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`, [JSON.stringify(passwordHash), found.rows[0].user_id]);
     await revokeAllAuthSessions({
       revokeAllSessions: async (subjectId) => { await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
@@ -3070,7 +3065,7 @@ export default {
         if (env.EMAIL_PROVIDER_MODE === 'disabled') return response(request, env, { error: 'provider_unavailable', provider: 'email', correlationId: id }, { status: 404 });
       }
       if (request.method === 'POST' && url.pathname === '/api/auth/email') return await emailAuth(request, env);
-      if ((request.method === 'GET' || request.method === 'POST') && url.pathname === '/api/auth/email/verify') return await verifyEmail(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/email/verify') return await verifyEmail(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/request') return await requestPasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return await completePasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return await refreshSession(request, env);

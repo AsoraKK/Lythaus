@@ -56,12 +56,12 @@ test('normalizes email authentication attempts and preserves safe mode defaults'
   assert.throws(() => normalizeEmailAddress(null), /invalid_email/);
 
   assert.deepEqual(prepareEmailAuthAttempt({
-    mode: 'register', email: 'Person@Example.test', password: 'twelve-char+', turnstileToken: 'turnstile-token',
+    mode: 'register', email: 'Person@Example.test', password: 'correct-horse-battery', turnstileToken: 'turnstile-token',
   }), {
-    mode: 'register', email: 'person@example.test', password: 'twelve-char+', turnstileToken: 'turnstile-token',
+    mode: 'register', email: 'person@example.test', password: 'correct-horse-battery', turnstileToken: 'turnstile-token',
   });
   assert.equal(prepareEmailAuthAttempt({ mode: 'resend_verification', email: 'person@example.test' }).mode, 'resend_verification');
-  assert.equal(prepareEmailAuthAttempt({ mode: 'unknown', email: 'person@example.test', password: 'twelve-char+' }).mode, 'login');
+  assert.equal(prepareEmailAuthAttempt({ mode: 'unknown', email: 'person@example.test', password: 'correct-horse-battery' }).mode, 'login');
   assert.throws(() => prepareEmailAuthAttempt({ mode: 'login', email: 'person@example.test', password: 'short' }), /invalid_password/);
   assert.throws(() => prepareEmailAuthAttempt({ mode: 'register', email: 'person@example.test', password: 'x'.repeat(129) }), /invalid_password/);
 });
@@ -70,9 +70,10 @@ test('recovers interrupted and migrated registrations without changing verified 
   assert.equal(planEmailRegistration(undefined), 'create_account');
   assert.equal(planEmailRegistration(undefined, { status: 'relink_required' }), 'attach_email_credential');
   assert.equal(planEmailRegistration(undefined, { status: 'active' }), 'attach_email_credential');
-  assert.equal(planEmailRegistration(undefined, { status: 'locked' }), 'account_exists');
-  assert.equal(planEmailRegistration({ verifiedAt: null }), 'resend_verification');
-  assert.equal(planEmailRegistration({ verifiedAt: '2026-08-26T10:00:00.000Z' }), 'account_exists');
+  assert.equal(planEmailRegistration(undefined, { status: 'locked' }), 'neutral_existing_account');
+  assert.equal(planEmailRegistration({ status: 'active', verifiedAt: null }), 'resend_verification');
+  assert.equal(planEmailRegistration({ status: 'locked', verifiedAt: null }), 'neutral_existing_account');
+  assert.equal(planEmailRegistration({ status: 'active', verifiedAt: '2026-08-26T10:00:00.000Z' }), 'neutral_existing_account');
 });
 
 test('returns verification-required only after a valid password for pending email accounts', () => {
@@ -99,7 +100,7 @@ test('enforces auth configuration, Turnstile, and credential boundaries', () => 
   assert.equal(requireToken('a'.repeat(32), 'verification_token_invalid'), 'a'.repeat(32));
   assert.throws(() => requireToken('short', 'verification_token_invalid'), /verification_token_invalid/);
   assert.throws(() => requireToken(undefined, 'reset_token_invalid'), /reset_token_invalid/);
-  assert.equal(requireResetPassword('twelve-char+'), 'twelve-char+');
+  assert.equal(requireResetPassword('correct-horse-battery'), 'correct-horse-battery');
   assert.throws(() => requireResetPassword('short'), /invalid_password/);
   assert.throws(() => requireResetPassword('x'.repeat(129)), /invalid_password/);
   assert.equal(requireRefreshToken({ refresh_token: 'legacy' }), 'legacy');

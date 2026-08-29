@@ -20,7 +20,7 @@ interface __BaseEnv_Env {
 	EMAIL_PROVIDER_URL?: "http://localhost:8788/email";
 	EMAIL_PROVIDER_MODE: "fallback" | "cloudflare";
 	EMAIL_FROM: "no-reply@localhost" | "no-reply@mail.lythaus.co";
-	EMAIL_VERIFICATION_BASE_URL: "http://localhost:8787/api/auth/email/verify?token=" | "https://api.lythaus.co/api/auth/email/verify?token=";
+	EMAIL_VERIFICATION_BASE_URL: "http://localhost:4321/verify-email?token=" | "https://lythaus.co/verify-email?token=";
 	EMAIL_PASSWORD_RESET_BASE_URL: "http://localhost:4321/reset-password?token=" | "https://lythaus.co/reset-password?token=";
 	TURNSTILE_REQUIRED: "false" | "true";
 	TURNSTILE_EXPECTED_HOSTNAMES: "localhost,127.0.0.1" | "lythaus.co,www.lythaus.co";
@@ -28,9 +28,10 @@ interface __BaseEnv_Env {
 	CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:4321" | "https://lythaus.co,https://www.lythaus.co,https://app.lythaus.co";
 	HYPERDRIVE_QUERY_CACHE_MODE: "disabled";
 	EXPECTED_DATABASE_TARGET: "development" | "main";
-	EXPECTED_DATABASE_SCHEMA_FINGERPRINT: "8922ea383a1a9ff32b9b695e3b04bf5f56648d6a7371d8a35b49db7fae394ad8" | "REPLACE_WITH_POST_0013_SCHEMA_FINGERPRINT";
-	EXPECTED_DATABASE_RELATION_COUNT: "77" | "REPLACE_WITH_POST_0013_RELATION_COUNT";
-	EXPECTED_DATABASE_SCHEMA_VERSION: "unknown" | "0013_marketing_waitlist.sql";
+	EXPECTED_DATABASE_SCHEMA_FINGERPRINT: "8922ea383a1a9ff32b9b695e3b04bf5f56648d6a7371d8a35b49db7fae394ad8" | "REPLACE_WITH_POST_0014_SCHEMA_FINGERPRINT";
+	EXPECTED_DATABASE_RELATION_COUNT: "77" | "REPLACE_WITH_POST_0014_RELATION_COUNT";
+	EXPECTED_DATABASE_SCHEMA_VERSION: "unknown" | "0014_transactional_email_outbox.sql";
+	TURNSTILE_EXPECTED_ACTION?: string;
 	EXPECTED_DATABASE_ROLE_CLASS: "login_non_superuser";
 	EMAIL?: SendEmail;
 	WORKER_VERSION?: WorkerVersionMetadata;

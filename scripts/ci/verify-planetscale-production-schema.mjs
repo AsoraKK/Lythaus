@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
-import { APPLICATION_SCHEMAS, approvedPost0013Expectation, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
+import { APPLICATION_SCHEMAS, approvedPost0014Expectation, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
 
 const { Client } = pg;
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
@@ -12,8 +12,8 @@ const committedOnly = process.argv.includes('--committed') || process.env.CI ===
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
 const requireProductIntegrityMigration = process.env.REQUIRE_PRODUCT_INTEGRITY_MIGRATION === 'true';
 const manifest = loadApprovedMigrations({ committedOnly });
-const post0013Expectation = requireProductIntegrityMigration || emitContract
-  ? approvedPost0013Expectation(
+const post0014Expectation = requireProductIntegrityMigration || emitContract
+  ? approvedPost0014Expectation(
     process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
     process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
   )
@@ -96,7 +96,7 @@ function fingerprintMismatch(contract, expectation) {
   const missing = [...expected].filter((key) => !observed.has(key)).sort();
   const extra = [...observed].filter((key) => !expected.has(key)).sort();
   return new Error(
-    `production post-0013 schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
+    `production post-0014 schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
     + `relations=${contract.relationCount}/${expectation.relationCount}; missing=${JSON.stringify(missing)}; extra=${JSON.stringify(extra)}`,
   );
 }
@@ -109,6 +109,8 @@ async function verifyWaitlistCatalog(client) {
     to_regclass('system.rate_limit_windows') IS NOT NULL AS rate_limit_windows,
     to_regclass('feed.notification_devices') IS NOT NULL AS notification_devices,
     to_regclass('trust.user_activity_events') IS NOT NULL AS activity_events,
+    to_regclass('system.transactional_email_outbox') IS NOT NULL AS transactional_email_outbox,
+    to_regclass('system.transactional_email_outbox_claim_idx') IS NOT NULL AS transactional_email_outbox_claim_index,
     to_regclass('moderation.appeal_review_votes') IS NOT NULL AS appeal_review_votes,
     EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'waitlist_signups_email_lookup_hmac_unique' AND contype = 'u') AS unique_hmac,
     NOT EXISTS (
@@ -116,7 +118,7 @@ async function verifyWaitlistCatalog(client) {
       WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups'
         AND column_name IN ('email', 'plain_email', 'raw_ip', 'ip_address', 'user_agent', 'turnstile_token')
     ) AS prohibited_columns_absent`);
-  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error('production post-0013 catalog contract is incomplete');
+  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error('production post-0014 catalog contract is incomplete');
 }
 
 async function verifyWaitlistPrivileges(client) {
@@ -143,13 +145,17 @@ async function verifyWaitlistPrivileges(client) {
     has_schema_privilege($1, 'marketing', 'USAGE') AS runtime_marketing_usage,
     has_column_privilege($1, 'marketing.waitlist_signups', 'email_lookup_hmac', 'INSERT') AS runtime_insert_hmac,
     has_table_privilege($1, 'marketing.waitlist_signups', 'SELECT') AS runtime_select,
+    has_table_privilege($1, 'system.transactional_email_outbox', 'SELECT') AS runtime_email_outbox_select,
+    has_table_privilege($1, 'system.transactional_email_outbox', 'INSERT') AS runtime_email_outbox_insert,
+    has_table_privilege($1, 'system.transactional_email_outbox', 'UPDATE') AS runtime_email_outbox_update,
     has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS admin_select_ciphertext,
     has_column_privilege($2, 'marketing.waitlist_signups', 'email_lookup_hmac', 'SELECT') AS admin_select_hmac,
     has_column_privilege($2, 'marketing.waitlist_signups', 'status', 'UPDATE') AS admin_update_status,
     has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'UPDATE') AS admin_update_ciphertext,
     has_table_privilege($3, 'marketing.waitlist_signups', 'DELETE') AS privacy_delete,
     has_column_privilege($3, 'marketing.waitlist_signups', 'purge_after', 'SELECT') AS privacy_select_purge,
-    has_column_privilege($3, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS privacy_select_ciphertext`,
+    has_column_privilege($3, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS privacy_select_ciphertext,
+    has_table_privilege($3, 'system.transactional_email_outbox', 'SELECT') AS privacy_email_outbox_select`,
   [runtime, admin, privacy]);
   const row = result.rows[0];
   if (!row?.runtime_system_usage || !row.runtime_rate_select || !row.runtime_rate_insert || !row.runtime_rate_update
@@ -158,9 +164,10 @@ async function verifyWaitlistPrivileges(client) {
     || !row.runtime_privacy_requests_select || !row.runtime_privacy_requests_insert
     || !row.runtime_activity_select || !row.runtime_activity_insert
     || !row.runtime_marketing_usage || !row.runtime_insert_hmac || row.runtime_select
+    || !row.runtime_email_outbox_select || !row.runtime_email_outbox_insert || !row.runtime_email_outbox_update
     || !row.admin_select_ciphertext || row.admin_select_hmac
     || !row.admin_update_status || row.admin_update_ciphertext
-    || !row.privacy_delete || !row.privacy_select_purge || row.privacy_select_ciphertext) {
+    || !row.privacy_delete || !row.privacy_select_purge || row.privacy_select_ciphertext || !row.privacy_email_outbox_select) {
     throw new Error('production waitlist/runtime least-privilege contract failed');
   }
 }
@@ -170,7 +177,7 @@ await client.connect();
 try {
   await client.query('BEGIN READ ONLY');
   const registry = await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
-  const through = requireProductIntegrityMigration || emitContract ? '0013_marketing_waitlist.sql' : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
+  const through = requireProductIntegrityMigration || emitContract ? '0014_transactional_email_outbox.sql' : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
   const expected = expectedMigrationPrefix(through);
   if (registry.rows.length !== expected.length) throw new Error(`production migration registry contains ${registry.rows.length} entries; expected ${expected.length}`);
   expected.forEach((migration, index) => {
@@ -184,13 +191,13 @@ try {
     if (emitContract) {
       console.log(JSON.stringify({ branch, ...contract, relations: undefined }));
     } else {
-      if (contract.fingerprint !== post0013Expectation.fingerprint) throw fingerprintMismatch(contract, post0013Expectation);
-      if (contract.relationCount !== post0013Expectation.relationCount) {
-        throw new Error(`production post-0013 relation count is ${contract.relationCount}; expected ${post0013Expectation.relationCount}`);
+      if (contract.fingerprint !== post0014Expectation.fingerprint) throw fingerprintMismatch(contract, post0014Expectation);
+      if (contract.relationCount !== post0014Expectation.relationCount) {
+        throw new Error(`production post-0014 relation count is ${contract.relationCount}; expected ${post0014Expectation.relationCount}`);
       }
-      console.log(`Observed post-0013 schema fingerprint: ${contract.fingerprint}`);
-      console.log(`Observed post-0013 relation count: ${contract.relationCount}`);
-      console.log(`Observed post-0013 catalog SHA-256: ${contract.catalogFingerprint}`);
+      console.log(`Observed post-0014 schema fingerprint: ${contract.fingerprint}`);
+      console.log(`Observed post-0014 relation count: ${contract.relationCount}`);
+      console.log(`Observed post-0014 catalog SHA-256: ${contract.catalogFingerprint}`);
     }
   }
   await client.query('ROLLBACK');

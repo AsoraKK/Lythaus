@@ -92,6 +92,10 @@ export function hashResetToken(token: string): string {
   return encode(sha256(token));
 }
 
+export function hashAuthToken(token: string, purpose: 'verification' | 'password_reset'): string {
+  return encode(sha256(`${purpose}:v1:${token}`));
+}
+
 export function hmacLookup(value: string, key: string): string {
   return encode(hmac(sha256, new TextEncoder().encode(key), value.trim().toLowerCase()));
 }

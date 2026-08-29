@@ -6,6 +6,7 @@ import { MAX_IMAGE_BYTES } from '@lythaus/media';
 import { json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
+import { handleTransactionalEmailLifecycleWebhook, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -1776,6 +1777,9 @@ async function deliverAdminOutcomeNotifications(env: Env): Promise<void> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const pathname = new URL(request.url).pathname;
+    if (pathname === '/internal/email/lifecycle' && request.method === 'POST') {
+      return handleTransactionalEmailLifecycleWebhook(request, env);
+    }
     if (request.method === 'GET' && pathname === '/internal/readiness/database-identity') {
       if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
       const [jobs, privacy] = await Promise.all([
@@ -1815,6 +1819,7 @@ export default {
   },
 
   async scheduled(_event: unknown, env: Env): Promise<void> {
+    await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);
     const now = new Date();

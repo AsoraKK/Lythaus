@@ -37,6 +37,7 @@ GRANT SELECT, INSERT ON moderation.appeal_review_votes TO lythaus_runtime;
 GRANT SELECT, INSERT ON privacy.requests TO lythaus_runtime;
 GRANT SELECT ON privacy.export_manifests, privacy.retention_rules TO lythaus_runtime;
 GRANT SELECT, INSERT ON system.outbox_events TO lythaus_runtime;
+GRANT SELECT, INSERT, UPDATE ON system.transactional_email_outbox TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON system.idempotency_keys TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.rate_limit_windows TO lythaus_runtime;
 GRANT SELECT ON system.cost_budget_periods, system.cost_kill_switches TO lythaus_runtime;
@@ -68,6 +69,7 @@ GRANT UPDATE (status, updated_at, invited_at, converted_at, unsubscribed_at, pur
 GRANT USAGE ON SCHEMA identity, content, moderation, feed, social, trust, media, system TO lythaus_jobs;
 GRANT SELECT ON identity.users, identity.email_credentials, identity.contact_emails, identity.admin_memberships TO lythaus_jobs;
 GRANT SELECT, INSERT, UPDATE ON content.posts, content.comments, content.content_declarations, moderation.cases, moderation.decisions, moderation.detector_runs, moderation.appeals, moderation.enforcement_events, feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.topic_memberships, feed.regional_memberships, feed.notifications, media.upload_sessions, media.objects, media.storage_ledger, media.variants, media.moderation_results, media.deletion_events, system.outbox_events, system.consumer_inbox TO lythaus_jobs;
+GRANT SELECT, UPDATE ON system.transactional_email_outbox TO lythaus_jobs;
 GRANT DELETE ON feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.notifications, media.storage_ledger, system.consumer_inbox TO lythaus_jobs;
 GRANT SELECT, DELETE ON feed.notification_preferences, feed.notification_devices TO lythaus_jobs;
 GRANT SELECT, DELETE ON trust.accountability_signals TO lythaus_jobs;
@@ -102,6 +104,7 @@ GRANT SELECT ON moderation.reviewer_qualifications, moderation.appeal_assignment
 GRANT SELECT ON moderation.content_flags TO lythaus_privacy;
 GRANT SELECT, INSERT, DELETE ON system.audit_events TO lythaus_privacy;
 GRANT SELECT, INSERT, DELETE ON system.outbox_events TO lythaus_privacy;
+GRANT SELECT, DELETE ON system.transactional_email_outbox TO lythaus_privacy;
 GRANT SELECT, DELETE ON system.consumer_inbox, system.idempotency_keys TO lythaus_privacy;
 GRANT SELECT (id, purge_after, retention_hold), DELETE ON marketing.waitlist_signups TO lythaus_privacy;
 GRANT EXECUTE ON FUNCTION privacy.reconcile_subject_data_locations(uuid) TO lythaus_privacy;

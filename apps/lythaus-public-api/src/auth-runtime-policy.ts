@@ -1,3 +1,5 @@
+import { planCanonicalRegistration } from '@lythaus/contracts';
+
 export type EmailAuthMode = 'register' | 'login' | 'resend_verification';
 
 export interface EmailAuthAttempt {
@@ -7,7 +9,7 @@ export interface EmailAuthAttempt {
   turnstileToken: unknown;
 }
 
-export type EmailRegistrationPlan = 'create_account' | 'attach_email_credential' | 'resend_verification' | 'account_exists';
+export type EmailRegistrationPlan = 'create_account' | 'attach_email_credential' | 'resend_verification' | 'neutral_existing_account';
 
 export type EmailLoginPlan = 'invalid_credentials' | 'email_verification_required' | 'authenticated';
 
@@ -110,7 +112,7 @@ export function prepareEmailAuthAttempt(input: {
     ? input.mode
     : 'login';
   const password = typeof input.password === 'string' ? input.password : '';
-  if (mode !== 'resend_verification' && (password.length < 12 || password.length > 128)) {
+  if (mode !== 'resend_verification' && (password.length < 15 || password.length > 128)) {
     throw new Error('invalid_password');
   }
   return {
@@ -122,12 +124,10 @@ export function prepareEmailAuthAttempt(input: {
 }
 
 export function planEmailRegistration(
-  account: { verifiedAt: string | null } | undefined,
+  account: { status: string; verifiedAt: string | null } | undefined,
   contactAccount: { status: string } | undefined = undefined,
 ): EmailRegistrationPlan {
-  if (!account && (contactAccount?.status === 'active' || contactAccount?.status === 'relink_required')) return 'attach_email_credential';
-  if (!account) return contactAccount ? 'account_exists' : 'create_account';
-  return account.verifiedAt ? 'account_exists' : 'resend_verification';
+  return planCanonicalRegistration({ account, contactAccount });
 }
 
 export function planEmailLogin(
@@ -173,7 +173,7 @@ export function requireToken(value: unknown, errorCode: 'verification_token_inva
 }
 
 export function requireResetPassword(value: unknown): string {
-  if (typeof value !== 'string' || value.length < 12 || value.length > 128) throw new Error('invalid_password');
+  if (typeof value !== 'string' || value.length < 15 || value.length > 128) throw new Error('invalid_password');
   return value;
 }
 

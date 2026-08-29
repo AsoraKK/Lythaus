@@ -14,11 +14,30 @@ export type GeoScope =
   | 'community'
   | 'none';
 
-export interface EmailDeliveryReference {
-  provider: string;
-  messageId: string;
-  acceptedAt: string;
-}
+import type { EmailDeliveryReference } from './transactional-email.ts';
+export type { EmailDeliveryReference } from './transactional-email.ts';
+export {
+  classifyEmailProviderFailure,
+  lifecycleStateForEmailEvent,
+  nextTransactionalEmailState,
+  renderTransactionalEmail,
+  type EmailProviderFailureCategory,
+  type EmailProviderFailureDetails,
+  type TransactionalEmailDelivery,
+  type TransactionalEmailMessage,
+  type TransactionalEmailPurpose,
+  type TransactionalEmailState,
+  type TransactionalEmailTransport,
+} from './transactional-email.ts';
+export {
+  CANONICAL_AUTH_STATE_TRANSITIONS,
+  planCanonicalRegistration,
+  type AuthTransitionOwner,
+  type CanonicalAuthState,
+  type CanonicalAuthTransition,
+  type EmailRegistrationState,
+} from './auth-state-policy.ts';
+export { validateTurnstileResponse, type TurnstileSiteverifyResponse } from './turnstile-policy.ts';
 
 export interface TransactionalEmailProvider {
   sendVerification(input: { to: string; token: string }): Promise<EmailDeliveryReference>;
