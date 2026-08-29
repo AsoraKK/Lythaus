@@ -5,6 +5,7 @@ import {
   applyTransactionalEmailLifecycle,
   emailProviderFailureCategory,
   authorizedEmailLifecycleRequest,
+  parseTransactionalEmailLifecycleQueueEvent,
 } from '../src/transactional-email-runtime.ts';
 
 test('provider failures distinguish retryable outages from permanent rejection', () => {
@@ -39,4 +40,45 @@ test('lifecycle application updates only the matching provider message', async (
   assert.match(calls[0].sql, /state = \$2/);
   assert.equal(calls[0].values[0], 'provider-message-1');
   assert.equal(await applyTransactionalEmailLifecycle(client, { eventType: 'unknown', messageId: 'provider-message-1' }), false);
+});
+
+test('known lifecycle messages are acknowledged idempotently while unmatched messages remain retryable', async () => {
+  const calls = [];
+  const client = {
+    query: async (sql, values) => {
+      calls.push({ sql, values });
+      return calls.length === 1 ? { rowCount: 0, rows: [] } : { rowCount: 1, rows: [] };
+    },
+  };
+  assert.equal(await applyTransactionalEmailLifecycle(client, {
+    eventType: 'message.delivered', messageId: 'provider-message-raced',
+  }), true);
+  assert.match(calls[1].sql, /SELECT 1 FROM system\.transactional_email_outbox/);
+});
+
+test('strictly parses Cloudflare lifecycle queue events without retaining recipient or subject', () => {
+  assert.deepEqual(parseTransactionalEmailLifecycleQueueEvent({
+    type: 'cf.email.sending.message.delivered',
+    payload: {
+      messageId: ' provider-message-1 ',
+      recipient: 'recipient@example.invalid',
+      subject: 'private subject',
+      errorCode: 'recipient-not-allowed',
+    },
+  }), {
+    eventType: 'message.delivered',
+    messageId: 'provider-message-1',
+    errorCode: 'RECIPIENT_NOT_ALLOWED',
+  });
+  assert.deepEqual(parseTransactionalEmailLifecycleQueueEvent({
+    type: 'cf.email.sending.message.bounced',
+    payload: { messageId: 'provider-message-2', rcptTo: 'recipient@example.invalid' },
+  }), { eventType: 'message.bounced', messageId: 'provider-message-2' });
+});
+
+test('strict lifecycle parsing rejects unsupported or unsafe provider payloads', () => {
+  assert.equal(parseTransactionalEmailLifecycleQueueEvent({ type: 'message.delivered', payload: { messageId: 'provider-message-1' } }), undefined);
+  assert.equal(parseTransactionalEmailLifecycleQueueEvent({ type: 'cf.email.sending.message.delivered', payload: {} }), undefined);
+  assert.equal(parseTransactionalEmailLifecycleQueueEvent('{"type":"cf.email.sending.message.delivered","payload":{"messageId":"provider-message-1\u0000"}}'), undefined);
+  assert.equal(parseTransactionalEmailLifecycleQueueEvent('not-json'), undefined);
 });

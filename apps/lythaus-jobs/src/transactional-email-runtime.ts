@@ -210,6 +210,63 @@ export interface TransactionalEmailLifecycleEvent {
   errorCode?: string;
 }
 
+export const EMAIL_LIFECYCLE_QUEUE = 'lythaus-email-lifecycle-dev';
+
+const CLOUDFLARE_LIFECYCLE_TYPES: Readonly<Record<string, string>> = Object.freeze({
+  'cf.email.sending.message.delivered': 'message.delivered',
+  'cf.email.sending.message.deferred': 'message.deferred',
+  'cf.email.sending.message.bounced': 'message.bounced',
+  'cf.email.sending.message.failed': 'message.failed',
+  'cf.email.sending.message.rejected': 'message.rejected',
+  'cf.email.sending.message.complained': 'message.complained',
+});
+
+function recordValue(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+}
+
+function normalizedProviderErrorCode(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const code = value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return /^[A-Z][A-Z0-9_]{2,63}$/.test(code) ? code : undefined;
+}
+
+function providerMessageId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const id = value.trim();
+  return id.length > 0 && id.length <= 256 && !/[\u0000-\u001f\u007f]/.test(id) ? id : undefined;
+}
+
+/**
+ * Accept only the Cloudflare lifecycle fields needed for reconciliation.
+ * Recipient, subject, and every other provider field are intentionally discarded.
+ */
+export function parseTransactionalEmailLifecycleQueueEvent(body: unknown): TransactionalEmailLifecycleEvent | undefined {
+  let root = recordValue(body);
+  if (typeof body === 'string') {
+    if (body.length > 16 * 1024) return undefined;
+    try { root = recordValue(JSON.parse(body)); } catch { return undefined; }
+  }
+  const eventType = typeof root?.type === 'string' ? CLOUDFLARE_LIFECYCLE_TYPES[root.type] : undefined;
+  const payload = recordValue(root?.payload);
+  const messageId = providerMessageId(payload?.messageId);
+  if (!eventType || !messageId) return undefined;
+  const errorCode = normalizedProviderErrorCode(payload?.errorCode ?? payload?.error_code ?? payload?.code);
+  return errorCode ? { eventType, messageId, errorCode } : { eventType, messageId };
+}
+
+export async function reconcileTransactionalEmailLifecycleQueueMessage(
+  env: TransactionalEmailRelayEnv,
+  body: unknown,
+): Promise<{ valid: boolean; reconciled: boolean }> {
+  const event = parseTransactionalEmailLifecycleQueueEvent(body);
+  if (!event) return { valid: false, reconciled: false };
+  return {
+    valid: true,
+    reconciled: await transaction(env.DB_JOBS_FRESH, (client) => applyTransactionalEmailLifecycle(client, event)),
+  };
+}
+
 export function authorizedEmailLifecycleRequest(request: Request, secret: string | undefined): boolean {
   if (!secret) return false;
   const supplied = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
@@ -237,7 +294,138 @@ export async function applyTransactionalEmailLifecycle(
         AND state NOT IN ('cancelled', 'bounced', 'rejected', 'failed', 'complained')`,
     [messageId, state, event.errorCode && /^[A-Z][A-Z0-9_]{2,63}$/.test(event.errorCode) ? event.errorCode : null, terminal],
   );
-  return result.rowCount === 1;
+  if (result.rowCount === 1) return true;
+  const known = await client.query(
+    `SELECT 1 FROM system.transactional_email_outbox WHERE provider_message_id = $1 LIMIT 1`,
+    [messageId],
+  );
+  return known.rowCount === 1;
+}
+
+interface TransactionalEmailEvidenceRow {
+  purpose: TransactionalEmailPurpose;
+  challenge_id: string | null;
+  correlation_id: string;
+  provider: string;
+  provider_message_id: string;
+  state: 'provider_accepted' | 'delivered';
+  created_at: string;
+  accepted_at: string | null;
+  delivered_at: string | null;
+}
+
+export interface TransactionalEmailDeliveryEvidenceFilter {
+  correlationId: string;
+  windowStart: string;
+  windowEnd: string;
+  challengeIds?: readonly string[];
+}
+
+export interface TransactionalEmailDeliveryEvidence {
+  evidenceStatus: 'delivered_rows_available' | 'provider_accepted_only' | 'no_matching_rows' | 'incomplete';
+  deliveryConfirmation: 'cloudflare_lifecycle_queue';
+  limitation: 'lifecycle_webhook_required' | 'evidence_truncated' | 'no_matching_rows' | null;
+  filters: TransactionalEmailDeliveryEvidenceFilter;
+  aggregate: {
+    totalRows: number;
+    deliveredRows: number;
+    providerAcceptedRows: number;
+    deliveredDistinctProviderIds: number;
+    byPurpose: Record<TransactionalEmailPurpose, { delivered: number; providerAccepted: number }>;
+  };
+  deliveredRows: Array<{
+    purpose: TransactionalEmailPurpose;
+    challengeId: string | null;
+    correlationId: string;
+    provider: string;
+    providerMessageId: string;
+    state: 'delivered';
+    createdAt: string;
+    acceptedAt: string | null;
+    deliveredAt: string | null;
+  }>;
+}
+
+function evidenceFilterError(): Error {
+  return new Error('email_evidence_filter_invalid');
+}
+
+function validateEvidenceFilter(filter: TransactionalEmailDeliveryEvidenceFilter): { start: Date; end: Date; challengeIds?: string[] } {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(filter.correlationId)) throw evidenceFilterError();
+  const start = new Date(filter.windowStart);
+  const end = new Date(filter.windowEnd);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || end.getTime() - start.getTime() > 31 * 86_400_000) throw evidenceFilterError();
+  const challengeIds = filter.challengeIds ? [...new Set(filter.challengeIds)] : undefined;
+  if (challengeIds && (challengeIds.length === 0 || challengeIds.length > 32 || challengeIds.some((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-7][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))) throw evidenceFilterError();
+  return { start, end, challengeIds };
+}
+
+export async function readTransactionalEmailDeliveryEvidence(
+  env: TransactionalEmailRelayEnv,
+  filter: TransactionalEmailDeliveryEvidenceFilter,
+): Promise<TransactionalEmailDeliveryEvidence> {
+  const validated = validateEvidenceFilter(filter);
+  const values: unknown[] = [filter.correlationId, validated.start.toISOString(), validated.end.toISOString()];
+  const challengePredicate = validated.challengeIds
+    ? (() => { values.push(validated.challengeIds); return ' AND challenge_id = ANY($4::uuid[])'; })()
+    : '';
+  const result = await query<TransactionalEmailEvidenceRow>(
+    env.DB_JOBS_FRESH,
+    `SELECT purpose, challenge_id, correlation_id, provider, provider_message_id, state,
+            created_at, accepted_at, delivered_at
+       FROM system.transactional_email_outbox
+      WHERE provider = 'cloudflare-email'
+        AND correlation_id = $1
+        AND created_at >= $2::timestamptz AND created_at < $3::timestamptz
+        AND state IN ('provider_accepted', 'delivered')
+        AND provider_message_id IS NOT NULL${challengePredicate}
+      ORDER BY created_at ASC
+      LIMIT 129`,
+    values,
+  );
+  const truncated = result.rows.length > 128;
+  const rows = result.rows.slice(0, 128);
+  const byPurpose: Record<TransactionalEmailPurpose, { delivered: number; providerAccepted: number }> = {
+    verification: { delivered: 0, providerAccepted: 0 },
+    password_reset: { delivered: 0, providerAccepted: 0 },
+    invite: { delivered: 0, providerAccepted: 0 },
+    email_change: { delivered: 0, providerAccepted: 0 },
+  };
+  const deliveredRows = rows.filter((row) => row.state === 'delivered').map((row) => ({
+    purpose: row.purpose,
+    challengeId: row.challenge_id,
+    correlationId: row.correlation_id,
+    provider: row.provider,
+    providerMessageId: row.provider_message_id,
+    state: 'delivered' as const,
+    createdAt: row.created_at,
+    acceptedAt: row.accepted_at,
+    deliveredAt: row.delivered_at,
+  }));
+  for (const row of rows) byPurpose[row.purpose][row.state === 'delivered' ? 'delivered' : 'providerAccepted'] += 1;
+  const deliveredProviderIds = new Set(deliveredRows.map((row) => row.providerMessageId));
+  const deliveredCount = deliveredRows.length;
+  const acceptedCount = rows.filter((row) => row.state === 'provider_accepted').length;
+  const evidenceStatus = truncated ? 'incomplete' : deliveredCount > 0 ? 'delivered_rows_available' : acceptedCount > 0 ? 'provider_accepted_only' : 'no_matching_rows';
+  return {
+    evidenceStatus,
+    deliveryConfirmation: 'cloudflare_lifecycle_queue',
+    limitation: evidenceStatus === 'delivered_rows_available' ? null : evidenceStatus === 'incomplete' ? 'evidence_truncated' : evidenceStatus === 'provider_accepted_only' ? 'lifecycle_webhook_required' : 'no_matching_rows',
+    filters: {
+      correlationId: filter.correlationId,
+      windowStart: validated.start.toISOString(),
+      windowEnd: validated.end.toISOString(),
+      ...(validated.challengeIds ? { challengeIds: validated.challengeIds } : {}),
+    },
+    aggregate: {
+      totalRows: rows.length,
+      deliveredRows: deliveredCount,
+      providerAcceptedRows: acceptedCount,
+      deliveredDistinctProviderIds: deliveredProviderIds.size,
+      byPurpose,
+    },
+    deliveredRows,
+  };
 }
 
 export async function handleTransactionalEmailLifecycleWebhook(request: Request, env: TransactionalEmailRelayEnv): Promise<Response> {
@@ -249,5 +437,5 @@ export async function handleTransactionalEmailLifecycleWebhook(request: Request,
     return new Response(null, { status: 400 });
   }
   const updated = await transaction(env.DB_JOBS_FRESH, (client) => applyTransactionalEmailLifecycle(client, event));
-  return Response.json({ accepted: updated });
+  return Response.json({ accepted: updated }, { status: updated ? 200 : 409 });
 }

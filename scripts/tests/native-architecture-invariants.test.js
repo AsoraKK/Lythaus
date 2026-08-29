@@ -85,6 +85,8 @@ test('email recovery is Turnstile-protected, neutral, and atomically single-use'
 test('native auth outbox and scanner-safe verification contracts are explicit', () => {
   const api = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/transactional-email-runtime.ts'), 'utf8');
+  const jobsIndex = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  const jobsConfig = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/wrangler.jsonc'), 'utf8');
   const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0014_transactional_email_outbox.sql'), 'utf8');
   assert.match(api, /request\.method === 'POST' && url\.pathname === '\/api\/auth\/email\/verify'.*verifyEmail/s);
   assert.match(api, /request\.method !== 'POST'/);
@@ -94,6 +96,14 @@ test('native auth outbox and scanner-safe verification contracts are explicit', 
   assert.match(jobs, /state = 'provider_accepted'/);
   assert.match(jobs, /secret_ciphertext = NULL/);
   assert.match(jobs, /lifecycleStateForEmailEvent/);
+  assert.match(jobs, /cf\.email\.sending\.message\.delivered/);
+  assert.match(jobs, /Recipient, subject/);
+  assert.match(jobsIndex, /EMAIL_LIFECYCLE_QUEUE/);
+  assert.match(jobsIndex, /email_lifecycle_event_invalid/);
+  assert.match(jobsConfig, /lythaus-email-lifecycle-dev/);
+  assert.match(jobsConfig, /lythaus-email-lifecycle-dlq-dev/);
+  assert.match(jobs, /provider_accepted_only/);
+  assert.match(jobs, /lifecycle_webhook_required/);
   assert.match(migration, /CREATE TABLE system\.transactional_email_outbox/);
   assert.match(migration, /secret_ciphertext text/);
   assert.doesNotMatch(migration, /recipient_email|plain_email/);

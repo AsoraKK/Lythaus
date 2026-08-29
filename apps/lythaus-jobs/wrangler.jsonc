@@ -70,7 +70,8 @@
       { "queue": "lythaus-moderation-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-moderation-dlq-dev" },
       { "queue": "lythaus-feed-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-feed-dlq-dev" },
       { "queue": "lythaus-privacy-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-privacy-dlq-dev" },
-      { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" }
+      { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" },
+      { "queue": "lythaus-email-lifecycle-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-email-lifecycle-dlq-dev" }
     ]
   },
   "triggers": { "crons": ["*/15 * * * *"] },
@@ -149,7 +150,8 @@
           { "queue": "lythaus-notifications-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-notifications-dlq-dev" },
           { "queue": "lythaus-media-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-media-dlq-dev" },
           { "queue": "lythaus-privacy-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-privacy-dlq-dev" },
-          { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" }
+          { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" },
+          { "queue": "lythaus-email-lifecycle-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-email-lifecycle-dlq-dev" }
         ]
       },
       "workflows": [

@@ -6,7 +6,7 @@ import { MAX_IMAGE_BYTES } from '@lythaus/media';
 import { json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
-import { handleTransactionalEmailLifecycleWebhook, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
+import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, readTransactionalEmailDeliveryEvidence, reconcileTransactionalEmailLifecycleQueueMessage, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -207,6 +207,24 @@ interface QueueMessage {
 interface QueueBatch {
   queue: string;
   messages: QueueMessage[];
+}
+
+async function processEmailLifecycleQueue(batch: QueueBatch, env: Env): Promise<void> {
+  for (const message of batch.messages) {
+    try {
+      const result = await reconcileTransactionalEmailLifecycleQueueMessage(env, message.body);
+      if (!result.valid) {
+        logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id, errorCode: 'email_lifecycle_event_invalid' });
+        message.retry();
+      } else if (!result.reconciled) {
+        logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id, errorCode: 'email_lifecycle_event_unmatched' });
+        message.retry();
+      }
+    } catch {
+      logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id, errorCode: 'email_lifecycle_reconciliation_failed' });
+      message.retry();
+    }
+  }
 }
 
 type ActivityWriteInput = Omit<ActivityEventInput, 'id' | 'createdAt'>;
@@ -1780,6 +1798,25 @@ export default {
     if (pathname === '/internal/email/lifecycle' && request.method === 'POST') {
       return handleTransactionalEmailLifecycleWebhook(request, env);
     }
+    if (pathname === '/internal/email/delivery-evidence' && request.method === 'GET') {
+      if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+      const params = new URL(request.url).searchParams;
+      const correlationId = params.get('correlation_id');
+      const windowStart = params.get('window_start');
+      const windowEnd = params.get('window_end');
+      const challengeIds = params.getAll('challenge_id');
+      if (!correlationId || !windowStart || !windowEnd) return json({ error: 'evidence_filter_required' }, { status: 400 });
+      try {
+        return json(await readTransactionalEmailDeliveryEvidence(env, {
+          correlationId,
+          windowStart,
+          windowEnd,
+          ...(challengeIds.length ? { challengeIds } : {}),
+        }));
+      } catch {
+        return json({ error: 'evidence_filter_invalid' }, { status: 400 });
+      }
+    }
     if (request.method === 'GET' && pathname === '/internal/readiness/database-identity') {
       if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
       const [jobs, privacy] = await Promise.all([
@@ -1808,6 +1845,10 @@ export default {
   },
 
   async queue(batch: QueueBatch, env: Env): Promise<void> {
+    if (batch.queue === EMAIL_LIFECYCLE_QUEUE) {
+      await processEmailLifecycleQueue(batch, env);
+      return;
+    }
     for (const message of batch.messages) {
       try {
         await processMessage(message, env);
