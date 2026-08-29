@@ -1,0 +1,119 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
+---
+
+<BaseLayout
+  title="Confirm your email"
+  description="Confirm the email address for your Lythaus account."
+  canonicalPath="/verify-email"
+  noReferrer
+  noIndex
+>
+  <section class="auth-page auth-page--single" aria-labelledby="verify-email-title">
+    <div class="auth-intro">
+      <span class="pill">Lythaus account</span>
+      <h1 id="verify-email-title">Confirm your email.</h1>
+      <p>Opening this page does not verify your email. When you are ready, choose the button below to complete the one-time confirmation.</p>
+
+      <div class="auth-form auth-form--centered" data-email-verification-form data-api-base-url={publicApiBaseUrl}>
+        <button class="button primary" type="button" data-email-verification-submit>Verify email</button>
+        <p class="auth-status" data-email-verification-status aria-live="polite" aria-atomic="true" role="status" tabindex="-1"></p>
+        <div class="auth-actions">
+          <a class="button secondary" data-email-verification-signin href="/sign-in" hidden>Sign in to Lythaus</a>
+          <a class="text-link" data-email-verification-resend href="/resend-verification" hidden>Request a new verification email</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline>
+    const form = document.querySelector('[data-email-verification-form]');
+    if (form instanceof HTMLElement) {
+      const button = form.querySelector('[data-email-verification-submit]');
+      const status = form.querySelector('[data-email-verification-status]');
+      const signInLink = form.querySelector('[data-email-verification-signin]');
+      const resendLink = form.querySelector('[data-email-verification-resend]');
+      const apiBaseUrl = form.dataset.apiBaseUrl?.replace(/\/$/u, '') ?? '';
+      let token = new URL(window.location.href).searchParams.get('token')?.trim() ?? '';
+      let isSubmitting = false;
+
+      const setStatus = (message, state = 'idle', moveFocus = true) => {
+        if (!(status instanceof HTMLElement)) return;
+        status.textContent = message;
+        status.dataset.state = state;
+        if (moveFocus && message) status.focus();
+      };
+      const showLink = (link) => {
+        if (link instanceof HTMLElement) link.hidden = false;
+      };
+      const showInvalidState = (message) => {
+        if (button instanceof HTMLButtonElement) button.disabled = true;
+        showLink(resendLink);
+        setStatus(message, 'error');
+      };
+
+      window.history.replaceState(null, '', '/verify-email');
+      if (!token) {
+        showInvalidState('This verification link is missing or invalid. Request a new verification email.');
+      }
+
+      form.addEventListener('click', async (event) => {
+        if (!(event.target instanceof HTMLButtonElement) || !event.target.matches('[data-email-verification-submit]')) return;
+        event.preventDefault();
+        if (isSubmitting || !token || !(button instanceof HTMLButtonElement)) return;
+        isSubmitting = true;
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        setStatus('Confirming your email...', 'submitting');
+        try {
+          const response = await fetch(`${apiBaseUrl}/api/auth/email/verify`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ token }),
+            cache: 'no-store',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
+          });
+          const body = await response.json().catch(() => ({}));
+          const code = typeof body.error === 'string' ? body.error : 'verification_token_invalid';
+          if (!response.ok || body.state !== 'verified') throw new Error(code);
+          token = '';
+          button.textContent = 'Email verified';
+          showLink(signInLink);
+          setStatus('Your email is verified. You can now sign in to Lythaus.', 'success');
+        } catch (error) {
+          const code = error instanceof Error ? error.message : 'verification_token_invalid';
+          if (code === 'verification_token_invalid') {
+            showInvalidState('This verification link is invalid, expired, or already used. Request a new verification email.');
+          } else {
+            button.disabled = false;
+            setStatus('We could not verify this link. Please try again or request a new verification email.', 'error');
+          }
+        } finally {
+          button.setAttribute('aria-busy', 'false');
+          isSubmitting = false;
+        }
+      });
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .auth-page { display: grid; grid-template-columns: minmax(0, 720px); justify-content: center; align-items: start; padding: clamp(82px, 13vw, 150px) 0 120px; }
+  .auth-page--single { min-height: 52vh; }
+  .auth-intro { text-align: center; }
+  .auth-intro h1 { margin-top: 22px; }
+  .auth-intro > p { max-width: 620px; margin: 22px auto 0; color: var(--muted); font-size: 18px; line-height: 1.7; }
+  .auth-form { display: grid; gap: 10px; padding: 30px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .auth-form--centered { max-width: 480px; margin: 38px auto 0; text-align: left; }
+  .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .auth-status:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .auth-status[data-state='error'] { color: #f1a7a0; }
+  .auth-status[data-state='success'] { color: #b8d5b5; }
+  .auth-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+  .auth-actions [hidden] { display: none; }
+  .auth-actions .text-link { color: var(--muted); font-size: 13px; text-decoration: underline; }
+  @media (max-width: 560px) { .auth-page { padding-top: 72px; } .auth-form { padding: 22px; } .auth-actions { align-items: flex-start; flex-direction: column; } }
+</style>

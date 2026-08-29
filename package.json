@@ -18,7 +18,7 @@
     "openapi:test:contract": "jest -c jest.contract.config.cjs --runInBand",
     "openapi:docs": "npx @redocly/cli build-docs api/openapi/dist/openapi.json -o api/openapi/dist/index.html",
     "marketing:validate": "node scripts/cloudflare/validate-marketing-output.mjs",
-    "marketing:test": "node --test apps/marketing-site/tests/homepage-waitlist.test.mjs",
+    "marketing:test": "node --test apps/marketing-site/tests/*.test.mjs",
     "k6:diagnose": "bash scripts/diagnose-k6-failures.sh",
     "todo:triage": "node scripts/generate-todo-triage.js",
     "k6:smoke": "node scripts/run-shared-mvp-k6.mjs load/k6/smoke.js",

@@ -20,5 +20,8 @@ test('signup page exposes the real production email registration flow', () => {
   assert.match(signup, /failureReference = typeof body\.correlationId/);
   assert.match(signup, /setResendVisible\(shouldOfferResend\(code\)\)/);
   assert.match(signup, /autocomplete="new-password"/);
+  assert.match(signup, /minlength="15"/);
+  assert.match(signup, /queued or is on its way/);
+  assert.doesNotMatch(signup, /This email is already registered/);
   assert.doesNotMatch(signup, /CLOUDFLARE_API_TOKEN|TURNSTILE_SECRET_KEY/);
 });

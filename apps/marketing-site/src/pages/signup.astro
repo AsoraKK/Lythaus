@@ -28,17 +28,22 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="320" required />
 
       <label for="signup-password">Password</label>
-      <input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
-      <p class="auth-field-note">Use at least 12 characters.</p>
+      <input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="signup-password-note" required />
+      <p class="auth-field-note" id="signup-password-note">Use at least 15 characters, up to 128. Longer passphrases are welcome. Password managers, paste, and autofill are supported.</p>
 
       <label for="signup-password-confirmation">Confirm password</label>
-      <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" minlength="12" maxlength="128" required />
+      <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="signup-password-note" required />
 
       <div class="auth-turnstile-shell" id="signup-turnstile" role="group" aria-label="Bot verification"></div>
       <button class="button primary" type="submit" data-signup-submit>Create account</button>
-      <p class="auth-status" data-signup-status aria-live="polite" role="status"></p>
+      <p class="auth-status" data-signup-status aria-live="polite" aria-atomic="true" role="status" tabindex="-1"></p>
       <button class="auth-resend" type="button" data-signup-resend hidden>Resend verification email</button>
-      <p class="auth-footnote">Already have an account? <a href="https://app.lythaus.co/login">Sign in to Lythaus</a>.</p>
+      <p class="auth-field-note" id="signup-resend-cooldown" data-signup-resend-cooldown aria-live="polite"></p>
+      <div class="auth-check-email" data-signup-check-email hidden aria-labelledby="signup-check-email-title">
+        <h2 id="signup-check-email-title">Check your email</h2>
+        <p>If the request was accepted, a verification message has been queued or is on its way. Delivery can take a few minutes and is not confirmed on this page.</p>
+      </div>
+      <p class="auth-footnote">Already have an account? <a href="/sign-in">Sign in to Lythaus</a>.</p>
     </form>
   </section>
 
@@ -52,21 +57,43 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       const button = form.querySelector('[data-signup-submit]');
       const status = form.querySelector('[data-signup-status]');
       const resendButton = form.querySelector('[data-signup-resend]');
+      const checkEmailState = form.querySelector('[data-signup-check-email]');
       const turnstileContainer = form.querySelector('#signup-turnstile');
       const apiBaseUrl = form.dataset.apiBaseUrl?.replace(/\/$/u, '') ?? '';
       const siteKey = form.dataset.turnstileSiteKey ?? '';
       let widgetId;
       let tokenResolve;
       let tokenReject;
+      let isSubmitting = false;
+      let cooldownUntil = 0;
+      let cooldownTimer;
 
-      const setStatus = (message, state = 'idle') => {
+      const setStatus = (message, state = 'idle', moveFocus = true) => {
         if (status instanceof HTMLElement) {
           status.textContent = message;
           status.dataset.state = state;
+          if (moveFocus && message) status.focus();
         }
       };
       const setResendVisible = (visible) => {
         if (resendButton instanceof HTMLButtonElement) resendButton.hidden = !visible;
+      };
+      const setCooldownMessage = () => {
+        if (!(resendButton instanceof HTMLButtonElement)) return;
+        const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+        resendButton.disabled = seconds > 0;
+        resendButton.setAttribute('aria-describedby', seconds > 0 ? 'signup-resend-cooldown' : '');
+        const cooldownMessage = form.querySelector('#signup-resend-cooldown');
+        if (cooldownMessage instanceof HTMLElement) cooldownMessage.textContent = seconds > 0 ? `You can request another message in ${seconds} seconds.` : '';
+        if (seconds <= 0 && cooldownTimer !== undefined) {
+          window.clearInterval(cooldownTimer);
+          cooldownTimer = undefined;
+        }
+      };
+      const startCooldown = () => {
+        cooldownUntil = Date.now() + 30_000;
+        setCooldownMessage();
+        cooldownTimer = window.setInterval(setCooldownMessage, 1000);
       };
       const resetVerification = () => {
         tokenReject?.(new Error('turnstile_failed'));
@@ -106,13 +133,13 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         });
       };
       const messageFor = (code) => {
-        if (code === 'account_exists') return 'This email is already registered. Sign in, or resend verification if setup was interrupted.';
+        if (code === 'account_exists') return 'We could not finish that request. If this was a retry, resend the verification email below.';
         if (code === 'email_verification_required') return 'Check your email and click the verification link before signing in.';
         if (code === 'invalid_email') return 'Enter a valid email address.';
-        if (code === 'invalid_password') return 'Use a password between 12 and 128 characters.';
+        if (code === 'invalid_password') return 'Use a password between 15 and 128 characters.';
         if (code === 'rate_limit_exceeded') return 'Too many signup attempts. Please wait before trying again.';
         if (code === 'turnstile_failed' || code === 'turnstile_required' || code === 'turnstile_unavailable') return 'We could not verify this request. Please try again.';
-        if (code === 'email_delivery_not_configured' || /^email_delivery_failed(?:_[1-5][0-9]{2})?$/u.test(code)) return 'Your account may be waiting for verification, but we could not send the email. Retry below.';
+        if (code === 'email_delivery_not_configured' || /^email_delivery_failed(?:_[1-5][0-9]{2})?$/u.test(code)) return 'Email delivery is temporarily delayed. Please try again shortly.';
         return 'We could not finish the signup request. If this was a retry, resend the verification email below.';
       };
       const shouldOfferResend = (code) => ![
@@ -126,13 +153,20 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       );
 
       const resendVerification = async () => {
-        if (!(email instanceof HTMLInputElement) || !(resendButton instanceof HTMLButtonElement)) return;
+        if (isSubmitting || !(email instanceof HTMLInputElement) || !(resendButton instanceof HTMLButtonElement)) return;
         if (!email.validity.valid) {
+          email.setAttribute('aria-invalid', 'true');
           email.reportValidity();
           setStatus('Enter a valid email address.', 'error');
           return;
         }
+        if (Date.now() < cooldownUntil) {
+          setCooldownMessage();
+          return;
+        }
+        isSubmitting = true;
         resendButton.disabled = true;
+        resendButton.setAttribute('aria-busy', 'true');
         setStatus('Sending a new verification email...', 'submitting');
         try {
           const turnstileToken = await requestToken();
@@ -140,16 +174,21 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ mode: 'resend_verification', email: email.value, turnstileToken }),
+            cache: 'no-store',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
           });
           const body = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'email_delivery_failed');
-          setStatus('If this account is waiting for verification, a new email is on its way.', 'success');
-          setResendVisible(false);
+          if (!response.ok || body.state !== 'verification_required') throw new Error(typeof body.error === 'string' ? body.error : 'email_delivery_failed');
+          startCooldown();
+          setStatus('If this account is eligible, your verification request was accepted. Check your inbox; delivery is not confirmed yet.', 'success');
         } catch (error) {
           setStatus(messageFor(error instanceof Error ? error.message : 'email_delivery_failed'), 'error');
         } finally {
           resetVerification();
-          resendButton.disabled = false;
+          resendButton.setAttribute('aria-busy', 'false');
+          if (Date.now() >= cooldownUntil) resendButton.disabled = false;
+          isSubmitting = false;
         }
       };
 
@@ -157,17 +196,25 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (!(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(confirmation instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
+        if (isSubmitting || !(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(confirmation instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
+        email.removeAttribute('aria-invalid');
         if (!email.validity.valid) {
+          email.setAttribute('aria-invalid', 'true');
           email.reportValidity();
           setStatus('Enter a valid email address.', 'error');
           return;
         }
         if (!password.validity.valid || password.value !== confirmation.value) {
-          setStatus('Passwords must match and contain at least 12 characters.', 'error');
+          password.setAttribute('aria-invalid', 'true');
+          confirmation.setAttribute('aria-invalid', 'true');
+          setStatus('Passwords must match and contain at least 15 characters.', 'error');
           return;
         }
+        password.removeAttribute('aria-invalid');
+        confirmation.removeAttribute('aria-invalid');
+        isSubmitting = true;
         button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
         button.textContent = 'Creating account...';
         setResendVisible(false);
         setStatus('', 'submitting');
@@ -178,14 +225,20 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ mode: 'register', email: email.value, password: password.value, turnstileToken }),
+            cache: 'no-store',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
           });
           const body = await response.json().catch(() => ({}));
           failureReference = typeof body.correlationId === 'string'
             ? body.correlationId
             : response.headers.get('x-correlation-id') ?? '';
-          if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
-          form.reset();
-          setStatus('Signup received. Check your email and click the verification link before signing in.', 'success');
+          if (!response.ok || body.state !== 'verification_required') throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
+          password.value = '';
+          confirmation.value = '';
+          if (checkEmailState instanceof HTMLElement) checkEmailState.hidden = false;
+          setResendVisible(true);
+          setStatus('Check your email. Your verification request was accepted and a message has been queued or is on its way. Delivery is not confirmed yet.', 'success');
         } catch (error) {
           const code = error instanceof Error ? error.message : 'account_creation_failed';
           setStatus(withSupportReference(messageFor(code), code, failureReference), 'error');
@@ -193,7 +246,9 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         } finally {
           resetVerification();
           button.disabled = false;
+          button.setAttribute('aria-busy', 'false');
           button.textContent = 'Create account';
+          isSubmitting = false;
         }
       });
     }
@@ -230,13 +285,20 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     outline: none;
   }
   .auth-form input:focus { border-color: rgba(223,231,220,.7); box-shadow: 0 0 0 3px rgba(223,231,220,.08); }
+  .auth-form input[aria-invalid='true'] { border-color: #f1a7a0; }
   .auth-field-note, .auth-footnote { margin: 0 0 8px; color: var(--quiet); font-size: 12px; line-height: 1.5; }
   .auth-turnstile-shell { min-height: 65px; margin: 8px 0; }
   .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .auth-status:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
   .auth-status[data-state='error'] { color: #f1a7a0; }
   .auth-status[data-state='success'] { color: #b8d5b5; }
   .auth-resend { justify-self: start; border: 0; padding: 0; color: var(--muted); background: transparent; text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
+  .auth-resend:disabled { cursor: wait; opacity: .65; }
   .auth-resend[hidden] { display: none; }
+  .auth-check-email { margin-top: 8px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; }
+  .auth-check-email[hidden] { display: none; }
+  .auth-check-email h2 { margin: 0 0 8px; font-size: 20px; }
+  .auth-check-email p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
   .auth-footnote { margin-top: 4px; }
   @media (max-width: 760px) {
     .auth-page { grid-template-columns: 1fr; padding-top: 72px; }

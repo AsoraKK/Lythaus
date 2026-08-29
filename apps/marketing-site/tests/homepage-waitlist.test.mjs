@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import './auth-pages.test.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const homepage = fs.readFileSync(path.join(root, 'src/pages/index.astro'), 'utf8');

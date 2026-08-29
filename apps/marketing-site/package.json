@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "test": "node --test tests/*.test.mjs",
     "preview": "astro preview",
     "lockfile:refresh": "npm install --package-lock-only --ignore-scripts && node ../../scripts/sanitize-provider-neutral-lockfile.mjs package-lock.json"
   },

@@ -5,6 +5,8 @@ const {
   canonicalPath = '',
   absoluteTitle = false,
   homePage = false,
+  noReferrer = false,
+  noIndex = false,
 } = Astro.props;
 const pageTitle = absoluteTitle ? title : title ? `${title} | Lythaus` : 'Lythaus';
 const siteUrl = Astro.site?.origin ?? 'https://lythaus.co';
@@ -17,6 +19,8 @@ import '../styles/global.css';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {noReferrer && <meta name="referrer" content="no-referrer" />}
+    {noIndex && <meta name="robots" content="noindex, nofollow, noarchive" />}
     <meta name="theme-color" content={homePage ? '#070706' : '#090a0b'} />
     <title>{pageTitle}</title>
     <link rel="canonical" href={canonicalUrl} />
