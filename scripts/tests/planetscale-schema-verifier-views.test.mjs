@@ -21,11 +21,13 @@ test('dedicated schema verifier receives metadata-only visibility for views', as
 
 test('production schema verification is sequential and emits safe relation drift diagnostics', async () => {
   const source = await fs.readFile('scripts/ci/verify-planetscale-production-schema.mjs', 'utf8');
+  const postgres17 = await fs.readFile('scripts/ci/validate-planetscale-postgres17.mjs', 'utf8');
   assert.doesNotMatch(source, /Promise\.all\(/);
   assert.match(source, /function fingerprintMismatch/);
   assert.match(source, /missing=\$\{JSON\.stringify\(missing\)\}/);
   assert.match(source, /extra=\$\{JSON\.stringify\(extra\)\}/);
   assert.match(source, /relations: relations\.rows/);
+  assert.match(postgres17, /relation_count\) \+ 2 !== 97/);
 });
 
 test('runtime rate-limit access requires system schema usage and is verified in production', async () => {
