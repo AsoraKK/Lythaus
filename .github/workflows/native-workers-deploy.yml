@@ -127,7 +127,7 @@ jobs:
           npx --yes wrangler@4.123.0 types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
           npx --yes wrangler@4.123.0 types --check apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc
           npx --yes wrangler@4.123.0 types --check apps/lythaus-jobs/src/worker-configuration.d.ts --config apps/lythaus-jobs/wrangler.jsonc
-      - name: Materialize approved post-0013 deployment identity
+      - name: Materialize approved post-0014 deployment identity
         env:
           PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
           PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
@@ -240,7 +240,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0013_marketing_waitlist.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -257,7 +257,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0013_marketing_waitlist.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -276,7 +276,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0013_marketing_waitlist.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -326,7 +326,7 @@ jobs:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0013_marketing_waitlist.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}

@@ -101,10 +101,13 @@ export function renderTransactionalEmail(input: {
   const baseUrl = input.purpose === 'password_reset' ? input.resetBaseUrl : input.verificationBaseUrl;
   const url = baseUrl ? `${baseUrl}${encodeURIComponent(input.token)}` : '';
   const safeUrl = url.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value));
+  const guidance = input.purpose === 'invite'
+    ? 'Confirm your email, then use Forgot password on the sign-in page to choose your Lythaus password.'
+    : '';
   return {
     to: '',
     subject,
-    html: `<p>${subject}.</p>${safeUrl ? `<p><a href="${safeUrl}">Continue securely</a></p>` : ''}`,
-    text: `${subject}.${url ? ` ${url}` : ''}`,
+    html: `<p>${subject}.</p>${guidance ? `<p>${guidance}</p>` : ''}${safeUrl ? `<p><a href="${safeUrl}">Continue securely</a></p>` : ''}`,
+    text: `${subject}.${guidance ? ` ${guidance}` : ''}${url ? ` ${url}` : ''}`,
   };
 }

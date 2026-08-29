@@ -17,9 +17,9 @@ test('Keeper routes expose live summaries and paginated identity operations', ()
 });
 
 test('Keeper email actions use the canonical transactional outbox seam', () => {
-  assert.match(adapter, /system\.transactional_email_outbox/);
-  assert.match(adapter, /challenge_id/);
-  assert.match(adapter, /secret_ciphertext/);
+  assert.match(adapter, /enqueueTransactionalEmailIntent/);
+  assert.match(adapter, /secretEncryptionKeyVersion/);
+  assert.match(adapter, /contactEmailUserId/);
   assert.doesNotMatch(adapter, /system\.outbox_events/);
   assert.doesNotMatch(adapter, /provider_message_id|provider_error_code/);
 });

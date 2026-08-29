@@ -48,7 +48,7 @@ jobs:
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PSCALE_BRANCH_NAME: main
         run: npm run validate:cloudflare-hyperdrive-targets
-      - name: Verify post-0013 schema read-only
+      - name: Verify post-0014 schema read-only
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
@@ -91,7 +91,7 @@ jobs:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0013_marketing_waitlist.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}

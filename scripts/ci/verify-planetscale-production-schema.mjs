@@ -127,7 +127,7 @@ async function verifyWaitlistPrivileges(client) {
   const admin = roleIdentifiers.lythaus_admin;
   const privacy = roleIdentifiers.lythaus_privacy;
   if (![runtime, admin, privacy].every((value) => /^pscale_api_[a-z0-9]+$/.test(value ?? ''))) {
-    throw new Error('post-0013 privilege verification requires canonical PlanetScale role identifiers');
+    throw new Error('post-0014 privilege verification requires canonical PlanetScale role identifiers');
   }
   const result = await client.query(`SELECT
     has_schema_privilege($1, 'system', 'USAGE') AS runtime_system_usage,

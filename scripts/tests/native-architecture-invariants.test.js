@@ -84,13 +84,18 @@ test('email recovery is Turnstile-protected, neutral, and atomically single-use'
 
 test('native auth outbox and scanner-safe verification contracts are explicit', () => {
   const api = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const verificationPage = fs.readFileSync(path.join(root, 'apps/marketing-site/src/pages/verify-email.astro'), 'utf8');
   const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/transactional-email-runtime.ts'), 'utf8');
   const jobsIndex = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
   const jobsConfig = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/wrangler.jsonc'), 'utf8');
   const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0014_transactional_email_outbox.sql'), 'utf8');
   assert.match(api, /request\.method === 'POST' && url\.pathname === '\/api\/auth\/email\/verify'.*verifyEmail/s);
   assert.match(api, /request\.method !== 'POST'/);
-  assert.match(api, /referrer-policy.*no-referrer/);
+  assert.doesNotMatch(api, /verificationPreview/);
+  assert.match(verificationPage, /noReferrer/);
+  assert.match(verificationPage, /noIndex/);
+  assert.match(verificationPage, /history\.replaceState/);
+  assert.match(verificationPage, /referrerPolicy: 'no-referrer'/);
   assert.match(api, /hashAuthToken\(token, 'verification'\)/);
   assert.match(jobs, /FOR UPDATE SKIP LOCKED/);
   assert.match(jobs, /state = 'provider_accepted'/);

@@ -417,38 +417,8 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character] ?? character));
-}
-
-async function verificationPreview(request: Request, env: Env, rawToken: string | null): Promise<Response> {
-  const token = typeof rawToken === 'string' && rawToken.length >= 32 ? rawToken : undefined;
-  const valid = token
-    ? (await query<{ id: string }>(env.DB_APP_FRESH,
-      `SELECT id FROM identity.email_verification_tokens
-        WHERE token_hash = decode($1, 'base64')
-          AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at > now()` ,
-      [hashAuthToken(token, 'verification')])).rows.length === 1
-    : false;
-  const action = `${new URL(request.url).origin}/api/auth/email/verify`;
-  const body = valid
-    ? `<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Confirm your email</title></head><body><main><h1>Confirm your email</h1><p>Continue to verify this Lythaus email address.</p><form method="post" action="${escapeHtml(action)}"><input type="hidden" name="token" value="${escapeHtml(token ?? '')}"><button type="submit">Continue / Verify</button></form></main></body></html>`
-    : '<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Verification link unavailable</title></head><body><main><h1>Verification link unavailable</h1><p>This link is invalid or expired.</p></main></body></html>';
-  return new Response(body, {
-    status: valid ? 200 : 400,
-    headers: {
-      'cache-control': 'private, no-store',
-      'content-security-policy': "default-src 'none'; form-action 'self'; base-uri 'none'; style-src 'unsafe-inline'",
-      'content-type': 'text/html; charset=utf-8',
-      'referrer-policy': 'no-referrer',
-      'x-correlation-id': correlationId(request),
-    },
-  });
-}
-
 async function verifyEmail(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  if (request.method === 'GET') return verificationPreview(request, env, url.searchParams.get('token'));
   if (request.method !== 'POST') throw new Error('method_not_allowed');
   const input = await readJson<{ token?: string }>(request, 8 * 1024);
   const token = requireToken(url.searchParams.get('token') ?? input.token, 'verification_token_invalid');

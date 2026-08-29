@@ -23,6 +23,7 @@ function row(id, createdAt, ciphertext) {
 
 mock.module('@lythaus/db', { cache: true, namedExports: {
   databaseExpectationsFromEnv: () => ({}), databaseReadinessResponse: () => ({}),
+  enqueueTransactionalEmailIntent: async () => undefined,
   inspectDatabaseIdentity: async () => ({ readiness: 'pass', budgetLedgerApplied: true }), recordUserActivity: async () => undefined,
   transaction: async (_binding, work) => { state.transactionCalls += 1; return work({ query: async () => result() }); },
   query: async (_binding, sql, values = []) => {
@@ -47,7 +48,9 @@ mock.module('@lythaus/observability', { cache: true, namedExports: {
 mock.module('@lythaus/security', { cache: true, namedExports: {
   constantTimeEqual: () => true,
   decryptField: async ({ ciphertext }) => { state.decryptions.push(ciphertext); return ciphertext === 'ciphertext-1' ? 'first@example.com' : 'second@example.com'; },
-  hmacLookup: () => 'access-subject-hmac', uuidv7: () => '01900000-0000-7000-8000-000000000777',
+  encryptField: async (value) => ({ ciphertext: value, encryptionKeyVersion: 'v1' }),
+  hashAuthToken: () => 'auth-token-hash', hashPassword: () => ({}),
+  hmacLookup: () => 'access-subject-hmac', randomToken: () => 'opaque-token', uuidv7: () => '01900000-0000-7000-8000-000000000777',
 } });
 
 mock.module(new URL('../src/admin-access-runtime-policy.ts', import.meta.url), { cache: true, namedExports: {

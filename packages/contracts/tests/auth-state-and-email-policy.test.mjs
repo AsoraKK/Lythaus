@@ -44,3 +44,14 @@ test('transactional email rendering keeps token out of HTML when no URL is confi
   assert.doesNotMatch(message.html, /secret-token/);
   assert.equal(message.subject, 'Verify your Lythaus email');
 });
+
+test('invitations explain the post-verification password setup path', () => {
+  const message = renderTransactionalEmail({
+    purpose: 'invite',
+    token: 'secret-token',
+    verificationBaseUrl: 'https://lythaus.co/verify-email?token=',
+  });
+  assert.match(message.html, /Forgot password/);
+  assert.match(message.text, /Forgot password/);
+  assert.match(message.text, /https:\/\/lythaus\.co\/verify-email\?token=secret-token/);
+});

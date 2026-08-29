@@ -2,7 +2,7 @@ import { query, transaction, type DatabaseClient, type HyperdriveBinding } from 
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { encodeCursor } from '@lythaus/contracts';
 import { json } from '@lythaus/observability';
-import { decryptField, encryptField, hashPassword, hashResetToken, hmacLookup, randomToken, uuidv7 } from '@lythaus/security';
+import { decryptField, encryptField, hashAuthToken, hashPassword, hmacLookup, randomToken, uuidv7 } from '@lythaus/security';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, requireWaitlistEncryptionKey } from './waitlist-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import {
@@ -296,10 +296,15 @@ export async function patchAdminUser(request: Request, env: KeeperEnv, actor: Ad
 async function prepareVerificationToken(client: DatabaseClient, userId: string): Promise<{ token: string; challengeId: string }> {
   const token = randomToken(32);
   const challengeId = uuidv7();
-  await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`, [userId]);
+  await client.query(
+    `UPDATE identity.email_verification_tokens
+        SET superseded_at = now()
+      WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
+    [userId],
+  );
   await client.query(
     `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-    [challengeId, userId, hashResetToken(token)]);
+    [challengeId, userId, hashAuthToken(token, 'verification')]);
   return { token, challengeId };
 }
 
@@ -338,13 +343,12 @@ export async function inviteAdminUser(request: Request, env: KeeperEnv, actor: A
        VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`,
       [userId, encryptedEmail.ciphertext, hmacLookup(email, keys.hmacKey)]);
     await client.query(
-      `UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL`, [userId]);
+      `UPDATE identity.email_verification_tokens
+          SET superseded_at = now()
+        WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`, [userId]);
     await client.query(
       `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-      [challengeId, userId, hashResetToken(verificationToken)]);
-    await client.query(
-      `INSERT INTO identity.password_reset_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-      [uuidv7(), userId, hashResetToken(verificationToken)]);
+      [challengeId, userId, hashAuthToken(verificationToken, 'verification')]);
     await dispatcher.enqueue(client, {
       actorId: actor.userId, correlationId: correlation, kind: 'account_invitation', userId, challengeId,
       tokenCiphertext: encrypted.ciphertext, tokenKeyVersion: encrypted.encryptionKeyVersion,
@@ -480,12 +484,12 @@ export async function getAdminAuthSummary(_request: Request, env: KeeperEnv, act
 export async function getAdminEmailHealth(_request: Request, env: KeeperEnv, actor: AdminActorLike, correlation: string): Promise<Response> {
   requireKeeperAdmin(actor);
   const result = await query(env.DB_ADMIN_FRESH,
-    `SELECT count(*) FILTER (WHERE state IN ('pending', 'processing'))::integer AS queued,
-            count(*) FILTER (WHERE state IN ('sent', 'delivered'))::integer AS dispatched,
-            count(*) FILTER (WHERE state = 'failed')::integer AS failed,
-            count(*) FILTER (WHERE created_at >= now() - interval '24 hours' AND (provider_message_id IS NOT NULL OR state IN ('sent', 'delivered', 'failed')))::integer AS accepted_last_24_hours,
+    `SELECT count(*) FILTER (WHERE state IN ('queued', 'processing'))::integer AS queued,
+            count(*) FILTER (WHERE state IN ('provider_accepted', 'delivered', 'deferred', 'bounced', 'rejected', 'failed', 'complained'))::integer AS dispatched,
+            count(*) FILTER (WHERE state IN ('bounced', 'rejected', 'failed', 'complained'))::integer AS failed,
+            count(*) FILTER (WHERE created_at >= now() - interval '24 hours' AND accepted_at IS NOT NULL)::integer AS accepted_last_24_hours,
             count(*) FILTER (WHERE created_at >= now() - interval '24 hours' AND state = 'delivered')::integer AS delivered_last_24_hours,
-            count(*) FILTER (WHERE created_at >= now() - interval '24 hours' AND (state = 'failed' OR provider_error_code IS NOT NULL))::integer AS failures_last_24_hours,
+            count(*) FILTER (WHERE created_at >= now() - interval '24 hours' AND (state IN ('bounced', 'rejected', 'failed', 'complained') OR provider_error_code IS NOT NULL))::integer AS failures_last_24_hours,
             max(updated_at) AS last_event_at
        FROM system.transactional_email_outbox`, []);
   const row = result.rows[0] ?? {};

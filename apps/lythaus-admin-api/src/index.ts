@@ -169,7 +169,7 @@ async function listWaitlist(request: Request, env: Env, actor: AdminActor, corre
         ORDER BY w.created_at DESC, w.id DESC
         LIMIT ${limitValue}`,
       values),
-    query<{ total_waiting: string; last_7_days: string }>(env.DB_ADMIN_FRESH,
+    query<{ total_waiting: string; last_7_days: string; last_24_hours: string }>(env.DB_ADMIN_FRESH,
       `SELECT count(id) FILTER (WHERE status = 'waiting')::text AS total_waiting,
               count(id) FILTER (WHERE created_at >= now() - interval '7 days')::text AS last_7_days,
               count(id) FILTER (WHERE created_at >= now() - interval '24 hours')::text AS last_24_hours

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { approvedPost0013Expectation } from './product-integrity-schema-contract.mjs';
+import { approvedPost0014Expectation } from './product-integrity-schema-contract.mjs';
 
-const expectation = approvedPost0013Expectation(
+const expectation = approvedPost0014Expectation(
   process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
   process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
 );

@@ -1,4 +1,4 @@
-import type { DatabaseClient } from '@lythaus/db';
+import { enqueueTransactionalEmailIntent, type DatabaseClient } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 
 export interface AuthEmailDispatchIntent {
@@ -20,12 +20,17 @@ export function createAuthEmailDispatchAdapter(_env: EnvBindings): AuthEmailDisp
   return {
     async enqueue(client, intent) {
       const purpose = intent.kind === 'account_invitation' ? 'invite' : 'verification';
-      await client.query(
-        `INSERT INTO system.transactional_email_outbox
-           (id, purpose, challenge_id, template_version, secret_ciphertext, key_version, state, correlation_id)
-         VALUES ($1, $2, $3, 'v1', convert_to($4, 'utf8'), $5, 'pending', $6)`,
-        [crypto.randomUUID(), purpose, intent.challengeId, intent.tokenCiphertext, intent.tokenKeyVersion, intent.correlationId],
-      );
+      await enqueueTransactionalEmailIntent(client, {
+        id: crypto.randomUUID(),
+        userId: intent.userId,
+        contactEmailUserId: intent.userId,
+        purpose,
+        challengeId: intent.challengeId,
+        templateVersion: 'v1',
+        secretCiphertext: intent.tokenCiphertext,
+        secretEncryptionKeyVersion: intent.tokenKeyVersion,
+        correlationId: intent.correlationId,
+      });
     },
   };
 }

@@ -76,7 +76,7 @@ describe('Waitlist', () => {
     fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'BETA_INVITE' } });
     fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: 'UPDATE WAITLIST STATUS' } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(screen.getByText('invited')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('invited', { selector: 'span.waitlist-status' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Place hold' }));
     fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'RETENTION_REVIEW' } });
     fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: 'PLACE RETENTION HOLD' } });

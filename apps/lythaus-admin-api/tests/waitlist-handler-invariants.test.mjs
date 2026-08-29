@@ -11,9 +11,12 @@ test('admin waitlist runs after Access membership authentication and uses keyset
   const routeIndex = worker.indexOf("url.pathname === '/api/admin/waitlist'");
   assert.ok(authorizationIndex >= 0 && routeIndex > authorizationIndex);
   assert.match(worker, /assertWaitlistAdminRole\(actor\.role\)/);
-  assert.match(worker, /\(created_at, id\) < \(\$1::timestamptz, \$2::uuid\)/);
-  assert.match(worker, /ORDER BY created_at DESC, id DESC/);
-  assert.match(worker, /LIMIT \$3/);
+  assert.match(worker, /if \(page\.cursor\) conditions\.push\(`\(w\.created_at, w\.id\) < \(/);
+  assert.match(worker, /addValue\(page\.cursor\.timestamp\)\}::timestamptz/);
+  assert.match(worker, /addValue\(page\.cursor\.id\)\}::uuid/);
+  assert.match(worker, /ORDER BY w\.created_at DESC, w\.id DESC/);
+  assert.match(worker, /const limitValue = addValue\(page\.limit \+ 1\)/);
+  assert.match(worker, /LIMIT \$\{limitValue\}/);
 });
 
 test('admin waitlist decrypts only approved fields and audits before returning PII', () => {
