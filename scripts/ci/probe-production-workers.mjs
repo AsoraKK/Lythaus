@@ -81,6 +81,9 @@ function assertDatabaseReport(report, worker, label) {
   for (const field of ['databaseEnvironment', 'branchFingerprint', 'schemaFingerprint', 'relationCount', 'identityContactEmails', 'budgetLedgerApplied', 'roleClass', 'readiness', 'readyForAuthentication']) {
     if (!(field in report)) throw new Error(`${worker}/${label} readiness is missing ${field}`);
   }
+  if (typeof report.readyForAuthentication !== 'boolean') {
+    throw new Error(`${worker}/${label} readiness has an invalid authentication readiness value`);
+  }
   if (report.branchFingerprint !== 'unknown') throw new Error(`${worker}/${label} must not self-assert a PlanetScale branch`);
   const mismatches = [];
   if (report.schemaFingerprint !== expectedSchemaFingerprint) mismatches.push('schemaFingerprint');
@@ -98,7 +101,7 @@ function assertDatabaseReport(report, worker, label) {
     ].map((field) => [field, report[field]]));
     throw new Error(`${worker}/${label} structural identity probe failed: ${mismatches.join(',')}; observed=${JSON.stringify(observed)}`);
   }
-  if (report.readyForAuthentication !== authenticatedAcceptanceProven) {
+  if (authenticatedAcceptanceProven && report.readyForAuthentication !== true) {
     throw new Error(`${worker}/${label} authentication readiness assertion is inconsistent`);
   }
 }
@@ -146,7 +149,8 @@ for (const target of targets) {
   const primaryReport = reports[0]?.[1];
   if (!primaryReport) throw new Error(`${target.worker} candidate probe returned no database report`);
   if (body.branchFingerprint !== 'unknown') throw new Error(`${target.worker} top-level probe must not self-assert a branch`);
-  if (body.readyForAuthentication !== authenticatedAcceptanceProven) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
+  if (typeof body.readyForAuthentication !== 'boolean') throw new Error(`${target.worker} top-level authentication readiness is invalid`);
+  if (authenticatedAcceptanceProven && body.readyForAuthentication !== true) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
   evidence.workers.push({
     worker: target.worker,
     workerVersionId: body.workerVersionId,

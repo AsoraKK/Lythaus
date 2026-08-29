@@ -202,6 +202,15 @@ test('candidate ADR-003 acceptance consumes the exact proven readiness artifact'
   assert.match(adr003Harness, /worker\.readyForAuthentication === true/);
 });
 
+test('candidate readiness does not confuse pre-acceptance state with structural readiness', () => {
+  const workerProbe = readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8');
+  assert.match(workerProbe, /typeof report\.readyForAuthentication !== 'boolean'/);
+  assert.match(workerProbe, /authenticatedAcceptanceProven && report\.readyForAuthentication !== true/);
+  assert.match(workerProbe, /typeof body\.readyForAuthentication !== 'boolean'/);
+  assert.match(workerProbe, /authenticatedAcceptanceProven && body\.readyForAuthentication !== true/);
+  assert.match(adr003Harness, /worker\.readyForAuthentication === true/);
+});
+
 test('ADR-003 repeat runs verify existing privacy requests without weakening limits', () => {
   assert.match(adr003Harness, /async function existingPrivacyRequestAcceptance/);
   assert.match(adr003Harness, /result\.response\.status !== 429/);
