@@ -1239,12 +1239,26 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1audit'
   /admin/waitlist:
     $ref: './product-integrity.yaml#/paths/~1admin~1waitlist'
+  /admin/waitlist/{waitlistId}:
+    $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}'
   /admin/waitlist/{waitlistId}/status:
     $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}~1status'
   /admin/waitlist/{waitlistId}/retention-hold:
     $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}~1retention-hold'
   /admin/users/search:
     $ref: './product-integrity.yaml#/paths/~1admin~1users~1search'
+  /admin/auth/summary:
+    $ref: './product-integrity.yaml#/paths/~1admin~1auth~1summary'
+  /admin/email-health:
+    $ref: './product-integrity.yaml#/paths/~1admin~1email-health'
+  /admin/users:
+    $ref: './product-integrity.yaml#/paths/~1admin~1users'
+  /admin/users/{userId}:
+    $ref: './product-integrity.yaml#/paths/~1admin~1users~1{userId}'
+  /admin/users/{userId}/resend-verification:
+    $ref: './product-integrity.yaml#/paths/~1admin~1users~1{userId}~1resend-verification'
+  /admin/users/{userId}/revoke-sessions:
+    $ref: './product-integrity.yaml#/paths/~1admin~1users~1{userId}~1revoke-sessions'
   /admin/privacy/legal-holds:
     $ref: './product-integrity.yaml#/paths/~1admin~1privacy~1legal-holds'
   /admin/privacy/legal-holds/{holdId}/clear:

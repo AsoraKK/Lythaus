@@ -18,7 +18,7 @@ function result(rows = [], rowCount = rows.length) {
 }
 
 function row(id, createdAt, ciphertext) {
-  return { id, email_ciphertext: ciphertext, encryption_key_version: 'v1', status: 'waiting', source: 'lythaus.co', created_at: createdAt, retention_hold: false };
+  return { id, email_ciphertext: ciphertext, encryption_key_version: 'v1', status: 'waiting', source: 'lythaus.co', created_at: createdAt, invited_at: null, converted_at: null, unsubscribed_at: null, retention_hold: false };
 }
 
 mock.module('@lythaus/db', { cache: true, namedExports: {
@@ -30,7 +30,7 @@ mock.module('@lythaus/db', { cache: true, namedExports: {
     if (sql.includes('identity.admin_memberships')) return state.access === 'nonmember'
       ? result([], 0) : result([{ user_id: '01900000-0000-7000-8000-000000000099', role: state.access }], 1);
     if (sql.includes('system.rate_limit_windows')) return result([{ request_count: 1 }], 1);
-    if (sql.includes('SELECT id, convert_from(email_ciphertext')) return values[0]
+    if (sql.includes('SELECT w.id, convert_from(w.email_ciphertext')) return values.length > 1
       ? result([row(SECOND_WAITLIST_ID, '2026-08-13T10:00:00.000Z', 'ciphertext-2')])
       : result([row(WAITLIST_ID, '2026-08-14T10:00:00.000Z', 'ciphertext-1'), row(SECOND_WAITLIST_ID, '2026-08-13T10:00:00.000Z', 'ciphertext-2')]);
     if (sql.includes('count(id) FILTER')) return result([{ total_waiting: '2', last_7_days: '2' }], 1);
@@ -93,13 +93,13 @@ test('authorized waitlist handler decrypts, paginates, audits and returns only a
   assert.equal(first.status, 200);
   assert.equal(first.headers.get('cache-control'), 'private, no-store');
   const firstBody = await first.json();
-  assert.deepEqual(firstBody.items, [{ id: WAITLIST_ID, email: 'first@example.com', status: 'waiting', source: 'lythaus.co', createdAt: '2026-08-14T10:00:00.000Z', retentionHold: false }]);
+  assert.deepEqual(firstBody.items, [{ id: WAITLIST_ID, email: 'first@example.com', status: 'waiting', source: 'lythaus.co', createdAt: '2026-08-14T10:00:00.000Z', invitedAt: null, convertedAt: null, unsubscribedAt: null, retentionHold: false }]);
   assert.ok(firstBody.nextCursor);
   assert.equal(JSON.stringify(firstBody).includes('ciphertext'), false);
   assert.equal(JSON.stringify(firstBody).includes('hmac'), false);
   assert.deepEqual(state.decryptions, ['ciphertext-1']);
   assert.equal(state.auditWrites.length, 1);
-  assert.deepEqual(JSON.parse(state.auditWrites[0].values[3]), { returnedRowCount: 1, requestedLimit: 1, hasCursor: false, hasMore: true });
+  assert.deepEqual(JSON.parse(state.auditWrites[0].values[3]), { returnedRowCount: 1, requestedLimit: 1, hasCursor: false, hasMore: true, hasSearch: false, statusFilter: null, sourceFilter: null });
   assert.equal(JSON.stringify(state.auditWrites[0]).includes('first@example.com'), false);
   const second = await worker.fetch(request(`/api/admin/waitlist?limit=1&cursor=${encodeURIComponent(firstBody.nextCursor)}`), env());
   assert.equal(second.status, 200);

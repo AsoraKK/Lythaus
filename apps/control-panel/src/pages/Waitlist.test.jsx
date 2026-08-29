@@ -62,7 +62,7 @@ describe('Waitlist', () => {
     await screen.findByText('person@example.com');
     fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
     await screen.findByText('second@example.com');
-    expect(adminRequest).toHaveBeenLastCalledWith('waitlist', { query: { limit: 50, cursor: 'next-page' } });
+    expect(adminRequest).toHaveBeenLastCalledWith('waitlist', { query: { q: '', status: '', source: '', createdAfter: '', createdBefore: '', limit: 50, cursor: 'next-page' } });
   });
 
   it('updates status and a retention hold without exposing implementation detail', async () => {
@@ -73,14 +73,20 @@ describe('Waitlist', () => {
     render(<Waitlist />);
     await screen.findByText('person@example.com');
     fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'BETA_INVITE' } });
+    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: 'UPDATE WAITLIST STATUS' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(screen.getByText('invited')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Place hold' }));
+    fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'RETENTION_REVIEW' } });
+    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: 'PLACE RETENTION HOLD' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Release hold' })).toBeInTheDocument());
     expect(adminRequest).toHaveBeenNthCalledWith(2, `waitlist/${firstPage.items[0].id}/status`, {
-      method: 'POST', body: { status: 'invited' }
+      method: 'POST', body: { status: 'invited', reasonCode: 'BETA_INVITE', confirmation: 'UPDATE WAITLIST STATUS' }
     });
     expect(adminRequest).toHaveBeenNthCalledWith(3, `waitlist/${firstPage.items[0].id}/retention-hold`, {
-      method: 'POST', body: { active: true }
+      method: 'POST', body: { active: true, reasonCode: 'RETENTION_REVIEW', confirmation: 'PLACE RETENTION HOLD' }
     });
   });
 });

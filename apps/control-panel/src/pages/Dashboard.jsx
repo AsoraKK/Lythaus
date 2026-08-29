@@ -27,8 +27,10 @@ function Dashboard() {
     setLoading(true);
     setError('');
     try {
-      const [health, moderation, appeals, audit] = await Promise.all([
+      const [health, summary, emailHealth, moderation, appeals, audit] = await Promise.all([
         adminRequest('health'),
+        adminRequest('auth/summary'),
+        adminRequest('email-health'),
         adminRequest('moderation/cases'),
         adminRequest('appeals/pending-adjudication'),
         adminRequest('audit'),
@@ -37,6 +39,9 @@ function Dashboard() {
       setSnapshot({
         health: health?.status || 'unknown',
         databaseTime: health?.database?.database_time || null,
+        accounts: summary?.accounts || {},
+        waitlist: summary?.waitlist || {},
+        emailHealth: emailHealth || {},
         openCases: moderationItems.filter((item) => item.state === 'open').length,
         pendingAdjudications: (appeals?.items || []).length,
         auditEntries: (audit?.items || []).length,
@@ -67,6 +72,16 @@ function Dashboard() {
             <div><span className="detail-label">Open moderation cases</span><strong className="kpi-value">{snapshot.openCases}</strong></div>
             <div><span className="detail-label">Pending adjudications</span><strong className="kpi-value">{snapshot.pendingAdjudications}</strong></div>
             <div><span className="detail-label">Recent audit entries</span><strong className="kpi-value">{snapshot.auditEntries}</strong></div>
+            <div><span className="detail-label">Waiting list</span><strong className="kpi-value">{metric(snapshot.waitlist.totalWaiting)}</strong></div>
+            <div><span className="detail-label">Waiting, last 24 hours</span><strong className="kpi-value">{metric(snapshot.waitlist.last24Hours)}</strong></div>
+            <div><span className="detail-label">Verified accounts</span><strong className="kpi-value">{metric(snapshot.accounts.verified)}</strong></div>
+            <div><span className="detail-label">Pending verification</span><strong className="kpi-value">{metric(snapshot.accounts.pendingVerification)}</strong></div>
+            <div><span className="detail-label">Active accounts</span><strong className="kpi-value">{metric(snapshot.accounts.active)}</strong></div>
+            <div><span className="detail-label">Suspended / locked</span><strong className="kpi-value">{metricPair(snapshot.accounts.suspended, snapshot.accounts.locked)}</strong></div>
+            <div><span className="detail-label">Email health</span><strong className="kpi-value">{snapshot.emailHealth.status || 'unknown'}</strong></div>
+            <div><span className="detail-label">Email accepted, last 24 hours</span><strong className="kpi-value">{metric(snapshot.emailHealth.acceptedLast24Hours)}</strong></div>
+            <div><span className="detail-label">Email delivered, last 24 hours</span><strong className="kpi-value">{metric(snapshot.emailHealth.deliveredLast24Hours)}</strong></div>
+            <div><span className="detail-label">Email failures, last 24 hours</span><strong className="kpi-value">{metric(snapshot.emailHealth.failuresLast24Hours)}</strong></div>
           </div>
         ) : null}
       </LythCard>
@@ -78,6 +93,17 @@ function Dashboard() {
       </div>
     </PageLayout>
   );
+}
+
+function metric(value) {
+  if (value === null || value === undefined || value === '') return 'Unknown';
+  return Number.isFinite(Number(value)) ? Number(value) : 'Unknown';
+}
+
+function metricPair(left, right) {
+  if (left === null || left === undefined || right === null || right === undefined) return 'Unknown';
+  if (!Number.isFinite(Number(left)) || !Number.isFinite(Number(right))) return 'Unknown';
+  return `${Number(left)} / ${Number(right)}`;
 }
 
 export default Dashboard;
