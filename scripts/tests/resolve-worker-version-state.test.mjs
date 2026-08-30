@@ -53,6 +53,15 @@ test('resolves the only exact-SHA candidate', () => {
   assert.match(result.output, /"matchingVersions":1/);
 });
 
+test('resolves Cloudflare version-list metadata timestamps', () => {
+  const result = run([{
+    id: '11111111-1111-4111-8111-111111111111',
+    metadata: { created_on: '2026-08-30T14:11:48.458905Z' },
+    annotations: { 'workers/tag': tag },
+  }]);
+  assert.match(result.env, /PUBLIC_WORKER_CREATED_AT=2026-08-30T14:11:48.458Z/);
+});
+
 test('resolves the newest exact-SHA candidate after an interrupted retry', () => {
   const result = run([
     version('11111111-1111-4111-8111-111111111111', '2026-08-25T10:00:00Z'),

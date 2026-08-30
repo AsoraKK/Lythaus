@@ -32,7 +32,15 @@ if (mode === 'candidate') {
 
   const ranked = matches.map((version) => ({
     version,
-    createdAt: Date.parse(version?.created_on ?? version?.createdAt ?? version?.created_at ?? ''),
+    createdAt: Date.parse(
+      version?.metadata?.created_on
+        ?? version?.metadata?.createdAt
+        ?? version?.metadata?.created_at
+        ?? version?.created_on
+        ?? version?.createdAt
+        ?? version?.created_at
+        ?? '',
+    ),
   }));
   if (ranked.some(({ createdAt }) => !Number.isFinite(createdAt))) {
     throw new Error(`candidate Worker versions tagged ${expectedTag} lack valid creation timestamps`);
