@@ -13,5 +13,15 @@ void main() {
       // TODO
     });
 
+    // String reasonCode
+    test('to test the property `reasonCode`', () async {
+      // TODO
+    });
+
+    // String confirmation
+    test('to test the property `confirmation`', () async {
+      // TODO
+    });
+
   });
 }

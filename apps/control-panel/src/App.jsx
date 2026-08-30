@@ -7,6 +7,7 @@ import Flags from './pages/Flags.jsx';
 import Users from './pages/Users.jsx';
 import Waitlist from './pages/Waitlist.jsx';
 import AppPreview from './pages/AppPreview.jsx';
+import AdminAccessGate from './components/AdminAccessGate.jsx';
 
 const NotFound = () => (
   <section className="page">
@@ -22,22 +23,24 @@ const NotFound = () => (
 function App() {
   return (
     <BrowserRouter>
-      <div className="app-shell">
-        <Nav />
-        <main className="main">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/flags" element={<Flags />} />
-            <Route path="/appeals" element={<Appeals />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/waitlist" element={<Waitlist />} />
-            <Route path="/moderation" element={<Flags />} />
-            <Route path="/audit" element={<Audit />} />
-            <Route path="/preview" element={<AppPreview />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-      </div>
+      <AdminAccessGate>
+        <div className="app-shell">
+          <Nav />
+          <main className="main">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/flags" element={<Flags />} />
+              <Route path="/appeals" element={<Appeals />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/waitlist" element={<Waitlist />} />
+              <Route path="/moderation" element={<Flags />} />
+              <Route path="/audit" element={<Audit />} />
+              <Route path="/preview" element={<AppPreview />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+        </div>
+      </AdminAccessGate>
     </BrowserRouter>
   );
 }

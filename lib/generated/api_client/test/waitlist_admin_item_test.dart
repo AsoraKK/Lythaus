@@ -32,9 +32,29 @@ void main() {
       // TODO
     });
 
+    // DateTime invitedAt
+    test('to test the property `invitedAt`', () async {
+      // TODO
+    });
+
+    // DateTime convertedAt
+    test('to test the property `convertedAt`', () async {
+      // TODO
+    });
+
+    // DateTime unsubscribedAt
+    test('to test the property `unsubscribedAt`', () async {
+      // TODO
+    });
+
     // Whether a retention hold prevents automatic waitlist-record purging.
     // bool retentionHold
     test('to test the property `retentionHold`', () async {
+      // TODO
+    });
+
+    // WaitlistAdminItemLinkedAccount linkedAccount
+    test('to test the property `linkedAccount`', () async {
       // TODO
     });
 

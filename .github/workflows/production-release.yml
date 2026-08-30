@@ -37,10 +37,6 @@ on:
         required: true
         default: false
         type: boolean
-      real_email_evidence_json:
-        description: Sanitized mailbox evidence for real signup, verification, reset, and resend acceptance
-        required: true
-        type: string
 
 permissions:
   actions: read
@@ -385,7 +381,7 @@ jobs:
             fi
           fi
           if [[ -f .artifacts/release-provider-evidence/planetscale-production-contract.json ]] \
-            && jq -e '.transactionReadOnly == true and .verifierPassed == true and .post0013Required == true' .artifacts/release-provider-evidence/planetscale-production-contract.json >/dev/null; then
+            && jq -e '.transactionReadOnly == true and .verifierPassed == true and .post0014Required == true' .artifacts/release-provider-evidence/planetscale-production-contract.json >/dev/null; then
             ps_status='VERIFIED'
           fi
           contract='.artifacts/release-provider-evidence/planetscale-production-contract.json'
@@ -397,8 +393,8 @@ jobs:
           if [[ -f "$contract" ]]; then
             server_version="$(jq -r '.postgresVersion // empty' "$contract")"
             grants_verified="$(jq -r 'if .verifierPassed == true then "true" else "false" end' "$contract")"
-            schema_fingerprint="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0013 schema fingerprint:")) | sub("^Observed post-0013 schema fingerprint: "; "")' "$contract" | head -n 1)"
-            relation_count="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0013 relation count:")) | sub("^Observed post-0013 relation count: "; "")' "$contract" | head -n 1)"
+            schema_fingerprint="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0014 schema fingerprint:")) | sub("^Observed post-0014 schema fingerprint: "; "")' "$contract" | head -n 1)"
+            relation_count="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0014 relation count:")) | sub("^Observed post-0014 relation count: "; "")' "$contract" | head -n 1)"
             migration_set="$(jq -r '.verifierOutput[]? | select(startswith("Approved migration-set SHA-256:")) | sub("^Approved migration-set SHA-256: "; "")' "$contract" | head -n 1)"
           fi
           {
@@ -471,7 +467,6 @@ jobs:
     uses: ./.github/workflows/native-workers-deploy.yml
     with:
       release_sha: ${{ inputs.release_sha }}
-      real_email_evidence_json: ${{ inputs.real_email_evidence_json }}
     secrets: inherit
 
   production_smoke:

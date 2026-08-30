@@ -10,6 +10,8 @@ export interface DatabaseEnv {
   connection: HyperdriveBinding;
 }
 
+export { enqueueTransactionalEmailIntent, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
+
 export async function query<T extends QueryResultRow = QueryResultRow>(
   binding: HyperdriveBinding,
   text: string,

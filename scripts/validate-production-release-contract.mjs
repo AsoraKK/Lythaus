@@ -21,6 +21,11 @@ const deploymentWorkflows = [
   'native-workers-deploy.yml',
 ];
 
+const authAcceptanceCollector = path.join(root, 'scripts', 'ci', 'collect-auth-acceptance-evidence.mjs');
+if (!fs.existsSync(authAcceptanceCollector)) {
+  failures.push('auth acceptance collector is missing');
+}
+
 for (const name of deploymentWorkflows) {
   const source = readWorkflow(name);
   if (!source) continue;
@@ -81,6 +86,52 @@ if (canonical) {
   }
   if (canonical.includes('UNAVAILABLE_BY_PLAN')) {
     failures.push('production-release.yml: stale unavailable-by-plan metadata remains');
+  }
+}
+
+const nativeWorkers = readWorkflow('native-workers-deploy.yml');
+const nativeAcceptance = readWorkflow('native-adr003-acceptance.yml');
+const authScripts = [
+  path.join(root, 'scripts', 'ci', 'real-email-acceptance-evidence.mjs'),
+  path.join(root, 'scripts', 'ci', 'run-adr003-authenticated-acceptance.mjs'),
+];
+for (const file of authScripts) {
+  if (!fs.existsSync(file)) {
+    failures.push(`missing auth acceptance script: ${path.relative(root, file)}`);
+  } else if (/real_email_evidence_json|ADR003_REAL_EMAIL_EVIDENCE_JSON|providerAccepted|messageObserved/u.test(fs.readFileSync(file, 'utf8'))) {
+    failures.push(`${path.relative(root, file)}: manually asserted auth evidence remains`);
+  }
+}
+for (const [name, source] of [['native-workers-deploy.yml', nativeWorkers], ['native-adr003-acceptance.yml', nativeAcceptance]]) {
+  if (!source) continue;
+  for (const required of [
+    'collect-auth-acceptance-evidence.mjs',
+    'HUMAN_ACCEPTANCE_REQUIRED',
+    '.status == "PASSED"',
+    'ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: protected_probe',
+    'mail.lythaus.co',
+    'cloudflare_email_sending_queue_subscription_observation',
+    'provider_configuration_missing',
+    'delivered',
+    'deferred',
+    'bounced',
+    'failed',
+    'rejected',
+    'complained',
+  ]) {
+    if (!source.includes(required)) failures.push(`${name}: missing generated auth evidence control ${required}`);
+  }
+  if (source.includes('real_email_evidence_json') || source.includes('ADR003_REAL_EMAIL_EVIDENCE_JSON')) {
+    failures.push(`${name}: manual auth evidence input remains`);
+  }
+}
+if (fs.existsSync(authAcceptanceCollector)) {
+  const collector = fs.readFileSync(authAcceptanceCollector, 'utf8');
+  for (const required of ['protected_probe', 'read_only_query_artifact', 'ADR003_AUTH_ACCEPTANCE_QUERY_OUTPUT_PATH', 'Cloudflare-Workers-Version-Overrides']) {
+    if (!collector.includes(required)) failures.push(`auth acceptance collector: missing ${required}`);
+  }
+  if (collector.includes('/internal/readiness/auth-acceptance')) {
+    failures.push('auth acceptance collector: implicit public evidence endpoint remains');
   }
 }
 

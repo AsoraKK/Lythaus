@@ -11,7 +11,8 @@
   <url><loc>https://lythaus.co/guidelines</loc><priority>0.5</priority></url>
   <url><loc>https://lythaus.co/invite</loc><priority>0.5</priority></url>
   <url><loc>https://lythaus.co/signup</loc><priority>0.6</priority></url>
+  <url><loc>https://lythaus.co/sign-in</loc><priority>0.6</priority></url>
+  <url><loc>https://lythaus.co/check-email</loc><priority>0.4</priority></url>
   <url><loc>https://lythaus.co/forgot-password</loc><priority>0.5</priority></url>
-  <url><loc>https://lythaus.co/reset-password</loc><priority>0.5</priority></url>
   <url><loc>https://lythaus.co/resend-verification</loc><priority>0.5</priority></url>
 </urlset>

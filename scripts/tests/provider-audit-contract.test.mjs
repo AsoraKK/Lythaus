@@ -30,7 +30,7 @@ test('Cloudflare inventory cannot pass as empty when provider evidence is incomp
   assert.match(cloudflareWorkflow, /provider state remains UNKNOWN\/BLOCKED/);
 });
 
-test('PlanetScale contract audit is read-only and delegates exact post-0013 verification', () => {
+test('PlanetScale contract audit is read-only and delegates exact post-0014 verification', () => {
   assert.match(planetscaleContractAudit, /verify-planetscale-production-schema\.mjs/);
   assert.match(planetscaleContractAudit, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'/);
   assert.match(planetscaleContractAudit, /BEGIN READ ONLY/);

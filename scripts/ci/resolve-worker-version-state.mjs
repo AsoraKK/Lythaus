@@ -34,8 +34,8 @@ if (mode === 'candidate') {
     version,
     createdAt: Date.parse(version?.created_on ?? version?.createdAt ?? version?.created_at ?? ''),
   }));
-  if (ranked.length > 1 && ranked.some(({ createdAt }) => !Number.isFinite(createdAt))) {
-    throw new Error(`duplicate candidate Worker versions tagged ${expectedTag} lack comparable creation timestamps`);
+  if (ranked.some(({ createdAt }) => !Number.isFinite(createdAt))) {
+    throw new Error(`candidate Worker versions tagged ${expectedTag} lack valid creation timestamps`);
   }
   ranked.sort((left, right) => right.createdAt - left.createdAt);
   if (ranked.length > 1 && ranked[0].createdAt === ranked[1].createdAt) {
@@ -43,7 +43,9 @@ if (mode === 'candidate') {
   }
 
   const candidate = ranked[0].version;
+  const candidateCreatedAt = ranked[0].createdAt;
   append(`${variablePrefix}_WORKER_VERSION_ID`, candidate.id);
+  append(`${variablePrefix}_WORKER_CREATED_AT`, new Date(candidateCreatedAt).toISOString());
   console.log(JSON.stringify({
     mode,
     variablePrefix,

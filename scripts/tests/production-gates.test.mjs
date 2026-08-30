@@ -51,7 +51,7 @@ test('deployment identity derives canonical database values and Access JWKS with
     },
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /Validated canonical post-0013 deployment identity/);
+  assert.match(result.stdout, /Validated canonical post-0014 deployment identity/);
 
   const materializer = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
   const jobsConfig = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/wrangler.jsonc'), 'utf8');

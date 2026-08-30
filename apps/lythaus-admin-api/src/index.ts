@@ -6,8 +6,24 @@ import { constantTimeEqual, decryptField, hmacLookup, uuidv7 } from '@lythaus/se
 import { adminCorsPreflight, assertAdminMutationRequest, withAdminCors } from './admin-cors-policy.ts';
 import { requireActiveAdminMembership, verifiedAccessSubject, type AdminActor } from './admin-access-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
+import { adminWaitlistFilters, parseAdminUserId, parseReasonCode, rejectUnknownFields, requireConfirmation } from './admin-runtime-policy.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
+import {
+  createWaitlistEntry,
+  deleteWaitlistEntry,
+  getAdminAuthSummary,
+  getAdminEmailHealth,
+  getAdminUser,
+  inviteAdminUser,
+  listAdminUsers,
+  patchAdminUser,
+  resendAdminVerification,
+  revokeAdminUserSessions,
+  deleteAdminUser,
+  updateAdminWaitlistEntry,
+  type KeeperEnv,
+} from './keeper-runtime.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -20,6 +36,8 @@ const ADMIN_ERROR_CODES = new Set([
   'access_assertion_invalid', 'access_required', 'access_subject_missing',
   'access_verification_not_configured', 'admin_public_label_declaration_mismatch',
   'admin_mutation_content_type_invalid', 'admin_mutation_origin_invalid', 'admin_role_required', 'admin_subject_key_not_configured',
+  'auth_data_unavailable', 'auth_email_dispatch_unavailable', 'confirmation_required',
+  'email_already_verified', 'email_change_requires_public_flow', 'idempotency_in_progress', 'idempotency_key_reused', 'idempotency_key_required', 'invalid_email',
   'ai_assisted_character_limit_exceeded', 'ai_generated_public_content_blocked',
   'appeal_adjudication_decision_invalid', 'appeal_adjudication_locked',
   'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
@@ -28,13 +46,14 @@ const ADMIN_ERROR_CODES = new Set([
   'appeal_policy_version_unsupported', 'appeal_risk_class_invalid',
   'appeal_subject_not_found', 'appeal_vote_decision_invalid', 'appeal_vote_level_invalid',
   'appeal_vote_qualification_invalid', 'appeal_vote_weight_invalid',
-  'invalid_account_status', 'invalid_editorial_publication', 'invalid_json',
+  'invalid_account_status', 'invalid_date_filter', 'invalid_display_name', 'invalid_editorial_publication', 'invalid_handle', 'invalid_json',
   'invalid_cursor', 'invalid_page_limit', 'invalid_waitlist_id', 'invalid_waitlist_retention_hold', 'invalid_waitlist_status',
-  'invalid_legal_hold', 'invalid_moderation_outcome', 'invalid_public_label',
-  'invalid_subscription_tier', 'invalid_user_search', 'legal_hold_not_found',
+  'invalid_legal_hold', 'invalid_moderation_outcome', 'invalid_public_label', 'invalid_source',
+  'invalid_subscription_tier', 'invalid_user_id', 'invalid_user_search', 'invalid_user_source_filter', 'invalid_user_status_filter',
+  'invalid_waitlist_search', 'invalid_waitlist_source', 'legal_hold_not_found',
   'moderation_case_already_resolved', 'moderation_case_not_found', 'moderation_declaration_missing',
   'moderation_case_superseded', 'rate_limit_exceeded', 'reason_code_required',
-  'request_too_large', 'reviewer_qualification_state_invalid', 'user_not_found', 'waitlist_not_found', 'waitlist_status_transition_invalid', 'waitlist_unavailable',
+  'request_too_large', 'reviewer_qualification_state_invalid', 'unknown_field', 'user_email_exists', 'user_not_found', 'waitlist_duplicate', 'waitlist_not_found', 'waitlist_status_transition_invalid', 'waitlist_unavailable',
 ]);
 
 function adminError(error: unknown): { exposedCode: string; internalCode: string; status: number } {
@@ -42,10 +61,11 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
   const exposedCode = ADMIN_ERROR_CODES.has(internalCode) ? internalCode : 'admin_request_failed';
   const status = exposedCode === 'admin_request_failed' || exposedCode === 'appeal_adjudication_not_recorded' ? 500
     : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable'].includes(exposedCode) ? 503
-      : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
+    : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
+      : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
         : ['admin_role_required', 'admin_mutation_origin_invalid'].includes(exposedCode) ? 403
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
-            : ['appeal_adjudication_locked', 'appeal_already_resolved', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
+              : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
               : exposedCode === 'request_too_large' ? 413
                 : exposedCode === 'admin_mutation_content_type_invalid' ? 415
                 : exposedCode === 'rate_limit_exceeded' ? 429 : 400;
@@ -106,54 +126,90 @@ interface WaitlistRow {
   status: string;
   source: string;
   created_at: string | Date;
+  invited_at: string | Date | null;
+  converted_at: string | Date | null;
+  unsubscribed_at: string | Date | null;
   retention_hold: boolean;
+  linked_user_id?: string | null;
+  linked_user_status?: string | null;
 }
 
 async function listWaitlist(request: Request, env: Env, actor: AdminActor, correlation: string): Promise<Response> {
   assertWaitlistAdminRole(actor.role);
   const encryptionKey = requireWaitlistEncryptionKey(env.PII_ENCRYPTION_KEY_V1);
+  const filters = adminWaitlistFilters(new URL(request.url));
   const page = waitlistPageRequest(new URL(request.url));
+  const values: unknown[] = [];
+  const addValue = (value: unknown): string => { values.push(value); return `$${values.length}`; };
+  const conditions = ['1 = 1'];
+  if (filters.query) {
+    if (!env.PII_HMAC_KEY_V1) throw new Error('waitlist_unavailable');
+    conditions.push(`w.email_lookup_hmac = decode(${addValue(hmacLookup(filters.query.toLowerCase(), env.PII_HMAC_KEY_V1))}, 'base64')`);
+  }
+  if (filters.status) conditions.push(`w.status = ${addValue(filters.status)}`);
+  if (filters.source) conditions.push(`w.source = ${addValue(filters.source)}`);
+  if (filters.createdAfter) conditions.push(`w.created_at >= ${addValue(filters.createdAfter)}::timestamptz`);
+  if (filters.createdBefore) conditions.push(`w.created_at < ${addValue(filters.createdBefore)}::timestamptz`);
+  if (page.cursor) conditions.push(`(w.created_at, w.id) < (${addValue(page.cursor.timestamp)}::timestamptz, ${addValue(page.cursor.id)}::uuid)`);
+  const limitValue = addValue(page.limit + 1);
   const [records, summaryResult] = await Promise.all([
     query<WaitlistRow>(env.DB_ADMIN_FRESH,
-      `SELECT id, convert_from(email_ciphertext, 'utf8') AS email_ciphertext,
-              encryption_key_version, status, source, created_at, retention_hold
-         FROM marketing.waitlist_signups
-        WHERE ($1::timestamptz IS NULL OR (created_at, id) < ($1::timestamptz, $2::uuid))
-        ORDER BY created_at DESC, id DESC
-        LIMIT $3`,
-      [page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]),
-    query<{ total_waiting: string; last_7_days: string }>(env.DB_ADMIN_FRESH,
+      `SELECT w.id, convert_from(w.email_ciphertext, 'utf8') AS email_ciphertext,
+              w.encryption_key_version, w.status, w.source, w.created_at, w.invited_at, w.converted_at, w.unsubscribed_at, w.retention_hold,
+              linked_user.id AS linked_user_id, linked_user.status AS linked_user_status
+         FROM marketing.waitlist_signups w
+         LEFT JOIN LATERAL (
+           SELECT u.id, u.status FROM identity.users u
+           LEFT JOIN identity.contact_emails c ON c.user_id = u.id
+           LEFT JOIN identity.email_credentials e ON e.user_id = u.id
+           WHERE COALESCE(c.email_lookup_hmac, e.email_lookup_hmac) = w.email_lookup_hmac
+           LIMIT 1
+         ) linked_user ON true
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY w.created_at DESC, w.id DESC
+        LIMIT ${limitValue}`,
+      values),
+    query<{ total_waiting: string; last_7_days: string; last_24_hours: string }>(env.DB_ADMIN_FRESH,
       `SELECT count(id) FILTER (WHERE status = 'waiting')::text AS total_waiting,
-              count(id) FILTER (WHERE created_at >= now() - interval '7 days')::text AS last_7_days
+              count(id) FILTER (WHERE created_at >= now() - interval '7 days')::text AS last_7_days,
+              count(id) FILTER (WHERE created_at >= now() - interval '24 hours')::text AS last_24_hours
          FROM marketing.waitlist_signups`),
   ]);
   const hasMore = records.rows.length > page.limit;
   const selectedRows = records.rows.slice(0, page.limit);
-  const items = await Promise.all(selectedRows.map(async (row) => ({
-    id: row.id,
-    email: await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
-    status: row.status,
-    source: row.source,
-    createdAt: new Date(row.created_at).toISOString(),
-    retentionHold: row.retention_hold,
-  })));
+  const items = await Promise.all(selectedRows.map(async (row: WaitlistRow) => {
+    const item: Record<string, unknown> = {
+      id: row.id,
+      email: await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
+      status: row.status,
+      source: row.source,
+      createdAt: new Date(row.created_at).toISOString(),
+      invitedAt: row.invited_at ? new Date(row.invited_at).toISOString() : null,
+      convertedAt: row.converted_at ? new Date(row.converted_at).toISOString() : null,
+      unsubscribedAt: row.unsubscribed_at ? new Date(row.unsubscribed_at).toISOString() : null,
+      retentionHold: row.retention_hold,
+    };
+    if (row.linked_user_id) item.linkedAccount = { id: row.linked_user_id, status: row.linked_user_status };
+    return item;
+  }));
   const tail = selectedRows.at(-1);
   await query(env.DB_ADMIN_FRESH,
     `INSERT INTO system.audit_events
        (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
      VALUES ($1, $2, 'marketing.waitlist_viewed', 'marketing.waitlist', NULL, 'WAITLIST_LIST_VIEW', $3, $4::jsonb)`,
-    [uuidv7(), actor.userId, correlation, JSON.stringify(waitlistAuditMetadata({
+    [uuidv7(), actor.userId, correlation, JSON.stringify({ ...waitlistAuditMetadata({
       returnedRowCount: items.length,
       requestedLimit: page.limit,
       hasCursor: page.cursor !== null,
       hasMore,
-    }))]);
+    }), hasSearch: Boolean(filters.query), statusFilter: filters.status, sourceFilter: filters.source })]);
   return json({
     items,
     nextCursor: hasMore && tail ? encodeCursor({ timestamp: new Date(tail.created_at).toISOString(), id: tail.id }) : null,
     summary: {
       totalWaiting: Number(summaryResult.rows[0]?.total_waiting ?? 0),
       last7Days: Number(summaryResult.rows[0]?.last_7_days ?? 0),
+      last24Hours: Number(summaryResult.rows[0]?.last_24_hours ?? 0),
     },
   }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
@@ -161,7 +217,10 @@ async function listWaitlist(request: Request, env: Env, actor: AdminActor, corre
 async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActor, rawId: string, correlation: string): Promise<Response> {
   assertWaitlistAdminRole(actor.role);
   const id = parseWaitlistId(rawId);
-  const status = parseWaitlistStatusUpdate(await readBoundedJson(request));
+  const input = rejectUnknownFields(await readBoundedJson(request), ['status', 'reasonCode', 'confirmation']);
+  const status = parseWaitlistStatusUpdate(input);
+  const reasonCode = parseReasonCode(input.reasonCode);
+  requireConfirmation(input.confirmation, 'UPDATE WAITLIST STATUS');
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const current = await client.query<{ status: string }>(
       `SELECT status FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
@@ -184,8 +243,8 @@ async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActo
       `INSERT INTO system.audit_events
          (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'marketing.waitlist_status_changed', 'marketing.waitlist', $3,
-               'WAITLIST_STATUS_CHANGE', $4, $5::jsonb)`,
-      [uuidv7(), actor.userId, id, correlation, JSON.stringify({ status, changed: previousStatus !== status })]);
+               $4, $5, $6::jsonb)`,
+      [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ status, changed: previousStatus !== status })]);
     return { id, status };
   });
   return json(result, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
@@ -194,7 +253,10 @@ async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActo
 async function updateWaitlistRetentionHold(request: Request, env: Env, actor: AdminActor, rawId: string, correlation: string): Promise<Response> {
   assertWaitlistAdminRole(actor.role);
   const id = parseWaitlistId(rawId);
-  const active = parseWaitlistRetentionHoldUpdate(await readBoundedJson(request));
+  const input = rejectUnknownFields(await readBoundedJson(request), ['active', 'reasonCode', 'confirmation']);
+  const active = parseWaitlistRetentionHoldUpdate(input);
+  const reasonCode = parseReasonCode(input.reasonCode);
+  requireConfirmation(input.confirmation, active ? 'PLACE RETENTION HOLD' : 'RELEASE RETENTION HOLD');
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const updated = await client.query<{ id: string; retention_hold: boolean }>(
       `UPDATE marketing.waitlist_signups
@@ -209,8 +271,8 @@ async function updateWaitlistRetentionHold(request: Request, env: Env, actor: Ad
       `INSERT INTO system.audit_events
          (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'marketing.waitlist_retention_hold_changed', 'marketing.waitlist', $3,
-               'WAITLIST_RETENTION_HOLD_CHANGE', $4, $5::jsonb)`,
-      [uuidv7(), actor.userId, id, correlation, JSON.stringify({ active })]);
+               $4, $5, $6::jsonb)`,
+      [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ active })]);
     return { id: updated.rows[0].id, retentionHold: updated.rows[0].retention_hold };
   });
   return json(result, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
@@ -1003,47 +1065,50 @@ async function updateReviewerQualification(
 
 async function updateAccountStatus(request: Request, env: Env, actor: { userId: string; role: string }, targetUserId: string, correlation: string): Promise<Response> {
   if (!['administrator', 'owner'].includes(actor.role)) throw new Error('admin_role_required');
-  const input = await readBoundedJson<{ status?: 'active' | 'suspended' | 'locked'; reasonCode?: string }>(request);
-  if (!input.status || !['active', 'suspended', 'locked'].includes(input.status)) throw new Error('invalid_account_status');
-  if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
+  const targetId = parseAdminUserId(targetUserId);
+  const input = rejectUnknownFields(await readBoundedJson(request), ['status', 'reasonCode', 'confirmation']);
+  if (typeof input.status !== 'string' || !['active', 'suspended', 'locked'].includes(input.status)) throw new Error('invalid_account_status');
+  const requestedStatus = input.status as 'active' | 'suspended' | 'locked';
+  const reasonCode = parseReasonCode(input.reasonCode);
+  requireConfirmation(input.confirmation, requestedStatus === 'active' ? 'REACTIVATE ACCOUNT' : requestedStatus === 'suspended' ? 'SUSPEND ACCOUNT' : 'LOCK ACCOUNT');
   const sourceEventId = uuidv7();
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const updated = await client.query<{ id: string }>(
       `UPDATE identity.users SET status = $1, token_version = token_version + 1, updated_at = now() WHERE id = $2 AND status <> 'deleted' RETURNING id`,
-      [input.status, targetUserId]
+      [requestedStatus, targetId]
     );
     if (updated.rowCount !== 1) throw new Error('user_not_found');
-    await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetUserId]);
-    await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetUserId]);
-    await client.query(`INSERT INTO identity.account_events (id, user_id, actor_id, event_type, metadata) VALUES ($1, $2, $3, 'account_status_changed', $4::jsonb)`, [uuidv7(), targetUserId, actor.userId, JSON.stringify({ status: input.status, reasonCode: input.reasonCode })]);
+    await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetId]);
+    await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [targetId]);
+    await client.query(`INSERT INTO identity.account_events (id, user_id, actor_id, event_type, metadata) VALUES ($1, $2, $3, 'account_status_changed', $4::jsonb)`, [uuidv7(), targetId, actor.userId, JSON.stringify({ status: requestedStatus, reasonCode })]);
     await recordUserActivity(client, {
-      id: uuidv7(), userId: targetUserId, actorUserId: actor.userId,
-      eventType: input.status === 'active' ? 'moderation.decision_reversed' : input.status === 'suspended' ? 'moderation.suspension_applied' : 'moderation.feature_restricted',
+      id: uuidv7(), userId: targetId, actorUserId: actor.userId,
+      eventType: requestedStatus === 'active' ? 'moderation.decision_reversed' : requestedStatus === 'suspended' ? 'moderation.suspension_applied' : 'moderation.feature_restricted',
       category: 'moderation', source: 'admin_api', sourceEventId,
       correlationId: correlation,
-      title: input.status === 'active' ? 'Account restriction cleared' : input.status === 'suspended' ? 'Account suspended' : 'Account locked',
-      explanation: input.status === 'active'
+      title: requestedStatus === 'active' ? 'Account restriction cleared' : requestedStatus === 'suspended' ? 'Account suspended' : 'Account locked',
+      explanation: requestedStatus === 'active'
         ? 'The previous account restriction was cleared by an authorised administrator.'
         : 'An authorised administrator changed your account access state under the recorded policy reason.',
-      result: input.status === 'active' ? 'reversed' : 'succeeded', reasonCode: input.reasonCode,
-      policyVersion: APPEAL_POLICY.version, objectType: 'user', objectId: targetUserId,
-      reputationEffect: input.status === 'active' ? 'none' : 'withheld', appealable: input.status !== 'active',
-      retentionClass: 'moderation', metadata: { restrictionType: input.status, durationBand: 'until_reviewed' },
+      result: requestedStatus === 'active' ? 'reversed' : 'succeeded', reasonCode,
+      policyVersion: APPEAL_POLICY.version, objectType: 'user', objectId: targetId,
+      reputationEffect: requestedStatus === 'active' ? 'none' : 'withheld', appealable: requestedStatus !== 'active',
+      retentionClass: 'moderation', metadata: { restrictionType: requestedStatus, durationBand: 'until_reviewed' },
       createdAt: new Date().toISOString(),
     });
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'identity.account.status_changed', 'user', $2, $3, $4::jsonb)`,
-      [sourceEventId, targetUserId, actor.userId, JSON.stringify({ userId: targetUserId, status: input.status })],
+      [sourceEventId, targetId, actor.userId, JSON.stringify({ userId: targetId, status: requestedStatus })],
     );
     await client.query(
       `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'account.status_changed', 'user', $3, $4, $5, $6::jsonb)`,
-      [uuidv7(), actor.userId, targetUserId, input.reasonCode, correlation, JSON.stringify({ status: input.status })]
+      [uuidv7(), actor.userId, targetId, reasonCode, correlation, JSON.stringify({ status: input.status })]
     );
     return updated.rows[0].id;
   });
-  return json({ userId: result, status: input.status }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+  return json({ userId: result, status: requestedStatus }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
 
 export default {
@@ -1077,6 +1142,9 @@ export default {
       }
       const actor = await requireAdmin(request, env);
       await enforceAdminRateLimit(request, env, actor.userId);
+      const keeperEnv = env as KeeperEnv;
+      if (request.method === 'GET' && url.pathname === '/api/admin/auth/summary') return cors(await getAdminAuthSummary(request, keeperEnv, actor, id));
+      if (request.method === 'GET' && url.pathname === '/api/admin/email-health') return cors(await getAdminEmailHealth(request, keeperEnv, actor, id));
       if (request.method === 'GET' && url.pathname === '/api/admin/health') {
         const result = await query(env.DB_ADMIN_FRESH, `SELECT current_timestamp AS database_time`);
         return cors(json({ status: 'ok', database: result.rows[0] }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
@@ -1095,6 +1163,19 @@ export default {
         return cors(json({ items: result.rows }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/waitlist') return cors(await listWaitlist(request, env, actor, id));
+      if (request.method === 'POST' && url.pathname === '/api/admin/waitlist') {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await createWaitlistEntry(request, keeperEnv, actor, id));
+      }
+      const waitlistEntry = url.pathname.match(/^\/api\/admin\/waitlist\/([^/]+)$/);
+      if (request.method === 'PATCH' && waitlistEntry) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await updateAdminWaitlistEntry(request, keeperEnv, actor, waitlistEntry[1], id));
+      }
+      if (request.method === 'DELETE' && waitlistEntry) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await deleteWaitlistEntry(request, keeperEnv, actor, waitlistEntry[1], id));
+      }
       const waitlistStatus = url.pathname.match(/^\/api\/admin\/waitlist\/([^/]+)\/status$/);
       if (request.method === 'POST' && waitlistStatus) {
         assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
@@ -1106,6 +1187,32 @@ export default {
         return cors(await updateWaitlistRetentionHold(request, env, actor, waitlistRetentionHold[1], id));
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/users/search') return cors(await searchUsers(request, env));
+      if (request.method === 'GET' && url.pathname === '/api/admin/users') return cors(await listAdminUsers(request, keeperEnv, actor, id));
+      if (request.method === 'POST' && url.pathname === '/api/admin/users') {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await inviteAdminUser(request, keeperEnv, actor, id));
+      }
+      const adminUser = url.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+      if (adminUser && request.method === 'GET') return cors(await getAdminUser(request, keeperEnv, actor, adminUser[1], id));
+      if (adminUser && request.method === 'PATCH') {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await patchAdminUser(request, keeperEnv, actor, adminUser[1], id));
+      }
+      const resendVerification = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/resend-verification$/);
+      if (request.method === 'POST' && resendVerification) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await resendAdminVerification(request, keeperEnv, actor, resendVerification[1], id));
+      }
+      const revokeSessions = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/revoke-sessions$/);
+      if (request.method === 'POST' && revokeSessions) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await revokeAdminUserSessions(request, keeperEnv, actor, revokeSessions[1], id));
+      }
+      const deleteUser = url.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+      if (request.method === 'DELETE' && deleteUser) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await deleteAdminUser(request, keeperEnv, actor, deleteUser[1], id));
+      }
       if (url.pathname === '/api/admin/privacy/legal-holds' && ['GET', 'POST'].includes(request.method)) return cors(await legalHolds(request, env, actor, id));
       const legalHoldClear = url.pathname.match(/^\/api\/admin\/privacy\/legal-holds\/([^/]+)\/clear$/);
       if (request.method === 'POST' && legalHoldClear) return cors(await clearLegalHold(env, actor, legalHoldClear[1], id));

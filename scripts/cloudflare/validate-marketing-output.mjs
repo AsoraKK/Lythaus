@@ -38,7 +38,8 @@ for (const file of htmlFiles) {
   const content = readFileSync(file, 'utf8');
   const route = routeFor(file);
   const expected = normalizedUrl(`${site}${route}`);
-  expectedCanonicals.add(expected);
+  const robotsMeta = content.match(/<meta name="robots" content="([^"]+)"/i)?.[1] ?? '';
+  if (!/\bnoindex\b/i.test(robotsMeta)) expectedCanonicals.add(expected);
 
   const doctypes = content.match(/<!doctype html>/gi) ?? [];
   const canonical = content.match(/<link rel="canonical" href="([^"]+)"/i)?.[1];

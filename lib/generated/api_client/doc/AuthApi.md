@@ -10,7 +10,6 @@ All URIs are relative to *https://api.lythaus.co/api*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**authEmail**](AuthApi.md#authemail) | **POST** /auth/email | Register, sign in, or resend email verification
-[**authEmailVerifyGet**](AuthApi.md#authemailverifyget) | **GET** /auth/email/verify | Verify an email address with a query token
 [**authEmailVerifyPost**](AuthApi.md#authemailverifypost) | **POST** /auth/email/verify | Verify an email address with a JSON token
 [**authJwksGet**](AuthApi.md#authjwksget) | **GET** /.well-known/jwks.json | Get the public JWT verification key set
 [**authLogout**](AuthApi.md#authlogout) | **POST** /auth/logout | Revoke all active sessions for the authenticated user
@@ -59,49 +58,6 @@ No authorization required
 ### HTTP request headers
 
  - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **authEmailVerifyGet**
-> EmailVerificationResponse authEmailVerifyGet(token)
-
-Verify an email address with a query token
-
-Consumes a single-use email-verification token and returns only a private verification state.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-
-final api = LythausApiClient().getAuthApi();
-final String token = token_example; // String |
-
-try {
-    final response = api.authEmailVerifyGet(token);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AuthApi->authEmailVerifyGet: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **token** | **String**|  |
-
-### Return type
-
-[**EmailVerificationResponse**](EmailVerificationResponse.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

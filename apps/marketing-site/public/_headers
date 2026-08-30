@@ -5,3 +5,26 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=()
   Strict-Transport-Security: max-age=300
   Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://api.lythaus.co https://challenges.cloudflare.com; upgrade-insecure-requests
+
+/verify-email
+  Cache-Control: no-store, max-age=0, must-revalidate
+  Referrer-Policy: no-referrer
+
+/reset-password
+  Cache-Control: no-store, max-age=0, must-revalidate
+  Referrer-Policy: no-referrer
+
+/signup
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/sign-in
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/forgot-password
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/resend-verification
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/check-email
+  Cache-Control: no-store, max-age=0, must-revalidate

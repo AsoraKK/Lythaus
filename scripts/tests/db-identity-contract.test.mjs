@@ -7,7 +7,7 @@ import {
   databaseExpectationsFromEnv,
   isDatabaseIdentityReady,
 } from '../../packages/db/src/identity.ts';
-import { approvedPost0013Expectation, canonicalPost0013SchemaContract } from '../ci/product-integrity-schema-contract.mjs';
+import { approvedPost0014Expectation, canonicalPost0014SchemaContract } from '../ci/product-integrity-schema-contract.mjs';
 
 test('database identity classification rejects privileged or non-login roles', () => {
   assert.equal(classifyRole({ rolsuper: false, rolcanlogin: true, rolbypassrls: false }), 'login_non_superuser');
@@ -41,18 +41,18 @@ test('database identity fingerprint is deterministic and includes migrations', a
   ));
 });
 
-test('canonical post-0013 identity matches the Worker runtime fingerprint algorithm', async () => {
-  const canonical = canonicalPost0013SchemaContract();
-  assert.equal(canonical.relationCount, 94);
-  assert.equal(canonical.fingerprint, '672dc746e50b868d4997e3cb9fca47b5426747bc992db2bdc3a33f8d2671415c');
+test('canonical post-0014 identity matches the Worker runtime fingerprint algorithm', async () => {
+  const canonical = canonicalPost0014SchemaContract();
+  assert.equal(canonical.relationCount, 95);
+  assert.equal(canonical.fingerprint, '84918a165b50257d5d5399eb87ed0c999b475dfe15134e81dcdb8d3170950986');
   assert.equal(await buildSchemaFingerprint(canonical.relations, canonical.migrations), canonical.fingerprint);
-  assert.deepEqual(approvedPost0013Expectation('', ''), {
+  assert.deepEqual(approvedPost0014Expectation('', ''), {
     fingerprint: canonical.fingerprint,
     relationCount: canonical.relationCount,
     canonical,
   });
   assert.throws(
-    () => approvedPost0013Expectation('86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625', '94'),
+    () => approvedPost0014Expectation('86ff272e09dbd195f18d262c354449ececdb907663615786c90a0d630b8f8625', '95'),
     /does not match the canonical migration contract/,
   );
 });

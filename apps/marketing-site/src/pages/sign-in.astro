@@ -1,0 +1,259 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
+---
+
+<BaseLayout
+  title="Sign in"
+  description="Sign in to your Lythaus account."
+  canonicalPath="/sign-in"
+>
+  <section class="auth-page" aria-labelledby="sign-in-title">
+    <div class="auth-intro">
+      <span class="pill">Lythaus account</span>
+      <h1 id="sign-in-title">Sign in to Lythaus.</h1>
+      <p>Use your verified email address and password to continue. A session is created by the Lythaus app after your credentials are accepted.</p>
+    </div>
+
+    <form
+      class="auth-form"
+      data-sign-in-form
+      data-api-base-url={publicApiBaseUrl}
+      data-turnstile-site-key={turnstileSiteKey}
+      novalidate
+    >
+      <label for="sign-in-email">Email address</label>
+      <input id="sign-in-email" name="email" type="email" autocomplete="email" maxlength="320" value={emailPrefill} required />
+
+      <label for="sign-in-password">Password</label>
+      <input id="sign-in-password" name="password" type="password" autocomplete="current-password" maxlength="128" aria-describedby="sign-in-password-note" required />
+      <p class="auth-field-note" id="sign-in-password-note">Enter your existing password. Password policy applies when you create or change a password.</p>
+
+      <a class="text-link auth-forgot-link" href="/forgot-password">Forgot password?</a>
+
+      <div class="auth-turnstile-shell" id="sign-in-turnstile" role="group" aria-label="Bot verification" hidden></div>
+      <button class="button primary" type="submit" data-sign-in-submit>Sign in</button>
+      <p class="auth-status" data-sign-in-status aria-live="polite" aria-atomic="true" role="status" tabindex="-1"></p>
+
+      <div class="auth-resend-region" data-sign-in-resend-region hidden>
+        <p class="auth-field-note">Your password was accepted, but your email still needs to be verified.</p>
+        <button class="auth-resend" type="button" data-sign-in-resend>Resend verification email</button>
+        <p class="auth-field-note" data-sign-in-cooldown aria-live="polite"></p>
+      </div>
+
+      <p class="auth-footnote">Need an account? <a href="/signup">Create one</a>.</p>
+      <p class="auth-footnote"><a href="https://app.lythaus.co/login">Open the Lythaus app sign in</a> to establish your session.</p>
+    </form>
+  </section>
+
+  {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
+  <script is:inline>
+    const form = document.querySelector('[data-sign-in-form]');
+    if (form instanceof HTMLFormElement) {
+      const email = form.querySelector('#sign-in-email');
+      const password = form.querySelector('#sign-in-password');
+      const button = form.querySelector('[data-sign-in-submit]');
+      const status = form.querySelector('[data-sign-in-status]');
+      const resendRegion = form.querySelector('[data-sign-in-resend-region]');
+      const resendButton = form.querySelector('[data-sign-in-resend]');
+      const cooldown = form.querySelector('[data-sign-in-cooldown]');
+      const turnstileContainer = form.querySelector('#sign-in-turnstile');
+      const apiBaseUrl = form.dataset.apiBaseUrl?.replace(/\/$/u, '') ?? '';
+      const siteKey = form.dataset.turnstileSiteKey ?? '';
+      let widgetId;
+      let tokenResolve;
+      let tokenReject;
+      let isSubmitting = false;
+      let cooldownUntil = 0;
+      let cooldownTimer;
+
+      const setStatus = (message, state = 'idle', moveFocus = true) => {
+        if (!(status instanceof HTMLElement)) return;
+        status.textContent = message;
+        status.dataset.state = state;
+        if (moveFocus && message) status.focus();
+      };
+      const setResendVisible = (visible) => {
+        if (resendRegion instanceof HTMLElement) resendRegion.hidden = !visible;
+        if (turnstileContainer instanceof HTMLElement) turnstileContainer.hidden = !visible;
+      };
+      const setCooldownMessage = () => {
+        if (!(cooldown instanceof HTMLElement)) return;
+        const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+        cooldown.textContent = seconds > 0 ? `You can request another message in ${seconds} seconds.` : '';
+        if (resendButton instanceof HTMLButtonElement) resendButton.disabled = seconds > 0;
+        if (seconds <= 0 && cooldownTimer !== undefined) {
+          window.clearInterval(cooldownTimer);
+          cooldownTimer = undefined;
+        }
+      };
+      const startCooldown = () => {
+        cooldownUntil = Date.now() + 30_000;
+        setCooldownMessage();
+        cooldownTimer = window.setInterval(setCooldownMessage, 1000);
+      };
+      const resetVerification = () => {
+        tokenReject?.(new Error('turnstile_failed'));
+        tokenResolve = undefined;
+        tokenReject = undefined;
+        if (widgetId !== undefined && window.turnstile) window.turnstile.reset(widgetId);
+      };
+      const renderTurnstile = () => {
+        if (!window.turnstile || !turnstileContainer || !siteKey || widgetId !== undefined) return false;
+        widgetId = window.turnstile.render(turnstileContainer, {
+          sitekey: siteKey,
+          action: 'verification_resend',
+          appearance: 'interaction-only',
+          execution: 'execute',
+          callback: (value) => {
+            tokenResolve?.(value);
+            tokenResolve = undefined;
+            tokenReject = undefined;
+          },
+          'expired-callback': resetVerification,
+          'error-callback': resetVerification,
+        });
+        return true;
+      };
+      const requestToken = async () => {
+        const rendered = widgetId !== undefined || renderTurnstile();
+        if (!siteKey || !rendered || widgetId === undefined || !window.turnstile) throw new Error('turnstile_unavailable');
+        return new Promise((resolve, reject) => {
+          tokenResolve = resolve;
+          tokenReject = reject;
+          window.turnstile.execute(widgetId);
+        });
+      };
+      const messageFor = (code) => {
+        if (code === 'turnstile_failed' || code === 'turnstile_required' || code === 'turnstile_unavailable') return 'We could not verify this request. Please try again.';
+        if (code === 'rate_limit_exceeded') return 'Too many sign-in attempts. Please wait and try again.';
+        return 'We could not sign you in. Check your details and try again.';
+      };
+      const errorCodeFrom = async (response) => {
+        const body = await response.json().catch(() => ({}));
+        return typeof body.error === 'string' ? body.error : 'request_failed';
+      };
+
+      const resendVerification = async () => {
+        if (isSubmitting || !(email instanceof HTMLInputElement) || !(resendButton instanceof HTMLButtonElement)) return;
+        if (!email.validity.valid) {
+          email.setAttribute('aria-invalid', 'true');
+          email.reportValidity();
+          setStatus('Enter a valid email address.', 'error');
+          return;
+        }
+        if (Date.now() < cooldownUntil) {
+          setCooldownMessage();
+          return;
+        }
+        isSubmitting = true;
+        resendButton.disabled = true;
+        resendButton.setAttribute('aria-busy', 'true');
+        setStatus('Checking the request...', 'submitting');
+        try {
+          const turnstileToken = await requestToken();
+          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ mode: 'resend_verification', email: email.value, turnstileToken }),
+            cache: 'no-store',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
+          });
+          if (!response.ok) throw new Error(await errorCodeFrom(response));
+          startCooldown();
+          setStatus('If this account is eligible, your verification request was accepted. Check your inbox; delivery is not confirmed yet.', 'success');
+        } catch (error) {
+          setStatus(messageFor(error instanceof Error ? error.message : 'verification_resend_failed'), 'error');
+        } finally {
+          resetVerification();
+          resendButton.setAttribute('aria-busy', 'false');
+          if (Date.now() >= cooldownUntil) resendButton.disabled = false;
+          isSubmitting = false;
+        }
+      };
+
+      resendButton?.addEventListener('click', resendVerification);
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (isSubmitting || !(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
+        email.removeAttribute('aria-invalid');
+        if (!email.validity.valid) {
+          email.setAttribute('aria-invalid', 'true');
+          email.reportValidity();
+          setStatus('Enter a valid email address.', 'error');
+          return;
+        }
+        if (!password.value) {
+          password.setAttribute('aria-invalid', 'true');
+          password.reportValidity();
+          setStatus('Enter your password.', 'error');
+          return;
+        }
+        password.removeAttribute('aria-invalid');
+        isSubmitting = true;
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        setResendVisible(false);
+        setStatus('Signing in...', 'submitting');
+        try {
+          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ mode: 'login', email: email.value, password: password.value }),
+            cache: 'no-store',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'request_failed');
+          const hasSession = Boolean(body.accessToken || body.access_token) && Boolean(body.refreshToken || body.refresh_token);
+          if (!hasSession) throw new Error('request_failed');
+          setStatus('Your credentials were accepted. Open the Lythaus app to continue and establish your session there.', 'success');
+        } catch (error) {
+          const code = error instanceof Error ? error.message : 'request_failed';
+          if (code === 'email_verification_required') {
+            setResendVisible(true);
+            setStatus('Your email still needs to be verified.', 'error');
+          } else {
+            setStatus(messageFor(code), 'error');
+          }
+        } finally {
+          button.disabled = false;
+          button.setAttribute('aria-busy', 'false');
+          isSubmitting = false;
+        }
+      });
+
+      if (window.location.search) window.history.replaceState(null, '', '/sign-in');
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .auth-page { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.7fr); gap: clamp(48px, 10vw, 140px); align-items: start; padding: clamp(82px, 13vw, 150px) 0 120px; }
+  .auth-intro h1 { margin-top: 22px; }
+  .auth-intro p { max-width: 520px; color: var(--muted); font-size: 18px; line-height: 1.7; }
+  .auth-form { display: grid; gap: 10px; padding: 30px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .auth-form label { color: var(--muted); font-size: 13px; }
+  .auth-form input { width: 100%; min-height: 50px; padding: 0 15px; color: var(--text); background: #0d0f10; border: 1px solid var(--line-strong); border-radius: 10px; outline: none; }
+  .auth-form input:focus { border-color: rgba(223,231,220,.7); box-shadow: 0 0 0 3px rgba(223,231,220,.08); }
+  .auth-form input[aria-invalid='true'] { border-color: #f1a7a0; }
+  .auth-field-note, .auth-footnote { margin: 0 0 8px; color: var(--quiet); font-size: 12px; line-height: 1.5; }
+  .auth-forgot-link { justify-self: start; margin: 4px 0 8px; color: var(--muted); font-size: 13px; text-decoration: underline; }
+  .auth-turnstile-shell { min-height: 65px; margin: 8px 0; }
+  .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .auth-status:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .auth-status[data-state='error'] { color: #f1a7a0; }
+  .auth-status[data-state='success'] { color: #b8d5b5; }
+  .auth-resend-region { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+  .auth-resend-region[hidden] { display: none; }
+  .auth-resend { justify-self: start; border: 0; padding: 0; color: var(--muted); background: transparent; text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
+  .auth-resend:disabled { cursor: wait; opacity: .65; }
+  .auth-footnote { margin-top: 4px; }
+  @media (max-width: 760px) { .auth-page { grid-template-columns: 1fr; padding-top: 72px; } .auth-form { padding: 22px; } }
+</style>

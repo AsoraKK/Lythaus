@@ -5,7 +5,7 @@ import { APPROVED_MIGRATIONS, expectedMigrationPrefix } from './planetscale-migr
 const root = process.cwd();
 
 // These fingerprints are generated against the canonical PostgreSQL 17 schema after
-// applying immutable migrations 0000 through 0013. A relation contract includes every
+// applying immutable migrations 0000 through 0014. A relation contract includes every
 // live column, constraint and index for relations changed by a migration. This is
 // intentionally fail-closed: the registry may only be advanced when the complete
 // canonical relation shape exists, not when representative objects happen to exist.
@@ -223,6 +223,11 @@ const artifacts = {
     { artifact: 'waitlist_cursor_index', kind: 'schema_artifact', sql: "SELECT to_regclass('marketing.waitlist_signups_created_cursor_idx') IS NOT NULL AS present" },
     { artifact: 'waitlist_purge_index', kind: 'schema_artifact', sql: "SELECT to_regclass('marketing.waitlist_signups_due_purge_idx') IS NOT NULL AS present" },
     { artifact: 'waitlist_no_plaintext_columns', kind: 'data_invariant', sql: "SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name IN ('email', 'plain_email', 'raw_ip', 'ip_address', 'user_agent', 'turnstile_token')) AS present" },
+  ],
+  '0014_transactional_email_outbox.sql': [
+    { artifact: 'transactional_email_outbox_table', kind: 'schema_artifact', sql: "SELECT to_regclass('system.transactional_email_outbox') IS NOT NULL AS present" },
+    { artifact: 'transactional_email_outbox_claim_index', kind: 'schema_artifact', sql: "SELECT to_regclass('system.transactional_email_outbox_claim_idx') IS NOT NULL AS present" },
+    { artifact: 'transactional_email_outbox_no_plaintext_recipient', kind: 'data_invariant', sql: "SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'system' AND table_name = 'transactional_email_outbox' AND column_name IN ('email', 'recipient_email', 'plain_email')) AS present" },
   ],
 };
 

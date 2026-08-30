@@ -170,7 +170,7 @@ try {
     }
     mode = 'bootstrap';
     pending = migrations;
-  } else if (incrementalRegistryHead(registry) === '0013_marketing_waitlist.sql') {
+  } else if (incrementalRegistryHead(registry) === '0014_transactional_email_outbox.sql') {
     mode = 'verified';
     pending = [];
   } else if (incrementalRegistryHead(registry)) {
@@ -187,7 +187,7 @@ try {
       initialState: states.find(({ name }) => name === migration.name)?.state ?? 'PARTIALLY_APPLIED',
     }));
   } else {
-    throw new Error('production migration registry is neither a clean bootstrap nor an exact canonical 0000-0008 through 0013 prefix');
+    throw new Error('production migration registry is neither a clean bootstrap nor an exact canonical migration prefix');
   }
 
   const bootstrapPending = [];
@@ -206,7 +206,7 @@ try {
     if (!currentRegistry || !exactRegistryPrefix(currentRegistry, migration.name)) throw new Error(`registry prefix verification failed after ${migration.name}`);
   }
   const finalRegistry = await registryRows(client);
-  if (!finalRegistry || !exactRegistryPrefix(finalRegistry, '0013_marketing_waitlist.sql')) throw new Error('production migration registry is incomplete after apply');
+  if (!finalRegistry || !exactRegistryPrefix(finalRegistry, '0014_transactional_email_outbox.sql')) throw new Error('production migration registry is incomplete after apply');
   await applyGrants(client);
   await verifyWaitlistPrivileges(client);
   await verifyRuntimeRateLimitPrivileges(client);

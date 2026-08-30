@@ -140,14 +140,45 @@ test('web authenticated smoke waits for Worker activation', () => {
 
 test('ADR-003 uses the canonical API base and keeps mobile acceptance separate', () => {
   assert.match(adr003Workflow, /default: https:\/\/api\.lythaus\.co\/api/);
-  assert.match(adr003Workflow, /ADR003_REAL_EMAIL_EVIDENCE_JSON: \$\{\{ inputs\.real_email_evidence_json \}\}/);
+  assert.doesNotMatch(workflow, /real_email_evidence_json|ADR003_REAL_EMAIL_EVIDENCE_JSON/);
+  assert.doesNotMatch(workersWorkflow, /real_email_evidence_json|ADR003_REAL_EMAIL_EVIDENCE_JSON/);
+  assert.doesNotMatch(adr003Workflow, /real_email_evidence_json|ADR003_REAL_EMAIL_EVIDENCE_JSON/);
+  assert.match(adr003Workflow, /ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: protected_probe/);
+  assert.match(workersWorkflow, /collect-auth-acceptance-evidence\.mjs/);
+  assert.match(workersWorkflow, /HUMAN_ACCEPTANCE_REQUIRED/);
+  assert.match(workersWorkflow, /\.status == "PASSED"/);
+  assert.match(workersWorkflow, /ADR003_CANDIDATE_UPLOADED_AT/);
+  assert.match(workersWorkflow, /ADR003_CANDIDATE_STAGED_AT/);
+  assert.match(workersWorkflow, /mail\.lythaus\.co/);
+  assert.match(workersWorkflow, /cloudflare_email_sending_queue_subscription_observation/);
+  assert.match(workersWorkflow, /provider_configuration_missing/);
+  assert.match(workersWorkflow, /bounced.*complained.*deferred.*delivered.*failed.*rejected/s);
+  assert.match(adr003Workflow, /mail\.lythaus\.co/);
+  assert.match(adr003Workflow, /cloudflare_email_sending_queue_subscription_observation/);
+  assert.match(adr003Workflow, /provider_configuration_missing/);
+  assert.match(adr003Workflow, /bounced.*complained.*deferred.*delivered.*failed.*rejected/s);
   assert.match(adr003Harness, /parseRealEmailAcceptanceEvidence/);
+  assert.match(adr003Harness, /ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH/);
+  assert.match(adr003Harness, /ADR003_ACCEPTANCE_RUN_ID/);
+  assert.match(adr003Harness, /x-correlation-id/);
   assert.doesNotMatch(adr003Harness, /manualFlag\('ADR003_EMAIL_DELIVERY_ACCEPTED'/);
   assert.doesNotMatch(adr003Harness, /manualFlag\('ADR003_EMAIL_LINK_REPLAY_VERIFIED'/);
   const a20 = adr003Harness.match(/await runCase\('A20',[\s\S]*?\n\}\);/)?.[0] ?? '';
-  assert.match(a20, /realEmailEvidence/);
+  assert.match(a20, /requireAuthAcceptance/);
   assert.doesNotMatch(a20, /ADR003_MOBILE_EMAIL_ACCEPTED/);
   assert.match(adr003Harness, /mobileEmailFlow: process\.env\.ADR003_MOBILE_EMAIL_ACCEPTED === 'true'/);
+});
+
+test('auth evidence sources stay protected and database-query compatible', () => {
+  const collector = readFileSync('scripts/ci/collect-auth-acceptance-evidence.mjs', 'utf8');
+  assert.match(collector, /protected_probe/);
+  assert.match(collector, /read_only_query_artifact/);
+  assert.match(collector, /ADR003_AUTH_ACCEPTANCE_QUERY_OUTPUT_PATH/);
+  assert.match(collector, /ADR003_AUTH_ACCEPTANCE_EVIDENCE_URL/);
+  assert.doesNotMatch(collector, /internal\/readiness\/auth-acceptance/);
+  assert.match(collector, /Cloudflare-Workers-Version-Overrides/);
+  assert.match(collector, /authorization/);
+  assert.doesNotMatch(collector, /provider_message_id.*SELECT|SELECT.*provider_message_id/i);
 });
 
 test('production ADR-003 preserves its login fixture', () => {

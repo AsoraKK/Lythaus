@@ -22,10 +22,14 @@
     "MEDIA_PROCESSING_ENABLED": "false",
     "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",
     "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev",
+    "EMAIL_PROVIDER_MODE": "cloudflare",
+    "EMAIL_FROM": "no-reply@mail.lythaus.co",
+    "EMAIL_VERIFICATION_BASE_URL": "https://lythaus.co/verify-email?token=",
+    "EMAIL_PASSWORD_RESET_BASE_URL": "https://lythaus.co/reset-password?token=",
     "EXPECTED_DATABASE_TARGET": "main",
-    "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "REPLACE_WITH_POST_0013_SCHEMA_FINGERPRINT",
-    "EXPECTED_DATABASE_RELATION_COUNT": "REPLACE_WITH_POST_0013_RELATION_COUNT",
-    "EXPECTED_DATABASE_SCHEMA_VERSION": "0013_marketing_waitlist.sql",
+    "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "REPLACE_WITH_POST_0014_SCHEMA_FINGERPRINT",
+    "EXPECTED_DATABASE_RELATION_COUNT": "REPLACE_WITH_POST_0014_RELATION_COUNT",
+    "EXPECTED_DATABASE_SCHEMA_VERSION": "0014_transactional_email_outbox.sql",
     "EXPECTED_DATABASE_ROLE_CLASS": "login_non_superuser",
     "EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED": "true",
     "AUTHENTICATED_ACCEPTANCE_PROVEN": "false",
@@ -42,6 +46,9 @@
   "hyperdrive": [
     { "binding": "DB_JOBS_FRESH", "id": "442bb04b99004cb38c6974ec031d65ee" },
     { "binding": "DB_PRIVACY_FRESH", "id": "bae909aa72e244bfa9b8ca8a948053b6" }
+  ],
+  "send_email": [
+    { "name": "EMAIL", "allowed_sender_addresses": ["no-reply@mail.lythaus.co"] }
   ],
   "r2_buckets": [
     { "binding": "MEDIA_QUARANTINE", "bucket_name": "lythaus-media-quarantine-dev" },
@@ -63,7 +70,8 @@
       { "queue": "lythaus-moderation-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-moderation-dlq-dev" },
       { "queue": "lythaus-feed-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-feed-dlq-dev" },
       { "queue": "lythaus-privacy-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-privacy-dlq-dev" },
-      { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" }
+      { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" },
+      { "queue": "lythaus-email-lifecycle-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-email-lifecycle-dlq-dev" }
     ]
   },
   "triggers": { "crons": ["*/15 * * * *"] },
@@ -81,6 +89,9 @@
       "preview_urls": false,
       "ai": { "binding": "AI" },
       "routes": [],
+      "send_email": [
+        { "name": "EMAIL", "allowed_sender_addresses": ["no-reply@mail.lythaus.co"] }
+      ],
       "hyperdrive": [
         { "binding": "DB_JOBS_FRESH", "id": "442bb04b99004cb38c6974ec031d65ee" },
         { "binding": "DB_PRIVACY_FRESH", "id": "bae909aa72e244bfa9b8ca8a948053b6" }
@@ -97,6 +108,11 @@
         "MEDIA_PROCESSING_ENABLED": "false",
         "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",
         "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev",
+        "EMAIL_PROVIDER_URL": "http://localhost:8788/email",
+        "EMAIL_PROVIDER_MODE": "fallback",
+        "EMAIL_FROM": "no-reply@localhost",
+        "EMAIL_VERIFICATION_BASE_URL": "http://localhost:4321/verify-email?token=",
+        "EMAIL_PASSWORD_RESET_BASE_URL": "http://localhost:4321/reset-password?token=",
         "EXPECTED_DATABASE_TARGET": "development",
         "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "8922ea383a1a9ff32b9b695e3b04bf5f56648d6a7371d8a35b49db7fae394ad8",
         "EXPECTED_DATABASE_RELATION_COUNT": "77",
@@ -134,7 +150,8 @@
           { "queue": "lythaus-notifications-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-notifications-dlq-dev" },
           { "queue": "lythaus-media-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-media-dlq-dev" },
           { "queue": "lythaus-privacy-dev", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-privacy-dlq-dev" },
-          { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" }
+          { "queue": "lythaus-audit-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-audit-dlq-dev" },
+          { "queue": "lythaus-email-lifecycle-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-email-lifecycle-dlq-dev" }
         ]
       },
       "workflows": [

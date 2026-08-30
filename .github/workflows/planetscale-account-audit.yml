@@ -66,7 +66,7 @@ jobs:
           assertions="$(jq -c '.assertions' "$report")"
           database_summary="$(jq -c '{name:.database.name,kind:.database.kind,region:.database.region,branchesCount:.database.branchesCount,openSchemaRecommendationsCount:.database.openSchemaRecommendationsCount,schemaLastUpdatedAt:.database.schemaLastUpdatedAt}' "$report")"
           if [[ -f "$contract" ]]; then
-            contract_summary="$(jq -c '{postgresVersion,transactionReadOnly,verifierPassed,post0013Required,extensions,migrationLedger,visibleGrantMetadata,verifierOutput}' "$contract")"
+            contract_summary="$(jq -c '{postgresVersion,transactionReadOnly,verifierPassed,post0014Required,extensions,migrationLedger,visibleGrantMetadata,verifierOutput}' "$contract")"
           else
             contract_summary='{"state":"UNKNOWN/BLOCKED","reason":"production contract verifier did not emit a sanitized contract artifact"}'
           fi
@@ -97,7 +97,7 @@ jobs:
             echo 'PlanetScale production contract evidence is incomplete; provider contract remains UNKNOWN/BLOCKED.' >&2
             exit 1
           fi
-          jq -e '.verifierPassed == true and .post0013Required == true and .transactionReadOnly == true' .artifacts/provider-inventory/planetscale-production-contract.json >/dev/null
+          jq -e '.verifierPassed == true and .post0014Required == true and .transactionReadOnly == true' .artifacts/provider-inventory/planetscale-production-contract.json >/dev/null
       - name: Upload sanitized provider evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f

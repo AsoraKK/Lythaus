@@ -13,6 +13,7 @@ part 'waitlist_admin_response_summary.g.dart';
 /// Properties:
 /// * [totalWaiting]
 /// * [last7Days]
+/// * [last24Hours]
 @BuiltValue()
 abstract class WaitlistAdminResponseSummary implements Built<WaitlistAdminResponseSummary, WaitlistAdminResponseSummaryBuilder> {
   @BuiltValueField(wireName: r'totalWaiting')
@@ -20,6 +21,9 @@ abstract class WaitlistAdminResponseSummary implements Built<WaitlistAdminRespon
 
   @BuiltValueField(wireName: r'last7Days')
   int get last7Days;
+
+  @BuiltValueField(wireName: r'last24Hours')
+  int get last24Hours;
 
   WaitlistAdminResponseSummary._();
 
@@ -52,6 +56,11 @@ class _$WaitlistAdminResponseSummarySerializer implements PrimitiveSerializer<Wa
     yield r'last7Days';
     yield serializers.serialize(
       object.last7Days,
+      specifiedType: const FullType(int),
+    );
+    yield r'last24Hours';
+    yield serializers.serialize(
+      object.last24Hours,
       specifiedType: const FullType(int),
     );
   }
@@ -90,6 +99,13 @@ class _$WaitlistAdminResponseSummarySerializer implements PrimitiveSerializer<Wa
             specifiedType: const FullType(int),
           ) as int;
           result.last7Days = valueDes;
+          break;
+        case r'last24Hours':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.last24Hours = valueDes;
           break;
         default:
           unhandled.add(key);

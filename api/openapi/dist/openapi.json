@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus API",
-    "version": "v6",
+    "version": "v7",
     "description": "HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication is Guest plus Email only. Production releases are coordinated from one reviewed main SHA; the release manifest and provider evidence remain outside this HTTP contract.\n",
     "license": {
       "name": "MIT",
@@ -981,73 +981,6 @@
       }
     },
     "/auth/email/verify": {
-      "get": {
-        "operationId": "authEmailVerifyGet",
-        "summary": "Verify an email address with a query token",
-        "description": "Consumes a single-use email-verification token and returns only a private verification state.",
-        "tags": [
-          "Auth"
-        ],
-        "security": [],
-        "parameters": [
-          {
-            "name": "token",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 32
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Email address verified.",
-            "headers": {
-              "Cache-Control": {
-                "description": "Verification responses are private and never cacheable.",
-                "schema": {
-                  "type": "string",
-                  "example": "private, no-store"
-                }
-              },
-              "X-Correlation-ID": {
-                "description": "Request correlation identifier.",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmailVerificationResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "verification_token_invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "provider_unavailable when email sign-in is disabled.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "operationId": "authEmailVerifyPost",
         "summary": "Verify an email address with a JSON token",
@@ -5655,6 +5588,185 @@
             "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
+      },
+      "post": {
+        "operationId": "adminWaitlistCreate",
+        "summary": "Add a waitlist signup",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminWaitlistCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Waitlist entry added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/waitlist/{waitlistId}": {
+      "servers": [
+        {
+          "url": "https://admin.lythaus.co/api"
+        }
+      ],
+      "patch": {
+        "operationId": "adminWaitlistPatch",
+        "summary": "Edit a waitlist signup",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "waitlistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminWaitlistPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Waitlist entry updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "adminWaitlistDelete",
+        "summary": "Retire a waitlist signup",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "waitlistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/requiredIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMutationConfirmation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Waitlist entry retired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          }
+        }
       }
     },
     "/admin/waitlist/{waitlistId}/status": {
@@ -5873,6 +5985,502 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/admin/auth/summary": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminAuthSummary",
+        "summary": "Read live authentication summary",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live user and waitlist counts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAuthSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/admin/email-health": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminEmailHealth",
+        "summary": "Read transactional email health",
+        "description": "Provider lifecycle is reported from canonical relay state; unavailable lifecycle evidence is surfaced as unknown.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Safe aggregate email state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminEmailHealth"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminUsersList",
+        "summary": "List users with keyset pagination",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "verified",
+                "pending_verification",
+                "active",
+                "relink_required",
+                "suspended",
+                "locked",
+                "deleted"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/cursor"
+          },
+          {
+            "$ref": "#/components/parameters/limit100"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private paginated user records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminUserInvite",
+        "summary": "Invite a new email account",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserInvite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created pending verification.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "userId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "adminUserDetail",
+        "summary": "Read a user and account activity",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private user detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/AdminUser"
+                    },
+                    "activity": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "adminUserProfilePatch",
+        "summary": "Edit a user profile",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserProfilePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserMutationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "adminUserDelete",
+        "summary": "Request controlled account deletion",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/requiredIdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMutationConfirmation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Account disabled and deletion request recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserDeletionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/resend-verification": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminUserResendVerification",
+        "summary": "Request a new verification message",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMutationConfirmation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification request accepted."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/revoke-sessions": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminUserRevokeSessions",
+        "summary": "Revoke all active sessions",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMutationConfirmation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sessions revoked."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -8175,6 +8783,20 @@
           }
         }
       },
+      "EmailVerificationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 32,
+            "description": "Single-use opaque email-verification token."
+          }
+        }
+      },
       "EmailVerificationResponse": {
         "type": "object",
         "description": "Private verification result. The response contains no user or email identifier.",
@@ -8187,20 +8809,6 @@
             "enum": [
               "verified"
             ]
-          }
-        }
-      },
-      "EmailVerificationRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "token"
-        ],
-        "properties": {
-          "token": {
-            "type": "string",
-            "minLength": 32,
-            "description": "Single-use opaque email-verification token."
           }
         }
       },
@@ -10031,9 +10639,45 @@
             "type": "string",
             "format": "date-time"
           },
+          "invitedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "convertedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "unsubscribedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "retentionHold": {
             "type": "boolean",
             "description": "Whether a retention hold prevents automatic waitlist-record purging."
+          },
+          "linkedAccount": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "suspended",
+                  "deleted",
+                  "locked",
+                  "relink_required"
+                ]
+              }
+            }
           }
         }
       },
@@ -10061,7 +10705,8 @@
             "additionalProperties": false,
             "required": [
               "totalWaiting",
-              "last7Days"
+              "last7Days",
+              "last24Hours"
             ],
             "properties": {
               "totalWaiting": {
@@ -10071,25 +10716,45 @@
               "last7Days": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "last24Hours": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }
         }
       },
-      "WaitlistStatusUpdate": {
+      "AdminWaitlistCreate": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "status"
+          "email",
+          "reasonCode",
+          "confirmation"
         ],
         "properties": {
-          "status": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "consentVersion": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_.:-]{2,80}$"
+          },
+          "confirmation": {
             "type": "string",
             "enum": [
-              "waiting",
-              "invited",
-              "converted",
-              "unsubscribed"
+              "ADD WAITLIST"
             ]
           }
         }
@@ -10117,16 +10782,110 @@
           }
         }
       },
+      "AdminMutationConfirmation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reasonCode",
+          "confirmation"
+        ],
+        "properties": {
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_.:-]{2,80}$"
+          },
+          "confirmation": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          }
+        }
+      },
+      "AdminWaitlistPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reasonCode",
+          "confirmation"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "invited",
+              "converted",
+              "unsubscribed"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_.:-]{2,80}$"
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "UPDATE WAITLIST"
+            ]
+          }
+        }
+      },
+      "WaitlistStatusUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "reasonCode",
+          "confirmation"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "invited",
+              "converted",
+              "unsubscribed"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_.:-]{2,80}$"
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "UPDATE WAITLIST STATUS"
+            ]
+          }
+        }
+      },
       "WaitlistRetentionHoldUpdate": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "active"
+          "active",
+          "reasonCode",
+          "confirmation"
         ],
         "properties": {
           "active": {
             "type": "boolean",
             "description": "Whether the retention hold is active."
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_.:-]{2,80}$"
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "PLACE RETENTION HOLD",
+              "RELEASE RETENTION HOLD"
+            ]
           }
         }
       },
@@ -10144,6 +10903,337 @@
           },
           "retentionHold": {
             "type": "boolean"
+          }
+        }
+      },
+      "AdminAuthSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "accounts",
+          "waitlist"
+        ],
+        "properties": {
+          "accounts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "waitlist": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "AdminEmailHealth": {
+        "type": "object",
+        "required": [
+          "status",
+          "providerLifecycle",
+          "queued",
+          "dispatched",
+          "failed"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "degraded",
+              "unknown"
+            ]
+          },
+          "providerLifecycle": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "queued": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dispatched": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0
+          },
+          "acceptedLast24Hours": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deliveredLast24Hours": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failuresLast24Hours": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastEventAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "AdminUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "status",
+          "verificationState",
+          "verifiedAt",
+          "emailStatus",
+          "createdAt",
+          "currentSessionCount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "locked",
+              "relink_required",
+              "deleted"
+            ]
+          },
+          "verificationState": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "pending_verification"
+            ]
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "emailStatus": {
+            "type": "string",
+            "nullable": true,
+            "description": "Safe canonical relay state only; provider identifiers and raw errors are never returned."
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "subscriptionTier": {
+            "type": "string",
+            "enum": [
+              "free",
+              "premium",
+              "black"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "currentSessionCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "AdminUserPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUser"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AdminUserInvite": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "reasonCode",
+          "confirmation"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "handle": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]{2,40}$"
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_.:-]{2,80}$"
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "INVITE ACCOUNT"
+            ]
+          }
+        }
+      },
+      "AdminUserMutationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "locked"
+            ]
+          },
+          "verificationState": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "pending_verification"
+            ]
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AdminUserDeletionResponse": {
+        "type": "object",
+        "required": [
+          "userId",
+          "requestId",
+          "status",
+          "legalHold",
+          "purgeState"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "deleted"
+            ]
+          },
+          "legalHold": {
+            "type": "boolean"
+          },
+          "purgeState": {
+            "type": "string",
+            "enum": [
+              "pending_purge",
+              "blocked_by_legal_hold"
+            ]
+          }
+        }
+      },
+      "AdminUserProfilePatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reasonCode",
+          "confirmation"
+        ],
+        "minProperties": 3,
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "handle": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]{2,40}$"
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9_.:-]{2,80}$"
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "UPDATE PROFILE"
+            ]
           }
         }
       },
@@ -10550,7 +11640,8 @@
         "additionalProperties": false,
         "required": [
           "status",
-          "reasonCode"
+          "reasonCode",
+          "confirmation"
         ],
         "properties": {
           "status": {
@@ -10564,6 +11655,14 @@
           "reasonCode": {
             "type": "string",
             "pattern": "^[A-Z0-9_.:-]{2,80}$"
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "REACTIVATE ACCOUNT",
+              "SUSPEND ACCOUNT",
+              "LOCK ACCOUNT"
+            ]
           }
         }
       },

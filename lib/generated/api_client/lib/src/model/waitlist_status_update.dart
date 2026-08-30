@@ -13,11 +13,20 @@ part 'waitlist_status_update.g.dart';
 ///
 /// Properties:
 /// * [status]
+/// * [reasonCode]
+/// * [confirmation]
 @BuiltValue()
 abstract class WaitlistStatusUpdate implements Built<WaitlistStatusUpdate, WaitlistStatusUpdateBuilder> {
   @BuiltValueField(wireName: r'status')
   WaitlistStatusUpdateStatusEnum get status;
   // enum statusEnum {  waiting,  invited,  converted,  unsubscribed,  };
+
+  @BuiltValueField(wireName: r'reasonCode')
+  String get reasonCode;
+
+  @BuiltValueField(wireName: r'confirmation')
+  WaitlistStatusUpdateConfirmationEnum get confirmation;
+  // enum confirmationEnum {  UPDATE WAITLIST STATUS,  };
 
   WaitlistStatusUpdate._();
 
@@ -46,6 +55,16 @@ class _$WaitlistStatusUpdateSerializer implements PrimitiveSerializer<WaitlistSt
     yield serializers.serialize(
       object.status,
       specifiedType: const FullType(WaitlistStatusUpdateStatusEnum),
+    );
+    yield r'reasonCode';
+    yield serializers.serialize(
+      object.reasonCode,
+      specifiedType: const FullType(String),
+    );
+    yield r'confirmation';
+    yield serializers.serialize(
+      object.confirmation,
+      specifiedType: const FullType(WaitlistStatusUpdateConfirmationEnum),
     );
   }
 
@@ -76,6 +95,20 @@ class _$WaitlistStatusUpdateSerializer implements PrimitiveSerializer<WaitlistSt
             specifiedType: const FullType(WaitlistStatusUpdateStatusEnum),
           ) as WaitlistStatusUpdateStatusEnum;
           result.status = valueDes;
+          break;
+        case r'reasonCode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.reasonCode = valueDes;
+          break;
+        case r'confirmation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(WaitlistStatusUpdateConfirmationEnum),
+          ) as WaitlistStatusUpdateConfirmationEnum;
+          result.confirmation = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -123,4 +156,17 @@ class WaitlistStatusUpdateStatusEnum extends EnumClass {
 
   static BuiltSet<WaitlistStatusUpdateStatusEnum> get values => _$waitlistStatusUpdateStatusEnumValues;
   static WaitlistStatusUpdateStatusEnum valueOf(String name) => _$waitlistStatusUpdateStatusEnumValueOf(name);
+}
+
+class WaitlistStatusUpdateConfirmationEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'UPDATE WAITLIST STATUS')
+  static const WaitlistStatusUpdateConfirmationEnum uPDATEWAITLISTSTATUS = _$waitlistStatusUpdateConfirmationEnum_uPDATEWAITLISTSTATUS;
+
+  static Serializer<WaitlistStatusUpdateConfirmationEnum> get serializer => _$waitlistStatusUpdateConfirmationEnumSerializer;
+
+  const WaitlistStatusUpdateConfirmationEnum._(String name): super(name);
+
+  static BuiltSet<WaitlistStatusUpdateConfirmationEnum> get values => _$waitlistStatusUpdateConfirmationEnumValues;
+  static WaitlistStatusUpdateConfirmationEnum valueOf(String name) => _$waitlistStatusUpdateConfirmationEnumValueOf(name);
 }

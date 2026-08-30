@@ -17,5 +17,10 @@ void main() {
       // TODO
     });
 
+    // int last24Hours
+    test('to test the property `last24Hours`', () async {
+      // TODO
+    });
+
   });
 }

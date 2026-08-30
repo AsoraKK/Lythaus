@@ -5,10 +5,10 @@ import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions
 
 test('loads the immutable canonical migration payload and checksum set', () => {
   const manifest = loadApprovedMigrations();
-  assert.equal(manifest.migrations.length, 14);
+  assert.equal(manifest.migrations.length, 15);
   assert.equal(manifest.bytes, EXPECTED_MIGRATION_BYTES);
   assert.equal(manifest.checksum, EXPECTED_MIGRATION_SET_SHA256);
-  assert.equal(manifest.migrations.at(-1)?.name, '0013_marketing_waitlist.sql');
+  assert.equal(manifest.migrations.at(-1)?.name, '0014_transactional_email_outbox.sql');
 });
 
 test('classifies catalog evidence without treating vacuous data invariants as applied structure', () => {

@@ -25,10 +25,26 @@ void main() {
       // TODO
     });
 
+    // Read live authentication summary
+    //
+    //Future<AdminAuthSummary> adminAuthSummary() async
+    test('test adminAuthSummary', () async {
+      // TODO
+    });
+
     // Publish an editorial News Board entry
     //
     //Future<EditorialPublicationResponse> adminEditorialPublicationsCreate(EditorialPublicationCreate editorialPublicationCreate) async
     test('test adminEditorialPublicationsCreate', () async {
+      // TODO
+    });
+
+    // Read transactional email health
+    //
+    // Provider lifecycle is reported from canonical relay state; unavailable lifecycle evidence is surfaced as unknown.
+    //
+    //Future<AdminEmailHealth> adminEmailHealth() async
+    test('test adminEmailHealth', () async {
       // TODO
     });
 
@@ -97,6 +113,55 @@ void main() {
       // TODO
     });
 
+    // Request controlled account deletion
+    //
+    //Future<AdminUserDeletionResponse> adminUserDelete(String userId, String idempotencyKey, AdminMutationConfirmation adminMutationConfirmation) async
+    test('test adminUserDelete', () async {
+      // TODO
+    });
+
+    // Read a user and account activity
+    //
+    //Future<AdminUserDetail200Response> adminUserDetail(String userId) async
+    test('test adminUserDetail', () async {
+      // TODO
+    });
+
+    // Invite a new email account
+    //
+    //Future<AdminUserMutationResponse> adminUserInvite(AdminUserInvite adminUserInvite) async
+    test('test adminUserInvite', () async {
+      // TODO
+    });
+
+    // Edit a user profile
+    //
+    //Future<AdminUserMutationResponse> adminUserProfilePatch(String userId, AdminUserProfilePatch adminUserProfilePatch) async
+    test('test adminUserProfilePatch', () async {
+      // TODO
+    });
+
+    // Request a new verification message
+    //
+    //Future adminUserResendVerification(String userId, AdminMutationConfirmation adminMutationConfirmation) async
+    test('test adminUserResendVerification', () async {
+      // TODO
+    });
+
+    // Revoke all active sessions
+    //
+    //Future adminUserRevokeSessions(String userId, AdminMutationConfirmation adminMutationConfirmation) async
+    test('test adminUserRevokeSessions', () async {
+      // TODO
+    });
+
+    // List users with keyset pagination
+    //
+    //Future<AdminUserPage> adminUsersList({ String q, String status, String source_, DateTime createdAfter, DateTime createdBefore, String cursor, int limit }) async
+    test('test adminUsersList', () async {
+      // TODO
+    });
+
     // Update account status
     //
     //Future<AccountStatusResponse> adminUsersStatusUpdate(String userId, AccountStatusUpdate accountStatusUpdate) async
@@ -111,12 +176,33 @@ void main() {
       // TODO
     });
 
+    // Add a waitlist signup
+    //
+    //Future<WaitlistStatusResponse> adminWaitlistCreate(AdminWaitlistCreate adminWaitlistCreate) async
+    test('test adminWaitlistCreate', () async {
+      // TODO
+    });
+
+    // Retire a waitlist signup
+    //
+    //Future<WaitlistStatusResponse> adminWaitlistDelete(String waitlistId, String idempotencyKey, AdminMutationConfirmation adminMutationConfirmation) async
+    test('test adminWaitlistDelete', () async {
+      // TODO
+    });
+
     // List private beta waitlist signups
     //
     // Administrator-only PII access. Every successful view is written to the admin audit log.
     //
     //Future<WaitlistAdminResponse> adminWaitlistList({ String cursor, int limit }) async
     test('test adminWaitlistList', () async {
+      // TODO
+    });
+
+    // Edit a waitlist signup
+    //
+    //Future<WaitlistStatusResponse> adminWaitlistPatch(String waitlistId, AdminWaitlistPatch adminWaitlistPatch) async
+    test('test adminWaitlistPatch', () async {
       // TODO
     });
 

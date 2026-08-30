@@ -17,8 +17,9 @@ const expected = {
 const hyperdriveVerifiedMain = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true';
 const candidateWorkerName = process.env.ADR003_WORKER_NAME?.trim() ?? '';
 const candidateWorkerVersionId = process.env.ADR003_WORKER_VERSION_ID?.trim() ?? '';
+const acceptanceRunId = process.env.ADR003_ACCEPTANCE_RUN_ID?.trim() ?? '';
 const candidateReadinessEvidencePath = process.env.ADR003_DATABASE_READINESS_EVIDENCE_PATH?.trim() ?? '';
-const realEmailEvidenceJson = process.env.ADR003_REAL_EMAIL_EVIDENCE_JSON?.trim() ?? '';
+const authAcceptanceEvidencePath = process.env.ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH?.trim() ?? '';
 const evidencePath = process.env.ADR003_EVIDENCE_PATH;
 const results = [];
 let readiness = null;
@@ -26,7 +27,7 @@ let accessToken = '';
 let refreshToken = '';
 let replacementRefreshToken = '';
 let postId = '';
-let cachedRealEmailEvidence = null;
+let cachedAuthAcceptanceEvidence = null;
 
 class BlockedCase extends Error {
   constructor(code) {
@@ -71,6 +72,12 @@ async function requestJson(route, options = {}) {
     headers.set('Cloudflare-Workers-Version-Overrides', `${candidateWorkerName}="${candidateWorkerVersionId}"`);
   }
   headers.set('accept', 'application/json');
+  if (acceptanceRunId) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(acceptanceRunId)) {
+      throw new Error('acceptance_run_id_invalid');
+    }
+    headers.set('x-correlation-id', acceptanceRunId);
+  }
   if (options.body !== undefined && !headers.has('content-type')) {
     headers.set('content-type', typeof options.body === 'string' ? 'application/x-www-form-urlencoded' : 'application/json');
   }
@@ -105,23 +112,37 @@ function manualFlag(name, code) {
   if (process.env[name] !== 'true') throw new BlockedCase(code);
 }
 
-function realEmailEvidence() {
-  if (cachedRealEmailEvidence) return cachedRealEmailEvidence;
-  const releaseSha = process.env.RELEASE_SHA ?? process.env.GITHUB_SHA ?? 'local';
+function authAcceptanceEvidence() {
+  if (cachedAuthAcceptanceEvidence) return cachedAuthAcceptanceEvidence;
+  if (!authAcceptanceEvidencePath) throw new BlockedCase('HUMAN_ACCEPTANCE_REQUIRED');
+  const releaseSha = required('RELEASE_SHA');
+  const expectedCandidate = {
+    workerName: candidateWorkerName,
+    workerVersionId: candidateWorkerVersionId,
+    ...(process.env.ADR003_CANDIDATE_UPLOADED_AT ? { uploadedAt: process.env.ADR003_CANDIDATE_UPLOADED_AT } : {}),
+    ...(process.env.ADR003_CANDIDATE_STAGED_AT ? { stagedAt: process.env.ADR003_CANDIDATE_STAGED_AT } : {}),
+  };
   try {
-    cachedRealEmailEvidence = parseRealEmailAcceptanceEvidence(realEmailEvidenceJson, releaseSha);
+    const raw = fs.readFileSync(authAcceptanceEvidencePath, 'utf8');
+    cachedAuthAcceptanceEvidence = parseRealEmailAcceptanceEvidence(raw, releaseSha, expectedCandidate);
   } catch (error) {
-    throw new BlockedCase(error instanceof Error ? error.message : 'real_email_acceptance_evidence_invalid');
+    throw new BlockedCase(error instanceof Error ? error.message : 'auth_acceptance_evidence_invalid');
   }
-  return cachedRealEmailEvidence;
+  return cachedAuthAcceptanceEvidence;
 }
 
-function realEmailEvidenceForOutput() {
-  if (!realEmailEvidenceJson) return { status: 'required' };
+function requireAuthAcceptance() {
+  const evidence = authAcceptanceEvidence();
+  if (evidence.status !== 'PASSED') throw new BlockedCase(evidence.reason ?? evidence.status);
+  return evidence;
+}
+
+function authAcceptanceEvidenceForOutput() {
+  if (!authAcceptanceEvidencePath) return { status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'auth_acceptance_observation_required' };
   try {
-    return realEmailEvidence();
+    return authAcceptanceEvidence();
   } catch (error) {
-    return { status: 'blocked', reason: error instanceof Error ? error.message : 'real_email_acceptance_evidence_invalid' };
+    return { status: 'BLOCKED', reason: error instanceof Error ? error.message : 'auth_acceptance_evidence_invalid' };
   }
 }
 
@@ -235,9 +256,15 @@ async function writeEvidence(databaseReport) {
   if (process.env.RELEASE_SHA && process.env.GITHUB_SHA && process.env.RELEASE_SHA !== process.env.GITHUB_SHA) {
     throw new Error('release_sha_checkout_mismatch');
   }
+  const authAcceptance = authAcceptanceEvidenceForOutput();
+  const casesPass = results.every((item) => item.outcome === 'passed' || item.outcome === 'skipped');
   const evidence = {
     formatVersion: 'lythaus-adr003-acceptance-v1',
-    status: results.every((item) => item.outcome === 'passed' || item.outcome === 'skipped') ? 'PASSED' : 'BLOCKED',
+    status: casesPass && authAcceptance.status === 'PASSED'
+      ? 'PASSED'
+      : authAcceptance.status === 'HUMAN_ACCEPTANCE_REQUIRED' || results.some((item) => item.reason === 'HUMAN_ACCEPTANCE_REQUIRED')
+        ? 'HUMAN_ACCEPTANCE_REQUIRED'
+        : 'BLOCKED',
     capturedAt: new Date().toISOString(),
     releaseSha,
     githubActionsRunId: process.env.GITHUB_RUN_ID ?? 'local',
@@ -251,7 +278,7 @@ async function writeEvidence(databaseReport) {
       guestBrowse: process.env.ADR003_GUEST_ACCEPTED === 'true',
       mobileEmailFlow: process.env.ADR003_MOBILE_EMAIL_ACCEPTED === 'true',
     },
-    realEmailAcceptance: realEmailEvidenceForOutput(),
+    authAcceptance,
     destructiveAccountDeletion: process.env.ADR003_RUN_DESTRUCTIVE_ACCOUNT_DELETION === 'true' ? 'REQUESTED' : 'NOT_RUN',
     cases: results,
   };
@@ -304,9 +331,13 @@ await runCase('GATE-ROUTING', async () => {
 });
 
 await runCase('A01', async () => manualFlag('ADR003_GUEST_ACCEPTED', 'guest_browse_kyle_owned'));
-await runCase('A02', async () => ({ acceptanceNote: `fresh_signup:${realEmailEvidence().freshSignup.requested ? 'proven' : 'missing'}` }));
+await runCase('A02', async () => {
+  requireAuthAcceptance();
+  return { acceptanceNote: 'fresh_signup:runtime_observed' };
+});
 
 await runCase('A03', async () => {
+  requireAuthAcceptance();
   requireReady();
   const email = required('ADR003_TEST_EMAIL');
   const password = required('ADR003_TEST_PASSWORD');
@@ -319,7 +350,10 @@ await runCase('A03', async () => {
   return result;
 });
 
-await runCase('A04', async () => ({ acceptanceNote: `email_delivery:${realEmailEvidence().freshSignup.messageObserved ? 'proven' : 'missing'}` }));
+await runCase('A04', async () => {
+  requireAuthAcceptance();
+  return { acceptanceNote: 'email_delivery:provider_lifecycle_observed' };
+});
 
 await runCase('A05', () => runAuthenticatedCase(async () => {
   const result = await requestJson('/api/auth/userinfo', { headers: bearer() });
@@ -453,7 +487,10 @@ await runCase('A17', async () => {
   return result;
 });
 
-await runCase('A18', async () => ({ acceptanceNote: `email_link_replay:${realEmailEvidence().verification.replayRejected ? 'proven' : 'missing'}` }));
+await runCase('A18', async () => {
+  requireAuthAcceptance();
+  return { acceptanceNote: 'email_link_replay:runtime_observed' };
+});
 
 await runCase('A19', async () => {
   const origin = required('ADR003_WEB_ORIGIN');
@@ -472,12 +509,21 @@ await runCase('A19', async () => {
 
 await runCase('A20', async () => {
   await webSecurityCheck();
-  expect(realEmailEvidence().verification.completed === true, 'web_email_flow_real_acceptance_missing');
+  expect(requireAuthAcceptance().initialVerification.verification.completedAt, 'web_email_flow_real_acceptance_missing');
 });
 
-await runCase('A21', async () => ({ acceptanceNote: `password_reset:${realEmailEvidence().passwordReset.completed ? 'proven' : 'missing'}` }));
-await runCase('A22', async () => ({ acceptanceNote: `password_reset_replay:${realEmailEvidence().passwordReset.replayRejected ? 'proven' : 'missing'}` }));
-await runCase('A23', async () => ({ acceptanceNote: `resend_verification:${realEmailEvidence().resendVerification.completed ? 'proven' : 'missing'}` }));
+await runCase('A21', async () => {
+  requireAuthAcceptance();
+  return { acceptanceNote: 'password_reset:runtime_observed' };
+});
+await runCase('A22', async () => {
+  requireAuthAcceptance();
+  return { acceptanceNote: 'password_reset_replay:runtime_observed' };
+});
+await runCase('A23', async () => {
+  requireAuthAcceptance();
+  return { acceptanceNote: 'resend_verification:runtime_observed' };
+});
 
 const evidence = await writeEvidence(readiness ?? { branchFingerprint: hyperdriveVerifiedMain ? 'main' : 'unknown', readiness: 'blocked' });
 const summary = Object.fromEntries(results.map((item) => [item.id, item.outcome]));

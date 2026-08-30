@@ -62,24 +62,57 @@ test('email registration retries recover accounts waiting for verification or le
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   assert.match(source, /planEmailRegistration/);
   assert.match(source, /registrationPlan === 'resend_verification'/);
-  assert.match(source, /sendAccountVerificationEmail\(request, env, account\.id, email, 'verification_resend'\)/);
+  assert.match(source, /queueAccountVerificationEmail\(request, env, account\.id\)/);
   assert.match(source, /registrationPlan === 'attach_email_credential'/);
   assert.match(source, /FROM identity\.contact_emails c JOIN identity\.users u/);
   assert.match(source, /status = 'active'.*status = 'relink_required'/);
-  assert.match(source, /registrationPlan === 'account_exists'/);
+  assert.match(source, /registrationPlan === 'neutral_existing_account'/);
 });
 
 test('email recovery is Turnstile-protected, neutral, and atomically single-use', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
   assert.match(source, /mode === 'register' \|\| mode === 'resend_verification'/);
-  assert.match(source, /event: 'auth_email_delivery_failed'/);
-  assert.match(source, /UPDATE identity\.password_reset_tokens[\s\S]*consumed_at IS NULL[\s\S]*expires_at > now\(\)[\s\S]*RETURNING user_id/);
+  assert.match(source, /enqueueTransactionalEmailIntent/);
+  assert.match(source, /UPDATE identity\.password_reset_tokens[\s\S]*superseded_at IS NULL[\s\S]*expires_at > now\(\)/);
   assert.match(source, /revokeAllAuthSessions/);
   assert.match(source, /rateLimitPlan\(url\.pathname\)/);
-  assert.match(source, /UPDATE identity\.email_verification_tokens[\s\S]*WHERE user_id = \$1 AND consumed_at IS NULL/);
-  assert.match(source, /UPDATE identity\.password_reset_tokens[\s\S]*WHERE user_id = \$1 AND consumed_at IS NULL/);
+  assert.match(source, /UPDATE identity\.email_verification_tokens[\s\S]*superseded_at = now\(\)/);
+  assert.match(source, /UPDATE identity\.password_reset_tokens[\s\S]*superseded_at = now\(\)/);
   assert.match(source, /FOR UPDATE/);
   assert.match(source, /planEmailLogin/);
+});
+
+test('native auth outbox and scanner-safe verification contracts are explicit', () => {
+  const api = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const verificationPage = fs.readFileSync(path.join(root, 'apps/marketing-site/src/pages/verify-email.astro'), 'utf8');
+  const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/transactional-email-runtime.ts'), 'utf8');
+  const jobsIndex = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  const jobsConfig = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/wrangler.jsonc'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0014_transactional_email_outbox.sql'), 'utf8');
+  assert.match(api, /request\.method === 'POST' && url\.pathname === '\/api\/auth\/email\/verify'.*verifyEmail/s);
+  assert.match(api, /request\.method !== 'POST'/);
+  assert.doesNotMatch(api, /verificationPreview/);
+  assert.match(verificationPage, /noReferrer/);
+  assert.match(verificationPage, /noIndex/);
+  assert.match(verificationPage, /history\.replaceState/);
+  assert.match(verificationPage, /referrerPolicy: 'no-referrer'/);
+  assert.match(api, /hashAuthToken\(token, 'verification'\)/);
+  assert.match(jobs, /FOR UPDATE SKIP LOCKED/);
+  assert.match(jobs, /state = 'provider_accepted'/);
+  assert.match(jobs, /secret_ciphertext = NULL/);
+  assert.match(jobs, /lifecycleStateForEmailEvent/);
+  assert.match(jobs, /cf\.email\.sending\.message\.delivered/);
+  assert.match(jobs, /Recipient, subject/);
+  assert.match(jobsIndex, /EMAIL_LIFECYCLE_QUEUE/);
+  assert.match(jobsIndex, /email_lifecycle_event_invalid/);
+  assert.match(jobsConfig, /lythaus-email-lifecycle-dev/);
+  assert.match(jobsConfig, /lythaus-email-lifecycle-dlq-dev/);
+  assert.match(jobs, /provider_accepted_only/);
+  assert.match(jobs, /GROUP BY purpose, state, provider, provider_error_category/);
+  assert.doesNotMatch(jobs, /deliveredRows:/);
+  assert.match(migration, /CREATE TABLE system\.transactional_email_outbox/);
+  assert.match(migration, /secret_ciphertext text/);
+  assert.doesNotMatch(migration, /recipient_email|plain_email/);
 });
 
 test('admin API dispatch awaits rejection-prone mutations', () => {
@@ -376,16 +409,16 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
   assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
   assert.match(verifier, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION/);
-  assert.match(verifier, /0013_marketing_waitlist\.sql/);
-  assert.match(verifier, /production post-0013 schema fingerprint mismatch/);
-  assert.match(verifier, /production post-0013 relation count/);
+  assert.match(verifier, /0014_transactional_email_outbox\.sql/);
+  assert.match(verifier, /production post-0014 schema fingerprint mismatch/);
+  assert.match(verifier, /production post-0014 relation count/);
   assert.match(verifier, /to_regclass\('marketing\.waitlist_signups'\)/);
   assert.match(verifier, /system\.rate_limit_windows/);
   const deployIdentity = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
   assert.match(workflow, /MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'true'/);
   assert.match(workflow, /node scripts\/ci\/validate-product-integrity-deploy-identity\.mjs[\s\S]*validate:native-workers:provisioned/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0013_SCHEMA_FINGERPRINT/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0013_RELATION_COUNT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0014_SCHEMA_FINGERPRINT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0014_RELATION_COUNT/);
   assert.match(deployIdentity, /fs\.writeFileSync\(configPath, source/);
   assert.match(workflow, /Capture predeployment Worker state/);
   assert.match(workflow, /Roll back partial Worker deployment on failure/);

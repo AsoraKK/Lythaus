@@ -16,6 +16,8 @@ describe('Dashboard', () => {
   it('loads only canonical admin Worker routes', async () => {
     adminRequest.mockImplementation((path) => {
       if (path === 'health') return Promise.resolve({ status: 'ok', database: { database_time: '2026-08-10T00:00:00Z' } });
+      if (path === 'auth/summary') return Promise.resolve({ accounts: { verified: 2, pendingVerification: 1, active: 3, suspended: 0, locked: 0 }, waitlist: { totalWaiting: 4, last24Hours: 1 } });
+      if (path === 'email-health') return Promise.resolve({ status: 'unknown' });
       if (path === 'moderation/cases') return Promise.resolve({ items: [{ state: 'open' }] });
       if (path === 'appeals/pending-adjudication') return Promise.resolve({ items: [{ appeal_id: 'a1' }] });
       if (path === 'audit') return Promise.resolve({ items: [{ id: 'e1' }] });
@@ -26,7 +28,7 @@ describe('Dashboard', () => {
 
     await waitFor(() => expect(screen.getByText('ok')).toBeInTheDocument());
     expect(screen.getByText('Open moderation cases', { selector: 'span' }).nextSibling.textContent).toBe('1');
-    expect(adminRequest).toHaveBeenCalledTimes(4);
+    expect(adminRequest).toHaveBeenCalledTimes(6);
     expect(adminRequest).not.toHaveBeenCalledWith(expect.stringContaining('_admin'), expect.anything());
   });
 });
