@@ -341,6 +341,13 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.match(workersWorkflow, /Resolve the existing exact-candidate Worker versions for resume[\s\S]*coordinator-versions\.json/);
 });
 
+test('protected coordinator requests retry transient access rejection and fail closed', () => {
+  assert.match(workersWorkflow, /coordinator_request\(\) \{[\s\S]*?case "\$status" in[\s\S]*?401\)[\s\S]*?sleep "\$attempt"[\s\S]*?Protected coordinator request failed with HTTP/);
+  assert.match(workersWorkflow, /run_json="\$\(coordinator_request GET "\$base\/runs\/\$EXISTING_ACCEPTANCE_RUN_ID"\)"/);
+  assert.match(workersWorkflow, /run_json="\$\(coordinator_request POST "\$base\/runs" "\$payload"\)"/);
+  assert.doesNotMatch(workersWorkflow, /run_json="\$\(curl --fail[\s\S]*production-auth-acceptance/);
+});
+
 test('jobs remain probeable by version evidence without requiring a public hostname', () => {
   const probe = readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8');
   assert.match(probe, /worker: 'lythaus-jobs-development',[\s\S]*probe: false/);
