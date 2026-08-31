@@ -59,7 +59,8 @@ function json(body: unknown, init: ResponseInit = {}): Response {
 
 function readinessAuthorized(request: Request, env: Env): boolean {
   const configured = env.DATABASE_READINESS_TOKEN;
-  const supplied = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const supplied = request.headers.get('x-lythaus-readiness-token')?.trim()
+    ?? request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
   return Boolean(configured && supplied && constantTimeEqual(new TextEncoder().encode(configured), new TextEncoder().encode(supplied)));
 }
 
