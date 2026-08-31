@@ -609,6 +609,7 @@ jobs:
       PUBLIC_API_WORKER_VERSION: ${{ needs.workers.outputs.public_worker_version }}
       ADMIN_API_WORKER_VERSION: ${{ needs.workers.outputs.admin_worker_version }}
       JOBS_WORKER_VERSION: ${{ needs.workers.outputs.jobs_worker_version }}
+      COORDINATOR_WORKER_VERSION: ${{ needs.workers.outputs.coordinator_worker_version }}
       WORKER_SOURCE_SHA: ${{ needs.workers.outputs.worker_source_sha }}
       ROLLBACK_ARTIFACTS_PROVEN: ${{ needs.workers.outputs.rollback_artifacts_proven || 'false' }}
       PRODUCTION_SMOKE_MARKETING: ${{ needs.production_smoke.outputs.marketing || 'BLOCKED' }}
