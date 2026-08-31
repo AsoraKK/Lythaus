@@ -373,7 +373,7 @@ jobs:
             echo
             echo "Exact candidate: \`$PUBLIC_WORKER_VERSION_ID\` for \`$RELEASE_SHA\`."
             echo "Keeper URL (Cloudflare Access required): $keeper_url"
-            echo 'Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with `acceptance_run_id`.'
+            echo "Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with \`acceptance_run_id\`."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Probe public candidate without production traffic
         env:
