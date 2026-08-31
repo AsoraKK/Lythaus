@@ -343,6 +343,7 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
 
 test('protected coordinator requests retry transient access rejection and fail closed', () => {
   assert.match(workersWorkflow, /base='https:\/\/admin\.lythaus\.co\/api\/admin\/production-auth-acceptance'\n\s+coordinator_response_file="\$RUNNER_TEMP\/production-cutover\/coordinator-request\.json"/);
+  assert.match(workersWorkflow, /-H "x-lythaus-readiness-token: \$\{DATABASE_READINESS_TOKEN\}"/);
   assert.match(workersWorkflow, /coordinator_request\(\) \{[\s\S]*?case "\$status" in[\s\S]*?401\)[\s\S]*?sleep "\$attempt"[\s\S]*?Protected coordinator request failed with HTTP/);
   assert.match(workersWorkflow, /run_json="\$\(coordinator_request GET "\$base\/runs\/\$EXISTING_ACCEPTANCE_RUN_ID"\)"/);
   assert.match(workersWorkflow, /run_json="\$\(coordinator_request POST "\$base\/runs" "\$payload"\)"/);

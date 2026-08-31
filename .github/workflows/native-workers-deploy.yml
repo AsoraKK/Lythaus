@@ -442,7 +442,7 @@ jobs:
           test -n "$DATABASE_READINESS_TOKEN" && test -n "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"
           curl_headers=(
             -H 'accept: application/json'
-            -H "authorization: Bearer ${DATABASE_READINESS_TOKEN}"
+            -H "x-lythaus-readiness-token: ${DATABASE_READINESS_TOKEN}"
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
           )

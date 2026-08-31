@@ -36,6 +36,13 @@ test('acceptance evidence is server derived and human interaction remains requir
   assert.doesNotMatch(observer, /\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE|DROP)\b/);
 });
 
+test('service readiness authorization survives the Access edge without weakening human Access validation', () => {
+  assert.match(coordinator, /request\.headers\.get\('x-lythaus-readiness-token'\)/);
+  assert.match(coordinator, /request\.headers\.get\('authorization'\)\?\.match\(\/\^Bearer/);
+  assert.match(coordinator, /if \(readinessAuthorized\(request, env\)\) return;/);
+  assert.match(coordinator, /await accessSubject\(request, env\)/);
+});
+
 test('refresh revocation proof is encrypted, bounded, and cleared after use', () => {
   assert.match(migration, /pre_reset_refresh_ciphertext text/);
   assert.match(migration, /pre_reset_refresh_encryption_key_version text/);
