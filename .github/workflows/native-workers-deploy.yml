@@ -270,10 +270,11 @@ jobs:
           coordinator_secret_list_error="$RUNNER_TEMP/production-cutover/coordinator-secret-list.error"
           coordinator_secret_command_output="$RUNNER_TEMP/production-cutover/coordinator-secret-list.output"
           coordinator_parent_state_after="$RUNNER_TEMP/production-cutover/coordinator-parent-state-after.json"
+          coordinator_response_file="$RUNNER_TEMP/production-cutover/coordinator-request.json"
           scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
           scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
           test -s "$turnstile_secret_file"
-          trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error" "$coordinator_secret_command_output"' EXIT
+          trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error" "$coordinator_secret_command_output" "$coordinator_response_file"' EXIT
           jq -n \
             --arg readiness_token "$DATABASE_READINESS_TOKEN" \
             --arg cloudflare_account_id "$CLOUDFLARE_ACCOUNT_ID" \
@@ -444,9 +445,41 @@ jobs:
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
           )
+          coordinator_request() {
+            local method="$1"
+            local url="$2"
+            local payload="${3:-}"
+            local attempt status
+            for attempt in 1 2 3; do
+              if [[ "$method" = GET ]]; then
+                status="$(curl --silent --show-error --max-time 30 \
+                  -o "$coordinator_response_file" -w '%{http_code}' \
+                  "${curl_headers[@]}" "$url" || true)"
+              else
+                status="$(curl --silent --show-error --max-time 30 \
+                  -o "$coordinator_response_file" -w '%{http_code}' \
+                  -X "$method" "${curl_headers[@]}" -H 'content-type: application/json' \
+                  --data "$payload" "$url" || true)"
+              fi
+              case "$status" in
+                2??)
+                  cat "$coordinator_response_file"
+                  return 0
+                  ;;
+                401)
+                  if [[ "$attempt" -lt 3 ]]; then
+                    sleep "$attempt"
+                    continue
+                  fi
+                  ;;
+              esac
+              echo "Protected coordinator request failed with HTTP ${status:-000}." >&2
+              return 1
+            done
+          }
           if [[ -n "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
             [[ "$EXISTING_ACCEPTANCE_RUN_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || exit 1
-            run_json="$(curl --fail --silent --show-error --max-time 30 "${curl_headers[@]}" "$base/runs/$EXISTING_ACCEPTANCE_RUN_ID")"
+            run_json="$(coordinator_request GET "$base/runs/$EXISTING_ACCEPTANCE_RUN_ID")"
             jq -e --arg sha "$RELEASE_SHA" --arg version "$PUBLIC_WORKER_VERSION_ID" '
               .acceptanceRunId != null and .releaseSha == $sha and .candidate.workerName == "lythaus-public-api-development"
               and .candidate.workerVersionId == $version and (.status == "pending" or .status == "in_progress" or .status == "completed")
@@ -458,7 +491,7 @@ jobs:
           else
             test -n "$PUBLIC_WORKER_CREATED_AT" && test -n "$CANDIDATE_STAGED_AT"
             payload="$(jq -n --arg releaseSha "$RELEASE_SHA" --arg candidateWorker lythaus-public-api-development --arg candidateVersion "$PUBLIC_WORKER_VERSION_ID" --arg candidateUploadedAt "$PUBLIC_WORKER_CREATED_AT" --arg candidateStagedAt "$CANDIDATE_STAGED_AT" '{releaseSha:$releaseSha,candidateWorker:$candidateWorker,candidateVersion:$candidateVersion,candidateUploadedAt:$candidateUploadedAt,candidateStagedAt:$candidateStagedAt}')"
-            run_json="$(curl --fail --silent --show-error --max-time 30 -X POST "${curl_headers[@]}" -H 'content-type: application/json' --data "$payload" "$base/runs")"
+            run_json="$(coordinator_request POST "$base/runs" "$payload")"
             jq -e '.acceptanceRunId and .keeperUrl and .expiresAt' <<<"$run_json" >/dev/null
             run_id="$(jq -r '.acceptanceRunId' <<<"$run_json")"
             keeper_url="$(jq -r '.keeperUrl' <<<"$run_json")"
