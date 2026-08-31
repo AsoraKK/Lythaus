@@ -34,9 +34,9 @@ interface __BaseEnv_Env {
 	EMAIL_VERIFICATION_BASE_URL: "http://localhost:4321/verify-email?token=" | "https://lythaus.co/verify-email?token=";
 	EMAIL_PASSWORD_RESET_BASE_URL: "http://localhost:4321/reset-password?token=" | "https://lythaus.co/reset-password?token=";
 	EXPECTED_DATABASE_TARGET: "development" | "main";
-	EXPECTED_DATABASE_SCHEMA_FINGERPRINT: "8922ea383a1a9ff32b9b695e3b04bf5f56648d6a7371d8a35b49db7fae394ad8" | "REPLACE_WITH_POST_0014_SCHEMA_FINGERPRINT";
-	EXPECTED_DATABASE_RELATION_COUNT: "77" | "REPLACE_WITH_POST_0014_RELATION_COUNT";
-	EXPECTED_DATABASE_SCHEMA_VERSION: "unknown" | "0014_transactional_email_outbox.sql";
+	EXPECTED_DATABASE_SCHEMA_FINGERPRINT: "8922ea383a1a9ff32b9b695e3b04bf5f56648d6a7371d8a35b49db7fae394ad8" | "REPLACE_WITH_POST_0015_SCHEMA_FINGERPRINT";
+	EXPECTED_DATABASE_RELATION_COUNT: "77" | "REPLACE_WITH_POST_0015_RELATION_COUNT";
+	EXPECTED_DATABASE_SCHEMA_VERSION: "unknown" | "0015_production_auth_acceptance_coordinator.sql";
 	EXPECTED_DATABASE_ROLE_CLASS: "login_non_superuser";
 	COST_BUDGET_ENABLED: "true";
 	COST_BUDGET_LIMIT_USD: "10";

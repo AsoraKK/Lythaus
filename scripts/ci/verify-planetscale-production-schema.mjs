@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
-import { APPLICATION_SCHEMAS, approvedPost0014Expectation, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
+import { APPLICATION_SCHEMAS, approvedPost0015Expectation, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
 
 const { Client } = pg;
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
@@ -12,8 +12,8 @@ const committedOnly = process.argv.includes('--committed') || process.env.CI ===
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
 const requireProductIntegrityMigration = process.env.REQUIRE_PRODUCT_INTEGRITY_MIGRATION === 'true';
 const manifest = loadApprovedMigrations({ committedOnly });
-const post0014Expectation = requireProductIntegrityMigration || emitContract
-  ? approvedPost0014Expectation(
+const post0015Expectation = requireProductIntegrityMigration || emitContract
+  ? approvedPost0015Expectation(
     process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
     process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
   )
@@ -96,7 +96,7 @@ function fingerprintMismatch(contract, expectation) {
   const missing = [...expected].filter((key) => !observed.has(key)).sort();
   const extra = [...observed].filter((key) => !expected.has(key)).sort();
   return new Error(
-    `production post-0014 schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
+    `production post-0015 schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
     + `relations=${contract.relationCount}/${expectation.relationCount}; missing=${JSON.stringify(missing)}; extra=${JSON.stringify(extra)}`,
   );
 }
@@ -111,14 +111,32 @@ async function verifyWaitlistCatalog(client) {
     to_regclass('trust.user_activity_events') IS NOT NULL AS activity_events,
     to_regclass('system.transactional_email_outbox') IS NOT NULL AS transactional_email_outbox,
     to_regclass('system.transactional_email_outbox_claim_idx') IS NOT NULL AS transactional_email_outbox_claim_index,
+    to_regclass('system.production_auth_acceptance_runs') IS NOT NULL AS production_auth_acceptance_runs,
+    to_regclass('system.production_auth_acceptance_events') IS NOT NULL AS production_auth_acceptance_events,
+    to_regclass('system.production_auth_acceptance_runs_expiry_idx') IS NOT NULL AS production_auth_acceptance_expiry_index,
     to_regclass('moderation.appeal_review_votes') IS NOT NULL AS appeal_review_votes,
     EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'waitlist_signups_email_lookup_hmac_unique' AND contype = 'u') AS unique_hmac,
     NOT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups'
         AND column_name IN ('email', 'plain_email', 'raw_ip', 'ip_address', 'user_agent', 'turnstile_token')
-    ) AS prohibited_columns_absent`);
-  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error('production post-0014 catalog contract is incomplete');
+    ) AS prohibited_columns_absent,
+    EXISTS (
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'identity' AND table_name = 'users'
+         AND column_name = 'is_production_acceptance' AND udt_name = 'bool'
+    ) AS production_acceptance_identity_class,
+    NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'system' AND table_name = 'production_auth_acceptance_runs'
+         AND column_name IN ('email', 'password', 'token', 'refresh_token')
+    ) AS acceptance_run_plaintext_absent,
+    EXISTS (
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'system' AND table_name = 'transactional_email_outbox'
+         AND column_name = 'acceptance_run_id' AND udt_name = 'uuid'
+    ) AS acceptance_outbox_run_binding`);
+  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error('production post-0015 catalog contract is incomplete');
 }
 
 async function verifyWaitlistPrivileges(client) {
@@ -127,7 +145,7 @@ async function verifyWaitlistPrivileges(client) {
   const admin = roleIdentifiers.lythaus_admin;
   const privacy = roleIdentifiers.lythaus_privacy;
   if (![runtime, admin, privacy].every((value) => /^pscale_api_[a-z0-9]+$/.test(value ?? ''))) {
-    throw new Error('post-0014 privilege verification requires canonical PlanetScale role identifiers');
+    throw new Error('post-0015 privilege verification requires canonical PlanetScale role identifiers');
   }
   const result = await client.query(`SELECT
     has_schema_privilege($1, 'system', 'USAGE') AS runtime_system_usage,
@@ -148,10 +166,22 @@ async function verifyWaitlistPrivileges(client) {
     has_table_privilege($1, 'system.transactional_email_outbox', 'SELECT') AS runtime_email_outbox_select,
     has_table_privilege($1, 'system.transactional_email_outbox', 'INSERT') AS runtime_email_outbox_insert,
     has_table_privilege($1, 'system.transactional_email_outbox', 'UPDATE') AS runtime_email_outbox_update,
+    has_table_privilege($1, 'system.production_auth_acceptance_runs', 'SELECT') AS runtime_acceptance_runs_select,
+    has_table_privilege($1, 'system.production_auth_acceptance_runs', 'INSERT') AS runtime_acceptance_runs_insert,
+    has_table_privilege($1, 'system.production_auth_acceptance_runs', 'UPDATE') AS runtime_acceptance_runs_update,
+    has_table_privilege($1, 'system.production_auth_acceptance_events', 'SELECT') AS runtime_acceptance_events_select,
+    has_table_privilege($1, 'system.production_auth_acceptance_events', 'INSERT') AS runtime_acceptance_events_insert,
+    has_table_privilege($1, 'system.production_auth_acceptance_events', 'UPDATE') AS runtime_acceptance_events_update,
     has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS admin_select_ciphertext,
     has_column_privilege($2, 'marketing.waitlist_signups', 'email_lookup_hmac', 'SELECT') AS admin_select_hmac,
     has_column_privilege($2, 'marketing.waitlist_signups', 'status', 'UPDATE') AS admin_update_status,
     has_column_privilege($2, 'marketing.waitlist_signups', 'email_ciphertext', 'UPDATE') AS admin_update_ciphertext,
+    has_table_privilege($2, 'system.production_auth_acceptance_runs', 'SELECT') AS admin_acceptance_runs_select,
+    has_table_privilege($2, 'system.production_auth_acceptance_events', 'SELECT') AS admin_acceptance_events_select,
+    has_column_privilege($2, 'identity.email_verification_tokens', 'token_hash', 'SELECT') AS admin_verification_token_hash_select,
+    has_column_privilege($2, 'identity.password_reset_tokens', 'token_hash', 'SELECT') AS admin_reset_token_hash_select,
+    has_column_privilege($2, 'system.transactional_email_outbox', 'acceptance_context_ciphertext', 'SELECT') AS admin_acceptance_context_select,
+    has_column_privilege($2, 'system.transactional_email_outbox', 'provider_message_id', 'SELECT') AS admin_provider_message_id_select,
     has_table_privilege($3, 'marketing.waitlist_signups', 'DELETE') AS privacy_delete,
     has_column_privilege($3, 'marketing.waitlist_signups', 'purge_after', 'SELECT') AS privacy_select_purge,
     has_column_privilege($3, 'marketing.waitlist_signups', 'email_ciphertext', 'SELECT') AS privacy_select_ciphertext,
@@ -165,8 +195,13 @@ async function verifyWaitlistPrivileges(client) {
     || !row.runtime_activity_select || !row.runtime_activity_insert
     || !row.runtime_marketing_usage || !row.runtime_insert_hmac || row.runtime_select
     || !row.runtime_email_outbox_select || !row.runtime_email_outbox_insert || !row.runtime_email_outbox_update
+    || !row.runtime_acceptance_runs_select || !row.runtime_acceptance_runs_insert || !row.runtime_acceptance_runs_update
+    || !row.runtime_acceptance_events_select || !row.runtime_acceptance_events_insert || !row.runtime_acceptance_events_update
     || !row.admin_select_ciphertext || row.admin_select_hmac
     || !row.admin_update_status || row.admin_update_ciphertext
+    || !row.admin_acceptance_runs_select || !row.admin_acceptance_events_select
+    || row.admin_verification_token_hash_select || row.admin_reset_token_hash_select || row.admin_acceptance_context_select
+    || !row.admin_provider_message_id_select
     || !row.privacy_delete || !row.privacy_select_purge || row.privacy_select_ciphertext || !row.privacy_email_outbox_select) {
     throw new Error('production waitlist/runtime least-privilege contract failed');
   }
@@ -177,7 +212,7 @@ await client.connect();
 try {
   await client.query('BEGIN READ ONLY');
   const registry = await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
-  const through = requireProductIntegrityMigration || emitContract ? '0014_transactional_email_outbox.sql' : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
+  const through = requireProductIntegrityMigration || emitContract ? '0015_production_auth_acceptance_coordinator.sql' : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
   const expected = expectedMigrationPrefix(through);
   if (registry.rows.length !== expected.length) throw new Error(`production migration registry contains ${registry.rows.length} entries; expected ${expected.length}`);
   expected.forEach((migration, index) => {
@@ -191,13 +226,13 @@ try {
     if (emitContract) {
       console.log(JSON.stringify({ branch, ...contract, relations: undefined }));
     } else {
-      if (contract.fingerprint !== post0014Expectation.fingerprint) throw fingerprintMismatch(contract, post0014Expectation);
-      if (contract.relationCount !== post0014Expectation.relationCount) {
-        throw new Error(`production post-0014 relation count is ${contract.relationCount}; expected ${post0014Expectation.relationCount}`);
+      if (contract.fingerprint !== post0015Expectation.fingerprint) throw fingerprintMismatch(contract, post0015Expectation);
+      if (contract.relationCount !== post0015Expectation.relationCount) {
+        throw new Error(`production post-0015 relation count is ${contract.relationCount}; expected ${post0015Expectation.relationCount}`);
       }
-      console.log(`Observed post-0014 schema fingerprint: ${contract.fingerprint}`);
-      console.log(`Observed post-0014 relation count: ${contract.relationCount}`);
-      console.log(`Observed post-0014 catalog SHA-256: ${contract.catalogFingerprint}`);
+      console.log(`Observed post-0015 schema fingerprint: ${contract.fingerprint}`);
+      console.log(`Observed post-0015 relation count: ${contract.relationCount}`);
+      console.log(`Observed post-0015 catalog SHA-256: ${contract.catalogFingerprint}`);
     }
   }
   await client.query('ROLLBACK');

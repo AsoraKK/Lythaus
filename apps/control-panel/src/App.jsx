@@ -7,6 +7,7 @@ import Flags from './pages/Flags.jsx';
 import Users from './pages/Users.jsx';
 import Waitlist from './pages/Waitlist.jsx';
 import AppPreview from './pages/AppPreview.jsx';
+import ProductionAuthAcceptance from './pages/ProductionAuthAcceptance.jsx';
 import AdminAccessGate from './components/AdminAccessGate.jsx';
 
 const NotFound = () => (
@@ -36,6 +37,7 @@ function App() {
               <Route path="/moderation" element={<Flags />} />
               <Route path="/audit" element={<Audit />} />
               <Route path="/preview" element={<AppPreview />} />
+              <Route path="/production-auth-acceptance" element={<ProductionAuthAcceptance />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

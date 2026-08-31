@@ -7,7 +7,8 @@ const links = [
   { to: '/users', label: 'Users' },
   { to: '/waitlist', label: 'Waitlist' },
   { to: '/audit', label: 'Audit' },
-  { to: '/preview', label: 'Preview' }
+  { to: '/preview', label: 'Preview' },
+  { to: '/production-auth-acceptance', label: 'Auth acceptance' }
 ];
 
 function Nav() {

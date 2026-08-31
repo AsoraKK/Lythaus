@@ -101,6 +101,34 @@ export function canonicalPost0014SchemaContract({ root = process.cwd(), committe
   });
 }
 
+export function canonicalPost0015SchemaContract({ root = process.cwd(), committedOnly = false } = {}) {
+  const manifest = loadApprovedMigrations({ root, committedOnly });
+  const migrationPrefix = expectedMigrationPrefix('0015_production_auth_acceptance_coordinator.sql');
+  const relations = relationInventory(manifest.migrations.slice(0, migrationPrefix.length));
+  const migrations = migrationPrefix
+    .map(({ name, appliedSha256 }) => ({ version: name, checksum: appliedSha256 }));
+  return Object.freeze({
+    fingerprint: runtimeSchemaFingerprint(relations, migrations),
+    relationCount: relations.length,
+    relations: Object.freeze(relations),
+    migrations: Object.freeze(migrations),
+  });
+}
+
+export function approvedPost0015Expectation(configuredFingerprint = '', configuredRelationCount = '') {
+  const canonical = canonicalPost0015SchemaContract({ committedOnly: process.env.CI === 'true' });
+  const fingerprint = configuredFingerprint.trim() || canonical.fingerprint;
+  const relationCountText = String(configuredRelationCount ?? '').trim();
+  const relationCount = relationCountText ? Number(relationCountText) : canonical.relationCount;
+  if (!/^[0-9a-f]{64}$/.test(fingerprint) || fingerprint !== canonical.fingerprint) {
+    throw new Error('post-0015 schema fingerprint does not match the canonical migration contract');
+  }
+  if (!Number.isInteger(relationCount) || relationCount !== canonical.relationCount) {
+    throw new Error(`post-0015 relation count must match the canonical migration contract (${canonical.relationCount})`);
+  }
+  return { fingerprint, relationCount, canonical };
+}
+
 export function approvedPost0014Expectation(configuredFingerprint = '', configuredRelationCount = '') {
   const canonical = canonicalPost0014SchemaContract({ committedOnly: process.env.CI === 'true' });
   const fingerprint = configuredFingerprint.trim() || canonical.fingerprint;

@@ -11,6 +11,10 @@ const outputPath = outputIndex === -1
   ? path.join(root, '.artifacts', 'release', 'release-manifest.json')
   : path.resolve(root, process.argv[outputIndex + 1]);
 const releaseSha = process.env.RELEASE_SHA ?? process.env.GITHUB_SHA ?? '';
+const allowWorktreeMigrationsForTest = process.env.LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS === 'true';
+if (allowWorktreeMigrationsForTest && process.env.CI === 'true') {
+  throw new Error('LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS is forbidden in CI');
+}
 
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) {
   throw new Error('RELEASE_SHA must be a full 40-character commit SHA');
@@ -75,7 +79,7 @@ if (nativeBranchProtectionStatus !== 'ACTIVE') {
 
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'lythaus-resource-registry.json'), 'utf8'));
 const hyperdrive = JSON.parse(fs.readFileSync(path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json'), 'utf8'));
-const migration = loadApprovedMigrations({ root, committedOnly: true });
+const migration = loadApprovedMigrations({ root, committedOnly: !allowWorktreeMigrationsForTest });
 
 const surfaces = {
   marketing: {

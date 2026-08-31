@@ -32,6 +32,11 @@ on:
         description: Successful historical branch reconciliation run ID for the exact release SHA
         required: true
         type: string
+      acceptance_run_id:
+        description: Existing exact-candidate production-auth acceptance run to resume
+        required: false
+        default: ''
+        type: string
       confirm_production:
         description: Confirm the four-surface production deployment
         required: true
@@ -381,7 +386,7 @@ jobs:
             fi
           fi
           if [[ -f .artifacts/release-provider-evidence/planetscale-production-contract.json ]] \
-            && jq -e '.transactionReadOnly == true and .verifierPassed == true and .post0014Required == true' .artifacts/release-provider-evidence/planetscale-production-contract.json >/dev/null; then
+            && jq -e '.transactionReadOnly == true and .verifierPassed == true and .post0015Required == true' .artifacts/release-provider-evidence/planetscale-production-contract.json >/dev/null; then
             ps_status='VERIFIED'
           fi
           contract='.artifacts/release-provider-evidence/planetscale-production-contract.json'
@@ -393,8 +398,8 @@ jobs:
           if [[ -f "$contract" ]]; then
             server_version="$(jq -r '.postgresVersion // empty' "$contract")"
             grants_verified="$(jq -r 'if .verifierPassed == true then "true" else "false" end' "$contract")"
-            schema_fingerprint="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0014 schema fingerprint:")) | sub("^Observed post-0014 schema fingerprint: "; "")' "$contract" | head -n 1)"
-            relation_count="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0014 relation count:")) | sub("^Observed post-0014 relation count: "; "")' "$contract" | head -n 1)"
+            schema_fingerprint="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0015 schema fingerprint:")) | sub("^Observed post-0015 schema fingerprint: "; "")' "$contract" | head -n 1)"
+            relation_count="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0015 relation count:")) | sub("^Observed post-0015 relation count: "; "")' "$contract" | head -n 1)"
             migration_set="$(jq -r '.verifierOutput[]? | select(startswith("Approved migration-set SHA-256:")) | sub("^Approved migration-set SHA-256: "; "")' "$contract" | head -n 1)"
           fi
           {
@@ -426,8 +431,8 @@ jobs:
 
   marketing:
     name: Deploy marketing
-    needs: [preflight, provider_evidence]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    needs: [preflight, provider_evidence, workers]
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && needs.workers.outputs.authenticated_acceptance_proven == 'true'
     uses: ./.github/workflows/deploy-marketing.yml
     with:
       release_sha: ${{ inputs.release_sha }}
@@ -437,7 +442,7 @@ jobs:
   web:
     name: Deploy Flutter web
     needs: [preflight, provider_evidence, workers]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && needs.workers.outputs.authenticated_acceptance_proven == 'true'
     uses: ./.github/workflows/deploy-alpha-web.yml
     with:
       release_sha: ${{ inputs.release_sha }}
@@ -452,8 +457,8 @@ jobs:
 
   admin:
     name: Deploy control panel
-    needs: [preflight, provider_evidence]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED'
+    needs: [preflight, provider_evidence, workers]
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && needs.workers.outputs.authenticated_acceptance_proven == 'true'
     uses: ./.github/workflows/deploy-control-panel.yml
     with:
       release_sha: ${{ inputs.release_sha }}
@@ -467,6 +472,7 @@ jobs:
     uses: ./.github/workflows/native-workers-deploy.yml
     with:
       release_sha: ${{ inputs.release_sha }}
+      acceptance_run_id: ${{ inputs.acceptance_run_id }}
     secrets: inherit
 
   production_smoke:

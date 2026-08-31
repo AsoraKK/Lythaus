@@ -129,6 +129,7 @@
     }
   },
   "workspaces": [
+    "apps/lythaus-auth-acceptance-coordinator",
     "apps/lythaus-admin-api",
     "apps/lythaus-jobs",
     "apps/lythaus-public-api",

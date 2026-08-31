@@ -178,7 +178,23 @@ test('auth evidence sources stay protected and database-query compatible', () =>
   assert.doesNotMatch(collector, /internal\/readiness\/auth-acceptance/);
   assert.match(collector, /Cloudflare-Workers-Version-Overrides/);
   assert.match(collector, /authorization/);
+  assert.match(collector, /CF-Access-Client-Id/);
+  assert.match(collector, /auth_acceptance_observer_access_service_token_incomplete/);
   assert.doesNotMatch(collector, /provider_message_id.*SELECT|SELECT.*provider_message_id/i);
+});
+
+test('canonical release creates or resumes the Keeper-bound exact candidate', () => {
+  const productionWorkflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
+  assert.match(workersWorkflow, /acceptance_run_id/);
+  assert.match(workersWorkflow, /AUTH_ACCEPTANCE_KEEPER_URL/);
+  assert.match(workersWorkflow, /CLOUDFLARE_ACCOUNT_ID: \$cloudflare_account_id/);
+  assert.match(workersWorkflow, /AUTH_ACCEPTANCE_PENDING=true/);
+  assert.match(workersWorkflow, /production-auth-acceptance\/observer/);
+  assert.match(workersWorkflow, /\.status == "completed"/);
+  assert.match(workersWorkflow, /JOBS_WORKER_VERSION_ID\}@100/);
+  assert.match(workersWorkflow, /CF-Access-Client-Id/);
+  assert.match(productionWorkflow, /acceptance_run_id/);
+  assert.match(productionWorkflow, /authenticated_acceptance_proven == 'true'/);
 });
 
 test('production ADR-003 preserves its login fixture', () => {
@@ -257,7 +273,7 @@ test('Worker readiness secrets are included in each immutable candidate upload',
   assert.match(workersWorkflow, /DATABASE_READINESS_TOKEN: \$\{\{ secrets\.DATABASE_READINESS_TOKEN \}\}/);
   assert.match(workersWorkflow, /secrets_file="\$RUNNER_TEMP\/production-cutover\/worker-secrets\.json"/);
   assert.match(workersWorkflow, /--secrets-file "\$secrets_file"/);
-  assert.match(workersWorkflow, /trap 'rm -f "\$secrets_file"' EXIT/);
+  assert.match(workersWorkflow, /trap 'rm -f "\$secrets_file" "\$turnstile_secret_file"' EXIT/);
   assert.match(workersWorkflow, /Stage candidate Worker versions at zero traffic/);
   assert.match(workersWorkflow, /versions deploy \$PUBLIC_ROLLBACK_SPECS "\$\{PUBLIC_WORKER_VERSION_ID\}@0"/);
   assert.match(workersWorkflow, /WORKER_STAGED/);

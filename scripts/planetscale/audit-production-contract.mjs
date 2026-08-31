@@ -52,9 +52,9 @@ try {
   const migrationsPayload = migrationsResult.rows.map(({ version, checksum }) => `${version}:${checksum}`).join('\n');
   const verifierOutput = String(verifier.stdout ?? '')
     .split(/\r?\n/)
-    .filter((line) => line.startsWith('Observed post-0014 schema fingerprint:')
-      || line.startsWith('Observed post-0014 relation count:')
-      || line.startsWith('Observed post-0014 catalog SHA-256:')
+    .filter((line) => line.startsWith('Observed post-0015 schema fingerprint:')
+      || line.startsWith('Observed post-0015 relation count:')
+      || line.startsWith('Observed post-0015 catalog SHA-256:')
       || line.startsWith('Approved migration-set SHA-256:')
       || line.startsWith('Verified read-only PlanetScale migration registry'));
   report = {
@@ -63,7 +63,7 @@ try {
     branch: 'main',
     transactionReadOnly: true,
     verifierPassed: true,
-    post0014Required: true,
+    post0015Required: true,
     postgresVersion: versionResult.rows[0]?.server_version ?? null,
     extensions: extensionsResult.rows,
     migrationLedger: {

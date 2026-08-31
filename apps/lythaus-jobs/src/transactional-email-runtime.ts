@@ -13,6 +13,8 @@ interface ClaimedEmail {
   contact_email_user_id: string | null;
   secret_ciphertext: string | null;
   secret_encryption_key_version: string | null;
+  acceptance_context_ciphertext: string | null;
+  acceptance_context_encryption_key_version: string | null;
   template_version: string;
   attempt_count: number;
   correlation_id: string;
@@ -61,12 +63,17 @@ function messageForRow(env: TransactionalEmailRelayEnv, row: ClaimedEmail & { em
   return Promise.all([
     decryptField({ ciphertext: row.secret_ciphertext, encryptionKeyVersion: row.secret_encryption_key_version }, env.PII_ENCRYPTION_KEY_V1),
     decryptField({ ciphertext: textValue(row.email_ciphertext), encryptionKeyVersion: row.encryption_key_version }, env.PII_ENCRYPTION_KEY_V1),
-  ]).then(([token, to]) => {
+    row.acceptance_context_ciphertext && row.acceptance_context_encryption_key_version
+      ? decryptField({ ciphertext: row.acceptance_context_ciphertext, encryptionKeyVersion: row.acceptance_context_encryption_key_version }, env.PII_ENCRYPTION_KEY_V1)
+      : Promise.resolve(undefined),
+  ]).then(([token, to, acceptanceContext]) => {
     const message = renderTransactionalEmail({
       purpose: row.purpose,
       token,
       verificationBaseUrl: env.EMAIL_VERIFICATION_BASE_URL,
       resetBaseUrl: env.EMAIL_PASSWORD_RESET_BASE_URL,
+      acceptanceLinkBaseUrl: env.AUTH_ACCEPTANCE_EMAIL_LINK_BASE_URL,
+      acceptanceContext,
     });
     return { ...message, to };
   });
@@ -145,6 +152,7 @@ async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, limit =
         WHERE outbox.id = claimable.id
        RETURNING outbox.id, outbox.purpose, outbox.contact_email_user_id,
                  outbox.secret_ciphertext, outbox.secret_encryption_key_version,
+                 outbox.acceptance_context_ciphertext, outbox.acceptance_context_encryption_key_version,
                  outbox.template_version, outbox.attempt_count, outbox.correlation_id`,
       [limit],
     );
@@ -191,7 +199,8 @@ async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: Claimed
     `UPDATE system.transactional_email_outbox
         SET state = 'provider_accepted', provider = $2, provider_message_id = $3,
             accepted_at = $4::timestamptz, secret_ciphertext = NULL,
-            secret_encryption_key_version = NULL, updated_at = now()
+            secret_encryption_key_version = NULL, acceptance_context_ciphertext = NULL,
+            acceptance_context_encryption_key_version = NULL, updated_at = now()
       WHERE id = $1 AND state = 'processing'`,
     [row.id, delivery.provider, delivery.messageId, delivery.acceptedAt],
   );

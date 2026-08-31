@@ -92,6 +92,8 @@ export function renderTransactionalEmail(input: {
   token: string;
   verificationBaseUrl?: string;
   resetBaseUrl?: string;
+  acceptanceLinkBaseUrl?: string;
+  acceptanceContext?: string;
 }): TransactionalEmailMessage {
   const subject = input.purpose === 'password_reset'
     ? 'Reset your Lythaus password'
@@ -99,7 +101,9 @@ export function renderTransactionalEmail(input: {
       ? 'Confirm your Lythaus email change'
       : input.purpose === 'invite' ? 'Your Lythaus invitation' : 'Verify your Lythaus email';
   const baseUrl = input.purpose === 'password_reset' ? input.resetBaseUrl : input.verificationBaseUrl;
-  const url = baseUrl ? `${baseUrl}${encodeURIComponent(input.token)}` : '';
+  const url = input.acceptanceContext && input.acceptanceLinkBaseUrl
+    ? `${input.acceptanceLinkBaseUrl}${encodeURIComponent(input.acceptanceContext)}&purpose=${encodeURIComponent(input.purpose)}&token=${encodeURIComponent(input.token)}`
+    : baseUrl ? `${baseUrl}${encodeURIComponent(input.token)}` : '';
   const safeUrl = url.replace(/[&<>"']/g, (value) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value] ?? value));
   const guidance = input.purpose === 'invite'
     ? 'Confirm your email, then use Forgot password on the sign-in page to choose your Lythaus password.'

@@ -7,11 +7,21 @@ on:
         description: Exact reviewed commit SHA to deploy
         required: true
         type: string
+      acceptance_run_id:
+        description: Existing exact-candidate acceptance run to resume after Keeper completion
+        required: false
+        default: ''
+        type: string
   workflow_call:
     inputs:
       release_sha:
         description: Exact reviewed commit SHA to deploy
         required: true
+        type: string
+      acceptance_run_id:
+        description: Existing exact-candidate acceptance run to resume after Keeper completion
+        required: false
+        default: ''
         type: string
     outputs:
       public_worker_version:
@@ -38,6 +48,12 @@ on:
       authenticated_acceptance_status:
         description: Generated candidate auth acceptance status
         value: ${{ jobs.deploy.outputs.authenticated_acceptance_status }}
+      acceptance_run_id:
+        description: Exact candidate-bound acceptance run ID
+        value: ${{ jobs.deploy.outputs.acceptance_run_id }}
+      acceptance_keeper_url:
+        description: Protected Cloudflare Access URL for the Keeper acceptance flow
+        value: ${{ jobs.deploy.outputs.acceptance_keeper_url }}
       planetscale_grants_verified:
         description: Exact-run proof that PlanetScale grants passed the production contract
         value: ${{ jobs.deploy.outputs.planetscale_grants_verified }}
@@ -69,6 +85,8 @@ jobs:
       budget_enforcement_verified: ${{ steps.release_metadata.outputs.budget_enforcement_verified }}
       authenticated_acceptance_proven: ${{ steps.release_metadata.outputs.authenticated_acceptance_proven }}
       authenticated_acceptance_status: ${{ steps.release_metadata.outputs.authenticated_acceptance_status }}
+      acceptance_run_id: ${{ steps.release_metadata.outputs.acceptance_run_id }}
+      acceptance_keeper_url: ${{ steps.release_metadata.outputs.acceptance_keeper_url }}
       planetscale_grants_verified: ${{ steps.release_metadata.outputs.planetscale_grants_verified }}
       worker_source_sha: ${{ steps.release_metadata.outputs.worker_source_sha }}
       rollback_artifacts_proven: ${{ steps.release_metadata.outputs.rollback_artifacts_proven }}
@@ -127,7 +145,16 @@ jobs:
           npx --yes wrangler@4.123.0 types --check apps/lythaus-public-api/src/worker-configuration.d.ts --config apps/lythaus-public-api/wrangler.jsonc
           npx --yes wrangler@4.123.0 types --check apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc
           npx --yes wrangler@4.123.0 types --check apps/lythaus-jobs/src/worker-configuration.d.ts --config apps/lythaus-jobs/wrangler.jsonc
-      - name: Materialize approved post-0014 deployment identity
+      - name: Provision or verify the real production Turnstile widget
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURNSTILE_SECRET_FILE: ${{ runner.temp }}/production-cutover/turnstile-secret.json
+          TURNSTILE_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/turnstile.json
+        run: |
+          mkdir -p "$RUNNER_TEMP/production-cutover"
+          node scripts/cloudflare/waitlist-turnstile.mjs ensure
+      - name: Materialize approved post-0015 deployment identity
         env:
           PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
           PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
@@ -195,19 +222,47 @@ jobs:
           CLOUDFLARE_EMAIL_LIFECYCLE_OUTPUT: ${{ runner.temp }}/production-cutover/email-lifecycle-infrastructure.json
         run: node scripts/ci/provision-cloudflare-email-lifecycle.mjs
       - name: Upload immutable candidate Worker versions
+        if: inputs.acceptance_run_id == ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          PII_ENCRYPTION_KEY_V1: ${{ secrets.PII_ENCRYPTION_KEY_V1 }}
+          PII_HMAC_KEY_V1: ${{ secrets.PII_HMAC_KEY_V1 }}
+          ACCESS_SUBJECT_HMAC_KEY: ${{ secrets.ACCESS_SUBJECT_HMAC_KEY }}
+          AUTH_ACCEPTANCE_EMAIL_BASE: ${{ secrets.CODEX_TEST_EMAIL }}
+          CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
           test -n "$DATABASE_READINESS_TOKEN"
+          test -n "$PII_ENCRYPTION_KEY_V1"
+          test -n "$PII_HMAC_KEY_V1"
+          test -n "$ACCESS_SUBJECT_HMAC_KEY"
+          test -n "$AUTH_ACCEPTANCE_EMAIL_BASE"
+          test -n "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN"
           umask 077
           secrets_file="$RUNNER_TEMP/production-cutover/worker-secrets.json"
-          trap 'rm -f "$secrets_file"' EXIT
-          jq -n --arg readiness_token "$DATABASE_READINESS_TOKEN" \
-            '{DATABASE_READINESS_TOKEN: $readiness_token}' > "$secrets_file"
+          turnstile_secret_file="$RUNNER_TEMP/production-cutover/turnstile-secret.json"
+          test -s "$turnstile_secret_file"
+          trap 'rm -f "$secrets_file" "$turnstile_secret_file"' EXIT
+          jq -n \
+            --arg readiness_token "$DATABASE_READINESS_TOKEN" \
+            --arg cloudflare_account_id "$CLOUDFLARE_ACCOUNT_ID" \
+            --arg encryption_key "$PII_ENCRYPTION_KEY_V1" \
+            --arg hmac_key "$PII_HMAC_KEY_V1" \
+            --arg access_subject_hmac_key "$ACCESS_SUBJECT_HMAC_KEY" \
+            --arg acceptance_email_base "$AUTH_ACCEPTANCE_EMAIL_BASE" \
+            --arg lifecycle_read_token "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN" \
+            '{DATABASE_READINESS_TOKEN: $readiness_token,
+              CLOUDFLARE_ACCOUNT_ID: $cloudflare_account_id,
+              PII_ENCRYPTION_KEY_V1: $encryption_key,
+              PII_HMAC_KEY_V1: $hmac_key,
+              ACCESS_SUBJECT_HMAC_KEY: $access_subject_hmac_key,
+              AUTH_ACCEPTANCE_EMAIL_BASE: $acceptance_email_base,
+              CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: $lifecycle_read_token}' > "$secrets_file"
+          jq -s 'add' "$secrets_file" "$turnstile_secret_file" > "$secrets_file.merged"
+          mv "$secrets_file.merged" "$secrets_file"
           upload_candidate() {
             local config="$1"
             local prefix="$2"
@@ -218,6 +273,22 @@ jobs:
           upload_candidate apps/lythaus-public-api/wrangler.jsonc PUBLIC "$RUNNER_TEMP/production-cutover/public-upload.log"
           upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log"
           upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log"
+          upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/production-cutover/coordinator-versions.json"
+          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
+          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/admin-versions.json" "$RELEASE_SHA" ADMIN
+          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/jobs-versions.json" "$RELEASE_SHA" JOBS
+          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/coordinator-versions.json" "$RELEASE_SHA" COORDINATOR
+      - name: Resolve the existing exact-candidate Worker versions for resume
+        if: inputs.acceptance_run_id != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
           npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
@@ -225,6 +296,7 @@ jobs:
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/admin-versions.json" "$RELEASE_SHA" ADMIN
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/jobs-versions.json" "$RELEASE_SHA" JOBS
       - name: Stage candidate Worker versions at zero traffic
+        if: inputs.acceptance_run_id == ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
@@ -236,18 +308,79 @@ jobs:
           echo "ADMIN_WORKER_STAGED=true" >> "$GITHUB_ENV"
           npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS "${ADMIN_WORKER_VERSION_ID}@0" \
             --name lythaus-admin-api-development --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"
-          echo "JOBS_WORKER_STAGED=true" >> "$GITHUB_ENV"
-          npx --yes wrangler@4.123.0 versions deploy $JOBS_ROLLBACK_SPECS "${JOBS_WORKER_VERSION_ID}@0" \
-            --name lythaus-jobs-development --yes --message "Stage reviewed Lythaus jobs candidate at zero traffic"
+          # Queue consumers do not accept a per-request Worker-version override.
+          # The exact Jobs candidate must therefore be active before any real
+          # email can produce lifecycle evidence; it has no public HTTP route.
+          echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 versions deploy "${JOBS_WORKER_VERSION_ID}@100" \
+            --name lythaus-jobs-development --yes --message "Activate exact Jobs lifecycle consumer for candidate acceptance"
+          echo "COORDINATOR_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100" \
+            --name lythaus-auth-acceptance-coordinator-development --yes --message "Activate protected exact-SHA acceptance coordinator"
+          npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc \
+            --name lythaus-auth-acceptance-coordinator-development
           candidate_staged_at="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
           echo "ADR003_CANDIDATE_STAGED_AT=$candidate_staged_at" >> "$GITHUB_ENV"
-          echo "AUTH_ACCEPTANCE_RUN_ID=$(node -e "process.stdout.write(require('node:crypto').randomUUID())")" >> "$GITHUB_ENV"
+      - name: Validate or create the exact-candidate Keeper acceptance run
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          EXISTING_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          PUBLIC_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
+          PUBLIC_WORKER_CREATED_AT: ${{ env.PUBLIC_WORKER_CREATED_AT }}
+          CANDIDATE_STAGED_AT: ${{ env.ADR003_CANDIDATE_STAGED_AT }}
+        run: |
+          set -euo pipefail
+          base='https://admin.lythaus.co/api/admin/production-auth-acceptance'
+          test -n "$DATABASE_READINESS_TOKEN" && test -n "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"
+          curl_headers=(
+            -H 'accept: application/json'
+            -H "authorization: Bearer ${DATABASE_READINESS_TOKEN}"
+            -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
+            -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
+          )
+          if [[ -n "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
+            [[ "$EXISTING_ACCEPTANCE_RUN_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || exit 1
+            run_json="$(curl --fail --silent --show-error --max-time 30 "${curl_headers[@]}" "$base/runs/$EXISTING_ACCEPTANCE_RUN_ID")"
+            jq -e --arg sha "$RELEASE_SHA" --arg version "$PUBLIC_WORKER_VERSION_ID" '
+              .acceptanceRunId != null and .releaseSha == $sha and .candidate.workerName == "lythaus-public-api-development"
+              and .candidate.workerVersionId == $version and (.status == "pending" or .status == "in_progress" or .status == "completed")
+            ' <<<"$run_json" >/dev/null
+            run_id="$EXISTING_ACCEPTANCE_RUN_ID"
+            keeper_url="https://admin.lythaus.co/production-auth-acceptance?run=$run_id"
+            uploaded_at="$(jq -r '.candidate.uploadedAt' <<<"$run_json")"
+            staged_at="$(jq -r '.candidate.stagedAt' <<<"$run_json")"
+          else
+            test -n "$PUBLIC_WORKER_CREATED_AT" && test -n "$CANDIDATE_STAGED_AT"
+            payload="$(jq -n --arg releaseSha "$RELEASE_SHA" --arg candidateWorker lythaus-public-api-development --arg candidateVersion "$PUBLIC_WORKER_VERSION_ID" --arg candidateUploadedAt "$PUBLIC_WORKER_CREATED_AT" --arg candidateStagedAt "$CANDIDATE_STAGED_AT" '{releaseSha:$releaseSha,candidateWorker:$candidateWorker,candidateVersion:$candidateVersion,candidateUploadedAt:$candidateUploadedAt,candidateStagedAt:$candidateStagedAt}')"
+            run_json="$(curl --fail --silent --show-error --max-time 30 -X POST "${curl_headers[@]}" -H 'content-type: application/json' --data "$payload" "$base/runs")"
+            jq -e '.acceptanceRunId and .keeperUrl and .expiresAt' <<<"$run_json" >/dev/null
+            run_id="$(jq -r '.acceptanceRunId' <<<"$run_json")"
+            keeper_url="$(jq -r '.keeperUrl' <<<"$run_json")"
+            uploaded_at="$PUBLIC_WORKER_CREATED_AT"
+            staged_at="$CANDIDATE_STAGED_AT"
+          fi
+          {
+            echo "AUTH_ACCEPTANCE_RUN_ID=$run_id"
+            echo "ADR003_CANDIDATE_UPLOADED_AT=$uploaded_at"
+            echo "ADR003_CANDIDATE_STAGED_AT=$staged_at"
+            echo "AUTH_ACCEPTANCE_KEEPER_URL=$keeper_url"
+          } >> "$GITHUB_ENV"
+          {
+            echo '## Production authentication acceptance'
+            echo
+            echo "Exact candidate: \`$PUBLIC_WORKER_VERSION_ID\` for \`$RELEASE_SHA\`."
+            echo "Keeper URL (Cloudflare Access required): $keeper_url"
+            echo 'Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with `acceptance_run_id`.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Probe public candidate without production traffic
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -264,7 +397,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -283,7 +416,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -302,7 +435,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           ADR003_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
           ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: protected_probe
-          ADR003_AUTH_ACCEPTANCE_EVIDENCE_URL: ${{ vars.PRODUCTION_AUTH_ACCEPTANCE_EVIDENCE_URL }}
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_URL: https://admin.lythaus.co/api/admin/production-auth-acceptance/observer
           ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/auth-acceptance-observation.json
           ADR003_ACCEPTANCE_RUN_ID: ${{ env.AUTH_ACCEPTANCE_RUN_ID }}
           ADR003_WORKER_NAME: lythaus-public-api-development
@@ -310,8 +443,11 @@ jobs:
           ADR003_CANDIDATE_UPLOADED_AT: ${{ env.PUBLIC_WORKER_CREATED_AT }}
           ADR003_CANDIDATE_STAGED_AT: ${{ env.ADR003_CANDIDATE_STAGED_AT }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: node scripts/ci/collect-auth-acceptance-evidence.mjs
       - name: Run authenticated acceptance against public candidate
+        if: steps.auth_acceptance_observation.outcome == 'success'
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           ADR003_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
@@ -333,7 +469,7 @@ jobs:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
@@ -356,7 +492,8 @@ jobs:
           test "$OBSERVER_OUTCOME" = success || {
             status="$(jq -r '.status // "BLOCKED"' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json" 2>/dev/null || echo BLOCKED)"
             if [[ "$status" = HUMAN_ACCEPTANCE_REQUIRED ]]; then
-              echo 'HUMAN_ACCEPTANCE_REQUIRED: complete the real Turnstile and mailbox interaction, then rerun the observer.' >&2
+              echo 'AUTH_ACCEPTANCE_PENDING=true' >> "$GITHUB_ENV"
+              echo "HUMAN_ACCEPTANCE_REQUIRED: complete the real Turnstile and mailbox interaction at ${AUTH_ACCEPTANCE_KEEPER_URL}, then re-dispatch this exact SHA with acceptance_run_id=${AUTH_ACCEPTANCE_RUN_ID}." >&2
             elif [[ "$status" = BLOCKED ]] && jq -e '.reason == "provider_configuration_missing"' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json" >/dev/null 2>&1; then
               echo 'Provider configuration failure: the enabled mail.lythaus.co Cloudflare Email Sending queue subscription was not independently observed for the required lifecycle events.' >&2
             else
@@ -456,12 +593,14 @@ jobs:
             echo "budget_enforcement_verified=${BUDGET_ENFORCEMENT_VERIFIED:-false}"
             echo "authenticated_acceptance_proven=${AUTHENTICATED_ACCEPTANCE_PROVEN:-false}"
             echo "authenticated_acceptance_status=$(jq -r '.status' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json")"
+            echo "acceptance_run_id=$AUTH_ACCEPTANCE_RUN_ID"
+            echo "acceptance_keeper_url=$AUTH_ACCEPTANCE_KEEPER_URL"
             echo "planetscale_grants_verified=${PLANETSCALE_GRANTS_VERIFIED:-false}"
             echo "worker_source_sha=$RELEASE_SHA"
             echo "rollback_artifacts_proven=true"
           } >> "$GITHUB_OUTPUT"
       - name: Roll back partial Worker deployment on failure
-        if: failure()
+        if: failure() && env.AUTH_ACCEPTANCE_PENDING != 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -484,6 +623,10 @@ jobs:
             npx --yes wrangler@4.123.0 versions deploy $PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development --yes --message "Restore exact predeployment Lythaus public versions" || rollback_failed=1
           fi
           exit "$rollback_failed"
+      - name: Remove ephemeral production secret files
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/production-cutover/worker-secrets.json" "$RUNNER_TEMP/production-cutover/turnstile-secret.json"
       - name: Upload sanitized production cutover evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

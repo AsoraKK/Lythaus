@@ -34,7 +34,7 @@ jobs:
           PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main
         run: npm run validate:cloudflare-hyperdrive-targets
-      - name: Verify approved post-0014 schema read-only
+      - name: Verify approved post-0015 schema read-only
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main
@@ -46,7 +46,7 @@ jobs:
         env:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           REQUIRE_BUDGET_MIGRATION: 'true'

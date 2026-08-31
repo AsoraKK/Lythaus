@@ -12,7 +12,7 @@ const evidencePath = process.env.TURNSTILE_EVIDENCE_PATH ?? '';
 const secretFile = process.env.TURNSTILE_SECRET_FILE ?? '';
 
 const widgetName = 'Lythaus Website Waitlist';
-const expectedDomains = Object.freeze(['lythaus.co', 'www.lythaus.co']);
+const expectedDomains = Object.freeze(['admin.lythaus.co', 'lythaus.co', 'www.lythaus.co']);
 const expectedMode = 'managed';
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}/challenges/widgets`;
 
@@ -92,7 +92,13 @@ if (matches.length === 0) {
 
 const listed = matches[0];
 const sitekey = listed?.sitekey;
-const detailed = await cloudflare(`/${encodeURIComponent(sitekey)}`);
+let detailed = await cloudflare(`/${encodeURIComponent(sitekey)}`);
+if (command === 'ensure' && !sameValues(normalizedDomains(detailed?.domains), expectedDomains)) {
+  detailed = await cloudflare(`/${encodeURIComponent(sitekey)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name: widgetName, domains: expectedDomains, mode: expectedMode, clearance_level: 'no_clearance' }),
+  });
+}
 const { domains } = validateWidget(detailed);
 const secret = typeof detailed?.secret === 'string' ? detailed.secret : '';
 
