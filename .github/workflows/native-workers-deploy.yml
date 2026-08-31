@@ -267,10 +267,11 @@ jobs:
           admin_secret_inventory="$RUNNER_TEMP/production-cutover/admin-secret-bindings.json"
           jobs_secret_inventory="$RUNNER_TEMP/production-cutover/jobs-secret-bindings.json"
           coordinator_secret_inventory="$RUNNER_TEMP/production-cutover/coordinator-secret-bindings.json"
+          coordinator_secret_list_error="$RUNNER_TEMP/production-cutover/coordinator-secret-list.error"
           scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
           scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
           test -s "$turnstile_secret_file"
-          trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory"' EXIT
+          trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error"' EXIT
           jq -n \
             --arg readiness_token "$DATABASE_READINESS_TOKEN" \
             --arg cloudflare_account_id "$CLOUDFLARE_ACCOUNT_ID" \
@@ -278,12 +279,34 @@ jobs:
             '{DATABASE_READINESS_TOKEN: $readiness_token,
               CLOUDFLARE_ACCOUNT_ID: $cloudflare_account_id,
               CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: $lifecycle_read_token}' > "$base_secrets_file"
+          list_coordinator_secrets() {
+            local output="$1"
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$output" 2> "$coordinator_secret_list_error"; then
+                jq -e 'type == "array"' "$output" >/dev/null || {
+                  echo 'Coordinator secret inventory returned invalid JSON.' >&2
+                  return 1
+                }
+                return 0
+              fi
+              if ! grep -Eiq 'not found|does not exist|10007' "$coordinator_secret_list_error"; then
+                echo 'Coordinator secret inventory failed for a non-propagation reason.' >&2
+                return 1
+              fi
+              if [[ "$attempt" -lt 5 ]]; then
+                sleep "$((attempt * 2))"
+              fi
+            done
+            echo 'Coordinator secret inventory remained unavailable after parent bootstrap.' >&2
+            return 1
+          }
           npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
           npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
           CLOUDFLARE_WORKER_PARENT_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-after.json" \
           CLOUDFLARE_WORKER_PARENT_STATE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-state-after.json" \
           node scripts/ci/ensure-cloudflare-worker-parent.mjs
-          npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$coordinator_secret_inventory"
+          list_coordinator_secrets "$coordinator_secret_inventory"
           PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
           JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
           COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_secret_inventory" \
@@ -311,7 +334,7 @@ jobs:
           npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
           npx --yes wrangler@4.123.0 secret list --name lythaus-admin-api-development --format json > "$admin_secret_inventory"
           npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
-          npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$coordinator_secret_inventory"
+          list_coordinator_secrets "$coordinator_secret_inventory"
           ADMIN_SECRET_INVENTORY_FILE="$admin_secret_inventory" \
           PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
           JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
