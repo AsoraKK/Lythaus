@@ -38,6 +38,7 @@ GRANT SELECT, INSERT ON privacy.requests TO lythaus_runtime;
 GRANT SELECT ON privacy.export_manifests, privacy.retention_rules TO lythaus_runtime;
 GRANT SELECT, INSERT ON system.outbox_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.transactional_email_outbox TO lythaus_runtime;
+GRANT SELECT, INSERT, UPDATE ON system.production_auth_acceptance_runs, system.production_auth_acceptance_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON system.idempotency_keys TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.rate_limit_windows TO lythaus_runtime;
 GRANT SELECT ON system.cost_budget_periods, system.cost_kill_switches TO lythaus_runtime;
@@ -59,6 +60,11 @@ GRANT SELECT, INSERT ON moderation.appeal_adjudications, moderation.appeal_outco
 GRANT SELECT, INSERT ON trust.user_activity_events TO lythaus_admin;
 GRANT SELECT, INSERT ON system.audit_events, system.outbox_events TO lythaus_admin;
 GRANT SELECT, INSERT, UPDATE ON system.rate_limit_windows TO lythaus_admin;
+GRANT SELECT, INSERT, UPDATE ON system.production_auth_acceptance_runs, system.production_auth_acceptance_events TO lythaus_admin;
+GRANT SELECT (id, user_id, created_at, expires_at, consumed_at, superseded_at) ON identity.email_verification_tokens, identity.password_reset_tokens TO lythaus_admin;
+GRANT SELECT (id, user_id, purpose, challenge_id, state, provider, provider_message_id, provider_error_category,
+              accepted_at, delivered_at, created_at, acceptance_run_id)
+  ON system.transactional_email_outbox TO lythaus_admin;
 GRANT USAGE ON SCHEMA marketing TO lythaus_admin;
 GRANT SELECT (id, email_ciphertext, encryption_key_version, status, source, created_at, retention_hold)
   ON marketing.waitlist_signups TO lythaus_admin;

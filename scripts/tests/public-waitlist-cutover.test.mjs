@@ -31,7 +31,7 @@ test('Turnstile provisioning is exact, idempotent, and secret-safe', () => {
 });
 
 test('public materializer keeps full authenticated acceptance fail closed', () => {
-  assert.match(materializer, /0014_transactional_email_outbox\.sql/);
+  assert.match(materializer, /0015_production_auth_acceptance_coordinator\.sql/);
   assert.match(materializer, /TURNSTILE_REQUIRED/);
   assert.match(materializer, /lythaus\.co,www\.lythaus\.co/);
   assert.match(materializer, /AUTHENTICATED_ACCEPTANCE_PROVEN/);

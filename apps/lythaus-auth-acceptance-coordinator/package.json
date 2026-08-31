@@ -1,0 +1,12 @@
+{
+  "name": "@lythaus/auth-acceptance-coordinator",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@lythaus/cloudflare-env": "file:../../packages/cloudflare-env",
+    "@lythaus/db": "file:../../packages/db",
+    "@lythaus/security": "file:../../packages/security",
+    "jose": "^6.2.0"
+  }
+}

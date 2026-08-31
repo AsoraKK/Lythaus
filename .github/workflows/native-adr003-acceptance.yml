@@ -48,7 +48,7 @@ jobs:
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PSCALE_BRANCH_NAME: main
         run: npm run validate:cloudflare-hyperdrive-targets
-      - name: Verify post-0014 schema read-only
+      - name: Verify post-0015 schema read-only
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
@@ -66,12 +66,14 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           ADR003_API_BASE_URL: ${{ inputs.api_base_url }}
           ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: protected_probe
-          ADR003_AUTH_ACCEPTANCE_EVIDENCE_URL: ${{ vars.PRODUCTION_AUTH_ACCEPTANCE_EVIDENCE_URL }}
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_URL: https://admin.lythaus.co/api/admin/production-auth-acceptance/observer
           ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ runner.temp }}/adr003-auth-acceptance-observation.json
           ADR003_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
           ADR003_WORKER_NAME: lythaus-public-api-development
           ADR003_WORKER_VERSION_ID: ${{ inputs.worker_version_id }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: node scripts/ci/collect-auth-acceptance-evidence.mjs
       - name: Run sanitized ADR-003 acceptance
         env:
@@ -91,7 +93,7 @@ jobs:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0014_transactional_email_outbox.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}

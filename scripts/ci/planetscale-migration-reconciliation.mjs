@@ -229,6 +229,12 @@ const artifacts = {
     { artifact: 'transactional_email_outbox_claim_index', kind: 'schema_artifact', sql: "SELECT to_regclass('system.transactional_email_outbox_claim_idx') IS NOT NULL AS present" },
     { artifact: 'transactional_email_outbox_no_plaintext_recipient', kind: 'data_invariant', sql: "SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'system' AND table_name = 'transactional_email_outbox' AND column_name IN ('email', 'recipient_email', 'plain_email')) AS present" },
   ],
+  '0015_production_auth_acceptance_coordinator.sql': [
+    { artifact: 'production_auth_acceptance_runs_table', kind: 'schema_artifact', sql: "SELECT to_regclass('system.production_auth_acceptance_runs') IS NOT NULL AS present" },
+    { artifact: 'production_auth_acceptance_events_table', kind: 'schema_artifact', sql: "SELECT to_regclass('system.production_auth_acceptance_events') IS NOT NULL AS present" },
+    { artifact: 'production_auth_acceptance_expiry_index', kind: 'schema_artifact', sql: "SELECT to_regclass('system.production_auth_acceptance_runs_expiry_idx') IS NOT NULL AS present" },
+    { artifact: 'production_auth_acceptance_no_plaintext_columns', kind: 'data_invariant', sql: "SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'system' AND table_name = 'production_auth_acceptance_runs' AND column_name IN ('email', 'password', 'token', 'refresh_token')) AS present" },
+  ],
 };
 
 export const migrationPostconditions = Object.fromEntries(

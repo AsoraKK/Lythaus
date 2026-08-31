@@ -84,6 +84,8 @@ try {
       to_regclass('system.cost_usage_events') AS usage_events,
       to_regclass('system.cost_kill_switches') AS kill_switches,
       to_regclass('marketing.waitlist_signups') AS waitlist_signups,
+      to_regclass('system.production_auth_acceptance_runs') AS production_auth_acceptance_runs,
+      to_regclass('system.production_auth_acceptance_events') AS production_auth_acceptance_events,
       (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name IN ('purge_after', 'retention_hold', 'retention_hold_at', 'retention_hold_released_at')) AS waitlist_retention_column_count,
       (SELECT count(*) FROM pg_extension WHERE extname IN ('pgcrypto', 'pg_trgm', 'unaccent')) AS extension_count,
       (SELECT count(*) FROM information_schema.tables
@@ -93,12 +95,12 @@ try {
           AND c.relkind IN ('r', 'p')) AS table_count
   `);
   const row = checks.rows[0];
-  for (const field of ['users', 'posts', 'subject_locations', 'idempotency', 'contact_emails', 'locator_function', 'retention_function', 'budget_periods', 'budget_reservations', 'usage_events', 'kill_switches', 'waitlist_signups']) if (!row[field]) throw new Error(`PostgreSQL 17 compatibility check missing ${field}`);
+  for (const field of ['users', 'posts', 'subject_locations', 'idempotency', 'contact_emails', 'locator_function', 'retention_function', 'budget_periods', 'budget_reservations', 'usage_events', 'kill_switches', 'waitlist_signups', 'production_auth_acceptance_runs', 'production_auth_acceptance_events']) if (!row[field]) throw new Error(`PostgreSQL 17 compatibility check missing ${field}`);
   if (Number(row.waitlist_retention_column_count) !== 4) throw new Error(`PostgreSQL 17 compatibility check expected waitlist retention and hold columns`);
   if (Number(row.extension_count) !== 3) throw new Error(`PostgreSQL 17 compatibility check expected 3 required extensions, found ${row.extension_count}`);
-  if (Number(row.relation_count) !== 95) throw new Error(`PostgreSQL 17 compatibility check expected 95 local application relations after migration 0014, found ${row.relation_count}`);
-  if (Number(row.relation_count) + 2 !== 97) throw new Error(`PostgreSQL 17 compatibility check expected 97 PlanetScale relations including two provider extension views, found ${Number(row.relation_count) + 2}`);
-  if (Number(row.table_count) !== 94) throw new Error(`PostgreSQL 17 compatibility check expected 94 launch tables after migration 0014, found ${row.table_count}`);
+  if (Number(row.relation_count) !== 97) throw new Error(`PostgreSQL 17 compatibility check expected 97 local application relations after migration 0015, found ${row.relation_count}`);
+  if (Number(row.relation_count) + 2 !== 99) throw new Error(`PostgreSQL 17 compatibility check expected 99 PlanetScale relations including two provider extension views, found ${Number(row.relation_count) + 2}`);
+  if (Number(row.table_count) !== 96) throw new Error(`PostgreSQL 17 compatibility check expected 96 launch tables after migration 0015, found ${row.table_count}`);
 
   const privileges = await client.query(`
     SELECT

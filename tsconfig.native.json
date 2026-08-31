@@ -23,6 +23,7 @@
   "include": [
     "apps/lythaus-public-api/src/**/*.ts",
     "apps/lythaus-admin-api/src/**/*.ts",
+    "apps/lythaus-auth-acceptance-coordinator/src/**/*.ts",
     "apps/lythaus-jobs/src/**/*.ts",
     "packages/*/src/**/*.ts"
   ]

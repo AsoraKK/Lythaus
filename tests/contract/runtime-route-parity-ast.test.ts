@@ -27,6 +27,7 @@ const internalRouteKeys = new Set([
   'GET /health',
   'GET /ready',
   'GET /internal/readiness/database-identity',
+  'POST /internal/production-auth-acceptance/resend-fixture',
 ]);
 const intentionalStartsWithPrefixes = new Set([
   '/api/auth/email/verify',

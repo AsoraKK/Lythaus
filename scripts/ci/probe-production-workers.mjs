@@ -1,14 +1,14 @@
 import fs from 'node:fs';
-import { approvedPost0014Expectation } from './product-integrity-schema-contract.mjs';
+import { approvedPost0015Expectation } from './product-integrity-schema-contract.mjs';
 
 const token = process.env.DATABASE_READINESS_TOKEN ?? '';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
-const post0014Expectation = approvedPost0014Expectation(
+const post0015Expectation = approvedPost0015Expectation(
   process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
   process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
 );
-const expectedRelationCount = post0014Expectation.relationCount;
-const expectedSchemaFingerprint = post0014Expectation.fingerprint;
+const expectedRelationCount = post0015Expectation.relationCount;
+const expectedSchemaFingerprint = post0015Expectation.fingerprint;
 const expectedSchemaVersion = process.env.EXPECTED_DATABASE_SCHEMA_VERSION ?? '';
 const expectedBudgetLedgerApplied = requireBudgetMigration;
 const expectedBranch = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true' ? 'main' : 'unknown';
@@ -22,7 +22,7 @@ const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET ?? '';
 if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
 if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTION_WORKER_VERSION_ID is required');
-if (expectedSchemaVersion !== '0014_transactional_email_outbox.sql') throw new Error('production probes require migration 0014');
+if (expectedSchemaVersion !== '0015_production_auth_acceptance_coordinator.sql') throw new Error('production probes require migration 0015');
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
 
 const allTargets = [

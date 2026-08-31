@@ -98,3 +98,37 @@ test('collector fails closed when lifecycle queue configuration is not observed'
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('collector rejects a partial Cloudflare Access service token', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lythaus-auth-observer-'));
+  const queryOutputPath = join(directory, 'query-output.json');
+  const evidencePath = join(directory, 'evidence.json');
+  writeFileSync(queryOutputPath, JSON.stringify({
+    formatVersion: 'lythaus-real-email-acceptance-v2',
+    source: 'runtime_observation',
+    status: 'HUMAN_ACCEPTANCE_REQUIRED',
+    reason: 'keeper_flow_incomplete',
+    releaseSha,
+    acceptanceRunId,
+    candidate,
+  }));
+  try {
+    assert.throws(() => execFileSync(process.execPath, [script], {
+      env: {
+        ...process.env,
+        RELEASE_SHA: releaseSha,
+        ADR003_WORKER_NAME: candidate.workerName,
+        ADR003_WORKER_VERSION_ID: workerVersionId,
+        ADR003_ACCEPTANCE_RUN_ID: acceptanceRunId,
+        ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: 'read_only_query_artifact',
+        ADR003_AUTH_ACCEPTANCE_QUERY_OUTPUT_PATH: queryOutputPath,
+        ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: evidencePath,
+        CF_ACCESS_CLIENT_ID: 'access-client-only',
+        CF_ACCESS_CLIENT_SECRET: '',
+      },
+      encoding: 'utf8',
+    }), /auth_acceptance_observer_access_service_token_incomplete/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

@@ -46,12 +46,13 @@ test('deployment identity derives canonical database values and Access JWKS with
       PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN: 'lythaus-test.cloudflareaccess.com',
       PRODUCT_INTEGRITY_ACCESS_AUDIENCES: 'audience_one_123,audience_two_456',
       PRODUCT_INTEGRITY_ACCESS_JWKS_URL: '',
+      PUBLIC_TURNSTILE_SITE_KEY: '0x4AAAAAAATestTurnstileSiteKey12345',
       PRODUCT_INTEGRITY_EXTERNAL_BACKUP_HEALTHCHECK_URL: '',
       MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'false',
     },
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /Validated canonical post-0014 deployment identity/);
+  assert.match(result.stdout, /Validated canonical post-0015 deployment identity/);
 
   const materializer = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
   const jobsConfig = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/wrangler.jsonc'), 'utf8');

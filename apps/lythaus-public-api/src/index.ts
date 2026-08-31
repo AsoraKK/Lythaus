@@ -40,6 +40,39 @@ interface EmailAuthInput {
   turnstileToken?: string;
 }
 
+interface AcceptanceContext {
+  runId: string;
+  context: string;
+}
+
+function coordinatorAuthorization(request: Request, env: Env): boolean {
+  const configured = env.DATABASE_READINESS_TOKEN;
+  const supplied = request.headers.get('x-lythaus-acceptance-coordinator');
+  if (!configured || !supplied) return false;
+  return constantTimeEqual(new TextEncoder().encode(configured), new TextEncoder().encode(supplied));
+}
+
+async function acceptanceContext(request: Request, env: Env): Promise<AcceptanceContext | undefined> {
+  const runId = request.headers.get('x-lythaus-acceptance-run-id');
+  const context = request.headers.get('x-lythaus-acceptance-context');
+  if (!runId && !context) return undefined;
+  if (!coordinatorAuthorization(request, env) || !runId || !context || !env.PII_HMAC_KEY_V1) throw new Error('authentication_required');
+  const result = await query<{ id: string }>(env.DB_APP_FRESH,
+    `SELECT id
+       FROM system.production_auth_acceptance_runs
+      WHERE id = $1
+        AND context_lookup_hmac = decode($2, 'base64')
+        AND release_sha = $3
+        AND candidate_worker = 'lythaus-public-api-development'
+        AND candidate_version = $4
+        AND status IN ('pending', 'in_progress')
+        AND expires_at > now()`,
+    [runId, hmacLookup(context, env.PII_HMAC_KEY_V1), env.WORKER_VERSION.tag, env.WORKER_VERSION.id],
+  );
+  if (result.rowCount !== 1) throw new Error('authentication_required');
+  return { runId, context };
+}
+
 interface ActivityDescriptor {
   eventType: ActivityEventType;
   category: ActivityCategory;
@@ -168,8 +201,8 @@ function hashConfiguredPassword(env: Env, password: string, pepper: string): Pas
   });
 }
 
-async function verifyTurnstile(env: Env, token: unknown): Promise<void> {
-  if (!requiresTurnstileVerification(env.TURNSTILE_REQUIRED, env.TURNSTILE_SECRET_KEY, token)) return;
+async function verifyTurnstile(env: Env, token: unknown): Promise<{ observedAt: string; hostname: string; action: string } | undefined> {
+  if (!requiresTurnstileVerification(env.TURNSTILE_REQUIRED, env.TURNSTILE_SECRET_KEY, token)) return undefined;
   let response: Response;
   try {
     response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -192,6 +225,25 @@ async function verifyTurnstile(env: Env, token: unknown): Promise<void> {
     throw new Error('turnstile_unavailable');
   }
   validateTurnstileResponse(result, env.TURNSTILE_EXPECTED_HOSTNAMES, env.TURNSTILE_EXPECTED_ACTION);
+  if (typeof result.hostname !== 'string' || typeof result.action !== 'string') throw new Error('turnstile_failed');
+  return { observedAt: new Date().toISOString(), hostname: result.hostname, action: result.action };
+}
+
+async function recordAcceptanceTurnstile(env: Env, acceptance: AcceptanceContext | undefined, observation: Awaited<ReturnType<typeof verifyTurnstile>>): Promise<void> {
+  if (!acceptance || !observation) return;
+  await query(env.DB_APP_FRESH,
+    `UPDATE system.production_auth_acceptance_runs
+        SET status = 'in_progress', turnstile_verified_at = $2::timestamptz,
+            turnstile_hostname = $3, turnstile_action = $4
+      WHERE id = $1 AND expires_at > now()`,
+    [acceptance.runId, observation.observedAt, observation.hostname, observation.action],
+  );
+  await query(env.DB_APP_FRESH,
+    `INSERT INTO system.production_auth_acceptance_events (id, run_id, event_type)
+     VALUES ($1, $2, 'turnstile_verified')
+     ON CONFLICT (run_id, event_type) DO NOTHING`,
+    [uuidv7(), acceptance.runId],
+  );
 }
 
 async function issueSession(
@@ -229,9 +281,13 @@ async function queueTransactionalEmail(
     token: string;
     encryptionKey: string;
     correlationId: string;
+    acceptance?: AcceptanceContext;
   },
 ): Promise<void> {
   const encryptedSecret = await encryptField(input.token, input.encryptionKey, 'v1');
+  const encryptedAcceptance = input.acceptance
+    ? await encryptField(input.acceptance.context, input.encryptionKey, 'v1')
+    : undefined;
   await enqueueTransactionalEmailIntent(client, {
     id: uuidv7(),
     userId: input.userId,
@@ -241,11 +297,14 @@ async function queueTransactionalEmail(
     templateVersion: 'v1',
     secretCiphertext: encryptedSecret.ciphertext,
     secretEncryptionKeyVersion: encryptedSecret.encryptionKeyVersion,
+    acceptanceContextCiphertext: encryptedAcceptance?.ciphertext,
+    acceptanceContextEncryptionKeyVersion: encryptedAcceptance?.encryptionKeyVersion,
+    acceptanceRunId: input.acceptance?.runId,
     correlationId: input.correlationId,
   });
 }
 
-async function queueAccountVerificationEmail(request: Request, env: Env, userId: string): Promise<void> {
+async function queueAccountVerificationEmail(request: Request, env: Env, userId: string, acceptance?: AcceptanceContext): Promise<void> {
   const verificationToken = randomToken(32);
   const challengeId = uuidv7();
   const sourceEventId = uuidv7();
@@ -276,7 +335,8 @@ async function queueAccountVerificationEmail(request: Request, env: Env, userId:
       challengeId,
       token: verificationToken,
       encryptionKey: secrets.encryptionKey,
-      correlationId: correlationId(request),
+      correlationId: acceptance?.runId ?? correlationId(request),
+      acceptance,
     });
     await writeActivity(client, request, { userId }, sourceEventId, {
       eventType: 'account.email_verification_requested', category: 'account',
@@ -292,7 +352,11 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   const input = await readJson<EmailAuthInput>(request, 16 * 1024);
   const attempt = prepareEmailAuthAttempt(input);
   const { email, password, mode } = attempt;
-  if (mode === 'register' || mode === 'resend_verification') await verifyTurnstile(env, attempt.turnstileToken);
+  const acceptance = await acceptanceContext(request, env);
+  const turnstileObservation = mode === 'register' || mode === 'resend_verification'
+    ? await verifyTurnstile(env, attempt.turnstileToken)
+    : undefined;
+  await recordAcceptanceTurnstile(env, acceptance, turnstileObservation);
   const secrets = requireAuthSecrets(env);
   const lookup = hmacLookup(email, secrets.hmacKey);
   const existing = await query<{ id: string; status: string; password_hash: PasswordHash; verified_at: string | null }>(env.DB_APP_FRESH,
@@ -307,7 +371,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   if (mode === 'resend_verification') {
     if (account && !account.verified_at) {
       try {
-        await queueAccountVerificationEmail(request, env, account.id);
+        await queueAccountVerificationEmail(request, env, account.id, acceptance);
       } catch { /* Keep resend enumeration-safe when queueing fails. */ }
     }
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
@@ -319,7 +383,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     );
     if (registrationPlan === 'resend_verification') {
       if (!account) throw new Error('account_unavailable');
-      await queueAccountVerificationEmail(request, env, account.id);
+      await queueAccountVerificationEmail(request, env, account.id, acceptance);
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     if (registrationPlan === 'neutral_existing_account') {
@@ -351,8 +415,18 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
           challengeId,
           token: verificationToken,
           encryptionKey: secrets.encryptionKey,
-          correlationId: correlationId(request),
+          correlationId: acceptance?.runId ?? correlationId(request),
+          acceptance,
         });
+        if (acceptance) {
+          const bound = await client.query(
+            `UPDATE system.production_auth_acceptance_runs
+                SET primary_user_id = $2, status = 'in_progress'
+              WHERE id = $1 AND primary_user_id IS NULL AND expires_at > now()`,
+            [acceptance.runId, contactOwner.id],
+          );
+          if (bound.rowCount !== 1) throw new Error('acceptance_run_identity_binding_failed');
+        }
         await client.query(
           `INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_relink_started', '{"source":"contact_email"}'::jsonb)`,
           [uuidv7(), contactOwner.id]);
@@ -368,7 +442,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     }
     const userId = uuidv7();
     await transaction(env.DB_APP_FRESH, async (client) => {
-      await client.query(`INSERT INTO identity.users (id) VALUES ($1)`, [userId]);
+      await client.query(`INSERT INTO identity.users (id, is_production_acceptance) VALUES ($1, $2)`, [userId, acceptance !== undefined]);
       await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
       await client.query(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`, [userId, encrypted.ciphertext, lookup]);
       await client.query(`INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`, [challengeId, userId, hashAuthToken(verificationToken, 'verification')]);
@@ -378,8 +452,18 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
         challengeId,
         token: verificationToken,
         encryptionKey: secrets.encryptionKey,
-        correlationId: correlationId(request),
+        correlationId: acceptance?.runId ?? correlationId(request),
+        acceptance,
       });
+      if (acceptance) {
+        const bound = await client.query(
+          `UPDATE system.production_auth_acceptance_runs
+              SET primary_user_id = $2, status = 'in_progress'
+            WHERE id = $1 AND primary_user_id IS NULL AND expires_at > now()`,
+          [acceptance.runId, userId],
+        );
+        if (bound.rowCount !== 1) throw new Error('acceptance_run_identity_binding_failed');
+      }
       await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_registration_started', '{}'::jsonb)`, [uuidv7(), userId]);
       await writeActivity(client, request, { userId }, sourceEventId, {
         eventType: 'account.registered', category: 'account', title: 'You registered an account',
@@ -417,7 +501,62 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
 }
 
+async function createAcceptanceResendFixture(request: Request, env: Env): Promise<Response> {
+  const acceptance = await acceptanceContext(request, env);
+  if (!acceptance || !env.PII_ENCRYPTION_KEY_V1 || !env.PII_HMAC_KEY_V1) throw new Error('authentication_required');
+  const secrets = requireAuthSecrets(env);
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    const run = await client.query<{
+      resend_email_ciphertext: string;
+      resend_email_encryption_key_version: string;
+      resend_email_lookup_hmac: Uint8Array;
+      resend_fixture_user_id: string | null;
+    }>(
+      `SELECT resend_email_ciphertext, resend_email_encryption_key_version, resend_email_lookup_hmac, resend_fixture_user_id
+         FROM system.production_auth_acceptance_runs
+        WHERE id = $1 AND expires_at > now()
+        FOR UPDATE`,
+      [acceptance.runId],
+    );
+    const row = run.rows[0];
+    if (!row) throw new Error('authentication_required');
+    if (row.resend_fixture_user_id) return;
+    const userId = uuidv7();
+    const challengeId = uuidv7();
+    await client.query(`INSERT INTO identity.users (id, is_production_acceptance) VALUES ($1, true)`, [userId]);
+    await client.query(
+      `INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
+       VALUES ($1, convert_to($2, 'utf8'), $3, 'v1', 'v1', $4::jsonb)`,
+      [userId, row.resend_email_ciphertext, row.resend_email_lookup_hmac, JSON.stringify(hashConfiguredPassword(env, randomToken(32), secrets.pepper))],
+    );
+    await client.query(
+      `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
+       VALUES ($1, convert_to($2, 'utf8'), $3, 'v1', 'email')`,
+      [userId, row.resend_email_ciphertext, row.resend_email_lookup_hmac],
+    );
+    await client.query(
+      `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
+      [challengeId, userId, hashAuthToken(randomToken(32), 'verification')],
+    );
+    await client.query(
+      `UPDATE system.production_auth_acceptance_runs
+          SET resend_fixture_user_id = $2, resend_previous_challenge_id = $3, status = 'in_progress'
+        WHERE id = $1`,
+      [acceptance.runId, userId, challengeId],
+    );
+    await client.query(
+      `INSERT INTO system.production_auth_acceptance_events (id, run_id, event_type)
+       VALUES ($1, $2, 'resend_fixture_created')
+       ON CONFLICT (run_id, event_type) DO NOTHING`,
+      [uuidv7(), acceptance.runId],
+    );
+  });
+  return privateResponse(request, env, { state: 'resend_fixture_ready' }, { status: 202 });
+}
+
 async function verifyEmail(request: Request, env: Env): Promise<Response> {
+  await acceptanceContext(request, env);
   const url = new URL(request.url);
   if (request.method !== 'POST') throw new Error('method_not_allowed');
   const input = await readJson<{ token?: string }>(request, 8 * 1024);
@@ -466,6 +605,7 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
 }
 
 async function refreshSession(request: Request, env: Env): Promise<Response> {
+  await acceptanceContext(request, env);
   const input = await readJson<{ refreshToken?: string; refresh_token?: string }>(request, 16 * 1024);
   const refreshToken = requireRefreshToken(input);
   const secrets = requireAuthSecrets(env);
@@ -516,6 +656,7 @@ async function refreshSession(request: Request, env: Env): Promise<Response> {
 }
 
 async function logout(request: Request, env: Env): Promise<Response> {
+  await acceptanceContext(request, env);
   const user = await principal(request, env);
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
@@ -535,7 +676,9 @@ async function logout(request: Request, env: Env): Promise<Response> {
 
 async function requestPasswordReset(request: Request, env: Env): Promise<Response> {
   const input = await readJson<{ email?: string; turnstileToken?: string }>(request, 8 * 1024);
-  await verifyTurnstile(env, input.turnstileToken);
+  const acceptance = await acceptanceContext(request, env);
+  const turnstileObservation = await verifyTurnstile(env, input.turnstileToken);
+  await recordAcceptanceTurnstile(env, acceptance, turnstileObservation);
   const email = normalizeEmailAddress(input.email);
   if (!env.PII_HMAC_KEY_V1 || !env.PII_ENCRYPTION_KEY_V1) throw new Error('authentication_not_configured');
   const encryptionKey = env.PII_ENCRYPTION_KEY_V1;
@@ -562,7 +705,8 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
         challengeId,
         token,
         encryptionKey,
-        correlationId: correlationId(request),
+        correlationId: acceptance?.runId ?? correlationId(request),
+        acceptance,
       });
       await writeActivity(client, request, { userId: account.rows[0].id }, sourceEventId, {
         eventType: 'account.password_reset_requested', category: 'account', title: 'A password reset was requested',
@@ -576,6 +720,7 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
 }
 
 async function completePasswordReset(request: Request, env: Env): Promise<Response> {
+  await acceptanceContext(request, env);
   const url = new URL(request.url);
   const input = await readJson<{ token?: string; password?: string }>(request, 16 * 1024);
   const token = requireToken(url.searchParams.get('token') ?? input.token, 'reset_token_invalid');
@@ -630,6 +775,12 @@ function response(request: Request, env: Env, body: unknown, init: ResponseInit 
   }
   result.headers.set('x-correlation-id', correlationId(request));
   result.headers.set('vary', 'Origin, Authorization');
+  if (coordinatorAuthorization(request, env)
+    && request.headers.has('x-lythaus-acceptance-run-id')
+    && request.headers.has('x-lythaus-acceptance-context')) {
+    result.headers.set('x-lythaus-candidate-version', env.WORKER_VERSION.id);
+    result.headers.set('x-lythaus-candidate-release', env.WORKER_VERSION.tag);
+  }
   return result;
 }
 
@@ -3035,6 +3186,7 @@ export default {
         if (env.EMAIL_PROVIDER_MODE === 'disabled') return response(request, env, { error: 'provider_unavailable', provider: 'email', correlationId: id }, { status: 404 });
       }
       if (request.method === 'POST' && url.pathname === '/api/auth/email') return await emailAuth(request, env);
+      if (request.method === 'POST' && url.pathname === '/internal/production-auth-acceptance/resend-fixture') return await createAcceptanceResendFixture(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/email/verify') return await verifyEmail(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/request') return await requestPasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return await completePasswordReset(request, env);

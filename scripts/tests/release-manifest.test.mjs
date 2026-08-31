@@ -13,7 +13,7 @@ test('release manifest records partial provider evidence without inventing live 
   const output = path.join(directory, 'release-manifest.json');
   execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], {
     cwd: root,
-    env: { ...process.env, RELEASE_SHA: releaseSha },
+    env: { ...process.env, RELEASE_SHA: releaseSha, LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS: 'true', CI: 'false' },
     stdio: 'pipe',
   });
   const manifest = JSON.parse(fs.readFileSync(output, 'utf8'));
@@ -27,7 +27,7 @@ test('release manifest records partial provider evidence without inventing live 
   assert.ok(manifest.evidence.platformLimitations.every((value) => !value.includes('native branch protection')));
   assert.equal(manifest.cloudflare.inventoryStatus, 'UNKNOWN/BLOCKED');
   assert.equal(manifest.planetscale.inventoryStatus, 'UNKNOWN/BLOCKED');
-  assert.equal(manifest.planetscale.latestMigration, '0014_transactional_email_outbox.sql');
+  assert.equal(manifest.planetscale.latestMigration, '0015_production_auth_acceptance_coordinator.sql');
   assert.match(manifest.planetscale.migrationSetSha256, /^[a-f0-9]{64}$/);
 });
 
@@ -39,6 +39,8 @@ test('release manifest records native and release governance independently', () 
     env: {
       ...process.env,
       RELEASE_SHA: releaseSha,
+      LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS: 'true',
+      CI: 'false',
       NATIVE_BRANCH_PROTECTION_STATUS: 'ACTIVE',
       RELEASE_GOVERNANCE_COMPENSATING_CONTROLS: 'VERIFIED',
       CANDIDATE_MERGED_PR_NUMBER: '661',

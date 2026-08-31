@@ -6,6 +6,7 @@ const configs = [
   'apps/lythaus-public-api/wrangler.jsonc',
   'apps/lythaus-admin-api/wrangler.jsonc',
   'apps/lythaus-jobs/wrangler.jsonc',
+  'apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc',
 ];
 const requireProvisioned = process.argv.includes('--require-provisioned');
 const failures = [];
@@ -16,6 +17,7 @@ const expectedNames = {
   'apps/lythaus-public-api/wrangler.jsonc': 'lythaus-public-api-development',
   'apps/lythaus-admin-api/wrangler.jsonc': 'lythaus-admin-api-development',
   'apps/lythaus-jobs/wrangler.jsonc': 'lythaus-jobs-development',
+  'apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc': 'lythaus-auth-acceptance-coordinator-development',
 };
 
 for (const relative of configs) {
@@ -30,12 +32,13 @@ for (const relative of configs) {
   if (!new RegExp(`"name"\\s*:\\s*"${expectedNames[relative]}"`).test(production)) failures.push(`${relative}: production must reuse ${expectedNames[relative]}`);
   if (/"images"\s*:/.test(production)) failures.push(`${relative}: Cloudflare Images binding is forbidden for this migration`);
   if (!/HYPERDRIVE_QUERY_CACHE_MODE/.test(source) || !/disabled/.test(source)) failures.push(`${relative}: Hyperdrive cache-disabled intent missing`);
-  if (!/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0014_transactional_email_outbox\.sql"/.test(production)) failures.push(`${relative}: production must require migration 0014`);
+  if (!/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0015_production_auth_acceptance_coordinator\.sql"/.test(production)) failures.push(`${relative}: production must require migration 0015`);
   if (!/"EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED"\s*:\s*"true"/.test(production)) failures.push(`${relative}: production must require the budget ledger`);
   if (/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0008_legacy_relink_status\.sql"/.test(production)) failures.push(`${relative}: legacy 0008 production identity is forbidden`);
   if (relative.includes('public-api') && !/api\.lythaus\.co/.test(production)) failures.push(`${relative}: public API must use api.lythaus.co`);
   if (relative.includes('admin-api') && !/admin-api\.lythaus\.co/.test(production)) failures.push(`${relative}: admin API must use admin-api.lythaus.co`);
   if (relative.includes('jobs') && /"routes"\s*:/.test(production)) failures.push(`${relative}: jobs Worker must not expose a production route`);
+  if (relative.includes('auth-acceptance-coordinator') && !/admin\.lythaus\.co\/api\/admin\/production-auth-acceptance\/\*/.test(production)) failures.push(`${relative}: coordinator must remain on the Access-protected admin hostname`);
   if (requireProvisioned && /REPLACE_WITH_/.test(production)) failures.push(`${relative}: unresolved production binding or required secret placeholder`);
 }
 

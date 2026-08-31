@@ -13,6 +13,11 @@ const source = required('ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE');
 if (!['protected_probe', 'read_only_query_artifact'].includes(source)) throw new Error('auth_acceptance_observer_source_invalid');
 const readinessToken = source === 'protected_probe' ? required('DATABASE_READINESS_TOKEN') : '';
 const queryOutputPath = source === 'read_only_query_artifact' ? required('ADR003_AUTH_ACCEPTANCE_QUERY_OUTPUT_PATH') : '';
+const accessClientId = process.env.CF_ACCESS_CLIENT_ID?.trim() ?? '';
+const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET?.trim() ?? '';
+if (Boolean(accessClientId) !== Boolean(accessClientSecret)) {
+  throw new Error('auth_acceptance_observer_access_service_token_incomplete');
+}
 const expectedCandidate = {
   workerName,
   workerVersionId,
@@ -87,6 +92,10 @@ async function collect() {
       'x-lythaus-acceptance-run-id': acceptanceRunId,
       'Cloudflare-Workers-Version-Overrides': `${workerName}="${workerVersionId}"`,
     });
+    if (accessClientId) {
+      headers.set('CF-Access-Client-Id', accessClientId);
+      headers.set('CF-Access-Client-Secret', accessClientSecret);
+    }
     response = await fetch(url, {
       headers,
       redirect: 'manual',
