@@ -438,6 +438,7 @@ jobs:
         run: |
           set -euo pipefail
           base='https://admin.lythaus.co/api/admin/production-auth-acceptance'
+          coordinator_response_file="$RUNNER_TEMP/production-cutover/coordinator-request.json"
           test -n "$DATABASE_READINESS_TOKEN" && test -n "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"
           curl_headers=(
             -H 'accept: application/json'
