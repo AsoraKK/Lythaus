@@ -22,6 +22,7 @@ interface Env extends EnvBindings {
   MEDIA_QUARANTINE: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
   PRIVATE_EXPORTS: NonNullable<EnvBindings['PRIVATE_EXPORTS']>;
   MODERATION_QUEUE: NonNullable<EnvBindings['MODERATION_QUEUE']>;
+  JOBS_COMPATIBILITY: NonNullable<EnvBindings['JOBS_COMPATIBILITY']>;
   R2_ACCOUNT_ID: string;
   LYTHAUS_CONFIG?: NonNullable<EnvBindings['LYTHAUS_CONFIG']>;
 }
@@ -312,6 +313,37 @@ async function queueTransactionalEmail(
 function requiredTransactionalEmailKey(env: Env): string {
   if (!env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1) throw new Error('transactional_email_not_configured');
   return env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1;
+}
+
+const TRANSACTIONAL_EMAIL_KEY_COMPATIBILITY_FIXTURE = 'lythaus:transactional-email-key-compatibility:v1';
+
+async function proveTransactionalEmailKeyCompatibility(request: Request, env: Env): Promise<Response> {
+  if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+  const envelope = await encryptField(
+    TRANSACTIONAL_EMAIL_KEY_COMPATIBILITY_FIXTURE,
+    requiredTransactionalEmailKey(env),
+    'v1',
+  );
+  const result = await env.JOBS_COMPATIBILITY.fetch('https://lythaus-jobs.internal/internal/readiness/transactional-email-key-compatibility', {
+    method: 'POST',
+    headers: {
+      authorization: request.headers.get('authorization') ?? '',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(envelope),
+  });
+  if (!result.ok) throw new Error('transactional_email_key_compatibility_failed');
+  const body = await result.json().catch(() => null) as { status?: unknown; workerVersionId?: unknown; releaseTag?: unknown } | null;
+  if (body?.status !== 'compatible' || typeof body.workerVersionId !== 'string' || typeof body.releaseTag !== 'string') {
+    throw new Error('transactional_email_key_compatibility_failed');
+  }
+  return privateResponse(request, env, {
+    status: 'compatible',
+    publicWorkerVersionId: env.WORKER_VERSION.id,
+    publicReleaseTag: env.WORKER_VERSION.tag,
+    jobsWorkerVersionId: body.workerVersionId,
+    jobsReleaseTag: body.releaseTag,
+  });
 }
 
 async function queueAccountVerificationEmail(request: Request, env: Env, userId: string, recipient: string, acceptance?: AcceptanceContext): Promise<void> {
@@ -2968,6 +3000,9 @@ export default {
           releaseTag: env.WORKER_VERSION.tag,
           ...databaseReadinessResponse(identity, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
         });
+      }
+      if (request.method === 'POST' && (url.pathname === '/internal/readiness/transactional-email-key-compatibility' || url.pathname === '/api/internal/readiness/transactional-email-key-compatibility')) {
+        return await proveTransactionalEmailKeyCompatibility(request, env);
       }
       if (request.method === 'GET' && (url.pathname === '/ready' || url.pathname === '/api/ready')) {
         await query(env.DB_APP_FRESH, 'SELECT 1 AS ready');

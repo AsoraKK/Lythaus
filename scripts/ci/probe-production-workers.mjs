@@ -1,14 +1,14 @@
 import fs from 'node:fs';
-import { approvedPost0015Expectation } from './product-integrity-schema-contract.mjs';
+import { approvedPost0016Expectation } from './product-integrity-schema-contract.mjs';
 
 const token = process.env.DATABASE_READINESS_TOKEN ?? '';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
-const post0015Expectation = approvedPost0015Expectation(
+const post0016Expectation = approvedPost0016Expectation(
   process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
   process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
 );
-const expectedRelationCount = post0015Expectation.relationCount;
-const expectedSchemaFingerprint = post0015Expectation.fingerprint;
+const expectedRelationCount = post0016Expectation.relationCount;
+const expectedSchemaFingerprint = post0016Expectation.fingerprint;
 const expectedSchemaVersion = process.env.EXPECTED_DATABASE_SCHEMA_VERSION ?? '';
 const expectedBudgetLedgerApplied = requireBudgetMigration;
 const expectedBranch = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true' ? 'main' : 'unknown';

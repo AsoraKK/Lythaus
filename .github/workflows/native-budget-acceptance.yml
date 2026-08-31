@@ -34,7 +34,7 @@ jobs:
           PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main
         run: npm run validate:cloudflare-hyperdrive-targets
-      - name: Verify approved post-0015 schema read-only
+      - name: Verify approved post-0016 schema read-only
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_BRANCH_NAME: main

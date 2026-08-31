@@ -269,16 +269,22 @@ test('ADR-003 repeat runs verify existing privacy requests without weakening lim
 });
 
 test('candidate uploads preserve legacy secrets and scope new purpose-specific keys', () => {
+  const scopedKeyLifecycle = readFileSync('scripts/ci/prepare-scoped-worker-secrets.mjs', 'utf8');
   assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 secret put DATABASE_READINESS_TOKEN/);
   assert.match(workersWorkflow, /DATABASE_READINESS_TOKEN: \$\{\{ secrets\.DATABASE_READINESS_TOKEN \}\}/);
   assert.doesNotMatch(workersWorkflow, /secrets\.PII_ENCRYPTION_KEY_V1|secrets\.PII_HMAC_KEY_V1|secrets\.ACCESS_SUBJECT_HMAC_KEY/);
-  assert.match(workersWorkflow, /TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1/);
-  assert.match(workersWorkflow, /AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1/);
+  assert.match(scopedKeyLifecycle, /TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1/);
+  assert.match(scopedKeyLifecycle, /AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1/);
   assert.match(workersWorkflow, /public-secrets\.json/);
   assert.match(workersWorkflow, /jobs-secrets\.json/);
   assert.match(workersWorkflow, /coordinator-secrets\.json/);
   assert.match(workersWorkflow, /--secrets-file "\$secrets_file"/);
-  assert.match(workersWorkflow, /openssl rand -base64 32/);
+  assert.match(workersWorkflow, /secret list --name lythaus-public-api-development/);
+  assert.match(workersWorkflow, /secret list --name lythaus-jobs-development/);
+  assert.match(workersWorkflow, /secret list --name lythaus-auth-acceptance-coordinator-development/);
+  assert.match(workersWorkflow, /prepare-scoped-worker-secrets\.mjs/);
+  assert.match(workersWorkflow, /Prove staged Public and Jobs transactional-email key compatibility/);
+  assert.doesNotMatch(workersWorkflow, /openssl rand -base64 32/);
   assert.match(workersWorkflow, /Stage candidate Worker versions at zero traffic/);
   assert.match(workersWorkflow, /versions deploy \$PUBLIC_ROLLBACK_SPECS "\$\{PUBLIC_WORKER_VERSION_ID\}@0"/);
   assert.match(workersWorkflow, /WORKER_STAGED/);

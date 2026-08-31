@@ -46,22 +46,37 @@ export function emailProviderFailureCategory(error: unknown): ReturnType<typeof 
   return classifyEmailProviderFailure(details);
 }
 
-function messageForRow(env: TransactionalEmailRelayEnv, row: ClaimedEmail): Promise<TransactionalEmailMessage> {
+export async function decryptTransactionalEmailEnvelope(
+  field: { ciphertext: string; encryptionKeyVersion: string },
+  transactionalEmailKey: string,
+): Promise<{ to: string; token: string; acceptanceContext?: string }> {
+  const plaintext = await decryptField(field, transactionalEmailKey);
+  let envelope: { to?: unknown; token?: unknown; acceptanceContext?: unknown };
+  try { envelope = JSON.parse(plaintext) as typeof envelope; } catch { throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID'); }
+  if (typeof envelope.to !== 'string' || typeof envelope.token !== 'string') throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID');
+  return {
+    to: envelope.to,
+    token: envelope.token,
+    ...(typeof envelope.acceptanceContext === 'string' ? { acceptanceContext: envelope.acceptanceContext } : {}),
+  };
+}
+
+async function messageForRow(env: TransactionalEmailRelayEnv, row: ClaimedEmail): Promise<TransactionalEmailMessage> {
   if (!row.delivery_envelope_ciphertext || !row.delivery_envelope_encryption_key_version) {
     throw new EmailProviderFailure(400, 'E_SECRET_UNAVAILABLE');
   }
   if (!env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1) throw new EmailProviderFailure(503, 'E_ENCRYPTION_KEY_UNAVAILABLE');
-  return decryptField({ ciphertext: row.delivery_envelope_ciphertext, encryptionKeyVersion: row.delivery_envelope_encryption_key_version }, env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1).then((plaintext) => {
-    let envelope: { to?: unknown; token?: unknown; acceptanceContext?: unknown };
-    try { envelope = JSON.parse(plaintext) as typeof envelope; } catch { throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID'); }
-    if (typeof envelope.to !== 'string' || typeof envelope.token !== 'string') throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID');
+  return decryptTransactionalEmailEnvelope({
+    ciphertext: row.delivery_envelope_ciphertext,
+    encryptionKeyVersion: row.delivery_envelope_encryption_key_version,
+  }, env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1).then((envelope) => {
     const message = renderTransactionalEmail({
       purpose: row.purpose,
       token: envelope.token,
       verificationBaseUrl: env.EMAIL_VERIFICATION_BASE_URL,
       resetBaseUrl: env.EMAIL_PASSWORD_RESET_BASE_URL,
       acceptanceLinkBaseUrl: env.AUTH_ACCEPTANCE_EMAIL_LINK_BASE_URL,
-      acceptanceContext: typeof envelope.acceptanceContext === 'string' ? envelope.acceptanceContext : undefined,
+      acceptanceContext: envelope.acceptanceContext,
     });
     return { ...message, to: envelope.to };
   });

@@ -54,6 +54,28 @@ function hasReadinessAuthorization(request: Request, env: Env): boolean {
   return constantTimeEqual(new TextEncoder().encode(configured), new TextEncoder().encode(supplied));
 }
 
+const TRANSACTIONAL_EMAIL_KEY_COMPATIBILITY_FIXTURE = 'lythaus:transactional-email-key-compatibility:v1';
+
+async function proveTransactionalEmailKeyCompatibility(request: Request, env: Env): Promise<Response> {
+  if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+  if (!env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1) return new Response(null, { status: 503 });
+  const body = await request.json().catch(() => null) as { ciphertext?: unknown; encryptionKeyVersion?: unknown } | null;
+  if (!body || typeof body.ciphertext !== 'string' || body.encryptionKeyVersion !== 'v1') {
+    return json({ error: 'compatibility_fixture_invalid' }, { status: 400, headers: { 'cache-control': 'private, no-store' } });
+  }
+  try {
+    const plaintext = await decryptField({ ciphertext: body.ciphertext, encryptionKeyVersion: 'v1' }, env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1);
+    if (!constantTimeEqual(new TextEncoder().encode(plaintext), new TextEncoder().encode(TRANSACTIONAL_EMAIL_KEY_COMPATIBILITY_FIXTURE))) {
+      return new Response(null, { status: 409 });
+    }
+  } catch {
+    return new Response(null, { status: 409 });
+  }
+  return json({ status: 'compatible', workerVersionId: env.WORKER_VERSION.id, releaseTag: env.WORKER_VERSION.tag }, {
+    headers: { 'cache-control': 'private, no-store' },
+  });
+}
+
 function budgetConfig(env: Env): BudgetConfig {
   if (env.COST_BUDGET_ENABLED !== 'true') throw new Error('budget_not_configured');
   const value = (candidate: string | undefined, fallback: number): number => {
@@ -1816,6 +1838,9 @@ export default {
       } catch {
         return json({ error: 'evidence_filter_invalid' }, { status: 400 });
       }
+    }
+    if (pathname === '/internal/readiness/transactional-email-key-compatibility' && request.method === 'POST') {
+      return proveTransactionalEmailKeyCompatibility(request, env);
     }
     if (request.method === 'GET' && pathname === '/internal/readiness/database-identity') {
       if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });

@@ -10,6 +10,7 @@ export interface EnvBindings {
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
   PRIVACY_QUEUE?: Queue;
+  JOBS_COMPATIBILITY?: ServiceBinding;
   AUDIT_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;
   MEDIA_QUEUE?: Queue;
@@ -86,6 +87,10 @@ export interface EnvBindings {
   COST_AUTHENTICITY_IMAGE_ESTIMATE_USD?: string;
   AI?: WorkersAiBinding;
   AI_GATEWAY_ID?: string;
+}
+
+export interface ServiceBinding {
+  fetch(input: Request | string, init?: RequestInit): Promise<Response>;
 }
 
 export interface R2ObjectLike {
