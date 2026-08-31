@@ -198,6 +198,21 @@ test('canonical release creates or resumes the Keeper-bound exact candidate', ()
   assert.match(productionWorkflow, /authenticated_acceptance_proven == 'true'/);
 });
 
+test('coordinator secret inventory waits for parent propagation and fails closed', () => {
+  assert.match(workersWorkflow, /list_coordinator_secrets\(\)/);
+  assert.match(workersWorkflow, /for attempt in 1 2 3 4 5/);
+  assert.match(workersWorkflow, /not found\|does not exist\|10007/);
+  assert.match(workersWorkflow, /Coordinator secret inventory returned invalid JSON/);
+  assert.match(workersWorkflow, /Coordinator secret inventory failed for a non-propagation reason/);
+  assert.match(workersWorkflow, /Coordinator secret inventory remained unavailable after parent bootstrap/);
+  const ensureIndex = workersWorkflow.indexOf('node scripts/ci/ensure-cloudflare-worker-parent.mjs');
+  const initialInventoryIndex = workersWorkflow.indexOf('list_coordinator_secrets "$coordinator_secret_inventory"');
+  assert.ok(ensureIndex >= 0 && initialInventoryIndex > ensureIndex);
+  const uploadIndex = workersWorkflow.indexOf('versions upload --config');
+  const postUploadInventoryIndex = workersWorkflow.lastIndexOf('list_coordinator_secrets "$coordinator_secret_inventory"');
+  assert.ok(uploadIndex >= 0 && postUploadInventoryIndex > uploadIndex);
+});
+
 test('production ADR-003 preserves its login fixture', () => {
   assert.match(workersWorkflow, /ADR003_RUN_DESTRUCTIVE_ACCOUNT_DELETION: 'false'/);
   assert.match(adr003Harness, /outcome: 'skipped', reason: 'account_deletion_not_run_in_production_release'/);
@@ -293,8 +308,8 @@ test('candidate uploads preserve legacy secrets and scope new purpose-specific k
 
 test('coordinator parent bootstrap is ordered before inventory and activation', () => {
   const providerPreflight = workersWorkflow.indexOf('Verify production schema read-only');
-  const parentEnsure = workersWorkflow.indexOf('node scripts/ci/ensure-cloudflare-worker-parent.mjs\n          npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development');
-  const coordinatorInventory = workersWorkflow.indexOf('secret list --name lythaus-auth-acceptance-coordinator-development');
+  const parentEnsure = workersWorkflow.indexOf('node scripts/ci/ensure-cloudflare-worker-parent.mjs\n          list_coordinator_secrets "$coordinator_secret_inventory"');
+  const coordinatorInventory = workersWorkflow.indexOf('list_coordinator_secrets "$coordinator_secret_inventory"', parentEnsure);
   const candidateUpload = workersWorkflow.indexOf('versions upload --config "$config" --tag "$RELEASE_SHA"');
   const coordinatorActivation = workersWorkflow.indexOf('versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100"');
   const keeperAcceptance = workersWorkflow.indexOf('Validate or create the exact-candidate Keeper acceptance run');
@@ -303,7 +318,7 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.ok(providerPreflight >= 0);
   assert.ok(parentEnsure > providerPreflight);
   assert.ok(coordinatorInventory > parentEnsure && coordinatorInventory < parentEnsure + 300);
-  assert.match(workersWorkflow, /node scripts\/ci\/ensure-cloudflare-worker-parent\.mjs\n\s+npx --yes wrangler@4\.123\.0 secret list --name lythaus-auth-acceptance-coordinator-development/);
+  assert.match(workersWorkflow, /node scripts\/ci\/ensure-cloudflare-worker-parent\.mjs\n\s+list_coordinator_secrets "\$coordinator_secret_inventory"/);
   assert.ok(candidateUpload > coordinatorInventory);
   assert.ok(coordinatorActivation > candidateUpload);
   assert.ok(keeperAcceptance > coordinatorActivation);
