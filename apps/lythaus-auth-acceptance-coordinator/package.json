@@ -7,6 +7,6 @@
     "@lythaus/cloudflare-env": "file:../../packages/cloudflare-env",
     "@lythaus/db": "file:../../packages/db",
     "@lythaus/security": "file:../../packages/security",
-    "jose": "^6.2.0"
+    "jose": "^6.2.10"
   }
 }
