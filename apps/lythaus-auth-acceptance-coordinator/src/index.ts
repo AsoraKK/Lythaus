@@ -82,7 +82,9 @@ function strictSha(value: unknown): string {
 }
 
 function strictUuid(value: unknown, code: string): string {
-  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new Error(code);
+  // Acceptance runs are generated with uuidv7(); retain strict RFC UUID
+  // validation while accepting the v7 run identifiers used by this Worker.
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new Error(code);
   return value;
 }
 

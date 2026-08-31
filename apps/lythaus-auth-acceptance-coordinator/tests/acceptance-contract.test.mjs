@@ -17,6 +17,12 @@ test('acceptance runs bind the exact coordinator release and candidate version',
   assert.match(migration, /production_auth_acceptance_active_candidate_uidx/);
 });
 
+test('acceptance run validation accepts the uuidv7 identifiers it generates', () => {
+  assert.match(coordinator, /uuidv7\(\)/);
+  assert.match(coordinator, /\[1-8\]\[0-9a-f\]\{3\}/);
+  assert.doesNotMatch(coordinator, /\[1-5\]\[0-9a-f\]\{3\}/);
+});
+
 test('acceptance evidence is server derived and human interaction remains required', () => {
   assert.match(coordinator, /status: 'HUMAN_ACCEPTANCE_REQUIRED'/);
   assert.match(coordinator, /source: 'runtime_observation'/);
