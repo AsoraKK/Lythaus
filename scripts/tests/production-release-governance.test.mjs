@@ -315,6 +315,27 @@ test('candidate uploads preserve legacy secrets and scope new purpose-specific k
   assert.match(workersWorkflow, /WORKER_STAGED/);
 });
 
+test('staged transactional-email compatibility probe retries transient failures and fails closed', () => {
+  const start = workersWorkflow.indexOf('- name: Prove staged Public and Jobs transactional-email key compatibility');
+  const end = workersWorkflow.indexOf('- name: Validate or create the exact-candidate Keeper acceptance run', start);
+  const probe = workersWorkflow.slice(start, end);
+
+  assert.match(probe, /compatible=false/);
+  assert.match(probe, /for attempt in 1 2 3 4 5/);
+  assert.match(probe, /--output "\$response"/);
+  assert.match(probe, /--write-out '%\{http_code\}'/);
+  assert.match(probe, /curl_exit=\$\?/);
+  assert.match(probe, /http_status/);
+  assert.match(probe, /sleep "\$\(\(attempt \* 2\)\)"/);
+  assert.match(probe, /HTTP \$\{http_status\}; failing closed/);
+  assert.match(probe, /remained unavailable after bounded retries; failing closed/);
+  assert.match(probe, /\.publicWorkerVersionId == \$public/);
+  assert.match(probe, /\.jobsWorkerVersionId == \$jobs/);
+  assert.match(probe, /\.publicReleaseTag == \$sha/);
+  assert.match(probe, /\.jobsReleaseTag == \$sha/);
+  assert.doesNotMatch(probe, /curl --fail/);
+});
+
 test('coordinator parent bootstrap is ordered before inventory and activation', () => {
   const providerPreflight = workersWorkflow.indexOf('Verify production schema read-only');
   const parentEnsure = workersWorkflow.indexOf('node scripts/ci/ensure-cloudflare-worker-parent.mjs\n          list_coordinator_secrets "$coordinator_secret_inventory"');

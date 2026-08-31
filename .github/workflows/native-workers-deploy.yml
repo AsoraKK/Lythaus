@@ -413,18 +413,50 @@ jobs:
           set -euo pipefail
           base="${PRODUCTION_PUBLIC_API_BASE_URL%/}"
           response="$RUNNER_TEMP/production-cutover/transactional-email-key-compatibility.json"
-          curl --fail --silent --show-error --max-time 30 \
-            -H "authorization: Bearer ${DATABASE_READINESS_TOKEN}" \
-            -H "Cloudflare-Workers-Version-Overrides: lythaus-public-api-development=\"${PUBLIC_WORKER_VERSION_ID}\"" \
-            -H 'accept: application/json' \
-            -X POST "$base/internal/readiness/transactional-email-key-compatibility" > "$response"
-          jq -e --arg public "$PUBLIC_WORKER_VERSION_ID" --arg jobs "$JOBS_WORKER_VERSION_ID" --arg sha "$RELEASE_SHA" '
-            .status == "compatible"
-            and .publicWorkerVersionId == $public
-            and .jobsWorkerVersionId == $jobs
-            and .publicReleaseTag == $sha
-            and .jobsReleaseTag == $sha
-          ' "$response" >/dev/null
+          compatible=false
+          for attempt in 1 2 3 4 5; do
+            rm -f "$response"
+            set +e
+            http_status="$(curl --silent --show-error --max-time 30 \
+              -H "authorization: Bearer ${DATABASE_READINESS_TOKEN}" \
+              -H "Cloudflare-Workers-Version-Overrides: lythaus-public-api-development=\"${PUBLIC_WORKER_VERSION_ID}\"" \
+              -H 'accept: application/json' \
+              -X POST "$base/internal/readiness/transactional-email-key-compatibility" \
+              --output "$response" \
+              --write-out '%{http_code}')"
+            curl_exit=$?
+            set -e
+
+            if [[ "$curl_exit" -eq 0 && "$http_status" == "200" ]]; then
+              if jq -e --arg public "$PUBLIC_WORKER_VERSION_ID" --arg jobs "$JOBS_WORKER_VERSION_ID" --arg sha "$RELEASE_SHA" '
+                .status == "compatible"
+                and .publicWorkerVersionId == $public
+                and .jobsWorkerVersionId == $jobs
+                and .publicReleaseTag == $sha
+                and .jobsReleaseTag == $sha
+              ' "$response" >/dev/null; then
+                compatible=true
+                break
+              fi
+              echo 'Transactional email compatibility returned malformed or mismatched success evidence; failing closed.' >&2
+              exit 1
+            fi
+
+            if [[ "$http_status" == "400" || "$http_status" == "401" || "$http_status" == "403" || "$http_status" == "409" ]]; then
+              echo "Transactional email compatibility rejected with HTTP ${http_status}; failing closed." >&2
+              exit 1
+            fi
+
+            if [[ "$attempt" -lt 5 ]]; then
+              echo "Transactional email compatibility probe attempt ${attempt} did not complete (curl=${curl_exit}, http=${http_status}); retrying." >&2
+              sleep "$((attempt * 2))"
+            fi
+          done
+
+          if [[ "$compatible" != true ]]; then
+            echo 'Transactional email compatibility remained unavailable after bounded retries; failing closed.' >&2
+            exit 1
+          fi
       - name: Validate or create the exact-candidate Keeper acceptance run
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
