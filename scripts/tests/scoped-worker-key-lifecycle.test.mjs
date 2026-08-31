@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ACCEPTANCE_STATE_KEY, TRANSACTIONAL_EMAIL_KEY, assertBootstrapLedgerPreconditions, classifyScopedKeyBindings } from '../ci/prepare-scoped-worker-secrets.mjs';
+import { ACCEPTANCE_STATE_KEY, BOOTSTRAP_LEDGER_COUNT_SQL, TRANSACTIONAL_EMAIL_KEY, assertBootstrapLedgerPreconditions, classifyScopedKeyBindings } from '../ci/prepare-scoped-worker-secrets.mjs';
 import { verifyScopedWorkerSecretBindings } from '../ci/verify-scoped-worker-secret-bindings.mjs';
 import fs from 'node:fs';
 
@@ -38,6 +38,12 @@ test('ordinary deployment path has no implicit scoped-key rotation mode', () => 
   const source = fs.readFileSync('scripts/ci/prepare-scoped-worker-secrets.mjs', 'utf8');
   assert.match(source, /SCOPED_KEY_ROTATION_REQUESTED/);
   assert.match(source, /dedicated reviewed rotation workflow/);
+});
+
+test('bootstrap ledger query uses only non-null aggregate-safe columns', () => {
+  assert.match(BOOTSTRAP_LEDGER_COUNT_SQL, /count\(purpose\)/);
+  assert.match(BOOTSTRAP_LEDGER_COUNT_SQL, /count\(created_at\)/);
+  assert.doesNotMatch(BOOTSTRAP_LEDGER_COUNT_SQL, /count\(\*\)/);
 });
 
 test('post-upload inventory proves least-privilege worker secret boundaries by name only', () => {

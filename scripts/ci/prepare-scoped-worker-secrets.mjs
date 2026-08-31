@@ -8,6 +8,14 @@ const { Client } = pg;
 export const TRANSACTIONAL_EMAIL_KEY = 'TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1';
 export const ACCEPTANCE_STATE_KEY = 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1';
 
+// purpose and created_at are NOT NULL in both ledgers. Counting those
+// columns keeps the bootstrap precondition compatible with the verifier's
+// aggregate-only column grants; SELECT * or COUNT(*) would require access to
+// every protected delivery/acceptance column.
+export const BOOTSTRAP_LEDGER_COUNT_SQL = `SELECT
+      (SELECT count(purpose)::integer FROM system.transactional_email_outbox) AS transactional_email_outbox_rows,
+      (SELECT count(created_at)::integer FROM system.production_auth_acceptance_runs) AS acceptance_run_rows`;
+
 function readJson(path) {
   return JSON.parse(fs.readFileSync(path, 'utf8'));
 }
@@ -66,9 +74,7 @@ async function readBootstrapLedgerCounts() {
     await client.query('BEGIN READ ONLY');
     const mode = await client.query('SHOW transaction_read_only');
     if (mode.rows[0]?.transaction_read_only !== 'on') throw new Error('scoped-key bootstrap requires a read-only database transaction');
-    const result = await client.query(`SELECT
-      (SELECT count(*)::integer FROM system.transactional_email_outbox) AS transactional_email_outbox_rows,
-      (SELECT count(*)::integer FROM system.production_auth_acceptance_runs) AS acceptance_run_rows`);
+    const result = await client.query(BOOTSTRAP_LEDGER_COUNT_SQL);
     await client.query('ROLLBACK');
     return {
       transactionalEmailOutboxRows: Number(result.rows[0]?.transactional_email_outbox_rows),
