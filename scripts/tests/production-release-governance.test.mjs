@@ -11,6 +11,7 @@ const runtimeAuth = readFileSync('scripts/release/runtime-authenticated-command.
 const ciWorkflow = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pagesVerifier = readFileSync('scripts/cloudflare/verify-pages-deployment.mjs', 'utf8');
 const publicApiRuntime = readFileSync('apps/lythaus-public-api/src/index.ts', 'utf8');
+const coordinatorParentHelper = readFileSync('scripts/ci/ensure-cloudflare-worker-parent.mjs', 'utf8');
 
 const satisfiesGovernance = (protection) => (
   protection.required_status_checks !== null
@@ -288,6 +289,37 @@ test('candidate uploads preserve legacy secrets and scope new purpose-specific k
   assert.match(workersWorkflow, /Stage candidate Worker versions at zero traffic/);
   assert.match(workersWorkflow, /versions deploy \$PUBLIC_ROLLBACK_SPECS "\$\{PUBLIC_WORKER_VERSION_ID\}@0"/);
   assert.match(workersWorkflow, /WORKER_STAGED/);
+});
+
+test('coordinator parent bootstrap is ordered before inventory and activation', () => {
+  const providerPreflight = workersWorkflow.indexOf('Verify production schema read-only');
+  const parentEnsure = workersWorkflow.indexOf('node scripts/ci/ensure-cloudflare-worker-parent.mjs\n          npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development');
+  const coordinatorInventory = workersWorkflow.indexOf('secret list --name lythaus-auth-acceptance-coordinator-development');
+  const candidateUpload = workersWorkflow.indexOf('versions upload --config "$config" --tag "$RELEASE_SHA"');
+  const coordinatorActivation = workersWorkflow.indexOf('versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100"');
+  const keeperAcceptance = workersWorkflow.indexOf('Validate or create the exact-candidate Keeper acceptance run');
+  const productionActivation = workersWorkflow.indexOf('Activate exact candidate Worker versions');
+
+  assert.ok(providerPreflight >= 0);
+  assert.ok(parentEnsure > providerPreflight);
+  assert.ok(coordinatorInventory > parentEnsure && coordinatorInventory < parentEnsure + 300);
+  assert.match(workersWorkflow, /node scripts\/ci\/ensure-cloudflare-worker-parent\.mjs\n\s+npx --yes wrangler@4\.123\.0 secret list --name lythaus-auth-acceptance-coordinator-development/);
+  assert.ok(candidateUpload > coordinatorInventory);
+  assert.ok(coordinatorActivation > candidateUpload);
+  assert.ok(keeperAcceptance > coordinatorActivation);
+  assert.ok(productionActivation > keeperAcceptance);
+  assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 deploy(?:\s|['"])/);
+  assert.match(coordinatorParentHelper, /COORDINATOR_PARENT_EXISTED_BEFORE/);
+  assert.match(coordinatorParentHelper, /COORDINATOR_PARENT_CREATED/);
+  assert.match(workersWorkflow, /COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS/);
+  assert.match(workersWorkflow, /COORDINATOR_ROUTE_TRIGGER_ATTEMPTED/);
+  assert.match(workersWorkflow, /coordinator-route-before\.json/);
+  const rollback = workersWorkflow.slice(workersWorkflow.indexOf('- name: Roll back partial Worker deployment on failure'));
+  assert.ok(rollback.indexOf('AUTH_ACCEPTANCE_PENDING') < rollback.indexOf('COORDINATOR_ROUTE_TRIGGER_ATTEMPTED'));
+  assert.match(rollback, /COORDINATOR_ROLLBACK_SPECS/);
+  assert.match(rollback, /retaining the harmless parent\/version/);
+  assert.match(rollback, /versions deploy \$COORDINATOR_ROLLBACK_SPECS/);
+  assert.match(workersWorkflow, /Resolve the existing exact-candidate Worker versions for resume[\s\S]*coordinator-versions\.json/);
 });
 
 test('jobs remain probeable by version evidence without requiring a public hostname', () => {

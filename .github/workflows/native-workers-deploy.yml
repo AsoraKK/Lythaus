@@ -33,6 +33,9 @@ on:
       jobs_worker_version:
         description: Activated jobs Worker version ID
         value: ${{ jobs.deploy.outputs.jobs_worker_version }}
+      coordinator_worker_version:
+        description: Activated protected acceptance coordinator Worker version ID
+        value: ${{ jobs.deploy.outputs.coordinator_worker_version }}
       hyperdrive_verified_main:
         description: Exact-run proof that production Hyperdrive targets PlanetScale main
         value: ${{ jobs.deploy.outputs.hyperdrive_verified_main }}
@@ -80,6 +83,7 @@ jobs:
       public_worker_version: ${{ steps.release_metadata.outputs.public_worker_version }}
       admin_worker_version: ${{ steps.release_metadata.outputs.admin_worker_version }}
       jobs_worker_version: ${{ steps.release_metadata.outputs.jobs_worker_version }}
+      coordinator_worker_version: ${{ steps.release_metadata.outputs.coordinator_worker_version }}
       hyperdrive_verified_main: ${{ steps.release_metadata.outputs.hyperdrive_verified_main }}
       database_identity_verified: ${{ steps.release_metadata.outputs.database_identity_verified }}
       budget_enforcement_verified: ${{ steps.release_metadata.outputs.budget_enforcement_verified }}
@@ -195,6 +199,20 @@ jobs:
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/public-before.json" unused PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/admin-before.json" unused ADMIN
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/jobs-before.json" unused JOBS
+          CLOUDFLARE_WORKER_PARENT_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-before.json" \
+          CLOUDFLARE_WORKER_PARENT_STATE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json" \
+          node scripts/ci/ensure-cloudflare-worker-parent.mjs --check-only
+          if jq -e '.status == "VERIFIED" and .deployment.exists == true' "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json" >/dev/null; then
+            npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/production-cutover/coordinator-before.json"
+            node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/coordinator-before.json" unused COORDINATOR
+            echo 'COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS=true' >> "$GITHUB_ENV"
+          elif jq -e '.status == "ABSENT" or (.status == "VERIFIED" and .deployment.exists == false)' "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json" >/dev/null; then
+            jq -n --slurpfile parent "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json" '{versions: [], parent: $parent[0]}' > "$RUNNER_TEMP/production-cutover/coordinator-before.json"
+            echo 'COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS=false' >> "$GITHUB_ENV"
+          else
+            echo 'Coordinator parent state was ambiguous; refusing to continue.' >&2
+            exit 1
+          fi
       - name: Capture predeployment same-origin admin API route
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -203,6 +221,9 @@ jobs:
           node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
             "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
             'admin.lythaus.co/api/admin/*'
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
+            "$RUNNER_TEMP/production-cutover/coordinator-route-before.json" \
+            'admin.lythaus.co/api/admin/production-auth-acceptance/*'
       - name: Record verified main routing assertion
         run: echo "HYPERDRIVE_VERIFIED_MAIN=true" >> "$GITHUB_ENV"
       - name: Verify production schema read-only
@@ -259,6 +280,9 @@ jobs:
               CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: $lifecycle_read_token}' > "$base_secrets_file"
           npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
           npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
+          CLOUDFLARE_WORKER_PARENT_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-after.json" \
+          CLOUDFLARE_WORKER_PARENT_STATE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-state-after.json" \
+          node scripts/ci/ensure-cloudflare-worker-parent.mjs
           npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$coordinator_secret_inventory"
           PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
           JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
@@ -315,6 +339,8 @@ jobs:
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/admin-versions.json" "$RELEASE_SHA" ADMIN
           node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/jobs-versions.json" "$RELEASE_SHA" JOBS
+          npx --yes wrangler@4.123.0 versions list --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/production-cutover/coordinator-versions.json"
+          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/coordinator-versions.json" "$RELEASE_SHA" COORDINATOR
       - name: Stage candidate Worker versions at zero traffic
         if: inputs.acceptance_run_id == ''
         env:
@@ -331,12 +357,13 @@ jobs:
           # Queue consumers do not accept a per-request Worker-version override.
           # The exact Jobs candidate must therefore be active before any real
           # email can produce lifecycle evidence; it has no public HTTP route.
-          echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
           npx --yes wrangler@4.123.0 versions deploy "${JOBS_WORKER_VERSION_ID}@100" \
             --name lythaus-jobs-development --yes --message "Activate exact Jobs lifecycle consumer for candidate acceptance"
-          echo "COORDINATOR_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+          echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
           npx --yes wrangler@4.123.0 versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100" \
             --name lythaus-auth-acceptance-coordinator-development --yes --message "Activate protected exact-SHA acceptance coordinator"
+          echo "COORDINATOR_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+          echo "COORDINATOR_ROUTE_TRIGGER_ATTEMPTED=true" >> "$GITHUB_ENV"
           npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc \
             --name lythaus-auth-acceptance-coordinator-development
           candidate_staged_at="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
@@ -608,7 +635,14 @@ jobs:
           test -s "$RUNNER_TEMP/production-cutover/public-before.json"
           test -s "$RUNNER_TEMP/production-cutover/admin-before.json"
           test -s "$RUNNER_TEMP/production-cutover/jobs-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/coordinator-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json"
           test -s "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/coordinator-route-before.json"
+          if [[ -z "${{ inputs.acceptance_run_id }}" ]]; then
+            test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-after.json"
+          fi
           lifecycle_evidence="$RUNNER_TEMP/production-cutover/email-lifecycle-infrastructure.json"
           scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
           scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
@@ -652,6 +686,7 @@ jobs:
             echo "public_worker_version=$PUBLIC_WORKER_VERSION_ID"
             echo "admin_worker_version=$ADMIN_WORKER_VERSION_ID"
             echo "jobs_worker_version=$JOBS_WORKER_VERSION_ID"
+            echo "coordinator_worker_version=$COORDINATOR_WORKER_VERSION_ID"
             echo "hyperdrive_verified_main=${HYPERDRIVE_VERIFIED_MAIN:-false}"
             echo "database_identity_verified=${DATABASE_IDENTITY_VERIFIED:-false}"
             echo "budget_enforcement_verified=${BUDGET_ENFORCEMENT_VERIFIED:-false}"
@@ -664,7 +699,7 @@ jobs:
             echo "rollback_artifacts_proven=true"
           } >> "$GITHUB_OUTPUT"
       - name: Roll back partial Worker deployment on failure
-        if: failure() && env.AUTH_ACCEPTANCE_PENDING != 'true'
+        if: failure()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -672,10 +707,26 @@ jobs:
         run: |
           set +e
           rollback_failed=0
+          if [[ "${AUTH_ACCEPTANCE_PENDING:-false}" == "true" ]]; then
+            echo 'HUMAN_ACCEPTANCE_REQUIRED: preserving exact candidate Jobs/coordinator state for resume.'
+            exit 0
+          fi
           if [[ "${ADMIN_ROUTE_TRIGGER_ATTEMPTED:-false}" == "true" ]]; then
             node scripts/ci/manage-cloudflare-worker-route.mjs restore \
               "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
               'admin.lythaus.co/api/admin/*' || rollback_failed=1
+          fi
+          if [[ "${COORDINATOR_ROUTE_TRIGGER_ATTEMPTED:-false}" == "true" ]]; then
+            node scripts/ci/manage-cloudflare-worker-route.mjs restore \
+              "$RUNNER_TEMP/production-cutover/coordinator-route-before.json" \
+              'admin.lythaus.co/api/admin/production-auth-acceptance/*' || rollback_failed=1
+          fi
+          if [[ "${COORDINATOR_WORKER_DEPLOYED:-false}" == "true" || "${COORDINATOR_WORKER_STAGED:-false}" == "true" ]]; then
+            if [[ -n "${COORDINATOR_ROLLBACK_SPECS:-}" ]]; then
+              npx --yes wrangler@4.123.0 versions deploy $COORDINATOR_ROLLBACK_SPECS --name lythaus-auth-acceptance-coordinator-development --yes --message "Restore exact predeployment Lythaus coordinator versions" || rollback_failed=1
+            else
+              echo 'No prior coordinator deployment existed; retaining the harmless parent/version and restoring only the route.'
+            fi
           fi
           if [[ "${JOBS_WORKER_DEPLOYED:-false}" == "true" || "${JOBS_WORKER_STAGED:-false}" == "true" ]]; then
             npx --yes wrangler@4.123.0 versions deploy $JOBS_ROLLBACK_SPECS --name lythaus-jobs-development --yes --message "Restore exact predeployment Lythaus jobs versions" || rollback_failed=1

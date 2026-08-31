@@ -109,6 +109,7 @@ const surfaces = {
     publicApi: { name: 'lythaus-public-api-development', versionId: valueOrNull('PUBLIC_API_WORKER_VERSION'), sourceSha: shaOrNull('WORKER_SOURCE_SHA') },
     adminApi: { name: 'lythaus-admin-api-development', versionId: valueOrNull('ADMIN_API_WORKER_VERSION'), sourceSha: shaOrNull('WORKER_SOURCE_SHA') },
     jobs: { name: 'lythaus-jobs-development', versionId: valueOrNull('JOBS_WORKER_VERSION'), sourceSha: shaOrNull('WORKER_SOURCE_SHA') },
+    acceptanceCoordinator: { name: 'lythaus-auth-acceptance-coordinator-development', versionId: valueOrNull('COORDINATOR_WORKER_VERSION'), sourceSha: shaOrNull('WORKER_SOURCE_SHA') },
   },
 };
 
@@ -223,6 +224,7 @@ const manifest = {
       publicApi: surfaces.workers.publicApi.name,
       adminApi: surfaces.workers.adminApi.name,
       jobs: surfaces.workers.jobs.name,
+      acceptanceCoordinator: surfaces.workers.acceptanceCoordinator.name,
     },
     legacyAsoraActiveResources,
     pagesInventoryVerified: process.env.CLOUDFLARE_PAGES_INVENTORY_VERIFIED === 'true',
