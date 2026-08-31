@@ -268,10 +268,12 @@ jobs:
           jobs_secret_inventory="$RUNNER_TEMP/production-cutover/jobs-secret-bindings.json"
           coordinator_secret_inventory="$RUNNER_TEMP/production-cutover/coordinator-secret-bindings.json"
           coordinator_secret_list_error="$RUNNER_TEMP/production-cutover/coordinator-secret-list.error"
+          coordinator_secret_command_output="$RUNNER_TEMP/production-cutover/coordinator-secret-list.output"
+          coordinator_parent_state_after="$RUNNER_TEMP/production-cutover/coordinator-parent-state-after.json"
           scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
           scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
           test -s "$turnstile_secret_file"
-          trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error"' EXIT
+          trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error" "$coordinator_secret_command_output"' EXIT
           jq -n \
             --arg readiness_token "$DATABASE_READINESS_TOKEN" \
             --arg cloudflare_account_id "$CLOUDFLARE_ACCOUNT_ID" \
@@ -281,13 +283,21 @@ jobs:
               CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: $lifecycle_read_token}' > "$base_secrets_file"
           list_coordinator_secrets() {
             local output="$1"
+            local allow_empty_parent_inventory="${2:-false}"
             local attempt
             for attempt in 1 2 3 4 5; do
-              if npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$output" 2> "$coordinator_secret_list_error"; then
+              if npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$coordinator_secret_command_output" 2> "$coordinator_secret_list_error"; then
+                cp "$coordinator_secret_command_output" "$output"
                 jq -e 'type == "array"' "$output" >/dev/null || {
                   echo 'Coordinator secret inventory returned invalid JSON.' >&2
                   return 1
                 }
+                return 0
+              fi
+              if [[ "$allow_empty_parent_inventory" == 'true' ]] \
+                && jq -e '.status == "VERIFIED" and .deployment.exists == false' "$coordinator_parent_state_after" >/dev/null 2>&1 \
+                && (grep -Eiq 'not found|does not exist|10007' "$coordinator_secret_command_output" || grep -Eiq 'not found|does not exist|10007' "$coordinator_secret_list_error"); then
+                printf '[]\n' > "$output"
                 return 0
               fi
               if ! grep -Eiq 'not found|does not exist|10007' "$coordinator_secret_list_error"; then
@@ -306,7 +316,7 @@ jobs:
           CLOUDFLARE_WORKER_PARENT_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-after.json" \
           CLOUDFLARE_WORKER_PARENT_STATE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-state-after.json" \
           node scripts/ci/ensure-cloudflare-worker-parent.mjs
-          list_coordinator_secrets "$coordinator_secret_inventory"
+          list_coordinator_secrets "$coordinator_secret_inventory" true
           PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
           JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
           COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_secret_inventory" \
