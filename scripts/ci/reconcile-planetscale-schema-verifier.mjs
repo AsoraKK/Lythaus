@@ -35,6 +35,11 @@ const incidentAggregateColumns = [
     columns: ['created_at', 'consumed_at', 'expires_at'],
   },
   { schema: 'identity', table: 'account_events', columns: ['event_type', 'created_at'] },
+  // Bootstrap checks count only NOT NULL columns. Do not grant the verifier
+  // table-wide SELECT because these relations contain protected ciphertext
+  // and acceptance metadata.
+  { schema: 'system', table: 'transactional_email_outbox', columns: ['purpose', 'created_at'] },
+  { schema: 'system', table: 'production_auth_acceptance_runs', columns: ['created_at'] },
 ];
 
 const adminConnection = verifiedConnection(adminDatabaseUrl, 'admin database URL');
@@ -122,6 +127,9 @@ try {
     has_column_privilege(current_user, 'identity.email_verification_tokens', 'expires_at', 'SELECT') AS incident_tokens_expires_at_read,
     has_column_privilege(current_user, 'identity.account_events', 'event_type', 'SELECT') AS incident_events_type_read,
     has_column_privilege(current_user, 'identity.account_events', 'created_at', 'SELECT') AS incident_events_created_at_read,
+    has_column_privilege(current_user, 'system.transactional_email_outbox', 'purpose', 'SELECT') AS bootstrap_outbox_purpose_read,
+    has_column_privilege(current_user, 'system.transactional_email_outbox', 'created_at', 'SELECT') AS bootstrap_outbox_created_at_read,
+    has_column_privilege(current_user, 'system.production_auth_acceptance_runs', 'created_at', 'SELECT') AS bootstrap_acceptance_created_at_read,
     EXISTS (
       SELECT 1 FROM information_schema.tables
       WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND table_type = 'BASE TABLE'
@@ -140,6 +148,8 @@ try {
     || !row.incident_credentials_verified_at_read || !row.incident_tokens_created_at_read
     || !row.incident_tokens_consumed_at_read || !row.incident_tokens_expires_at_read
     || !row.incident_events_type_read || !row.incident_events_created_at_read
+    || !row.bootstrap_outbox_purpose_read || !row.bootstrap_outbox_created_at_read
+    || !row.bootstrap_acceptance_created_at_read
     || !row.waitlist_visible || !row.storage_ledgers_visible || !row.waitlist_columns_visible) {
     throw new Error('dedicated schema verifier metadata and aggregate evidence grant contract failed');
   }

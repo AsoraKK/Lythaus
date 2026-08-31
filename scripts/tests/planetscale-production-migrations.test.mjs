@@ -221,6 +221,11 @@ test('dedicated schema verifier grants metadata and aggregate-safe evidence colu
   assert.match(source, /table: 'email_credentials', columns: \['verified_at'\]/);
   assert.match(source, /table: 'email_verification_tokens'[\s\S]*columns: \['created_at', 'consumed_at', 'expires_at'\]/);
   assert.match(source, /table: 'account_events', columns: \['event_type', 'created_at'\]/);
+  assert.match(source, /table: 'transactional_email_outbox', columns: \['purpose', 'created_at'\]/);
+  assert.match(source, /table: 'production_auth_acceptance_runs', columns: \['created_at'\]/);
+  assert.match(source, /bootstrap_outbox_purpose_read/);
+  assert.match(source, /bootstrap_outbox_created_at_read/);
+  assert.match(source, /bootstrap_acceptance_created_at_read/);
   assert.match(source, /REVOKE CREATE ON DATABASE postgres/);
   assert.match(source, /REVOKE CREATE ON SCHEMA/);
   assert.match(source, /SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY/);
