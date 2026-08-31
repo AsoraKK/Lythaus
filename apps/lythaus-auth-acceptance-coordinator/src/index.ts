@@ -1,6 +1,6 @@
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
-import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hmacLookup, randomToken, uuidv7 } from '@lythaus/security';
+import { constantTimeEqual, decryptField, encryptField, hashAuthToken, randomToken, uuidv7 } from '@lythaus/security';
 import { accessSubject } from './access-policy.ts';
 
 interface Env extends EnvBindings {
@@ -65,13 +65,9 @@ function readinessAuthorized(request: Request, env: Env): boolean {
 
 async function requireKeeper(request: Request, env: Env): Promise<void> {
   if (readinessAuthorized(request, env)) return;
-  if (!env.ACCESS_SUBJECT_HMAC_KEY) throw new Error('access_not_configured');
-  const subject = await accessSubject(request, env);
-  const membership = await query<{ user_id: string }>(env.DB_ADMIN_FRESH,
-    `SELECT user_id FROM identity.admin_memberships WHERE access_subject_hmac = decode($1, 'base64') AND active = true`,
-    [hmacLookup(subject, env.ACCESS_SUBJECT_HMAC_KEY)],
-  );
-  if (membership.rowCount !== 1) throw new Error('admin_role_required');
+  // The route is already protected by the Admin UI Access application. Require
+  // a signed human Access subject; service-token authentication is not enough.
+  await accessSubject(request, env);
 }
 
 function requiredSecret(env: Env, key: keyof Env): string {
@@ -93,6 +89,11 @@ function strictUuid(value: unknown, code: string): string {
 function strictTimestamp(value: unknown, code: string): string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(value) || !Number.isFinite(Date.parse(value))) throw new Error(code);
   return new Date(value).toISOString();
+}
+
+async function acceptanceContextDigest(context: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(context));
+  return btoa(String.fromCharCode(...new Uint8Array(digest)));
 }
 
 function aliases(base: string, runId: string): { primary: string; resend: string } {
@@ -138,13 +139,13 @@ async function loadRun(env: Env, id: string, markExpired = true): Promise<RunRow
 }
 
 async function runContext(env: Env, run: RunRow): Promise<string> {
-  return decryptField({ ciphertext: run.context_ciphertext, encryptionKeyVersion: run.context_encryption_key_version }, requiredSecret(env, 'PII_ENCRYPTION_KEY_V1'));
+  return decryptField({ ciphertext: run.context_ciphertext, encryptionKeyVersion: run.context_encryption_key_version }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
 }
 
 async function runEmail(env: Env, run: RunRow, kind: 'primary' | 'resend'): Promise<string> {
   const ciphertext = kind === 'primary' ? run.primary_email_ciphertext : run.resend_email_ciphertext;
   const keyVersion = kind === 'primary' ? run.primary_email_encryption_key_version : run.resend_email_encryption_key_version;
-  return decryptField({ ciphertext, encryptionKeyVersion: keyVersion }, requiredSecret(env, 'PII_ENCRYPTION_KEY_V1'));
+  return decryptField({ ciphertext, encryptionKeyVersion: keyVersion }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
 }
 
 async function recordEvent(env: Env, runId: string, eventType: string): Promise<void> {
@@ -208,8 +209,7 @@ async function createRun(request: Request, env: Env): Promise<Response> {
   const id = uuidv7();
   const context = randomToken(32);
   const email = aliases(requiredSecret(env, 'AUTH_ACCEPTANCE_EMAIL_BASE'), id);
-  const encryptionKey = requiredSecret(env, 'PII_ENCRYPTION_KEY_V1');
-  const hmacKey = requiredSecret(env, 'PII_HMAC_KEY_V1');
+  const encryptionKey = requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1');
   const [encryptedContext, encryptedPrimary, encryptedResend] = await Promise.all([
     encryptField(context, encryptionKey, 'v1'), encryptField(email.primary, encryptionKey, 'v1'), encryptField(email.resend, encryptionKey, 'v1'),
   ]);
@@ -223,9 +223,9 @@ async function createRun(request: Request, env: Env): Promise<Response> {
      VALUES ($1, $2, $3, $4, $5::timestamptz, $6::timestamptz, $7::timestamptz,
              decode($8, 'base64'), $9, $10, $11, $12, decode($13, 'base64'), $14, $15, decode($16, 'base64'))`,
     [id, releaseSha, candidateWorker, candidateVersion, uploadedAt, stagedAt, expiresAt,
-      hmacLookup(context, hmacKey), encryptedContext.ciphertext, encryptedContext.encryptionKeyVersion,
-      encryptedPrimary.ciphertext, encryptedPrimary.encryptionKeyVersion, hmacLookup(email.primary, hmacKey),
-      encryptedResend.ciphertext, encryptedResend.encryptionKeyVersion, hmacLookup(email.resend, hmacKey)],
+      await acceptanceContextDigest(context), encryptedContext.ciphertext, encryptedContext.encryptionKeyVersion,
+      encryptedPrimary.ciphertext, encryptedPrimary.encryptionKeyVersion, await acceptanceContextDigest(email.primary),
+      encryptedResend.ciphertext, encryptedResend.encryptionKeyVersion, await acceptanceContextDigest(email.resend)],
   );
   return json({ acceptanceRunId: id, expiresAt, keeperUrl: `${env.AUTH_ACCEPTANCE_ROUTE_BASE_URL}/production-auth-acceptance?run=${encodeURIComponent(id)}` }, { status: 201 });
 }
@@ -278,9 +278,9 @@ async function prepareResend(request: Request, env: Env, id: string): Promise<Re
   const body = await readJson(request);
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
   const run = await loadRun(env, id);
-  const fixture = await candidateJson(env, run, '/internal/production-auth-acceptance/resend-fixture', {});
-  if (fixture.response.status !== 202) throw new Error('candidate_resend_fixture_rejected');
   const email = await runEmail(env, run, 'resend');
+  const fixture = await candidateJson(env, run, '/internal/production-auth-acceptance/resend-fixture', { email });
+  if (fixture.response.status !== 202) throw new Error('candidate_resend_fixture_rejected');
   const candidate = await candidateJson(env, run, '/api/auth/email', { mode: 'resend_verification', email, turnstileToken });
   if (candidate.response.status !== 202) throw new Error('candidate_resend_rejected');
   await setChallenge(env, id, 'resend');
@@ -308,7 +308,6 @@ function linkPage(context: string, purpose: string, token: string): Response {
 }
 
 async function runForEmailContext(env: Env, context: string): Promise<RunRow> {
-  if (!env.PII_HMAC_KEY_V1) throw new Error('acceptance_not_configured');
   const result = await query<RunRow>(env.DB_ADMIN_FRESH,
     `SELECT id, release_sha, candidate_worker, candidate_version, candidate_uploaded_at, candidate_staged_at,
             created_at, expires_at, status, context_ciphertext, context_encryption_key_version,
@@ -317,7 +316,7 @@ async function runForEmailContext(env: Env, context: string): Promise<RunRow> {
             resend_verification_challenge_id, password_reset_challenge_id, turnstile_verified_at, turnstile_hostname, turnstile_action,
             pre_reset_refresh_ciphertext, pre_reset_refresh_encryption_key_version, pre_reset_refresh_captured_at
        FROM system.production_auth_acceptance_runs
-      WHERE context_lookup_hmac = decode($1, 'base64')`, [hmacLookup(context, env.PII_HMAC_KEY_V1)]);
+      WHERE context_lookup_hmac = decode($1, 'base64')`, [await acceptanceContextDigest(context)]);
   const run = result.rows[0];
   if (!run) throw new Error('acceptance_context_invalid');
   const actual = await runContext(env, run);
@@ -381,7 +380,7 @@ async function initialSessionProof(request: Request, env: Env, id: string): Prom
   const refreshedToken = typeof refreshed.body?.refreshToken === 'string' ? refreshed.body.refreshToken : '';
   if (!refreshed.response.ok || !refreshedToken) throw new Error('candidate_initial_refresh_rejected');
   await recordEvent(env, id, 'refresh_completed');
-  const encrypted = await encryptField(refreshedToken, requiredSecret(env, 'PII_ENCRYPTION_KEY_V1'), 'v1');
+  const encrypted = await encryptField(refreshedToken, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'), 'v1');
   await query(env.DB_ADMIN_FRESH,
     `UPDATE system.production_auth_acceptance_runs
         SET pre_reset_refresh_ciphertext = $2,
@@ -404,7 +403,7 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
   const preResetRefresh = await decryptField({
     ciphertext: run.pre_reset_refresh_ciphertext,
     encryptionKeyVersion: run.pre_reset_refresh_encryption_key_version,
-  }, requiredSecret(env, 'PII_ENCRYPTION_KEY_V1'));
+  }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
   const revokedRefresh = await candidateJson(env, run, '/api/auth/refresh', { refreshToken: preResetRefresh });
   if (revokedRefresh.response.ok) throw new Error('candidate_pre_reset_refresh_accepted');
   await recordEvent(env, id, 'password_reset_sessions_revoked');

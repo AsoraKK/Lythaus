@@ -39,6 +39,8 @@ export interface EnvBindings {
   JWT_PUBLIC_JWKS?: string;
   PII_ENCRYPTION_KEY_V1?: string;
   PII_HMAC_KEY_V1?: string;
+  TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1?: string;
+  AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1?: string;
   EMAIL_PROVIDER_URL?: string;
   EMAIL_PROVIDER_TOKEN?: string;
   EMAIL_PROVIDER_MODE?: 'cloudflare' | 'fallback' | 'disabled';

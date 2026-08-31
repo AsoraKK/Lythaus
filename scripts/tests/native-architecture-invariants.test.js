@@ -99,7 +99,7 @@ test('native auth outbox and scanner-safe verification contracts are explicit', 
   assert.match(api, /hashAuthToken\(token, 'verification'\)/);
   assert.match(jobs, /FOR UPDATE SKIP LOCKED/);
   assert.match(jobs, /state = 'provider_accepted'/);
-  assert.match(jobs, /secret_ciphertext = NULL/);
+  assert.match(jobs, /delivery_envelope_ciphertext = NULL/);
   assert.match(jobs, /lifecycleStateForEmailEvent/);
   assert.match(jobs, /cf\.email\.sending\.message\.delivered/);
   assert.match(jobs, /Recipient, subject/);
@@ -113,6 +113,22 @@ test('native auth outbox and scanner-safe verification contracts are explicit', 
   assert.match(migration, /CREATE TABLE system\.transactional_email_outbox/);
   assert.match(migration, /secret_ciphertext text/);
   assert.doesNotMatch(migration, /recipient_email|plain_email/);
+});
+
+test('transactional delivery and acceptance state have purpose-specific cryptographic boundaries', () => {
+  const coordinator = fs.readFileSync(path.join(root, 'apps/lythaus-auth-acceptance-coordinator/src/index.ts'), 'utf8');
+  const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/transactional-email-runtime.ts'), 'utf8');
+  const api = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0016_transactional_email_envelope_boundary.sql'), 'utf8');
+  assert.doesNotMatch(coordinator, /PII_ENCRYPTION_KEY_V1|PII_HMAC_KEY_V1|ACCESS_SUBJECT_HMAC_KEY/);
+  assert.match(coordinator, /AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1/);
+  assert.doesNotMatch(jobs, /PII_ENCRYPTION_KEY_V1|identity\.contact_emails/);
+  assert.match(jobs, /TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1/);
+  assert.match(api, /TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1/);
+  assert.match(api, /deliveryEnvelopeCiphertext/);
+  assert.match(jobs, /delivery_envelope_ciphertext = NULL/);
+  assert.match(migration, /count\(\*\) FROM system\.transactional_email_outbox/);
+  assert.match(migration, /delivery_envelope_ciphertext text/);
 });
 
 test('admin API dispatch awaits rejection-prone mutations', () => {
@@ -409,7 +425,7 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
   assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
   assert.match(verifier, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION/);
-  assert.match(verifier, /0015_production_auth_acceptance_coordinator\.sql/);
+  assert.match(verifier, /0016_transactional_email_envelope_boundary\.sql/);
   assert.match(verifier, /production post-0015 schema fingerprint mismatch/);
   assert.match(verifier, /production post-0015 relation count/);
   assert.match(verifier, /to_regclass\('marketing\.waitlist_signups'\)/);

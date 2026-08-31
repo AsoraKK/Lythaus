@@ -7,7 +7,7 @@ const configPaths = [
   'apps/lythaus-jobs/wrangler.jsonc',
   'apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc',
 ];
-const requiredVersion = '0015_production_auth_acceptance_coordinator.sql';
+const requiredVersion = '0016_transactional_email_envelope_boundary.sql';
 const post0015Expectation = approvedPost0015Expectation();
 const expectedFingerprint = post0015Expectation.fingerprint;
 const expectedRelationCount = String(post0015Expectation.relationCount);

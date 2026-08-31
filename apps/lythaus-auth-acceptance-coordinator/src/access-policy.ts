@@ -9,7 +9,7 @@ export async function accessSubject(request: Request, env: { ACCESS_JWKS_URL?: s
       audience: audiences,
       issuer: env.ACCESS_TEAM_DOMAIN ? `https://${env.ACCESS_TEAM_DOMAIN}` : undefined,
     });
-    const subject = typeof verified.payload.sub === 'string' ? verified.payload.sub : typeof verified.payload.email === 'string' ? verified.payload.email : '';
+    const subject = typeof verified.payload.sub === 'string' ? verified.payload.sub : '';
     if (!subject) throw new Error('access_subject_missing');
     return subject;
   } catch (error) {

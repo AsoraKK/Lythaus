@@ -22,7 +22,7 @@ const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET ?? '';
 if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
 if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTION_WORKER_VERSION_ID is required');
-if (expectedSchemaVersion !== '0015_production_auth_acceptance_coordinator.sql') throw new Error('production probes require migration 0015');
+if (expectedSchemaVersion !== '0016_transactional_email_envelope_boundary.sql') throw new Error('production probes require migration 0016');
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
 
 const allTargets = [

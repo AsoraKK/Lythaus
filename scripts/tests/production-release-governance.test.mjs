@@ -268,12 +268,17 @@ test('ADR-003 repeat runs verify existing privacy requests without weakening lim
   assert.match(adr003Harness, /acceptanceNote/);
 });
 
-test('Worker readiness secrets are included in each immutable candidate upload', () => {
+test('candidate uploads preserve legacy secrets and scope new purpose-specific keys', () => {
   assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 secret put DATABASE_READINESS_TOKEN/);
   assert.match(workersWorkflow, /DATABASE_READINESS_TOKEN: \$\{\{ secrets\.DATABASE_READINESS_TOKEN \}\}/);
-  assert.match(workersWorkflow, /secrets_file="\$RUNNER_TEMP\/production-cutover\/worker-secrets\.json"/);
+  assert.doesNotMatch(workersWorkflow, /secrets\.PII_ENCRYPTION_KEY_V1|secrets\.PII_HMAC_KEY_V1|secrets\.ACCESS_SUBJECT_HMAC_KEY/);
+  assert.match(workersWorkflow, /TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1/);
+  assert.match(workersWorkflow, /AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1/);
+  assert.match(workersWorkflow, /public-secrets\.json/);
+  assert.match(workersWorkflow, /jobs-secrets\.json/);
+  assert.match(workersWorkflow, /coordinator-secrets\.json/);
   assert.match(workersWorkflow, /--secrets-file "\$secrets_file"/);
-  assert.match(workersWorkflow, /trap 'rm -f "\$secrets_file" "\$turnstile_secret_file"' EXIT/);
+  assert.match(workersWorkflow, /openssl rand -base64 32/);
   assert.match(workersWorkflow, /Stage candidate Worker versions at zero traffic/);
   assert.match(workersWorkflow, /versions deploy \$PUBLIC_ROLLBACK_SPECS "\$\{PUBLIC_WORKER_VERSION_ID\}@0"/);
   assert.match(workersWorkflow, /WORKER_STAGED/);

@@ -103,7 +103,7 @@ export function canonicalPost0014SchemaContract({ root = process.cwd(), committe
 
 export function canonicalPost0015SchemaContract({ root = process.cwd(), committedOnly = false } = {}) {
   const manifest = loadApprovedMigrations({ root, committedOnly });
-  const migrationPrefix = expectedMigrationPrefix('0015_production_auth_acceptance_coordinator.sql');
+  const migrationPrefix = expectedMigrationPrefix('0016_transactional_email_envelope_boundary.sql');
   const relations = relationInventory(manifest.migrations.slice(0, migrationPrefix.length));
   const migrations = migrationPrefix
     .map(({ name, appliedSha256 }) => ({ version: name, checksum: appliedSha256 }));

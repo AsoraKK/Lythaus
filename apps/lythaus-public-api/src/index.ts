@@ -45,6 +45,11 @@ interface AcceptanceContext {
   context: string;
 }
 
+async function acceptanceContextDigest(context: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(context));
+  return btoa(String.fromCharCode(...new Uint8Array(digest)));
+}
+
 function coordinatorAuthorization(request: Request, env: Env): boolean {
   const configured = env.DATABASE_READINESS_TOKEN;
   const supplied = request.headers.get('x-lythaus-acceptance-coordinator');
@@ -56,7 +61,7 @@ async function acceptanceContext(request: Request, env: Env): Promise<Acceptance
   const runId = request.headers.get('x-lythaus-acceptance-run-id');
   const context = request.headers.get('x-lythaus-acceptance-context');
   if (!runId && !context) return undefined;
-  if (!coordinatorAuthorization(request, env) || !runId || !context || !env.PII_HMAC_KEY_V1) throw new Error('authentication_required');
+  if (!coordinatorAuthorization(request, env) || !runId || !context) throw new Error('authentication_required');
   const result = await query<{ id: string }>(env.DB_APP_FRESH,
     `SELECT id
        FROM system.production_auth_acceptance_runs
@@ -67,7 +72,7 @@ async function acceptanceContext(request: Request, env: Env): Promise<Acceptance
         AND candidate_version = $4
         AND status IN ('pending', 'in_progress')
         AND expires_at > now()`,
-    [runId, hmacLookup(context, env.PII_HMAC_KEY_V1), env.WORKER_VERSION.tag, env.WORKER_VERSION.id],
+    [runId, await acceptanceContextDigest(context), env.WORKER_VERSION.tag, env.WORKER_VERSION.id],
   );
   if (result.rowCount !== 1) throw new Error('authentication_required');
   return { runId, context };
@@ -279,15 +284,17 @@ async function queueTransactionalEmail(
     purpose: 'verification' | 'password_reset' | 'invite' | 'email_change';
     challengeId: string;
     token: string;
-    encryptionKey: string;
+    recipient: string;
+    deliveryEncryptionKey: string;
     correlationId: string;
     acceptance?: AcceptanceContext;
   },
 ): Promise<void> {
-  const encryptedSecret = await encryptField(input.token, input.encryptionKey, 'v1');
-  const encryptedAcceptance = input.acceptance
-    ? await encryptField(input.acceptance.context, input.encryptionKey, 'v1')
-    : undefined;
+  const envelope = await encryptField(JSON.stringify({
+    to: input.recipient,
+    token: input.token,
+    acceptanceContext: input.acceptance?.context,
+  }), input.deliveryEncryptionKey, 'v1');
   await enqueueTransactionalEmailIntent(client, {
     id: uuidv7(),
     userId: input.userId,
@@ -295,16 +302,19 @@ async function queueTransactionalEmail(
     purpose: input.purpose,
     challengeId: input.challengeId,
     templateVersion: 'v1',
-    secretCiphertext: encryptedSecret.ciphertext,
-    secretEncryptionKeyVersion: encryptedSecret.encryptionKeyVersion,
-    acceptanceContextCiphertext: encryptedAcceptance?.ciphertext,
-    acceptanceContextEncryptionKeyVersion: encryptedAcceptance?.encryptionKeyVersion,
+    deliveryEnvelopeCiphertext: envelope.ciphertext,
+    deliveryEnvelopeEncryptionKeyVersion: envelope.encryptionKeyVersion,
     acceptanceRunId: input.acceptance?.runId,
     correlationId: input.correlationId,
   });
 }
 
-async function queueAccountVerificationEmail(request: Request, env: Env, userId: string, acceptance?: AcceptanceContext): Promise<void> {
+function requiredTransactionalEmailKey(env: Env): string {
+  if (!env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1) throw new Error('transactional_email_not_configured');
+  return env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1;
+}
+
+async function queueAccountVerificationEmail(request: Request, env: Env, userId: string, recipient: string, acceptance?: AcceptanceContext): Promise<void> {
   const verificationToken = randomToken(32);
   const challengeId = uuidv7();
   const sourceEventId = uuidv7();
@@ -334,7 +344,8 @@ async function queueAccountVerificationEmail(request: Request, env: Env, userId:
       purpose: 'verification',
       challengeId,
       token: verificationToken,
-      encryptionKey: secrets.encryptionKey,
+      recipient,
+      deliveryEncryptionKey: requiredTransactionalEmailKey(env),
       correlationId: acceptance?.runId ?? correlationId(request),
       acceptance,
     });
@@ -371,7 +382,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
   if (mode === 'resend_verification') {
     if (account && !account.verified_at) {
       try {
-        await queueAccountVerificationEmail(request, env, account.id, acceptance);
+        await queueAccountVerificationEmail(request, env, account.id, email, acceptance);
       } catch { /* Keep resend enumeration-safe when queueing fails. */ }
     }
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
@@ -383,7 +394,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     );
     if (registrationPlan === 'resend_verification') {
       if (!account) throw new Error('account_unavailable');
-      await queueAccountVerificationEmail(request, env, account.id, acceptance);
+      await queueAccountVerificationEmail(request, env, account.id, email, acceptance);
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     if (registrationPlan === 'neutral_existing_account') {
@@ -414,7 +425,8 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
           purpose: 'verification',
           challengeId,
           token: verificationToken,
-          encryptionKey: secrets.encryptionKey,
+          recipient: email,
+          deliveryEncryptionKey: requiredTransactionalEmailKey(env),
           correlationId: acceptance?.runId ?? correlationId(request),
           acceptance,
         });
@@ -451,7 +463,8 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
         purpose: 'verification',
         challengeId,
         token: verificationToken,
-        encryptionKey: secrets.encryptionKey,
+        recipient: email,
+        deliveryEncryptionKey: requiredTransactionalEmailKey(env),
         correlationId: acceptance?.runId ?? correlationId(request),
         acceptance,
       });
@@ -504,15 +517,14 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
 async function createAcceptanceResendFixture(request: Request, env: Env): Promise<Response> {
   const acceptance = await acceptanceContext(request, env);
   if (!acceptance || !env.PII_ENCRYPTION_KEY_V1 || !env.PII_HMAC_KEY_V1) throw new Error('authentication_required');
+  const input = await readJson<{ email?: string }>(request, 8 * 1024);
+  const email = normalizeEmailAddress(input.email);
   const secrets = requireAuthSecrets(env);
   await transaction(env.DB_APP_FRESH, async (client) => {
     const run = await client.query<{
-      resend_email_ciphertext: string;
-      resend_email_encryption_key_version: string;
-      resend_email_lookup_hmac: Uint8Array;
       resend_fixture_user_id: string | null;
     }>(
-      `SELECT resend_email_ciphertext, resend_email_encryption_key_version, resend_email_lookup_hmac, resend_fixture_user_id
+      `SELECT resend_fixture_user_id
          FROM system.production_auth_acceptance_runs
         WHERE id = $1 AND expires_at > now()
         FOR UPDATE`,
@@ -526,13 +538,13 @@ async function createAcceptanceResendFixture(request: Request, env: Env): Promis
     await client.query(`INSERT INTO identity.users (id, is_production_acceptance) VALUES ($1, true)`, [userId]);
     await client.query(
       `INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
-       VALUES ($1, convert_to($2, 'utf8'), $3, 'v1', 'v1', $4::jsonb)`,
-      [userId, row.resend_email_ciphertext, row.resend_email_lookup_hmac, JSON.stringify(hashConfiguredPassword(env, randomToken(32), secrets.pepper))],
+       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`,
+      [userId, (await encryptField(email, secrets.encryptionKey, 'v1')).ciphertext, hmacLookup(email, secrets.hmacKey), JSON.stringify(hashConfiguredPassword(env, randomToken(32), secrets.pepper))],
     );
     await client.query(
       `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
-       VALUES ($1, convert_to($2, 'utf8'), $3, 'v1', 'email')`,
-      [userId, row.resend_email_ciphertext, row.resend_email_lookup_hmac],
+       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`,
+      [userId, (await encryptField(email, secrets.encryptionKey, 'v1')).ciphertext, hmacLookup(email, secrets.hmacKey)],
     );
     await client.query(
       `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at)
@@ -704,7 +716,8 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
         purpose: 'password_reset',
         challengeId,
         token,
-        encryptionKey,
+        recipient: email,
+        deliveryEncryptionKey: requiredTransactionalEmailKey(env),
         correlationId: acceptance?.runId ?? correlationId(request),
         acceptance,
       });
