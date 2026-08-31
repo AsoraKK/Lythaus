@@ -154,7 +154,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/production-cutover"
           node scripts/cloudflare/waitlist-turnstile.mjs ensure
-      - name: Materialize approved post-0015 deployment identity
+      - name: Materialize approved post-0016 deployment identity
         env:
           PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
           PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
@@ -226,54 +226,74 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
-          PII_ENCRYPTION_KEY_V1: ${{ secrets.PII_ENCRYPTION_KEY_V1 }}
-          PII_HMAC_KEY_V1: ${{ secrets.PII_HMAC_KEY_V1 }}
-          ACCESS_SUBJECT_HMAC_KEY: ${{ secrets.ACCESS_SUBJECT_HMAC_KEY }}
           AUTH_ACCEPTANCE_EMAIL_BASE: ${{ secrets.CODEX_TEST_EMAIL }}
           CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
           test -n "$DATABASE_READINESS_TOKEN"
-          test -n "$PII_ENCRYPTION_KEY_V1"
-          test -n "$PII_HMAC_KEY_V1"
-          test -n "$ACCESS_SUBJECT_HMAC_KEY"
           test -n "$AUTH_ACCEPTANCE_EMAIL_BASE"
           test -n "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN"
           umask 077
-          secrets_file="$RUNNER_TEMP/production-cutover/worker-secrets.json"
+          base_secrets_file="$RUNNER_TEMP/production-cutover/base-secrets.json"
+          public_secrets_file="$RUNNER_TEMP/production-cutover/public-secrets.json"
+          jobs_secrets_file="$RUNNER_TEMP/production-cutover/jobs-secrets.json"
+          coordinator_secrets_file="$RUNNER_TEMP/production-cutover/coordinator-secrets.json"
           turnstile_secret_file="$RUNNER_TEMP/production-cutover/turnstile-secret.json"
+          public_secret_inventory="$RUNNER_TEMP/production-cutover/public-secret-bindings.json"
+          admin_secret_inventory="$RUNNER_TEMP/production-cutover/admin-secret-bindings.json"
+          jobs_secret_inventory="$RUNNER_TEMP/production-cutover/jobs-secret-bindings.json"
+          coordinator_secret_inventory="$RUNNER_TEMP/production-cutover/coordinator-secret-bindings.json"
+          scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
+          scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
           test -s "$turnstile_secret_file"
-          trap 'rm -f "$secrets_file" "$turnstile_secret_file"' EXIT
+          trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory"' EXIT
           jq -n \
             --arg readiness_token "$DATABASE_READINESS_TOKEN" \
             --arg cloudflare_account_id "$CLOUDFLARE_ACCOUNT_ID" \
-            --arg encryption_key "$PII_ENCRYPTION_KEY_V1" \
-            --arg hmac_key "$PII_HMAC_KEY_V1" \
-            --arg access_subject_hmac_key "$ACCESS_SUBJECT_HMAC_KEY" \
-            --arg acceptance_email_base "$AUTH_ACCEPTANCE_EMAIL_BASE" \
             --arg lifecycle_read_token "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN" \
             '{DATABASE_READINESS_TOKEN: $readiness_token,
               CLOUDFLARE_ACCOUNT_ID: $cloudflare_account_id,
-              PII_ENCRYPTION_KEY_V1: $encryption_key,
-              PII_HMAC_KEY_V1: $hmac_key,
-              ACCESS_SUBJECT_HMAC_KEY: $access_subject_hmac_key,
-              AUTH_ACCEPTANCE_EMAIL_BASE: $acceptance_email_base,
-              CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: $lifecycle_read_token}' > "$secrets_file"
-          jq -s 'add' "$secrets_file" "$turnstile_secret_file" > "$secrets_file.merged"
-          mv "$secrets_file.merged" "$secrets_file"
+              CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: $lifecycle_read_token}' > "$base_secrets_file"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$coordinator_secret_inventory"
+          PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
+          JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
+          COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_secret_inventory" \
+          BASE_SECRETS_FILE="$base_secrets_file" \
+          TURNSTILE_SECRET_FILE="$turnstile_secret_file" \
+          PUBLIC_SECRETS_FILE="$public_secrets_file" \
+          JOBS_SECRETS_FILE="$jobs_secrets_file" \
+          COORDINATOR_SECRETS_FILE="$coordinator_secrets_file" \
+          SCOPED_KEY_LIFECYCLE_EVIDENCE_PATH="$scoped_key_evidence" \
+          AUTH_ACCEPTANCE_EMAIL_BASE="$AUTH_ACCEPTANCE_EMAIL_BASE" \
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL="$PLANETSCALE_SCHEMA_READ_DATABASE_URL" \
+          node scripts/ci/prepare-scoped-worker-secrets.mjs
           upload_candidate() {
             local config="$1"
             local prefix="$2"
             local output="$3"
+            local secrets_file="$4"
             npx --yes wrangler@4.123.0 versions upload --config "$config" --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA" --secrets-file "$secrets_file" 2>&1 | tee "$output"
             node scripts/ci/resolve-worker-version-state.mjs upload "$output" "$RELEASE_SHA" "$prefix"
           }
-          upload_candidate apps/lythaus-public-api/wrangler.jsonc PUBLIC "$RUNNER_TEMP/production-cutover/public-upload.log"
-          upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log"
-          upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log"
-          upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log"
+          upload_candidate apps/lythaus-public-api/wrangler.jsonc PUBLIC "$RUNNER_TEMP/production-cutover/public-upload.log" "$public_secrets_file"
+          upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$base_secrets_file"
+          upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log" "$jobs_secrets_file"
+          upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log" "$coordinator_secrets_file"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-admin-api-development --format json > "$admin_secret_inventory"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$coordinator_secret_inventory"
+          ADMIN_SECRET_INVENTORY_FILE="$admin_secret_inventory" \
+          PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
+          JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
+          COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_secret_inventory" \
+          SCOPED_WORKER_SECRET_BINDING_EVIDENCE_PATH="$scoped_binding_evidence" \
+          node scripts/ci/verify-scoped-worker-secret-bindings.mjs
           npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
@@ -321,6 +341,29 @@ jobs:
             --name lythaus-auth-acceptance-coordinator-development
           candidate_staged_at="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
           echo "ADR003_CANDIDATE_STAGED_AT=$candidate_staged_at" >> "$GITHUB_ENV"
+      - name: Prove staged Public and Jobs transactional-email key compatibility
+        env:
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PUBLIC_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
+          JOBS_WORKER_VERSION_ID: ${{ env.JOBS_WORKER_VERSION_ID }}
+          PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          base="${PRODUCTION_PUBLIC_API_BASE_URL%/}"
+          response="$RUNNER_TEMP/production-cutover/transactional-email-key-compatibility.json"
+          curl --fail --silent --show-error --max-time 30 \
+            -H "authorization: Bearer ${DATABASE_READINESS_TOKEN}" \
+            -H "Cloudflare-Workers-Version-Overrides: lythaus-public-api-development=\"${PUBLIC_WORKER_VERSION_ID}\"" \
+            -H 'accept: application/json' \
+            -X POST "$base/internal/readiness/transactional-email-key-compatibility" > "$response"
+          jq -e --arg public "$PUBLIC_WORKER_VERSION_ID" --arg jobs "$JOBS_WORKER_VERSION_ID" --arg sha "$RELEASE_SHA" '
+            .status == "compatible"
+            and .publicWorkerVersionId == $public
+            and .jobsWorkerVersionId == $jobs
+            and .publicReleaseTag == $sha
+            and .jobsReleaseTag == $sha
+          ' "$response" >/dev/null
       - name: Validate or create the exact-candidate Keeper acceptance run
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -380,7 +423,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -397,7 +440,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -416,7 +459,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -469,7 +512,7 @@ jobs:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0015_production_auth_acceptance_coordinator.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
@@ -567,6 +610,27 @@ jobs:
           test -s "$RUNNER_TEMP/production-cutover/jobs-before.json"
           test -s "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
           lifecycle_evidence="$RUNNER_TEMP/production-cutover/email-lifecycle-infrastructure.json"
+          scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
+          scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
+          test -s "$scoped_key_evidence"
+          test -s "$scoped_binding_evidence"
+          jq -e '
+            .status == "VERIFIED"
+            and .transactionalEmail.compatibilityProbeRequired == true
+            and (.transactionalEmail.action == "bootstrap" or .transactionalEmail.action == "preserve")
+            and (.acceptanceState.action == "bootstrap" or .acceptanceState.action == "preserve")
+            and .secretValuesIncluded == false
+          ' "$scoped_key_evidence" >/dev/null
+          jq -e '
+            .status == "VERIFIED"
+            and .source == "cloudflare_secret_binding_names"
+            and (.publicApi.requiredBindingsPresent | index("TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1"))
+            and .jobs.requiredBindingsPresent == ["TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1"]
+            and (.jobs.forbiddenProductBindingsAbsent | sort) == ["PII_ENCRYPTION_KEY_V1", "PII_HMAC_KEY_V1"]
+            and .acceptanceCoordinator.requiredBindingsPresent == ["AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1"]
+            and (.acceptanceCoordinator.forbiddenProductBindingsAbsent | sort) == ["ACCESS_SUBJECT_HMAC_KEY", "PII_ENCRYPTION_KEY_V1", "PII_HMAC_KEY_V1"]
+            and .secretValuesIncluded == false
+          ' "$scoped_binding_evidence" >/dev/null
           jq -e --arg jobs_version "$JOBS_WORKER_VERSION_ID" '
             if (
               .status == "VERIFIED"
@@ -626,7 +690,7 @@ jobs:
       - name: Remove ephemeral production secret files
         if: always()
         shell: bash
-        run: rm -f "$RUNNER_TEMP/production-cutover/worker-secrets.json" "$RUNNER_TEMP/production-cutover/turnstile-secret.json"
+        run: rm -f "$RUNNER_TEMP/production-cutover/base-secrets.json" "$RUNNER_TEMP/production-cutover/public-secrets.json" "$RUNNER_TEMP/production-cutover/jobs-secrets.json" "$RUNNER_TEMP/production-cutover/coordinator-secrets.json" "$RUNNER_TEMP/production-cutover/worker-secrets.json" "$RUNNER_TEMP/production-cutover/turnstile-secret.json"
       - name: Upload sanitized production cutover evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

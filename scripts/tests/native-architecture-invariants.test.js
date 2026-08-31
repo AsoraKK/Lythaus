@@ -99,7 +99,7 @@ test('native auth outbox and scanner-safe verification contracts are explicit', 
   assert.match(api, /hashAuthToken\(token, 'verification'\)/);
   assert.match(jobs, /FOR UPDATE SKIP LOCKED/);
   assert.match(jobs, /state = 'provider_accepted'/);
-  assert.match(jobs, /secret_ciphertext = NULL/);
+  assert.match(jobs, /delivery_envelope_ciphertext = NULL/);
   assert.match(jobs, /lifecycleStateForEmailEvent/);
   assert.match(jobs, /cf\.email\.sending\.message\.delivered/);
   assert.match(jobs, /Recipient, subject/);
@@ -113,6 +113,40 @@ test('native auth outbox and scanner-safe verification contracts are explicit', 
   assert.match(migration, /CREATE TABLE system\.transactional_email_outbox/);
   assert.match(migration, /secret_ciphertext text/);
   assert.doesNotMatch(migration, /recipient_email|plain_email/);
+});
+
+test('transactional delivery and acceptance state have purpose-specific cryptographic boundaries', () => {
+  const coordinator = fs.readFileSync(path.join(root, 'apps/lythaus-auth-acceptance-coordinator/src/index.ts'), 'utf8');
+  const jobs = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/transactional-email-runtime.ts'), 'utf8');
+  const jobsIndex = fs.readFileSync(path.join(root, 'apps/lythaus-jobs/src/index.ts'), 'utf8');
+  const api = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const migration = fs.readFileSync(path.join(root, 'database/planetscale/migrations/0016_transactional_email_envelope_boundary.sql'), 'utf8');
+  assert.doesNotMatch(coordinator, /PII_ENCRYPTION_KEY_V1|PII_HMAC_KEY_V1|ACCESS_SUBJECT_HMAC_KEY/);
+  assert.match(coordinator, /AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1/);
+  assert.doesNotMatch(jobs, /PII_ENCRYPTION_KEY_V1|identity\.contact_emails/);
+  assert.match(jobs, /TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1/);
+  assert.match(api, /TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1/);
+  assert.match(api, /JOBS_COMPATIBILITY/);
+  assert.match(api, /transactional-email-key-compatibility/);
+  assert.match(jobsIndex, /transactional-email-key-compatibility/);
+  assert.match(api, /deliveryEnvelopeCiphertext/);
+  assert.match(jobs, /delivery_envelope_ciphertext = NULL/);
+  assert.match(migration, /count\(\*\) FROM system\.transactional_email_outbox/);
+  assert.match(migration, /delivery_envelope_ciphertext text/);
+});
+
+test('scoped cryptographic key lifecycle preserves v1 keys between ordinary releases', () => {
+  const lifecycle = fs.readFileSync(path.join(root, 'scripts/ci/prepare-scoped-worker-secrets.mjs'), 'utf8');
+  const workflow = fs.readFileSync(path.join(root, '.github/workflows/native-workers-deploy.yml'), 'utf8');
+  assert.match(lifecycle, /BEGIN READ ONLY/);
+  assert.match(lifecycle, /empty transactional email outbox/);
+  assert.match(lifecycle, /zero acceptance runs/);
+  assert.match(lifecycle, /state divergence/);
+  assert.match(lifecycle, /randomBytes\(32\)/);
+  assert.match(lifecycle, /action: publicHasTransactionalKey \? 'preserve' : 'bootstrap'/);
+  assert.match(workflow, /prepare-scoped-worker-secrets\.mjs/);
+  assert.match(workflow, /transactional-email-key-compatibility/);
+  assert.doesNotMatch(workflow, /openssl rand -base64 32/);
 });
 
 test('admin API dispatch awaits rejection-prone mutations', () => {
@@ -409,16 +443,16 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
   assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
   assert.match(verifier, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION/);
-  assert.match(verifier, /0015_production_auth_acceptance_coordinator\.sql/);
-  assert.match(verifier, /production post-0015 schema fingerprint mismatch/);
-  assert.match(verifier, /production post-0015 relation count/);
+  assert.match(verifier, /0016_transactional_email_envelope_boundary\.sql/);
+  assert.match(verifier, /production post-0016 schema fingerprint mismatch/);
+  assert.match(verifier, /production post-0016 relation count/);
   assert.match(verifier, /to_regclass\('marketing\.waitlist_signups'\)/);
   assert.match(verifier, /system\.rate_limit_windows/);
   const deployIdentity = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
   assert.match(workflow, /MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'true'/);
   assert.match(workflow, /node scripts\/ci\/validate-product-integrity-deploy-identity\.mjs[\s\S]*validate:native-workers:provisioned/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0015_SCHEMA_FINGERPRINT/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0015_RELATION_COUNT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0016_SCHEMA_FINGERPRINT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0016_RELATION_COUNT/);
   assert.match(deployIdentity, /fs\.writeFileSync\(configPath, source/);
   assert.match(workflow, /Capture predeployment Worker state/);
   assert.match(workflow, /Roll back partial Worker deployment on failure/);

@@ -10,6 +10,7 @@ export interface EnvBindings {
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
   PRIVACY_QUEUE?: Queue;
+  JOBS_COMPATIBILITY?: ServiceBinding;
   AUDIT_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;
   MEDIA_QUEUE?: Queue;
@@ -39,6 +40,8 @@ export interface EnvBindings {
   JWT_PUBLIC_JWKS?: string;
   PII_ENCRYPTION_KEY_V1?: string;
   PII_HMAC_KEY_V1?: string;
+  TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1?: string;
+  AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1?: string;
   EMAIL_PROVIDER_URL?: string;
   EMAIL_PROVIDER_TOKEN?: string;
   EMAIL_PROVIDER_MODE?: 'cloudflare' | 'fallback' | 'disabled';
@@ -84,6 +87,10 @@ export interface EnvBindings {
   COST_AUTHENTICITY_IMAGE_ESTIMATE_USD?: string;
   AI?: WorkersAiBinding;
   AI_GATEWAY_ID?: string;
+}
+
+export interface ServiceBinding {
+  fetch(input: Request | string, init?: RequestInit): Promise<Response>;
 }
 
 export interface R2ObjectLike {

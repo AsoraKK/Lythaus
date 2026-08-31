@@ -10,11 +10,8 @@ export interface TransactionalEmailRelayEnv extends EnvBindings {
 interface ClaimedEmail {
   id: string;
   purpose: TransactionalEmailPurpose;
-  contact_email_user_id: string | null;
-  secret_ciphertext: string | null;
-  secret_encryption_key_version: string | null;
-  acceptance_context_ciphertext: string | null;
-  acceptance_context_encryption_key_version: string | null;
+  delivery_envelope_ciphertext: string | null;
+  delivery_envelope_encryption_key_version: string | null;
   template_version: string;
   attempt_count: number;
   correlation_id: string;
@@ -49,33 +46,39 @@ export function emailProviderFailureCategory(error: unknown): ReturnType<typeof 
   return classifyEmailProviderFailure(details);
 }
 
-function textValue(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (value instanceof Uint8Array) return new TextDecoder().decode(value);
-  return '';
+export async function decryptTransactionalEmailEnvelope(
+  field: { ciphertext: string; encryptionKeyVersion: string },
+  transactionalEmailKey: string,
+): Promise<{ to: string; token: string; acceptanceContext?: string }> {
+  const plaintext = await decryptField(field, transactionalEmailKey);
+  let envelope: { to?: unknown; token?: unknown; acceptanceContext?: unknown };
+  try { envelope = JSON.parse(plaintext) as typeof envelope; } catch { throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID'); }
+  if (typeof envelope.to !== 'string' || typeof envelope.token !== 'string') throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID');
+  return {
+    to: envelope.to,
+    token: envelope.token,
+    ...(typeof envelope.acceptanceContext === 'string' ? { acceptanceContext: envelope.acceptanceContext } : {}),
+  };
 }
 
-function messageForRow(env: TransactionalEmailRelayEnv, row: ClaimedEmail & { email_ciphertext: unknown; encryption_key_version: string | null }): Promise<TransactionalEmailMessage> {
-  if (!row.secret_ciphertext || !row.secret_encryption_key_version || !row.email_ciphertext || !row.encryption_key_version) {
+async function messageForRow(env: TransactionalEmailRelayEnv, row: ClaimedEmail): Promise<TransactionalEmailMessage> {
+  if (!row.delivery_envelope_ciphertext || !row.delivery_envelope_encryption_key_version) {
     throw new EmailProviderFailure(400, 'E_SECRET_UNAVAILABLE');
   }
-  if (!env.PII_ENCRYPTION_KEY_V1) throw new EmailProviderFailure(503, 'E_ENCRYPTION_KEY_UNAVAILABLE');
-  return Promise.all([
-    decryptField({ ciphertext: row.secret_ciphertext, encryptionKeyVersion: row.secret_encryption_key_version }, env.PII_ENCRYPTION_KEY_V1),
-    decryptField({ ciphertext: textValue(row.email_ciphertext), encryptionKeyVersion: row.encryption_key_version }, env.PII_ENCRYPTION_KEY_V1),
-    row.acceptance_context_ciphertext && row.acceptance_context_encryption_key_version
-      ? decryptField({ ciphertext: row.acceptance_context_ciphertext, encryptionKeyVersion: row.acceptance_context_encryption_key_version }, env.PII_ENCRYPTION_KEY_V1)
-      : Promise.resolve(undefined),
-  ]).then(([token, to, acceptanceContext]) => {
+  if (!env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1) throw new EmailProviderFailure(503, 'E_ENCRYPTION_KEY_UNAVAILABLE');
+  return decryptTransactionalEmailEnvelope({
+    ciphertext: row.delivery_envelope_ciphertext,
+    encryptionKeyVersion: row.delivery_envelope_encryption_key_version,
+  }, env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1).then((envelope) => {
     const message = renderTransactionalEmail({
       purpose: row.purpose,
-      token,
+      token: envelope.token,
       verificationBaseUrl: env.EMAIL_VERIFICATION_BASE_URL,
       resetBaseUrl: env.EMAIL_PASSWORD_RESET_BASE_URL,
       acceptanceLinkBaseUrl: env.AUTH_ACCEPTANCE_EMAIL_LINK_BASE_URL,
-      acceptanceContext,
+      acceptanceContext: envelope.acceptanceContext,
     });
-    return { ...message, to };
+    return { ...message, to: envelope.to };
   });
 }
 
@@ -150,9 +153,8 @@ async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, limit =
               provider_error_code = NULL, provider_error_category = NULL
          FROM claimable
         WHERE outbox.id = claimable.id
-       RETURNING outbox.id, outbox.purpose, outbox.contact_email_user_id,
-                 outbox.secret_ciphertext, outbox.secret_encryption_key_version,
-                 outbox.acceptance_context_ciphertext, outbox.acceptance_context_encryption_key_version,
+       RETURNING outbox.id, outbox.purpose,
+                 outbox.delivery_envelope_ciphertext, outbox.delivery_envelope_encryption_key_version,
                  outbox.template_version, outbox.attempt_count, outbox.correlation_id`,
       [limit],
     );
@@ -180,16 +182,7 @@ async function markEmailFailure(env: TransactionalEmailRelayEnv, row: ClaimedEma
 async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: ClaimedEmail): Promise<void> {
   let delivery: { provider: string; messageId: string; acceptedAt: string };
   try {
-    const recipient = await query<{ email_ciphertext: unknown; encryption_key_version: string | null }>(
-      env.DB_JOBS_FRESH,
-      `SELECT email_ciphertext, encryption_key_version
-         FROM identity.contact_emails
-        WHERE user_id = $1`,
-      [row.contact_email_user_id],
-    );
-    const contact = recipient.rows[0];
-    if (!contact) throw new EmailProviderFailure(400, 'E_RECIPIENT_UNAVAILABLE');
-    const message = await messageForRow(env, { ...row, email_ciphertext: contact.email_ciphertext, encryption_key_version: contact.encryption_key_version });
+    const message = await messageForRow(env, row);
     delivery = await sendTransactionalEmail(env, message);
   } catch (error) {
     await markEmailFailure(env, row, error);
@@ -198,9 +191,8 @@ async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: Claimed
   await query(env.DB_JOBS_FRESH,
     `UPDATE system.transactional_email_outbox
         SET state = 'provider_accepted', provider = $2, provider_message_id = $3,
-            accepted_at = $4::timestamptz, secret_ciphertext = NULL,
-            secret_encryption_key_version = NULL, acceptance_context_ciphertext = NULL,
-            acceptance_context_encryption_key_version = NULL, updated_at = now()
+            accepted_at = $4::timestamptz, delivery_envelope_ciphertext = NULL,
+            delivery_envelope_encryption_key_version = NULL, updated_at = now()
       WHERE id = $1 AND state = 'processing'`,
     [row.id, delivery.provider, delivery.messageId, delivery.acceptedAt],
   );

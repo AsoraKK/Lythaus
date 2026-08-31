@@ -11,6 +11,8 @@ export interface TransactionalEmailOutboxInput {
   templateVersion: string;
   secretCiphertext?: string;
   secretEncryptionKeyVersion?: string;
+  deliveryEnvelopeCiphertext?: string;
+  deliveryEnvelopeEncryptionKeyVersion?: string;
   acceptanceContextCiphertext?: string;
   acceptanceContextEncryptionKeyVersion?: string;
   acceptanceRunId?: string;
@@ -26,9 +28,10 @@ export async function enqueueTransactionalEmailIntent(client: Client, input: Tra
     `INSERT INTO system.transactional_email_outbox
        (id, user_id, contact_email_user_id, purpose, challenge_id, template_version,
         secret_ciphertext, secret_encryption_key_version,
+        delivery_envelope_ciphertext, delivery_envelope_encryption_key_version,
         acceptance_context_ciphertext, acceptance_context_encryption_key_version, acceptance_run_id,
         correlation_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
     [
       input.id,
       input.userId ?? null,
@@ -38,6 +41,8 @@ export async function enqueueTransactionalEmailIntent(client: Client, input: Tra
       input.templateVersion,
       input.secretCiphertext ?? null,
       input.secretEncryptionKeyVersion ?? null,
+      input.deliveryEnvelopeCiphertext ?? null,
+      input.deliveryEnvelopeEncryptionKeyVersion ?? null,
       input.acceptanceContextCiphertext ?? null,
       input.acceptanceContextEncryptionKeyVersion ?? null,
       input.acceptanceRunId ?? null,

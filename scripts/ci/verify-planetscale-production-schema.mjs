@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
-import { APPLICATION_SCHEMAS, approvedPost0015Expectation, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
+import { APPLICATION_SCHEMAS, approvedPost0016Expectation, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
 
 const { Client } = pg;
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
@@ -12,8 +12,8 @@ const committedOnly = process.argv.includes('--committed') || process.env.CI ===
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
 const requireProductIntegrityMigration = process.env.REQUIRE_PRODUCT_INTEGRITY_MIGRATION === 'true';
 const manifest = loadApprovedMigrations({ committedOnly });
-const post0015Expectation = requireProductIntegrityMigration || emitContract
-  ? approvedPost0015Expectation(
+const post0016Expectation = requireProductIntegrityMigration || emitContract
+  ? approvedPost0016Expectation(
     process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
     process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
   )
@@ -96,7 +96,7 @@ function fingerprintMismatch(contract, expectation) {
   const missing = [...expected].filter((key) => !observed.has(key)).sort();
   const extra = [...observed].filter((key) => !expected.has(key)).sort();
   return new Error(
-    `production post-0015 schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
+    `production post-0016 schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
     + `relations=${contract.relationCount}/${expectation.relationCount}; missing=${JSON.stringify(missing)}; extra=${JSON.stringify(extra)}`,
   );
 }
@@ -136,7 +136,7 @@ async function verifyWaitlistCatalog(client) {
        WHERE table_schema = 'system' AND table_name = 'transactional_email_outbox'
          AND column_name = 'acceptance_run_id' AND udt_name = 'uuid'
     ) AS acceptance_outbox_run_binding`);
-  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error('production post-0015 catalog contract is incomplete');
+  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error('production post-0016 catalog contract is incomplete');
 }
 
 async function verifyWaitlistPrivileges(client) {
@@ -145,7 +145,7 @@ async function verifyWaitlistPrivileges(client) {
   const admin = roleIdentifiers.lythaus_admin;
   const privacy = roleIdentifiers.lythaus_privacy;
   if (![runtime, admin, privacy].every((value) => /^pscale_api_[a-z0-9]+$/.test(value ?? ''))) {
-    throw new Error('post-0015 privilege verification requires canonical PlanetScale role identifiers');
+    throw new Error('post-0016 privilege verification requires canonical PlanetScale role identifiers');
   }
   const result = await client.query(`SELECT
     has_schema_privilege($1, 'system', 'USAGE') AS runtime_system_usage,
@@ -212,7 +212,7 @@ await client.connect();
 try {
   await client.query('BEGIN READ ONLY');
   const registry = await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
-  const through = requireProductIntegrityMigration || emitContract ? '0015_production_auth_acceptance_coordinator.sql' : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
+  const through = requireProductIntegrityMigration || emitContract ? '0016_transactional_email_envelope_boundary.sql' : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
   const expected = expectedMigrationPrefix(through);
   if (registry.rows.length !== expected.length) throw new Error(`production migration registry contains ${registry.rows.length} entries; expected ${expected.length}`);
   expected.forEach((migration, index) => {
@@ -226,13 +226,13 @@ try {
     if (emitContract) {
       console.log(JSON.stringify({ branch, ...contract, relations: undefined }));
     } else {
-      if (contract.fingerprint !== post0015Expectation.fingerprint) throw fingerprintMismatch(contract, post0015Expectation);
-      if (contract.relationCount !== post0015Expectation.relationCount) {
-        throw new Error(`production post-0015 relation count is ${contract.relationCount}; expected ${post0015Expectation.relationCount}`);
+      if (contract.fingerprint !== post0016Expectation.fingerprint) throw fingerprintMismatch(contract, post0016Expectation);
+      if (contract.relationCount !== post0016Expectation.relationCount) {
+        throw new Error(`production post-0016 relation count is ${contract.relationCount}; expected ${post0016Expectation.relationCount}`);
       }
-      console.log(`Observed post-0015 schema fingerprint: ${contract.fingerprint}`);
-      console.log(`Observed post-0015 relation count: ${contract.relationCount}`);
-      console.log(`Observed post-0015 catalog SHA-256: ${contract.catalogFingerprint}`);
+      console.log(`Observed post-0016 schema fingerprint: ${contract.fingerprint}`);
+      console.log(`Observed post-0016 relation count: ${contract.relationCount}`);
+      console.log(`Observed post-0016 catalog SHA-256: ${contract.catalogFingerprint}`);
     }
   }
   await client.query('ROLLBACK');

@@ -27,7 +27,7 @@ test('release manifest records partial provider evidence without inventing live 
   assert.ok(manifest.evidence.platformLimitations.every((value) => !value.includes('native branch protection')));
   assert.equal(manifest.cloudflare.inventoryStatus, 'UNKNOWN/BLOCKED');
   assert.equal(manifest.planetscale.inventoryStatus, 'UNKNOWN/BLOCKED');
-  assert.equal(manifest.planetscale.latestMigration, '0015_production_auth_acceptance_coordinator.sql');
+  assert.equal(manifest.planetscale.latestMigration, '0016_transactional_email_envelope_boundary.sql');
   assert.match(manifest.planetscale.migrationSetSha256, /^[a-f0-9]{64}$/);
 });
 
