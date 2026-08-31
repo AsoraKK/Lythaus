@@ -105,6 +105,10 @@ const columnContracts = {
   '0010_native_runtime_parity.sql': [
     ['feed.notifications', 'dismissed_at', 'timestamp with time zone'],
   ],
+  '0016_transactional_email_envelope_boundary.sql': [
+    ['system.transactional_email_outbox', 'delivery_envelope_ciphertext', 'text'],
+    ['system.transactional_email_outbox', 'delivery_envelope_encryption_key_version', 'text'],
+  ],
 };
 
 const relationContractSql = (label, relation, fingerprint) => `/* migration-artifact:${label} */
@@ -234,6 +238,10 @@ const artifacts = {
     { artifact: 'production_auth_acceptance_events_table', kind: 'schema_artifact', sql: "SELECT to_regclass('system.production_auth_acceptance_events') IS NOT NULL AS present" },
     { artifact: 'production_auth_acceptance_expiry_index', kind: 'schema_artifact', sql: "SELECT to_regclass('system.production_auth_acceptance_runs_expiry_idx') IS NOT NULL AS present" },
     { artifact: 'production_auth_acceptance_no_plaintext_columns', kind: 'data_invariant', sql: "SELECT NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'system' AND table_name = 'production_auth_acceptance_runs' AND column_name IN ('email', 'password', 'token', 'refresh_token')) AS present" },
+  ],
+  '0016_transactional_email_envelope_boundary.sql': [
+    ...contractArtifacts['0016_transactional_email_envelope_boundary.sql'],
+    { artifact: 'transactional_email_outbox_delivery_envelope_key_check', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint constraint_entry JOIN pg_class relation_entry ON relation_entry.oid = constraint_entry.conrelid JOIN pg_namespace relation_namespace ON relation_namespace.oid = relation_entry.relnamespace WHERE relation_namespace.nspname = 'system' AND relation_entry.relname = 'transactional_email_outbox' AND constraint_entry.conname = 'transactional_email_outbox_delivery_envelope_key_check' AND constraint_entry.contype = 'c' AND constraint_entry.convalidated IS TRUE AND pg_get_constraintdef(constraint_entry.oid) ILIKE '%delivery_envelope_ciphertext IS NULL%' AND pg_get_constraintdef(constraint_entry.oid) ILIKE '%delivery_envelope_encryption_key_version IS NOT NULL%') AS present" },
   ],
 };
 

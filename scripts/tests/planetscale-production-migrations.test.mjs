@@ -52,6 +52,25 @@ test('requires complete canonical relation, function and data postconditions bef
   }
 });
 
+test('requires both 0016 envelope columns and its key-version constraint', async () => {
+  const checks = migrationPostconditions['0016_transactional_email_envelope_boundary.sql'];
+  assert.equal(checks.length, 3);
+  assert.deepEqual(checks.map(({ artifact, kind }) => ({ artifact, kind })), [
+    { artifact: 'column:system.transactional_email_outbox.delivery_envelope_ciphertext', kind: 'column_contract' },
+    { artifact: 'column:system.transactional_email_outbox.delivery_envelope_encryption_key_version', kind: 'column_contract' },
+    { artifact: 'transactional_email_outbox_delivery_envelope_key_check', kind: 'schema_artifact' },
+  ]);
+
+  const missingConstraintClient = {
+    async query(sql) {
+      return { rows: [{ present: !sql.includes('transactional_email_outbox_delivery_envelope_key_check') }] };
+    },
+  };
+  const [state] = await classifyMigrationState(missingConstraintClient, ['0016_transactional_email_envelope_boundary.sql']);
+  assert.equal(state.state, 'PARTIALLY_APPLIED');
+  assert.throws(() => assertCompleteMigrationPostconditions(state), /transactional_email_outbox_delivery_envelope_key_check/);
+});
+
 test('function postconditions verify canonical PL/pgSQL semantics without pg_get_functiondef', async () => {
   const queries = [];
   const client = {
