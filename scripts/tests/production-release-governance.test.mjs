@@ -201,16 +201,20 @@ test('canonical release creates or resumes the Keeper-bound exact candidate', ()
 test('coordinator secret inventory waits for parent propagation and fails closed', () => {
   assert.match(workersWorkflow, /list_coordinator_secrets\(\)/);
   assert.match(workersWorkflow, /for attempt in 1 2 3 4 5/);
+  assert.match(workersWorkflow, /allow_empty_parent_inventory/);
+  assert.match(workersWorkflow, /\.status == "VERIFIED" and \.deployment\.exists == false/);
+  assert.match(workersWorkflow, /printf '\[\]\\n' > "\$output"/);
   assert.match(workersWorkflow, /not found\|does not exist\|10007/);
   assert.match(workersWorkflow, /Coordinator secret inventory returned invalid JSON/);
   assert.match(workersWorkflow, /Coordinator secret inventory failed for a non-propagation reason/);
   assert.match(workersWorkflow, /Coordinator secret inventory remained unavailable after parent bootstrap/);
   const ensureIndex = workersWorkflow.indexOf('node scripts/ci/ensure-cloudflare-worker-parent.mjs');
-  const initialInventoryIndex = workersWorkflow.indexOf('list_coordinator_secrets "$coordinator_secret_inventory"');
+  const initialInventoryIndex = workersWorkflow.indexOf('list_coordinator_secrets "$coordinator_secret_inventory" true');
   assert.ok(ensureIndex >= 0 && initialInventoryIndex > ensureIndex);
   const uploadIndex = workersWorkflow.indexOf('versions upload --config');
   const postUploadInventoryIndex = workersWorkflow.lastIndexOf('list_coordinator_secrets "$coordinator_secret_inventory"');
   assert.ok(uploadIndex >= 0 && postUploadInventoryIndex > uploadIndex);
+  assert.doesNotMatch(workersWorkflow.slice(postUploadInventoryIndex), /allow_empty_parent_inventory.*true/);
 });
 
 test('production ADR-003 preserves its login fixture', () => {
