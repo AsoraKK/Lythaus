@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
 const webWorkflow = readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
-const workersWorkflow = readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
+const workersWorkflow = readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8').replace(/\r\n/g, '\n');
 const adr003Workflow = readFileSync('.github/workflows/native-adr003-acceptance.yml', 'utf8');
 const adr003Harness = readFileSync('scripts/ci/run-adr003-authenticated-acceptance.mjs', 'utf8');
 const runtimeAuth = readFileSync('scripts/release/runtime-authenticated-command.mjs', 'utf8');
