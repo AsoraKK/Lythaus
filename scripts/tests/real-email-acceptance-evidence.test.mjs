@@ -147,6 +147,19 @@ test('generated runtime observation accepts complete exact-candidate proof', () 
   assert.equal(evidence.initialVerification.outbox.provider, 'cloudflare-email');
 });
 
+test('generated runtime observation accepts UUIDv7 acceptance and auth identifiers', () => {
+  const evidence = validEvidence();
+  evidence.acceptanceRunId = '99999999-9999-7999-8999-999999999999';
+  evidence.initialVerification.challenge.id = '22222222-2222-7222-8222-222222222222';
+  evidence.initialVerification.outbox.id = '66666666-6666-7666-8666-666666666666';
+  evidence.initialVerification.outbox.challengeId = evidence.initialVerification.challenge.id;
+  evidence.initialVerification.outbox.lifecycle.providerMessageId = evidence.initialVerification.outbox.providerMessageId;
+  evidence.initialVerification.verification.challengeId = evidence.initialVerification.challenge.id;
+  const parsed = parseRealEmailAcceptanceEvidence(evidence, releaseSha, candidate);
+  assert.equal(parsed.status, 'PASSED');
+  assert.equal(parsed.acceptanceRunId, evidence.acceptanceRunId);
+});
+
 test('runtime observation rejects legacy manually asserted booleans and unknown fields', () => {
   const legacy = {
     ...validEvidence(),

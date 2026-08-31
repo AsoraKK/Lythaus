@@ -73,7 +73,7 @@ async function requestJson(route, options = {}) {
   }
   headers.set('accept', 'application/json');
   if (acceptanceRunId) {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(acceptanceRunId)) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(acceptanceRunId)) {
       throw new Error('acceptance_run_id_invalid');
     }
     headers.set('x-correlation-id', acceptanceRunId);

@@ -1,5 +1,7 @@
 const FORMAT_VERSION = 'lythaus-real-email-acceptance-v2';
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+// RFC 9562 UUIDs include the UUIDv7 identifiers emitted by the acceptance
+// coordinator and auth workers. Keep the variant and shape strict.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const SAFE_IDENTIFIER = /^[A-Za-z0-9._:-]{6,200}$/u;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
 const FLOW_NAMES = ['initialVerification', 'resendVerification', 'passwordReset'];

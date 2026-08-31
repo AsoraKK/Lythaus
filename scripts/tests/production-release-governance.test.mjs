@@ -170,6 +170,11 @@ test('ADR-003 uses the canonical API base and keeps mobile acceptance separate',
   assert.match(adr003Harness, /mobileEmailFlow: process\.env\.ADR003_MOBILE_EMAIL_ACCEPTED === 'true'/);
 });
 
+test('ADR-003 accepts coordinator-generated UUIDv7 acceptance runs', () => {
+  assert.match(adr003Harness, /\[1-8\]\[0-9a-f\]\{3\}/);
+  assert.doesNotMatch(adr003Harness, /\[1-5\]\[0-9a-f\]\{3\}/);
+});
+
 test('auth evidence sources stay protected and database-query compatible', () => {
   const collector = readFileSync('scripts/ci/collect-auth-acceptance-evidence.mjs', 'utf8');
   assert.match(collector, /protected_probe/);
