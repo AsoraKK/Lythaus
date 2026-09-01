@@ -367,6 +367,28 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.match(workersWorkflow, /Resolve the existing exact-candidate Worker versions for resume[\s\S]*coordinator-versions\.json/);
 });
 
+test('release rollback capture preserves serving traffic beside staged candidates', () => {
+  const resolver = readFileSync('scripts/ci/resolve-worker-version-state.mjs', 'utf8');
+  const capture = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: Capture predeployment Worker state'),
+    workersWorkflow.indexOf('- name: Upload immutable public Worker candidate'),
+  );
+  const rollback = workersWorkflow.slice(workersWorkflow.indexOf('- name: Roll back partial Worker deployment on failure'));
+
+  assert.match(capture, /resolve-worker-version-state\.mjs rollback/);
+  assert.match(resolver, /const activeVersions = validatedVersions\.filter/);
+  assert.match(resolver, /const zeroTrafficVersions = validatedVersions\.filter/);
+  assert.match(resolver, /const activeTrafficTotal = activeVersions\.reduce/);
+  assert.match(resolver, /const specs = activeVersions\.map/);
+  assert.doesNotMatch(resolver, /percentage <= 0/);
+  assert.match(rollback, /versions deploy \$PUBLIC_ROLLBACK_SPECS/);
+  assert.match(rollback, /versions deploy \$ADMIN_ROLLBACK_SPECS/);
+  assert.match(rollback, /versions deploy \$JOBS_ROLLBACK_SPECS/);
+  assert.doesNotMatch(rollback, /versions deploy[^\n]*@0/);
+  assert.match(workersWorkflow, /versions deploy \$PUBLIC_ROLLBACK_SPECS "\$\{PUBLIC_WORKER_VERSION_ID\}@0"/);
+  assert.match(workersWorkflow, /versions deploy \$ADMIN_ROLLBACK_SPECS "\$\{ADMIN_WORKER_VERSION_ID\}@0"/);
+});
+
 test('protected coordinator requests retry transient access rejection and fail closed', () => {
   assert.match(workersWorkflow, /base='https:\/\/admin\.lythaus\.co\/api\/admin\/production-auth-acceptance'\n\s+coordinator_response_file="\$RUNNER_TEMP\/production-cutover\/coordinator-request\.json"/);
   assert.match(workersWorkflow, /-H "x-lythaus-readiness-token: \$\{DATABASE_READINESS_TOKEN\}"/);

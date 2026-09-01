@@ -46,6 +46,24 @@ const runUpload = (output) => {
   }
 };
 
+const rollbackVersion = (version_id, percentage) => ({ version_id, percentage });
+
+const runRollback = (versions) => {
+  const directory = mkdtempSync(join(tmpdir(), 'lythaus-worker-rollback-'));
+  const input = join(directory, 'deployment.json');
+  const githubEnv = join(directory, 'github.env');
+  writeFileSync(input, JSON.stringify({ versions }));
+  try {
+    const output = execFileSync(process.execPath, [script, 'rollback', input, 'unused', 'PUBLIC'], {
+      env: { ...process.env, GITHUB_ENV: githubEnv },
+      encoding: 'utf8',
+    });
+    return { output, env: readFileSync(githubEnv, 'utf8') };
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+};
+
 test('resolves the only exact-SHA candidate', () => {
   const result = run([version('11111111-1111-4111-8111-111111111111', '2026-08-25T10:00:00Z')]);
   assert.match(result.env, /PUBLIC_WORKER_VERSION_ID=11111111-1111-4111-8111-111111111111/);
@@ -114,4 +132,145 @@ test('rejects invalid candidate ids and missing exact-SHA candidates', () => {
     () => run([version('11111111-1111-4111-8111-111111111111', '2026-08-25T10:00:00Z', '0'.repeat(40))]),
     /no candidate Worker version tagged/,
   );
+});
+
+test('rollback captures a single traffic-serving version at 100 percent', () => {
+  const result = runRollback([
+    rollbackVersion('11111111-1111-4111-8111-111111111111', 100),
+  ]);
+  assert.match(result.env, /PUBLIC_ROLLBACK_SPECS=11111111-1111-4111-8111-111111111111@100/);
+  assert.doesNotMatch(result.env, /@0/);
+  assert.match(result.output, /"activeVersionIds":\["11111111-1111-4111-8111-111111111111"\]/);
+  assert.match(result.output, /"zeroTrafficVersionCount":0/);
+});
+
+test('rollback ignores zero-traffic staged candidates and retains the active snapshot', () => {
+  const result = runRollback([
+    rollbackVersion('11111111-1111-4111-8111-111111111111', 100),
+    rollbackVersion('22222222-2222-4222-8222-222222222222', 0),
+  ]);
+  assert.equal(result.env.trim(), 'PUBLIC_ROLLBACK_SPECS=11111111-1111-4111-8111-111111111111@100');
+  assert.doesNotMatch(result.env, /22222222-2222-4222-8222-222222222222|@0/);
+  assert.match(result.output, /"zeroTrafficVersionIds":\["22222222-2222-4222-8222-222222222222"\]/);
+});
+
+test('rollback preserves split serving traffic and excludes staged candidates', () => {
+  const result = runRollback([
+    rollbackVersion('11111111-1111-4111-8111-111111111111', 80),
+    rollbackVersion('22222222-2222-4222-8222-222222222222', 20),
+    rollbackVersion('33333333-3333-4333-8333-333333333333', 0),
+  ]);
+  assert.equal(
+    result.env.trim(),
+    'PUBLIC_ROLLBACK_SPECS=11111111-1111-4111-8111-111111111111@80 22222222-2222-4222-8222-222222222222@20',
+  );
+  assert.doesNotMatch(result.env, /33333333-3333-4333-8333-333333333333|@0/);
+  assert.match(result.output, /"trafficTotal":100/);
+});
+
+test('rollback excludes multiple zero-traffic candidates', () => {
+  const result = runRollback([
+    rollbackVersion('11111111-1111-4111-8111-111111111111', 100),
+    rollbackVersion('22222222-2222-4222-8222-222222222222', 0),
+    rollbackVersion('33333333-3333-4333-8333-333333333333', 0),
+  ]);
+  assert.equal(result.env.trim(), 'PUBLIC_ROLLBACK_SPECS=11111111-1111-4111-8111-111111111111@100');
+  assert.match(result.output, /"zeroTrafficVersionCount":2/);
+});
+
+test('rollback accepts floating serving percentages within the existing tolerance', () => {
+  const result = runRollback([
+    rollbackVersion('11111111-1111-4111-8111-111111111111', 40.0004),
+    rollbackVersion('22222222-2222-4222-8222-222222222222', 59.9994),
+    rollbackVersion('33333333-3333-4333-8333-333333333333', 0),
+  ]);
+  assert.match(result.env, /@40\.0004/);
+  assert.match(result.env, /@59\.9994/);
+  assert.doesNotMatch(result.env, /@0/);
+});
+
+test('rollback fails closed when all versions are zero traffic', () => {
+  assert.throws(
+    () => runRollback([
+      rollbackVersion('11111111-1111-4111-8111-111111111111', 0),
+      rollbackVersion('22222222-2222-4222-8222-222222222222', 0),
+    ]),
+    /no active rollback versions/,
+  );
+});
+
+test('rollback fails closed when active traffic does not total 100', () => {
+  assert.throws(
+    () => runRollback([rollbackVersion('11111111-1111-4111-8111-111111111111', 99)]),
+    /rollback traffic totals 99, not 100/,
+  );
+  assert.throws(
+    () => runRollback([rollbackVersion('11111111-1111-4111-8111-111111111111', 101)]),
+    /invalid rollback version/,
+  );
+});
+
+test('rollback fails closed on invalid percentages, including malformed staged entries', () => {
+  for (const percentage of [-1, 'not-a-number', null, '', true]) {
+    assert.throws(
+      () => runRollback([
+        rollbackVersion('11111111-1111-4111-8111-111111111111', 100),
+        rollbackVersion('22222222-2222-4222-8222-222222222222', percentage),
+      ]),
+      /invalid rollback version/,
+    );
+  }
+});
+
+test('rollback validates zero-traffic IDs and rejects duplicate IDs', () => {
+  assert.throws(
+    () => runRollback([
+      rollbackVersion('11111111-1111-4111-8111-111111111111', 100),
+      rollbackVersion('not-a-uuid', 0),
+    ]),
+    /invalid rollback version/,
+  );
+  assert.throws(
+    () => runRollback([
+      rollbackVersion('11111111-1111-4111-8111-111111111111', 100),
+      rollbackVersion('11111111-1111-4111-8111-111111111111', 0),
+    ]),
+    /duplicate rollback version IDs/,
+  );
+});
+
+test('rollback rejects missing and empty version lists', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lythaus-worker-rollback-invalid-'));
+  const input = join(directory, 'deployment.json');
+  const githubEnv = join(directory, 'github.env');
+  try {
+    for (const payload of [{}, { versions: [] }]) {
+      writeFileSync(input, JSON.stringify(payload));
+      assert.throws(
+        () => execFileSync(process.execPath, [script, 'rollback', input, 'unused', 'PUBLIC'], {
+          env: { ...process.env, GITHUB_ENV: githubEnv },
+          encoding: 'utf8',
+        }),
+        /no rollback versions/,
+      );
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('predeployment rollback snapshot restores only serving traffic at 100 percent', () => {
+  const result = runRollback([
+    rollbackVersion('11111111-1111-4111-8111-111111111111', 100),
+    rollbackVersion('22222222-2222-4222-8222-222222222222', 0),
+    rollbackVersion('33333333-3333-4333-8333-333333333333', 0),
+  ]);
+  const specs = result.env
+    .match(/PUBLIC_ROLLBACK_SPECS=(.*)/)?.[1]
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean) ?? [];
+  assert.deepEqual(specs, ['11111111-1111-4111-8111-111111111111@100']);
+  assert.equal(specs.reduce((sum, spec) => sum + Number(spec.split('@')[1]), 0), 100);
+  assert.doesNotMatch(result.env, /@0/);
 });
