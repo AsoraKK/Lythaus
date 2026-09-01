@@ -80,17 +80,39 @@ if (mode === 'candidate') {
 } else {
   const versions = source?.versions;
   if (!Array.isArray(versions) || versions.length === 0) throw new Error('deployment state has no rollback versions');
-  let total = 0;
-  const specs = versions.map((version) => {
+  const seenIds = new Set();
+  const validatedVersions = versions.map((version) => {
     const id = version?.version_id;
-    const percentage = Number(version?.percentage);
-    if (!uuid.test(id ?? '') || !Number.isFinite(percentage) || percentage <= 0 || percentage > 100) {
+    const rawPercentage = version?.percentage;
+    const percentage = typeof rawPercentage === 'number'
+      ? rawPercentage
+      : typeof rawPercentage === 'string' && rawPercentage.trim() !== ''
+        ? Number(rawPercentage)
+        : Number.NaN;
+    if (!uuid.test(id ?? '') || !Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
       throw new Error('deployment state contains an invalid rollback version');
     }
-    total += percentage;
-    return `${id}@${percentage}`;
+    if (seenIds.has(id.toLowerCase())) throw new Error('deployment state contains duplicate rollback version IDs');
+    seenIds.add(id.toLowerCase());
+    return { id, percentage };
   });
-  if (Math.abs(total - 100) > 0.001) throw new Error(`rollback traffic totals ${total}, not 100`);
+
+  const activeVersions = validatedVersions.filter((version) => version.percentage > 0);
+  const zeroTrafficVersions = validatedVersions.filter((version) => version.percentage === 0);
+  const activeTrafficTotal = activeVersions.reduce((total, version) => total + version.percentage, 0);
+  if (activeVersions.length === 0) throw new Error('deployment state has no active rollback versions');
+  if (Math.abs(activeTrafficTotal - 100) > 0.001) {
+    throw new Error(`rollback traffic totals ${activeTrafficTotal}, not 100`);
+  }
+
+  const specs = activeVersions.map(({ id, percentage }) => `${id}@${percentage}`);
   append(`${variablePrefix}_ROLLBACK_SPECS`, specs.join(' '));
-  console.log(JSON.stringify({ mode, variablePrefix, versionIds: versions.map((version) => version.version_id), trafficTotal: total }));
+  console.log(JSON.stringify({
+    mode,
+    variablePrefix,
+    activeVersionIds: activeVersions.map((version) => version.id),
+    zeroTrafficVersionIds: zeroTrafficVersions.map((version) => version.id),
+    zeroTrafficVersionCount: zeroTrafficVersions.length,
+    trafficTotal: activeTrafficTotal,
+  }));
 }
