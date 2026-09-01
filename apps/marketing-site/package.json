@@ -11,7 +11,7 @@
     "lockfile:refresh": "npm install --package-lock-only --ignore-scripts && node ../../scripts/sanitize-provider-neutral-lockfile.mjs package-lock.json"
   },
   "dependencies": {
-    "astro": "7.1.6",
+    "astro": "7.2.9",
     "lythaus-marketing-site": "file:"
   },
   "overrides": {
