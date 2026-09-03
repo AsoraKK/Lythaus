@@ -147,6 +147,28 @@ test('generated runtime observation accepts complete exact-candidate proof', () 
   assert.equal(evidence.initialVerification.outbox.provider, 'cloudflare-email');
 });
 
+test('runtime observation preserves the exact candidate and reused dependency set', () => {
+  const evidence = validEvidence();
+  const sourceCandidate = { ...candidate, sourceReleaseSha: releaseSha };
+  const candidateDependencies = {
+    public: { workerName: 'lythaus-public-api-development', versionId: candidate.workerVersionId, sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    admin: { workerName: 'lythaus-admin-api-development', versionId: '22222222-2222-4222-8222-222222222222', sourceSha: 'b'.repeat(40), status: 'REUSED_PRODUCTION', provenance: 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' },
+    jobs: { workerName: 'lythaus-jobs-development', versionId: '33333333-3333-4333-8333-333333333333', sourceSha: 'c'.repeat(40), status: 'REUSED_PRODUCTION', provenance: 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' },
+    coordinator: { workerName: 'lythaus-auth-acceptance-coordinator-development', versionId: '44444444-4444-4444-8444-444444444444', sourceSha: 'd'.repeat(40), status: 'REUSED_PRODUCTION', provenance: 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' },
+  };
+  evidence.candidate = sourceCandidate;
+  evidence.candidateDependencies = candidateDependencies;
+  const parsed = parseRealEmailAcceptanceEvidence(evidence, releaseSha, { ...sourceCandidate, candidateDependencies });
+  assert.deepEqual(parsed.candidateDependencies, candidateDependencies);
+
+  const drifted = structuredClone(evidence);
+  drifted.candidateDependencies.jobs.versionId = '55555555-5555-4555-8555-555555555555';
+  assert.throws(
+    () => parseRealEmailAcceptanceEvidence(drifted, releaseSha, { ...sourceCandidate, candidateDependencies }),
+    /candidate_dependency_mismatch/,
+  );
+});
+
 test('generated runtime observation accepts UUIDv7 acceptance and auth identifiers', () => {
   const evidence = validEvidence();
   evidence.acceptanceRunId = '99999999-9999-7999-8999-999999999999';
