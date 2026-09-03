@@ -333,6 +333,7 @@ test('staged transactional-email compatibility probe retries transient failures 
   assert.match(probe, /\.jobsWorkerVersionId == \$jobs/);
   assert.match(probe, /\.publicReleaseTag == \$sha/);
   assert.match(probe, /\.jobsReleaseTag == \$sha/);
+  assert.match(probe, /lythaus-jobs-development=\\\"\$\{JOBS_WORKER_VERSION_ID\}\\\"/);
   assert.doesNotMatch(probe, /curl --fail/);
 });
 

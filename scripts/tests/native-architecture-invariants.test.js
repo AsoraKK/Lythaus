@@ -128,6 +128,9 @@ test('transactional delivery and acceptance state have purpose-specific cryptogr
   assert.match(api, /TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1/);
   assert.match(api, /JOBS_COMPATIBILITY/);
   assert.match(api, /transactional-email-key-compatibility/);
+  assert.match(api, /Cloudflare-Workers-Version-Overrides/);
+  assert.match(api, /JOBS_WORKER_NAME/);
+  assert.match(api, /versionOverrides/);
   assert.match(jobsIndex, /transactional-email-key-compatibility/);
   assert.match(api, /deliveryEnvelopeCiphertext/);
   assert.match(jobs, /delivery_envelope_ciphertext = NULL/);
