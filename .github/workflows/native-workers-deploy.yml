@@ -298,9 +298,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=SOURCE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=release_plan_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=deterministic release classification or component planning failed' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=SOURCE'
+            echo 'RELEASE_FAILURE_CODE=release_plan_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=deterministic release classification or component planning failed'
+          } >> "$GITHUB_ENV"
           node scripts/ci/resolve-release-plan.mjs \
             --release-sha "$RELEASE_SHA" \
             --base-sha "$PREVIOUS_PRODUCTION_SHA" \
@@ -312,9 +314,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=SOURCE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=manual_release_class_downgrade' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=manual release-class downgrade is not permitted' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=SOURCE'
+            echo 'RELEASE_FAILURE_CODE=manual_release_class_downgrade'
+            echo 'RELEASE_FAILURE_MESSAGE=manual release-class downgrade is not permitted'
+          } >> "$GITHUB_ENV"
           test -z "${RELEASE_CLASS_OVERRIDE:-}"
           if [[ "${{ inputs.force_auth_critical }}" == true ]]; then
             test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE
@@ -498,9 +502,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=acceptance_rollback_snapshot_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=exact positive serving traffic and route rollback snapshot could not be preserved' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE'
+            echo 'RELEASE_FAILURE_CODE=acceptance_rollback_snapshot_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=exact positive serving traffic and route rollback snapshot could not be preserved'
+          } >> "$GITHUB_ENV"
           snapshot="$RUNNER_TEMP/production-cutover/acceptance-rollback-snapshot.json"
           if [[ -n "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
             [[ "$EXISTING_ACCEPTANCE_RUN_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || {
@@ -582,9 +588,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=acceptance_resume_secret_evidence_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=exact scoped secret evidence could not be reverified for acceptance resume' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=CANDIDATE'
+            echo 'RELEASE_FAILURE_CODE=acceptance_resume_secret_evidence_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=exact scoped secret evidence could not be reverified for acceptance resume'
+          } >> "$GITHUB_ENV"
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
@@ -651,9 +659,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=candidate_upload_or_secret_binding_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=changed Worker candidate upload or scoped secret binding failed' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=CANDIDATE'
+            echo 'RELEASE_FAILURE_CODE=candidate_upload_or_secret_binding_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=changed Worker candidate upload or scoped secret binding failed'
+          } >> "$GITHUB_ENV"
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
@@ -774,9 +784,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=candidate_identity_resolution_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=changed candidate or known-good production version identity could not be proven' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=CANDIDATE'
+            echo 'RELEASE_FAILURE_CODE=candidate_identity_resolution_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=changed candidate or known-good production version identity could not be proven'
+          } >> "$GITHUB_ENV"
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
@@ -796,18 +808,22 @@ jobs:
             else
               node scripts/ci/resolve-worker-version-state.mjs candidate "$versions_file" "$RELEASE_SHA" "$prefix"
             fi
-            echo "${prefix}_WORKER_PROVENANCE=BUILT_FROM_RELEASE_SHA" >> "$GITHUB_ENV"
-            echo "${prefix}_WORKER_STATUS=NEW_CANDIDATE" >> "$GITHUB_ENV"
-            echo "${prefix}_WORKER_SOURCE_SHA=$RELEASE_SHA" >> "$GITHUB_ENV"
+            {
+              echo "${prefix}_WORKER_PROVENANCE=BUILT_FROM_RELEASE_SHA"
+              echo "${prefix}_WORKER_STATUS=NEW_CANDIDATE"
+              echo "${prefix}_WORKER_SOURCE_SHA=$RELEASE_SHA"
+            } >> "$GITHUB_ENV"
           }
           reuse_production() {
             local prefix="$1"
             local version_var="${prefix}_REUSED_PRODUCTION_VERSION_ID"
             local version_id="${!version_var:-}"
             test -n "$version_id" || { echo "Missing captured production version for unchanged ${prefix}." >&2; exit 1; }
-            echo "${prefix}_WORKER_VERSION_ID=$version_id" >> "$GITHUB_ENV"
-            echo "${prefix}_WORKER_PROVENANCE=REUSED_KNOWN_GOOD_PRODUCTION_VERSION" >> "$GITHUB_ENV"
-            echo "${prefix}_WORKER_STATUS=REUSED_PRODUCTION" >> "$GITHUB_ENV"
+            {
+              echo "${prefix}_WORKER_VERSION_ID=$version_id"
+              echo "${prefix}_WORKER_PROVENANCE=REUSED_KNOWN_GOOD_PRODUCTION_VERSION"
+              echo "${prefix}_WORKER_STATUS=REUSED_PRODUCTION"
+            } >> "$GITHUB_ENV"
             version_ids_var="${prefix}_REUSED_PRODUCTION_VERSION_IDS_JSON"
             source_shas_var="${prefix}_REUSED_PRODUCTION_SOURCE_SHAS_JSON"
             created_ats_var="${prefix}_REUSED_PRODUCTION_CREATED_ATS_JSON"
@@ -822,8 +838,10 @@ jobs:
               echo "Missing exact source or creation provenance for positive serving ${prefix} versions; refusing unverifiable reuse." >&2
               exit 1
             }
-            echo "${prefix}_WORKER_SOURCE_SHA=$(jq -r '.[0]' <<<"$source_shas_json")" >> "$GITHUB_ENV"
-            echo "${prefix}_WORKER_CREATED_AT=$(jq -r '.[0]' <<<"$created_ats_json")" >> "$GITHUB_ENV"
+            {
+              echo "${prefix}_WORKER_SOURCE_SHA=$(jq -r '.[0]' <<<"$source_shas_json")"
+              echo "${prefix}_WORKER_CREATED_AT=$(jq -r '.[0]' <<<"$created_ats_json")"
+            } >> "$GITHUB_ENV"
           }
           if component_changed public; then resolve_candidate public lythaus-public-api-development PUBLIC; else reuse_production PUBLIC; fi
           if component_changed admin; then resolve_candidate admin lythaus-admin-api-development ADMIN; else reuse_production ADMIN; fi
@@ -855,9 +873,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=candidate_staging_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=changed Worker candidate staging failed' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=CANDIDATE'
+            echo 'RELEASE_FAILURE_CODE=candidate_staging_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=changed Worker candidate staging failed'
+          } >> "$GITHUB_ENV"
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
@@ -900,9 +920,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=jobs_transactional_email_compatibility_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=Public and Jobs transactional email compatibility proof failed' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=CANDIDATE'
+            echo 'RELEASE_FAILURE_CODE=jobs_transactional_email_compatibility_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=Public and Jobs transactional email compatibility proof failed'
+          } >> "$GITHUB_ENV"
           base="${PRODUCTION_PUBLIC_API_BASE_URL%/}"
           response="$RUNNER_TEMP/production-cutover/transactional-email-key-compatibility.json"
           compatible=false
@@ -960,9 +982,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=keeper_certification_unavailable' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=protected Keeper acceptance certification could not be established' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE'
+            echo 'RELEASE_FAILURE_CODE=keeper_certification_unavailable'
+            echo 'RELEASE_FAILURE_MESSAGE=protected Keeper acceptance certification could not be established'
+          } >> "$GITHUB_ENV"
           base='https://admin.lythaus.co/api/admin/production-auth-acceptance'
           coordinator_response_file="$RUNNER_TEMP/production-cutover/coordinator-request.json"
           test -n "$DATABASE_READINESS_TOKEN" && test -n "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"
@@ -1218,9 +1242,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=auth_product_acceptance_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=real authentication product acceptance failed' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE'
+            echo 'RELEASE_FAILURE_CODE=auth_product_acceptance_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=real authentication product acceptance failed'
+          } >> "$GITHUB_ENV"
           api_base="${ADR003_API_BASE_URL%/}"
           test -n "$api_base"
           if [[ "$api_base" != */api ]]; then
@@ -1241,9 +1267,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=certification_evidence_required' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=auth-critical acceptance certification evidence is required' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE'
+            echo 'RELEASE_FAILURE_CODE=certification_evidence_required'
+            echo 'RELEASE_FAILURE_MESSAGE=auth-critical acceptance certification evidence is required'
+          } >> "$GITHUB_ENV"
           test "$OBSERVER_OUTCOME" = success || {
             status="$(jq -r '.status // "BLOCKED"' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json" 2>/dev/null || echo BLOCKED)"
             if [[ "$status" = HUMAN_ACCEPTANCE_REQUIRED ]]; then
@@ -1296,9 +1324,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'DATABASE_IDENTITY_VERIFIED=true' >> "$GITHUB_ENV"
-          echo 'BUDGET_ENFORCEMENT_VERIFIED=true' >> "$GITHUB_ENV"
-          echo 'PLANETSCALE_GRANTS_VERIFIED=true' >> "$GITHUB_ENV"
+          {
+            echo 'DATABASE_IDENTITY_VERIFIED=true'
+            echo 'BUDGET_ENFORCEMENT_VERIFIED=true'
+            echo 'PLANETSCALE_GRANTS_VERIFIED=true'
+          } >> "$GITHUB_ENV"
       - name: ACTIVATION - Validate final production gates before activation
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -1370,9 +1400,11 @@ jobs:
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=release_metadata_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=release candidate and reuse metadata validation failed' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=ACTIVATION'
+            echo 'RELEASE_FAILURE_CODE=release_metadata_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=release candidate and reuse metadata validation failed'
+          } >> "$GITHUB_ENV"
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
