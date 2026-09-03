@@ -316,9 +316,14 @@ function requiredTransactionalEmailKey(env: Env): string {
 }
 
 const TRANSACTIONAL_EMAIL_KEY_COMPATIBILITY_FIXTURE = 'lythaus:transactional-email-key-compatibility:v1';
+const JOBS_WORKER_NAME = 'lythaus-jobs-development';
 
 async function proveTransactionalEmailKeyCompatibility(request: Request, env: Env): Promise<Response> {
   if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+  const versionOverrides = request.headers.get('Cloudflare-Workers-Version-Overrides');
+  if (!versionOverrides || !new RegExp(`(?:^|,\\s*)${JOBS_WORKER_NAME}="[0-9a-f-]{36}"(?:\\s*(?:,|$))`, 'i').test(versionOverrides)) {
+    return new Response(null, { status: 400 });
+  }
   const envelope = await encryptField(
     TRANSACTIONAL_EMAIL_KEY_COMPATIBILITY_FIXTURE,
     requiredTransactionalEmailKey(env),
@@ -329,6 +334,7 @@ async function proveTransactionalEmailKeyCompatibility(request: Request, env: En
     headers: {
       authorization: request.headers.get('authorization') ?? '',
       'content-type': 'application/json',
+      'Cloudflare-Workers-Version-Overrides': versionOverrides,
     },
     body: JSON.stringify(envelope),
   });

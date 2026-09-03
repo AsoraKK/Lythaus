@@ -419,7 +419,7 @@ jobs:
             set +e
             http_status="$(curl --silent --show-error --max-time 30 \
               -H "authorization: Bearer ${DATABASE_READINESS_TOKEN}" \
-              -H "Cloudflare-Workers-Version-Overrides: lythaus-public-api-development=\"${PUBLIC_WORKER_VERSION_ID}\"" \
+              -H "Cloudflare-Workers-Version-Overrides: lythaus-public-api-development=\"${PUBLIC_WORKER_VERSION_ID}\", lythaus-jobs-development=\"${JOBS_WORKER_VERSION_ID}\"" \
               -H 'accept: application/json' \
               -X POST "$base/internal/readiness/transactional-email-key-compatibility" \
               --output "$response" \
