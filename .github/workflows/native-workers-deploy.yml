@@ -1275,17 +1275,23 @@ jobs:
           test "$OBSERVER_OUTCOME" = success || {
             status="$(jq -r '.status // "BLOCKED"' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json" 2>/dev/null || echo BLOCKED)"
             if [[ "$status" = HUMAN_ACCEPTANCE_REQUIRED ]]; then
-              echo 'RELEASE_FAILURE_CODE=human_acceptance_required' >> "$GITHUB_ENV"
-              echo 'RELEASE_FAILURE_MESSAGE=human acceptance window is incomplete' >> "$GITHUB_ENV"
-              echo 'AUTH_ACCEPTANCE_PENDING=true' >> "$GITHUB_ENV"
+              {
+                echo 'RELEASE_FAILURE_CODE=human_acceptance_required'
+                echo 'RELEASE_FAILURE_MESSAGE=human acceptance window is incomplete'
+                echo 'AUTH_ACCEPTANCE_PENDING=true'
+              } >> "$GITHUB_ENV"
               echo "HUMAN_ACCEPTANCE_REQUIRED: complete the real Turnstile and mailbox interaction at ${AUTH_ACCEPTANCE_KEEPER_URL}, then re-dispatch this exact SHA with acceptance_run_id=${AUTH_ACCEPTANCE_RUN_ID}." >&2
             elif [[ "$status" = BLOCKED ]] && jq -e '.reason == "provider_configuration_missing"' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json" >/dev/null 2>&1; then
-              echo 'RELEASE_FAILURE_CODE=delivery_observer_unavailable' >> "$GITHUB_ENV"
-              echo 'RELEASE_FAILURE_MESSAGE=delivery observer availability prevented independent acceptance evidence' >> "$GITHUB_ENV"
+              {
+                echo 'RELEASE_FAILURE_CODE=delivery_observer_unavailable'
+                echo 'RELEASE_FAILURE_MESSAGE=delivery observer availability prevented independent acceptance evidence'
+              } >> "$GITHUB_ENV"
               echo 'Provider configuration failure: the enabled mail.lythaus.co Cloudflare Email Sending queue subscription was not independently observed for the required lifecycle events.' >&2
             else
-              echo 'RELEASE_FAILURE_CODE=auth_acceptance_certification_failed' >> "$GITHUB_ENV"
-              echo 'RELEASE_FAILURE_MESSAGE=auth-critical acceptance certification evidence was not proven' >> "$GITHUB_ENV"
+              {
+                echo 'RELEASE_FAILURE_CODE=auth_acceptance_certification_failed'
+                echo 'RELEASE_FAILURE_MESSAGE=auth-critical acceptance certification evidence was not proven'
+              } >> "$GITHUB_ENV"
               echo "Candidate auth acceptance is not independently proven: $status" >&2
             fi
             exit 1
