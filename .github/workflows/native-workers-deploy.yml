@@ -222,6 +222,9 @@ jobs:
             "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
             'admin.lythaus.co/api/admin/*'
           node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
+            "$RUNNER_TEMP/production-cutover/admin-direct-api-route-before.json" \
+            'admin-api.lythaus.co/*'
+          node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
             "$RUNNER_TEMP/production-cutover/coordinator-route-before.json" \
             'admin.lythaus.co/api/admin/production-auth-acceptance/*'
       - name: Record verified main routing assertion
@@ -544,6 +547,22 @@ jobs:
             echo "Keeper URL (Cloudflare Access required): $keeper_url"
             echo "Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with \`acceptance_run_id\`."
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Ensure direct admin API route for exact candidate probe
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+        run: |
+          set -euo pipefail
+          route_evidence="$RUNNER_TEMP/production-cutover/admin-direct-api-route-after.json"
+          node scripts/ci/manage-cloudflare-worker-route.mjs ensure \
+            "$route_evidence" \
+            'admin-api.lythaus.co/*' \
+            lythaus-admin-api-development
+          if jq -e '.action == "created"' "$route_evidence" >/dev/null; then
+            echo 'ADMIN_DIRECT_API_ROUTE_CREATED=true' >> "$GITHUB_ENV"
+          fi
+          jq -e '.route.pattern == "admin-api.lythaus.co/*" and .route.script == "lythaus-admin-api-development"' \
+            "$route_evidence" >/dev/null
       - name: Probe public candidate without production traffic
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -722,6 +741,10 @@ jobs:
             "$RUNNER_TEMP/production-cutover/admin-api-route-after.json" \
             'admin.lythaus.co/api/admin/*' \
             lythaus-admin-api-development
+          node scripts/ci/manage-cloudflare-worker-route.mjs verify \
+            "$RUNNER_TEMP/production-cutover/admin-direct-api-route-after.json" \
+            'admin-api.lythaus.co/*' \
+            lythaus-admin-api-development
       - name: Export activated Worker version metadata
         id: release_metadata
         env:
@@ -738,6 +761,8 @@ jobs:
           test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-before.json"
           test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json"
           test -s "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/admin-direct-api-route-before.json"
+          test -s "$RUNNER_TEMP/production-cutover/admin-direct-api-route-after.json"
           test -s "$RUNNER_TEMP/production-cutover/coordinator-route-before.json"
           if [[ -z "${{ inputs.acceptance_run_id }}" ]]; then
             test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-after.json"
@@ -814,6 +839,11 @@ jobs:
             node scripts/ci/manage-cloudflare-worker-route.mjs restore \
               "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
               'admin.lythaus.co/api/admin/*' || rollback_failed=1
+          fi
+          if [[ "${ADMIN_DIRECT_API_ROUTE_CREATED:-false}" == "true" ]]; then
+            node scripts/ci/manage-cloudflare-worker-route.mjs restore \
+              "$RUNNER_TEMP/production-cutover/admin-direct-api-route-before.json" \
+              'admin-api.lythaus.co/*' || rollback_failed=1
           fi
           if [[ "${COORDINATOR_ROUTE_TRIGGER_ATTEMPTED:-false}" == "true" ]]; then
             node scripts/ci/manage-cloudflare-worker-route.mjs restore \

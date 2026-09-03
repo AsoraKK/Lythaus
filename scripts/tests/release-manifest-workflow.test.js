@@ -39,3 +39,11 @@ test('native release publishes, verifies, and restores the same-origin admin API
     'route triggers must be published only after immutable versions activate',
   );
 });
+
+test('native release declares and verifies the direct admin API route used by candidate probes', () => {
+  assert.match(workflow, /admin-api\.lythaus\.co\/\*/);
+  assert.match(workflow, /admin-direct-api-route-before\.json/);
+  assert.match(workflow, /admin-direct-api-route-after\.json/);
+  assert.match(workflow, /manage-cloudflare-worker-route\.mjs ensure/);
+  assert.match(workflow, /ADMIN_DIRECT_API_ROUTE_CREATED=true/);
+});

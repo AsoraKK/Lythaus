@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  ensurePlan,
   restorePlan,
   routeForPattern,
 } from "../ci/manage-cloudflare-worker-route.mjs";
@@ -51,4 +52,37 @@ test("restorePlan returns only the mutation needed to restore the prior route", 
     routeId: "current",
     body: { pattern, script: "lythaus-admin-api-development" },
   });
+});
+
+test("ensurePlan only creates the canonical direct admin API route", () => {
+  assert.deepEqual(
+    ensurePlan(
+      "admin-api.lythaus.co/*",
+      null,
+      "lythaus-admin-api-development",
+    ),
+    {
+      method: "create",
+      body: {
+        pattern: "admin-api.lythaus.co/*",
+        script: "lythaus-admin-api-development",
+      },
+    },
+  );
+  assert.deepEqual(
+    ensurePlan(
+      "admin-api.lythaus.co/*",
+      { pattern: "admin-api.lythaus.co/*", script: "lythaus-admin-api-development" },
+      "lythaus-admin-api-development",
+    ),
+    { method: "none" },
+  );
+  assert.throws(
+    () => ensurePlan("admin.lythaus.co/*", null, "lythaus-admin-api-development"),
+    /not permitted/,
+  );
+  assert.throws(
+    () => ensurePlan("admin-api.lythaus.co/*", { pattern: "admin-api.lythaus.co/*", script: "other-worker" }, "lythaus-admin-api-development"),
+    /unexpected Worker/,
+  );
 });
