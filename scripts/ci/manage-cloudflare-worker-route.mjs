@@ -44,11 +44,30 @@ export function restorePlan(beforeRoute, currentRoute) {
   };
 }
 
+export function ensurePlan(pattern, currentRoute, expectedScript) {
+  if (pattern !== "admin-api.lythaus.co/*") {
+    fail(`Route ensure is not permitted for ${pattern}.`);
+  }
+  if (!expectedScript) {
+    fail("An expected Worker script is required to ensure a route.");
+  }
+  if (!currentRoute) {
+    return {
+      method: "create",
+      body: { pattern, script: expectedScript },
+    };
+  }
+  if (currentRoute.script !== expectedScript) {
+    fail(`Cloudflare route ${pattern} targets an unexpected Worker.`);
+  }
+  return { method: "none" };
+}
+
 async function main() {
   const [operation, evidencePath, pattern, expectedScript] =
     process.argv.slice(2);
   if (
-    !["snapshot", "verify", "restore"].includes(operation) ||
+    !["snapshot", "verify", "ensure", "restore"].includes(operation) ||
     !evidencePath ||
     !pattern
   ) {
@@ -99,6 +118,24 @@ async function main() {
       fail(`Cloudflare did not publish ${pattern} to ${expectedScript}.`);
     }
     await writeFile(evidencePath, JSON.stringify({ route }, null, 2));
+    return;
+  }
+
+  if (operation === "ensure") {
+    if (!expectedScript) {
+      fail("An expected Worker script is required to ensure a route.");
+    }
+    const plan = ensurePlan(pattern, await currentRoute(), expectedScript);
+    if (plan.method === "create") {
+      await request("", { method: "POST", body: JSON.stringify(plan.body) });
+    }
+    await writeFile(
+      evidencePath,
+      JSON.stringify({
+        action: plan.method === "create" ? "created" : "existing",
+        route: await currentRoute(),
+      }, null, 2),
+    );
     return;
   }
 

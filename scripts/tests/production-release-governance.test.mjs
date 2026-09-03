@@ -421,6 +421,34 @@ test('admin candidate probe authenticates the Access-protected API route', () =>
   assert.match(adminProbe, /CF_ACCESS_CLIENT_SECRET: \$\{\{ secrets\.CF_ACCESS_CLIENT_SECRET \}\}/);
 });
 
+test('admin candidate probe provisions the canonical direct API route before probing', () => {
+  const route = 'admin-api\\.lythaus\\.co/\\*';
+  const capture = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: Capture predeployment same-origin admin API route'),
+    workersWorkflow.indexOf('- name: Record verified main routing assertion'),
+  );
+  const ensure = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: Ensure direct admin API route for exact candidate probe'),
+    workersWorkflow.indexOf('- name: Probe public candidate without production traffic'),
+  );
+  const rollback = workersWorkflow.slice(workersWorkflow.indexOf('- name: Roll back partial Worker deployment on failure'));
+  assert.match(capture, new RegExp(`admin-direct-api-route-before\\.json`));
+  assert.match(capture, new RegExp(`'${route}'`));
+  assert.match(ensure, /manage-cloudflare-worker-route\.mjs ensure/);
+  assert.match(ensure, /admin-direct-api-route-after\.json/);
+  assert.match(ensure, new RegExp(`'${route}'`));
+  assert.match(ensure, /lythaus-admin-api-development/);
+  assert.match(ensure, /ADMIN_DIRECT_API_ROUTE_CREATED=true/);
+  assert.ok(
+    workersWorkflow.indexOf('- name: Ensure direct admin API route for exact candidate probe')
+      < workersWorkflow.indexOf('- name: Probe admin candidate without production traffic'),
+    'the direct API route must exist before the candidate probe',
+  );
+  assert.match(rollback, /ADMIN_DIRECT_API_ROUTE_CREATED/);
+  assert.match(rollback, /admin-direct-api-route-before\.json/);
+  assert.match(rollback, new RegExp(`'${route}'`));
+});
+
 test('production smoke authenticates the Access-protected admin API health check', () => {
   const smokeSection = workflow.match(/\n  production_smoke:[\s\S]*?\n  manifest:/)?.[0] ?? '';
   assert.match(smokeSection, /ADMIN_API_URL%\/\}\}\/health|ADMIN_API_URL%\/\}\/health/);
