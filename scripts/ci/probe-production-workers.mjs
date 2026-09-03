@@ -15,12 +15,14 @@ const expectedBranch = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true' ? 'main' 
 const authenticatedAcceptanceProven = process.env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true';
 const requestedWorker = process.env.PRODUCTION_WORKER_SCOPE ?? 'all';
 const releaseSha = process.env.RELEASE_SHA ?? '';
+const expectedWorkerSourceSha = process.env.EXPECTED_WORKER_SOURCE_SHA ?? releaseSha;
 const expectedWorkerVersionId = process.env.PRODUCTION_WORKER_VERSION_ID ?? '';
 const accessClientId = process.env.CF_ACCESS_CLIENT_ID ?? '';
 const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET ?? '';
 
 if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
+if (!/^[0-9a-f]{40}$/.test(expectedWorkerSourceSha)) throw new Error('EXPECTED_WORKER_SOURCE_SHA must be a full source SHA');
 if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTION_WORKER_VERSION_ID is required');
 if (expectedSchemaVersion !== '0016_transactional_email_envelope_boundary.sql') throw new Error('production probes require migration 0016');
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
@@ -125,7 +127,8 @@ for (const target of targets) {
     evidence.workers.push({
       worker: target.worker,
       workerVersionId: expectedWorkerVersionId,
-      releaseTag: releaseSha,
+      releaseTag: expectedWorkerSourceSha,
+      sourceSha: expectedWorkerSourceSha,
       baseUrl: null,
       databaseCount: 0,
       readiness: 'not_applicable_no_public_route',
@@ -139,7 +142,7 @@ for (const target of targets) {
   const body = await fetchJson(`${base}/internal/readiness/database-identity`, {
     headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
   });
-  if (body.workerVersionId !== expectedWorkerVersionId || body.releaseTag !== releaseSha) {
+  if (body.workerVersionId !== expectedWorkerVersionId || body.releaseTag !== expectedWorkerSourceSha) {
     throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
   }
   const reports = body.databases && typeof body.databases === 'object'
@@ -155,6 +158,7 @@ for (const target of targets) {
     worker: target.worker,
     workerVersionId: body.workerVersionId,
     releaseTag: body.releaseTag,
+    sourceSha: body.releaseTag,
     baseUrl: base,
     databaseCount: reports.length,
     databaseEnvironment: primaryReport.databaseEnvironment,

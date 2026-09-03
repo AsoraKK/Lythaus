@@ -2,7 +2,7 @@
 
 import fs from 'node:fs';
 
-const [mode, inputPath, expectedTag, variablePrefix] = process.argv.slice(2);
+const [mode, inputPath, expectedTag, variablePrefix, expectedVersionId] = process.argv.slice(2);
 const githubEnv = process.env.GITHUB_ENV;
 
 if (!['candidate', 'upload', 'rollback'].includes(mode)) throw new Error('mode must be candidate, upload, or rollback');
@@ -13,7 +13,7 @@ if (!githubEnv) throw new Error('GITHUB_ENV is required');
 
 const sourceText = fs.readFileSync(inputPath, 'utf8');
 const source = mode === 'upload' ? sourceText : JSON.parse(sourceText);
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function append(name, value) {
   fs.appendFileSync(githubEnv, `${name}=${value}\n`, 'utf8');
@@ -21,10 +21,14 @@ function append(name, value) {
 
 if (mode === 'candidate') {
   if (!expectedTag || !/^[0-9a-f]{40}$/.test(expectedTag)) throw new Error('candidate tag must be the exact release SHA');
+  if (expectedVersionId !== undefined && !uuid.test(expectedVersionId)) throw new Error('expected candidate version id is invalid');
   if (!Array.isArray(source)) throw new Error('Worker version list must be an array');
-  const matches = source.filter((version) => version?.annotations?.['workers/tag'] === expectedTag);
+  const matches = source.filter((version) => version?.annotations?.['workers/tag'] === expectedTag
+    && (expectedVersionId === undefined || version?.id?.toLowerCase() === expectedVersionId.toLowerCase()));
   if (matches.length === 0) {
-    throw new Error(`no candidate Worker version tagged ${expectedTag}`);
+    throw new Error(expectedVersionId
+      ? `candidate Worker version ${expectedVersionId} is not tagged ${expectedTag}`
+      : `no candidate Worker version tagged ${expectedTag}`);
   }
   if (matches.some((version) => !uuid.test(version?.id ?? ''))) {
     throw new Error(`candidate Worker version tagged ${expectedTag} has an invalid version id`);
@@ -64,7 +68,7 @@ if (mode === 'candidate') {
 } else if (mode === 'upload') {
   if (!expectedTag || !/^[0-9a-f]{40}$/.test(expectedTag)) throw new Error('upload tag must be the exact release SHA');
   const output = source.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '');
-  const matches = [...output.matchAll(/Worker Version ID:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/gi)]
+  const matches = [...output.matchAll(/Worker Version ID:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/gi)]
     .map((match) => match[1]);
   if (matches.length === 0) throw new Error(`Worker upload did not return a version id for ${expectedTag}`);
   if (matches.length > 1) throw new Error(`Worker upload returned multiple version ids for ${expectedTag}`);

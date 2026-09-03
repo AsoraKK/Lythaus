@@ -12,6 +12,36 @@ on:
         required: false
         default: ''
         type: string
+      previous_production_sha:
+        description: Previous canonical production SHA used to compute changed components
+        required: false
+        default: NONE
+        type: string
+      force_auth_critical:
+        description: Upgrade the deterministic release class to AUTH_CRITICAL_RELEASE
+        required: false
+        default: false
+        type: boolean
+      ci_run_id:
+        description: Successful CI run ID for the exact release SHA
+        required: true
+        type: string
+      codeql_run_id:
+        description: Successful CodeQL run ID for the exact release SHA
+        required: true
+        type: string
+      dependency_review_run_id:
+        description: Successful dependency review run ID for the exact release SHA
+        required: true
+        type: string
+      secret_scan_run_id:
+        description: Successful native secret scan run ID for the exact release SHA
+        required: true
+        type: string
+      historical_reconciliation_run_id:
+        description: Successful historical reconciliation run ID for the exact release SHA
+        required: true
+        type: string
   workflow_call:
     inputs:
       release_sha:
@@ -22,6 +52,41 @@ on:
         description: Existing exact-candidate acceptance run to resume after Keeper completion
         required: false
         default: ''
+        type: string
+      previous_production_sha:
+        description: Previous canonical production SHA used to compute changed components
+        required: false
+        default: NONE
+        type: string
+      source_evidence_verified:
+        description: The canonical parent already verified exact CI/security evidence
+        required: false
+        default: false
+        type: boolean
+      force_auth_critical:
+        description: Upgrade the deterministic release class to AUTH_CRITICAL_RELEASE
+        required: false
+        default: false
+        type: boolean
+      ci_run_id:
+        description: Successful CI run ID for the exact release SHA
+        required: true
+        type: string
+      codeql_run_id:
+        description: Successful CodeQL run ID for the exact release SHA
+        required: true
+        type: string
+      dependency_review_run_id:
+        description: Successful dependency review run ID for the exact release SHA
+        required: true
+        type: string
+      secret_scan_run_id:
+        description: Successful native secret scan run ID for the exact release SHA
+        required: true
+        type: string
+      historical_reconciliation_run_id:
+        description: Successful historical reconciliation run ID for the exact release SHA
+        required: true
         type: string
     outputs:
       public_worker_version:
@@ -51,9 +116,15 @@ on:
       authenticated_acceptance_status:
         description: Generated candidate auth acceptance status
         value: ${{ jobs.deploy.outputs.authenticated_acceptance_status }}
+      acceptance_expires_at:
+        description: Exact candidate-bound acceptance expiry
+        value: ${{ jobs.deploy.outputs.acceptance_expires_at }}
       acceptance_run_id:
         description: Exact candidate-bound acceptance run ID
         value: ${{ jobs.deploy.outputs.acceptance_run_id }}
+      acceptance_dependencies_json:
+        description: Exact candidate and reused Worker dependencies bound to the acceptance run
+        value: ${{ jobs.deploy.outputs.acceptance_dependencies_json }}
       acceptance_keeper_url:
         description: Protected Cloudflare Access URL for the Keeper acceptance flow
         value: ${{ jobs.deploy.outputs.acceptance_keeper_url }}
@@ -63,9 +134,72 @@ on:
       worker_source_sha:
         description: Reviewed source SHA used for every activated Worker version
         value: ${{ jobs.deploy.outputs.worker_source_sha }}
+      public_worker_source_sha:
+        description: Public Worker source SHA or reused production source SHA
+        value: ${{ jobs.deploy.outputs.public_worker_source_sha }}
+      admin_worker_source_sha:
+        description: Admin Worker source SHA or reused production source SHA
+        value: ${{ jobs.deploy.outputs.admin_worker_source_sha }}
+      jobs_worker_source_sha:
+        description: Jobs Worker source SHA or reused production source SHA
+        value: ${{ jobs.deploy.outputs.jobs_worker_source_sha }}
+      coordinator_worker_source_sha:
+        description: Coordinator Worker source SHA or reused production source SHA
+        value: ${{ jobs.deploy.outputs.coordinator_worker_source_sha }}
+      public_worker_provenance:
+        description: Public Worker provenance
+        value: ${{ jobs.deploy.outputs.public_worker_provenance }}
+      admin_worker_provenance:
+        description: Admin Worker provenance
+        value: ${{ jobs.deploy.outputs.admin_worker_provenance }}
+      jobs_worker_provenance:
+        description: Jobs Worker provenance
+        value: ${{ jobs.deploy.outputs.jobs_worker_provenance }}
+      coordinator_worker_provenance:
+        description: Coordinator Worker provenance
+        value: ${{ jobs.deploy.outputs.coordinator_worker_provenance }}
+      public_worker_status:
+        description: Public Worker candidate or reuse status
+        value: ${{ jobs.deploy.outputs.public_worker_status }}
+      admin_worker_status:
+        description: Admin Worker candidate or reuse status
+        value: ${{ jobs.deploy.outputs.admin_worker_status }}
+      jobs_worker_status:
+        description: Jobs Worker candidate or reuse status
+        value: ${{ jobs.deploy.outputs.jobs_worker_status }}
+      coordinator_worker_status:
+        description: Coordinator Worker candidate or reuse status
+        value: ${{ jobs.deploy.outputs.coordinator_worker_status }}
       rollback_artifacts_proven:
         description: Exact predeployment Worker and route snapshots were captured for rollback
         value: ${{ jobs.deploy.outputs.rollback_artifacts_proven }}
+      rollback_state:
+        description: Rollback outcome for changed components
+        value: ${{ jobs.deploy.outputs.rollback_state }}
+      release_class:
+        description: Deterministically computed release class
+        value: ${{ jobs.deploy.outputs.release_class }}
+      changed_components_json:
+        description: Components that receive new candidates
+        value: ${{ jobs.deploy.outputs.changed_components_json }}
+      reused_components_json:
+        description: Components that reuse known-good production versions
+        value: ${{ jobs.deploy.outputs.reused_components_json }}
+      acceptance_evidence_path:
+        description: Sanitized auth acceptance evidence reference
+        value: ${{ jobs.deploy.outputs.acceptance_evidence_path }}
+      activation_state:
+        description: Explicit activation state
+        value: ${{ jobs.deploy.outputs.activation_state }}
+      release_state:
+        description: Explicit five-gate release state
+        value: ${{ jobs.deploy.outputs.release_state }}
+      release_state_history_json:
+        description: Sanitized five-gate state history
+        value: ${{ jobs.deploy.outputs.release_state_history_json }}
+      failure_domain_evidence_json:
+        description: Sanitized failure-domain evidence
+        value: ${{ jobs.deploy.outputs.failure_domain_evidence_json }}
 
 permissions:
   contents: read
@@ -89,11 +223,34 @@ jobs:
       budget_enforcement_verified: ${{ steps.release_metadata.outputs.budget_enforcement_verified }}
       authenticated_acceptance_proven: ${{ steps.release_metadata.outputs.authenticated_acceptance_proven }}
       authenticated_acceptance_status: ${{ steps.release_metadata.outputs.authenticated_acceptance_status }}
+      acceptance_expires_at: ${{ steps.release_metadata.outputs.acceptance_expires_at }}
       acceptance_run_id: ${{ steps.release_metadata.outputs.acceptance_run_id }}
+      acceptance_dependencies_json: ${{ steps.release_metadata.outputs.acceptance_dependencies_json }}
       acceptance_keeper_url: ${{ steps.release_metadata.outputs.acceptance_keeper_url }}
       planetscale_grants_verified: ${{ steps.release_metadata.outputs.planetscale_grants_verified }}
       worker_source_sha: ${{ steps.release_metadata.outputs.worker_source_sha }}
       rollback_artifacts_proven: ${{ steps.release_metadata.outputs.rollback_artifacts_proven }}
+      rollback_state: ${{ steps.release_metadata.outputs.rollback_state }}
+      release_class: ${{ steps.release_metadata.outputs.release_class }}
+      changed_components_json: ${{ steps.release_metadata.outputs.changed_components_json }}
+      reused_components_json: ${{ steps.release_metadata.outputs.reused_components_json }}
+      acceptance_evidence_path: ${{ steps.release_metadata.outputs.acceptance_evidence_path }}
+      activation_state: ${{ steps.release_metadata.outputs.activation_state }}
+      release_state: ${{ steps.release_metadata.outputs.release_state }}
+      release_state_history_json: ${{ steps.release_metadata.outputs.release_state_history_json }}
+      failure_domain_evidence_json: ${{ steps.release_metadata.outputs.failure_domain_evidence_json }}
+      public_worker_source_sha: ${{ steps.release_metadata.outputs.public_worker_source_sha }}
+      admin_worker_source_sha: ${{ steps.release_metadata.outputs.admin_worker_source_sha }}
+      jobs_worker_source_sha: ${{ steps.release_metadata.outputs.jobs_worker_source_sha }}
+      coordinator_worker_source_sha: ${{ steps.release_metadata.outputs.coordinator_worker_source_sha }}
+      public_worker_provenance: ${{ steps.release_metadata.outputs.public_worker_provenance }}
+      admin_worker_provenance: ${{ steps.release_metadata.outputs.admin_worker_provenance }}
+      jobs_worker_provenance: ${{ steps.release_metadata.outputs.jobs_worker_provenance }}
+      coordinator_worker_provenance: ${{ steps.release_metadata.outputs.coordinator_worker_provenance }}
+      public_worker_status: ${{ steps.release_metadata.outputs.public_worker_status }}
+      admin_worker_status: ${{ steps.release_metadata.outputs.admin_worker_status }}
+      jobs_worker_status: ${{ steps.release_metadata.outputs.jobs_worker_status }}
+      coordinator_worker_status: ${{ steps.release_metadata.outputs.coordinator_worker_status }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -120,28 +277,92 @@ jobs:
             echo "Refusing deployment: checked-out main is not current origin/main." >&2
             exit 1
           fi
+      - name: SOURCE - Require exact successful CI and security evidence
+        if: inputs.source_evidence_verified != true
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          CODEQL_RUN_ID: ${{ inputs.codeql_run_id }}
+          DEPENDENCY_REVIEW_RUN_ID: ${{ inputs.dependency_review_run_id }}
+          SECRET_SCAN_RUN_ID: ${{ inputs.secret_scan_run_id }}
+          HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/verify-exact-release-evidence.mjs
+      - name: SOURCE - Resolve deterministic release class and component plan
+        id: release_plan
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
+          FORCE_AUTH_CRITICAL: ${{ inputs.force_auth_critical }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=SOURCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=release_plan_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=deterministic release classification or component planning failed' >> "$GITHUB_ENV"
+          node scripts/ci/resolve-release-plan.mjs \
+            --release-sha "$RELEASE_SHA" \
+            --base-sha "$PREVIOUS_PRODUCTION_SHA" \
+            --output "$RUNNER_TEMP/production-cutover/release-plan.json"
+          jq -e --arg sha "$RELEASE_SHA" '.releaseSha == $sha and (.releaseClass == "STANDARD_RELEASE" or .releaseClass == "AUTH_CRITICAL_RELEASE")' "$RUNNER_TEMP/production-cutover/release-plan.json" >/dev/null
+      - name: Require no manual release-class downgrade
+        env:
+          RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
+        run: |
+          set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=SOURCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=manual_release_class_downgrade' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=manual release-class downgrade is not permitted' >> "$GITHUB_ENV"
+          test -z "${RELEASE_CLASS_OVERRIDE:-}"
+          if [[ "${{ inputs.force_auth_critical }}" == true ]]; then
+            test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE
+          fi
+          if [[ -n "${{ inputs.acceptance_run_id }}" ]]; then
+            test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE
+          fi
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
           cache: npm
-      - run: npm ci --ignore-scripts
+      - name: Install exact release dependencies
+        run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=release_dependency_install_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=exact release dependency installation failed' >> "$GITHUB_ENV"
+          npm ci --ignore-scripts
       - name: Validate committed production configuration
         env:
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           CLOUDFLARE_ENVIRONMENT: production
-        run: npm run validate:native-workers
+        run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=worker_configuration_validation_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=committed Worker configuration validation failed' >> "$GITHUB_ENV"
+          npm run validate:native-workers
       - name: Validate production account and zone scope
         env:
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
           CLOUDFLARE_ENVIRONMENT: production
-        run: npm run validate:native-scope:production
+        run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=provider_scope_validation_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Cloudflare production account or zone scope validation failed' >> "$GITHUB_ENV"
+          npm run validate:native-scope:production
       - name: Validate production predeployment gates
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
-        run: npm run validate:production-gates:predeploy
+          RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
+        run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=production_predeploy_gate_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=production predeployment safety gates failed' >> "$GITHUB_ENV"
+          npm run validate:production-gates:predeploy
       - name: Validate migrations and generated Worker types
         run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=static_infrastructure_validation_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=migration, provider, or generated Worker infrastructure validation failed' >> "$GITHUB_ENV"
           npm run validate:planetscale-migrations
           npm run validate:planetscale-extensions
           npm run validate:no-retired-provider-dependencies
@@ -156,6 +377,9 @@ jobs:
           TURNSTILE_SECRET_FILE: ${{ runner.temp }}/production-cutover/turnstile-secret.json
           TURNSTILE_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/turnstile.json
         run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=provider_configuration_validation_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=production Turnstile provider configuration validation failed' >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/production-cutover"
           node scripts/cloudflare/waitlist-turnstile.mjs ensure
       - name: Materialize approved post-0016 deployment identity
@@ -170,6 +394,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           CLOUDFLARE_ENVIRONMENT: production
         run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=deployment_identity_materialization_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=approved post-0016 deployment identity materialization failed' >> "$GITHUB_ENV"
           node scripts/ci/validate-product-integrity-deploy-identity.mjs
           npm run validate:native-workers:provisioned
       - name: Prove production Hyperdrive origins target PlanetScale main
@@ -184,46 +411,189 @@ jobs:
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PSCALE_BRANCH_NAME: main
         run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=provider_origin_validation_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=production Hyperdrive or database origin validation failed' >> "$GITHUB_ENV"
           set -o pipefail
           mkdir -p "$RUNNER_TEMP/production-cutover"
           node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs | tee "$RUNNER_TEMP/production-cutover/hyperdrive-targets.json"
-      - name: Capture predeployment Worker state
+      - name: Capture predeployment Worker state (INFRASTRUCTURE gate)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=rollback_snapshot_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=exact positive serving traffic rollback snapshot failed' >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/production-cutover"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before.json"
           npx --yes wrangler@4.123.0 deployments status --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-before.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-before-versions.json"
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/public-before.json" unused PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/admin-before.json" unused ADMIN
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/jobs-before.json" unused JOBS
+          node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/public-before.json" PUBLIC "$RUNNER_TEMP/production-cutover/public-before-versions.json"
+          node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/admin-before.json" ADMIN "$RUNNER_TEMP/production-cutover/admin-before-versions.json"
+          node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/jobs-before.json" JOBS "$RUNNER_TEMP/production-cutover/jobs-before-versions.json"
           CLOUDFLARE_WORKER_PARENT_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-before.json" \
           CLOUDFLARE_WORKER_PARENT_STATE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json" \
           node scripts/ci/ensure-cloudflare-worker-parent.mjs --check-only
           if jq -e '.status == "VERIFIED" and .deployment.exists == true' "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json" >/dev/null; then
             npx --yes wrangler@4.123.0 deployments status --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/production-cutover/coordinator-before.json"
+            npx --yes wrangler@4.123.0 versions list --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/production-cutover/coordinator-before-versions.json"
             node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/coordinator-before.json" unused COORDINATOR
+            if jq -e --argjson changed "${CHANGED_COMPONENTS_JSON:-[]}" '$changed | index("coordinator") == null' <<< '{}' >/dev/null; then
+              node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/coordinator-before.json" COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-before-versions.json"
+            fi
             echo 'COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS=true' >> "$GITHUB_ENV"
           elif jq -e '.status == "ABSENT" or (.status == "VERIFIED" and .deployment.exists == false)' "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json" >/dev/null; then
             jq -n --slurpfile parent "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json" '{versions: [], parent: $parent[0]}' > "$RUNNER_TEMP/production-cutover/coordinator-before.json"
+            if jq -e --argjson changed "${CHANGED_COMPONENTS_JSON:-[]}" '$changed | index("coordinator") == null' <<< '{}' >/dev/null; then
+              echo 'Coordinator has no reusable production deployment; refusing a release that declares it unchanged.' >&2
+              exit 1
+            fi
             echo 'COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS=false' >> "$GITHUB_ENV"
           else
             echo 'Coordinator parent state was ambiguous; refusing to continue.' >&2
             exit 1
           fi
+          echo 'ROLLBACK_ARTIFACTS_PROVEN=true' >> "$GITHUB_ENV"
       - name: Capture predeployment same-origin admin API route
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
         run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=route_snapshot_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=production route rollback snapshot failed' >> "$GITHUB_ENV"
           node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
             "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
             'admin.lythaus.co/api/admin/*'
           node scripts/ci/manage-cloudflare-worker-route.mjs snapshot \
             "$RUNNER_TEMP/production-cutover/coordinator-route-before.json" \
             'admin.lythaus.co/api/admin/production-auth-acceptance/*'
+      - name: Preserve exact acceptance rollback snapshot across human windows
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          EXISTING_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=acceptance_rollback_snapshot_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=exact positive serving traffic and route rollback snapshot could not be preserved' >> "$GITHUB_ENV"
+          snapshot="$RUNNER_TEMP/production-cutover/acceptance-rollback-snapshot.json"
+          if [[ -n "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
+            [[ "$EXISTING_ACCEPTANCE_RUN_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || {
+              echo 'acceptance_run_id must be a UUID.' >&2
+              exit 1
+            }
+            test -n "$DATABASE_READINESS_TOKEN"
+            run_summary="$RUNNER_TEMP/production-cutover/acceptance-run-summary.json"
+            curl_headers=(
+              -H 'accept: application/json'
+              -H "x-lythaus-readiness-token: ${DATABASE_READINESS_TOKEN}"
+            )
+            if [[ -n "$CF_ACCESS_CLIENT_ID" || -n "$CF_ACCESS_CLIENT_SECRET" ]]; then
+              test -n "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"
+              curl_headers+=(
+                -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
+                -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
+              )
+            fi
+            status="$(curl --silent --show-error --max-time 30 --retry 3 --retry-delay 2 \
+              -o "$run_summary" -w '%{http_code}' \
+              "${curl_headers[@]}" \
+              "https://admin.lythaus.co/api/admin/production-auth-acceptance/runs/${EXISTING_ACCEPTANCE_RUN_ID}" || true)"
+            test "$status" = 200 || {
+              echo "Could not read the exact acceptance rollback snapshot (HTTP ${status})." >&2
+              exit 1
+            }
+            jq -e --arg sha "$RELEASE_SHA" '
+              .releaseSha == $sha
+              and .candidate.workerName == "lythaus-public-api-development"
+              and .rollbackSnapshot != null
+            ' "$run_summary" >/dev/null
+            node scripts/ci/prepare-acceptance-rollback-snapshot.mjs from-run \
+              --run "$run_summary" --output "$snapshot"
+          else
+            node scripts/ci/prepare-acceptance-rollback-snapshot.mjs capture \
+              --public "$RUNNER_TEMP/production-cutover/public-before.json" \
+              --admin "$RUNNER_TEMP/production-cutover/admin-before.json" \
+              --jobs "$RUNNER_TEMP/production-cutover/jobs-before.json" \
+              --coordinator "$RUNNER_TEMP/production-cutover/coordinator-before.json" \
+              --admin-route "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" \
+              --coordinator-route "$RUNNER_TEMP/production-cutover/coordinator-route-before.json" \
+              --output "$snapshot"
+          fi
+          for component in public admin jobs coordinator; do
+            rollback_file="$RUNNER_TEMP/production-cutover/${component}-acceptance-rollback.json"
+            jq -c --arg component "$component" '{versions: .workers[$component].versions | map({version_id: .versionId, percentage: .percentage})}' "$snapshot" > "$rollback_file"
+            if [[ "$component" = coordinator && "$(jq '.versions | length' "$rollback_file")" = 0 ]]; then
+              echo 'COORDINATOR_ROLLBACK_SPECS=' >> "$GITHUB_ENV"
+            else
+              node scripts/ci/resolve-worker-version-state.mjs rollback "$rollback_file" unused "${component^^}"
+            fi
+            jq -c --arg component "$component" '{versions: .workers[$component].versions | map({version_id: .versionId, percentage: .percentage})}' "$snapshot" > "$RUNNER_TEMP/production-cutover/${component}-before.json"
+          done
+          jq -c '{route: .routes.adminApi}' "$snapshot" > "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
+          jq -c '{route: .routes.coordinator}' "$snapshot" > "$RUNNER_TEMP/production-cutover/coordinator-route-before.json"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
+          if [[ -n "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
+            if component_changed jobs; then
+              echo 'JOBS_WORKER_DEPLOYED=true' >> "$GITHUB_ENV"
+            fi
+            if component_changed coordinator; then
+              echo 'COORDINATOR_WORKER_DEPLOYED=true' >> "$GITHUB_ENV"
+              echo 'COORDINATOR_ROUTE_TRIGGER_ATTEMPTED=true' >> "$GITHUB_ENV"
+            fi
+          fi
+          echo "ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH=$snapshot" >> "$GITHUB_ENV"
+          if [[ -n "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
+            echo "ACCEPTANCE_RUN_SUMMARY_PATH=$run_summary" >> "$GITHUB_ENV"
+          fi
+      - name: Reverify scoped secret evidence for acceptance resume (CANDIDATE gate)
+        if: inputs.acceptance_run_id != '' && (contains(steps.release_plan.outputs.changed_components_json, '"public"') || contains(steps.release_plan.outputs.changed_components_json, '"admin"') || contains(steps.release_plan.outputs.changed_components_json, '"jobs"') || contains(steps.release_plan.outputs.changed_components_json, '"coordinator"'))
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=acceptance_resume_secret_evidence_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=exact scoped secret evidence could not be reverified for acceptance resume' >> "$GITHUB_ENV"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
+          public_inventory="$RUNNER_TEMP/production-cutover/public-secret-bindings.json"
+          admin_inventory="$RUNNER_TEMP/production-cutover/admin-secret-bindings.json"
+          jobs_inventory="$RUNNER_TEMP/production-cutover/jobs-secret-bindings.json"
+          coordinator_inventory="$RUNNER_TEMP/production-cutover/coordinator-secret-bindings.json"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_inventory"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-admin-api-development --format json > "$admin_inventory"
+          npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_inventory"
+          if component_changed coordinator; then
+            npx --yes wrangler@4.123.0 secret list --name lythaus-auth-acceptance-coordinator-development --format json > "$coordinator_inventory"
+          else
+            printf '[]\n' > "$coordinator_inventory"
+          fi
+          PUBLIC_SECRET_INVENTORY_FILE="$public_inventory" \
+          ADMIN_SECRET_INVENTORY_FILE="$admin_inventory" \
+          JOBS_SECRET_INVENTORY_FILE="$jobs_inventory" \
+          COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_inventory" \
+          SKIP_ACCEPTANCE_COORDINATOR="$(if component_changed coordinator; then echo false; else echo true; fi)" \
+          SCOPED_WORKER_SECRET_BINDING_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json" \
+          SCOPED_KEY_LIFECYCLE_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json" \
+          node scripts/ci/write-scoped-worker-secret-evidence.mjs
       - name: Record verified main routing assertion
         run: echo "HYPERDRIVE_VERIFIED_MAIN=true" >> "$GITHUB_ENV"
       - name: Verify production schema read-only
@@ -241,22 +611,38 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
           CLOUDFLARE_EMAIL_LIFECYCLE_OUTPUT: ${{ runner.temp }}/production-cutover/email-lifecycle-infrastructure.json
-        run: node scripts/ci/provision-cloudflare-email-lifecycle.mjs
-      - name: Upload immutable candidate Worker versions
-        if: inputs.acceptance_run_id == ''
+        run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=email_lifecycle_provider_configuration_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Cloudflare Email lifecycle provider configuration verification failed' >> "$GITHUB_ENV"
+          node scripts/ci/provision-cloudflare-email-lifecycle.mjs
+      - name: INFRASTRUCTURE - Mark verified infrastructure gate
+        run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=infrastructure_state_transition_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=infrastructure gate state transition failed' >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs INFRASTRUCTURE_VERIFIED
+      - name: Upload immutable public Worker candidate (CANDIDATE gate; changed components only)
+        if: inputs.acceptance_run_id == '' && (contains(steps.release_plan.outputs.changed_components_json, '"public"') || contains(steps.release_plan.outputs.changed_components_json, '"admin"') || contains(steps.release_plan.outputs.changed_components_json, '"jobs"') || contains(steps.release_plan.outputs.changed_components_json, '"coordinator"'))
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
-          AUTH_ACCEPTANCE_EMAIL_BASE: ${{ secrets.CODEX_TEST_EMAIL }}
-          CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AUTH_ACCEPTANCE_EMAIL_BASE: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_EMAIL || '' }}
+          CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CLOUDFLARE_API_TOKEN || '' }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=candidate_upload_or_secret_binding_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=changed Worker candidate upload or scoped secret binding failed' >> "$GITHUB_ENV"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
           test -n "$DATABASE_READINESS_TOKEN"
-          test -n "$AUTH_ACCEPTANCE_EMAIL_BASE"
-          test -n "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN"
+          if component_changed coordinator; then test -n "$AUTH_ACCEPTANCE_EMAIL_BASE"; fi
+          if component_changed coordinator; then test -n "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN"; fi
           umask 077
           base_secrets_file="$RUNNER_TEMP/production-cutover/base-secrets.json"
           public_secrets_file="$RUNNER_TEMP/production-cutover/public-secrets.json"
@@ -273,15 +659,13 @@ jobs:
           coordinator_response_file="$RUNNER_TEMP/production-cutover/coordinator-request.json"
           scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
           scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
-          test -s "$turnstile_secret_file"
+          if component_changed public; then test -s "$turnstile_secret_file"; fi
           trap 'rm -f "$base_secrets_file" "$public_secrets_file" "$jobs_secrets_file" "$coordinator_secrets_file" "$turnstile_secret_file" "$public_secret_inventory" "$admin_secret_inventory" "$jobs_secret_inventory" "$coordinator_secret_inventory" "$coordinator_secret_list_error" "$coordinator_secret_command_output" "$coordinator_response_file"' EXIT
           jq -n \
             --arg readiness_token "$DATABASE_READINESS_TOKEN" \
             --arg cloudflare_account_id "$CLOUDFLARE_ACCOUNT_ID" \
-            --arg lifecycle_read_token "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN" \
             '{DATABASE_READINESS_TOKEN: $readiness_token,
-              CLOUDFLARE_ACCOUNT_ID: $cloudflare_account_id,
-              CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: $lifecycle_read_token}' > "$base_secrets_file"
+              CLOUDFLARE_ACCOUNT_ID: $cloudflare_account_id}' > "$base_secrets_file"
           list_coordinator_secrets() {
             local output="$1"
             local allow_empty_parent_inventory="${2:-false}"
@@ -312,24 +696,35 @@ jobs:
             echo 'Coordinator secret inventory remained unavailable after parent bootstrap.' >&2
             return 1
           }
-          npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
-          npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
-          CLOUDFLARE_WORKER_PARENT_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-after.json" \
-          CLOUDFLARE_WORKER_PARENT_STATE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-state-after.json" \
-          node scripts/ci/ensure-cloudflare-worker-parent.mjs
-          list_coordinator_secrets "$coordinator_secret_inventory" true
-          PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
-          JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
-          COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_secret_inventory" \
-          BASE_SECRETS_FILE="$base_secrets_file" \
-          TURNSTILE_SECRET_FILE="$turnstile_secret_file" \
-          PUBLIC_SECRETS_FILE="$public_secrets_file" \
-          JOBS_SECRETS_FILE="$jobs_secrets_file" \
-          COORDINATOR_SECRETS_FILE="$coordinator_secrets_file" \
-          SCOPED_KEY_LIFECYCLE_EVIDENCE_PATH="$scoped_key_evidence" \
-          AUTH_ACCEPTANCE_EMAIL_BASE="$AUTH_ACCEPTANCE_EMAIL_BASE" \
-          PLANETSCALE_SCHEMA_READ_DATABASE_URL="$PLANETSCALE_SCHEMA_READ_DATABASE_URL" \
-          node scripts/ci/prepare-scoped-worker-secrets.mjs
+          if component_changed public || component_changed jobs || component_changed coordinator; then
+            npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
+            npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
+            if component_changed coordinator; then
+              CLOUDFLARE_WORKER_PARENT_EVIDENCE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-after.json" \
+              CLOUDFLARE_WORKER_PARENT_STATE_PATH="$RUNNER_TEMP/production-cutover/coordinator-parent-state-after.json" \
+              node scripts/ci/ensure-cloudflare-worker-parent.mjs
+              list_coordinator_secrets "$coordinator_secret_inventory" true
+            else
+              printf '[]\n' > "$coordinator_secret_inventory"
+            fi
+            PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
+            JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
+            COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_secret_inventory" \
+            BASE_SECRETS_FILE="$base_secrets_file" \
+            TURNSTILE_SECRET_FILE="$turnstile_secret_file" \
+            PUBLIC_SECRETS_FILE="$public_secrets_file" \
+            JOBS_SECRETS_FILE="$jobs_secrets_file" \
+            COORDINATOR_SECRETS_FILE="$coordinator_secrets_file" \
+            SCOPED_KEY_LIFECYCLE_EVIDENCE_PATH="$scoped_key_evidence" \
+            AUTH_ACCEPTANCE_EMAIL_BASE="$AUTH_ACCEPTANCE_EMAIL_BASE" \
+            SKIP_ACCEPTANCE_COORDINATOR="$(if component_changed coordinator; then echo false; else echo true; fi)" \
+            PLANETSCALE_SCHEMA_READ_DATABASE_URL="$PLANETSCALE_SCHEMA_READ_DATABASE_URL" \
+            node scripts/ci/prepare-scoped-worker-secrets.mjs
+          else
+            printf '[]\n' > "$public_secret_inventory"
+            printf '[]\n' > "$jobs_secret_inventory"
+            printf '[]\n' > "$coordinator_secret_inventory"
+          fi
           upload_candidate() {
             local config="$1"
             local prefix="$2"
@@ -338,79 +733,154 @@ jobs:
             npx --yes wrangler@4.123.0 versions upload --config "$config" --tag "$RELEASE_SHA" --message "Lythaus candidate $RELEASE_SHA" --secrets-file "$secrets_file" 2>&1 | tee "$output"
             node scripts/ci/resolve-worker-version-state.mjs upload "$output" "$RELEASE_SHA" "$prefix"
           }
-          upload_candidate apps/lythaus-public-api/wrangler.jsonc PUBLIC "$RUNNER_TEMP/production-cutover/public-upload.log" "$public_secrets_file"
-          upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$base_secrets_file"
-          upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log" "$jobs_secrets_file"
-          upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log" "$coordinator_secrets_file"
+          if component_changed public; then upload_candidate apps/lythaus-public-api/wrangler.jsonc PUBLIC "$RUNNER_TEMP/production-cutover/public-upload.log" "$public_secrets_file"; fi
+          if component_changed admin; then upload_candidate apps/lythaus-admin-api/wrangler.jsonc ADMIN "$RUNNER_TEMP/production-cutover/admin-upload.log" "$base_secrets_file"; fi
+          if component_changed jobs; then upload_candidate apps/lythaus-jobs/wrangler.jsonc JOBS "$RUNNER_TEMP/production-cutover/jobs-upload.log" "$jobs_secrets_file"; fi
+          if component_changed coordinator; then upload_candidate apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-upload.log" "$coordinator_secrets_file"; fi
           npx --yes wrangler@4.123.0 secret list --name lythaus-public-api-development --format json > "$public_secret_inventory"
           npx --yes wrangler@4.123.0 secret list --name lythaus-admin-api-development --format json > "$admin_secret_inventory"
           npx --yes wrangler@4.123.0 secret list --name lythaus-jobs-development --format json > "$jobs_secret_inventory"
-          list_coordinator_secrets "$coordinator_secret_inventory"
-          ADMIN_SECRET_INVENTORY_FILE="$admin_secret_inventory" \
-          PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
-          JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
-          COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_secret_inventory" \
-          SCOPED_WORKER_SECRET_BINDING_EVIDENCE_PATH="$scoped_binding_evidence" \
-          node scripts/ci/verify-scoped-worker-secret-bindings.mjs
-          npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
-          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
-          npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
-          npx --yes wrangler@4.123.0 versions list --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/production-cutover/coordinator-versions.json"
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/admin-versions.json" "$RELEASE_SHA" ADMIN
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/jobs-versions.json" "$RELEASE_SHA" JOBS
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/coordinator-versions.json" "$RELEASE_SHA" COORDINATOR
-      - name: Resolve the existing exact-candidate Worker versions for resume
-        if: inputs.acceptance_run_id != ''
+          if component_changed coordinator; then list_coordinator_secrets "$coordinator_secret_inventory"; fi
+          if component_changed public || component_changed admin || component_changed jobs || component_changed coordinator; then
+            ADMIN_SECRET_INVENTORY_FILE="$admin_secret_inventory" \
+            PUBLIC_SECRET_INVENTORY_FILE="$public_secret_inventory" \
+            JOBS_SECRET_INVENTORY_FILE="$jobs_secret_inventory" \
+            COORDINATOR_SECRET_INVENTORY_FILE="$coordinator_secret_inventory" \
+            SKIP_ACCEPTANCE_COORDINATOR="$(if component_changed coordinator; then echo false; else echo true; fi)" \
+            SCOPED_WORKER_SECRET_BINDING_EVIDENCE_PATH="$scoped_binding_evidence" \
+            node scripts/ci/verify-scoped-worker-secret-bindings.mjs
+          fi
+      - name: Resolve changed candidates and reused production versions (CANDIDATE gate)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
-          npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-versions.json"
-          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-versions.json"
-          npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-versions.json"
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/public-versions.json" "$RELEASE_SHA" PUBLIC
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/admin-versions.json" "$RELEASE_SHA" ADMIN
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/jobs-versions.json" "$RELEASE_SHA" JOBS
-          npx --yes wrangler@4.123.0 versions list --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/production-cutover/coordinator-versions.json"
-          node scripts/ci/resolve-worker-version-state.mjs candidate "$RUNNER_TEMP/production-cutover/coordinator-versions.json" "$RELEASE_SHA" COORDINATOR
-      - name: Stage candidate Worker versions at zero traffic
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=candidate_identity_resolution_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=changed candidate or known-good production version identity could not be proven' >> "$GITHUB_ENV"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
+          resolve_candidate() {
+            local component="$1"; local worker_name="$2"; local prefix="$3"
+            local versions_file="$RUNNER_TEMP/production-cutover/${prefix,,}-versions.json"
+            npx --yes wrangler@4.123.0 versions list --name "$worker_name" --json > "$versions_file"
+            local expected_candidate_id=''
+            if [[ -n "${ACCEPTANCE_RUN_SUMMARY_PATH:-}" && -s "$ACCEPTANCE_RUN_SUMMARY_PATH" ]]; then
+              expected_candidate_id="$(jq -r --arg component "$component" '.candidateDependencies[$component].versionId // empty' "$ACCEPTANCE_RUN_SUMMARY_PATH")"
+              if [[ -n "$expected_candidate_id" ]]; then
+                test "$(jq -r --arg component "$component" '.candidateDependencies[$component].status // empty' "$ACCEPTANCE_RUN_SUMMARY_PATH")" = NEW_CANDIDATE
+              fi
+            fi
+            if [[ -n "$expected_candidate_id" ]]; then
+              node scripts/ci/resolve-worker-version-state.mjs candidate "$versions_file" "$RELEASE_SHA" "$prefix" "$expected_candidate_id"
+            else
+              node scripts/ci/resolve-worker-version-state.mjs candidate "$versions_file" "$RELEASE_SHA" "$prefix"
+            fi
+            echo "${prefix}_WORKER_PROVENANCE=BUILT_FROM_RELEASE_SHA" >> "$GITHUB_ENV"
+            echo "${prefix}_WORKER_STATUS=NEW_CANDIDATE" >> "$GITHUB_ENV"
+            echo "${prefix}_WORKER_SOURCE_SHA=$RELEASE_SHA" >> "$GITHUB_ENV"
+          }
+          reuse_production() {
+            local prefix="$1"
+            local version_var="${prefix}_REUSED_PRODUCTION_VERSION_ID"
+            local version_id="${!version_var:-}"
+            test -n "$version_id" || { echo "Missing captured production version for unchanged ${prefix}." >&2; exit 1; }
+            echo "${prefix}_WORKER_VERSION_ID=$version_id" >> "$GITHUB_ENV"
+            echo "${prefix}_WORKER_PROVENANCE=REUSED_KNOWN_GOOD_PRODUCTION_VERSION" >> "$GITHUB_ENV"
+            echo "${prefix}_WORKER_STATUS=REUSED_PRODUCTION" >> "$GITHUB_ENV"
+            version_ids_var="${prefix}_REUSED_PRODUCTION_VERSION_IDS_JSON"
+            source_shas_var="${prefix}_REUSED_PRODUCTION_SOURCE_SHAS_JSON"
+            created_ats_var="${prefix}_REUSED_PRODUCTION_CREATED_ATS_JSON"
+            version_ids_json="${!version_ids_var:-[]}"
+            source_shas_json="${!source_shas_var:-[]}"
+            created_ats_json="${!created_ats_var:-[]}"
+            jq -e --argjson ids "$version_ids_json" --argjson shas "$source_shas_json" --argjson created "$created_ats_json" '
+              ($ids | type == "array" and length > 0)
+              and ($shas | type == "array" and length == ($ids | length) and all(.[]; type == "string" and test("^[0-9a-f]{40}$"; "i")))
+              and ($created | type == "array" and length == ($ids | length) and all(.[]; type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?Z$")))
+            ' <<< '{}' >/dev/null || {
+              echo "Missing exact source or creation provenance for positive serving ${prefix} versions; refusing unverifiable reuse." >&2
+              exit 1
+            }
+            echo "${prefix}_WORKER_SOURCE_SHA=$(jq -r '.[0]' <<<"$source_shas_json")" >> "$GITHUB_ENV"
+            echo "${prefix}_WORKER_CREATED_AT=$(jq -r '.[0]' <<<"$created_ats_json")" >> "$GITHUB_ENV"
+          }
+          if component_changed public; then resolve_candidate public lythaus-public-api-development PUBLIC; else reuse_production PUBLIC; fi
+          if component_changed admin; then resolve_candidate admin lythaus-admin-api-development ADMIN; else reuse_production ADMIN; fi
+          if component_changed jobs; then resolve_candidate jobs lythaus-jobs-development JOBS; else reuse_production JOBS; fi
+          if component_changed coordinator; then resolve_candidate coordinator lythaus-auth-acceptance-coordinator-development COORDINATOR; else reuse_production COORDINATOR; fi
+          echo "CANDIDATE_STATE=CANDIDATE_READY" >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs CANDIDATE_READY
+      - name: PRODUCT_ACCEPTANCE - Mark human acceptance required
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
+        run: |
+          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=acceptance_state_transition_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=auth acceptance state transition failed' >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_REQUIRED
+      - name: PRODUCT_ACCEPTANCE - Mark standard acceptance not required
+        if: steps.release_plan.outputs.release_class == 'STANDARD_RELEASE'
+        run: |
+          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=standard_acceptance_state_transition_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=standard release acceptance state transition failed' >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_NOT_REQUIRED
+      - name: Stage candidate Worker versions at zero traffic (CANDIDATE gate; changed components only)
         if: inputs.acceptance_run_id == ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
         run: |
           set -euo pipefail
-          echo "PUBLIC_WORKER_STAGED=true" >> "$GITHUB_ENV"
-          npx --yes wrangler@4.123.0 versions deploy $PUBLIC_ROLLBACK_SPECS "${PUBLIC_WORKER_VERSION_ID}@0" \
-            --name lythaus-public-api-development --yes --message "Stage reviewed Lythaus public candidate at zero traffic"
-          echo "ADMIN_WORKER_STAGED=true" >> "$GITHUB_ENV"
-          npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS "${ADMIN_WORKER_VERSION_ID}@0" \
-            --name lythaus-admin-api-development --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=candidate_staging_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=changed Worker candidate staging failed' >> "$GITHUB_ENV"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
+          if component_changed public; then
+            echo "PUBLIC_WORKER_STAGED=true" >> "$GITHUB_ENV"
+            npx --yes wrangler@4.123.0 versions deploy $PUBLIC_ROLLBACK_SPECS "${PUBLIC_WORKER_VERSION_ID}@0" \
+              --name lythaus-public-api-development --yes --message "Stage reviewed Lythaus public candidate at zero traffic"
+          fi
+          if component_changed admin; then
+            echo "ADMIN_WORKER_STAGED=true" >> "$GITHUB_ENV"
+            npx --yes wrangler@4.123.0 versions deploy $ADMIN_ROLLBACK_SPECS "${ADMIN_WORKER_VERSION_ID}@0" \
+              --name lythaus-admin-api-development --yes --message "Stage reviewed Lythaus admin candidate at zero traffic"
+          fi
           # Queue consumers do not accept a per-request Worker-version override.
           # The exact Jobs candidate must therefore be active before any real
           # email can produce lifecycle evidence; it has no public HTTP route.
-          npx --yes wrangler@4.123.0 versions deploy "${JOBS_WORKER_VERSION_ID}@100" \
-            --name lythaus-jobs-development --yes --message "Activate exact Jobs lifecycle consumer for candidate acceptance"
-          echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
-          npx --yes wrangler@4.123.0 versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100" \
-            --name lythaus-auth-acceptance-coordinator-development --yes --message "Activate protected exact-SHA acceptance coordinator"
-          echo "COORDINATOR_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
-          echo "COORDINATOR_ROUTE_TRIGGER_ATTEMPTED=true" >> "$GITHUB_ENV"
-          npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc \
-            --name lythaus-auth-acceptance-coordinator-development
-          candidate_staged_at="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
-          echo "ADR003_CANDIDATE_STAGED_AT=$candidate_staged_at" >> "$GITHUB_ENV"
-      - name: Prove staged Public and Jobs transactional-email key compatibility
+          if component_changed jobs; then
+            npx --yes wrangler@4.123.0 versions deploy "${JOBS_WORKER_VERSION_ID}@100" \
+              --name lythaus-jobs-development --yes --message "Activate exact Jobs lifecycle consumer for changed candidate"
+            echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+          fi
+          if component_changed coordinator; then
+            npx --yes wrangler@4.123.0 versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100" \
+              --name lythaus-auth-acceptance-coordinator-development --yes --message "Activate protected exact-SHA acceptance coordinator candidate"
+            echo "COORDINATOR_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+            echo "COORDINATOR_ROUTE_TRIGGER_ATTEMPTED=true" >> "$GITHUB_ENV"
+            npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc \
+              --name lythaus-auth-acceptance-coordinator-development
+          fi
+          if component_changed public || component_changed coordinator || [[ "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE ]]; then
+            candidate_staged_at="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
+            echo "ADR003_CANDIDATE_STAGED_AT=$candidate_staged_at" >> "$GITHUB_ENV"
+          fi
+      - name: Prove staged Public and Jobs transactional-email key compatibility (CANDIDATE gate)
+        if: contains(steps.release_plan.outputs.changed_components_json, '"public"') || contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
         env:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           RELEASE_SHA: ${{ inputs.release_sha }}
-          PUBLIC_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
-          JOBS_WORKER_VERSION_ID: ${{ env.JOBS_WORKER_VERSION_ID }}
           PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
         run: |
           set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=jobs_transactional_email_compatibility_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Public and Jobs transactional email compatibility proof failed' >> "$GITHUB_ENV"
           base="${PRODUCTION_PUBLIC_API_BASE_URL%/}"
           response="$RUNNER_TEMP/production-cutover/transactional-email-key-compatibility.json"
           compatible=false
@@ -428,12 +898,12 @@ jobs:
             set -e
 
             if [[ "$curl_exit" -eq 0 && "$http_status" == "200" ]]; then
-              if jq -e --arg public "$PUBLIC_WORKER_VERSION_ID" --arg jobs "$JOBS_WORKER_VERSION_ID" --arg sha "$RELEASE_SHA" '
+              if jq -e --arg public "$PUBLIC_WORKER_VERSION_ID" --arg jobs "$JOBS_WORKER_VERSION_ID" --arg public_sha "$PUBLIC_WORKER_SOURCE_SHA" --arg jobs_sha "$JOBS_WORKER_SOURCE_SHA" '
                 .status == "compatible"
                 and .publicWorkerVersionId == $public
                 and .jobsWorkerVersionId == $jobs
-                and .publicReleaseTag == $sha
-                and .jobsReleaseTag == $sha
+                and .publicReleaseTag == $public_sha
+                and .jobsReleaseTag == $jobs_sha
               ' "$response" >/dev/null; then
                 compatible=true
                 break
@@ -457,18 +927,19 @@ jobs:
             echo 'Transactional email compatibility remained unavailable after bounded retries; failing closed.' >&2
             exit 1
           fi
-      - name: Validate or create the exact-candidate Keeper acceptance run
+      - name: Validate or create the exact-candidate Keeper acceptance run (PRODUCT_ACCEPTANCE gate)
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           EXISTING_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          PUBLIC_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
-          PUBLIC_WORKER_CREATED_AT: ${{ env.PUBLIC_WORKER_CREATED_AT }}
-          CANDIDATE_STAGED_AT: ${{ env.ADR003_CANDIDATE_STAGED_AT }}
         run: |
           set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=keeper_certification_unavailable' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=protected Keeper acceptance certification could not be established' >> "$GITHUB_ENV"
           base='https://admin.lythaus.co/api/admin/production-auth-acceptance'
           coordinator_response_file="$RUNNER_TEMP/production-cutover/coordinator-request.json"
           test -n "$DATABASE_READINESS_TOKEN" && test -n "$CF_ACCESS_CLIENT_ID" && test -n "$CF_ACCESS_CLIENT_SECRET"
@@ -478,6 +949,22 @@ jobs:
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}"
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
           )
+          for required_dependency in \
+            PUBLIC_WORKER_VERSION_ID PUBLIC_WORKER_SOURCE_SHA PUBLIC_WORKER_STATUS PUBLIC_WORKER_PROVENANCE \
+            ADMIN_WORKER_VERSION_ID ADMIN_WORKER_SOURCE_SHA ADMIN_WORKER_STATUS ADMIN_WORKER_PROVENANCE \
+            JOBS_WORKER_VERSION_ID JOBS_WORKER_SOURCE_SHA JOBS_WORKER_STATUS JOBS_WORKER_PROVENANCE \
+            COORDINATOR_WORKER_VERSION_ID COORDINATOR_WORKER_SOURCE_SHA COORDINATOR_WORKER_STATUS COORDINATOR_WORKER_PROVENANCE; do
+            test -n "${!required_dependency:-}" || { echo "Missing acceptance dependency field: $required_dependency" >&2; exit 1; }
+          done
+          candidate_dependencies="$(jq -c -n \
+            --arg public_version "$PUBLIC_WORKER_VERSION_ID" --arg public_source "$PUBLIC_WORKER_SOURCE_SHA" --arg public_status "$PUBLIC_WORKER_STATUS" --arg public_provenance "$PUBLIC_WORKER_PROVENANCE" \
+            --arg admin_version "$ADMIN_WORKER_VERSION_ID" --arg admin_source "$ADMIN_WORKER_SOURCE_SHA" --arg admin_status "$ADMIN_WORKER_STATUS" --arg admin_provenance "$ADMIN_WORKER_PROVENANCE" \
+            --arg jobs_version "$JOBS_WORKER_VERSION_ID" --arg jobs_source "$JOBS_WORKER_SOURCE_SHA" --arg jobs_status "$JOBS_WORKER_STATUS" --arg jobs_provenance "$JOBS_WORKER_PROVENANCE" \
+            --arg coordinator_version "$COORDINATOR_WORKER_VERSION_ID" --arg coordinator_source "$COORDINATOR_WORKER_SOURCE_SHA" --arg coordinator_status "$COORDINATOR_WORKER_STATUS" --arg coordinator_provenance "$COORDINATOR_WORKER_PROVENANCE" \
+            '{public:{workerName:"lythaus-public-api-development",versionId:$public_version,sourceSha:$public_source,status:$public_status,provenance:$public_provenance},admin:{workerName:"lythaus-admin-api-development",versionId:$admin_version,sourceSha:$admin_source,status:$admin_status,provenance:$admin_provenance},jobs:{workerName:"lythaus-jobs-development",versionId:$jobs_version,sourceSha:$jobs_source,status:$jobs_status,provenance:$jobs_provenance},coordinator:{workerName:"lythaus-auth-acceptance-coordinator-development",versionId:$coordinator_version,sourceSha:$coordinator_source,status:$coordinator_status,provenance:$coordinator_provenance}}')"
+          candidate_source_sha="$PUBLIC_WORKER_SOURCE_SHA"
+          uploaded_at=''
+          staged_at=''
           coordinator_request() {
             local method="$1"
             local url="$2"
@@ -510,41 +997,79 @@ jobs:
               return 1
             done
           }
+          run_id=''
           if [[ -n "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
-            [[ "$EXISTING_ACCEPTANCE_RUN_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || exit 1
+            [[ "$EXISTING_ACCEPTANCE_RUN_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || exit 1
             run_json="$(coordinator_request GET "$base/runs/$EXISTING_ACCEPTANCE_RUN_ID")"
             jq -e --arg sha "$RELEASE_SHA" --arg version "$PUBLIC_WORKER_VERSION_ID" '
               .acceptanceRunId != null and .releaseSha == $sha and .candidate.workerName == "lythaus-public-api-development"
-              and .candidate.workerVersionId == $version and (.status == "pending" or .status == "in_progress" or .status == "completed")
+              and .candidate.workerVersionId == $version and (.status == "pending" or .status == "in_progress" or .status == "completed" or .status == "expired")
             ' <<<"$run_json" >/dev/null
-            run_id="$EXISTING_ACCEPTANCE_RUN_ID"
-            keeper_url="https://admin.lythaus.co/production-auth-acceptance?run=$run_id"
+            expires_at="$(jq -r '.expiresAt' <<<"$run_json")"
             uploaded_at="$(jq -r '.candidate.uploadedAt' <<<"$run_json")"
             staged_at="$(jq -r '.candidate.stagedAt' <<<"$run_json")"
-          else
-            test -n "$PUBLIC_WORKER_CREATED_AT" && test -n "$CANDIDATE_STAGED_AT"
-            payload="$(jq -n --arg releaseSha "$RELEASE_SHA" --arg candidateWorker lythaus-public-api-development --arg candidateVersion "$PUBLIC_WORKER_VERSION_ID" --arg candidateUploadedAt "$PUBLIC_WORKER_CREATED_AT" --arg candidateStagedAt "$CANDIDATE_STAGED_AT" '{releaseSha:$releaseSha,candidateWorker:$candidateWorker,candidateVersion:$candidateVersion,candidateUploadedAt:$candidateUploadedAt,candidateStagedAt:$candidateStagedAt}')"
+            candidate_source_sha="$(jq -r '.candidate.sourceReleaseSha // empty' <<<"$run_json")"
+            [[ "$candidate_source_sha" =~ ^[0-9a-f]{40}$ ]] || candidate_source_sha="$PUBLIC_WORKER_SOURCE_SHA"
+            run_dependencies="$(jq -c '.candidateDependencies // empty' <<<"$run_json")"
+            run_rollback_snapshot="$(jq -c '.rollbackSnapshot // empty' <<<"$run_json")"
+            test -n "$run_rollback_snapshot" || {
+              echo 'Existing acceptance run lacks exact rollback snapshot provenance; refusing to resume it.' >&2
+              exit 1
+            }
+            test "$(jq -S -c '.' <<<"$run_rollback_snapshot")" = "$(jq -S -c '.' "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH")" || {
+              echo 'Acceptance rollback snapshot changed since the original run; refusing to resume.' >&2
+              exit 1
+            }
+            if [[ -z "$run_dependencies" ]]; then
+              echo 'Existing acceptance run lacks exact candidate dependency provenance; creating a fresh run.' >&2
+            else
+              test "$(jq -S -c '.' <<<"$run_dependencies")" = "$(jq -S -c '.' <<<"$candidate_dependencies")" || {
+                echo 'Acceptance dependency versions or provenance changed since the original run; refusing to resume.' >&2
+                exit 1
+              }
+            fi
+            if [[ "$(jq -r '.status' <<<"$run_json")" != 'expired' && -n "$run_dependencies" ]]; then
+              run_id="$EXISTING_ACCEPTANCE_RUN_ID"
+              keeper_url="https://admin.lythaus.co/production-auth-acceptance?run=$run_id"
+            elif [[ "$(jq -r '.status' <<<"$run_json")" = 'expired' ]]; then
+              echo 'The human acceptance window expired; creating a fresh run against the same still-valid candidate version.' >&2
+            fi
+          fi
+          if [[ -z "$run_id" ]]; then
+            if [[ -z "$uploaded_at" || -z "$staged_at" ]]; then
+              test -n "$PUBLIC_WORKER_CREATED_AT" && test -n "$CANDIDATE_STAGED_AT"
+              uploaded_at="$PUBLIC_WORKER_CREATED_AT"
+              staged_at="$CANDIDATE_STAGED_AT"
+            fi
+            test -n "$uploaded_at" && test -n "$staged_at"
+            test -n "$candidate_source_sha"
+            rollback_snapshot="$(cat "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH")"
+            payload="$(jq -n --arg releaseSha "$RELEASE_SHA" --arg candidateSourceSha "$candidate_source_sha" --arg candidateWorker lythaus-public-api-development --arg candidateVersion "$PUBLIC_WORKER_VERSION_ID" --arg candidateUploadedAt "$uploaded_at" --arg candidateStagedAt "$staged_at" --argjson candidateDependencies "$candidate_dependencies" --argjson rollbackSnapshot "$rollback_snapshot" '{releaseSha:$releaseSha,candidateSourceSha:$candidateSourceSha,candidateWorker:$candidateWorker,candidateVersion:$candidateVersion,candidateUploadedAt:$candidateUploadedAt,candidateStagedAt:$candidateStagedAt,candidateDependencies:$candidateDependencies,rollbackSnapshot:$rollbackSnapshot}')"
             run_json="$(coordinator_request POST "$base/runs" "$payload")"
             jq -e '.acceptanceRunId and .keeperUrl and .expiresAt' <<<"$run_json" >/dev/null
             run_id="$(jq -r '.acceptanceRunId' <<<"$run_json")"
             keeper_url="$(jq -r '.keeperUrl' <<<"$run_json")"
-            uploaded_at="$PUBLIC_WORKER_CREATED_AT"
-            staged_at="$CANDIDATE_STAGED_AT"
+            expires_at="$(jq -r '.expiresAt' <<<"$run_json")"
+            echo "Acceptance run created for candidate source $candidate_source_sha."
           fi
           {
             echo "AUTH_ACCEPTANCE_RUN_ID=$run_id"
+            echo "AUTH_ACCEPTANCE_EXPIRES_AT=$expires_at"
+            echo "ADR003_CANDIDATE_SOURCE_SHA=$candidate_source_sha"
             echo "ADR003_CANDIDATE_UPLOADED_AT=$uploaded_at"
             echo "ADR003_CANDIDATE_STAGED_AT=$staged_at"
             echo "AUTH_ACCEPTANCE_KEEPER_URL=$keeper_url"
+            echo "AUTH_ACCEPTANCE_DEPENDENCIES_JSON=$candidate_dependencies"
           } >> "$GITHUB_ENV"
           {
             echo '## Production authentication acceptance'
             echo
-            echo "Exact candidate: \`$PUBLIC_WORKER_VERSION_ID\` for \`$RELEASE_SHA\`."
+            echo "Exact candidate: \`$PUBLIC_WORKER_VERSION_ID\` from source \`$candidate_source_sha\`, certified for release \`$RELEASE_SHA\`."
             echo "Keeper URL (Cloudflare Access required): $keeper_url"
             echo "Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with \`acceptance_run_id\`."
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Probe public candidate without production traffic
+      - name: Probe public candidate without production traffic (CANDIDATE gate)
+        if: contains(steps.release_plan.outputs.changed_components_json, '"public"') || steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
@@ -557,11 +1082,17 @@ jobs:
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
           PRODUCTION_WORKER_SCOPE: lythaus-public-api-development
-          PRODUCTION_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
           PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/public-candidate-probe.json
-        run: node scripts/ci/probe-production-workers.mjs
-      - name: Probe admin candidate without production traffic
+        run: |
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=public_candidate_runtime_probe_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Public candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
+          export PRODUCTION_WORKER_VERSION_ID="$PUBLIC_WORKER_VERSION_ID"
+          export EXPECTED_WORKER_SOURCE_SHA="$PUBLIC_WORKER_SOURCE_SHA"
+          node scripts/ci/probe-production-workers.mjs
+      - name: Probe admin candidate without production traffic (CANDIDATE gate)
+        if: contains(steps.release_plan.outputs.changed_components_json, '"admin"')
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
@@ -574,13 +1105,19 @@ jobs:
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
           PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
-          PRODUCTION_WORKER_VERSION_ID: ${{ env.ADMIN_WORKER_VERSION_ID }}
           PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/admin-candidate-probe.json
-        run: node scripts/ci/probe-production-workers.mjs
-      - name: Probe jobs candidate without production traffic
+        run: |
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=admin_candidate_runtime_probe_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Admin candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
+          export PRODUCTION_WORKER_VERSION_ID="$ADMIN_WORKER_VERSION_ID"
+          export EXPECTED_WORKER_SOURCE_SHA="$ADMIN_WORKER_SOURCE_SHA"
+          node scripts/ci/probe-production-workers.mjs
+      - name: Probe jobs candidate without production traffic (CANDIDATE gate)
+        if: contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
@@ -593,12 +1130,18 @@ jobs:
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
           PRODUCTION_WORKER_SCOPE: lythaus-jobs-development
-          PRODUCTION_WORKER_VERSION_ID: ${{ env.JOBS_WORKER_VERSION_ID }}
           PRODUCTION_JOBS_API_BASE_URL: ${{ vars.PRODUCTION_JOBS_API_BASE_URL }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/jobs-candidate-probe.json
-        run: node scripts/ci/probe-production-workers.mjs
-      - name: Collect generated candidate auth acceptance evidence
+        run: |
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=jobs_candidate_compatibility_probe_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Jobs candidate readiness or runtime compatibility probe failed' >> "$GITHUB_ENV"
+          export PRODUCTION_WORKER_VERSION_ID="$JOBS_WORKER_VERSION_ID"
+          export EXPECTED_WORKER_SOURCE_SHA="$JOBS_WORKER_SOURCE_SHA"
+          node scripts/ci/probe-production-workers.mjs
+      - name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence
         id: auth_acceptance_observation
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
         continue-on-error: true
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -606,31 +1149,33 @@ jobs:
           ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: protected_probe
           ADR003_AUTH_ACCEPTANCE_EVIDENCE_URL: https://admin.lythaus.co/api/admin/production-auth-acceptance/observer
           ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/auth-acceptance-observation.json
-          ADR003_ACCEPTANCE_RUN_ID: ${{ env.AUTH_ACCEPTANCE_RUN_ID }}
           ADR003_WORKER_NAME: lythaus-public-api-development
-          ADR003_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
-          ADR003_CANDIDATE_UPLOADED_AT: ${{ env.PUBLIC_WORKER_CREATED_AT }}
-          ADR003_CANDIDATE_STAGED_AT: ${{ env.ADR003_CANDIDATE_STAGED_AT }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: node scripts/ci/collect-auth-acceptance-evidence.mjs
-      - name: Run authenticated acceptance against public candidate
-        if: steps.auth_acceptance_observation.outcome == 'success'
+        run: |
+          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=auth_acceptance_observer_certification_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=protected auth acceptance observer evidence was unavailable' >> "$GITHUB_ENV"
+          export ADR003_WORKER_VERSION_ID="$PUBLIC_WORKER_VERSION_ID"
+          export ADR003_ACCEPTANCE_RUN_ID="$AUTH_ACCEPTANCE_RUN_ID"
+          export ADR003_CANDIDATE_SOURCE_SHA="$ADR003_CANDIDATE_SOURCE_SHA"
+          export ADR003_CANDIDATE_UPLOADED_AT="$ADR003_CANDIDATE_UPLOADED_AT"
+          export ADR003_CANDIDATE_STAGED_AT="$ADR003_CANDIDATE_STAGED_AT"
+          export ADR003_CANDIDATE_DEPENDENCIES_JSON="$AUTH_ACCEPTANCE_DEPENDENCIES_JSON"
+          node scripts/ci/collect-auth-acceptance-evidence.mjs
+      - name: PRODUCT_ACCEPTANCE - Run authenticated acceptance against public candidate
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && steps.auth_acceptance_observation.outcome == 'success'
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           ADR003_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
           ADR003_WORKER_NAME: lythaus-public-api-development
-          ADR003_WORKER_VERSION_ID: ${{ env.PUBLIC_WORKER_VERSION_ID }}
           ADR003_DATABASE_READINESS_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/public-candidate-probe.json
           ADR003_WEB_HEALTH_URL: ${{ vars.ADR003_WEB_HEALTH_URL }}
           ADR003_WEB_ORIGIN: ${{ vars.ADR003_WEB_ORIGIN }}
           ADR003_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/adr003-candidate-acceptance.json
           ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/auth-acceptance-observation.json
-          ADR003_ACCEPTANCE_RUN_ID: ${{ env.AUTH_ACCEPTANCE_RUN_ID }}
           ADR003_WORKER_VERSIONS_JSON: ${{ vars.ADR003_WORKER_VERSIONS_JSON }}
-          ADR003_CANDIDATE_UPLOADED_AT: ${{ env.PUBLIC_WORKER_CREATED_AT }}
-          ADR003_CANDIDATE_STAGED_AT: ${{ env.ADR003_CANDIDATE_STAGED_AT }}
           ADR003_HYPERDRIVE_IDS_JSON: ${{ vars.ADR003_HYPERDRIVE_IDS_JSON }}
           ADR003_GUEST_ACCEPTED: ${{ vars.ADR003_GUEST_ACCEPTED }}
           ADR003_MOBILE_EMAIL_ACCEPTED: ${{ vars.ADR003_MOBILE_EMAIL_ACCEPTED }}
@@ -645,27 +1190,45 @@ jobs:
           ADR003_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
         run: |
           set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=auth_product_acceptance_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=real authentication product acceptance failed' >> "$GITHUB_ENV"
           api_base="${ADR003_API_BASE_URL%/}"
           test -n "$api_base"
           if [[ "$api_base" != */api ]]; then
             api_base="$api_base/api"
           fi
           export ADR003_API_BASE_URL="$api_base"
+          export ADR003_WORKER_VERSION_ID="$PUBLIC_WORKER_VERSION_ID"
+          export ADR003_ACCEPTANCE_RUN_ID="$AUTH_ACCEPTANCE_RUN_ID"
+          export ADR003_CANDIDATE_SOURCE_SHA="$ADR003_CANDIDATE_SOURCE_SHA"
+          export ADR003_CANDIDATE_UPLOADED_AT="$ADR003_CANDIDATE_UPLOADED_AT"
+          export ADR003_CANDIDATE_STAGED_AT="$ADR003_CANDIDATE_STAGED_AT"
+          export ADR003_CANDIDATE_DEPENDENCIES_JSON="$AUTH_ACCEPTANCE_DEPENDENCIES_JSON"
           npm run acceptance:adr003
-      - name: Require generated candidate auth acceptance
-        if: always()
+      - name: PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance
+        if: always() && steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
         env:
           OBSERVER_OUTCOME: ${{ steps.auth_acceptance_observation.outcome }}
         run: |
           set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=certification_evidence_required' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=auth-critical acceptance certification evidence is required' >> "$GITHUB_ENV"
           test "$OBSERVER_OUTCOME" = success || {
             status="$(jq -r '.status // "BLOCKED"' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json" 2>/dev/null || echo BLOCKED)"
             if [[ "$status" = HUMAN_ACCEPTANCE_REQUIRED ]]; then
+              echo 'RELEASE_FAILURE_CODE=human_acceptance_required' >> "$GITHUB_ENV"
+              echo 'RELEASE_FAILURE_MESSAGE=human acceptance window is incomplete' >> "$GITHUB_ENV"
               echo 'AUTH_ACCEPTANCE_PENDING=true' >> "$GITHUB_ENV"
               echo "HUMAN_ACCEPTANCE_REQUIRED: complete the real Turnstile and mailbox interaction at ${AUTH_ACCEPTANCE_KEEPER_URL}, then re-dispatch this exact SHA with acceptance_run_id=${AUTH_ACCEPTANCE_RUN_ID}." >&2
             elif [[ "$status" = BLOCKED ]] && jq -e '.reason == "provider_configuration_missing"' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json" >/dev/null 2>&1; then
+              echo 'RELEASE_FAILURE_CODE=delivery_observer_unavailable' >> "$GITHUB_ENV"
+              echo 'RELEASE_FAILURE_MESSAGE=delivery observer availability prevented independent acceptance evidence' >> "$GITHUB_ENV"
               echo 'Provider configuration failure: the enabled mail.lythaus.co Cloudflare Email Sending queue subscription was not independently observed for the required lifecycle events.' >&2
             else
+              echo 'RELEASE_FAILURE_CODE=auth_acceptance_certification_failed' >> "$GITHUB_ENV"
+              echo 'RELEASE_FAILURE_MESSAGE=auth-critical acceptance certification evidence was not proven' >> "$GITHUB_ENV"
               echo "Candidate auth acceptance is not independently proven: $status" >&2
             fi
             exit 1
@@ -685,7 +1248,8 @@ jobs:
             echo "AUTHENTICATED_ACCEPTANCE_PROVEN=true"
             echo "PLANETSCALE_GRANTS_VERIFIED=true"
           } >> "$GITHUB_ENV"
-      - name: Reverify production schema before activation
+          node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_PASSED
+      - name: INFRASTRUCTURE - Reverify production schema before activation
         env:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
@@ -693,44 +1257,113 @@ jobs:
           REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
-        run: node scripts/ci/verify-planetscale-production-schema.mjs
-      - name: Validate final production gates before activation
+        run: |
+          echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=production_schema_verification_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=production database schema verification failed' >> "$GITHUB_ENV"
+          node scripts/ci/verify-planetscale-production-schema.mjs
+      - name: INFRASTRUCTURE - Record exact structural readiness evidence
+        run: |
+          set -euo pipefail
+          echo 'DATABASE_IDENTITY_VERIFIED=true' >> "$GITHUB_ENV"
+          echo 'BUDGET_ENFORCEMENT_VERIFIED=true' >> "$GITHUB_ENV"
+          echo 'PLANETSCALE_GRANTS_VERIFIED=true' >> "$GITHUB_ENV"
+      - name: ACTIVATION - Validate final production gates before activation
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
-        run: npm run validate:production-gates:final
-      - name: Activate exact candidate Worker versions
+          RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
+        run: |
+          echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=activation_safety_gate_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=final production safety gates failed before activation' >> "$GITHUB_ENV"
+          npm run validate:production-gates:final
+      - name: Activate exact candidate Worker versions (ACTIVATION gate; changed components only)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx --yes wrangler@4.123.0 versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" --name lythaus-public-api-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
-          echo "PUBLIC_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
-          npx --yes wrangler@4.123.0 versions deploy "${ADMIN_WORKER_VERSION_ID}@100" --name lythaus-admin-api-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
-          echo "ADMIN_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
-          npx --yes wrangler@4.123.0 versions deploy "${JOBS_WORKER_VERSION_ID}@100" --name lythaus-jobs-development --yes --message "Activate reviewed Lythaus release ${{ inputs.release_sha }}"
-          echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
-      - name: Publish and verify same-origin admin API route
+          echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=candidate_activation_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=changed candidate activation failed' >> "$GITHUB_ENV"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
+          if component_changed public; then
+            npx --yes wrangler@4.123.0 versions deploy "${PUBLIC_WORKER_VERSION_ID}@100" --name lythaus-public-api-development --yes --message "Activate reviewed Lythaus public release ${{ inputs.release_sha }}"
+            echo "PUBLIC_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+            echo "PUBLIC_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"
+          fi
+          if component_changed admin; then
+            npx --yes wrangler@4.123.0 versions deploy "${ADMIN_WORKER_VERSION_ID}@100" --name lythaus-admin-api-development --yes --message "Activate reviewed Lythaus admin release ${{ inputs.release_sha }}"
+            echo "ADMIN_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+            echo "ADMIN_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"
+          fi
+          if component_changed jobs && [[ "${JOBS_WORKER_DEPLOYED:-false}" != "true" ]]; then
+            npx --yes wrangler@4.123.0 versions deploy "${JOBS_WORKER_VERSION_ID}@100" --name lythaus-jobs-development --yes --message "Activate reviewed Lythaus jobs release ${{ inputs.release_sha }}"
+            echo "JOBS_WORKER_DEPLOYED=true" >> "$GITHUB_ENV"
+          fi
+          if component_changed jobs; then echo "JOBS_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"; fi
+          if component_changed coordinator; then echo "COORDINATOR_WORKER_STATUS=ACTIVATED" >> "$GITHUB_ENV"; fi
+          echo "ACTIVATION_STATE=ACTIVATED" >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs ACTIVATED
+      - name: Publish and verify same-origin admin API route (ACTIVATION gate; changed components only)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
         run: |
-          echo "ADMIN_ROUTE_TRIGGER_ATTEMPTED=true" >> "$GITHUB_ENV"
-          npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-admin-api/wrangler.jsonc --name lythaus-admin-api-development
-          echo "ADMIN_ROUTE_TRIGGER_DEPLOYED=true" >> "$GITHUB_ENV"
-          node scripts/ci/manage-cloudflare-worker-route.mjs verify \
-            "$RUNNER_TEMP/production-cutover/admin-api-route-after.json" \
-            'admin.lythaus.co/api/admin/*' \
-            lythaus-admin-api-development
-      - name: Export activated Worker version metadata
-        id: release_metadata
+          echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=route_activation_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=changed same-origin route activation or verification failed' >> "$GITHUB_ENV"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
+          if component_changed admin; then
+            echo "ADMIN_ROUTE_TRIGGER_ATTEMPTED=true" >> "$GITHUB_ENV"
+            npx --yes wrangler@4.123.0 triggers deploy --config apps/lythaus-admin-api/wrangler.jsonc --name lythaus-admin-api-development
+            echo "ADMIN_ROUTE_TRIGGER_DEPLOYED=true" >> "$GITHUB_ENV"
+            node scripts/ci/manage-cloudflare-worker-route.mjs verify \
+              "$RUNNER_TEMP/production-cutover/admin-api-route-after.json" \
+              'admin.lythaus.co/api/admin/*' \
+              lythaus-admin-api-development
+          else
+            echo "ADMIN_ROUTE_TRIGGER_ATTEMPTED=false" >> "$GITHUB_ENV"
+          fi
+      - name: ACTIVATION - Export candidate, reuse, and activation metadata
+        id: validate_release_metadata
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
+          echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=release_metadata_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=release candidate and reuse metadata validation failed' >> "$GITHUB_ENV"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
           test -n "${PUBLIC_WORKER_VERSION_ID:-}"
           test -n "${ADMIN_WORKER_VERSION_ID:-}"
           test -n "${JOBS_WORKER_VERSION_ID:-}"
+          test -n "${COORDINATOR_WORKER_VERSION_ID:-}"
+          check_worker_provenance() {
+            local component="$1"; local prefix="$2"
+            local source_var="${prefix}_WORKER_SOURCE_SHA"; local provenance_var="${prefix}_WORKER_PROVENANCE"; local status_var="${prefix}_WORKER_STATUS"
+            local source="${!source_var:-}"; local provenance="${!provenance_var:-}"; local status="${!status_var:-}"
+            test -n "$source"
+            if component_changed "$component"; then
+              test "$source" = "$RELEASE_SHA"
+              test "$provenance" = BUILT_FROM_RELEASE_SHA
+              test "$status" = ACTIVATED
+            else
+              [[ "$source" =~ ^[0-9a-f]{40}$ ]]
+              test "$provenance" = REUSED_KNOWN_GOOD_PRODUCTION_VERSION
+              test "$status" = REUSED_PRODUCTION
+            fi
+          }
+          check_worker_provenance public PUBLIC
+          check_worker_provenance admin ADMIN
+          check_worker_provenance jobs JOBS
+          check_worker_provenance coordinator COORDINATOR
           test -s "$RUNNER_TEMP/production-cutover/public-before.json"
           test -s "$RUNNER_TEMP/production-cutover/admin-before.json"
           test -s "$RUNNER_TEMP/production-cutover/jobs-before.json"
@@ -739,31 +1372,35 @@ jobs:
           test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-state-before.json"
           test -s "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
           test -s "$RUNNER_TEMP/production-cutover/coordinator-route-before.json"
-          if [[ -z "${{ inputs.acceptance_run_id }}" ]]; then
+          if component_changed coordinator && [[ -z "${{ inputs.acceptance_run_id }}" ]]; then
             test -s "$RUNNER_TEMP/production-cutover/coordinator-parent-after.json"
           fi
           lifecycle_evidence="$RUNNER_TEMP/production-cutover/email-lifecycle-infrastructure.json"
           scoped_key_evidence="$RUNNER_TEMP/production-cutover/scoped-key-lifecycle.json"
           scoped_binding_evidence="$RUNNER_TEMP/production-cutover/scoped-worker-secret-bindings.json"
-          test -s "$scoped_key_evidence"
-          test -s "$scoped_binding_evidence"
-          jq -e '
-            .status == "VERIFIED"
-            and .transactionalEmail.compatibilityProbeRequired == true
-            and (.transactionalEmail.action == "bootstrap" or .transactionalEmail.action == "preserve")
-            and (.acceptanceState.action == "bootstrap" or .acceptanceState.action == "preserve")
-            and .secretValuesIncluded == false
-          ' "$scoped_key_evidence" >/dev/null
-          jq -e '
-            .status == "VERIFIED"
-            and .source == "cloudflare_secret_binding_names"
-            and (.publicApi.requiredBindingsPresent | index("TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1"))
-            and .jobs.requiredBindingsPresent == ["TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1"]
-            and (.jobs.forbiddenProductBindingsAbsent | sort) == ["PII_ENCRYPTION_KEY_V1", "PII_HMAC_KEY_V1"]
-            and .acceptanceCoordinator.requiredBindingsPresent == ["AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1"]
-            and (.acceptanceCoordinator.forbiddenProductBindingsAbsent | sort) == ["ACCESS_SUBJECT_HMAC_KEY", "PII_ENCRYPTION_KEY_V1", "PII_HMAC_KEY_V1"]
-            and .secretValuesIncluded == false
-          ' "$scoped_binding_evidence" >/dev/null
+          if component_changed public || component_changed jobs || component_changed coordinator; then
+            test -s "$scoped_key_evidence"
+            jq -e --argjson changed "$CHANGED_COMPONENTS_JSON" '
+              .status == "VERIFIED"
+              and .transactionalEmail.compatibilityProbeRequired == true
+              and (.transactionalEmail.action == "bootstrap" or .transactionalEmail.action == "preserve")
+              and ((.acceptanceState.action == "bootstrap" or .acceptanceState.action == "preserve") or ((($changed | index("coordinator")) == null) and .acceptanceState.action == "reuse_not_touched"))
+              and .secretValuesIncluded == false
+            ' "$scoped_key_evidence" >/dev/null
+          fi
+          if component_changed public || component_changed admin || component_changed jobs || component_changed coordinator; then
+            test -s "$scoped_binding_evidence"
+            jq -e --argjson changed "$CHANGED_COMPONENTS_JSON" '
+              .status == "VERIFIED"
+              and .source == "cloudflare_secret_binding_names"
+              and (.publicApi.requiredBindingsPresent | index("TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1"))
+              and .jobs.requiredBindingsPresent == ["TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1"]
+              and (.jobs.forbiddenProductBindingsAbsent | sort) == ["PII_ENCRYPTION_KEY_V1", "PII_HMAC_KEY_V1"]
+              and ((($changed | index("coordinator")) != null and .acceptanceCoordinator.requiredBindingsPresent == ["AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1"]) or (($changed | index("coordinator")) == null and .acceptanceCoordinator.requiredBindingsPresent == []))
+              and (.acceptanceCoordinator.forbiddenProductBindingsAbsent | sort) == ["ACCESS_SUBJECT_HMAC_KEY", "PII_ENCRYPTION_KEY_V1", "PII_HMAC_KEY_V1"]
+              and .secretValuesIncluded == false
+            ' "$scoped_binding_evidence" >/dev/null
+          fi
           jq -e --arg jobs_version "$JOBS_WORKER_VERSION_ID" '
             if (
               .status == "VERIFIED"
@@ -790,15 +1427,50 @@ jobs:
             echo "database_identity_verified=${DATABASE_IDENTITY_VERIFIED:-false}"
             echo "budget_enforcement_verified=${BUDGET_ENFORCEMENT_VERIFIED:-false}"
             echo "authenticated_acceptance_proven=${AUTHENTICATED_ACCEPTANCE_PROVEN:-false}"
-            echo "authenticated_acceptance_status=$(jq -r '.status' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json")"
-            echo "acceptance_run_id=$AUTH_ACCEPTANCE_RUN_ID"
-            echo "acceptance_keeper_url=$AUTH_ACCEPTANCE_KEEPER_URL"
+            if [[ "$RELEASE_CLASS" = "AUTH_CRITICAL_RELEASE" ]]; then
+              echo "authenticated_acceptance_status=$(jq -r '.status' "$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json")"
+              echo "acceptance_run_id=${AUTH_ACCEPTANCE_RUN_ID:-}"
+              echo "acceptance_expires_at=${AUTH_ACCEPTANCE_EXPIRES_AT:-}"
+              echo "acceptance_keeper_url=${AUTH_ACCEPTANCE_KEEPER_URL:-}"
+              echo "acceptance_dependencies_json=${AUTH_ACCEPTANCE_DEPENDENCIES_JSON:-}"
+              echo "acceptance_evidence_path=$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json"
+            else
+              echo 'authenticated_acceptance_status=NOT_REQUIRED'
+              echo 'acceptance_run_id='
+              echo 'acceptance_expires_at='
+              echo 'acceptance_keeper_url='
+              echo 'acceptance_dependencies_json='
+              echo 'acceptance_evidence_path='
+            fi
+            echo "release_class=$RELEASE_CLASS"
+            echo "changed_components_json=$CHANGED_COMPONENTS_JSON"
+            echo "reused_components_json=$REUSED_COMPONENTS_JSON"
+            echo "activation_state=${ACTIVATION_STATE:-ACTIVATED}"
+            echo "release_state=${RELEASE_STATE:-ACTIVATED}"
+            echo "release_state_history_json=${RELEASE_STATE_HISTORY_JSON:-[]}"
+            echo "failure_domain_evidence_json=${FAILURE_DOMAIN_EVIDENCE_JSON:-[]}"
+            echo "public_worker_source_sha=${PUBLIC_WORKER_SOURCE_SHA:-}"
+            echo "admin_worker_source_sha=${ADMIN_WORKER_SOURCE_SHA:-}"
+            echo "jobs_worker_source_sha=${JOBS_WORKER_SOURCE_SHA:-}"
+            echo "coordinator_worker_source_sha=${COORDINATOR_WORKER_SOURCE_SHA:-}"
+            echo "public_worker_provenance=${PUBLIC_WORKER_PROVENANCE:-}"
+            echo "admin_worker_provenance=${ADMIN_WORKER_PROVENANCE:-}"
+            echo "jobs_worker_provenance=${JOBS_WORKER_PROVENANCE:-}"
+            echo "coordinator_worker_provenance=${COORDINATOR_WORKER_PROVENANCE:-}"
+            echo "public_worker_status=${PUBLIC_WORKER_STATUS:-}"
+            echo "admin_worker_status=${ADMIN_WORKER_STATUS:-}"
+            echo "jobs_worker_status=${JOBS_WORKER_STATUS:-}"
+            echo "coordinator_worker_status=${COORDINATOR_WORKER_STATUS:-}"
             echo "planetscale_grants_verified=${PLANETSCALE_GRANTS_VERIFIED:-false}"
             echo "worker_source_sha=$RELEASE_SHA"
             echo "rollback_artifacts_proven=true"
           } >> "$GITHUB_OUTPUT"
+      - name: Classify release failure domain
+        id: failure_domain
+        if: ${{ always() && (failure() || cancelled()) }}
+        run: node scripts/ci/write-failure-domain-evidence.mjs
       - name: Roll back partial Worker deployment on failure
-        if: failure()
+        if: ${{ always() && (failure() || cancelled()) }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -806,8 +1478,10 @@ jobs:
         run: |
           set +e
           rollback_failed=0
+          echo 'ROLLBACK_STATE=IN_PROGRESS' >> "$GITHUB_ENV"
           if [[ "${AUTH_ACCEPTANCE_PENDING:-false}" == "true" ]]; then
             echo 'HUMAN_ACCEPTANCE_REQUIRED: preserving exact candidate Jobs/coordinator state for resume.'
+            echo 'ROLLBACK_STATE=PRESERVED_FOR_ACCEPTANCE' >> "$GITHUB_ENV"
             exit 0
           fi
           if [[ "${ADMIN_ROUTE_TRIGGER_ATTEMPTED:-false}" == "true" ]]; then
@@ -836,7 +1510,76 @@ jobs:
           if [[ "${PUBLIC_WORKER_DEPLOYED:-false}" == "true" || "${PUBLIC_WORKER_STAGED:-false}" == "true" ]]; then
             npx --yes wrangler@4.123.0 versions deploy $PUBLIC_ROLLBACK_SPECS --name lythaus-public-api-development --yes --message "Restore exact predeployment Lythaus public versions" || rollback_failed=1
           fi
+          if [[ "$rollback_failed" -eq 0 && "${AUTH_ACCEPTANCE_PENDING:-false}" != "true" ]]; then
+            node scripts/ci/transition-release-state.mjs ROLLED_BACK || rollback_failed=1
+          fi
+          if [[ "$rollback_failed" -eq 0 ]]; then
+            echo 'ROLLBACK_STATE=ROLLED_BACK' >> "$GITHUB_ENV"
+            echo 'ACTIVATION_STATE=ROLLED_BACK' >> "$GITHUB_ENV"
+          else
+            echo 'ROLLBACK_STATE=BLOCKED' >> "$GITHUB_ENV"
+          fi
           exit "$rollback_failed"
+      - name: Export candidate, reuse, and final activation metadata
+        id: release_metadata
+        if: always()
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        shell: bash
+        run: |
+          set -u
+          release_class="${RELEASE_CLASS:-AUTH_CRITICAL_RELEASE}"
+          acceptance_status="NOT_REQUIRED"
+          if [[ "$release_class" == 'AUTH_CRITICAL_RELEASE' ]]; then
+            acceptance_status='BLOCKED'
+            observation="$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json"
+            if [[ -s "$observation" ]]; then
+              acceptance_status="$(jq -r '.status // "BLOCKED"' "$observation" 2>/dev/null || printf 'BLOCKED')"
+            fi
+          fi
+          {
+            echo "public_worker_version=${PUBLIC_WORKER_VERSION_ID:-}"
+            echo "admin_worker_version=${ADMIN_WORKER_VERSION_ID:-}"
+            echo "jobs_worker_version=${JOBS_WORKER_VERSION_ID:-}"
+            echo "coordinator_worker_version=${COORDINATOR_WORKER_VERSION_ID:-}"
+            echo "hyperdrive_verified_main=${HYPERDRIVE_VERIFIED_MAIN:-false}"
+            echo "database_identity_verified=${DATABASE_IDENTITY_VERIFIED:-false}"
+            echo "budget_enforcement_verified=${BUDGET_ENFORCEMENT_VERIFIED:-false}"
+            echo "authenticated_acceptance_proven=${AUTHENTICATED_ACCEPTANCE_PROVEN:-false}"
+            echo "authenticated_acceptance_status=$acceptance_status"
+            echo "acceptance_run_id=${AUTH_ACCEPTANCE_RUN_ID:-}"
+            echo "acceptance_expires_at=${AUTH_ACCEPTANCE_EXPIRES_AT:-}"
+            echo "acceptance_keeper_url=${AUTH_ACCEPTANCE_KEEPER_URL:-}"
+            echo "acceptance_dependencies_json=${AUTH_ACCEPTANCE_DEPENDENCIES_JSON:-}"
+            if [[ "$release_class" == 'AUTH_CRITICAL_RELEASE' ]]; then
+              echo "acceptance_evidence_path=$RUNNER_TEMP/production-cutover/auth-acceptance-observation.json"
+            else
+              echo 'acceptance_evidence_path='
+            fi
+            echo "release_class=$release_class"
+            echo "changed_components_json=${CHANGED_COMPONENTS_JSON:-[]}"
+            echo "reused_components_json=${REUSED_COMPONENTS_JSON:-[]}"
+            echo "activation_state=${ACTIVATION_STATE:-${RELEASE_STATE:-BLOCKED}}"
+            echo "release_state=${RELEASE_STATE:-BLOCKED}"
+            echo "release_state_history_json=${RELEASE_STATE_HISTORY_JSON:-[]}"
+            echo "failure_domain_evidence_json=${FAILURE_DOMAIN_EVIDENCE_JSON:-[]}"
+            echo "public_worker_source_sha=${PUBLIC_WORKER_SOURCE_SHA:-}"
+            echo "admin_worker_source_sha=${ADMIN_WORKER_SOURCE_SHA:-}"
+            echo "jobs_worker_source_sha=${JOBS_WORKER_SOURCE_SHA:-}"
+            echo "coordinator_worker_source_sha=${COORDINATOR_WORKER_SOURCE_SHA:-}"
+            echo "public_worker_provenance=${PUBLIC_WORKER_PROVENANCE:-}"
+            echo "admin_worker_provenance=${ADMIN_WORKER_PROVENANCE:-}"
+            echo "jobs_worker_provenance=${JOBS_WORKER_PROVENANCE:-}"
+            echo "coordinator_worker_provenance=${COORDINATOR_WORKER_PROVENANCE:-}"
+            echo "public_worker_status=${PUBLIC_WORKER_STATUS:-}"
+            echo "admin_worker_status=${ADMIN_WORKER_STATUS:-}"
+            echo "jobs_worker_status=${JOBS_WORKER_STATUS:-}"
+            echo "coordinator_worker_status=${COORDINATOR_WORKER_STATUS:-}"
+            echo "planetscale_grants_verified=${PLANETSCALE_GRANTS_VERIFIED:-false}"
+            echo "worker_source_sha=$RELEASE_SHA"
+            echo "rollback_artifacts_proven=${ROLLBACK_ARTIFACTS_PROVEN:-false}"
+            echo "rollback_state=${ROLLBACK_STATE:-READY}"
+          } >> "$GITHUB_OUTPUT"
       - name: Remove ephemeral production secret files
         if: always()
         shell: bash

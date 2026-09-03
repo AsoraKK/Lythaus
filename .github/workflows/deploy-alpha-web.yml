@@ -11,6 +11,11 @@ on:
         description: Successful CI workflow run ID for the exact release SHA
         required: true
         type: string
+      security_run_ids_json:
+        description: JSON object containing exact CodeQL, dependency review, secret scan, and historical reconciliation run IDs
+        required: false
+        default: '{}'
+        type: string
       target_environment:
         description: Cloudflare deployment class
         required: true
@@ -38,6 +43,11 @@ on:
         description: Cloudflare-protected admin API origin
         required: true
         type: string
+      run_browser_smoke:
+        description: Optional authenticated browser convenience smoke; never required for release activation
+        required: false
+        default: false
+        type: boolean
   workflow_call:
     inputs:
       release_sha:
@@ -47,6 +57,11 @@ on:
       ci_run_id:
         description: Successful CI workflow run ID for the exact release SHA
         required: true
+        type: string
+      security_run_ids_json:
+        description: JSON object containing exact CodeQL, dependency review, secret scan, and historical reconciliation run IDs
+        required: false
+        default: '{}'
         type: string
       target_environment:
         description: Cloudflare deployment class
@@ -72,6 +87,16 @@ on:
         description: Cloudflare-protected admin API origin
         required: true
         type: string
+      source_evidence_verified:
+        description: The canonical parent already verified exact CI/security evidence
+        required: false
+        default: false
+        type: boolean
+      run_browser_smoke:
+        description: Optional authenticated browser convenience smoke; never required for release activation
+        required: false
+        default: false
+        type: boolean
     outputs:
       pages_deployment_id:
         description: Exact Pages deployment identifier selected for the release SHA
@@ -156,6 +181,22 @@ jobs:
             exit 1
           }
 
+      - name: Require exact production CI and security evidence
+        if: inputs.target_environment == 'production' && inputs.source_evidence_verified != true
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          SECURITY_RUN_IDS_JSON: ${{ inputs.security_run_ids_json }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          jq -e 'type == "object"' <<<"$SECURITY_RUN_IDS_JSON" >/dev/null
+          export CODEQL_RUN_ID="$(jq -r '.CODEQL_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          export DEPENDENCY_REVIEW_RUN_ID="$(jq -r '.DEPENDENCY_REVIEW_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          export SECRET_SCAN_RUN_ID="$(jq -r '.SECRET_SCAN_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          export HISTORICAL_RECONCILIATION_RUN_ID="$(jq -r '.HISTORICAL_RECONCILIATION_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          node scripts/ci/verify-exact-release-evidence.mjs
+
       - name: Deploy immutable Pages artifact
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -228,6 +269,8 @@ jobs:
   browser-smoke:
     name: Run authenticated web browser smoke
     needs: deploy-and-smoke
+    if: inputs.run_browser_smoke == true
+    continue-on-error: true
     runs-on: ubuntu-latest
     environment: ${{ inputs.target_environment == 'production' && 'production' || 'dev' }}
     timeout-minutes: 25
@@ -247,7 +290,7 @@ jobs:
           npm ci --ignore-scripts
           npx playwright install --with-deps chromium
 
-      - name: Run required web Alpha browser smoke
+      - name: Run optional web Alpha browser smoke
         env:
           WEB_BASE_URL: ${{ inputs.web_base_url }}
           API_BASE_URL: ${{ inputs.api_base_url }}

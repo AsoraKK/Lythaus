@@ -14,13 +14,15 @@ const version = (id, created_on, releaseTag = tag) => ({
   annotations: { 'workers/tag': releaseTag },
 });
 
-const run = (versions) => {
+const run = (versions, expectedVersionId) => {
   const directory = mkdtempSync(join(tmpdir(), 'lythaus-worker-version-'));
   const input = join(directory, 'versions.json');
   const githubEnv = join(directory, 'github.env');
   writeFileSync(input, JSON.stringify(versions));
   try {
-    const output = execFileSync(process.execPath, [script, 'candidate', input, tag, 'PUBLIC'], {
+    const args = [script, 'candidate', input, tag, 'PUBLIC'];
+    if (expectedVersionId !== undefined) args.push(expectedVersionId);
+    const output = execFileSync(process.execPath, args, {
       env: { ...process.env, GITHUB_ENV: githubEnv },
       encoding: 'utf8',
     });
@@ -89,10 +91,35 @@ test('resolves the newest exact-SHA candidate after an interrupted retry', () =>
   assert.match(result.output, /"matchingVersions":2/);
 });
 
+test('resumes the exact stored candidate instead of selecting a newer duplicate', () => {
+  const result = run([
+    version('11111111-1111-4111-8111-111111111111', '2026-08-25T10:00:00Z'),
+    version('22222222-2222-4222-8222-222222222222', '2026-08-25T10:01:00Z'),
+  ], '11111111-1111-4111-8111-111111111111');
+  assert.match(result.env, /PUBLIC_WORKER_VERSION_ID=11111111-1111-4111-8111-111111111111/);
+  assert.match(result.output, /"matchingVersions":1/);
+});
+
+test('fails closed when the stored candidate is missing or has the wrong tag', () => {
+  assert.throws(
+    () => run([version('22222222-2222-4222-8222-222222222222', '2026-08-25T10:01:00Z')], '11111111-1111-4111-8111-111111111111'),
+    /is not tagged/,
+  );
+  assert.throws(
+    () => run([version('11111111-1111-4111-8111-111111111111', '2026-08-25T10:01:00Z')], 'not-a-uuid'),
+    /expected candidate version id is invalid/,
+  );
+});
+
 test('resolves the exact version returned by an upload', () => {
   const result = runUpload(`\nWorker Version ID: \n33333333-3333-4333-8333-333333333333\n`);
   assert.match(result.env, /PUBLIC_WORKER_VERSION_ID=33333333-3333-4333-8333-333333333333/);
   assert.match(result.output, /"source":"upload_output"/);
+});
+
+test('accepts provider Worker UUIDv7 version IDs', () => {
+  const result = runUpload('Worker Version ID: 018f2f3a-7b4c-7abc-8def-0123456789ab');
+  assert.match(result.env, /PUBLIC_WORKER_VERSION_ID=018f2f3a-7b4c-7abc-8def-0123456789ab/);
 });
 
 test('rejects an upload without exactly one version id', () => {

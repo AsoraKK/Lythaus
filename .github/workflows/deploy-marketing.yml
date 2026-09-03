@@ -13,6 +13,31 @@ on:
         default: preview
         type: choice
         options: [preview, production]
+      ci_run_id:
+        description: Successful CI run ID for a production release
+        required: false
+        default: ''
+        type: string
+      codeql_run_id:
+        description: Successful CodeQL run ID for a production release
+        required: false
+        default: ''
+        type: string
+      dependency_review_run_id:
+        description: Successful dependency review run ID for a production release
+        required: false
+        default: ''
+        type: string
+      secret_scan_run_id:
+        description: Successful native secret scan run ID for a production release
+        required: false
+        default: ''
+        type: string
+      historical_reconciliation_run_id:
+        description: Successful historical reconciliation run ID for a production release
+        required: false
+        default: ''
+        type: string
   workflow_call:
     inputs:
       release_sha:
@@ -22,6 +47,36 @@ on:
       deployment_class:
         description: Pages deployment class
         required: true
+        type: string
+      source_evidence_verified:
+        description: The canonical parent already verified exact CI/security evidence
+        required: false
+        default: false
+        type: boolean
+      ci_run_id:
+        description: Successful CI run ID for a production release
+        required: false
+        default: ''
+        type: string
+      codeql_run_id:
+        description: Successful CodeQL run ID for a production release
+        required: false
+        default: ''
+        type: string
+      dependency_review_run_id:
+        description: Successful dependency review run ID for a production release
+        required: false
+        default: ''
+        type: string
+      secret_scan_run_id:
+        description: Successful native secret scan run ID for a production release
+        required: false
+        default: ''
+        type: string
+      historical_reconciliation_run_id:
+        description: Successful historical reconciliation run ID for a production release
+        required: false
+        default: ''
         type: string
     outputs:
       pages_deployment_id:
@@ -85,6 +140,18 @@ jobs:
               exit 1
             }
           fi
+
+      - name: Require exact production CI and security evidence
+        if: inputs.deployment_class == 'production' && inputs.source_evidence_verified != true
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          CODEQL_RUN_ID: ${{ inputs.codeql_run_id }}
+          DEPENDENCY_REVIEW_RUN_ID: ${{ inputs.dependency_review_run_id }}
+          SECRET_SCAN_RUN_ID: ${{ inputs.secret_scan_run_id }}
+          HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/verify-exact-release-evidence.mjs
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
