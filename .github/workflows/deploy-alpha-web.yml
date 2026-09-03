@@ -191,10 +191,11 @@ jobs:
         run: |
           set -euo pipefail
           jq -e 'type == "object"' <<<"$SECURITY_RUN_IDS_JSON" >/dev/null
-          export CODEQL_RUN_ID="$(jq -r '.CODEQL_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
-          export DEPENDENCY_REVIEW_RUN_ID="$(jq -r '.DEPENDENCY_REVIEW_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
-          export SECRET_SCAN_RUN_ID="$(jq -r '.SECRET_SCAN_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
-          export HISTORICAL_RECONCILIATION_RUN_ID="$(jq -r '.HISTORICAL_RECONCILIATION_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          CODEQL_RUN_ID="$(jq -r '.CODEQL_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          DEPENDENCY_REVIEW_RUN_ID="$(jq -r '.DEPENDENCY_REVIEW_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          SECRET_SCAN_RUN_ID="$(jq -r '.SECRET_SCAN_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          HISTORICAL_RECONCILIATION_RUN_ID="$(jq -r '.HISTORICAL_RECONCILIATION_RUN_ID // empty' <<<"$SECURITY_RUN_IDS_JSON")"
+          export CODEQL_RUN_ID DEPENDENCY_REVIEW_RUN_ID SECRET_SCAN_RUN_ID HISTORICAL_RECONCILIATION_RUN_ID
           node scripts/ci/verify-exact-release-evidence.mjs
 
       - name: Deploy immutable Pages artifact

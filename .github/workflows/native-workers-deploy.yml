@@ -296,6 +296,7 @@ jobs:
           FORCE_AUTH_CRITICAL: ${{ inputs.force_auth_critical }}
         shell: bash
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=SOURCE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=release_plan_failed' >> "$GITHUB_ENV"
@@ -309,6 +310,7 @@ jobs:
         env:
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=SOURCE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=manual_release_class_downgrade' >> "$GITHUB_ENV"
@@ -326,6 +328,7 @@ jobs:
           cache: npm
       - name: Install exact release dependencies
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=release_dependency_install_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=exact release dependency installation failed' >> "$GITHUB_ENV"
@@ -335,6 +338,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           CLOUDFLARE_ENVIRONMENT: production
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=worker_configuration_validation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=committed Worker configuration validation failed' >> "$GITHUB_ENV"
@@ -345,6 +349,7 @@ jobs:
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
           CLOUDFLARE_ENVIRONMENT: production
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=provider_scope_validation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=Cloudflare production account or zone scope validation failed' >> "$GITHUB_ENV"
@@ -354,12 +359,14 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=production_predeploy_gate_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=production predeployment safety gates failed' >> "$GITHUB_ENV"
           npm run validate:production-gates:predeploy
       - name: Validate migrations and generated Worker types
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=static_infrastructure_validation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=migration, provider, or generated Worker infrastructure validation failed' >> "$GITHUB_ENV"
@@ -377,6 +384,7 @@ jobs:
           TURNSTILE_SECRET_FILE: ${{ runner.temp }}/production-cutover/turnstile-secret.json
           TURNSTILE_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/turnstile.json
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=provider_configuration_validation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=production Turnstile provider configuration validation failed' >> "$GITHUB_ENV"
@@ -394,6 +402,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           CLOUDFLARE_ENVIRONMENT: production
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=deployment_identity_materialization_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=approved post-0016 deployment identity materialization failed' >> "$GITHUB_ENV"
@@ -411,6 +420,7 @@ jobs:
           PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
           PSCALE_BRANCH_NAME: main
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=provider_origin_validation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=production Hyperdrive or database origin validation failed' >> "$GITHUB_ENV"
@@ -422,6 +432,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=rollback_snapshot_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=exact positive serving traffic rollback snapshot failed' >> "$GITHUB_ENV"
@@ -466,6 +477,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=route_snapshot_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=production route rollback snapshot failed' >> "$GITHUB_ENV"
@@ -484,6 +496,7 @@ jobs:
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         shell: bash
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=acceptance_rollback_snapshot_failed' >> "$GITHUB_ENV"
@@ -567,6 +580,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
         shell: bash
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=acceptance_resume_secret_evidence_failed' >> "$GITHUB_ENV"
@@ -612,12 +626,14 @@ jobs:
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
           CLOUDFLARE_EMAIL_LIFECYCLE_OUTPUT: ${{ runner.temp }}/production-cutover/email-lifecycle-infrastructure.json
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=email_lifecycle_provider_configuration_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=Cloudflare Email lifecycle provider configuration verification failed' >> "$GITHUB_ENV"
           node scripts/ci/provision-cloudflare-email-lifecycle.mjs
       - name: INFRASTRUCTURE - Mark verified infrastructure gate
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=infrastructure_state_transition_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=infrastructure gate state transition failed' >> "$GITHUB_ENV"
@@ -633,6 +649,7 @@ jobs:
           CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CLOUDFLARE_API_TOKEN || '' }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=candidate_upload_or_secret_binding_failed' >> "$GITHUB_ENV"
@@ -755,6 +772,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=candidate_identity_resolution_failed' >> "$GITHUB_ENV"
@@ -816,6 +834,7 @@ jobs:
       - name: PRODUCT_ACCEPTANCE - Mark human acceptance required
         if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=acceptance_state_transition_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=auth acceptance state transition failed' >> "$GITHUB_ENV"
@@ -823,6 +842,7 @@ jobs:
       - name: PRODUCT_ACCEPTANCE - Mark standard acceptance not required
         if: steps.release_plan.outputs.release_class == 'STANDARD_RELEASE'
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=standard_acceptance_state_transition_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=standard release acceptance state transition failed' >> "$GITHUB_ENV"
@@ -833,6 +853,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=candidate_staging_failed' >> "$GITHUB_ENV"
@@ -877,6 +898,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=jobs_transactional_email_compatibility_failed' >> "$GITHUB_ENV"
@@ -936,6 +958,7 @@ jobs:
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=keeper_certification_unavailable' >> "$GITHUB_ENV"
@@ -1085,6 +1108,7 @@ jobs:
           PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/public-candidate-probe.json
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=public_candidate_runtime_probe_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=Public candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
@@ -1110,6 +1134,7 @@ jobs:
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/admin-candidate-probe.json
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=admin_candidate_runtime_probe_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=Admin candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
@@ -1133,6 +1158,7 @@ jobs:
           PRODUCTION_JOBS_API_BASE_URL: ${{ vars.PRODUCTION_JOBS_API_BASE_URL }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/jobs-candidate-probe.json
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=jobs_candidate_compatibility_probe_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=Jobs candidate readiness or runtime compatibility probe failed' >> "$GITHUB_ENV"
@@ -1154,6 +1180,7 @@ jobs:
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=auth_acceptance_observer_certification_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=protected auth acceptance observer evidence was unavailable' >> "$GITHUB_ENV"
@@ -1189,6 +1216,7 @@ jobs:
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
           ADR003_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=auth_product_acceptance_failed' >> "$GITHUB_ENV"
@@ -1211,6 +1239,7 @@ jobs:
         env:
           OBSERVER_OUTCOME: ${{ steps.auth_acceptance_observation.outcome }}
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=certification_evidence_required' >> "$GITHUB_ENV"
@@ -1258,12 +1287,14 @@ jobs:
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=production_schema_verification_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=production database schema verification failed' >> "$GITHUB_ENV"
           node scripts/ci/verify-planetscale-production-schema.mjs
       - name: INFRASTRUCTURE - Record exact structural readiness evidence
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'DATABASE_IDENTITY_VERIFIED=true' >> "$GITHUB_ENV"
           echo 'BUDGET_ENFORCEMENT_VERIFIED=true' >> "$GITHUB_ENV"
@@ -1273,6 +1304,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=activation_safety_gate_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=final production safety gates failed before activation' >> "$GITHUB_ENV"
@@ -1282,6 +1314,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=candidate_activation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=changed candidate activation failed' >> "$GITHUB_ENV"
@@ -1312,6 +1345,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
         run: |
+          # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=route_activation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=changed same-origin route activation or verification failed' >> "$GITHUB_ENV"
@@ -1334,6 +1368,7 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
+          # shellcheck disable=SC2129
           set -euo pipefail
           echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=release_metadata_failed' >> "$GITHUB_ENV"

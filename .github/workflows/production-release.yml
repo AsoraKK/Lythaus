@@ -794,8 +794,7 @@ jobs:
           if [[ "$rollback_failed" = 0 ]]; then
             transition_env="$rollback_dir/transition.env"
             transition_output="$rollback_dir/transition.output"
-            transition_json="$(GITHUB_ENV="$transition_env" GITHUB_OUTPUT="$transition_output" RELEASE_STATE_HISTORY_JSON="$history" node scripts/ci/transition-release-state.mjs ROLLED_BACK 2>"$rollback_dir/transition.error")"
-            if [[ $? -eq 0 ]]; then
+            if transition_json="$(GITHUB_ENV="$transition_env" GITHUB_OUTPUT="$transition_output" RELEASE_STATE_HISTORY_JSON="$history" node scripts/ci/transition-release-state.mjs ROLLED_BACK 2>"$rollback_dir/transition.error")"; then
               state='ROLLED_BACK'
               history="$(jq -c '.history' <<<"$transition_json" 2>/dev/null)"
             else
