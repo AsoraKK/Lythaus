@@ -184,6 +184,8 @@ test('ADR-003 uses the canonical API base and keeps mobile acceptance separate',
   assert.match(workersWorkflow, /\.status == "PASSED"/);
   assert.match(workersWorkflow, /ADR003_CANDIDATE_UPLOADED_AT/);
   assert.match(workersWorkflow, /ADR003_CANDIDATE_STAGED_AT/);
+  assert.match(workersWorkflow, /test -n "\$PUBLIC_WORKER_CREATED_AT" && test -n "\$ADR003_CANDIDATE_STAGED_AT"/);
+  assert.doesNotMatch(workersWorkflow, /test -n "\$PUBLIC_WORKER_CREATED_AT" && test -n "\$CANDIDATE_STAGED_AT"/);
   assert.match(workersWorkflow, /mail\.lythaus\.co/);
   assert.match(workersWorkflow, /cloudflare_email_sending_queue_subscription_observation/);
   assert.match(workersWorkflow, /provider_configuration_missing/);
