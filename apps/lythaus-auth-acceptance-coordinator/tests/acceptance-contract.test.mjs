@@ -37,7 +37,9 @@ test('acceptance run validation accepts the uuidv7 identifiers it generates', ()
 });
 
 test('acceptance evidence is server derived and human interaction remains required', () => {
-  assert.match(coordinator, /status: 'HUMAN_ACCEPTANCE_REQUIRED'/);
+  const pendingResponses = coordinator.split("status: 'HUMAN_ACCEPTANCE_REQUIRED'").slice(1);
+  assert.equal(pendingResponses.length, 2);
+  assert.ok(pendingResponses.every((response) => response.slice(0, 320).includes('candidateDependencies: dependencies')));
   assert.match(coordinator, /source: 'runtime_observation'/);
   assert.match(coordinator, /outboxSummary: \{ source: 'read_only_database_query'/);
   assert.match(coordinator, /emailLifecycle: outbox\.rows\.map/);
