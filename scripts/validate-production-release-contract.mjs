@@ -31,6 +31,7 @@ for (const file of [
   path.join(root, 'scripts', 'release', 'failure-domains.mjs'),
   path.join(root, 'scripts', 'ci', 'resolve-release-plan.mjs'),
   path.join(root, 'scripts', 'ci', 'resolve-production-version-state.mjs'),
+  path.join(root, 'scripts', 'ci', 'merge-worker-version-metadata.mjs'),
   path.join(root, 'scripts', 'ci', 'transition-release-state.mjs'),
   path.join(root, 'scripts', 'ci', 'write-failure-domain-evidence.mjs'),
   path.join(root, 'scripts', 'ci', 'resolve-release-failure-domain.mjs'),

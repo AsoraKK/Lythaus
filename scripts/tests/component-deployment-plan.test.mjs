@@ -100,6 +100,20 @@ test('zero-traffic candidates are valid production state while rollback uses pos
   assert.deepEqual(state.versions.map(({ createdAt }) => createdAt), ['2026-09-02T23:59:59.000Z', '2026-09-03T00:00:00.000Z']);
 });
 
+test('rollback provenance enriches an active version outside Wrangler recent-list results', async () => {
+  const { parseProductionDeploymentState } = await import('../ci/resolve-production-version-state.mjs');
+  const { mergeWorkerVersionMetadata } = await import('../ci/merge-worker-version-metadata.mjs');
+  const servingId = id(6);
+  const recentId = id(7);
+  const enriched = mergeWorkerVersionMetadata(
+    [{ id: recentId, annotations: { 'workers/tag': '7'.repeat(40) }, metadata: { created_on: '2026-09-03T00:00:00Z' } }],
+    { result: { id: servingId, annotations: { 'workers/tag': '6'.repeat(40) }, metadata: { created_on: '2026-08-01T00:00:00Z' } } },
+  );
+  const state = parseProductionDeploymentState({ versions: [{ version_id: servingId, percentage: 100 }] }, enriched);
+  assert.deepEqual(state.reusedVersionIds, [servingId]);
+  assert.deepEqual(state.reusedSourceShas, ['6'.repeat(40)]);
+});
+
 test('reuse provenance validates every positive serving version in a split deployment', async () => {
   const { parseProductionDeploymentState } = await import('../ci/resolve-production-version-state.mjs');
   const state = parseProductionDeploymentState({ versions: [
