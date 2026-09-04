@@ -28,3 +28,10 @@ export function dependencyGraphMetadata(manifest) {
 export function dependencyGraphChanged(before, after) {
   return JSON.stringify(dependencyGraphMetadata(before)) !== JSON.stringify(dependencyGraphMetadata(after));
 }
+
+export function shouldRunLocalAudit({ changedNpmDependencyManifests = [], changedNpmLocks = [] } = {}) {
+  if (!Array.isArray(changedNpmDependencyManifests) || !Array.isArray(changedNpmLocks)) {
+    throw new TypeError('dependency review change lists must be arrays');
+  }
+  return changedNpmDependencyManifests.length > 0 || changedNpmLocks.length > 0;
+}

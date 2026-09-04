@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { dependencyGraphChanged } from './dependency-review-policy.mjs';
+import { dependencyGraphChanged, shouldRunLocalAudit } from './dependency-review-policy.mjs';
 
 const baseSha = process.env.BASE_SHA?.trim();
 const headSha = process.env.HEAD_SHA?.trim() || 'HEAD';
@@ -52,7 +52,10 @@ for (const manifest of changedNpmDependencyManifests) {
   }
 }
 
-for (const root of packageRoots) {
+const auditedPackageRoots = shouldRunLocalAudit({ changedNpmDependencyManifests, changedNpmLocks })
+  ? packageRoots
+  : [];
+for (const root of auditedPackageRoots) {
   const lockfile = path.resolve(root || '.', 'package-lock.json');
   if (!fs.existsSync(lockfile)) continue;
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -69,5 +72,5 @@ console.log(JSON.stringify({
   changedNpmManifests,
   changedNpmDependencyManifests,
   changedNpmLocks,
-  auditedPackageRoots: packageRoots,
+  auditedPackageRoots,
 }));
