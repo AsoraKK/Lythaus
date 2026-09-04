@@ -956,7 +956,12 @@ jobs:
                 compatible=true
                 break
               fi
-              echo 'Transactional email compatibility returned malformed or mismatched success evidence; failing closed.' >&2
+              if [[ "$attempt" -lt 5 ]]; then
+                echo "Transactional email compatibility returned malformed or mismatched success evidence on attempt ${attempt}; waiting for bounded deployment propagation before retrying." >&2
+                sleep "$((attempt * 2))"
+                continue
+              fi
+              echo 'Transactional email compatibility remained malformed or mismatched after bounded retries; failing closed.' >&2
               exit 1
             fi
 
