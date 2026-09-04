@@ -211,6 +211,15 @@ test('ADR-003 accepts coordinator-generated UUIDv7 acceptance runs', () => {
   assert.doesNotMatch(adr003Harness, /\[1-5\]\[0-9a-f\]\{3\}/);
 });
 
+test('candidate compatibility retries propagation mismatches before failing closed', () => {
+  const compatibilitySection = workersWorkflow.match(/Prove staged Public and Jobs transactional-email key compatibility[\s\S]*?\n      - name: Probe public candidate/)?.[0] ?? '';
+  assert.match(compatibilitySection, /malformed or mismatched success evidence on attempt/);
+  assert.match(compatibilitySection, /sleep "\$\(\(attempt \* 2\)\)"/);
+  assert.match(compatibilitySection, /continue/);
+  assert.match(compatibilitySection, /malformed or mismatched after bounded retries; failing closed/);
+  assert.match(compatibilitySection, /if \[\[ "\$attempt" -lt 5 \]\]; then[\s\S]*?continue/);
+});
+
 test('auth evidence sources stay protected and database-query compatible', () => {
   const collector = readFileSync('scripts/ci/collect-auth-acceptance-evidence.mjs', 'utf8');
   assert.match(collector, /protected_probe/);
