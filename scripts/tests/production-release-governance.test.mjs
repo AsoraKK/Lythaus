@@ -275,6 +275,21 @@ test('STANDARD_RELEASE bypasses human acceptance and reuses an unchanged Coordin
   assert.match(workersWorkflow, /Validate final production gates before activation[\s\S]*RELEASE_CLASS: \$\{\{ steps\.release_plan\.outputs\.release_class \}\}/);
 });
 
+test('candidate readiness completes before product acceptance begins', () => {
+  const publicProbe = workersWorkflow.indexOf('- name: Probe public candidate without production traffic (CANDIDATE gate)');
+  const adminProbe = workersWorkflow.indexOf('- name: Probe admin candidate without production traffic (CANDIDATE gate)');
+  const jobsProbe = workersWorkflow.indexOf('- name: Probe jobs candidate without production traffic (CANDIDATE gate)');
+  const candidateReady = workersWorkflow.indexOf('- name: Mark candidates ready after candidate probes (CANDIDATE gate)');
+  const keeper = workersWorkflow.indexOf('- name: Validate or create the exact-candidate Keeper acceptance run (PRODUCT_ACCEPTANCE gate)');
+  const acceptanceObservation = workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence');
+
+  assert.ok(publicProbe >= 0 && adminProbe > publicProbe && jobsProbe > adminProbe);
+  assert.ok(candidateReady > jobsProbe);
+  assert.ok(keeper > candidateReady);
+  assert.ok(acceptanceObservation > keeper);
+  assert.equal((workersWorkflow.match(/CANDIDATE_STATE=CANDIDATE_READY/g) ?? []).length, 1);
+});
+
 test('runtime verification does not depend on certification observer availability', () => {
   assert.doesNotMatch(publicApiRuntime, /AUTH_ACCEPTANCE_PUBLIC_API_URL|production-auth-acceptance\/observer|delivery observer/);
   assert.match(publicApiRuntime, /acceptanceContext\(request, env\)/);

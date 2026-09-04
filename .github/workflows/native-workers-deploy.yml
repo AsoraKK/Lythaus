@@ -847,24 +847,6 @@ jobs:
           if component_changed admin; then resolve_candidate admin lythaus-admin-api-development ADMIN; else reuse_production ADMIN; fi
           if component_changed jobs; then resolve_candidate jobs lythaus-jobs-development JOBS; else reuse_production JOBS; fi
           if component_changed coordinator; then resolve_candidate coordinator lythaus-auth-acceptance-coordinator-development COORDINATOR; else reuse_production COORDINATOR; fi
-          echo "CANDIDATE_STATE=CANDIDATE_READY" >> "$GITHUB_ENV"
-          node scripts/ci/transition-release-state.mjs CANDIDATE_READY
-      - name: PRODUCT_ACCEPTANCE - Mark human acceptance required
-        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
-        run: |
-          # shellcheck disable=SC2129
-          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=acceptance_state_transition_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=auth acceptance state transition failed' >> "$GITHUB_ENV"
-          node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_REQUIRED
-      - name: PRODUCT_ACCEPTANCE - Mark standard acceptance not required
-        if: steps.release_plan.outputs.release_class == 'STANDARD_RELEASE'
-        run: |
-          # shellcheck disable=SC2129
-          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=standard_acceptance_state_transition_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=standard release acceptance state transition failed' >> "$GITHUB_ENV"
-          node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_NOT_REQUIRED
       - name: Stage candidate Worker versions at zero traffic (CANDIDATE gate; changed components only)
         if: inputs.acceptance_run_id == ''
         env:
@@ -971,6 +953,101 @@ jobs:
             echo 'Transactional email compatibility remained unavailable after bounded retries; failing closed.' >&2
             exit 1
           fi
+      - name: Probe public candidate without production traffic (CANDIDATE gate)
+        if: contains(steps.release_plan.outputs.changed_components_json, '"public"') || steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+          EXPECTED_DATABASE_TARGET: main
+          EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
+          REQUIRE_BUDGET_MIGRATION: 'true'
+          HYPERDRIVE_VERIFIED_MAIN: 'true'
+          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+          PRODUCTION_WORKER_SCOPE: lythaus-public-api-development
+          PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
+          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/public-candidate-probe.json
+        run: |
+          # shellcheck disable=SC2129
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=public_candidate_runtime_probe_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Public candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
+          export PRODUCTION_WORKER_VERSION_ID="$PUBLIC_WORKER_VERSION_ID"
+          export EXPECTED_WORKER_SOURCE_SHA="$PUBLIC_WORKER_SOURCE_SHA"
+          node scripts/ci/probe-production-workers.mjs
+      - name: Probe admin candidate without production traffic (CANDIDATE gate)
+        if: contains(steps.release_plan.outputs.changed_components_json, '"admin"')
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+          EXPECTED_DATABASE_TARGET: main
+          EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
+          REQUIRE_BUDGET_MIGRATION: 'true'
+          HYPERDRIVE_VERIFIED_MAIN: 'true'
+          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+          PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
+          PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/admin-candidate-probe.json
+        run: |
+          # shellcheck disable=SC2129
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=admin_candidate_runtime_probe_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Admin candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
+          export PRODUCTION_WORKER_VERSION_ID="$ADMIN_WORKER_VERSION_ID"
+          export EXPECTED_WORKER_SOURCE_SHA="$ADMIN_WORKER_SOURCE_SHA"
+          node scripts/ci/probe-production-workers.mjs
+      - name: Probe jobs candidate without production traffic (CANDIDATE gate)
+        if: contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
+          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+          EXPECTED_DATABASE_TARGET: main
+          EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
+          REQUIRE_BUDGET_MIGRATION: 'true'
+          HYPERDRIVE_VERIFIED_MAIN: 'true'
+          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+          PRODUCTION_WORKER_SCOPE: lythaus-jobs-development
+          PRODUCTION_JOBS_API_BASE_URL: ${{ vars.PRODUCTION_JOBS_API_BASE_URL }}
+          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/jobs-candidate-probe.json
+        run: |
+          # shellcheck disable=SC2129
+          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=jobs_candidate_compatibility_probe_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=Jobs candidate readiness or runtime compatibility probe failed' >> "$GITHUB_ENV"
+          export PRODUCTION_WORKER_VERSION_ID="$JOBS_WORKER_VERSION_ID"
+          export EXPECTED_WORKER_SOURCE_SHA="$JOBS_WORKER_SOURCE_SHA"
+          node scripts/ci/probe-production-workers.mjs
+      - name: Mark candidates ready after candidate probes (CANDIDATE gate)
+        run: |
+          # shellcheck disable=SC2129
+          echo "CANDIDATE_STATE=CANDIDATE_READY" >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs CANDIDATE_READY
+      - name: PRODUCT_ACCEPTANCE - Mark human acceptance required
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
+        run: |
+          # shellcheck disable=SC2129
+          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=acceptance_state_transition_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=auth acceptance state transition failed' >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_REQUIRED
+      - name: PRODUCT_ACCEPTANCE - Mark standard acceptance not required
+        if: steps.release_plan.outputs.release_class == 'STANDARD_RELEASE'
+        run: |
+          # shellcheck disable=SC2129
+          echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_CODE=standard_acceptance_state_transition_failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=standard release acceptance state transition failed' >> "$GITHUB_ENV"
+          node scripts/ci/transition-release-state.mjs PRODUCT_ACCEPTANCE_NOT_REQUIRED
       - name: Validate or create the exact-candidate Keeper acceptance run (PRODUCT_ACCEPTANCE gate)
         if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
         env:
@@ -1115,80 +1192,6 @@ jobs:
             echo "Keeper URL (Cloudflare Access required): $keeper_url"
             echo "Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with \`acceptance_run_id\`."
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Probe public candidate without production traffic (CANDIDATE gate)
-        if: contains(steps.release_plan.outputs.changed_components_json, '"public"') || steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
-          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
-          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
-          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
-          EXPECTED_DATABASE_TARGET: main
-          EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
-          REQUIRE_BUDGET_MIGRATION: 'true'
-          HYPERDRIVE_VERIFIED_MAIN: 'true'
-          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
-          PRODUCTION_WORKER_SCOPE: lythaus-public-api-development
-          PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
-          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/public-candidate-probe.json
-        run: |
-          # shellcheck disable=SC2129
-          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=public_candidate_runtime_probe_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=Public candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
-          export PRODUCTION_WORKER_VERSION_ID="$PUBLIC_WORKER_VERSION_ID"
-          export EXPECTED_WORKER_SOURCE_SHA="$PUBLIC_WORKER_SOURCE_SHA"
-          node scripts/ci/probe-production-workers.mjs
-      - name: Probe admin candidate without production traffic (CANDIDATE gate)
-        if: contains(steps.release_plan.outputs.changed_components_json, '"admin"')
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
-          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
-          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
-          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
-          EXPECTED_DATABASE_TARGET: main
-          EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
-          REQUIRE_BUDGET_MIGRATION: 'true'
-          HYPERDRIVE_VERIFIED_MAIN: 'true'
-          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
-          PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
-          PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/admin-candidate-probe.json
-        run: |
-          # shellcheck disable=SC2129
-          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=admin_candidate_runtime_probe_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=Admin candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
-          export PRODUCTION_WORKER_VERSION_ID="$ADMIN_WORKER_VERSION_ID"
-          export EXPECTED_WORKER_SOURCE_SHA="$ADMIN_WORKER_SOURCE_SHA"
-          node scripts/ci/probe-production-workers.mjs
-      - name: Probe jobs candidate without production traffic (CANDIDATE gate)
-        if: contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
-        env:
-          RELEASE_SHA: ${{ inputs.release_sha }}
-          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
-          EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
-          EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
-          EXPECTED_DATABASE_TARGET: main
-          EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
-          REQUIRE_BUDGET_MIGRATION: 'true'
-          HYPERDRIVE_VERIFIED_MAIN: 'true'
-          AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
-          PRODUCTION_WORKER_SCOPE: lythaus-jobs-development
-          PRODUCTION_JOBS_API_BASE_URL: ${{ vars.PRODUCTION_JOBS_API_BASE_URL }}
-          PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/jobs-candidate-probe.json
-        run: |
-          # shellcheck disable=SC2129
-          echo 'RELEASE_FAILURE_GATE=CANDIDATE' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=jobs_candidate_compatibility_probe_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=Jobs candidate readiness or runtime compatibility probe failed' >> "$GITHUB_ENV"
-          export PRODUCTION_WORKER_VERSION_ID="$JOBS_WORKER_VERSION_ID"
-          export EXPECTED_WORKER_SOURCE_SHA="$JOBS_WORKER_SOURCE_SHA"
-          node scripts/ci/probe-production-workers.mjs
       - name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence
         id: auth_acceptance_observation
         if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
