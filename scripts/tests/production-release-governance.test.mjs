@@ -537,8 +537,8 @@ test('always-run acceptance checks cannot overwrite an earlier gate failure', ()
   const start = workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance');
   const end = workersWorkflow.indexOf('- name: INFRASTRUCTURE - Reverify production schema before activation', start);
   const section = workersWorkflow.slice(start, end);
-  assert.match(section, /PRIOR_GATE_FAILURE: \$\{\{ failure\(\) \}\}/);
-  assert.match(section, /PRIOR_GATE_FAILURE.*true.*OBSERVER_OUTCOME.*failure/s);
+  assert.match(workersWorkflow, /id: preserve_prior_gate_failure\n\s+if: \$\{\{ failure\(\) && steps\.auth_acceptance_observation\.outcome != 'failure' \}\}/);
+  assert.match(section, /PRIOR_GATE_FAILURE:-false.*OBSERVER_OUTCOME.*failure/s);
   assert.match(workersWorkflow, /No complete rollback snapshot was proven; production was left untouched\./);
 });
 

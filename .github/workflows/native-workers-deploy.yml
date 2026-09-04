@@ -1285,15 +1285,18 @@ jobs:
           export ADR003_CANDIDATE_STAGED_AT="$ADR003_CANDIDATE_STAGED_AT"
           export ADR003_CANDIDATE_DEPENDENCIES_JSON="$AUTH_ACCEPTANCE_DEPENDENCIES_JSON"
           npm run acceptance:adr003
+      - name: PRODUCT_ACCEPTANCE - Preserve prior release gate failure
+        id: preserve_prior_gate_failure
+        if: ${{ failure() && steps.auth_acceptance_observation.outcome != 'failure' }}
+        run: echo 'PRIOR_GATE_FAILURE=true' >> "$GITHUB_ENV"
       - name: PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance
         if: always() && steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
         env:
           OBSERVER_OUTCOME: ${{ steps.auth_acceptance_observation.outcome }}
-          PRIOR_GATE_FAILURE: ${{ failure() }}
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
-          if [[ "$PRIOR_GATE_FAILURE" == "true" && "$OBSERVER_OUTCOME" != "failure" ]]; then
+          if [[ "${PRIOR_GATE_FAILURE:-false}" == "true" && "$OBSERVER_OUTCOME" != "failure" ]]; then
             exit 0
           fi
           {
