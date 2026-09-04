@@ -1183,9 +1183,9 @@ jobs:
           fi
           if [[ -z "$run_id" ]]; then
             if [[ -z "$uploaded_at" || -z "$staged_at" ]]; then
-              test -n "$PUBLIC_WORKER_CREATED_AT" && test -n "$CANDIDATE_STAGED_AT"
+              test -n "$PUBLIC_WORKER_CREATED_AT" && test -n "$ADR003_CANDIDATE_STAGED_AT"
               uploaded_at="$PUBLIC_WORKER_CREATED_AT"
-              staged_at="$CANDIDATE_STAGED_AT"
+              staged_at="$ADR003_CANDIDATE_STAGED_AT"
             fi
             test -n "$uploaded_at" && test -n "$staged_at"
             test -n "$candidate_source_sha"
