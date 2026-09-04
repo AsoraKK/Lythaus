@@ -447,6 +447,27 @@ jobs:
           npx --yes wrangler@4.123.0 versions list --name lythaus-public-api-development --json > "$RUNNER_TEMP/production-cutover/public-before-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/production-cutover/admin-before-versions.json"
           npx --yes wrangler@4.123.0 versions list --name lythaus-jobs-development --json > "$RUNNER_TEMP/production-cutover/jobs-before-versions.json"
+          enrich_worker_versions() {
+            local component="$1"
+            local worker_name="$2"
+            local deployment_path="$RUNNER_TEMP/production-cutover/${component}-before.json"
+            local listed_path="$RUNNER_TEMP/production-cutover/${component}-before-versions.json"
+            local enriched_path="${listed_path}.enriched"
+            local exact_dir="$RUNNER_TEMP/production-cutover/exact-version-metadata"
+            local exact_paths=()
+            mkdir -p "$exact_dir"
+            while IFS= read -r version_id; do
+              [[ -n "$version_id" ]] || continue
+              local exact_path="$exact_dir/${component}-${version_id}.json"
+              npx --yes wrangler@4.123.0 versions view "$version_id" --name "$worker_name" --json > "$exact_path"
+              exact_paths+=("$exact_path")
+            done < <(jq -r '.versions[] | select((.percentage | tonumber) > 0) | .version_id' "$deployment_path")
+            node scripts/ci/merge-worker-version-metadata.mjs "$listed_path" "${exact_paths[@]}" > "$enriched_path"
+            mv "$enriched_path" "$listed_path"
+          }
+          enrich_worker_versions public lythaus-public-api-development
+          enrich_worker_versions admin lythaus-admin-api-development
+          enrich_worker_versions jobs lythaus-jobs-development
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/public-before.json" unused PUBLIC
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/admin-before.json" unused ADMIN
           node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/jobs-before.json" unused JOBS
@@ -461,6 +482,7 @@ jobs:
             npx --yes wrangler@4.123.0 versions list --name lythaus-auth-acceptance-coordinator-development --json > "$RUNNER_TEMP/production-cutover/coordinator-before-versions.json"
             node scripts/ci/resolve-worker-version-state.mjs rollback "$RUNNER_TEMP/production-cutover/coordinator-before.json" unused COORDINATOR
             if jq -e --argjson changed "${CHANGED_COMPONENTS_JSON:-[]}" '$changed | index("coordinator") == null' <<< '{}' >/dev/null; then
+              enrich_worker_versions coordinator lythaus-auth-acceptance-coordinator-development
               node scripts/ci/resolve-production-version-state.mjs "$RUNNER_TEMP/production-cutover/coordinator-before.json" COORDINATOR "$RUNNER_TEMP/production-cutover/coordinator-before-versions.json"
             fi
             echo 'COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS=true' >> "$GITHUB_ENV"
@@ -475,7 +497,6 @@ jobs:
             echo 'Coordinator parent state was ambiguous; refusing to continue.' >&2
             exit 1
           fi
-          echo 'ROLLBACK_ARTIFACTS_PROVEN=true' >> "$GITHUB_ENV"
       - name: Capture predeployment same-origin admin API route
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -563,6 +584,7 @@ jobs:
           done
           jq -c '{route: .routes.adminApi}' "$snapshot" > "$RUNNER_TEMP/production-cutover/admin-api-route-before.json"
           jq -c '{route: .routes.coordinator}' "$snapshot" > "$RUNNER_TEMP/production-cutover/coordinator-route-before.json"
+          echo 'ROLLBACK_ARTIFACTS_PROVEN=true' >> "$GITHUB_ENV"
           component_changed() {
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
@@ -1267,9 +1289,13 @@ jobs:
         if: always() && steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
         env:
           OBSERVER_OUTCOME: ${{ steps.auth_acceptance_observation.outcome }}
+          PRIOR_GATE_FAILURE: ${{ failure() }}
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail
+          if [[ "$PRIOR_GATE_FAILURE" == "true" && "$OBSERVER_OUTCOME" != "failure" ]]; then
+            exit 0
+          fi
           {
             echo 'RELEASE_FAILURE_GATE=PRODUCT_ACCEPTANCE'
             echo 'RELEASE_FAILURE_CODE=certification_evidence_required'
@@ -1555,6 +1581,12 @@ jobs:
           set +e
           rollback_failed=0
           echo 'ROLLBACK_STATE=IN_PROGRESS' >> "$GITHUB_ENV"
+          if [[ "${ROLLBACK_ARTIFACTS_PROVEN:-false}" != "true" ]]; then
+            echo 'ROLLBACK_STATE=BLOCKED' >> "$GITHUB_ENV"
+            echo 'ACTIVATION_STATE=BLOCKED' >> "$GITHUB_ENV"
+            echo 'No complete rollback snapshot was proven; production was left untouched.' >&2
+            exit 0
+          fi
           if [[ "${AUTH_ACCEPTANCE_PENDING:-false}" == "true" ]]; then
             echo 'HUMAN_ACCEPTANCE_REQUIRED: preserving exact candidate Jobs/coordinator state for resume.'
             echo 'ROLLBACK_STATE=PRESERVED_FOR_ACCEPTANCE' >> "$GITHUB_ENV"

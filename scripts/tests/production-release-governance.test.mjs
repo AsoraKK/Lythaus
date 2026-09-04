@@ -527,6 +527,21 @@ test('release rollback capture preserves serving traffic beside staged candidate
   assert.match(workersWorkflow, /versions deploy \$ADMIN_ROLLBACK_SPECS "\$\{ADMIN_WORKER_VERSION_ID\}@0"/);
 });
 
+test('predeployment provenance fetches exact active versions beyond the recent list', () => {
+  assert.match(workersWorkflow, /versions view "\$version_id" --name "\$worker_name" --json/);
+  assert.match(workersWorkflow, /merge-worker-version-metadata\.mjs/);
+  assert.match(workersWorkflow, /ROLLBACK_ARTIFACTS_PROVEN=true/);
+});
+
+test('always-run acceptance checks cannot overwrite an earlier gate failure', () => {
+  const start = workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance');
+  const end = workersWorkflow.indexOf('- name: INFRASTRUCTURE - Reverify production schema before activation', start);
+  const section = workersWorkflow.slice(start, end);
+  assert.match(section, /PRIOR_GATE_FAILURE: \$\{\{ failure\(\) \}\}/);
+  assert.match(section, /PRIOR_GATE_FAILURE.*true.*OBSERVER_OUTCOME.*failure/s);
+  assert.match(workersWorkflow, /No complete rollback snapshot was proven; production was left untouched\./);
+});
+
 test('Admin-only Worker changes prepare and verify the Admin candidate secret boundary', () => {
   const uploadSegment = workersWorkflow.slice(
     workersWorkflow.indexOf('- name: Upload immutable public Worker candidate'),
