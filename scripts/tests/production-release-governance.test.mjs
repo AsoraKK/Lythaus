@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import fs from 'node:fs';
 import test from 'node:test';
 
 const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
@@ -114,8 +115,36 @@ test('release preflight uses readable Actions evidence and fail-closed fanout', 
 
   const smokeSection = workflow.match(/\n  production_smoke:[\s\S]*?\n  manifest:/)?.[0] ?? '';
   const manifestSection = workflow.match(/\n  manifest:[\s\S]*/)?.[0] ?? '';
-  assert.doesNotMatch(smokeSection, /if: always\(\)/);
-  assert.doesNotMatch(manifestSection, /if: always\(\)/);
+  assert.match(smokeSection, /if: always\(\)/);
+  assert.match(manifestSection, /if: always\(\)/);
+});
+
+test('every production deployment entrypoint remains bound to exact CI and security evidence', () => {
+  for (const source of [workersWorkflow, readFileSync('.github/workflows/deploy-marketing.yml', 'utf8'), webWorkflow, readFileSync('.github/workflows/deploy-control-panel.yml', 'utf8')]) {
+    assert.match(source, /verify-exact-release-evidence\.mjs/);
+  }
+  assert.match(workersWorkflow, /ci_run_id:/);
+  assert.match(workflow, /ci_run_id: \$\{\{ inputs\.ci_run_id \}\}/);
+  assert.match(workflow, /historical_reconciliation_run_id: \$\{\{ inputs\.historical_reconciliation_run_id \}\}/);
+});
+
+test('canonical parent reuses exact source evidence without weakening direct dispatch', () => {
+  const childWorkflows = [
+    ['marketing', readFileSync('.github/workflows/deploy-marketing.yml', 'utf8')],
+    ['alpha web', webWorkflow],
+    ['control panel', readFileSync('.github/workflows/deploy-control-panel.yml', 'utf8')],
+    ['native Workers', workersWorkflow],
+  ];
+  for (const [, source] of childWorkflows) {
+    assert.match(source, /source_evidence_verified:[\s\S]*default: false/);
+    assert.match(source, /if: .*source_evidence_verified != true/);
+    assert.match(source, /verify-exact-release-evidence\.mjs/);
+  }
+  for (const [name, source] of childWorkflows) {
+    const dispatch = source.slice(source.indexOf('workflow_dispatch:'), source.indexOf('workflow_call:'));
+    assert.doesNotMatch(dispatch, /source_evidence_verified:/, `${name} direct dispatch must not accept parent evidence`);
+  }
+  assert.match(workflow, /source_evidence_verified: true/);
 });
 
 test('the exact CI run publishes the immutable artifact consumed by production release', () => {
@@ -125,13 +154,18 @@ test('the exact CI run publishes the immutable artifact consumed by production r
   assert.match(ciWorkflow, /if-no-files-found: error/);
 });
 
-test('production browser smoke uses production acceptance credentials', () => {
+test('browser smoke is opt-in convenience and retains production credentials when requested', () => {
   assert.match(workflow, /target_environment: production/);
   assert.match(workflow, /api_base_url: https:\/\/api\.lythaus\.co\/api/);
   assert.match(webWorkflow, /deploy-and-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
+  assert.match(webWorkflow, /run_browser_smoke:[\s\S]*default: false/);
+  assert.match(webWorkflow, /security_run_ids_json:[\s\S]*default: '\{\}'/);
+  assert.match(webWorkflow, /browser-smoke:[\s\S]*if: inputs\.run_browser_smoke == true/);
   assert.match(webWorkflow, /browser-smoke:[\s\S]*environment: \$\{\{ inputs\.target_environment == 'production' && 'production'/);
   assert.match(webWorkflow, /RUNTIME_AUTH_EMAIL: \$\{\{ inputs\.target_environment == 'production' && secrets\.CODEX_TEST_EMAIL \|\| secrets\.MVP_SMOKE_EMAIL \}\}/);
   assert.match(webWorkflow, /RUNTIME_AUTH_PASSWORD: \$\{\{ inputs\.target_environment == 'production' && secrets\.CODEX_TEST_PASSWORD \|\| secrets\.MVP_SMOKE_PASSWORD \}\}/);
+  assert.doesNotMatch(workflow, /run_browser_smoke:/);
+  assert.match(workflow, /security_run_ids_json:/);
 });
 
 test('web authenticated smoke waits for Worker activation', () => {
@@ -196,11 +230,109 @@ test('canonical release creates or resumes the Keeper-bound exact candidate', ()
   assert.match(workersWorkflow, /CLOUDFLARE_ACCOUNT_ID: \$cloudflare_account_id/);
   assert.match(workersWorkflow, /AUTH_ACCEPTANCE_PENDING=true/);
   assert.match(workersWorkflow, /production-auth-acceptance\/observer/);
+  assert.match(workersWorkflow, /Existing acceptance run lacks exact candidate dependency provenance; creating a fresh run/);
   assert.match(workersWorkflow, /\.status == "completed"/);
   assert.match(workersWorkflow, /JOBS_WORKER_VERSION_ID\}@100/);
   assert.match(workersWorkflow, /CF-Access-Client-Id/);
   assert.match(productionWorkflow, /acceptance_run_id/);
-  assert.match(productionWorkflow, /authenticated_acceptance_proven == 'true'/);
+  assert.match(productionWorkflow, /force_auth_critical/);
+  assert.match(productionWorkflow, /changed_components_json/);
+  assert.doesNotMatch(productionWorkflow, /authenticated_acceptance_proven == 'true'/);
+});
+
+test('STANDARD_RELEASE bypasses human acceptance and reuses an unchanged Coordinator', () => {
+  const acceptanceSteps = [
+    'Validate or create the exact-candidate Keeper acceptance run (PRODUCT_ACCEPTANCE gate)',
+    'PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence',
+    'PRODUCT_ACCEPTANCE - Run authenticated acceptance against public candidate',
+    'PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance',
+  ];
+  for (const name of acceptanceSteps) {
+    const start = workersWorkflow.indexOf(`- name: ${name}`);
+    const end = workersWorkflow.indexOf('\n      - name:', start + 1);
+    const section = workersWorkflow.slice(start, end === -1 ? undefined : end);
+    assert.ok(start >= 0, `${name} must remain in the certification plane`);
+    assert.match(section, /if:[^\n]*steps\.release_plan\.outputs\.release_class == 'AUTH_CRITICAL_RELEASE'/);
+  }
+  assert.match(workersWorkflow, /- name: PRODUCT_ACCEPTANCE - Mark standard acceptance not required\n\s+if: steps\.release_plan\.outputs\.release_class == 'STANDARD_RELEASE'/);
+  assert.match(workersWorkflow, /if component_changed coordinator; then upload_candidate/);
+  assert.match(workersWorkflow, /if component_changed coordinator; then list_coordinator_secrets/);
+  assert.match(workersWorkflow, /if component_changed coordinator; then echo "COORDINATOR_WORKER_STATUS=ACTIVATED"/);
+  assert.match(workersWorkflow, /SKIP_ACCEPTANCE_COORDINATOR="\$\(if component_changed coordinator; then echo false; else echo true; fi\)"/);
+  assert.match(workersWorkflow, /Reverify scoped secret evidence for acceptance resume/);
+  assert.match(workersWorkflow, /write-scoped-worker-secret-evidence\.mjs/);
+  assert.match(workersWorkflow, /acceptance rollback snapshot/i);
+  assert.match(workersWorkflow, /COORDINATOR_WORKER_DEPLOYED=true/);
+  assert.match(workersWorkflow, /\$RUNNER_TEMP\/production-cutover\/\$\{component\}-before\.json/);
+  const preservedSnapshot = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: Preserve exact acceptance rollback snapshot across human windows'),
+    workersWorkflow.indexOf('- name: Reverify scoped secret evidence for acceptance resume'),
+  );
+  assert.match(preservedSnapshot, /component_changed\(\)/);
+  assert.match(preservedSnapshot, /JOBS_WORKER_DEPLOYED=true/);
+  assert.match(preservedSnapshot, /COORDINATOR_WORKER_DEPLOYED=true/);
+  assert.doesNotMatch(preservedSnapshot, /candidate_dependencies/);
+  assert.match(workersWorkflow, /Validate final production gates before activation[\s\S]*RELEASE_CLASS: \$\{\{ steps\.release_plan\.outputs\.release_class \}\}/);
+});
+
+test('candidate readiness completes before product acceptance begins', () => {
+  const publicProbe = workersWorkflow.indexOf('- name: Probe public candidate without production traffic (CANDIDATE gate)');
+  const adminProbe = workersWorkflow.indexOf('- name: Probe admin candidate without production traffic (CANDIDATE gate)');
+  const jobsProbe = workersWorkflow.indexOf('- name: Probe jobs candidate without production traffic (CANDIDATE gate)');
+  const candidateReady = workersWorkflow.indexOf('- name: Mark candidates ready after candidate probes (CANDIDATE gate)');
+  const keeper = workersWorkflow.indexOf('- name: Validate or create the exact-candidate Keeper acceptance run (PRODUCT_ACCEPTANCE gate)');
+  const acceptanceObservation = workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence');
+
+  assert.ok(publicProbe >= 0 && adminProbe > publicProbe && jobsProbe > adminProbe);
+  assert.ok(candidateReady > jobsProbe);
+  assert.ok(keeper > candidateReady);
+  assert.ok(acceptanceObservation > keeper);
+  assert.equal((workersWorkflow.match(/CANDIDATE_STATE=CANDIDATE_READY/g) ?? []).length, 1);
+});
+
+test('runtime verification does not depend on certification observer availability', () => {
+  assert.doesNotMatch(publicApiRuntime, /AUTH_ACCEPTANCE_PUBLIC_API_URL|production-auth-acceptance\/observer|delivery observer/);
+  assert.match(publicApiRuntime, /acceptanceContext\(request, env\)/);
+  assert.match(publicApiRuntime, /expires_at > now\(\)/);
+});
+
+test('canonical manifest finalizes VERIFIED or BLOCKED after production smoke', () => {
+  assert.match(workflow, /- name: Finalize post-activation release state\n\s+id: verified_state\n\s+if: always\(\)/);
+  assert.match(workflow, /resolve-release-failure-domain\.mjs/);
+  assert.match(workflow, /transition-release-state\.mjs VERIFIED/);
+  assert.match(workflow, /transition-release-state\.mjs BLOCKED/);
+  assert.match(workflow, /RELEASE_STATE_HISTORY_JSON: \$\{\{ steps\.verified_state\.outputs\.history_json \|\| '\[\]' \}\}/);
+});
+
+test('canonical manifest retains the exact deterministic release plan provenance', () => {
+  assert.match(workflow, /changed_files_json: \$\{\{ steps\.release_plan\.outputs\.changed_files_json \}\}/);
+  assert.match(workflow, /PREVIOUS_PRODUCTION_SHA: \$\{\{ inputs\.previous_production_sha \}\}/);
+  assert.match(workflow, /classification_rules_version: \$\{\{ steps\.release_plan\.outputs\.classification_rules_version \}\}/);
+  assert.match(workflow, /CHANGED_FILES_JSON: \$\{\{ needs\.preflight\.outputs\.changed_files_json \}\}/);
+  assert.match(workflow, /RELEASE_CLASSIFICATION_RULES_VERSION: \$\{\{ needs\.preflight\.outputs\.classification_rules_version \}\}/);
+  assert.match(workflow, /FORCE_AUTH_CRITICAL: \$\{\{ needs\.preflight\.outputs\.force_auth_critical \}\}/);
+});
+
+test('the canonical v2 manifest has no competing push-triggered manifest workflow', () => {
+  assert.equal(fs.existsSync('.github/workflows/release-manifest.yml'), false);
+  assert.match(workflow, /build-release-manifest\.mjs/);
+});
+
+test('failed or paused Worker releases still export exact candidate metadata', () => {
+  const rollback = workersWorkflow.indexOf('- name: Roll back partial Worker deployment on failure');
+  const metadata = workersWorkflow.indexOf('- name: Export candidate, reuse, and final activation metadata');
+  assert.ok(metadata > rollback, 'final metadata must be collected after rollback/failure handling');
+  assert.match(workersWorkflow.slice(metadata), /id: release_metadata\n\s+if: always\(\)/);
+  assert.match(workersWorkflow.slice(metadata), /acceptance_run_id=\$\{AUTH_ACCEPTANCE_RUN_ID:-\}/);
+  assert.match(workersWorkflow.slice(metadata), /acceptance_dependencies_json=\$\{AUTH_ACCEPTANCE_DEPENDENCIES_JSON:-\}/);
+  assert.match(workersWorkflow.slice(metadata), /failure_domain_evidence_json=\$\{FAILURE_DOMAIN_EVIDENCE_JSON:-\[\]\}/);
+  assert.match(workersWorkflow.slice(metadata), /rollback_state=\$\{ROLLBACK_STATE:-READY\}/);
+});
+
+test('cancelled Worker releases enter failure classification and rollback', () => {
+  const failure = workersWorkflow.slice(workersWorkflow.indexOf('- name: Classify release failure domain'), workersWorkflow.indexOf('- name: Export candidate, reuse, and final activation metadata'));
+  const cancellationGuards = failure.match(/if: \$\{\{ always\(\) && \(failure\(\) \|\| cancelled\(\)\) \}\}/g) ?? [];
+  assert.equal(cancellationGuards.length, 2);
 });
 
 test('coordinator secret inventory waits for parent propagation and fails closed', () => {
@@ -239,7 +371,7 @@ test('ADR-003 routes root-scoped readiness separately from public API routes', (
 });
 
 test('candidate ADR-003 acceptance normalizes the protected production API base', () => {
-  const candidateAcceptance = workersWorkflow.match(/- name: Run authenticated acceptance against public candidate[\s\S]*?npm run acceptance:adr003/)?.[0] ?? '';
+  const candidateAcceptance = workersWorkflow.match(/- name: .*Run authenticated acceptance against public candidate[\s\S]*?npm run acceptance:adr003/)?.[0] ?? '';
   assert.match(candidateAcceptance, /ADR003_DATABASE_READINESS_EVIDENCE_PATH: \$\{\{ runner\.temp \}\}\/production-cutover\/public-candidate-probe\.json/);
   assert.match(candidateAcceptance, /api_base="\$\{ADR003_API_BASE_URL%\//);
   assert.match(candidateAcceptance, /api_base="\$api_base\/api"/);
@@ -331,24 +463,24 @@ test('staged transactional-email compatibility probe retries transient failures 
   assert.match(probe, /remained unavailable after bounded retries; failing closed/);
   assert.match(probe, /\.publicWorkerVersionId == \$public/);
   assert.match(probe, /\.jobsWorkerVersionId == \$jobs/);
-  assert.match(probe, /\.publicReleaseTag == \$sha/);
-  assert.match(probe, /\.jobsReleaseTag == \$sha/);
+  assert.match(probe, /\.publicReleaseTag == \$public_sha/);
+  assert.match(probe, /\.jobsReleaseTag == \$jobs_sha/);
   assert.match(probe, /lythaus-jobs-development=\\\"\$\{JOBS_WORKER_VERSION_ID\}\\\"/);
   assert.doesNotMatch(probe, /curl --fail/);
 });
 
 test('coordinator parent bootstrap is ordered before inventory and activation', () => {
-  const providerPreflight = workersWorkflow.indexOf('Verify production schema read-only');
-  const parentEnsure = workersWorkflow.indexOf('node scripts/ci/ensure-cloudflare-worker-parent.mjs\n          list_coordinator_secrets "$coordinator_secret_inventory"');
+  const infrastructureCapture = workersWorkflow.indexOf('Capture predeployment Worker state');
+  const parentEnsure = workersWorkflow.indexOf('node scripts/ci/ensure-cloudflare-worker-parent.mjs --check-only');
   const coordinatorInventory = workersWorkflow.indexOf('list_coordinator_secrets "$coordinator_secret_inventory"', parentEnsure);
   const candidateUpload = workersWorkflow.indexOf('versions upload --config "$config" --tag "$RELEASE_SHA"');
   const coordinatorActivation = workersWorkflow.indexOf('versions deploy "${COORDINATOR_WORKER_VERSION_ID}@100"');
   const keeperAcceptance = workersWorkflow.indexOf('Validate or create the exact-candidate Keeper acceptance run');
   const productionActivation = workersWorkflow.indexOf('Activate exact candidate Worker versions');
 
-  assert.ok(providerPreflight >= 0);
-  assert.ok(parentEnsure > providerPreflight);
-  assert.ok(coordinatorInventory > parentEnsure && coordinatorInventory < parentEnsure + 300);
+  assert.ok(infrastructureCapture >= 0);
+  assert.ok(parentEnsure > infrastructureCapture);
+  assert.ok(coordinatorInventory > parentEnsure && coordinatorInventory < candidateUpload);
   assert.match(workersWorkflow, /node scripts\/ci\/ensure-cloudflare-worker-parent\.mjs\n\s+list_coordinator_secrets "\$coordinator_secret_inventory"/);
   assert.ok(candidateUpload > coordinatorInventory);
   assert.ok(coordinatorActivation > candidateUpload);
@@ -360,12 +492,17 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.match(workersWorkflow, /COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS/);
   assert.match(workersWorkflow, /COORDINATOR_ROUTE_TRIGGER_ATTEMPTED/);
   assert.match(workersWorkflow, /coordinator-route-before\.json/);
+  assert.match(workersWorkflow, /prepare-acceptance-rollback-snapshot\.mjs/);
+  assert.match(workersWorkflow, /from-run/);
+  assert.match(workersWorkflow, /ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH/);
+  assert.match(workersWorkflow, /refusing to resume it/);
   const rollback = workersWorkflow.slice(workersWorkflow.indexOf('- name: Roll back partial Worker deployment on failure'));
   assert.ok(rollback.indexOf('AUTH_ACCEPTANCE_PENDING') < rollback.indexOf('COORDINATOR_ROUTE_TRIGGER_ATTEMPTED'));
   assert.match(rollback, /COORDINATOR_ROLLBACK_SPECS/);
   assert.match(rollback, /retaining the harmless parent\/version/);
   assert.match(rollback, /versions deploy \$COORDINATOR_ROLLBACK_SPECS/);
-  assert.match(workersWorkflow, /Resolve the existing exact-candidate Worker versions for resume[\s\S]*coordinator-versions\.json/);
+  assert.match(workersWorkflow, /Capture predeployment Worker state[\s\S]*coordinator-before-versions\.json/);
+  assert.match(workersWorkflow, /Resolve changed candidates and reused production versions \(CANDIDATE gate\)/);
 });
 
 test('release rollback capture preserves serving traffic beside staged candidates', () => {
@@ -390,11 +527,46 @@ test('release rollback capture preserves serving traffic beside staged candidate
   assert.match(workersWorkflow, /versions deploy \$ADMIN_ROLLBACK_SPECS "\$\{ADMIN_WORKER_VERSION_ID\}@0"/);
 });
 
+test('Admin-only Worker changes prepare and verify the Admin candidate secret boundary', () => {
+  const uploadSegment = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: Upload immutable public Worker candidate'),
+    workersWorkflow.indexOf('- name: Resolve changed candidates and reused production versions'),
+  );
+  assert.match(uploadSegment, /if component_changed public \|\| component_changed admin \|\| component_changed jobs \|\| component_changed coordinator/);
+  assert.match(uploadSegment, /if component_changed admin; then upload_candidate apps\/lythaus-admin-api\/wrangler\.jsonc/);
+  assert.match(uploadSegment, /verify-scoped-worker-secret-bindings\.mjs/);
+  assert.match(workersWorkflow, /if component_changed public \|\| component_changed jobs \|\| component_changed coordinator; then\n\s+test -s "\$scoped_key_evidence"/);
+  assert.match(workersWorkflow, /if component_changed public \|\| component_changed admin \|\| component_changed jobs \|\| component_changed coordinator; then\n\s+test -s "\$scoped_binding_evidence"/);
+  assert.match(workersWorkflow, /inputs\.acceptance_run_id != ''.*contains\(steps\.release_plan\.outputs\.changed_components_json, '\"admin\"'\)/s);
+});
+
+test('parent rollback restores only changed components after downstream failure', () => {
+  const rollback = workflow.match(/\n  rollback:[\s\S]*?\n  manifest:/)?.[0] ?? '';
+  assert.match(rollback, /needs: \[preflight, provider_evidence, marketing, web, admin, workers, production_smoke\]/);
+  assert.match(rollback, /needs\.workers\.result == 'success'/);
+  assert.match(rollback, /Download exact predeployment rollback snapshots/);
+  assert.match(rollback, /rollback-pages-deployment\.mjs/);
+  assert.match(rollback, /PAGES_PRODUCTION_STATE_JSON/);
+  for (const component of ['public', 'admin', 'jobs', 'coordinator']) {
+    assert.match(rollback, new RegExp(`if component_changed ${component}; then`));
+  }
+  for (const component of ['marketing', 'flutter-web', 'control-panel']) {
+    assert.match(rollback, new RegExp(`if component_changed ${component} && \\[\\[`));
+  }
+  assert.match(rollback, /local expected_branch="\$3"/);
+  assert.match(rollback, /restore_page flutter-web lythaus-web .*needs\.preflight\.outputs\.web_pages_branch/);
+  assert.match(rollback, /ROLLBACK_FAILED=/);
+  assert.match(rollback, /component_rollback_failed/);
+  assert.match(workflow, /ROLLBACK_RESULT: \$\{\{ needs\.rollback\.result \}\}/);
+  assert.match(workflow, /rollback_components_json: \$\{\{ steps\.rollback_finalize\.outputs\.rollback_components_json \}\}/);
+});
+
 test('protected coordinator requests retry transient access rejection and fail closed', () => {
   assert.match(workersWorkflow, /base='https:\/\/admin\.lythaus\.co\/api\/admin\/production-auth-acceptance'\n\s+coordinator_response_file="\$RUNNER_TEMP\/production-cutover\/coordinator-request\.json"/);
   assert.match(workersWorkflow, /-H "x-lythaus-readiness-token: \$\{DATABASE_READINESS_TOKEN\}"/);
   assert.match(workersWorkflow, /coordinator_request\(\) \{[\s\S]*?case "\$status" in[\s\S]*?401\)[\s\S]*?sleep "\$attempt"[\s\S]*?Protected coordinator request failed with HTTP/);
   assert.match(workersWorkflow, /run_json="\$\(coordinator_request GET "\$base\/runs\/\$EXISTING_ACCEPTANCE_RUN_ID"\)"/);
+  assert.match(workersWorkflow, /EXISTING_ACCEPTANCE_RUN_ID.*\[1-8\]/);
   assert.match(workersWorkflow, /run_json="\$\(coordinator_request POST "\$base\/runs" "\$payload"\)"/);
   assert.doesNotMatch(workersWorkflow, /run_json="\$\(curl --fail[\s\S]*production-auth-acceptance/);
 });
@@ -416,9 +588,13 @@ test('admin candidate probe authenticates the Access-protected API route', () =>
   const probe = readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8');
   assert.match(probe, /CF-Access-Client-Id/);
   assert.match(probe, /CF-Access-Client-Secret/);
-  const adminProbe = workersWorkflow.match(/- name: Probe admin candidate[\s\S]*?run: node scripts\/ci\/probe-production-workers\.mjs/)?.[0] ?? '';
+  const adminProbeStart = workersWorkflow.indexOf('- name: Probe admin candidate');
+  const adminProbeEnd = workersWorkflow.indexOf('\n      - name:', adminProbeStart + 1);
+  const adminProbe = workersWorkflow.slice(adminProbeStart, adminProbeEnd === -1 ? undefined : adminProbeEnd);
   assert.match(adminProbe, /CF_ACCESS_CLIENT_ID: \$\{\{ secrets\.CF_ACCESS_CLIENT_ID \}\}/);
   assert.match(adminProbe, /CF_ACCESS_CLIENT_SECRET: \$\{\{ secrets\.CF_ACCESS_CLIENT_SECRET \}\}/);
+  assert.match(adminProbe, /export PRODUCTION_WORKER_VERSION_ID="\$ADMIN_WORKER_VERSION_ID"/);
+  assert.match(adminProbe, /node scripts\/ci\/probe-production-workers\.mjs/);
 });
 
 test('production smoke authenticates the Access-protected admin API health check', () => {

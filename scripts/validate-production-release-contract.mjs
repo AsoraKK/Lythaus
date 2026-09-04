@@ -25,6 +25,22 @@ const authAcceptanceCollector = path.join(root, 'scripts', 'ci', 'collect-auth-a
 if (!fs.existsSync(authAcceptanceCollector)) {
   failures.push('auth acceptance collector is missing');
 }
+for (const file of [
+  path.join(root, 'scripts', 'release', 'release-classification.mjs'),
+  path.join(root, 'scripts', 'release', 'component-deployment-plan.mjs'),
+  path.join(root, 'scripts', 'release', 'failure-domains.mjs'),
+  path.join(root, 'scripts', 'ci', 'resolve-release-plan.mjs'),
+  path.join(root, 'scripts', 'ci', 'resolve-production-version-state.mjs'),
+  path.join(root, 'scripts', 'ci', 'transition-release-state.mjs'),
+  path.join(root, 'scripts', 'ci', 'write-failure-domain-evidence.mjs'),
+  path.join(root, 'scripts', 'ci', 'resolve-release-failure-domain.mjs'),
+  path.join(root, 'scripts', 'ci', 'verify-exact-release-evidence.mjs'),
+  path.join(root, 'scripts', 'ci', 'prepare-acceptance-rollback-snapshot.mjs'),
+  path.join(root, 'scripts', 'ci', 'write-scoped-worker-secret-evidence.mjs'),
+  path.join(root, 'scripts', 'release', 'acceptance-rollback-snapshot.mjs'),
+]) {
+  if (!fs.existsSync(file)) failures.push(`missing deterministic release control: ${path.relative(root, file)}`);
+}
 
 for (const name of deploymentWorkflows) {
   const source = readWorkflow(name);
@@ -36,6 +52,12 @@ for (const name of deploymentWorkflows) {
   if (!source.includes('wrangler@4.123.0')) failures.push(`${name}: Wrangler 4.123.0 pin is missing`);
   if (name !== 'native-workers-deploy.yml' && !source.includes('ref: ${{ inputs.release_sha }}')) {
     failures.push(`${name}: checkout does not use release_sha`);
+  }
+  if (!source.includes('verify-exact-release-evidence.mjs')) {
+    failures.push(`${name}: exact CI/security evidence guard is missing`);
+  }
+  if (!source.includes('source_evidence_verified')) {
+    failures.push(`${name}: parent-verified source evidence switch is missing`);
   }
   if (name !== 'native-workers-deploy.yml' && !source.includes('verify-pages-deployment.mjs')) {
     failures.push(`${name}: actual Pages deployment evidence is missing`);
@@ -49,7 +71,7 @@ if (canonical) {
       failures.push(`production-release.yml: missing ${name} child workflow`);
     }
   }
-  for (const required of ['confirm_production', 'ci_run_id', 'previous_production_sha', 'origin/main', '.conclusion', 'success']) {
+  for (const required of ['confirm_production', 'ci_run_id', 'previous_production_sha', 'force_auth_critical', 'resolve-release-plan.mjs', 'changed_components_json', 'reused_components_json', 'origin/main', '.conclusion', 'success']) {
     if (!canonical.includes(required)) failures.push(`production-release.yml: missing ${required} gate`);
   }
   for (const required of ['provider_evidence', 'CLOUDFLARE_INVENTORY_STATUS', 'PLANETSCALE_INVENTORY_STATUS', 'MARKETING_DEPLOYMENT_ID', 'WEB_DEPLOYMENT_ID', 'ADMIN_DEPLOYMENT_ID']) {
@@ -67,6 +89,7 @@ if (canonical) {
     'database_identity_verified',
     'budget_enforcement_verified',
     'authenticated_acceptance_proven',
+    'rollback_state',
   ]) {
     if (!canonical.includes(`needs.workers.outputs.${evidenceOutput}`)) {
       failures.push(`production-release.yml: provider evidence must come from workers.${evidenceOutput}`);
@@ -87,6 +110,17 @@ if (canonical) {
   if (canonical.includes('UNAVAILABLE_BY_PLAN')) {
     failures.push('production-release.yml: stale unavailable-by-plan metadata remains');
   }
+  for (const required of [
+    'source_evidence_verified: true',
+    'deployment_class: production',
+    'target_environment: production',
+  ]) {
+    if (!canonical.includes(required)) failures.push(`production-release.yml: missing safe parent evidence reuse ${required}`);
+  }
+  if (/^\s{6}release_class:/m.test(dispatchHeader)) failures.push('production-release.yml: release class must be computed, not supplied as a free-form input');
+  if (!canonical.includes('contains(needs.preflight.outputs.changed_components_json')) failures.push('production-release.yml: unchanged Pages components are not selectively reused');
+  if (canonical.includes("authenticated_acceptance_proven == 'true'")) failures.push('production-release.yml: standard fanout is still coupled to authenticated acceptance');
+  if (!canonical.includes('if: always()')) failures.push('production-release.yml: skipped unchanged components cannot reach production smoke/manifest');
 }
 
 const nativeWorkers = readWorkflow('native-workers-deploy.yml');
@@ -123,6 +157,46 @@ for (const [name, source] of [['native-workers-deploy.yml', nativeWorkers], ['na
   }
   if (source.includes('real_email_evidence_json') || source.includes('ADR003_REAL_EMAIL_EVIDENCE_JSON')) {
     failures.push(`${name}: manual auth evidence input remains`);
+  }
+}
+if (nativeWorkers) {
+  for (const required of [
+    'SOURCE - Resolve deterministic release class and component plan',
+    'Upload immutable public Worker candidate',
+    'Resolve changed candidates and reused production versions',
+    'Activate exact candidate Worker versions',
+    'component_changed()',
+    'REUSED_KNOWN_GOOD_PRODUCTION_VERSION',
+    'BUILT_FROM_RELEASE_SHA',
+    'zero traffic',
+    "steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'",
+    "steps.release_plan.outputs.release_class == 'STANDARD_RELEASE'",
+    'NOT_REQUIRED',
+    'transition-release-state.mjs',
+    'PRODUCT_ACCEPTANCE_REQUIRED',
+    'PRODUCT_ACCEPTANCE_PASSED',
+    'ROLLED_BACK',
+    'write-failure-domain-evidence.mjs',
+    'prepare-acceptance-rollback-snapshot.mjs',
+    'write-scoped-worker-secret-evidence.mjs',
+    'ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH',
+  ]) {
+    if (!nativeWorkers.includes(required)) failures.push(`native-workers-deploy.yml: missing simplified release control ${required}`);
+  }
+  if (nativeWorkers.includes('triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc') && !nativeWorkers.includes('if component_changed coordinator')) {
+    failures.push('native-workers-deploy.yml: coordinator route deployment is not component-scoped');
+  }
+  if (!nativeWorkers.includes('if component_changed coordinator; then list_coordinator_secrets')) {
+    failures.push('native-workers-deploy.yml: unchanged Coordinator secret inventory is not reused');
+  }
+  if (!nativeWorkers.includes('if component_changed coordinator; then upload_candidate')) {
+    failures.push('native-workers-deploy.yml: Coordinator candidate upload is not component-scoped');
+  }
+  if (!nativeWorkers.includes('AUTH_ACCEPTANCE_DEPENDENCIES_JSON')) {
+    failures.push('native-workers-deploy.yml: exact acceptance dependency provenance is missing');
+  }
+  if (!nativeWorkers.includes('RELEASE_FAILURE_CODE=') || !nativeWorkers.includes('write-failure-domain-evidence.mjs')) {
+    failures.push('native-workers-deploy.yml: explicit failure-domain evidence is missing');
   }
 }
 if (fs.existsSync(authAcceptanceCollector)) {

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 const [inputPath, expectedTag, variablePrefix] = process.argv.slice(2);
 const githubEnv = process.env.GITHUB_ENV ?? '';
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 if (!inputPath || !/^[0-9a-f]{40}$/.test(expectedTag ?? '') || !/^[A-Z][A-Z0-9_]*$/.test(variablePrefix ?? '')) {
   throw new Error('usage: resolve-latest-worker-version.mjs <versions.json> <release-sha> <VARIABLE_PREFIX>');

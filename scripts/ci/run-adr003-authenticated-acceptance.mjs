@@ -17,6 +17,10 @@ const expected = {
 const hyperdriveVerifiedMain = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true';
 const candidateWorkerName = process.env.ADR003_WORKER_NAME?.trim() ?? '';
 const candidateWorkerVersionId = process.env.ADR003_WORKER_VERSION_ID?.trim() ?? '';
+const candidateSourceSha = process.env.ADR003_CANDIDATE_SOURCE_SHA?.trim() || process.env.RELEASE_SHA?.trim() || '';
+const candidateDependencies = process.env.ADR003_CANDIDATE_DEPENDENCIES_JSON
+  ? JSON.parse(process.env.ADR003_CANDIDATE_DEPENDENCIES_JSON)
+  : undefined;
 const acceptanceRunId = process.env.ADR003_ACCEPTANCE_RUN_ID?.trim() ?? '';
 const candidateReadinessEvidencePath = process.env.ADR003_DATABASE_READINESS_EVIDENCE_PATH?.trim() ?? '';
 const authAcceptanceEvidencePath = process.env.ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH?.trim() ?? '';
@@ -119,6 +123,8 @@ function authAcceptanceEvidence() {
   const expectedCandidate = {
     workerName: candidateWorkerName,
     workerVersionId: candidateWorkerVersionId,
+    sourceReleaseSha: candidateSourceSha,
+    ...(candidateDependencies ? { candidateDependencies } : {}),
     ...(process.env.ADR003_CANDIDATE_UPLOADED_AT ? { uploadedAt: process.env.ADR003_CANDIDATE_UPLOADED_AT } : {}),
     ...(process.env.ADR003_CANDIDATE_STAGED_AT ? { stagedAt: process.env.ADR003_CANDIDATE_STAGED_AT } : {}),
   };
@@ -162,7 +168,7 @@ function candidateReadinessEvidence() {
     : undefined;
   expect(worker && typeof worker === 'object', 'candidate_readiness_worker_missing');
   expect(worker.workerVersionId === candidateWorkerVersionId, 'candidate_readiness_worker_version_mismatch');
-  expect(worker.releaseTag === releaseSha, 'candidate_readiness_worker_release_mismatch');
+  expect(worker.releaseTag === candidateSourceSha, 'candidate_readiness_worker_release_mismatch');
   expect(worker.branchFingerprint === 'main', 'candidate_readiness_worker_branch_mismatch');
   expect(worker.schemaFingerprint === expected.schemaFingerprint, 'candidate_readiness_worker_schema_fingerprint_mismatch');
   expect(worker.relationCount === expected.relationCount, 'candidate_readiness_worker_relation_count_mismatch');
@@ -269,7 +275,7 @@ async function writeEvidence(databaseReport) {
     releaseSha,
     githubActionsRunId: process.env.GITHUB_RUN_ID ?? 'local',
     candidateWorker: candidateWorkerName && candidateWorkerVersionId
-      ? { name: candidateWorkerName, versionId: candidateWorkerVersionId }
+      ? { name: candidateWorkerName, versionId: candidateWorkerVersionId, sourceReleaseSha: candidateSourceSha }
       : { status: 'not_provided' },
     database: databaseReport,
     workerVersions: parseSanitizedJson(process.env.ADR003_WORKER_VERSIONS_JSON, 'workerVersions'),

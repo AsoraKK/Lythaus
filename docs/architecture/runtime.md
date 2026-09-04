@@ -22,3 +22,21 @@ Production releases are coordinated by `.github/workflows/production-release.yml
 from one reviewed main SHA. The generated release manifest is the cross-provider
 record; it must remain blocked when Cloudflare inventory or deployment evidence
 is unavailable.
+
+## Authentication and certification boundary
+
+Runtime authentication and release certification are separate planes. A real
+user depends only on Turnstile, the Public API, PlanetScale auth/session/
+challenge state, the transactional outbox, Jobs, and Cloudflare Email. The
+protected Coordinator, Keeper, browser/Gmail convenience automation, and
+delivery observer provide release evidence only; they are never required for a
+valid runtime verification challenge to be consumed.
+
+The canonical release has five conceptual gates: `SOURCE`,
+`INFRASTRUCTURE`, `CANDIDATE`, `PRODUCT_ACCEPTANCE`, and `ACTIVATION`.
+`STANDARD_RELEASE` runs automated readiness and production smoke without a
+human auth ceremony. `AUTH_CRITICAL_RELEASE` additionally runs the existing
+real Turnstile/email/signup/verification/replay/login/resend/reset/session
+revocation acceptance. See
+`docs/architecture/adr-004-release-certification-separation.md` and
+`docs/runbooks/production-auth-release-simplified.md`.

@@ -7,10 +7,13 @@ const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const phaseIndex = process.argv.indexOf('--phase');
 const phase = phaseIndex === -1 ? null : process.argv[phaseIndex + 1];
 const expectedSha = process.env.RELEASE_SHA ?? '';
+const releaseClass = process.env.RELEASE_CLASS ?? 'AUTH_CRITICAL_RELEASE';
+const authCritical = releaseClass === 'AUTH_CRITICAL_RELEASE';
 const allowedStatuses = new Set(['COMPLETED', 'REQUIRED', 'BLOCKED']);
 const failures = [];
 
 if (manifest.schemaVersion !== 'lythaus-production-gates-v3') failures.push('unsupported production gate manifest schema');
+if (!['STANDARD_RELEASE', 'AUTH_CRITICAL_RELEASE'].includes(releaseClass)) failures.push('RELEASE_CLASS must be STANDARD_RELEASE or AUTH_CRITICAL_RELEASE');
 if (manifest.releaseSha !== null && (typeof manifest.releaseSha !== 'string' || !/^[0-9a-f]{40}$/.test(manifest.releaseSha))) failures.push('releaseSha must be null before merge or a full 40-character commit SHA');
 if (manifest.releaseShaPolicy !== 'workflow input must equal the checked-out merged main SHA') failures.push('releaseShaPolicy must require the merged main checkout');
 if (typeof manifest.estimatedIncrementalCostUsd !== 'number' || manifest.estimatedIncrementalCostUsd < 0) failures.push('estimatedIncrementalCostUsd must be a non-negative number');
@@ -50,9 +53,11 @@ if (phase === 'final') {
   for (const [gateName, record] of Object.entries(manifest.gates?.final ?? {})) {
     if (record.status === 'BLOCKED') failures.push(`final.${gateName} is BLOCKED`);
   }
-  for (const evidenceVariable of ['HYPERDRIVE_VERIFIED_MAIN', 'DATABASE_IDENTITY_VERIFIED', 'BUDGET_ENFORCEMENT_VERIFIED', 'AUTHENTICATED_ACCEPTANCE_PROVEN']) {
+  for (const evidenceVariable of ['HYPERDRIVE_VERIFIED_MAIN', 'DATABASE_IDENTITY_VERIFIED', 'BUDGET_ENFORCEMENT_VERIFIED']) {
     if (process.env[evidenceVariable] !== 'true') failures.push(`${evidenceVariable}=true is required from this exact deployment run`);
   }
+  if (authCritical && process.env.AUTHENTICATED_ACCEPTANCE_PROVEN !== 'true') failures.push('AUTHENTICATED_ACCEPTANCE_PROVEN=true is required for AUTH_CRITICAL_RELEASE');
+  if (!authCritical && process.env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true') failures.push('STANDARD_RELEASE must not claim authenticated acceptance was required');
 }
 
 if (failures.length) {

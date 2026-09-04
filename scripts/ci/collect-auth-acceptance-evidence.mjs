@@ -21,6 +21,8 @@ if (Boolean(accessClientId) !== Boolean(accessClientSecret)) {
 const expectedCandidate = {
   workerName,
   workerVersionId,
+  sourceReleaseSha: process.env.ADR003_CANDIDATE_SOURCE_SHA?.trim() || releaseSha,
+  ...(process.env.ADR003_CANDIDATE_DEPENDENCIES_JSON ? { candidateDependencies: JSON.parse(process.env.ADR003_CANDIDATE_DEPENDENCIES_JSON) } : {}),
   ...(process.env.ADR003_CANDIDATE_UPLOADED_AT ? { uploadedAt: process.env.ADR003_CANDIDATE_UPLOADED_AT } : {}),
   ...(process.env.ADR003_CANDIDATE_STAGED_AT ? { stagedAt: process.env.ADR003_CANDIDATE_STAGED_AT } : {}),
 };
@@ -36,6 +38,7 @@ function candidateFromEnvironment() {
   return {
     workerName,
     workerVersionId,
+    sourceReleaseSha: expectedCandidate.sourceReleaseSha,
     uploadedAt: expectedCandidate.uploadedAt,
     stagedAt: expectedCandidate.stagedAt,
   };
@@ -68,6 +71,7 @@ function fallbackEvidence(status, reason) {
     releaseSha,
     acceptanceRunId,
     candidate,
+    ...(expectedCandidate.candidateDependencies ? { candidateDependencies: expectedCandidate.candidateDependencies } : {}),
   };
 }
 

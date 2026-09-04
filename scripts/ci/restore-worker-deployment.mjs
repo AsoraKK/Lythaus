@@ -9,7 +9,7 @@ const candidateVersionId = process.env.EXPECTED_CANDIDATE_VERSION_ID ?? '';
 const rollbackSpecs = process.env.ROLLBACK_SPECS ?? '';
 const currentDeploymentPath = process.env.CURRENT_DEPLOYMENT_PATH ?? '';
 
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 if (!/^[0-9a-f]{32}$/.test(accountId)) throw new Error('CLOUDFLARE_ACCOUNT_ID is invalid');
 if (!apiToken) throw new Error('CLOUDFLARE_API_TOKEN is required');

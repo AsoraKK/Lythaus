@@ -39,11 +39,11 @@ function requireAbsent(names, forbiddenNames, worker) {
   if (present.length) throw new Error(`${worker} must not have product cryptographic bindings: ${present.join(', ')}`);
 }
 
-export function verifyScopedWorkerSecretBindings({ publicNames, adminNames, jobsNames, coordinatorNames }) {
+export function verifyScopedWorkerSecretBindings({ publicNames, adminNames, jobsNames, coordinatorNames = new Set(), coordinatorManaged = true }) {
   requirePresent(publicNames, PUBLIC_REQUIRED, 'public API');
   requirePresent(adminNames, ADMIN_REQUIRED, 'admin API');
   requirePresent(jobsNames, [TRANSACTIONAL_EMAIL_KEY], 'Jobs');
-  requirePresent(coordinatorNames, [ACCEPTANCE_STATE_KEY], 'acceptance coordinator');
+  if (coordinatorManaged) requirePresent(coordinatorNames, [ACCEPTANCE_STATE_KEY], 'acceptance coordinator');
   requireAbsent(jobsNames, JOBS_FORBIDDEN, 'Jobs');
   requireAbsent(coordinatorNames, COORDINATOR_FORBIDDEN, 'acceptance coordinator');
   return Object.freeze({
@@ -52,7 +52,7 @@ export function verifyScopedWorkerSecretBindings({ publicNames, adminNames, jobs
     publicApi: { requiredBindingsPresent: PUBLIC_REQUIRED },
     adminApi: { requiredBindingsPresent: ADMIN_REQUIRED },
     jobs: { requiredBindingsPresent: [TRANSACTIONAL_EMAIL_KEY], forbiddenProductBindingsAbsent: JOBS_FORBIDDEN },
-    acceptanceCoordinator: { requiredBindingsPresent: [ACCEPTANCE_STATE_KEY], forbiddenProductBindingsAbsent: COORDINATOR_FORBIDDEN },
+    acceptanceCoordinator: { requiredBindingsPresent: coordinatorManaged ? [ACCEPTANCE_STATE_KEY] : [], forbiddenProductBindingsAbsent: COORDINATOR_FORBIDDEN, managed: coordinatorManaged },
     secretValuesIncluded: false,
   });
 }
@@ -66,7 +66,8 @@ function main() {
     publicNames: readInventory('PUBLIC_SECRET_INVENTORY_FILE'),
     adminNames: readInventory('ADMIN_SECRET_INVENTORY_FILE'),
     jobsNames: readInventory('JOBS_SECRET_INVENTORY_FILE'),
-    coordinatorNames: readInventory('COORDINATOR_SECRET_INVENTORY_FILE'),
+    coordinatorNames: process.env.SKIP_ACCEPTANCE_COORDINATOR === 'true' ? new Set() : readInventory('COORDINATOR_SECRET_INVENTORY_FILE'),
+    coordinatorManaged: process.env.SKIP_ACCEPTANCE_COORDINATOR !== 'true',
   });
   fs.writeFileSync(required('SCOPED_WORKER_SECRET_BINDING_EVIDENCE_PATH'), `${JSON.stringify(evidence)}\n`, { encoding: 'utf8', mode: 0o600 });
 }

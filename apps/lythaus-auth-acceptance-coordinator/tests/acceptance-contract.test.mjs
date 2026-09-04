@@ -7,14 +7,27 @@ const publicApi = fs.readFileSync('apps/lythaus-public-api/src/index.ts', 'utf8'
 const migration = fs.readFileSync('database/planetscale/migrations/0015_production_auth_acceptance_coordinator.sql', 'utf8');
 const controlPanel = fs.readFileSync('apps/control-panel/src/pages/ProductionAuthAcceptance.jsx', 'utf8');
 
-test('acceptance runs bind the exact coordinator release and candidate version', () => {
-  assert.match(coordinator, /env\.WORKER_VERSION\.tag !== releaseSha/);
+test('stable coordinator binds the certified release and candidate source separately', () => {
+  assert.doesNotMatch(coordinator, /env\.WORKER_VERSION\.tag !== releaseSha/);
+  assert.match(coordinator, /body\.candidateSourceSha/);
+  assert.match(coordinator, /releaseSha, candidateSourceSha/);
+  assert.match(coordinator, /candidateSourceShaFromContext/);
+  assert.match(coordinator, /sourceReleaseSha/);
+  assert.match(coordinator, /candidateDependencies\.coordinator\.status === 'NEW_CANDIDATE'/);
+  assert.match(coordinator, /candidateDependencies\.coordinator\.versionId !== env\.WORKER_VERSION\.id/);
+  assert.match(coordinator, /strictRollbackSnapshot/);
+  assert.match(coordinator, /rollbackSnapshot: await rollbackSnapshot\(env, run\) \?\? null/);
+  assert.match(coordinator, /acceptance_rollback_snapshot_required/);
+  assert.match(coordinator, /loadRun\(env, id, false\)/);
   assert.match(coordinator, /Cloudflare-Workers-Version-Overrides/);
   assert.match(coordinator, /candidate_version_response_mismatch/);
   assert.match(coordinator, /requiredSecret\(env, 'CLOUDFLARE_ACCOUNT_ID'\)/);
   assert.match(migration, /release_sha text NOT NULL CHECK \(release_sha ~ '\^\[0-9a-f\]\{40\}\$'\)/);
   assert.match(migration, /expires_at timestamptz NOT NULL/);
   assert.match(migration, /production_auth_acceptance_active_candidate_uidx/);
+  assert.match(publicApi, /candidateSourceSha/);
+  assert.match(publicApi, /acceptanceContextIdentity/);
+  assert.match(publicApi, /release_sha = \$3/);
 });
 
 test('acceptance run validation accepts the uuidv7 identifiers it generates', () => {
@@ -32,6 +45,7 @@ test('acceptance evidence is server derived and human interaction remains requir
   assert.match(coordinator, /provider_message_digest/);
   assert.doesNotMatch(coordinator, /SELECT id, purpose, challenge_id, created_at, provider, provider_message_id/);
   assert.match(coordinator, /const run = await loadRun\(env, runId, false\)/);
+  assert.match(coordinator, /UPDATE system\.production_auth_acceptance_runs SET status = 'expired'/);
   const observer = coordinator.slice(coordinator.indexOf('async function observer'), coordinator.indexOf('function failure'));
   assert.doesNotMatch(observer, /\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE|DROP)\b/);
 });

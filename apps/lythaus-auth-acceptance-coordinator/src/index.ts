@@ -41,9 +41,43 @@ interface RunRow {
   pre_reset_refresh_captured_at: string | Date | null;
 }
 
+interface AcceptanceContextPayload {
+  context?: unknown;
+  releaseSha?: unknown;
+  candidateSourceSha?: unknown;
+  candidateDependencies?: unknown;
+  rollbackSnapshot?: unknown;
+}
+
 const RUN_TTL_MS = 45 * 60 * 1000;
 const REQUIRED_EVENTS = ['message.delivered', 'message.deferred', 'message.bounced', 'message.failed', 'message.rejected', 'message.complained'];
 const LIFECYCLE_QUEUE = 'lythaus-email-lifecycle-dev';
+const ACCEPTANCE_COMPONENTS = ['public', 'admin', 'jobs', 'coordinator'] as const;
+const ACCEPTANCE_WORKERS: Record<(typeof ACCEPTANCE_COMPONENTS)[number], string> = {
+  public: 'lythaus-public-api-development',
+  admin: 'lythaus-admin-api-development',
+  jobs: 'lythaus-jobs-development',
+  coordinator: 'lythaus-auth-acceptance-coordinator-development',
+};
+const ACCEPTANCE_PROVENANCE = ['BUILT_FROM_RELEASE_SHA', 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION'] as const;
+const ACCEPTANCE_STATUS = ['NEW_CANDIDATE', 'REUSED_PRODUCTION'] as const;
+
+type AcceptanceComponent = (typeof ACCEPTANCE_COMPONENTS)[number];
+type CandidateDependency = {
+  workerName: string;
+  versionId: string;
+  sourceSha: string;
+  status: (typeof ACCEPTANCE_STATUS)[number];
+  provenance: (typeof ACCEPTANCE_PROVENANCE)[number];
+};
+type CandidateDependencies = Record<AcceptanceComponent, CandidateDependency>;
+type RollbackVersion = { versionId: string; percentage: number };
+type RollbackRoute = { id: string; pattern: string; script: string | null };
+type AcceptanceRollbackSnapshot = {
+  schemaVersion: 'lythaus-acceptance-rollback-v1';
+  workers: Record<AcceptanceComponent, { versions: RollbackVersion[] }>;
+  routes: { adminApi: RollbackRoute | null; coordinator: RollbackRoute | null };
+};
 
 function asIso(value: string | Date | null | undefined): string | undefined {
   if (!value) return undefined;
@@ -136,13 +170,146 @@ async function loadRun(env: Env, id: string, markExpired = true): Promise<RunRow
   if (!run) throw new Error('acceptance_run_not_found');
   if (new Date(run.expires_at).getTime() <= Date.now() && ['pending', 'in_progress'].includes(run.status)) {
     if (markExpired) await query(env.DB_ADMIN_FRESH, `UPDATE system.production_auth_acceptance_runs SET status = 'expired' WHERE id = $1`, [id]);
-    throw new Error('acceptance_run_expired');
+    if (markExpired) throw new Error('acceptance_run_expired');
   }
   return run;
 }
 
 async function runContext(env: Env, run: RunRow): Promise<string> {
   return decryptField({ ciphertext: run.context_ciphertext, encryptionKeyVersion: run.context_encryption_key_version }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
+}
+
+function strictCandidateDependencies(value: unknown, candidateSourceSha: string, releaseSha?: string): CandidateDependencies {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('acceptance_context_dependencies_invalid');
+  const input = value as Record<string, unknown>;
+  if (Object.keys(input).sort().join(',') !== [...ACCEPTANCE_COMPONENTS].sort().join(',')) {
+    throw new Error('acceptance_context_dependencies_invalid');
+  }
+  const candidateDependencies = Object.fromEntries(ACCEPTANCE_COMPONENTS.map((component) => {
+    const dependencyValue = input[component];
+    if (!dependencyValue || typeof dependencyValue !== 'object' || Array.isArray(dependencyValue)) throw new Error('acceptance_context_dependencies_invalid');
+    const dependency = dependencyValue as Record<string, unknown>;
+    if (dependency.workerName !== ACCEPTANCE_WORKERS[component]
+      || typeof dependency.versionId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(dependency.versionId)
+      || typeof dependency.sourceSha !== 'string' || !/^[0-9a-f]{40}$/i.test(dependency.sourceSha)
+      || !ACCEPTANCE_STATUS.includes(dependency.status as (typeof ACCEPTANCE_STATUS)[number])
+      || !ACCEPTANCE_PROVENANCE.includes(dependency.provenance as (typeof ACCEPTANCE_PROVENANCE)[number])
+      || (dependency.status === 'NEW_CANDIDATE' && dependency.provenance !== 'BUILT_FROM_RELEASE_SHA')
+      || (dependency.status === 'REUSED_PRODUCTION' && dependency.provenance !== 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION')) {
+      throw new Error('acceptance_context_dependencies_invalid');
+    }
+    return [component, {
+      workerName: dependency.workerName,
+      versionId: dependency.versionId,
+      sourceSha: dependency.sourceSha.toLowerCase(),
+      status: dependency.status as CandidateDependency['status'],
+      provenance: dependency.provenance as CandidateDependency['provenance'],
+    }];
+  })) as CandidateDependencies;
+  if (candidateDependencies.public.sourceSha !== candidateSourceSha.toLowerCase()
+    || candidateDependencies.public.workerName !== 'lythaus-public-api-development') {
+    throw new Error('acceptance_context_dependencies_invalid');
+  }
+  if (releaseSha && Object.values(candidateDependencies).some((dependency) => (
+    dependency.status === 'NEW_CANDIDATE' && dependency.sourceSha !== releaseSha.toLowerCase()
+  ))) {
+    throw new Error('acceptance_context_dependencies_invalid');
+  }
+  return candidateDependencies;
+}
+
+function strictRollbackSnapshot(value: unknown, dependencies?: CandidateDependencies): AcceptanceRollbackSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('acceptance_rollback_snapshot_invalid');
+  const input = value as Record<string, unknown>;
+  if (Object.keys(input).sort().join(',') !== ['schemaVersion', 'workers', 'routes'].sort().join(',')) throw new Error('acceptance_rollback_snapshot_unknown_field');
+  if (input.schemaVersion !== 'lythaus-acceptance-rollback-v1') throw new Error('acceptance_rollback_snapshot_schema_invalid');
+  if (!input.workers || typeof input.workers !== 'object' || Array.isArray(input.workers)) throw new Error('acceptance_rollback_snapshot_workers_invalid');
+  const workerInput = input.workers as Record<string, unknown>;
+  if (Object.keys(workerInput).sort().join(',') !== [...ACCEPTANCE_COMPONENTS].sort().join(',')) throw new Error('acceptance_rollback_snapshot_workers_unknown_field');
+  const workers = Object.fromEntries(ACCEPTANCE_COMPONENTS.map((component) => {
+    const componentInput = workerInput[component];
+    if (!componentInput || typeof componentInput !== 'object' || Array.isArray(componentInput)) throw new Error(`acceptance_rollback_${component}_versions_invalid`);
+    const versionsValue = (componentInput as Record<string, unknown>).versions;
+    if (!Array.isArray(versionsValue) || (component !== 'coordinator' && versionsValue.length === 0)) throw new Error(`acceptance_rollback_${component}_versions_invalid`);
+    const seen = new Set<string>();
+    const versions = versionsValue.map((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error(`acceptance_rollback_${component}_version_invalid`);
+      const version = entry as Record<string, unknown>;
+      if (Object.keys(version).sort().join(',') !== 'percentage,versionId') throw new Error(`acceptance_rollback_${component}_version_unknown_field`);
+      if (typeof version.versionId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(version.versionId)) throw new Error(`acceptance_rollback_${component}_version_id_invalid`);
+      if (seen.has(version.versionId.toLowerCase())) throw new Error(`acceptance_rollback_${component}_duplicate_version`);
+      seen.add(version.versionId.toLowerCase());
+      if (typeof version.percentage !== 'number' || !Number.isFinite(version.percentage) || version.percentage <= 0 || version.percentage > 100) throw new Error(`acceptance_rollback_${component}_percentage_invalid`);
+      return { versionId: version.versionId, percentage: version.percentage };
+    });
+    if (versions.length > 0 && Math.abs(versions.reduce((sum, version) => sum + version.percentage, 0) - 100) > 0.001) throw new Error(`acceptance_rollback_${component}_traffic_invalid`);
+    if (dependencies?.[component]?.status === 'REUSED_PRODUCTION' && versions.length === 0) throw new Error(`acceptance_rollback_${component}_reused_snapshot_empty`);
+    return [component, { versions }];
+  })) as Record<AcceptanceComponent, { versions: RollbackVersion[] }>;
+  if (!input.routes || typeof input.routes !== 'object' || Array.isArray(input.routes)) throw new Error('acceptance_rollback_snapshot_routes_invalid');
+  const routeInput = input.routes as Record<string, unknown>;
+  if (Object.keys(routeInput).sort().join(',') !== 'adminApi,coordinator') throw new Error('acceptance_rollback_snapshot_routes_unknown_field');
+  const route = (value: unknown, component: string): RollbackRoute | null => {
+    if (value === null) return null;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`acceptance_rollback_${component}_route_invalid`);
+    const item = value as Record<string, unknown>;
+    if (Object.keys(item).sort().join(',') !== 'id,pattern,script') throw new Error(`acceptance_rollback_${component}_route_unknown_field`);
+    if (typeof item.id !== 'string' || !/^[A-Za-z0-9._:-]{1,200}$/.test(item.id)) throw new Error(`acceptance_rollback_${component}_route_id_invalid`);
+    if (typeof item.pattern !== 'string' || !/^[\x20-\x7e]{1,1000}$/.test(item.pattern)) throw new Error(`acceptance_rollback_${component}_route_pattern_invalid`);
+    if (item.script !== null && (typeof item.script !== 'string' || !/^[A-Za-z0-9._:-]{1,200}$/.test(item.script))) throw new Error(`acceptance_rollback_${component}_route_script_invalid`);
+    return { id: item.id, pattern: item.pattern, script: item.script === null ? null : item.script };
+  };
+  return {
+    schemaVersion: 'lythaus-acceptance-rollback-v1',
+    workers,
+    routes: { adminApi: route(routeInput.adminApi, 'adminApi'), coordinator: route(routeInput.coordinator, 'coordinator') },
+  };
+}
+
+function acceptanceContextPayload(context: string, fallback: string): { releaseSha: string; candidateSourceSha: string; candidateDependencies?: CandidateDependencies; rollbackSnapshot?: AcceptanceRollbackSnapshot } {
+  if (!context.trimStart().startsWith('{')) return { releaseSha: fallback, candidateSourceSha: fallback };
+  let payload: AcceptanceContextPayload;
+  try {
+    const parsed = JSON.parse(context) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid');
+    payload = parsed as AcceptanceContextPayload;
+  } catch {
+    throw new Error('acceptance_context_payload_invalid');
+  }
+  if (typeof payload.context !== 'string' || payload.context.length < 32 || payload.context.length > 200
+    || typeof payload.releaseSha !== 'string' || !/^[0-9a-f]{40}$/i.test(payload.releaseSha)
+    || typeof payload.candidateSourceSha !== 'string' || !/^[0-9a-f]{40}$/i.test(payload.candidateSourceSha)) {
+    throw new Error('acceptance_context_payload_invalid');
+  }
+  if (payload.releaseSha.toLowerCase() !== fallback.toLowerCase()) throw new Error('acceptance_context_payload_invalid');
+  const candidateDependencies = payload.candidateDependencies === undefined
+    ? undefined
+    : strictCandidateDependencies(payload.candidateDependencies, payload.candidateSourceSha, payload.releaseSha);
+  const rollbackSnapshot = payload.rollbackSnapshot === undefined
+    ? undefined
+    : strictRollbackSnapshot(payload.rollbackSnapshot, candidateDependencies);
+  if (rollbackSnapshot && !candidateDependencies) throw new Error('acceptance_rollback_snapshot_dependencies_missing');
+  return { releaseSha: payload.releaseSha.toLowerCase(), candidateSourceSha: payload.candidateSourceSha.toLowerCase(), candidateDependencies, rollbackSnapshot };
+}
+
+function candidateSourceShaFromContext(context: string, fallback: string): string {
+  return acceptanceContextPayload(context, fallback).candidateSourceSha;
+}
+
+function candidateDependenciesFromContext(context: string, fallback: string): CandidateDependencies | undefined {
+  return acceptanceContextPayload(context, fallback).candidateDependencies;
+}
+
+async function candidateSourceSha(env: Env, run: RunRow): Promise<string> {
+  return candidateSourceShaFromContext(await runContext(env, run), run.release_sha);
+}
+
+async function candidateDependencies(env: Env, run: RunRow): Promise<CandidateDependencies | undefined> {
+  return candidateDependenciesFromContext(await runContext(env, run), run.release_sha);
+}
+
+async function rollbackSnapshot(env: Env, run: RunRow): Promise<AcceptanceRollbackSnapshot | undefined> {
+  return acceptanceContextPayload(await runContext(env, run), run.release_sha).rollbackSnapshot;
 }
 
 async function runEmail(env: Env, run: RunRow, kind: 'primary' | 'resend'): Promise<string> {
@@ -160,6 +327,7 @@ async function recordEvent(env: Env, runId: string, eventType: string): Promise<
 
 async function candidateFetch(env: Env, run: RunRow, path: string, init: RequestInit): Promise<Response> {
   const context = await runContext(env, run);
+  const sourceSha = candidateSourceShaFromContext(context, run.release_sha);
   const headers = new Headers(init.headers);
   headers.set('x-lythaus-acceptance-run-id', run.id);
   headers.set('x-lythaus-acceptance-context', context);
@@ -168,7 +336,7 @@ async function candidateFetch(env: Env, run: RunRow, path: string, init: Request
   headers.set('accept', 'application/json');
   const response = await fetch(new URL(path, env.AUTH_ACCEPTANCE_PUBLIC_API_URL).toString(), { ...init, headers, redirect: 'manual', signal: AbortSignal.timeout(30_000) });
   if (response.headers.get('x-lythaus-candidate-version') !== run.candidate_version
-    || response.headers.get('x-lythaus-candidate-release') !== run.release_sha) {
+    || response.headers.get('x-lythaus-candidate-release') !== sourceSha) {
     throw new Error('candidate_version_response_mismatch');
   }
   return response;
@@ -203,14 +371,32 @@ async function createRun(request: Request, env: Env): Promise<Response> {
   await requireKeeper(request, env);
   const body = await readJson(request);
   const releaseSha = strictSha(body.releaseSha);
-  if (env.WORKER_VERSION.tag !== releaseSha) throw new Error('acceptance_coordinator_release_mismatch');
+  // The coordinator is a stable certification service. Its deployed source
+  // SHA may be older than the release being certified; the candidate source
+  // SHA is bound separately inside the encrypted acceptance context.
+  const candidateSourceSha = body.candidateSourceSha === undefined ? releaseSha : strictSha(body.candidateSourceSha);
   const candidateWorker = body.candidateWorker === 'lythaus-public-api-development' ? body.candidateWorker : (() => { throw new Error('acceptance_candidate_worker_invalid'); })();
   const candidateVersion = strictUuid(body.candidateVersion, 'acceptance_candidate_version_invalid');
   const uploadedAt = strictTimestamp(body.candidateUploadedAt, 'acceptance_candidate_uploaded_at_invalid');
   const stagedAt = strictTimestamp(body.candidateStagedAt, 'acceptance_candidate_staged_at_invalid');
   if (Date.parse(stagedAt) < Date.parse(uploadedAt)) throw new Error('acceptance_candidate_stage_before_upload');
+  const candidateDependencies = body.candidateDependencies === undefined
+    ? undefined
+    : strictCandidateDependencies(body.candidateDependencies, candidateSourceSha, releaseSha);
+  const rollbackSnapshot = body.rollbackSnapshot === undefined
+    ? undefined
+    : strictRollbackSnapshot(body.rollbackSnapshot, candidateDependencies);
+  if (candidateDependencies && !rollbackSnapshot) throw new Error('acceptance_rollback_snapshot_required');
+  if (candidateDependencies && (candidateDependencies.public.versionId !== candidateVersion || candidateDependencies.public.workerName !== candidateWorker)) {
+    throw new Error('acceptance_context_dependencies_invalid');
+  }
+  if (candidateDependencies
+    && candidateDependencies.coordinator.status === 'NEW_CANDIDATE'
+    && candidateDependencies.coordinator.versionId !== env.WORKER_VERSION.id) {
+    throw new Error('acceptance_coordinator_version_mismatch');
+  }
   const id = uuidv7();
-  const context = randomToken(32);
+  const context = JSON.stringify({ context: randomToken(32), releaseSha, candidateSourceSha, ...(candidateDependencies ? { candidateDependencies } : {}), ...(rollbackSnapshot ? { rollbackSnapshot } : {}) });
   const email = aliases(requiredSecret(env, 'AUTH_ACCEPTANCE_EMAIL_BASE'), id);
   const encryptionKey = requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1');
   const [encryptedContext, encryptedPrimary, encryptedResend] = await Promise.all([
@@ -235,7 +421,14 @@ async function createRun(request: Request, env: Env): Promise<Response> {
 
 async function runSummary(request: Request, env: Env, id: string): Promise<Response> {
   await requireKeeper(request, env);
-  const run = await loadRun(env, id);
+  // Keep expired-run metadata readable to the protected Keeper so the release
+  // workflow can start a fresh acceptance run against the same candidate.
+  // No secrets or bearer tokens are returned by this summary.
+  const run = await loadRun(env, id, false);
+  if (new Date(run.expires_at).getTime() <= Date.now() && ['pending', 'in_progress'].includes(run.status)) {
+    await query(env.DB_ADMIN_FRESH, `UPDATE system.production_auth_acceptance_runs SET status = 'expired' WHERE id = $1`, [id]);
+    run.status = 'expired';
+  }
   const events = await query<{ event_type: string; occurred_at: string | Date }>(env.DB_ADMIN_FRESH,
     `SELECT event_type, occurred_at FROM system.production_auth_acceptance_events WHERE run_id = $1 ORDER BY occurred_at`, [id]);
   const outbox = await query<{ purpose: string; state: string; queued_count: string; accepted_count: string; delivered_count: string }>(env.DB_ADMIN_FRESH,
@@ -247,7 +440,9 @@ async function runSummary(request: Request, env: Env, id: string): Promise<Respo
       GROUP BY purpose, state
       ORDER BY purpose, state`, [id]);
   return json({
-    acceptanceRunId: run.id, releaseSha: run.release_sha, candidate: { workerName: run.candidate_worker, workerVersionId: run.candidate_version, uploadedAt: asIso(run.candidate_uploaded_at), stagedAt: asIso(run.candidate_staged_at) },
+    acceptanceRunId: run.id, releaseSha: run.release_sha, candidate: { workerName: run.candidate_worker, workerVersionId: run.candidate_version, sourceReleaseSha: await candidateSourceSha(env, run), uploadedAt: asIso(run.candidate_uploaded_at), stagedAt: asIso(run.candidate_staged_at) },
+    candidateDependencies: await candidateDependencies(env, run) ?? null,
+    rollbackSnapshot: await rollbackSnapshot(env, run) ?? null,
     expiresAt: asIso(run.expires_at), status: run.status,
     turnstile: run.turnstile_verified_at ? { status: 'verified', observedAt: asIso(run.turnstile_verified_at), hostname: run.turnstile_hostname, action: run.turnstile_action } : { status: 'human_required' },
     events: events.rows.map((event) => ({ type: event.event_type, occurredAt: asIso(event.occurred_at) })),
@@ -490,7 +685,8 @@ async function observer(request: Request, env: Env): Promise<Response> {
   const runId = strictUuid(request.headers.get('x-lythaus-acceptance-run-id'), 'acceptance_run_id_invalid');
   const run = await loadRun(env, runId, false);
   if (url.searchParams.get('releaseSha') !== run.release_sha || url.searchParams.get('candidateWorker') !== run.candidate_worker || url.searchParams.get('candidateVersion') !== run.candidate_version) throw new Error('acceptance_observer_binding_mismatch');
-  const candidate = { workerName: run.candidate_worker, workerVersionId: run.candidate_version, uploadedAt: asIso(run.candidate_uploaded_at), stagedAt: asIso(run.candidate_staged_at) };
+  const candidate = { workerName: run.candidate_worker, workerVersionId: run.candidate_version, sourceReleaseSha: await candidateSourceSha(env, run), uploadedAt: asIso(run.candidate_uploaded_at), stagedAt: asIso(run.candidate_staged_at) };
+  const dependencies = await candidateDependencies(env, run);
   const events = await query<{ event_type: string; occurred_at: string | Date }>(env.DB_ADMIN_FRESH, `SELECT event_type, occurred_at FROM system.production_auth_acceptance_events WHERE run_id = $1`, [run.id]);
   const at = new Map(events.rows.map((event) => [event.event_type, asIso(event.occurred_at)!]));
   const required = ['account_created', 'turnstile_verified', 'initial_verification_requested', 'initial_verification_completed', 'initial_verification_replay_rejected', 'resend_fixture_created', 'resend_requested', 'resend_verification_completed', 'resend_verification_replay_rejected', 'password_reset_requested', 'password_reset_completed', 'password_reset_replay_rejected', 'password_reset_sessions_revoked', 'password_reset_old_password_rejected', 'password_reset_new_password_accepted', 'login_completed', 'refresh_completed', 'logout_completed'];
@@ -556,6 +752,7 @@ async function observer(request: Request, env: Env): Promise<Response> {
   const lifecycle = await lifecycleSubscription(env);
   const evidence = {
     formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'PASSED', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, lifecycleSubscription: lifecycle,
+    ...(dependencies ? { candidateDependencies: dependencies } : {}),
     outboxSummary: { source: 'read_only_database_query', lifecycleSource: 'authenticated_lifecycle_handler', capturedAt: new Date().toISOString(), rows: summaryRows.rows.map((row) => ({ purpose: row.purpose, state: row.state, provider: row.provider, providerErrorCategory: row.provider_error_category, rowCount: Number(row.row_count), providerMessageIdCount: Number(row.provider_message_id_count), distinctProviderMessageIdCount: Number(row.distinct_provider_message_id_count), acceptedCount: Number(row.accepted_count), deliveredCount: Number(row.delivered_count) })) },
     acceptanceAccount: { class: 'production_acceptance', createdAt: asIso(primary.rows[0].created_at), metricIsolation: 'excluded' },
     turnstile: { status: 'verified', observedAt: asIso(run.turnstile_verified_at), hostname: run.turnstile_hostname, action: run.turnstile_action },

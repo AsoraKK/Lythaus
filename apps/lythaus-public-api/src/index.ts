@@ -44,11 +44,37 @@ interface EmailAuthInput {
 interface AcceptanceContext {
   runId: string;
   context: string;
+  releaseSha: string;
+  candidateSourceSha: string;
+}
+
+interface AcceptanceContextPayload {
+  context?: unknown;
+  releaseSha?: unknown;
+  candidateSourceSha?: unknown;
 }
 
 async function acceptanceContextDigest(context: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(context));
   return btoa(String.fromCharCode(...new Uint8Array(digest)));
+}
+
+function acceptanceContextIdentity(context: string, fallback: string): { releaseSha: string; candidateSourceSha: string } {
+  if (!context.trimStart().startsWith('{')) return { releaseSha: fallback, candidateSourceSha: fallback };
+  let payload: AcceptanceContextPayload;
+  try {
+    const parsed = JSON.parse(context) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid');
+    payload = parsed as AcceptanceContextPayload;
+  } catch {
+    throw new Error('authentication_required');
+  }
+  if (typeof payload.context !== 'string' || payload.context.length < 32 || payload.context.length > 200
+    || typeof payload.releaseSha !== 'string' || !/^[0-9a-f]{40}$/i.test(payload.releaseSha)
+    || typeof payload.candidateSourceSha !== 'string' || !/^[0-9a-f]{40}$/i.test(payload.candidateSourceSha)) {
+    throw new Error('authentication_required');
+  }
+  return { releaseSha: payload.releaseSha.toLowerCase(), candidateSourceSha: payload.candidateSourceSha.toLowerCase() };
 }
 
 function coordinatorAuthorization(request: Request, env: Env): boolean {
@@ -63,6 +89,7 @@ async function acceptanceContext(request: Request, env: Env): Promise<Acceptance
   const context = request.headers.get('x-lythaus-acceptance-context');
   if (!runId && !context) return undefined;
   if (!coordinatorAuthorization(request, env) || !runId || !context) throw new Error('authentication_required');
+  const { releaseSha, candidateSourceSha } = acceptanceContextIdentity(context, env.WORKER_VERSION.tag);
   const result = await query<{ id: string }>(env.DB_APP_FRESH,
     `SELECT id
        FROM system.production_auth_acceptance_runs
@@ -73,10 +100,10 @@ async function acceptanceContext(request: Request, env: Env): Promise<Acceptance
         AND candidate_version = $4
         AND status IN ('pending', 'in_progress')
         AND expires_at > now()`,
-    [runId, await acceptanceContextDigest(context), env.WORKER_VERSION.tag, env.WORKER_VERSION.id],
+    [runId, await acceptanceContextDigest(context), releaseSha, env.WORKER_VERSION.id],
   );
   if (result.rowCount !== 1) throw new Error('authentication_required');
-  return { runId, context };
+  return { runId, context, releaseSha, candidateSourceSha };
 }
 
 interface ActivityDescriptor {

@@ -6,6 +6,13 @@ const SAFE_IDENTIFIER = /^[A-Za-z0-9._:-]{6,200}$/u;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
 const FLOW_NAMES = ['initialVerification', 'resendVerification', 'passwordReset'];
 const REQUIRED_LIFECYCLE_EVENTS = ['delivered', 'deferred', 'bounced', 'failed', 'rejected', 'complained'];
+const ACCEPTANCE_DEPENDENCY_WORKERS = {
+  public: 'lythaus-public-api-development',
+  admin: 'lythaus-admin-api-development',
+  jobs: 'lythaus-jobs-development',
+  coordinator: 'lythaus-auth-acceptance-coordinator-development',
+};
+const ACCEPTANCE_DEPENDENCY_COMPONENTS = Object.keys(ACCEPTANCE_DEPENDENCY_WORKERS);
 
 function assertObject(value, code) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(code);
@@ -36,7 +43,7 @@ function assertAtOrAfter(left, right, code) {
 
 function validateCandidate(candidate, releaseSha, expectedCandidate = {}) {
   assertObject(candidate, 'real_email_acceptance_candidate_missing');
-  assertOnlyKeys(candidate, ['workerName', 'workerVersionId', 'uploadedAt', 'stagedAt'], 'real_email_acceptance_candidate_unknown_field');
+  assertOnlyKeys(candidate, ['workerName', 'workerVersionId', 'sourceReleaseSha', 'uploadedAt', 'stagedAt'], 'real_email_acceptance_candidate_unknown_field');
   if (typeof candidate.workerName !== 'string' || !/^[a-z0-9-]+$/u.test(candidate.workerName)) {
     throw new Error('real_email_acceptance_candidate_worker_invalid');
   }
@@ -49,6 +56,13 @@ function validateCandidate(candidate, releaseSha, expectedCandidate = {}) {
   if (candidate.workerVersionId !== (expectedCandidate.workerVersionId ?? candidate.workerVersionId)) {
     throw new Error('real_email_acceptance_candidate_version_mismatch');
   }
+  const sourceReleaseSha = candidate.sourceReleaseSha ?? releaseSha;
+  if (typeof sourceReleaseSha !== 'string' || !/^[0-9a-f]{40}$/iu.test(sourceReleaseSha)) {
+    throw new Error('real_email_acceptance_candidate_source_sha_invalid');
+  }
+  if (sourceReleaseSha.toLowerCase() !== (expectedCandidate.sourceReleaseSha ?? releaseSha).toLowerCase()) {
+    throw new Error('real_email_acceptance_candidate_source_sha_mismatch');
+  }
   if (candidate.uploadedAt !== (expectedCandidate.uploadedAt ?? candidate.uploadedAt)) {
     throw new Error('real_email_acceptance_candidate_uploaded_at_mismatch');
   }
@@ -56,6 +70,60 @@ function validateCandidate(candidate, releaseSha, expectedCandidate = {}) {
     throw new Error('real_email_acceptance_candidate_staged_at_mismatch');
   }
   assertAtOrAfter(candidate.stagedAt, candidate.uploadedAt, 'real_email_acceptance_candidate_staged_before_upload');
+}
+
+function validateCandidateDependencies(value, candidate, expectedDependencies, releaseSha) {
+  assertObject(value, 'real_email_acceptance_candidate_dependencies_invalid');
+  if (Object.keys(value).sort().join(',') !== ACCEPTANCE_DEPENDENCY_COMPONENTS.slice().sort().join(',')) {
+    throw new Error('real_email_acceptance_candidate_dependencies_invalid');
+  }
+  const normalized = {};
+  for (const component of ACCEPTANCE_DEPENDENCY_COMPONENTS) {
+    const dependency = value[component];
+    assertObject(dependency, 'real_email_acceptance_candidate_dependency_invalid');
+    assertOnlyKeys(dependency, ['workerName', 'versionId', 'sourceSha', 'status', 'provenance'], 'real_email_acceptance_candidate_dependency_unknown_field');
+    if (dependency.workerName !== ACCEPTANCE_DEPENDENCY_WORKERS[component]
+      || !UUID.test(dependency.versionId)
+      || typeof dependency.sourceSha !== 'string' || !/^[0-9a-f]{40}$/iu.test(dependency.sourceSha)
+      || !['NEW_CANDIDATE', 'REUSED_PRODUCTION'].includes(dependency.status)
+      || !['BUILT_FROM_RELEASE_SHA', 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION'].includes(dependency.provenance)
+      || (dependency.status === 'NEW_CANDIDATE' && dependency.provenance !== 'BUILT_FROM_RELEASE_SHA')
+      || (dependency.status === 'REUSED_PRODUCTION' && dependency.provenance !== 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION')) {
+      throw new Error('real_email_acceptance_candidate_dependency_invalid');
+    }
+    normalized[component] = {
+      workerName: dependency.workerName,
+      versionId: dependency.versionId,
+      sourceSha: dependency.sourceSha.toLowerCase(),
+      status: dependency.status,
+      provenance: dependency.provenance,
+    };
+  }
+  if (normalized.public.versionId !== candidate.workerVersionId || normalized.public.workerName !== candidate.workerName
+    || normalized.public.sourceSha !== (candidate.sourceReleaseSha ?? '').toLowerCase()) {
+    throw new Error('real_email_acceptance_candidate_dependency_public_mismatch');
+  }
+  if (Object.values(normalized).some((dependency) => (
+    dependency.status === 'NEW_CANDIDATE' && dependency.sourceSha !== releaseSha.toLowerCase()
+  ))) {
+    throw new Error('real_email_acceptance_candidate_dependency_source_mismatch');
+  }
+  if (expectedDependencies !== undefined) {
+    if (!expectedDependencies || typeof expectedDependencies !== 'object' || Array.isArray(expectedDependencies)) {
+      throw new Error('real_email_acceptance_candidate_dependencies_expected_invalid');
+    }
+    for (const component of ACCEPTANCE_DEPENDENCY_COMPONENTS) {
+      const expected = expectedDependencies[component];
+      if (!expected || normalized[component].workerName !== expected.workerName
+        || normalized[component].versionId !== expected.versionId
+        || normalized[component].sourceSha !== String(expected.sourceSha ?? '').toLowerCase()
+        || normalized[component].status !== expected.status
+        || normalized[component].provenance !== expected.provenance) {
+        throw new Error('real_email_acceptance_candidate_dependency_mismatch');
+      }
+    }
+  }
+  return normalized;
 }
 
 function validateDelivery(flow, flowName) {
@@ -206,7 +274,8 @@ function validateLifecycleSubscription(evidence) {
   );
 }
 
-function validateCompleteEvidence(evidence) {
+function validateCompleteEvidence(evidence, releaseSha) {
+  if (evidence.candidateDependencies !== undefined) validateCandidateDependencies(evidence.candidateDependencies, evidence.candidate, undefined, releaseSha);
   validateInitialAndAccount(evidence);
   if (evidence.turnstile.status !== 'verified') throw new Error('real_email_acceptance_turnstile_not_verified');
   validateLifecycleSubscription(evidence);
@@ -275,6 +344,7 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
   assertObject(evidence, 'real_email_acceptance_evidence_invalid');
   assertOnlyKeys(evidence, [
     'formatVersion', 'source', 'status', 'reason', 'releaseSha', 'acceptanceRunId', 'candidate',
+    'candidateDependencies',
     'lifecycleSubscription', 'outboxSummary',
     'acceptanceAccount', 'turnstile', 'initialVerification', 'resendVerification', 'passwordReset',
     'login', 'refresh', 'logout',
@@ -285,6 +355,12 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
   if (typeof evidence.releaseSha !== 'string' || evidence.releaseSha !== releaseSha) throw new Error('real_email_acceptance_release_sha_mismatch');
   identifier(evidence.acceptanceRunId, 'real_email_acceptance_run_id_invalid', { uuid: true });
   validateCandidate(evidence.candidate, releaseSha, expectedCandidate);
+  if (expectedCandidate.candidateDependencies !== undefined && evidence.candidateDependencies === undefined) {
+    throw new Error('real_email_acceptance_candidate_dependencies_missing');
+  }
+  if (evidence.candidateDependencies !== undefined) {
+    validateCandidateDependencies(evidence.candidateDependencies, evidence.candidate, expectedCandidate.candidateDependencies, releaseSha);
+  }
 
   if (evidence.status === 'HUMAN_ACCEPTANCE_REQUIRED') {
     if (typeof evidence.reason !== 'string' || !/^[a-z0-9_:-]{3,120}$/u.test(evidence.reason)) throw new Error('real_email_acceptance_human_reason_invalid');
@@ -295,7 +371,7 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
     return evidence;
   }
   if (evidence.reason !== undefined) throw new Error('real_email_acceptance_pass_reason_forbidden');
-  validateCompleteEvidence(evidence);
+  validateCompleteEvidence(evidence, releaseSha);
   return evidence;
 }
 

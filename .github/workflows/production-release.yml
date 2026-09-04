@@ -37,6 +37,11 @@ on:
         required: false
         default: ''
         type: string
+      force_auth_critical:
+        description: Upgrade the deterministic release class to AUTH_CRITICAL_RELEASE
+        required: false
+        default: false
+        type: boolean
       confirm_production:
         description: Confirm the four-surface production deployment
         required: true
@@ -71,6 +76,12 @@ jobs:
       previous_release_ancestry_verified: ${{ steps.governance.outputs.previous_release_ancestry_verified }}
       historical_branches_reconciled: ${{ steps.governance.outputs.historical_branches_reconciled }}
       security_checks_verified: ${{ steps.governance.outputs.security_checks_verified }}
+      release_class: ${{ steps.release_plan.outputs.release_class }}
+      changed_components_json: ${{ steps.release_plan.outputs.changed_components_json }}
+      reused_components_json: ${{ steps.release_plan.outputs.reused_components_json }}
+      changed_files_json: ${{ steps.release_plan.outputs.changed_files_json }}
+      classification_rules_version: ${{ steps.release_plan.outputs.classification_rules_version }}
+      force_auth_critical: ${{ steps.release_plan.outputs.force_auth_critical }}
     permissions:
       actions: read
       checks: read
@@ -84,6 +95,7 @@ jobs:
       DEPENDENCY_REVIEW_RUN_ID: ${{ inputs.dependency_review_run_id }}
       SECRET_SCAN_RUN_ID: ${{ inputs.secret_scan_run_id }}
       HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
+      FORCE_AUTH_CRITICAL: ${{ inputs.force_auth_critical }}
       GH_TOKEN: ${{ github.token }}
       REF_PROTECTED: ${{ github.ref_protected }}
     steps:
@@ -298,10 +310,31 @@ jobs:
             echo 'historical_branches_reconciled=true'
             echo 'security_checks_verified=true'
           } >> "$GITHUB_OUTPUT"
+      - name: SOURCE - Resolve deterministic release class and component plan
+        id: release_plan
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
+          FORCE_AUTH_CRITICAL: ${{ inputs.force_auth_critical }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/resolve-release-plan.mjs \
+            --release-sha "$RELEASE_SHA" \
+            --base-sha "$PREVIOUS_PRODUCTION_SHA" \
+            --output "$RUNNER_TEMP/release-plan.json"
+          jq -e --arg sha "$RELEASE_SHA" '.releaseSha == $sha and (.releaseClass == "STANDARD_RELEASE" or .releaseClass == "AUTH_CRITICAL_RELEASE")' "$RUNNER_TEMP/release-plan.json" >/dev/null
       - name: Validate release manifest contract
         run: node scripts/ci/build-release-manifest.mjs
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          PREVIOUS_PRODUCTION_SHA: ${{ inputs.previous_production_sha }}
+          RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
+          CHANGED_COMPONENTS_JSON: ${{ steps.release_plan.outputs.changed_components_json }}
+          REUSED_COMPONENTS_JSON: ${{ steps.release_plan.outputs.reused_components_json }}
+          CHANGED_FILES_JSON: ${{ steps.release_plan.outputs.changed_files_json }}
+          RELEASE_CLASSIFICATION_RULES_VERSION: ${{ steps.release_plan.outputs.classification_rules_version }}
+          FORCE_AUTH_CRITICAL: ${{ steps.release_plan.outputs.force_auth_critical }}
       - name: Create sanitized manifest integrity digest
         run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256
       - name: Upload preflight manifest
@@ -312,6 +345,7 @@ jobs:
           path: |
             .artifacts/release/release-manifest.json
             .artifacts/release/release-manifest.sha256
+            ${{ runner.temp }}/release-plan.json
 
   provider_evidence:
     name: Capture exact-SHA provider evidence
@@ -332,6 +366,7 @@ jobs:
       planetscale_migration_set_sha256: ${{ steps.summary.outputs.planetscale_migration_set_sha256 }}
       planetscale_grants_verified: ${{ steps.summary.outputs.planetscale_grants_verified }}
       evidence_run_url: ${{ steps.summary.outputs.evidence_run_url }}
+      pages_production_state_json: ${{ steps.summary.outputs.pages_production_state_json }}
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -347,6 +382,8 @@ jobs:
       PSCALE_BRANCH_NAME: main
       REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'
       PLANETSCALE_CONTRACT_AUDIT_OUTPUT: .artifacts/release-provider-evidence/planetscale-production-contract.json
+      ADMIN_PAGES_PROJECT: ${{ needs.preflight.outputs.admin_pages_project }}
+      WEB_PAGES_BRANCH: ${{ needs.preflight.outputs.web_pages_branch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -402,6 +439,22 @@ jobs:
             relation_count="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0016 relation count:")) | sub("^Observed post-0016 relation count: "; "")' "$contract" | head -n 1)"
             migration_set="$(jq -r '.verifierOutput[]? | select(startswith("Approved migration-set SHA-256:")) | sub("^Approved migration-set SHA-256: "; "")' "$contract" | head -n 1)"
           fi
+          pages_state='{}'
+          if [[ -f .artifacts/release-provider-evidence/cloudflare.json ]]; then
+            pages_state="$(jq -c --arg admin_project "$ADMIN_PAGES_PROJECT" --arg web_branch "$WEB_PAGES_BRANCH" '
+              def production($project; $branch):
+                ([.pages.details[$project].recentDeployments[]?
+                  | select(.environment == "production")
+                  | select($branch == "" or .branch == $branch)
+                  | {project: $project, deploymentId: .id, deploymentUrl: .url, commitSha: .commitHash, branch: .branch, createdAt: .createdAt}]
+                 | sort_by(.createdAt) | last) // null;
+              {
+                marketing: production("lythaus-marketing"; "main"),
+                "flutter-web": production("lythaus-web"; $web_branch),
+                "control-panel": production($admin_project; "main")
+              }
+            ' .artifacts/release-provider-evidence/cloudflare.json)"
+          fi
           {
             echo "cloudflare_status=$cf_status"
             echo "cloudflare_legacy_asora_active_resources=${legacy_asora_count:-0}"
@@ -413,6 +466,9 @@ jobs:
             echo "planetscale_migration_set_sha256=$migration_set"
             echo "planetscale_grants_verified=$grants_verified"
             echo "evidence_run_url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo 'pages_production_state_json<<LYTHAUS_PAGES_STATE'
+            echo "$pages_state"
+            echo 'LYTHAUS_PAGES_STATE'
           } >> "$GITHUB_OUTPUT"
       - name: Require provider evidence before deployment
         env:
@@ -432,37 +488,52 @@ jobs:
   marketing:
     name: Deploy marketing
     needs: [preflight, provider_evidence, workers]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && needs.workers.outputs.authenticated_acceptance_proven == 'true'
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"marketing"')
     uses: ./.github/workflows/deploy-marketing.yml
     with:
       release_sha: ${{ inputs.release_sha }}
       deployment_class: production
+      source_evidence_verified: true
+      ci_run_id: ${{ inputs.ci_run_id }}
+      codeql_run_id: ${{ inputs.codeql_run_id }}
+      dependency_review_run_id: ${{ inputs.dependency_review_run_id }}
+      secret_scan_run_id: ${{ inputs.secret_scan_run_id }}
+      historical_reconciliation_run_id: ${{ inputs.historical_reconciliation_run_id }}
     secrets: inherit
 
   web:
     name: Deploy Flutter web
     needs: [preflight, provider_evidence, workers]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && needs.workers.outputs.authenticated_acceptance_proven == 'true'
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"flutter-web"')
     uses: ./.github/workflows/deploy-alpha-web.yml
     with:
       release_sha: ${{ inputs.release_sha }}
-      ci_run_id: ${{ inputs.ci_run_id }}
       target_environment: production
+      source_evidence_verified: true
       pages_project: lythaus-web
       pages_branch: ${{ needs.preflight.outputs.web_pages_branch }}
       web_base_url: https://app.lythaus.co
       api_base_url: https://api.lythaus.co/api
       admin_api_url: https://admin-api.lythaus.co
+      ci_run_id: ${{ inputs.ci_run_id }}
+      security_run_ids_json: >-
+        {"CODEQL_RUN_ID":"${{ inputs.codeql_run_id }}","DEPENDENCY_REVIEW_RUN_ID":"${{ inputs.dependency_review_run_id }}","SECRET_SCAN_RUN_ID":"${{ inputs.secret_scan_run_id }}","HISTORICAL_RECONCILIATION_RUN_ID":"${{ inputs.historical_reconciliation_run_id }}"}
     secrets: inherit
 
   admin:
     name: Deploy control panel
     needs: [preflight, provider_evidence, workers]
-    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && needs.workers.outputs.authenticated_acceptance_proven == 'true'
+    if: needs.provider_evidence.outputs.cloudflare_status == 'VERIFIED' && needs.provider_evidence.outputs.planetscale_status == 'VERIFIED' && contains(needs.preflight.outputs.changed_components_json, '"control-panel"')
     uses: ./.github/workflows/deploy-control-panel.yml
     with:
       release_sha: ${{ inputs.release_sha }}
       pages_project: ${{ needs.preflight.outputs.admin_pages_project }}
+      source_evidence_verified: true
+      ci_run_id: ${{ inputs.ci_run_id }}
+      codeql_run_id: ${{ inputs.codeql_run_id }}
+      dependency_review_run_id: ${{ inputs.dependency_review_run_id }}
+      secret_scan_run_id: ${{ inputs.secret_scan_run_id }}
+      historical_reconciliation_run_id: ${{ inputs.historical_reconciliation_run_id }}
     secrets: inherit
 
   workers:
@@ -473,11 +544,20 @@ jobs:
     with:
       release_sha: ${{ inputs.release_sha }}
       acceptance_run_id: ${{ inputs.acceptance_run_id }}
+      previous_production_sha: ${{ inputs.previous_production_sha }}
+      source_evidence_verified: true
+      force_auth_critical: ${{ inputs.force_auth_critical }}
+      ci_run_id: ${{ inputs.ci_run_id }}
+      codeql_run_id: ${{ inputs.codeql_run_id }}
+      dependency_review_run_id: ${{ inputs.dependency_review_run_id }}
+      secret_scan_run_id: ${{ inputs.secret_scan_run_id }}
+      historical_reconciliation_run_id: ${{ inputs.historical_reconciliation_run_id }}
     secrets: inherit
 
   production_smoke:
     name: Verify canonical production surfaces
     needs: [preflight, provider_evidence, marketing, web, admin, workers]
+    if: always()
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
@@ -496,7 +576,7 @@ jobs:
       WEB_BASE_URL: https://app.lythaus.co
       API_BASE_URL: https://api.lythaus.co
       ADMIN_API_URL: https://admin-api.lythaus.co
-      DEPLOYMENTS_OK: ${{ needs.marketing.result == 'success' && needs.web.result == 'success' && needs.admin.result == 'success' && needs.workers.result == 'success' }}
+      DEPLOYMENTS_OK: ${{ needs.marketing.result != 'failure' && needs.marketing.result != 'cancelled' && needs.web.result != 'failure' && needs.web.result != 'cancelled' && needs.admin.result != 'failure' && needs.admin.result != 'cancelled' && needs.workers.result == 'success' && needs.provider_evidence.result == 'success' }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
     steps:
@@ -555,9 +635,218 @@ jobs:
           echo 'admin_ui=PASS' >> "$GITHUB_OUTPUT"
           echo 'jobs=PASS' >> "$GITHUB_OUTPUT"
 
+  rollback:
+    name: Roll back changed components after downstream failure
+    needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke]
+    if: ${{ always() && needs.workers.result == 'success' && (needs.marketing.result == 'failure' || needs.marketing.result == 'cancelled' || needs.web.result == 'failure' || needs.web.result == 'cancelled' || needs.admin.result == 'failure' || needs.admin.result == 'cancelled' || needs.production_smoke.result == 'failure' || needs.production_smoke.result == 'cancelled') }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    outputs:
+      rollback_state: ${{ steps.rollback_finalize.outputs.rollback_state }}
+      rollback_components_json: ${{ steps.rollback_finalize.outputs.rollback_components_json }}
+      release_state_history_json: ${{ steps.rollback_finalize.outputs.release_state_history_json }}
+      failure_domain_evidence_json: ${{ steps.rollback_finalize.outputs.failure_domain_evidence_json }}
+      rollback_evidence_path: ${{ steps.rollback_finalize.outputs.rollback_evidence_path }}
+    permissions:
+      contents: read
+      actions: read
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      CHANGED_COMPONENTS_JSON: ${{ needs.preflight.outputs.changed_components_json }}
+      PAGES_PRODUCTION_STATE_JSON: ${{ needs.provider_evidence.outputs.pages_production_state_json || '{}' }}
+      ADMIN_PAGES_PROJECT: ${{ needs.preflight.outputs.admin_pages_project }}
+      MARKETING_RESULT: ${{ needs.marketing.result }}
+      WEB_RESULT: ${{ needs.web.result }}
+      ADMIN_RESULT: ${{ needs.admin.result }}
+      PRODUCTION_SMOKE_RESULT: ${{ needs.production_smoke.result }}
+      WORKER_RELEASE_STATE_HISTORY_JSON: ${{ needs.workers.outputs.release_state_history_json || '[]' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+      - name: Download exact predeployment rollback snapshots
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: production-cutover-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/production-cutover
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Restore only changed Worker, route, and Pages components
+        id: restore_components
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          rollback_failed=0
+          rollback_dir="$RUNNER_TEMP/production-rollback"
+          mkdir -p "$rollback_dir"
+          rollback_env="$rollback_dir/rollback.env"
+          : > "$rollback_env"
+          component_changed() {
+            jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
+          }
+          restore_worker() {
+            local component="$1"
+            local prefix="$2"
+            local worker_name="$3"
+            local before="$RUNNER_TEMP/production-cutover/${component}-before.json"
+            local versions="$RUNNER_TEMP/production-cutover/${component}-before-versions.json"
+            local state_json specs
+            if [[ ! -s "$before" ]]; then
+              echo "Missing ${component} predeployment rollback snapshot." >&2
+              return 1
+            fi
+            if [[ "$component" = coordinator && "$(jq -r '.versions | length' "$before" 2>/dev/null)" = 0 ]]; then
+              echo 'No prior Coordinator version existed; preserving the harmless parent and restoring its route only.'
+              return 0
+            fi
+            if [[ ! -s "$versions" ]]; then
+              echo "Missing ${component} version provenance snapshot." >&2
+              return 1
+            fi
+            if ! state_json="$(GITHUB_ENV="$rollback_env" node scripts/ci/resolve-production-version-state.mjs "$before" "$prefix" "$versions" 2>"$rollback_dir/${component}-state.error")"; then
+              cat "$rollback_dir/${component}-state.error" >&2
+              return 1
+            fi
+            specs="$(jq -r '.rollbackSpecs // empty' <<<"$state_json")"
+            [[ -n "$specs" ]] || {
+              echo "${component} rollback snapshot has no positive serving traffic." >&2
+              return 1
+            }
+            read -r -a rollback_specs <<< "$specs"
+            npx --yes wrangler@4.123.0 versions deploy "${rollback_specs[@]}" --name "$worker_name" --yes --message "Restore exact predeployment Lythaus ${component} versions"
+            return $?
+          }
+          restore_route() {
+            local snapshot="$1"
+            local pattern="$2"
+            node scripts/ci/manage-cloudflare-worker-route.mjs restore "$snapshot" "$pattern"
+            return $?
+          }
+          restore_page() {
+            local key="$1"
+            local expected_project="$2"
+            local expected_branch="$3"
+            local entry project deployment commit branch
+            entry="$(jq -c --arg key "$key" '.[$key] // empty' <<<"$PAGES_PRODUCTION_STATE_JSON" 2>/dev/null)"
+            if [[ -z "$entry" || "$entry" = null ]]; then
+              echo "Missing exact prior production Pages state for ${key}." >&2
+              return 1
+            fi
+            project="$(jq -r '.project // empty' <<<"$entry")"
+            deployment="$(jq -r '.deploymentId // empty' <<<"$entry")"
+            commit="$(jq -r '.commitSha // empty' <<<"$entry")"
+            branch="$(jq -r '.branch // empty' <<<"$entry")"
+            test "$project" = "$expected_project" || { echo "Prior Pages project mismatch for ${key}." >&2; return 1; }
+            test "$branch" = "$expected_branch" || { echo "Prior Pages branch mismatch for ${key}." >&2; return 1; }
+            [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || { echo "Prior Pages commit provenance is invalid for ${key}." >&2; return 1; }
+            node scripts/ci/rollback-pages-deployment.mjs \
+              --project "$project" \
+              --deployment-id "$deployment" \
+              --expected-commit-sha "$commit" \
+              --output "$rollback_dir/${key}-pages-rollback.json"
+            return $?
+          }
+          if component_changed public; then
+            restore_worker public PUBLIC lythaus-public-api-development || rollback_failed=1
+          fi
+          if component_changed admin; then
+            restore_worker admin ADMIN lythaus-admin-api-development || rollback_failed=1
+            restore_route "$RUNNER_TEMP/production-cutover/admin-api-route-before.json" 'admin.lythaus.co/api/admin/*' || rollback_failed=1
+          fi
+          if component_changed jobs; then
+            restore_worker jobs JOBS lythaus-jobs-development || rollback_failed=1
+          fi
+          if component_changed coordinator; then
+            restore_worker coordinator COORDINATOR lythaus-auth-acceptance-coordinator-development || rollback_failed=1
+            restore_route "$RUNNER_TEMP/production-cutover/coordinator-route-before.json" 'admin.lythaus.co/api/admin/production-auth-acceptance/*' || rollback_failed=1
+          fi
+          if component_changed marketing && [[ "$MARKETING_RESULT" != skipped ]]; then
+            restore_page marketing lythaus-marketing main || rollback_failed=1
+          fi
+          if component_changed flutter-web && [[ "$WEB_RESULT" != skipped ]]; then
+            restore_page flutter-web lythaus-web "${{ needs.preflight.outputs.web_pages_branch }}" || rollback_failed=1
+          fi
+          if component_changed control-panel && [[ "$ADMIN_RESULT" != skipped ]]; then
+            restore_page control-panel "$ADMIN_PAGES_PROJECT" main || rollback_failed=1
+          fi
+          echo "ROLLBACK_FAILED=$rollback_failed" >> "$GITHUB_ENV"
+          exit "$rollback_failed"
+      - name: Finalize downstream rollback evidence
+        id: rollback_finalize
+        if: always()
+        shell: bash
+        env:
+          WORKER_HISTORY: ${{ needs.workers.outputs.release_state_history_json || '[]' }}
+        run: |
+          set +e
+          rollback_failed="${ROLLBACK_FAILED:-1}"
+          rollback_dir="$RUNNER_TEMP/production-rollback"
+          mkdir -p "$rollback_dir"
+          state='BLOCKED'
+          history="$WORKER_HISTORY"
+          failure_evidence='[]'
+          if [[ "$rollback_failed" = 0 ]]; then
+            transition_env="$rollback_dir/transition.env"
+            transition_output="$rollback_dir/transition.output"
+            if transition_json="$(GITHUB_ENV="$transition_env" GITHUB_OUTPUT="$transition_output" RELEASE_STATE_HISTORY_JSON="$history" node scripts/ci/transition-release-state.mjs ROLLED_BACK 2>"$rollback_dir/transition.error")"; then
+              state='ROLLED_BACK'
+              history="$(jq -c '.history' <<<"$transition_json" 2>/dev/null)"
+            else
+              rollback_failed=1
+            fi
+          fi
+          if [[ "$rollback_failed" != 0 ]]; then
+            failure_env="$rollback_dir/failure.env"
+            failure_output="$rollback_dir/failure.output"
+            RELEASE_FAILURE_GATE=ACTIVATION \
+            RELEASE_FAILURE_CODE=component_rollback_failed \
+            RELEASE_FAILURE_MESSAGE='changed component rollback did not complete successfully' \
+            RELEASE_STATE_HISTORY_JSON="$history" \
+            GITHUB_ENV="$failure_env" \
+            GITHUB_OUTPUT="$failure_output" \
+            node scripts/ci/write-failure-domain-evidence.mjs >/dev/null 2>&1 || true
+            failure_evidence="$(awk -F= '$1 == "evidence_json" { sub(/^[^=]*=/, ""); print; exit }' "$failure_output" 2>/dev/null)"
+            [[ -n "$failure_evidence" ]] || failure_evidence='[{"gate":"ACTIVATION","code":"component_rollback_failed","domain":"SAFETY_BLOCKER","message":"changed component rollback did not complete successfully"}]'
+            next_history="$(awk -F= '/^RELEASE_STATE_HISTORY_JSON=/ { sub(/^[^=]*=/, ""); print; exit }' "$failure_env" 2>/dev/null)"
+            [[ -n "$next_history" ]] && history="$next_history"
+          fi
+          rollback_evidence="$rollback_dir/rollback-evidence.json"
+          jq -n \
+            --arg state "$state" \
+            --argjson components "$CHANGED_COMPONENTS_JSON" \
+            --arg trigger "$PRODUCTION_SMOKE_RESULT" \
+            --arg worker_result '${{ needs.workers.result }}' \
+            --arg marketing_result "$MARKETING_RESULT" \
+            --arg web_result "$WEB_RESULT" \
+            --arg admin_result "$ADMIN_RESULT" \
+            '{schemaVersion:1, state:$state, changedComponents:$components, trigger:{productionSmoke:$trigger,worker:$worker_result,marketing:$marketing_result,flutterWeb:$web_result,controlPanel:$admin_result}, completedAt:now|todate}' \
+            > "$rollback_evidence"
+          {
+            echo "rollback_state=$state"
+            echo "rollback_components_json=$CHANGED_COMPONENTS_JSON"
+            echo "release_state_history_json=$history"
+            echo "failure_domain_evidence_json=$failure_evidence"
+            echo 'rollback_evidence_path=production-release-rollback/rollback-evidence.json'
+          } >> "$GITHUB_OUTPUT"
+          exit "$rollback_failed"
+      - name: Upload downstream rollback evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: production-release-rollback-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/production-rollback
+          if-no-files-found: warn
+
   manifest:
     name: Publish canonical release manifest
-    needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke]
+    needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke, rollback]
+    if: always()
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 10
@@ -578,8 +867,11 @@ jobs:
       HISTORICAL_BRANCHES_RECONCILED: ${{ needs.preflight.outputs.historical_branches_reconciled || 'false' }}
       SECURITY_CHECKS_VERIFIED: ${{ needs.preflight.outputs.security_checks_verified || 'false' }}
       MARKETING_DEPLOYMENT_SHA: ${{ needs.marketing.outputs.deployed_sha }}
+      MARKETING_DEPLOYMENT_STATUS: ${{ needs.marketing.result == 'success' && 'ACTIVATED' || '' }}
       WEB_DEPLOYMENT_SHA: ${{ needs.web.outputs.deployed_sha }}
+      WEB_DEPLOYMENT_STATUS: ${{ needs.web.result == 'success' && 'ACTIVATED' || '' }}
       ADMIN_DEPLOYMENT_SHA: ${{ needs.admin.outputs.deployed_sha }}
+      ADMIN_DEPLOYMENT_STATUS: ${{ needs.admin.result == 'success' && 'ACTIVATED' || '' }}
       MARKETING_DEPLOYMENT_ID: ${{ needs.marketing.outputs.pages_deployment_id }}
       MARKETING_DEPLOYMENT_URL: ${{ needs.marketing.outputs.pages_deployment_url }}
       MARKETING_PAGES_PROJECT: ${{ needs.marketing.outputs.pages_project }}
@@ -600,6 +892,20 @@ jobs:
       DATABASE_IDENTITY_VERIFIED: ${{ needs.workers.outputs.database_identity_verified }}
       BUDGET_ENFORCEMENT_VERIFIED: ${{ needs.workers.outputs.budget_enforcement_verified }}
       AUTHENTICATED_ACCEPTANCE_PROVEN: ${{ needs.workers.outputs.authenticated_acceptance_proven }}
+      RELEASE_CLASS: ${{ needs.preflight.outputs.release_class }}
+      CHANGED_COMPONENTS_JSON: ${{ needs.preflight.outputs.changed_components_json }}
+      REUSED_COMPONENTS_JSON: ${{ needs.preflight.outputs.reused_components_json }}
+      CHANGED_FILES_JSON: ${{ needs.preflight.outputs.changed_files_json }}
+      RELEASE_CLASSIFICATION_RULES_VERSION: ${{ needs.preflight.outputs.classification_rules_version }}
+      FORCE_AUTH_CRITICAL: ${{ needs.preflight.outputs.force_auth_critical }}
+      REUSED_PAGES_STATE_JSON: ${{ needs.provider_evidence.outputs.pages_production_state_json }}
+      AUTH_ACCEPTANCE_STATUS: ${{ needs.workers.outputs.authenticated_acceptance_status }}
+      AUTH_ACCEPTANCE_RUN_ID: ${{ needs.workers.outputs.acceptance_run_id }}
+      AUTH_ACCEPTANCE_DEPENDENCIES_JSON: ${{ needs.workers.outputs.acceptance_dependencies_json }}
+      AUTH_ACCEPTANCE_EXPIRES_AT: ${{ needs.workers.outputs.acceptance_expires_at }}
+      AUTH_ACCEPTANCE_EVIDENCE_PATH: ${{ needs.workers.outputs.acceptance_evidence_path }}
+      ACTIVATION_STATE: ${{ needs.workers.outputs.activation_state }}
+      FAILURE_DOMAIN_EVIDENCE_JSON: ${{ needs.workers.outputs.failure_domain_evidence_json }}
       PLANETSCALE_SCHEMA_FINGERPRINT: ${{ needs.provider_evidence.outputs.planetscale_schema_fingerprint }}
       PLANETSCALE_RELATION_COUNT: ${{ needs.provider_evidence.outputs.planetscale_relation_count }}
       PLANETSCALE_SERVER_VERSION: ${{ needs.provider_evidence.outputs.planetscale_server_version }}
@@ -611,7 +917,22 @@ jobs:
       JOBS_WORKER_VERSION: ${{ needs.workers.outputs.jobs_worker_version }}
       COORDINATOR_WORKER_VERSION: ${{ needs.workers.outputs.coordinator_worker_version }}
       WORKER_SOURCE_SHA: ${{ needs.workers.outputs.worker_source_sha }}
+      PUBLIC_API_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.public_worker_source_sha }}
+      ADMIN_API_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.admin_worker_source_sha }}
+      JOBS_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.jobs_worker_source_sha }}
+      COORDINATOR_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.coordinator_worker_source_sha }}
+      PUBLIC_API_WORKER_PROVENANCE: ${{ needs.workers.outputs.public_worker_provenance }}
+      ADMIN_API_WORKER_PROVENANCE: ${{ needs.workers.outputs.admin_worker_provenance }}
+      JOBS_WORKER_PROVENANCE: ${{ needs.workers.outputs.jobs_worker_provenance }}
+      COORDINATOR_WORKER_PROVENANCE: ${{ needs.workers.outputs.coordinator_worker_provenance }}
+      PUBLIC_API_WORKER_STATUS: ${{ needs.workers.outputs.public_worker_status }}
+      ADMIN_API_WORKER_STATUS: ${{ needs.workers.outputs.admin_worker_status }}
+      JOBS_WORKER_STATUS: ${{ needs.workers.outputs.jobs_worker_status }}
+      COORDINATOR_WORKER_STATUS: ${{ needs.workers.outputs.coordinator_worker_status }}
       ROLLBACK_ARTIFACTS_PROVEN: ${{ needs.workers.outputs.rollback_artifacts_proven || 'false' }}
+      ROLLBACK_STATE: ${{ needs.workers.outputs.rollback_state || 'UNKNOWN' }}
+      ROLLBACK_COMPONENTS_JSON: ${{ needs.rollback.outputs.rollback_components_json || needs.preflight.outputs.changed_components_json || '[]' }}
+      ROLLBACK_EVIDENCE_PATH: ${{ needs.rollback.outputs.rollback_evidence_path || '' }}
       PRODUCTION_SMOKE_MARKETING: ${{ needs.production_smoke.outputs.marketing || 'BLOCKED' }}
       PRODUCTION_SMOKE_WWW: ${{ needs.production_smoke.outputs.www || 'BLOCKED' }}
       PRODUCTION_SMOKE_ADMIN_UI: ${{ needs.production_smoke.outputs.admin_ui || 'BLOCKED' }}
@@ -628,7 +949,56 @@ jobs:
       - name: Require exact manifest SHA
         shell: bash
         run: test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+      - name: Classify upstream release failure domain
+        id: upstream_failure_domain
+        if: always()
+        env:
+          PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          PROVIDER_RESULT: ${{ needs.provider_evidence.result }}
+          WORKERS_RESULT: ${{ needs.workers.result }}
+          MARKETING_RESULT: ${{ needs.marketing.result }}
+          WEB_RESULT: ${{ needs.web.result }}
+          ADMIN_RESULT: ${{ needs.admin.result }}
+          PRODUCTION_SMOKE_RESULT: ${{ needs.production_smoke.result }}
+          ROLLBACK_RESULT: ${{ needs.rollback.result }}
+          FAILURE_DOMAIN_EVIDENCE_JSON: ${{ needs.workers.outputs.failure_domain_evidence_json || '[]' }}
+        run: node scripts/ci/resolve-release-failure-domain.mjs
+      - name: Finalize post-activation release state
+        id: verified_state
+        if: always()
+        env:
+          RELEASE_STATE_HISTORY_JSON: ${{ needs.workers.outputs.release_state_history_json || '[]' }}
+          PRODUCTION_SMOKE_RESULT: ${{ needs.production_smoke.result }}
+          ROLLBACK_RESULT: ${{ needs.rollback.result }}
+          ROLLBACK_STATE: ${{ needs.rollback.outputs.rollback_state || needs.workers.outputs.rollback_state || 'READY' }}
+          ROLLBACK_HISTORY_JSON: ${{ needs.rollback.outputs.release_state_history_json || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$ROLLBACK_RESULT" == 'success' && "$ROLLBACK_STATE" == 'ROLLED_BACK' ]]; then
+            echo 'RELEASE_STATE=ROLLED_BACK' >> "$GITHUB_ENV"
+            echo 'state=ROLLED_BACK' >> "$GITHUB_OUTPUT"
+            echo "RELEASE_STATE_HISTORY_JSON=$ROLLBACK_HISTORY_JSON" >> "$GITHUB_ENV"
+            echo "history_json=$ROLLBACK_HISTORY_JSON" >> "$GITHUB_OUTPUT"
+          elif [[ "$PRODUCTION_SMOKE_RESULT" == 'success' ]]; then
+            node scripts/ci/transition-release-state.mjs VERIFIED
+          elif jq -e '.[-1].state == "ROLLED_BACK"' <<<"$RELEASE_STATE_HISTORY_JSON" >/dev/null 2>&1; then
+            echo 'RELEASE_STATE=ROLLED_BACK' >> "$GITHUB_ENV"
+            echo 'state=ROLLED_BACK' >> "$GITHUB_OUTPUT"
+            echo "history_json=$RELEASE_STATE_HISTORY_JSON" >> "$GITHUB_OUTPUT"
+          elif jq -e 'type == "array" and length > 0' <<<"$RELEASE_STATE_HISTORY_JSON" >/dev/null 2>&1; then
+            node scripts/ci/transition-release-state.mjs BLOCKED
+          else
+            echo 'RELEASE_STATE=BLOCKED' >> "$GITHUB_ENV"
+            echo 'RELEASE_STATE_HISTORY_JSON=[]' >> "$GITHUB_ENV"
+            echo 'state=BLOCKED' >> "$GITHUB_OUTPUT"
+            echo 'history_json=[]' >> "$GITHUB_OUTPUT"
+          fi
       - name: Build canonical release manifest
+        env:
+          RELEASE_STATE: ${{ steps.verified_state.outputs.state || 'BLOCKED' }}
+          RELEASE_STATE_HISTORY_JSON: ${{ steps.verified_state.outputs.history_json || '[]' }}
+          FAILURE_DOMAIN_EVIDENCE_JSON: ${{ steps.upstream_failure_domain.outputs.failure_domain_evidence_json || needs.workers.outputs.failure_domain_evidence_json || '[]' }}
         run: node scripts/ci/build-release-manifest.mjs
       - name: Create sanitized manifest integrity digest
         run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256

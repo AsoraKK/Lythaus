@@ -8,11 +8,11 @@ const workflow = fs.readFileSync('.github/workflows/native-workers-deploy.yml', 
 const jobsConfig = fs.readFileSync('apps/lythaus-jobs/wrangler.jsonc', 'utf8');
 
 test('canonical Worker deployment explicitly provisions the email lifecycle infrastructure before upload', () => {
-  const provision = workflow.match(/- name: Provision and verify Cloudflare Email Sending lifecycle infrastructure[\s\S]*?(?=\n      - name: Upload immutable candidate Worker versions)/)?.[0] ?? '';
+  const provision = workflow.match(/- name: Provision and verify Cloudflare Email Sending lifecycle infrastructure[\s\S]*?(?=\n      - name: INFRASTRUCTURE - Mark verified infrastructure gate)/)?.[0] ?? '';
   assert.match(provision, /node scripts\/ci\/provision-cloudflare-email-lifecycle\.mjs/);
   assert.match(provision, /CLOUDFLARE_EMAIL_LIFECYCLE_OUTPUT/);
   assert.match(provision, /CLOUDFLARE_API_TOKEN/);
-  assert.ok(workflow.indexOf('Provision and verify Cloudflare Email Sending lifecycle infrastructure') < workflow.indexOf('Upload immutable candidate Worker versions'));
+  assert.ok(workflow.indexOf('Provision and verify Cloudflare Email Sending lifecycle infrastructure') < workflow.indexOf('Upload immutable public Worker candidate'));
 });
 
 test('lifecycle provisioner is idempotent, exact, and records sanitized evidence', () => {

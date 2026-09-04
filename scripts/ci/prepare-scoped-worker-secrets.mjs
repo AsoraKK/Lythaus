@@ -27,10 +27,10 @@ function secretNames(inventory) {
     .map((binding) => binding.name));
 }
 
-export function classifyScopedKeyBindings({ publicNames, jobsNames, coordinatorNames }) {
+export function classifyScopedKeyBindings({ publicNames, jobsNames, coordinatorNames = new Set(), coordinatorManaged = true }) {
   const publicHasTransactionalKey = publicNames.has(TRANSACTIONAL_EMAIL_KEY);
   const jobsHasTransactionalKey = jobsNames.has(TRANSACTIONAL_EMAIL_KEY);
-  const coordinatorHasStateKey = coordinatorNames.has(ACCEPTANCE_STATE_KEY);
+  const coordinatorHasStateKey = coordinatorManaged && coordinatorNames.has(ACCEPTANCE_STATE_KEY);
   if (publicHasTransactionalKey !== jobsHasTransactionalKey) {
     throw new Error('scoped-key state divergence: transactional email key exists on exactly one Worker');
   }
@@ -42,8 +42,8 @@ export function classifyScopedKeyBindings({ publicNames, jobsNames, coordinatorN
       compatibilityProbeRequired: true,
     }),
     acceptanceState: Object.freeze({
-      coordinator: coordinatorHasStateKey ? 'present' : 'absent',
-      action: coordinatorHasStateKey ? 'preserve' : 'bootstrap',
+      coordinator: coordinatorManaged ? (coordinatorHasStateKey ? 'present' : 'absent') : 'not_touched',
+      action: coordinatorManaged ? (coordinatorHasStateKey ? 'preserve' : 'bootstrap') : 'reuse_not_touched',
     }),
   });
 }
@@ -98,35 +98,64 @@ function requiredEnvironment(name) {
   return value;
 }
 
+export function buildScopedSecretPayloads({
+  base,
+  turnstile = {},
+  coordinatorManaged = true,
+  lifecycleReadToken = '',
+  acceptanceEmailBase = '',
+  transactionalEmailKey = '',
+  acceptanceStateKey = '',
+}) {
+  if (!base || typeof base !== 'object' || Array.isArray(base)) throw new Error('base secret payload must be an object');
+  if (!turnstile || typeof turnstile !== 'object' || Array.isArray(turnstile)) throw new Error('Turnstile secret payload must be an object');
+  if (Object.prototype.hasOwnProperty.call(base, 'CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN')) {
+    throw new Error('lifecycle observer credential must not be included in base runtime secret payload');
+  }
+
+  const publicSecrets = { ...base, ...turnstile };
+  const jobsSecrets = { ...base };
+  const coordinatorSecrets = { ...base };
+  if (coordinatorManaged) {
+    if (!lifecycleReadToken) throw new Error('CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN is required');
+    if (!acceptanceEmailBase) throw new Error('AUTH_ACCEPTANCE_EMAIL_BASE is required');
+    coordinatorSecrets.AUTH_ACCEPTANCE_EMAIL_BASE = acceptanceEmailBase;
+    coordinatorSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN = lifecycleReadToken;
+  }
+  if (transactionalEmailKey) {
+    publicSecrets[TRANSACTIONAL_EMAIL_KEY] = transactionalEmailKey;
+    jobsSecrets[TRANSACTIONAL_EMAIL_KEY] = transactionalEmailKey;
+  }
+  if (acceptanceStateKey) coordinatorSecrets[ACCEPTANCE_STATE_KEY] = acceptanceStateKey;
+  return { publicSecrets, jobsSecrets, coordinatorSecrets };
+}
+
 async function main() {
   if (process.env.SCOPED_KEY_ROTATION_REQUESTED === 'true') {
     throw new Error('intentional scoped-key rotation requires a dedicated reviewed rotation workflow');
   }
   const publicNames = secretNames(readJson(requiredEnvironment('PUBLIC_SECRET_INVENTORY_FILE')));
   const jobsNames = secretNames(readJson(requiredEnvironment('JOBS_SECRET_INVENTORY_FILE')));
-  const coordinatorNames = secretNames(readJson(requiredEnvironment('COORDINATOR_SECRET_INVENTORY_FILE')));
-  const lifecycle = classifyScopedKeyBindings({ publicNames, jobsNames, coordinatorNames });
+  const coordinatorManaged = process.env.SKIP_ACCEPTANCE_COORDINATOR !== 'true';
+  const coordinatorNames = coordinatorManaged
+    ? secretNames(readJson(requiredEnvironment('COORDINATOR_SECRET_INVENTORY_FILE')))
+    : new Set();
+  const lifecycle = classifyScopedKeyBindings({ publicNames, jobsNames, coordinatorNames, coordinatorManaged });
   const requiresBootstrap = lifecycle.transactionalEmail.action === 'bootstrap' || lifecycle.acceptanceState.action === 'bootstrap';
   const counts = requiresBootstrap ? await readBootstrapLedgerCounts() : undefined;
   if (counts) assertBootstrapLedgerPreconditions(counts, lifecycle);
 
   const base = readJson(requiredEnvironment('BASE_SECRETS_FILE'));
   const turnstile = readJson(requiredEnvironment('TURNSTILE_SECRET_FILE'));
-  const publicSecrets = { ...base, ...turnstile };
-  const jobsSecrets = { ...base };
-  const coordinatorSecrets = {
-    ...base,
-    AUTH_ACCEPTANCE_EMAIL_BASE: requiredEnvironment('AUTH_ACCEPTANCE_EMAIL_BASE'),
-  };
-
-  if (lifecycle.transactionalEmail.action === 'bootstrap') {
-    const transactionalEmailKey = randomBytes(32).toString('base64');
-    publicSecrets[TRANSACTIONAL_EMAIL_KEY] = transactionalEmailKey;
-    jobsSecrets[TRANSACTIONAL_EMAIL_KEY] = transactionalEmailKey;
-  }
-  if (lifecycle.acceptanceState.action === 'bootstrap') {
-    coordinatorSecrets[ACCEPTANCE_STATE_KEY] = randomBytes(32).toString('base64');
-  }
+  const { publicSecrets, jobsSecrets, coordinatorSecrets } = buildScopedSecretPayloads({
+    base,
+    turnstile,
+    coordinatorManaged,
+    lifecycleReadToken: coordinatorManaged ? requiredEnvironment('CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN') : '',
+    acceptanceEmailBase: coordinatorManaged ? requiredEnvironment('AUTH_ACCEPTANCE_EMAIL_BASE') : '',
+    transactionalEmailKey: lifecycle.transactionalEmail.action === 'bootstrap' ? randomBytes(32).toString('base64') : '',
+    acceptanceStateKey: lifecycle.acceptanceState.action === 'bootstrap' ? randomBytes(32).toString('base64') : '',
+  });
 
   writeSecretFile(requiredEnvironment('PUBLIC_SECRETS_FILE'), publicSecrets);
   writeSecretFile(requiredEnvironment('JOBS_SECRETS_FILE'), jobsSecrets);

@@ -67,7 +67,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci --ignore-scripts
+      - run: npm ci --ignore-scripts --no-audit
       - run: npm run typecheck:native
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
       - run: npm run test:native-architecture
@@ -106,7 +106,7 @@ jobs:
           flutter-version-file: .fvmrc
           channel: stable
           cache: true
-      - run: npm ci --ignore-scripts
+      - run: npm ci --ignore-scripts --no-audit
       - run: flutter pub get
       - run: npm run openapi:lint
       - run: npm run openapi:bundle
@@ -168,9 +168,9 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm ci --ignore-scripts --prefix apps/control-panel
-      - run: npm ci --ignore-scripts --prefix apps/marketing-site
+      - run: npm ci --ignore-scripts --no-audit
+      - run: npm ci --ignore-scripts --no-audit --prefix apps/control-panel
+      - run: npm ci --ignore-scripts --no-audit --prefix apps/marketing-site
       - run: npm --prefix apps/control-panel test
       - run: node --test apps/marketing-site/tests/*.test.mjs
       - run: npm --prefix apps/control-panel run build
@@ -187,9 +187,9 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm ci --ignore-scripts --prefix apps/control-panel
-      - run: npm ci --ignore-scripts --prefix apps/marketing-site
+      - run: npm ci --ignore-scripts --no-audit
+      - run: npm ci --ignore-scripts --no-audit --prefix apps/control-panel
+      - run: npm ci --ignore-scripts --no-audit --prefix apps/marketing-site
       - name: Audit root dependencies
         run: node scripts/check-npm-audit.js
       - name: Audit control panel dependencies
