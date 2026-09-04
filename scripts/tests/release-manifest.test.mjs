@@ -72,7 +72,7 @@ test('STANDARD_RELEASE explicitly records that human auth acceptance is not requ
       CHANGED_COMPONENTS_JSON: '["marketing"]',
       REUSED_COMPONENTS_JSON: '["admin","control-panel","coordinator","flutter-web","jobs","public"]',
       CHANGED_FILES_JSON: '["apps/marketing-site/src/pages/pricing.astro"]',
-      RELEASE_CLASSIFICATION_RULES_VERSION: 'release-classification-v1',
+      RELEASE_CLASSIFICATION_RULES_VERSION: 'release-classification-v2',
       FORCE_AUTH_CRITICAL: 'false',
       PREVIOUS_PRODUCTION_SHA: 'f'.repeat(40),
       LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS: 'true',
@@ -88,7 +88,7 @@ test('STANDARD_RELEASE explicitly records that human auth acceptance is not requ
   assert.equal(manifest.authAcceptance.acceptanceRunId, null);
   assert.equal(manifest.authAcceptance.candidateDependencies, null);
   assert.deepEqual(manifest.source.changedFiles, ['apps/marketing-site/src/pages/pricing.astro']);
-  assert.equal(manifest.source.classificationRulesVersion, 'release-classification-v1');
+  assert.equal(manifest.source.classificationRulesVersion, 'release-classification-v2');
   assert.equal(manifest.source.forceAuthCritical, false);
 });
 

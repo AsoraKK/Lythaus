@@ -18,6 +18,9 @@ release SHA without rechecking it.
 
 The workflow computes `releaseClass`, `changedComponents`, and
 `reusedComponents`; there is no manual downgrade switch.
+Root `package.json` edits remain critical, while scripts-only edits reuse all
+component versions because the resolver proves the dependency graph is
+unchanged.
 
 ## What happens next
 

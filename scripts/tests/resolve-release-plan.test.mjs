@@ -54,7 +54,7 @@ test('CLI resolver writes deterministic standard scope and GitHub state outputs'
   assert.match(result.output, /release_class=STANDARD_RELEASE/);
   assert.match(result.output, /changed_components_json=\["marketing"\]/);
   assert.match(result.output, /changed_files_json=\["apps\/marketing-site\/src\/pages\/pricing\.astro","docs\/architecture\/runtime\.md"\]/);
-  assert.match(result.output, /classification_rules_version=release-classification-v1/);
+  assert.match(result.output, /classification_rules_version=release-classification-v2/);
   assert.match(result.output, /force_auth_critical=false/);
 });
 

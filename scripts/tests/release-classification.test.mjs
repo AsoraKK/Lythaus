@@ -187,3 +187,20 @@ test('component ownership maps shared runtime dependencies to every affected wor
   assert.deepEqual([...componentsForPath('api/openapi/openapi.yaml')].sort(), ['admin', 'control-panel', 'flutter-web', 'public']);
   assert.deepEqual([...componentsForPath('infrastructure/cloudflare/native-hyperdrive-production.json')].sort(), ['admin', 'coordinator', 'jobs', 'public']);
 });
+
+test('root package scripts stay critical without rebuilding components when dependencies are unchanged', () => {
+  const scriptsOnly = classifyRelease({
+    baseSha,
+    changedFiles: ['package.json'],
+    rootPackageDependencyChanged: false,
+  });
+  assert.equal(scriptsOnly.releaseClass, RELEASE_CLASSES.AUTH_CRITICAL);
+  assert.deepEqual(scriptsOnly.changedComponents, []);
+  assert.deepEqual(scriptsOnly.reusedComponents, ['admin', 'control-panel', 'coordinator', 'flutter-web', 'jobs', 'marketing', 'public']);
+  const dependencyChange = classifyRelease({
+    baseSha,
+    changedFiles: ['package.json'],
+    rootPackageDependencyChanged: true,
+  });
+  assert.deepEqual(dependencyChange.changedComponents, ['admin', 'control-panel', 'coordinator', 'flutter-web', 'jobs', 'marketing', 'public']);
+});

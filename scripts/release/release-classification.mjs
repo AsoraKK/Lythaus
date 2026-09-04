@@ -133,8 +133,14 @@ export function authCriticalMatches(value) {
   return authCriticalRules.filter((rule) => ruleMatches(path, rule)).map((rule) => rule.id);
 }
 
-export function classifyRelease({ changedFiles = [], forceAuthCritical = false, baseSha = null } = {}) {
+export function classifyRelease({
+  changedFiles = [],
+  forceAuthCritical = false,
+  baseSha = null,
+  rootPackageDependencyChanged = true,
+} = {}) {
   if (!Array.isArray(changedFiles)) throw new TypeError('changedFiles must be an array');
+  if (typeof rootPackageDependencyChanged !== 'boolean') throw new TypeError('rootPackageDependencyChanged must be a boolean');
   const paths = [...new Set(changedFiles.map(normalizePath).filter(Boolean))].sort();
   const changedComponents = new Set();
   const criticalReasons = [];
@@ -146,7 +152,10 @@ export function classifyRelease({ changedFiles = [], forceAuthCritical = false, 
   }
 
   for (const path of paths) {
-    for (const component of componentsForPath(path)) changedComponents.add(component);
+    const pathComponents = path === 'package.json' && !rootPackageDependencyChanged
+      ? []
+      : componentsForPath(path);
+    for (const component of pathComponents) changedComponents.add(component);
     const standardOverride = explicitStandardRules.find((rule) => ruleMatches(path, rule));
     if (standardOverride) {
       standardReasons.push({ path, rule: standardOverride.id });
@@ -198,9 +207,10 @@ export function classifyRelease({ changedFiles = [], forceAuthCritical = false, 
     changedFiles: Object.freeze(paths),
     changedComponents: Object.freeze([...changedComponents].filter((component) => allDeployableComponents.includes(component)).sort()),
     reusedComponents: Object.freeze(allDeployableComponents.filter((component) => !changedComponents.has(component)).sort()),
+    rootPackageDependencyChanged,
     criticalReasons: Object.freeze(criticalReasons),
     standardReasons: Object.freeze(standardReasons),
-    rulesVersion: 'release-classification-v1',
+    rulesVersion: 'release-classification-v2',
   });
 }
 

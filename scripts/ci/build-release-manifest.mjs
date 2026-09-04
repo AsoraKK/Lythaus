@@ -430,7 +430,7 @@ const manifest = {
   source: {
     releaseSha,
     previousProductionSha,
-    classificationRulesVersion: valueOrNull('RELEASE_CLASSIFICATION_RULES_VERSION') ?? 'release-classification-v1',
+    classificationRulesVersion: valueOrNull('RELEASE_CLASSIFICATION_RULES_VERSION') ?? 'release-classification-v2',
     changedFiles,
     forceAuthCritical: booleanValue('FORCE_AUTH_CRITICAL'),
   },

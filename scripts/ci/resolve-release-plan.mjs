@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { dependencyGraphChanged } from './dependency-review-policy.mjs';
 import { classifyRelease } from '../release/release-classification.mjs';
 import { componentDisposition } from '../release/component-deployment-plan.mjs';
 
@@ -36,7 +37,30 @@ if (changedFilesJson) {
   comparisonBase = null;
 }
 
-const classification = classifyRelease({ changedFiles, baseSha: comparisonBase, forceAuthCritical });
+function manifestAt(sha, manifest) {
+  try {
+    return JSON.parse(execFileSync('git', ['show', `${sha}:${manifest}`], { encoding: 'utf8' }));
+  } catch {
+    return null;
+  }
+}
+
+const rootPackageDependencyChanged = changedFiles.includes('package.json')
+  ? (comparisonBase === null
+    ? true
+    : (() => {
+      const before = manifestAt(comparisonBase, 'package.json');
+      const after = manifestAt(releaseSha, 'package.json');
+      return before === null || after === null || dependencyGraphChanged(before, after);
+    })())
+  : false;
+
+const classification = classifyRelease({
+  changedFiles,
+  baseSha: comparisonBase,
+  forceAuthCritical,
+  rootPackageDependencyChanged,
+});
 const plan = {
   schemaVersion: 'lythaus-release-plan-v1',
   generatedAt: new Date().toISOString(),
@@ -47,6 +71,7 @@ const plan = {
   changedFiles: classification.changedFiles,
   changedComponents: classification.changedComponents,
   reusedComponents: classification.reusedComponents,
+  rootPackageDependencyChanged: classification.rootPackageDependencyChanged,
   componentDisposition: componentDisposition(classification.changedComponents),
   criticalReasons: classification.criticalReasons,
   standardReasons: classification.standardReasons,

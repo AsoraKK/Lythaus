@@ -45,6 +45,10 @@ production SHA and applies auditable path rules.
 class input that can downgrade a computed critical plan. A missing baseline or
 ambiguous path is conservative and critical. Shared database, security,
 contract, and root dependency changes map to every affected component.
+The root `package.json` remains auth-critical for release safety, but a
+scripts-only edit is not a runtime component change: the resolver compares
+its dependency graph and reuses all production components when that graph is
+unchanged.
 
 ## Five gates
 
