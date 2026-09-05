@@ -70,7 +70,7 @@
     "test:planetscale-production-migrations": "node --test scripts/tests/planetscale-production-migrations.test.mjs scripts/tests/planetscale-schema-verifier-views.test.mjs"
   },
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "^2.25.0",
+    "@openapitools/openapi-generator-cli": "^2.41.0",
     "@redocly/cli": "^2.5.0",
     "@stoplight/spectral-cli": "6.15.0",
     "@types/jest": "^30.0.0",
