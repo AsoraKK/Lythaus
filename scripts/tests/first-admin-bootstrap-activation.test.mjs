@@ -43,6 +43,7 @@ test('bootstrap activation has exact provenance, 100-percent verification, rollb
   assert.match(workflow, /\.version_id == \$id and \(\(\.percentage \| tonumber\) == 100\)/);
   assert.match(workflow, /if: \$\{\{ always\(\) && env\.BOOTSTRAP_ACTIVATION_ATTEMPTED == 'true' && env\.BOOTSTRAP_ACTIVATION_VERIFIED != 'true' \}\}/);
   assert.match(workflow, /versions deploy "\$ADMIN_ROLLBACK_SPECS"/);
+  assert.doesNotMatch(workflow, /resolve-production-version-state\.mjs/);
   assert.match(workflow, /first-admin-bootstrap-activation-\$\{\{ github\.run_id \}\}/);
   assert.doesNotMatch(workflow, /identity\.admin_memberships/);
   assert.doesNotMatch(workflow, /CF-Access-Client-Secret/);

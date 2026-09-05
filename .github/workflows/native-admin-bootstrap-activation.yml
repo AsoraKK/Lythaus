@@ -153,9 +153,6 @@ jobs:
           npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/bootstrap-activation/admin-before-versions.json"
           node scripts/ci/resolve-worker-version-state.mjs rollback \
             "$RUNNER_TEMP/bootstrap-activation/admin-before.json" unused ADMIN
-          node scripts/ci/resolve-production-version-state.mjs \
-            "$RUNNER_TEMP/bootstrap-activation/admin-before.json" ADMIN \
-            "$RUNNER_TEMP/bootstrap-activation/admin-before-versions.json"
           test -n "${ADMIN_ROLLBACK_SPECS:-}"
           jq -e --arg id "$CANDIDATE_VERSION_ID" \
             '([.versions[] | select((.percentage | tonumber) > 0) | .version_id] | index($id)) == null' \
