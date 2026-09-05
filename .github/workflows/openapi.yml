@@ -89,12 +89,12 @@ jobs:
       - name: Contract tests
         run: npm run openapi:test:contract
       - name: Upload bundled spec
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: openapi.json
           path: api/openapi/dist/openapi.json
       - name: Upload OpenAPI docs
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: openapi-docs
           path: api/openapi/dist/index.html
