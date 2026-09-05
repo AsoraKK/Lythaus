@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
   "name": "lythaus-admin-api-development",
-  "main": "src/index.ts",
+  "main": "src/bootstrap-wrapper.ts",
   "compatibility_date": "2026-07-27",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
@@ -44,7 +44,7 @@
       "routes": [],
       "hyperdrive": [
         { "binding": "DB_ADMIN_FRESH", "id": "6bfbb0eab42642e8ad294dbf59294ed3" },
-        { "binding": "DB_PRIVACY_FRESH", "id": "bae909aa72e244bfa9b8ca8a948053b6" }
+        { "binding": "DB_PRIVACY_FRESH", "id": "bae909aa72e244bfa8ca8a948053b6" }
       ],
       "vars": {
         "ENVIRONMENT": "development",
