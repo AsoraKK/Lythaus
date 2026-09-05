@@ -29,6 +29,7 @@ test('bootstrap activation checks Access and untouched database state before tra
   assert.match(workflow, /EXPECTED_MEMBERSHIP_COUNT: '0'/);
   assert.match(workflow, /EXPECTED_BOOTSTRAP_CONSUMED: 'false'/);
   assert.match(workflow, /EXPECTED_COMPLETION_AUDIT_COUNT: '0'/);
+  assert.match(workflow, /PLANETSCALE_SCHEMA_READ_DATABASE_URL: \$\{\{ secrets\.PLANETSCALE_ADMIN_DATABASE_URL \}\}/);
   assert.match(workflow, /verify-cloudflare-admin-access\.mjs/);
   assert.match(workflow, /verify-first-admin-bootstrap-state\.mjs/);
   assert.match(workflow, /versions deploy \\\n\s+"\$\{CANDIDATE_VERSION_ID\}@100"/);
