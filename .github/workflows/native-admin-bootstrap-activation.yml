@@ -105,7 +105,7 @@ jobs:
           jq -e --arg sha "$CANDIDATE_SOURCE_SHA" '
             .name == "Canonical production release"
             and .head_sha == $sha
-            and .status == "completed"
+            and (.status == "waiting" or .status == "completed")
           ' <<<"$run_json" >/dev/null
           jobs_json="$(api_get "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}/jobs?per_page=100")"
           jq -e '
