@@ -86,7 +86,7 @@ GRANT SELECT, DELETE ON system.rate_limit_windows TO lythaus_jobs;
 GRANT DELETE ON system.outbox_events TO lythaus_jobs;
 GRANT SELECT, INSERT ON trust.provenance_events, trust.human_contribution_events TO lythaus_jobs;
 GRANT SELECT, INSERT, UPDATE ON trust.reputation_events, trust.reputation_profiles, trust.user_activity_events, moderation.reviewer_qualifications, moderation.appeal_assignments, moderation.appeal_outcomes TO lythaus_jobs;
-GRANT SELECT ON moderation.appeal_review_votes, moderation.appeal_adjudications, moderation.appeal_outcome_effects TO lythaus_jobs;
+GRANT SELECT ON moderation.appeal_review_votes, moderation.appeal_adjudications, moderation.appeal_outcomes, moderation.appeal_outcome_effects TO lythaus_jobs;
 GRANT SELECT ON trust.reputation_events TO lythaus_jobs;
 GRANT SELECT, DELETE ON social.follows, social.reactions, social.blocks, social.mutes, social.bookmarks TO lythaus_jobs;
 GRANT SELECT, INSERT ON system.audit_events TO lythaus_jobs;
@@ -133,3 +133,87 @@ REVOKE CREATE ON DATABASE postgres FROM lythaus_runtime, lythaus_admin, lythaus_
 
 -- Runtime roles must not own database objects or receive CREATE/CREATEROLE/CREATEDB.
 -- Verify with database/planetscale/verification/role-negative-tests.sql.
+
+-- First-administrator bootstrap is deliberately a one-shot database capability.
+-- The normal admin role keeps no INSERT privilege on identity.users or
+-- identity.admin_memberships; it can only execute this fixed SECURITY DEFINER
+-- function. The durable feature-flag latch, existing-membership check, and audit
+-- evidence make subsequent execution inert even if the HTTP bootstrap surface
+-- remains deployed.
+INSERT INTO system.feature_flags (flag_key, enabled, policy_version)
+VALUES ('identity.first_admin_bootstrap_consumed', false, 'bootstrap-v1')
+ON CONFLICT (flag_key) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION identity.bootstrap_first_administrator(
+  p_user_id uuid,
+  p_access_subject_hmac bytea,
+  p_audit_id uuid,
+  p_correlation_id text
+) RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, identity, system
+AS $$
+DECLARE
+  bootstrap_consumed boolean;
+BEGIN
+  IF p_user_id IS NULL OR p_audit_id IS NULL THEN
+    RAISE EXCEPTION 'invalid first-admin bootstrap identifiers' USING ERRCODE = '22023';
+  END IF;
+  IF p_access_subject_hmac IS NULL OR octet_length(p_access_subject_hmac) <> 32 THEN
+    RAISE EXCEPTION 'invalid first-admin bootstrap subject digest' USING ERRCODE = '22023';
+  END IF;
+  IF p_correlation_id IS NULL OR length(p_correlation_id) < 1 OR length(p_correlation_id) > 200 THEN
+    RAISE EXCEPTION 'invalid first-admin bootstrap correlation id' USING ERRCODE = '22023';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtext('lythaus:first-admin-bootstrap:v1'));
+
+  SELECT enabled INTO bootstrap_consumed
+    FROM system.feature_flags
+   WHERE flag_key = 'identity.first_admin_bootstrap_consumed'
+   FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'first-admin bootstrap latch unavailable' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF bootstrap_consumed THEN
+    RETURN false;
+  END IF;
+
+  -- Either of these durable facts also closes the bootstrap. This prevents a
+  -- stale false latch from creating a second administrator.
+  IF EXISTS (SELECT 1 FROM identity.admin_memberships)
+     OR EXISTS (SELECT 1 FROM system.audit_events WHERE action = 'identity.first_admin_bootstrapped') THEN
+    UPDATE system.feature_flags
+       SET enabled = true, policy_version = 'bootstrap-v1', updated_at = now()
+     WHERE flag_key = 'identity.first_admin_bootstrap_consumed';
+    RETURN false;
+  END IF;
+
+  -- This is a control-plane actor only: locked, credentialless, handleless and
+  -- profileless. It exists solely to satisfy admin/audit foreign-key identity.
+  INSERT INTO identity.users (id, status, display_name)
+  VALUES (p_user_id, 'locked', 'Lythaus control-plane administrator');
+
+  INSERT INTO identity.admin_memberships (user_id, access_subject_hmac, role, active)
+  VALUES (p_user_id, p_access_subject_hmac, 'administrator', true);
+
+  UPDATE system.feature_flags
+     SET enabled = true, policy_version = 'bootstrap-v1', updated_at = now()
+   WHERE flag_key = 'identity.first_admin_bootstrap_consumed';
+
+  INSERT INTO system.audit_events
+    (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+  VALUES
+    (p_audit_id, p_user_id, 'identity.first_admin_bootstrapped', 'admin_membership', p_user_id,
+     'FIRST_ADMIN_BOOTSTRAP', p_correlation_id,
+     jsonb_build_object('createdCount', 1, 'role', 'administrator', 'principalType', 'control_plane'));
+
+  RETURN true;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION identity.bootstrap_first_administrator(uuid, bytea, uuid, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION identity.bootstrap_first_administrator(uuid, bytea, uuid, text) FROM lythaus_runtime, lythaus_jobs, lythaus_privacy;
+GRANT EXECUTE ON FUNCTION identity.bootstrap_first_administrator(uuid, bytea, uuid, text) TO lythaus_admin;

@@ -6,6 +6,7 @@ on:
     paths:
       - 'database/planetscale/**'
       - 'scripts/ci/validate-planetscale-postgres17.mjs'
+      - 'scripts/ci/validate-first-admin-bootstrap-postgres17.mjs'
       - '.github/workflows/native-planetscale-ci.yml'
 
 permissions:
@@ -44,3 +45,7 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: npm run validate:planetscale-postgres17
+      - name: Prove first-admin bootstrap rollback, concurrency and closure
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: node scripts/ci/validate-first-admin-bootstrap-postgres17.mjs
