@@ -128,6 +128,25 @@ test('every production deployment entrypoint remains bound to exact CI and secur
   assert.match(workflow, /historical_reconciliation_run_id: \$\{\{ inputs\.historical_reconciliation_run_id \}\}/);
 });
 
+test('refreshes generated Worker types after deployment identity materialization', () => {
+  const materialize = workersWorkflow.indexOf('- name: Materialize approved post-0016 deployment identity');
+  const refresh = workersWorkflow.indexOf('- name: Refresh generated Worker types after deployment identity materialization');
+  const validate = workersWorkflow.indexOf('- name: Validate provisioned native Worker configuration');
+  assert.ok(materialize >= 0, 'deployment identity materialization must remain explicit');
+  assert.ok(refresh > materialize, 'generated types must refresh after materialization');
+  assert.ok(validate > refresh, 'provisioned validation must follow the refresh');
+
+  const refreshSection = workersWorkflow.slice(refresh, validate);
+  for (const worker of ['public-api', 'admin-api', 'jobs']) {
+    assert.match(
+      refreshSection,
+      new RegExp(`npx --yes wrangler@4\\.123\\.0 types apps/lythaus-${worker}/src/worker-configuration\\.d\\.ts --config apps/lythaus-${worker}/wrangler\\.jsonc`),
+      `${worker} generated types must be refreshed with the canonical Wrangler version`,
+    );
+  }
+  assert.match(workersWorkflow, /npm run validate:native-workers:provisioned/);
+});
+
 test('canonical parent reuses exact source evidence without weakening direct dispatch', () => {
   const childWorkflows = [
     ['marketing', readFileSync('.github/workflows/deploy-marketing.yml', 'utf8')],
