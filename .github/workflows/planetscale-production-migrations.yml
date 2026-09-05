@@ -130,6 +130,13 @@ jobs:
           PLANETSCALE_MIGRATION_USAGE_APPROVED: approved
           PLANETSCALE_MIGRATION_USAGE_MAX_USD: ${{ vars.PLANETSCALE_MIGRATION_USAGE_MAX_USD }}
         run: node scripts/ci/apply-planetscale-production-migrations.mjs
+      - name: Verify first-admin bootstrap least-privilege boundary
+        env:
+          PSCALE_BRANCH_NAME: main
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+        run: |
+          node scripts/ci/verify-first-admin-bootstrap-boundary.mjs \
+            > "$RUNNER_TEMP/planetscale-migration/first-admin-bootstrap-boundary.json"
       - name: Reconcile dedicated schema verifier metadata grants
         env:
           PSCALE_BRANCH_NAME: main
