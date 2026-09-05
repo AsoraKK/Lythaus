@@ -75,11 +75,14 @@ PR validation must prove:
 2. Collect fresh exact-main CI/security evidence.
 3. Run the protected `PlanetScale production migrations` workflow for that exact main SHA. No schema migration is added; the run reapplies the reviewed role boundary and records sanitized bootstrap-boundary evidence.
 4. Run the canonical AUTH_CRITICAL production release. Admin is a changed component and must receive a new exact candidate/version; unchanged components may be reused according to the release plan.
-5. Before invoking bootstrap, reconfirm both Cloudflare Access applications still permit only the intended administrator identity. Do not broaden Access to make bootstrap easier.
-6. In an Access-authenticated same-origin browser session, submit exactly one POST to the bootstrap endpoint with the required confirmation.
-7. Verify sanitized database state: membership count is exactly one, the bootstrap latch is consumed, and the completion audit count is exactly one.
-8. Reload the normal Admin UI/API and prove the ordinary membership lookup succeeds. Do not use the bootstrap route for routine administration.
-9. Renew the expired production-auth acceptance run against the current exact candidate/reused-component set and continue issue #720 acceptance.
+5. If the canonical AUTH_CRITICAL release is blocked at human acceptance because no administrator exists yet, run the protected **first-admin bootstrap activation** workflow. Supply only the exact candidate SHA, canonical release run and staged Admin version ID from that release. The workflow requires protected `main`, revalidates the immutable candidate artifact and the bootstrap route, checks both Access applications, requires the sanitized database state `0/false/0`, captures rollback state, and activates only the Admin candidate at 100%.
+6. Before invoking bootstrap, reconfirm both Cloudflare Access applications still permit only the intended administrator identity. Do not broaden Access to make bootstrap easier.
+7. In an Access-authenticated same-origin browser session, submit exactly one POST to the bootstrap endpoint with the required confirmation.
+8. Verify sanitized database state: membership count is exactly one, the bootstrap latch is consumed, and the completion audit count is exactly one.
+9. Reload the normal Admin UI/API and prove the ordinary membership lookup succeeds. Do not use the bootstrap route for routine administration.
+10. Renew the expired production-auth acceptance run against the current exact candidate/reused-component set and continue issue #720 acceptance.
+
+The first-admin activation workflow is deliberately narrow and one-shot in practice: it cannot run after bootstrap because its read-only precondition rejects any state other than zero active memberships, an unconsumed latch and zero completion audit events. It is not a replacement for the canonical AUTH_CRITICAL release or for the real issue #720 acceptance.
 
 ## Browser invocation
 

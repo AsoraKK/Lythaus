@@ -1,0 +1,220 @@
+name: Protected first-admin bootstrap activation
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_source_sha:
+        description: Exact reviewed SHA that produced the staged bootstrap-aware Admin candidate
+        required: true
+        type: string
+      candidate_run_id:
+        description: Canonical release run that produced the immutable candidate evidence
+        required: true
+        type: string
+      candidate_version_id:
+        description: Exact staged Admin Worker version ID from that release run
+        required: true
+        type: string
+      confirm_production:
+        description: Confirm the one-shot pre-bootstrap Admin activation
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: lythaus-first-admin-bootstrap-activation
+  cancel-in-progress: false
+
+jobs:
+  activate:
+    name: Activate bootstrap-aware Admin candidate
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    permissions:
+      actions: read
+      contents: read
+    env:
+      REF_PROTECTED: ${{ github.ref_protected }}
+      CANDIDATE_SOURCE_SHA: ${{ inputs.candidate_source_sha }}
+      CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+      CANDIDATE_VERSION_ID: ${{ inputs.candidate_version_id }}
+      CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+      CLOUDFLARE_ZONE_ID: 7bc572c8b7cd3c00be9c655176c29382
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_AUDIT_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN }}
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+      PSCALE_BRANCH_NAME: main
+      EXPECTED_MEMBERSHIP_COUNT: '0'
+      EXPECTED_BOOTSTRAP_CONSUMED: 'false'
+      EXPECTED_COMPLETION_AUDIT_COUNT: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Require protected main and explicit confirmation
+        shell: bash
+        env:
+          CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$REF_PROTECTED" = 'true'
+          test "$CONFIRM_PRODUCTION" = 'true'
+          [[ "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CANDIDATE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$CANDIDATE_VERSION_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$(git rev-parse HEAD)"
+          git cat-file -e "${CANDIDATE_SOURCE_SHA}^{commit}"
+          git merge-base --is-ancestor "$CANDIDATE_SOURCE_SHA" HEAD
+          test -z "$(git diff --name-only "$CANDIDATE_SOURCE_SHA" HEAD -- apps/lythaus-admin-api)"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Download immutable candidate evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: production-cutover-${{ inputs.candidate_source_sha }}
+          path: ${{ runner.temp }}/candidate-evidence
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.candidate_run_id }}
+      - name: Verify exact bootstrap candidate provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api_get() {
+            curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              -H 'User-Agent: Lythaus-first-admin-bootstrap-activation' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              "$1"
+          }
+          run_json="$(api_get "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}")"
+          jq -e --arg sha "$CANDIDATE_SOURCE_SHA" '
+            .name == "Canonical production release"
+            and .head_sha == $sha
+            and .status == "completed"
+          ' <<<"$run_json" >/dev/null
+          jobs_json="$(api_get "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}/jobs?per_page=100")"
+          jq -e '
+            ([.jobs[] | select(.name == "Deploy Workers and jobs / deploy")] | if length == 1 then .[0].steps else empty end) as $steps
+            | any($steps[]; .name == "Stage candidate Worker versions at zero traffic (CANDIDATE gate; changed components only)" and .conclusion == "success")
+            and any($steps[]; .name == "Probe admin candidate without production traffic (CANDIDATE gate)" and .conclusion == "success")
+          ' <<<"$jobs_json" >/dev/null
+
+          evidence_dir="$RUNNER_TEMP/candidate-evidence"
+          probe="$(find "$evidence_dir" -type f -name admin-candidate-probe.json -print -quit)"
+          versions="$(find "$evidence_dir" -type f -name admin-versions.json -print -quit)"
+          test -n "$probe" && test -n "$versions"
+          jq -e --arg sha "$CANDIDATE_SOURCE_SHA" --arg id "$CANDIDATE_VERSION_ID" '
+            ([.workers[] | select(.worker == "lythaus-admin-api-development")] | if length == 1 then .[0] else empty end) as $worker
+            | .releaseSha == $sha
+            and $worker.workerVersionId == $id
+            and $worker.releaseTag == $sha
+            and $worker.sourceSha == $sha
+            and $worker.readiness == "pass"
+          ' "$probe" >/dev/null
+          jq -e --arg sha "$CANDIDATE_SOURCE_SHA" --arg id "$CANDIDATE_VERSION_ID" '
+            any(.[]; .id == $id and .annotations["workers/tag"] == $sha)
+          ' "$versions" >/dev/null
+          git show "$CANDIDATE_SOURCE_SHA:apps/lythaus-admin-api/src/bootstrap-wrapper.ts" \
+            | grep -Fq '/api/admin/bootstrap/first-administrator'
+      - name: Verify the exact staged Admin Worker version in Cloudflare
+        shell: bash
+        run: |
+          set -euo pipefail
+          versions_file="$RUNNER_TEMP/admin-versions.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$versions_file"
+          node scripts/ci/resolve-worker-version-state.mjs candidate \
+            "$versions_file" "$CANDIDATE_SOURCE_SHA" ADMIN "$CANDIDATE_VERSION_ID"
+      - name: Reconfirm both Cloudflare Access administrator allowlists
+        run: node scripts/ci/verify-cloudflare-admin-access.mjs
+      - name: Verify the database is still bootstrap-ready
+        run: node scripts/ci/verify-first-admin-bootstrap-state.mjs
+      - name: Capture exact Admin rollback state
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bootstrap-activation"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$RUNNER_TEMP/bootstrap-activation/admin-before.json"
+          npx --yes wrangler@4.123.0 versions list --name lythaus-admin-api-development --json > "$RUNNER_TEMP/bootstrap-activation/admin-before-versions.json"
+          node scripts/ci/resolve-worker-version-state.mjs rollback \
+            "$RUNNER_TEMP/bootstrap-activation/admin-before.json" unused ADMIN
+          node scripts/ci/resolve-production-version-state.mjs \
+            "$RUNNER_TEMP/bootstrap-activation/admin-before.json" ADMIN \
+            "$RUNNER_TEMP/bootstrap-activation/admin-before-versions.json"
+          test -n "${ADMIN_ROLLBACK_SPECS:-}"
+          jq -e --arg id "$CANDIDATE_VERSION_ID" \
+            '([.versions[] | select((.percentage | tonumber) > 0) | .version_id] | index($id)) == null' \
+            "$RUNNER_TEMP/bootstrap-activation/admin-before.json" >/dev/null
+          echo 'BOOTSTRAP_ACTIVATION_ATTEMPTED=false' >> "$GITHUB_ENV"
+          echo 'BOOTSTRAP_ACTIVATION_VERIFIED=false' >> "$GITHUB_ENV"
+      - name: Activate only the exact bootstrap-aware Admin candidate
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo 'BOOTSTRAP_ACTIVATION_ATTEMPTED=true' >> "$GITHUB_ENV"
+          npx --yes wrangler@4.123.0 versions deploy \
+            "${CANDIDATE_VERSION_ID}@100" \
+            --name lythaus-admin-api-development \
+            --yes \
+            --message "Activate reviewed first-admin bootstrap candidate ${CANDIDATE_SOURCE_SHA}"
+      - name: Verify exact Admin candidate serves 100 percent
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          deployment_file="$RUNNER_TEMP/bootstrap-activation/admin-after.json"
+          npx --yes wrangler@4.123.0 deployments status --name lythaus-admin-api-development --json > "$deployment_file"
+          jq -e --arg id "$CANDIDATE_VERSION_ID" '
+            ([.versions[] | select((.percentage | tonumber) > 0)] | length == 1)
+            and ([.versions[] | select((.percentage | tonumber) > 0)][0] | .version_id == $id and ((.percentage | tonumber) == 100))
+          ' "$deployment_file" >/dev/null
+          echo 'BOOTSTRAP_ACTIVATION_VERIFIED=true' >> "$GITHUB_ENV"
+      - name: Roll back Admin if activation verification failed
+        if: ${{ always() && env.BOOTSTRAP_ACTIVATION_ATTEMPTED == 'true' && env.BOOTSTRAP_ACTIVATION_VERIFIED != 'true' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.123.0 versions deploy "$ADMIN_ROLLBACK_SPECS" \
+            --name lythaus-admin-api-development \
+            --yes \
+            --message 'Restore exact pre-bootstrap Admin production traffic'
+          echo 'BOOTSTRAP_ACTIVATION_ROLLBACK=RESTORED' >> "$GITHUB_ENV"
+      - name: Publish sanitized bootstrap activation evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bootstrap-activation"
+          jq -n \
+            --arg sourceSha "$CANDIDATE_SOURCE_SHA" \
+            --arg candidateVersionId "$CANDIDATE_VERSION_ID" \
+            --arg candidateRunId "$CANDIDATE_RUN_ID" \
+            --arg attempted "${BOOTSTRAP_ACTIVATION_ATTEMPTED:-false}" \
+            --arg verified "${BOOTSTRAP_ACTIVATION_VERIFIED:-false}" \
+            --arg rollback "${BOOTSTRAP_ACTIVATION_ROLLBACK:-NOT_REQUIRED}" \
+            '{schemaVersion:"first-admin-bootstrap-activation-v1",sourceSha:$sourceSha,candidateVersionId:$candidateVersionId,candidateRunId:$candidateRunId,activationAttempted:($attempted == "true"),activationVerified:($verified == "true"),rollbackState:$rollback}' \
+            > "$RUNNER_TEMP/bootstrap-activation/evidence.json"
+      - name: Upload sanitized bootstrap activation evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: first-admin-bootstrap-activation-${{ github.run_id }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/bootstrap-activation/evidence.json
