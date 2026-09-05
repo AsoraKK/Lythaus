@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const root = process.cwd();
 const configs = [
@@ -7,6 +8,11 @@ const configs = [
   'apps/lythaus-admin-api/wrangler.jsonc',
   'apps/lythaus-jobs/wrangler.jsonc',
   'apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc',
+];
+const generatedTypes = [
+  ['apps/lythaus-public-api/wrangler.jsonc', 'apps/lythaus-public-api/src/worker-configuration.d.ts'],
+  ['apps/lythaus-admin-api/wrangler.jsonc', 'apps/lythaus-admin-api/src/worker-configuration.d.ts'],
+  ['apps/lythaus-jobs/wrangler.jsonc', 'apps/lythaus-jobs/src/worker-configuration.d.ts'],
 ];
 const requireProvisioned = process.argv.includes('--require-provisioned');
 const failures = [];
@@ -42,9 +48,25 @@ for (const relative of configs) {
   if (requireProvisioned && /REPLACE_WITH_/.test(production)) failures.push(`${relative}: unresolved production binding or required secret placeholder`);
 }
 
+// Keep the inexpensive generated-type freshness gate in ordinary CI so a
+// configuration/entrypoint change cannot first be discovered by a production
+// release. Match the canonical release's pinned Wrangler version exactly.
+for (const [config, types] of generatedTypes) {
+  const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const result = spawnSync(
+    npx,
+    ['--yes', 'wrangler@4.123.0', 'types', '--check', types, '--config', config],
+    { cwd: root, encoding: 'utf8' },
+  );
+  if (result.error || result.status !== 0) {
+    const detail = [result.stderr, result.stdout].filter(Boolean).join('\n').trim();
+    failures.push(`${types}: generated Worker types are stale or unverifiable${detail ? ` (${detail.split('\n').at(-1)})` : ''}`);
+  }
+}
+
 if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`Validated ${configs.length} native Worker configs${requireProvisioned ? ' with provisioning requirements' : ''}.`);
+  console.log(`Validated ${configs.length} native Worker configs and ${generatedTypes.length} generated Worker type files${requireProvisioned ? ' with provisioning requirements' : ''}.`);
 }
