@@ -1,8 +1,8 @@
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? '';
-const token = process.env.CLOUDFLARE_AUDIT_API_TOKEN ?? '';
+const token = process.env.CLOUDFLARE_AUDIT_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
 
 if (!/^[0-9a-f]{32}$/i.test(accountId)) throw new Error('CLOUDFLARE_ACCOUNT_ID is required');
-if (!token) throw new Error('CLOUDFLARE_AUDIT_API_TOKEN is required');
+if (!token) throw new Error('CLOUDFLARE_AUDIT_API_TOKEN or CLOUDFLARE_API_TOKEN is required');
 
 const accountBase = `https://api.cloudflare.com/client/v4/accounts/${accountId}`;
 const expectedApplications = [

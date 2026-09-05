@@ -48,6 +48,7 @@ test('bootstrap activation has exact provenance, 100-percent verification, rollb
 });
 
 test('Access verifier requires one shared human identity and preserved deny policies without exposing it', () => {
+  assert.match(accessVerifier, /CLOUDFLARE_AUDIT_API_TOKEN \|\| process\.env\.CLOUDFLARE_API_TOKEN/);
   assert.match(accessVerifier, /Lythaus Admin UI/);
   assert.match(accessVerifier, /Lythaus Admin API/);
   assert.match(accessVerifier, /admin\.lythaus\.co/);
