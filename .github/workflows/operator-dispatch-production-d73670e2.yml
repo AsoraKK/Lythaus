@@ -1,0 +1,131 @@
+name: Temporary protected d736 production dispatcher
+
+on:
+  push:
+    branches:
+      - ops/dispatch-production-d73670e2
+    paths:
+      - .github/workflows/operator-dispatch-production-d73670e2.yml
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: temporary-protected-d736-production-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      RELEASE_SHA: d73670e2b4cc3dca23675247e813b6882c2b4d8c
+      PREVIOUS_PRODUCTION_SHA: 3dc65b477fd8898ec898fbc62e3ad00378fd2144
+      CI_RUN_ID: '33958570996'
+      CODEQL_RUN_ID: '33958570963'
+      DEPENDENCY_REVIEW_RUN_ID: '33958570926'
+      SECRET_SCAN_RUN_ID: '33958570927'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify authoritative protected main and wait for exact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_main="$(gh api "repos/${GITHUB_REPOSITORY}/branches/main" --jq '.commit.sha')"
+          test "$current_main" = "$RELEASE_SHA" || {
+            echo "main moved: expected $RELEASE_SHA, got $current_main" >&2
+            exit 1
+          }
+
+          wait_run() {
+            local run_id="$1"
+            local expected_name="$2"
+            for attempt in $(seq 1 180); do
+              payload="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
+              echo "$payload" | jq -e --arg sha "$RELEASE_SHA" --arg name "$expected_name" '.head_sha == $sha and .name == $name' >/dev/null || {
+                echo "Evidence run $run_id does not bind to exact SHA/name." >&2
+                return 1
+              }
+              status="$(echo "$payload" | jq -r '.status')"
+              conclusion="$(echo "$payload" | jq -r '.conclusion // empty')"
+              if [[ "$status" == completed ]]; then
+                [[ "$conclusion" == success ]] || {
+                  echo "Evidence run $run_id completed with $conclusion." >&2
+                  return 1
+                }
+                return 0
+              fi
+              sleep 10
+            done
+            echo "Timed out waiting for evidence run $run_id." >&2
+            return 1
+          }
+
+          wait_run "$CI_RUN_ID" 'CI'
+          wait_run "$CODEQL_RUN_ID" 'CodeQL'
+          wait_run "$DEPENDENCY_REVIEW_RUN_ID" 'Dependency review'
+          wait_run "$SECRET_SCAN_RUN_ID" 'Native secret scan'
+
+      - name: Dispatch exact-main historical reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="$(date -u +%s)"
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/historical-branch-reconciliation.yml/dispatches" \
+            -f ref=main
+
+          for attempt in $(seq 1 60); do
+            run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?event=workflow_dispatch&branch=main&per_page=100" \
+              | jq -c --arg sha "$RELEASE_SHA" --argjson before "$before" '[.workflow_runs[] | select(.name == "Historical branch reconciliation" and .head_sha == $sha and ((.created_at | fromdateiso8601) >= $before))] | sort_by(.created_at) | last // empty')"
+            if [[ -n "$run_json" ]]; then
+              run_id="$(echo "$run_json" | jq -r '.id')"
+              echo "HISTORICAL_RUN_ID=$run_id" >> "$GITHUB_ENV"
+              gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Timed out resolving the historical reconciliation run.' >&2
+          exit 1
+
+      - name: Dispatch canonical AUTH_CRITICAL production release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${HISTORICAL_RUN_ID:-}"
+
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/production-release.yml/dispatches" \
+            -f ref=main \
+            -f "inputs[release_sha]=$RELEASE_SHA" \
+            -f "inputs[previous_production_sha]=$PREVIOUS_PRODUCTION_SHA" \
+            -f "inputs[ci_run_id]=$CI_RUN_ID" \
+            -f "inputs[codeql_run_id]=$CODEQL_RUN_ID" \
+            -f "inputs[dependency_review_run_id]=$DEPENDENCY_REVIEW_RUN_ID" \
+            -f "inputs[secret_scan_run_id]=$SECRET_SCAN_RUN_ID" \
+            -f "inputs[historical_reconciliation_run_id]=$HISTORICAL_RUN_ID" \
+            -f 'inputs[acceptance_run_id]=' \
+            -f 'inputs[force_auth_critical]=true' \
+            -f 'inputs[confirm_production]=true'
+
+          for attempt in $(seq 1 60); do
+            run_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?event=workflow_dispatch&branch=main&per_page=100" \
+              | jq -r --arg sha "$RELEASE_SHA" '[.workflow_runs[] | select(.name == "Canonical production release" and .head_sha == $sha)] | sort_by(.created_at) | last | .id // empty')"
+            if [[ -n "$run_id" ]]; then
+              echo "Canonical production release dispatched: $run_id"
+              {
+                echo '## Protected production sequence dispatched'
+                echo "- Release SHA: $RELEASE_SHA"
+                echo "- Historical reconciliation run: $HISTORICAL_RUN_ID"
+                echo "- Canonical production release run: $run_id"
+                echo '- PlanetScale bootstrap boundary was already applied and verified by production migration run 33957514105 on the direct parent SHA; this corrective SHA changes only generated Worker types and an early CI validator.'
+                echo '- The canonical workflow retains all existing provider, candidate, rollback, Keeper and human-acceptance gates.'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Timed out resolving the canonical production release run.' >&2
+          exit 1
