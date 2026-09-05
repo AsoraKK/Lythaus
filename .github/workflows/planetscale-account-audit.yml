@@ -100,7 +100,7 @@ jobs:
           jq -e '.verifierPassed == true and .post0016Required == true and .transactionReadOnly == true' .artifacts/provider-inventory/planetscale-production-contract.json >/dev/null
       - name: Upload sanitized provider evidence
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: planetscale-account-audit-${{ github.sha }}
           if-no-files-found: error
