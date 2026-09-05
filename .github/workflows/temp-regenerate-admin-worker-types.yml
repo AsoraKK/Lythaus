@@ -1,0 +1,35 @@
+name: Temporary regenerate admin Worker types
+
+on:
+  push:
+    branches: [fix/admin-worker-generated-types]
+    paths:
+      - '.github/workflows/temp-regenerate-admin-worker-types.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/admin-worker-generated-types
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Regenerate exact Wrangler types
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.123.0 types apps/lythaus-admin-api/src/worker-configuration.d.ts --config apps/lythaus-admin-api/wrangler.jsonc
+          changed="$(git status --porcelain | awk '{print $2}')"
+          test "$changed" = "apps/lythaus-admin-api/src/worker-configuration.d.ts"
+      - name: Commit generated types
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/lythaus-admin-api/src/worker-configuration.d.ts
+          git commit -m 'fix(admin): regenerate Worker configuration types'
+          git push origin HEAD:fix/admin-worker-generated-types
