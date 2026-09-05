@@ -84,7 +84,7 @@
     "jsonpointer": "^5.0.1",
     "oasdiff": "file:tools/openapi/oasdiff",
     "openapi-client-axios": "^7.7.0",
-    "playwright": "^1.60.0",
+    "playwright": "^1.62.1",
     "tesseract.js": "^7.0.0",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
