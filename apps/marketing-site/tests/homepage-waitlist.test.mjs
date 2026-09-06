@@ -48,6 +48,7 @@ test('homepage public copy matches the living internet pitch and stays launch sa
     '04 / AUTHORSHIP',
     '05 / DISCOVERY',
     '06 / REPUTATION',
+    'Contribution over attention.',
     '07 / ACCOUNTABILITY',
     '08 / PUBLIC INTEREST',
     '09 / EDITORIAL',
@@ -82,21 +83,24 @@ test('homepage story sections use the approved narrative labels and anchors', ()
   for (const anchor of ['problem', 'human-first', 'platform', 'authorship', 'discovery', 'reputation', 'accountability', 'public-interest', 'editorial', 'why-lythaus', 'waitlist']) {
     assert.match(homepage, new RegExp(`id="${anchor}"`));
   }
-  assert.doesNotMatch(homepage, /pitch-section-meta/);
+  assert.match(homepage, /class="pitch-section-meta">01 \/ THE PROBLEM<\/div>/);
+  assert.match(homepage, /data-pitch-reveal/);
+  assert.doesNotMatch(homepage, /story-section|story-section--tint/);
 });
 
-test('homepage story content is direct and does not claim a live product preview', () => {
-  assert.match(homepage, /class="hero hero--story"/);
-  assert.match(homepage, /class="story-section"/);
+test('homepage story content is direct and includes an illustrative product preview', () => {
+  assert.match(homepage, /class="pitch-intro"/);
+  assert.match(homepage, /class="pitch-section pitch-problem"/);
   assert.match(homepage, /Your feed should not be a black box\./);
   assert.match(homepage, /Credibility should be earned, not purchased\./);
+  assert.match(homepage, /class="pitch-preview-shell"/);
   assert.doesNotMatch(homepage, /href="https?:\/\/app\.lythaus\.co/);
 });
 
 test('homepage story content remains visible without a JavaScript reveal dependency', () => {
-  assert.match(homepage, /class="story-section/);
-  assert.match(homePitchStyles, /\.story-section/);
-  assert.doesNotMatch(homePitchStyles, /\.story-section[^}]*opacity:\s*0/);
+  assert.match(homepage, /class="pitch-section/);
+  assert.match(homePitchStyles, /\.pitch-section\.pitch-reveal-pending/);
+  assert.doesNotMatch(homePitchStyles, /\.story-section/);
 });
 
 test('shared layout provides an accessible mobile navigation fallback', () => {
@@ -119,11 +123,29 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
 });
 
 test('homepage hero carries the living internet signal', () => {
-  assert.match(homepage, /class="hero hero--story"/);
-  assert.match(homepage, /<h1 id="hero-title">For the living internet\.<\/h1>/);
-  assert.match(homepage, /class="hero-card hero-card--signal"/);
-  assert.match(homepage, /Human authorship\.<br \/>Accountable participation\.<br \/>Discovery you can understand\./);
-  assert.doesNotMatch(homepage, /pitch-wordmark|pitchLighthouseSweep|pitchLighthouseCore/);
+  assert.match(homepage, /class="pitch-wordmark"/);
+  assert.match(homepage, /<p class="pitch-intro-statement">For the living internet\.<\/p>/);
+  assert.match(homepage, /class="pitch-intro-support"/);
+  assert.match(homepage, /class="pitch-letter"/);
+  assert.match(homepage, /pitch-opening-resolved/);
+  assert.doesNotMatch(homepage, /hero-card--signal|label-card|signal-mark/);
+  assert.doesNotMatch(homepage, /Human authorship\.<br|Accountable participation\.<br/);
+});
+
+test('homepage uses restrained authorship rows and natural copy wrapping', () => {
+  assert.match(homepage, /<dl class="pitch-authorship-list">/);
+  for (const label of ['Human-authored', 'AI-assisted', 'AI-generated', 'Under review']) {
+    assert.match(homepage, new RegExp(`<dt>${label}<\\/dt>`));
+  }
+  assert.match(homePitchStyles, /\.pitch-authorship-list/);
+  assert.doesNotMatch(homePitchStyles, /\.label-card|\.hero-card--signal|--story-line/);
+  assert.doesNotMatch(homepage, /<br\s*\/?\s*>/i);
+});
+
+test('homepage resolves the added hero support copy for reduced motion', () => {
+  assert.match(homePitchStyles, /\.pitch-intro-support/);
+  assert.match(homePitchStyles, /\.pitch-intro-support[\s\S]*opacity:\s*1/);
+  assert.match(homePitchStyles, /\.pitch-intro-support[\s\S]*animation:\s*none !important/);
 });
 
 test('homepage navigation and preview tabs have stable cross-browser hit areas', () => {
