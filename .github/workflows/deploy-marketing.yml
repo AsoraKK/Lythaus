@@ -279,7 +279,7 @@ jobs:
             body="$(mktemp)"
             status="$(curl --location --silent --show-error --max-time 30 --retry 6 --retry-delay 3 --dump-header "$headers" --output "$body" --write-out '%{http_code}' "$host/")"
             test "$status" = 200
-            rg -F 'The human internet is worth protecting.' "$body"
+            rg -F 'For the living internet.' "$body"
             rg -F -i 'X-Content-Type-Options: nosniff' "$headers"
             rg -F -i 'X-Frame-Options: DENY' "$headers"
             rm -f "$headers" "$body"
