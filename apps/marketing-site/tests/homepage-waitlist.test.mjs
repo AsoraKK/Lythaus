@@ -34,70 +34,69 @@ test('homepage uses the approved waitlist submission and accessible states', () 
   assert.doesNotMatch(homepage, /You are on the list\. We will be in touch when a place opens\./);
 });
 
-test('homepage public copy matches the human-first pitch and stays launch safe', () => {
+test('homepage public copy matches the living internet pitch and stays launch safe', () => {
   const publicSource = `${homepage}\n${layout}`;
   const visibleCopy = publicSource.replace(/<script[\s\S]*?<\/script>/giu, '');
   assert.doesNotMatch(visibleCopy, /\u2014/u);
-  assert.doesNotMatch(visibleCopy, /lime|neon green|purple gradient|PlanetScale|Hyperdrive|Cloudflare|C2PA|stylometric|confidence score|policy engine|appeal threshold|moderation weight/i);
-  assert.match(homepage, /The human internet is worth protecting\./);
-  assert.match(homepage, /Built for humans first\./);
-  assert.match(homepage, /Lythaus is a human-first, public-interest platform built for genuine human interaction\./);
-  assert.match(homepage, /Algorithms for relevance, not addiction\./);
-  assert.match(homepage, /Reputation is earned\./);
-  assert.match(homepage, /Member content is not sold or repurposed to train generative models\./);
-  assert.match(homepage, /Join the waitlist/);
-  assert.match(homepage, /Join Lythaus early\./);
-  assert.match(homepage, /Preview how Lythaus works\./);
-  assert.match(homepage, /Illustrative UI only\. No account actions or live content are available here\./);
-  assert.match(homepage, /Human-authored/);
-  assert.match(homepage, /AI-assisted/);
-  assert.match(homepage, /Under review/);
-  assert.doesNotMatch(homepage, /Enter a live, read-only version of Lythaus/);
+  assert.doesNotMatch(visibleCopy, /lime|neon green|purple gradient|PlanetScale|Hyperdrive|Cloudflare|C2PA|stylometric|policy engine|appeal threshold|moderation weight/i);
+  for (const phrase of [
+    'For the living internet.',
+    'Lythaus is a human-first social platform for public-interest conversation',
+    '01 / THE PROBLEM',
+    '02 / HUMAN FIRST',
+    '03 / THE PLATFORM',
+    '04 / AUTHORSHIP',
+    '05 / DISCOVERY',
+    '06 / REPUTATION',
+    '07 / ACCOUNTABILITY',
+    '08 / PUBLIC INTEREST',
+    '09 / EDITORIAL',
+    '10 / WHY LYTHAUS',
+    'Human-authored',
+    'AI-assisted',
+    'AI-generated',
+    'Under review',
+    'Join the private beta',
+  ]) assert.match(homepage, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.doesNotMatch(homepage, /The human internet is worth protecting\./);
   assert.doesNotMatch(homepage, /app\.lythaus\.co|Guest Preview|News Board/i);
   const retiredUserFacingNames = [String.fromCharCode(65, 115, 111, 114, 97), String.fromCharCode(65, 122, 117, 114, 101)];
   assert.doesNotMatch(visibleCopy, new RegExp(retiredUserFacingNames.join('|'), 'i'));
-  assert.equal((homepage.match(/The human internet is worth protecting\./g) ?? []).length, 1);
-  assert.equal((homepage.match(/Algorithms for relevance, not addiction\./g) ?? []).length, 1);
+  assert.equal((homepage.match(/For the living internet\./g) ?? []).length, 2);
   assert.match(styles, /--accent: #f2c98d/i);
 });
 
-test('homepage editorial section labels are unnumbered and non-redundant', () => {
-  assert.doesNotMatch(homepage, /pitch-intro-meta/);
-  assert.doesNotMatch(homepage, /pitch-section-meta[^>]*>\d{2} \/ /);
+test('homepage story sections use the approved narrative labels and anchors', () => {
   for (const label of [
-    'The Problem',
-    'What Lythaus Is',
-    'Experience Lythaus',
-    'A Different Kind of Feed',
-    'Reputation',
-    'Lythaus and AI',
-    'Principles',
-  ]) {
-    assert.match(homepage, new RegExp(`<div class="pitch-section-meta">${label}<\\/div>`));
+    '01 / THE PROBLEM',
+    '02 / HUMAN FIRST',
+    '03 / THE PLATFORM',
+    '04 / AUTHORSHIP',
+    '05 / DISCOVERY',
+    '06 / REPUTATION',
+    '07 / ACCOUNTABILITY',
+    '08 / PUBLIC INTEREST',
+    '09 / EDITORIAL',
+    '10 / WHY LYTHAUS',
+  ]) assert.match(homepage, new RegExp(label));
+  for (const anchor of ['problem', 'human-first', 'platform', 'authorship', 'discovery', 'reputation', 'accountability', 'public-interest', 'editorial', 'why-lythaus', 'waitlist']) {
+    assert.match(homepage, new RegExp(`id="${anchor}"`));
   }
-  assert.doesNotMatch(homepage, /<div class="pitch-section-meta">Built for Humans First<\/div>/);
-  assert.match(homepage, /<section class="pitch-section pitch-human-first"[\s\S]*?<h2 id="human-first-title">Built for humans first\.<\/h2>/);
+  assert.doesNotMatch(homepage, /pitch-section-meta/);
 });
 
-test('Experience is an explicit local preview with keyboard-oriented controls', () => {
-  assert.match(homepage, /data-preview/);
-  assert.match(homepage, /role="tablist"/);
-  assert.match(homepage, /data-preview-tab="discovery"/);
-  assert.match(homepage, /data-preview-tab="authorship"/);
-  assert.match(homepage, /data-preview-tab="controls"/);
-  assert.match(homepage, /data-preview-control aria-pressed/);
-  assert.match(homepage, /No feed request is made\./);
-  assert.match(homepage, /ArrowRight.*ArrowLeft.*Home.*End/s);
+test('homepage story content is direct and does not claim a live product preview', () => {
+  assert.match(homepage, /class="hero hero--story"/);
+  assert.match(homepage, /class="story-section"/);
+  assert.match(homepage, /Your feed should not be a black box\./);
+  assert.match(homepage, /Credibility should be earned, not purchased\./);
   assert.doesNotMatch(homepage, /href="https?:\/\/app\.lythaus\.co/);
 });
 
-test('homepage reveal enhancement has a visible-content fallback', () => {
-  assert.match(homepage, /pitch-reveal-pending/);
-  assert.match(homepage, /pitch-opening-resolved/);
-  assert.match(homepage, /IntersectionObserver/);
-  assert.match(homepage, /prefers-reduced-motion/);
-  assert.match(homePitchStyles, /\.pitch-section\.pitch-reveal-pending/);
-  assert.doesNotMatch(homePitchStyles, /\.pitch-section\[data-pitch-reveal\],[\s\S]{0,120}opacity: 0/);
+test('homepage story content remains visible without a JavaScript reveal dependency', () => {
+  assert.match(homepage, /class="story-section/);
+  assert.match(homePitchStyles, /\.story-section/);
+  assert.doesNotMatch(homePitchStyles, /\.story-section[^}]*opacity:\s*0/);
 });
 
 test('shared layout provides an accessible mobile navigation fallback', () => {
@@ -119,34 +118,12 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
   assert.match(styles, /min-height: 44px/);
 });
 
-test('homepage opening resolves the Lythaus letters without a separate point light', () => {
-  assert.match(homepage, /class="pitch-wordmark"/);
-  assert.match(homepage, /--letter-index: 0/);
-  assert.match(homepage, /--letter-index: 6/);
-  for (const delay of ['90ms', '225ms', '360ms', '495ms', '630ms', '765ms', '900ms']) {
-    assert.match(homepage, new RegExp(`--letter-delay: ${delay}`));
-  }
-  assert.match(homePitchStyles, /@keyframes pitchLetterResolve/);
-  assert.doesNotMatch(homepage, /--light-delay/);
-  assert.doesNotMatch(homePitchStyles, /pitchLightPoint|\.pitch-letter::before/);
-  assert.match(homePitchStyles, /prefers-reduced-motion/);
-  assert.match(homePitchStyles, /animation-delay: var\(--letter-delay\)/);
-  assert.match(homePitchStyles, /animation: pitchLetterResolve 1080ms linear forwards/);
-  assert.match(homePitchStyles, /@keyframes pitchLetterResolve[\s\S]*?24%[\s\S]*?38%[\s\S]*?50%[\s\S]*?68%[\s\S]*?100%/);
-  assert.match(homePitchStyles, /@keyframes pitchLetterResolveMobile[\s\S]*?24%[\s\S]*?38%[\s\S]*?50%[\s\S]*?68%[\s\S]*?100%/);
-  assert.match(homePitchStyles, /animation-timing-function: cubic-bezier\(0\.8, 0, 1, 1\)/);
-  assert.match(homePitchStyles, /animation-timing-function: cubic-bezier\(0\.4, 0, 0\.2, 1\)/);
-  assert.match(homePitchStyles, /animation: pitchCopyReveal 520ms ease 860ms forwards/);
-  assert.doesNotMatch(homePitchStyles, /pitchLighthouseSweep|pitchLighthouseCore|pitchWordmarkHit|pitch-beam-blur|pitch-core-blur/);
-  assert.doesNotMatch(homePitchStyles, /\.pitch-wordmark::after/);
-  assert.match(homePitchStyles, /filter: blur\(3\.8px\) brightness\(2\.6\)/);
-  assert.match(homePitchStyles, /filter: blur\(1\.6px\) brightness\(2\.1\)/);
-  assert.match(homePitchStyles, /filter: blur\(2\.5px\) brightness\(2\.25\)/);
-  assert.match(homePitchStyles, /filter: blur\(0\.9px\) brightness\(1\.82\)/);
-  assert.match(homePitchStyles, /animation: none/);
-  assert.match(homePitchStyles, /filter: none;\s*text-shadow: none;/);
-  assert.doesNotMatch(homepage, /pitch-scroll-cue|pitchCueReveal|pitchCueMove/);
-  assert.doesNotMatch(homePitchStyles, /pitch-scroll-cue|pitchCueReveal|pitchCueMove/);
+test('homepage hero carries the living internet signal', () => {
+  assert.match(homepage, /class="hero hero--story"/);
+  assert.match(homepage, /<h1 id="hero-title">For the living internet\.<\/h1>/);
+  assert.match(homepage, /class="hero-card hero-card--signal"/);
+  assert.match(homepage, /Human authorship\.<br \/>Accountable participation\.<br \/>Discovery you can understand\./);
+  assert.doesNotMatch(homepage, /pitch-wordmark|pitchLighthouseSweep|pitchLighthouseCore/);
 });
 
 test('homepage navigation and preview tabs have stable cross-browser hit areas', () => {
