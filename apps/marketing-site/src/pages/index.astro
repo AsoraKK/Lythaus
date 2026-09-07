@@ -295,7 +295,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       ['pointerdown', 'keydown', 'scroll', 'touchstart', 'focusin'].forEach((eventName) => {
         window.addEventListener(eventName, resolveOpening, { once: true, passive: eventName !== 'keydown' });
       });
-      window.setTimeout(resolveOpening, 1700);
+      window.setTimeout(resolveOpening, 2800);
     })();
   </script>
 

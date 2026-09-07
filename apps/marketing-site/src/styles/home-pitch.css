@@ -135,13 +135,13 @@
   display: flex;
   justify-content: center;
   gap: inherit;
-  padding: 0.18em;
-  margin: -0.18em;
+  padding: 0.32em;
+  margin: -0.32em;
   -webkit-mask-size: 400% 100%;
   mask-size: 400% 100%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  animation: pitchSweep 1550ms linear 100ms both;
+  animation: pitchSweep 2600ms linear 100ms both;
 }
 
 .pitch-presence {
@@ -152,7 +152,7 @@
 .pitch-beam {
   pointer-events: none;
   color: #fffdf6;
-  text-shadow: 0 0 2px #fffdf6, 0 0 8px rgba(255, 247, 226, 0.9), 0 0 18px rgba(242, 201, 141, 0.55);
+  text-shadow: 0 0 3px #fffdf6, 0 0 10px rgba(255, 253, 246, 1), 0 0 24px rgba(242, 201, 141, 0.8);
   -webkit-mask-image: linear-gradient(90deg, transparent 29%, rgba(0, 0, 0, 0.15) 36%, rgba(0, 0, 0, 0.55) 42%, #000 47%, transparent 50%);
   mask-image: linear-gradient(90deg, transparent 29%, rgba(0, 0, 0, 0.15) 36%, rgba(0, 0, 0, 0.55) 42%, #000 47%, transparent 50%);
 }
