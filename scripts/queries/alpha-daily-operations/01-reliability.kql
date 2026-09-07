@@ -1,6 +1,0 @@
-let requestWindow = requests | where timestamp >= ago(24h);
-print
-  totalRequests = toscalar(requestWindow | count),
-  failedRequests = toscalar(requestWindow | where success == false or toint(resultCode) >= 500 | count),
-  apiErrorRatePct = 100.0 * todouble(toscalar(requestWindow | where success == false or toint(resultCode) >= 500 | count)) / todouble(max_of(1, toscalar(requestWindow | count))),
-  activeUsersEstimate = toscalar(requestWindow | where isnotempty(user_AuthenticatedId) | summarize value = dcount(user_AuthenticatedId))

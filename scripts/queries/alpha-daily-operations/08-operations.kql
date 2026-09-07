@@ -1,7 +1,0 @@
-let events = customEvents | where timestamp >= ago(24h);
-let latestDsr = events | where name == 'dsr.queue.monitor' | top 1 by timestamp desc;
-print
-  dsrStuckRequests = toint(toscalar(latestDsr | project customDimensions['stuckQueuedCount'])),
-  dsrFailedRequests = toint(toscalar(latestDsr | project customDimensions['failedRequestCount'])),
-  infrastructureExceptions = toscalar(exceptions | where timestamp >= ago(24h) | count),
-  supportIncidents = toscalar(events | where name startswith 'support_' or name startswith 'incident_' | count)

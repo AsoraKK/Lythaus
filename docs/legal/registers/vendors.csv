@@ -1,3 +1,0 @@
-vendor,service,purpose,data_categories,transfer_mechanism,dpa_status,scc_or_idta_status,operator_agreement_status,last_reviewed_utc,owner,status,notes
-Cloudflare,Runtime edge storage and transactional email,Application delivery and processing,account identifiers|content metadata|request metadata|media objects|email addresses,To be confirmed,unknown,unknown,unknown,2026-08-06,platform,open,Confirm Workers R2 and Email Service transfer terms
-PlanetScale,Managed PostgreSQL,Canonical application database,account identifiers|content metadata|moderation records|privacy records,To be confirmed,unknown,unknown,unknown,2026-08-06,platform,open,Confirm PostgreSQL region retention and transfer terms

@@ -1,2 +1,0 @@
-incident_id,detected_utc,summary,severity,contains_personal_data,assessment_due_utc,assessment_completed_utc,notifiable,owner,status,notes
-INC-TEMPLATE,2026-02-05T00:00:00Z,Replace with real incident entry,unknown,unknown,2026-02-08T00:00:00Z,,unknown,security-ops,template,Use one row per incident and retain for audit history

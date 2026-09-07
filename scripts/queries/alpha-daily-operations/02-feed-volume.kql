@@ -1,8 +1,0 @@
-let feedRequests = requests
-  | where timestamp >= ago(24h)
-  | where tostring(url) contains '/feed' or tostring(url) contains '/news';
-print
-  feedRequests = toscalar(feedRequests | count),
-  feedFailedRequests = toscalar(feedRequests | where success == false or toint(resultCode) >= 500 | count),
-  feedErrorRatePct = 100.0 * todouble(toscalar(feedRequests | where success == false or toint(resultCode) >= 500 | count)) / todouble(max_of(1, toscalar(feedRequests | count))),
-  feedP50Ms = todouble(toscalar(feedRequests | summarize value = percentile(duration, 50)))

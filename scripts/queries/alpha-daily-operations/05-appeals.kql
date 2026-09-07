@@ -1,6 +1,0 @@
-let events = customEvents | where timestamp >= ago(24h);
-print
-  appealsCreated = toscalar(events | where name == 'alpha_appeal_created' | count),
-  appealsResolved = toscalar(events | where name == 'alpha_appeal_resolved' | count),
-  appealsOverturned = toscalar(events | where name == 'alpha_appeal_resolved' and tostring(customDimensions['overturned']) == 'true' | count),
-  appealOverturnRatePct = 100.0 * todouble(toscalar(events | where name == 'alpha_appeal_resolved' and tostring(customDimensions['overturned']) == 'true' | count)) / todouble(max_of(1, toscalar(events | where name == 'alpha_appeal_resolved' | count)))

@@ -1,7 +1,0 @@
-let events = customEvents | where timestamp >= ago(24h);
-let latestDsr = events | where name == 'dsr.queue.monitor' | top 1 by timestamp desc;
-print
-  aiClassificationConflicts = toscalar(events | where name == 'post_created' and tostring(customDimensions['classificationState']) == 'conflict' | count),
-  aiClassificationUnavailable = toscalar(events | where name == 'post_created' and tostring(customDimensions['classificationState']) == 'unavailable' | count),
-  dsrQueueMessages = toint(toscalar(latestDsr | project customDimensions['approximateMessageCount'])),
-  dsrPoisonMessages = toint(toscalar(latestDsr | project customDimensions['poisonApproximateMessageCount']))

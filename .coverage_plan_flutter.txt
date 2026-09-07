@@ -1,7 +1,0 @@
-// Flutter Test Coverage Plan:
-// 1. Generate current coverage report and locate gaps (in_progress)
-// 2. Identify top untested files to test first
-// 3. Scaffold test files for uncovered modules
-// 4. Write unit tests covering normal and edge cases
-// 5. Integrate mocks and stubs for external dependencies
-// 6. Run tests and coverage, iterate until >90%

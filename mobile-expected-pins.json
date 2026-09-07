@@ -1,6 +1,0 @@
-{
-  "_states": {
-    "api.lythaus.co": "disabled"
-  },
-  "_comment_mvp": "Strict SPKI pinning is disabled for the MVP. Do not add pins or enable strict pinning until the Cloudflare public-gateway certificate rotation and rollback procedure has passed."
-}

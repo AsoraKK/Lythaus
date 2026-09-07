@@ -1,6 +1,0 @@
-Smoke Test Results
-====================
-p95: 247.05ms
-p99: 261.24ms
-error_rate: 100.00%
-iterations: 23

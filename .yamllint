@@ -1,7 +1,0 @@
----
-extends: default
-rules:
-  line-length: disable
-  comments-indentation: disable
-  # Allow undefined variables in GitHub Actions workflows
-  # (they are injected by GitHub Actions at runtime)

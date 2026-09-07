@@ -1,8 +1,0 @@
-let requestWindow = requests | where timestamp >= ago(24h);
-let feedRequests = requestWindow | where tostring(url) contains '/feed' or tostring(url) contains '/news';
-let authRequests = requestWindow | where tostring(url) contains '/auth/';
-print
-  feedP95Ms = todouble(toscalar(feedRequests | summarize value = percentile(duration, 95))),
-  feedP99Ms = todouble(toscalar(feedRequests | summarize value = percentile(duration, 99))),
-  authRequests = toscalar(authRequests | count),
-  authFailures = toscalar(authRequests | where success == false or toint(resultCode) >= 400 | count)

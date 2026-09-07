@@ -1,9 +1,0 @@
-title = "Lythaus gitleaks configuration"
-
-[allowlist]
-  description = "Known non-secret test placeholders"
-  regexes = [
-    '''K6_SMOKE_TOKEN''',
-    '''STAGING_SMOKE_TOKEN''',
-    '''STAGING_DOMAIN'''
-  ]

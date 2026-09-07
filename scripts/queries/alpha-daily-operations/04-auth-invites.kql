@@ -1,7 +1,0 @@
-let events = customEvents | where timestamp >= ago(24h);
-let authRequests = requests | where timestamp >= ago(24h) | where tostring(url) contains '/auth/';
-print
-  authenticationSuccessRatePct = 100.0 * todouble(toscalar(authRequests | where success == true and toint(resultCode) < 400 | count)) / todouble(max_of(1, toscalar(authRequests | count))),
-  newUsers = toscalar(events | where name == 'alpha_invite_redeemed' and tostring(customDimensions['insertedMembership']) == 'true' | count),
-  invitesCreated = toscalar(events | where name == 'alpha_invite_created' | summarize value = sum(toint(customDimensions['count']))),
-  invitesRedeemed = toscalar(events | where name == 'alpha_invite_redeemed' | count)

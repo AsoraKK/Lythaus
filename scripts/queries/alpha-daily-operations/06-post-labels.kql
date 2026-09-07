@@ -1,8 +1,0 @@
-let postEvents = customEvents
-  | where timestamp >= ago(24h)
-  | where name == 'post_created' and tostring(customDimensions['isTestMode']) != 'true';
-print
-  humanAuthoredPosts = toscalar(postEvents | where tostring(customDimensions['authorshipLabel']) == 'Human-authored' | count),
-  aiAssistedPosts = toscalar(postEvents | where tostring(customDimensions['authorshipLabel']) == 'AI-assisted' | count),
-  aiGeneratedPosts = toscalar(postEvents | where tostring(customDimensions['authorshipLabel']) == 'AI-generated' | count),
-  underReviewPosts = toscalar(postEvents | where tostring(customDimensions['authorshipLabel']) == 'Under review' | count)
