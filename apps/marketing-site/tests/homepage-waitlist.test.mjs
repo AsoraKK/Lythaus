@@ -129,6 +129,11 @@ test('homepage hero carries the living internet signal', () => {
   assert.match(homepage, /id="pitch-wordmark" aria-label="Lythaus"/);
   assert.match(homepage, /class="pitch-beam" aria-hidden="true"/);
   assert.doesNotMatch(homepage, /--letter-delay|--letter-index/);
+  assert.match(homepage, /class="pitch-presence" aria-hidden="true"/);
+  assert.doesNotMatch(homePitchStyles, /pitchWordmarkIlluminate|pitchBeamCross/);
+  assert.match(homePitchStyles, /animation: pitchSweep [^;]* linear/);
+  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-presence\s*\{[^}]*mask: none/);
+  assert.match(homePitchStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.pitch-presence\s*\{[^}]*animation: none;[^}]*mask: none/);
   assert.doesNotMatch(homePitchStyles, /pitchLetterResolve|pitchLetterResolveMobile|pitchWordReveal|pitchLightPass/);
   assert.match(homePitchStyles, /\.pitch-beam\s*\{[^}]*pointer-events: none/);
   assert.match(homePitchStyles, /\.pitch-beam\s*\{[^}]*mask-image/);
