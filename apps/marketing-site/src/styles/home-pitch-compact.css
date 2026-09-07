@@ -1,0 +1,43 @@
+.pitch-section--compact {
+  padding: clamp(68px, 7vw, 104px) 0;
+}
+
+.pitch-section--compact .pitch-section-meta {
+  margin-bottom: clamp(34px, 4vw, 52px);
+}
+
+.pitch-section--compact h2 {
+  font-size: clamp(40px, 5vw, 68px);
+}
+
+.pitch-section--compact .pitch-reputation-grid {
+  margin-top: clamp(44px, 5.5vw, 72px);
+}
+
+.pitch-section--compact .pitch-four-lines {
+  margin-top: clamp(36px, 4.5vw, 60px);
+}
+
+.pitch-section--compact .pitch-emphasis {
+  margin-top: 26px !important;
+}
+
+@media (max-width: 700px) {
+  .pitch-section--compact {
+    padding: 60px 0;
+  }
+
+  .pitch-section--compact .pitch-section-meta {
+    margin-bottom: 34px;
+  }
+
+  .pitch-section--compact h2,
+  .pitch-section--compact.pitch-reputation h2 {
+    font-size: clamp(40px, 12vw, 58px);
+  }
+
+  .pitch-section--compact .pitch-reputation-grid,
+  .pitch-section--compact .pitch-four-lines {
+    margin-top: 38px;
+  }
+}
