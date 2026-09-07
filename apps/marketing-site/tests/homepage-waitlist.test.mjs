@@ -127,12 +127,16 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
 
 test('homepage hero carries the living internet signal', () => {
   assert.match(homepage, /id="pitch-wordmark" aria-label="Lythaus"/);
+  assert.match(homepage, /class="pitch-beam" aria-hidden="true"/);
   assert.doesNotMatch(homepage, /--letter-delay|--letter-index/);
-  assert.doesNotMatch(homePitchStyles, /pitchLetterResolve|pitchLetterResolveMobile/);
-  assert.match(homePitchStyles, /\.pitch-intro::before\s*\{[^}]*pointer-events: none/);
+  assert.doesNotMatch(homePitchStyles, /pitchLetterResolve|pitchLetterResolveMobile|pitchWordReveal|pitchLightPass/);
+  assert.match(homePitchStyles, /\.pitch-beam\s*\{[^}]*pointer-events: none/);
+  assert.match(homePitchStyles, /\.pitch-beam\s*\{[^}]*mask-image/);
+  assert.doesNotMatch(homePitchStyles, /\.pitch-intro::before/);
   assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-intro-support/);
-  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-intro::before\s*\{[^}]*animation: none;[^}]*opacity: 0/);
-  assert.match(homePitchStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.pitch-wordmark\s*\{[^}]*animation: none !important;[^}]*mask: none/);
+  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-beam\s*\{[^}]*animation: none;[^}]*opacity: 0/);
+  assert.match(homePitchStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.pitch-wordmark\s*\{[^}]*animation: none !important;[^}]*opacity: 1/);
+  assert.doesNotMatch(homePitchStyles, /\.pitch-wordmark\s*\{[^}]*mask-image/);
   for (const event of ['pointerdown', 'keydown', 'scroll', 'touchstart', 'focusin']) assert.ok(homepage.includes(`'${event}'`));
   assert.ok(homepage.includes('Lythaus is a human-first social platform for public-interest conversation, built around clear authorship, accountable participation and feeds you can understand and control.'));
   assert.match(homepage, /class="pitch-wordmark"/);
