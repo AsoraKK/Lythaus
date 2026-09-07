@@ -919,7 +919,7 @@ jobs:
       WORKER_SOURCE_SHA: ${{ needs.workers.outputs.worker_source_sha }}
       PUBLIC_API_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.public_worker_source_sha }}
       ADMIN_API_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.admin_worker_source_sha }}
-      JOBS_API_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.jobs_worker_source_sha }}
+      JOBS_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.jobs_worker_source_sha }}
       COORDINATOR_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.coordinator_worker_source_sha }}
       PUBLIC_API_WORKER_PROVENANCE: ${{ needs.workers.outputs.public_worker_provenance }}
       ADMIN_API_WORKER_PROVENANCE: ${{ needs.workers.outputs.admin_worker_provenance }}
