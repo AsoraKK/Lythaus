@@ -598,7 +598,7 @@ jobs:
             local status
             status="$(curl --location --silent --show-error --max-time 30 --retry 4 --retry-delay 2 --dump-header "$headers" --output "$output" --write-out '%{http_code}' "https://${host}/")"
             test "$status" = 200
-            grep -F 'The human internet is worth protecting.' "$output" >/dev/null
+            grep -F 'For the living internet.' "$output" >/dev/null
             grep -F -i 'strict-transport-security:' "$headers" >/dev/null
             grep -F -i 'content-security-policy:' "$headers" >/dev/null
             grep -F -i 'x-content-type-options: nosniff' "$headers" >/dev/null
@@ -919,7 +919,7 @@ jobs:
       WORKER_SOURCE_SHA: ${{ needs.workers.outputs.worker_source_sha }}
       PUBLIC_API_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.public_worker_source_sha }}
       ADMIN_API_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.admin_worker_source_sha }}
-      JOBS_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.jobs_worker_source_sha }}
+      JOBS_API_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.jobs_worker_source_sha }}
       COORDINATOR_WORKER_SOURCE_SHA: ${{ needs.workers.outputs.coordinator_worker_source_sha }}
       PUBLIC_API_WORKER_PROVENANCE: ${{ needs.workers.outputs.public_worker_provenance }}
       ADMIN_API_WORKER_PROVENANCE: ${{ needs.workers.outputs.admin_worker_provenance }}
