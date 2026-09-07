@@ -598,7 +598,7 @@ jobs:
             local status
             status="$(curl --location --silent --show-error --max-time 30 --retry 4 --retry-delay 2 --dump-header "$headers" --output "$output" --write-out '%{http_code}' "https://${host}/")"
             test "$status" = 200
-            grep -F 'The human internet is worth protecting.' "$output" >/dev/null
+            grep -F 'For the living internet.' "$output" >/dev/null
             grep -F -i 'strict-transport-security:' "$headers" >/dev/null
             grep -F -i 'content-security-policy:' "$headers" >/dev/null
             grep -F -i 'x-content-type-options: nosniff' "$headers" >/dev/null

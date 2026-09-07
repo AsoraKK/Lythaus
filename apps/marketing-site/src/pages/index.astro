@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import '../styles/home-pitch.css';
+import '../styles/home-pitch-compact.css';
 
 const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
@@ -69,7 +70,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       </div>
       <div>
         <dt>AI-generated</dt>
-        <dd>Not permitted as public content. Blocked from public publication.</dd>
+        <dd>Not permitted for public publication.</dd>
       </div>
       <div>
         <dt>Under review</dt>
@@ -98,77 +99,6 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <div class="pitch-control-line">
       <strong>The ambition is not to create the loudest public square.</strong>
       <span>It is to create a more trustworthy one.</span>
-    </div>
-  </section>
-
-  <section class="pitch-section pitch-experience" id="experience" aria-labelledby="experience-title" data-pitch-reveal>
-    <div class="pitch-section-meta">Experience Lythaus</div>
-    <div class="pitch-experience-grid">
-      <div class="pitch-copy-column">
-        <h2 id="experience-title">Preview how Lythaus works.</h2>
-        <p class="pitch-lede">A lightweight, illustrative view of Discovery, authorship disclosure and member controls.</p>
-        <p>See how the product makes human contribution, context and accountability visible without pretending this preview is a live guest app.</p>
-        <p class="pitch-quiet">Illustrative UI only. No account actions or live content are available here.</p>
-      </div>
-      <div class="pitch-preview-shell" data-preview aria-label="Illustrative Lythaus product preview" role="region">
-        <div class="pitch-preview-topbar">
-          <span>Illustrative product preview</span>
-          <span>Preview only</span>
-        </div>
-        <div class="pitch-preview-body">
-          <div class="pitch-preview-tabs" role="tablist" aria-label="Preview states">
-            <button type="button" role="tab" id="preview-tab-discovery" aria-selected="true" aria-controls="preview-panel-discovery" data-preview-tab="discovery">Discovery</button>
-            <button type="button" role="tab" id="preview-tab-authorship" aria-selected="false" aria-controls="preview-panel-authorship" data-preview-tab="authorship">Authorship</button>
-            <button type="button" role="tab" id="preview-tab-controls" aria-selected="false" aria-controls="preview-panel-controls" data-preview-tab="controls">Controls</button>
-          </div>
-          <div class="pitch-preview-panels">
-            <section class="pitch-preview-panel" id="preview-panel-discovery" role="tabpanel" aria-labelledby="preview-tab-discovery" data-preview-panel="discovery">
-              <p class="pitch-preview-panel-label">Illustrative contribution</p>
-              <article class="pitch-preview-post">
-                <div class="pitch-preview-post-head">
-                  <span class="pitch-avatar" aria-hidden="true"></span>
-                  <div>
-                    <strong>A human contribution</strong>
-                    <small>Human-authored</small>
-                  </div>
-                </div>
-                <p>A considered contribution with context around the topic, the person sharing it and the signals that help others understand what they are seeing.</p>
-                <div class="pitch-preview-post-meta">
-                  <span>Public-interest discussion</span>
-                  <strong>Contribution + accountability</strong>
-                </div>
-              </article>
-            </section>
-            <section class="pitch-preview-panel" id="preview-panel-authorship" role="tabpanel" aria-labelledby="preview-tab-authorship" data-preview-panel="authorship">
-              <p class="pitch-preview-panel-label">Clear authorship context</p>
-              <article class="pitch-preview-state">
-                <div><strong>AI-assisted</strong><span>Disclosed at contribution</span></div>
-                <p>When AI assists a public contribution, the context stays visible instead of being presented as something it is not.</p>
-              </article>
-              <article class="pitch-preview-state is-review">
-                <div><strong>Under review</strong><span>Separate explanatory state</span></div>
-                <p>Unclear or conflicting authorship information can remain under review. AI-generated public content is not shown as published.</p>
-              </article>
-            </section>
-            <section class="pitch-preview-panel" id="preview-panel-controls" role="tabpanel" aria-labelledby="preview-tab-controls" data-preview-panel="controls">
-              <p class="pitch-preview-panel-label">Transparent feed controls</p>
-              <div class="pitch-preview-controls" aria-label="Illustrative member-controlled Discovery inputs">
-                <button type="button" data-preview-control aria-pressed="true"><span>Your chosen interests</span><strong>Included</strong></button>
-                <button type="button" data-preview-control aria-pressed="false"><span>Optional general location</span><strong>Off</strong></button>
-                <button type="button" data-preview-control aria-pressed="true"><span>Your feed preferences</span><strong>Included</strong></button>
-              </div>
-              <p class="pitch-preview-control-status" data-preview-control-status aria-live="polite">Preview controls only. No feed request is made.</p>
-            </section>
-          </div>
-        </div>
-        <div class="pitch-preview-footer">
-          <div>
-            <strong>Product proof without a live-app claim.</strong>
-            <span>Want to help shape what comes next?</span>
-          </div>
-          <a class="button primary" href="#waitlist">Join Lythaus early</a>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -213,7 +143,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     </div>
   </section>
 
-  <section class="pitch-section pitch-reputation" id="reputation" aria-labelledby="reputation-title" data-pitch-reveal>
+  <section class="pitch-section pitch-reputation pitch-section--compact" id="reputation" aria-labelledby="reputation-title" data-pitch-reveal>
     <div class="pitch-section-meta">06 / REPUTATION</div>
     <h2 id="reputation-title">Contribution over attention.</h2>
     <div class="pitch-reputation-grid">
@@ -233,7 +163,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     </div>
   </section>
 
-  <section class="pitch-section pitch-platform" id="accountability" aria-labelledby="accountability-title" data-pitch-reveal>
+  <section class="pitch-section pitch-platform pitch-section--compact" id="accountability" aria-labelledby="accountability-title" data-pitch-reveal>
     <div class="pitch-section-meta">07 / ACCOUNTABILITY</div>
     <div class="pitch-platform-grid">
       <div>
@@ -275,7 +205,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <p class="pitch-result">Public-interest conversation does not have to mean institutional or political conversation. It means information and perspective that can be useful beyond the person posting it.</p>
   </section>
 
-  <section class="pitch-section pitch-ai" id="editorial" aria-labelledby="editorial-title" data-pitch-reveal>
+  <section class="pitch-section pitch-ai pitch-section--compact" id="editorial" aria-labelledby="editorial-title" data-pitch-reveal>
     <div class="pitch-section-meta">09 / EDITORIAL</div>
     <div class="pitch-ai-grid">
       <div>
@@ -337,54 +267,6 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   <script>
     (() => {
       const revealTargets = Array.from(document.querySelectorAll('[data-pitch-reveal]'));
-      const preview = document.querySelector('[data-preview]');
-      const previewTabs = Array.from(document.querySelectorAll('[data-preview-tab]'));
-      const previewPanels = Array.from(document.querySelectorAll('[data-preview-panel]'));
-      const previewControls = Array.from(document.querySelectorAll('[data-preview-control]'));
-      const previewControlStatus = document.querySelector('[data-preview-control-status]');
-
-      const activatePreview = (name, moveFocus = false) => {
-        previewTabs.forEach((tab) => {
-          const active = tab.getAttribute('data-preview-tab') === name;
-          tab.setAttribute('aria-selected', String(active));
-          tab.tabIndex = active ? 0 : -1;
-          if (moveFocus && active) tab.focus();
-        });
-        previewPanels.forEach((panel) => {
-          const active = panel.getAttribute('data-preview-panel') === name;
-          panel.hidden = !active;
-          panel.classList.toggle('is-active', active);
-        });
-      };
-
-      if (preview instanceof HTMLElement && previewTabs.length && previewPanels.length) {
-        preview.dataset.previewEnhanced = 'true';
-        activatePreview('discovery');
-        previewTabs.forEach((tab, index) => {
-          tab.addEventListener('click', () => activatePreview(tab.getAttribute('data-preview-tab') ?? 'discovery'));
-          tab.addEventListener('keydown', (event) => {
-            if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
-            event.preventDefault();
-            const nextIndex = event.key === 'Home'
-              ? 0
-              : event.key === 'End'
-                ? previewTabs.length - 1
-                : (index + (event.key === 'ArrowRight' ? 1 : -1) + previewTabs.length) % previewTabs.length;
-            const nextTab = previewTabs[nextIndex];
-            activatePreview(nextTab.getAttribute('data-preview-tab') ?? 'discovery', true);
-          });
-        });
-      }
-
-      previewControls.forEach((control) => {
-        control.addEventListener('click', () => {
-          const active = control.getAttribute('aria-pressed') !== 'true';
-          control.setAttribute('aria-pressed', String(active));
-          const state = control.querySelector('strong');
-          if (state) state.textContent = active ? 'Included' : 'Off';
-          if (previewControlStatus) previewControlStatus.textContent = 'Preview controls only. No feed request is made.';
-        });
-      });
 
       if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         revealTargets.forEach((target) => target.classList.add('pitch-reveal-pending'));

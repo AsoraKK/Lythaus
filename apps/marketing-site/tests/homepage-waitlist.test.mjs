@@ -9,6 +9,7 @@ const layout = fs.readFileSync(path.join(root, 'src/layouts/BaseLayout.astro'), 
 const privacy = fs.readFileSync(path.join(root, 'src/pages/privacy/index.astro'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'src/styles/global.css'), 'utf8');
 const homePitchStyles = fs.readFileSync(path.join(root, 'src/styles/home-pitch.css'), 'utf8');
+const homePitchCompactStyles = fs.readFileSync(path.join(root, 'src/styles/home-pitch-compact.css'), 'utf8');
 const headers = fs.readFileSync(path.join(root, 'public/_headers'), 'utf8');
 const manifest = fs.readFileSync(path.join(root, 'public/site.webmanifest'), 'utf8');
 
@@ -56,10 +57,12 @@ test('homepage public copy matches the living internet pitch and stays launch sa
     'Human-authored',
     'AI-assisted',
     'AI-generated',
+    'Not permitted for public publication.',
     'Under review',
     'Join the private beta',
   ]) assert.match(homepage, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   assert.doesNotMatch(homepage, /The human internet is worth protecting\./);
+  assert.doesNotMatch(homepage, /Not permitted as public content\. Blocked from public publication\./);
   assert.doesNotMatch(homepage, /app\.lythaus\.co|Guest Preview|News Board/i);
   const retiredUserFacingNames = [String.fromCharCode(65, 115, 111, 114, 97), String.fromCharCode(65, 122, 117, 114, 101)];
   assert.doesNotMatch(visibleCopy, new RegExp(retiredUserFacingNames.join('|'), 'i'));
@@ -88,12 +91,12 @@ test('homepage story sections use the approved narrative labels and anchors', ()
   assert.doesNotMatch(homepage, /story-section|story-section--tint/);
 });
 
-test('homepage story content is direct and includes an illustrative product preview', () => {
+test('homepage story content is direct and withholds the product preview until the product is ready', () => {
   assert.match(homepage, /class="pitch-intro"/);
   assert.match(homepage, /class="pitch-section pitch-problem"/);
   assert.match(homepage, /Your feed should not be a black box\./);
   assert.match(homepage, /Credibility should be earned, not purchased\./);
-  assert.match(homepage, /class="pitch-preview-shell"/);
+  assert.doesNotMatch(homepage, /Experience Lythaus|Preview how Lythaus works|pitch-preview-shell|data-preview/);
   assert.doesNotMatch(homepage, /href="https?:\/\/app\.lythaus\.co/);
 });
 
@@ -148,12 +151,19 @@ test('homepage resolves the added hero support copy for reduced motion', () => {
   assert.match(homePitchStyles, /\.pitch-intro-support[\s\S]*animation:\s*none !important/);
 });
 
-test('homepage navigation and preview tabs have stable cross-browser hit areas', () => {
+test('homepage navigation has stable cross-browser hit areas', () => {
   assert.match(homePitchStyles, /grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);
   assert.match(homePitchStyles, /\.home-page \.site-header::after[\s\S]*pointer-events: none/);
   assert.match(homePitchStyles, /\.home-page \.site-nav a[\s\S]*display: inline-flex[\s\S]*min-height: 44px/);
-  assert.match(homePitchStyles, /\.pitch-preview-tabs button[\s\S]*min-height: 44px/);
-  assert.match(homePitchStyles, /touch-action: manipulation/);
+});
+
+test('secondary story sections use tighter pacing without flattening the primary chapters', () => {
+  assert.match(homepage, /pitch-reputation pitch-section--compact/);
+  assert.match(homepage, /pitch-platform pitch-section--compact" id="accountability/);
+  assert.match(homepage, /pitch-ai pitch-section--compact" id="editorial/);
+  assert.match(homePitchCompactStyles, /\.pitch-section--compact \{[\s\S]*padding: clamp\(68px, 7vw, 104px\) 0/);
+  assert.match(homePitchCompactStyles, /\.pitch-section--compact h2/);
+  assert.match(homePitchCompactStyles, /@media \(max-width: 700px\)/);
 });
 
 test('shared layout declares Lythaus browser and home-screen assets', () => {
