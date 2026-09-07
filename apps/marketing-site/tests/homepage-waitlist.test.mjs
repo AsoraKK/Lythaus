@@ -126,6 +126,15 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
 });
 
 test('homepage hero carries the living internet signal', () => {
+  assert.match(homepage, /id="pitch-wordmark" aria-label="Lythaus"/);
+  assert.doesNotMatch(homepage, /--letter-delay|--letter-index/);
+  assert.doesNotMatch(homePitchStyles, /pitchLetterResolve|pitchLetterResolveMobile/);
+  assert.match(homePitchStyles, /\.pitch-intro::before\s*\{[^}]*pointer-events: none/);
+  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-intro-support/);
+  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-intro::before\s*\{[^}]*animation: none;[^}]*opacity: 0/);
+  assert.match(homePitchStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.pitch-wordmark\s*\{[^}]*animation: none !important;[^}]*mask: none/);
+  for (const event of ['pointerdown', 'keydown', 'scroll', 'touchstart', 'focusin']) assert.ok(homepage.includes(`'${event}'`));
+  assert.ok(homepage.includes('Lythaus is a human-first social platform for public-interest conversation, built around clear authorship, accountable participation and feeds you can understand and control.'));
   assert.match(homepage, /class="pitch-wordmark"/);
   assert.match(homepage, /<p class="pitch-intro-statement">For the living internet\.<\/p>/);
   assert.match(homepage, /class="pitch-intro-support"/);
