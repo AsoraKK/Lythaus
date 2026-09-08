@@ -13,6 +13,10 @@
   --light-bloom-height: 82px;
   --light-warmth: 0.75;
   --light-intensity: 1;
+  --wordmark-ivory: #f3e5c7;
+  --light-ivory: #fff7de;
+  --light-gold: #efd095;
+  --letter-reveal-gain: 1.5;
   --reveal-delay: 120;
   --reveal-duration: 1080;
   --settle-duration: 120;
@@ -25,12 +29,13 @@
 }
 
 .wordmark-dark { fill: #050505; }
-.wordmark-settled { fill: var(--pitch-text); }
+.wordmark-settled { fill: var(--wordmark-ivory); }
 .wordmark-optics { visibility: hidden; }
 .wordmark-core { rx: var(--light-core-width); }
 .wordmark-bloom { rx: var(--light-bloom-width); ry: var(--light-bloom-height); }
 .wordmark-atmosphere { opacity: var(--light-warmth); }
-.wordmark-afterlight { opacity: 0.65; }
+.wordmark-afterlight { opacity: calc(0.65 * var(--letter-reveal-gain)); }
+.wordmark-reflection-shoulder { stop-opacity: calc(0.5 * var(--letter-reveal-gain)); }
 
 html[data-opening="armed"] .wordmark-settled,
 html[data-opening="playing"] .wordmark-settled {
