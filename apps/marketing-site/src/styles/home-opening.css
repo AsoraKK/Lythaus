@@ -1,0 +1,88 @@
+.pitch-wordmark {
+  position: relative;
+  width: min(100%, 980px);
+  max-width: none;
+  aspect-ratio: 1000 / 166;
+  margin: 0;
+  isolation: isolate;
+}
+
+.wordmark-scene {
+  --light-core-width: 3px;
+  --light-bloom-width: 44px;
+  --light-bloom-height: 82px;
+  --light-warmth: 0.75;
+  --light-intensity: 1;
+  --reveal-delay: 120;
+  --reveal-duration: 1080;
+  --settle-duration: 120;
+  --copy-delay: 1420;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.wordmark-dark { fill: #050505; }
+.wordmark-settled { fill: var(--pitch-text); }
+.wordmark-optics { visibility: hidden; }
+.wordmark-core { rx: var(--light-core-width); }
+.wordmark-bloom { rx: var(--light-bloom-width); ry: var(--light-bloom-height); }
+.wordmark-atmosphere { opacity: var(--light-warmth); }
+.wordmark-afterlight { opacity: 0.65; }
+
+html[data-opening="armed"] .wordmark-settled,
+html[data-opening="playing"] .wordmark-settled {
+  mask: url(#wordmark-exposure);
+}
+
+html[data-opening="armed"] [data-light-position],
+html[data-opening="playing"] [data-light-position] {
+  transform: translateX(-70px);
+}
+
+[data-light-position],
+[data-light-projection] {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+html[data-opening="armed"] .wordmark-optics,
+html[data-opening="playing"] .wordmark-optics {
+  visibility: visible;
+}
+html[data-opening="armed"] .wordmark-optics { opacity: 0; }
+
+html[data-opening="armed"] .pitch-intro-statement,
+html[data-opening="armed"] .pitch-intro-support .pitch-lede,
+html[data-opening="armed"] .pitch-intro-support .button,
+html[data-opening="armed"] .home-page .site-header,
+html[data-opening="playing"] .pitch-intro-statement,
+html[data-opening="playing"] .pitch-intro-support .pitch-lede,
+html[data-opening="playing"] .pitch-intro-support .button,
+html[data-opening="playing"] .home-page .site-header {
+  opacity: 0;
+}
+
+@media (max-width: 700px) {
+  .wordmark-scene {
+    --light-core-width: 3.8px;
+    --light-bloom-width: 38px;
+    --light-bloom-height: 74px;
+    --light-warmth: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-settled { mask: none !important; }
+  .wordmark-optics { display: none !important; }
+  .home-page .site-header,
+  .pitch-intro-statement,
+  .pitch-intro-support .pitch-lede,
+  .pitch-intro-support .button {
+    opacity: 1 !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}

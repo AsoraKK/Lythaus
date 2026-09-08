@@ -19,7 +19,7 @@
 }
 
 .pitch-section--compact .pitch-emphasis {
-  margin-top: 26px !important;
+  margin-top: 26px;
 }
 
 @media (max-width: 700px) {
@@ -33,7 +33,7 @@
 
   .pitch-section--compact h2,
   .pitch-section--compact.pitch-reputation h2 {
-    font-size: clamp(40px, 12vw, 58px);
+    font-size: clamp(38px, 10.8vw, 58px);
   }
 
   .pitch-section--compact .pitch-reputation-grid,

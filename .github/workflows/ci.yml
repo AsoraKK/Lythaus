@@ -175,6 +175,10 @@ jobs:
       - run: node --test apps/marketing-site/tests/*.test.mjs
       - run: npm --prefix apps/control-panel run build
       - run: npm --prefix apps/marketing-site run build
+      - name: Install homepage test browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify homepage optical and accessibility contracts
+        run: npm run marketing:test:browser
 
   dependency_audit:
     name: Dependency audit

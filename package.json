@@ -19,6 +19,7 @@
     "openapi:docs": "npx @redocly/cli build-docs api/openapi/dist/openapi.json -o api/openapi/dist/index.html",
     "marketing:validate": "node scripts/cloudflare/validate-marketing-output.mjs",
     "marketing:test": "node --test apps/marketing-site/tests/*.test.mjs",
+    "marketing:test:browser": "node --test apps/marketing-site/tests/home-opening.browser.mjs",
     "k6:diagnose": "bash scripts/diagnose-k6-failures.sh",
     "todo:triage": "node scripts/generate-todo-triage.js",
     "k6:smoke": "node scripts/run-shared-mvp-k6.mjs load/k6/smoke.js",
