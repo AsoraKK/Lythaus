@@ -12,11 +12,13 @@ const pageTitle = absoluteTitle ? title : title ? `${title} | Lythaus` : 'Lythau
 const siteUrl = Astro.site?.origin ?? 'https://lythaus.co';
 const canonicalUrl = `${siteUrl}${canonicalPath}`;
 import '../styles/global.css';
+import homeOpening from '../scripts/home-opening.js?raw';
 ---
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    {homePage && <script is:inline set:html={homeOpening} />}
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     {noReferrer && <meta name="referrer" content="no-referrer" />}
@@ -39,12 +41,21 @@ import '../styles/global.css';
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Manrope:wght@500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    {homePage ? (
+      <>
+        <link rel="preload" as="font" type="font/woff2" href="https://fonts.gstatic.com/s/dmsans/v17/rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K4.woff2" crossorigin />
+        <link rel="preload" as="font" type="font/woff2" href="https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2" crossorigin />
+      </>
+    ) : (
+      <>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Manrope:wght@500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </>
+    )}
   </head>
   <body class:list={{ 'home-page': homePage }}>
     <header class="site-header">

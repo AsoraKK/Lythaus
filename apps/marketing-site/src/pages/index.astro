@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import OpeningWordmark from '../components/OpeningWordmark.astro';
 import '../styles/home-pitch.css';
 import '../styles/home-pitch-compact.css';
 
@@ -15,26 +16,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 >
   <section class="pitch-intro" id="top" aria-labelledby="pitch-wordmark">
     <div class="pitch-intro-inner">
-      <h1 class="pitch-wordmark" id="pitch-wordmark" aria-label="Lythaus">
-        <span class="pitch-presence" aria-hidden="true">
-        <span class="pitch-letter" aria-hidden="true">L</span>
-        <span class="pitch-letter" aria-hidden="true">Y</span>
-        <span class="pitch-letter" aria-hidden="true">T</span>
-        <span class="pitch-letter" aria-hidden="true">H</span>
-        <span class="pitch-letter" aria-hidden="true">A</span>
-        <span class="pitch-letter" aria-hidden="true">U</span>
-        <span class="pitch-letter" aria-hidden="true">S</span>
-        </span>
-        <span class="pitch-beam" aria-hidden="true">
-          <span class="pitch-letter">L</span>
-          <span class="pitch-letter">Y</span>
-          <span class="pitch-letter">T</span>
-          <span class="pitch-letter">H</span>
-          <span class="pitch-letter">A</span>
-          <span class="pitch-letter">U</span>
-          <span class="pitch-letter">S</span>
-        </span>
-      </h1>
+      <OpeningWordmark />
       <p class="pitch-intro-statement">For the living internet.</p>
       <div class="pitch-intro-support">
         <p class="pitch-lede">Lythaus is a human-first social platform for public-interest conversation, built around clear authorship, accountable participation and feeds you can understand and control.</p>
@@ -43,7 +25,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     </div>
   </section>
 
-  <section class="pitch-section pitch-problem" id="problem" aria-labelledby="problem-title" data-pitch-reveal>
+  <section class="pitch-section pitch-problem" id="problem" aria-labelledby="problem-title">
     <div class="pitch-section-meta">01 / THE PROBLEM</div>
     <div class="pitch-problem-grid">
       <div class="pitch-copy-column">
@@ -60,7 +42,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <p class="pitch-result">Lythaus is being built around a different set of incentives.</p>
   </section>
 
-  <section class="pitch-section pitch-human-first" id="human-first" aria-labelledby="human-first-title" data-pitch-reveal>
+  <section class="pitch-section pitch-human-first" id="human-first" aria-labelledby="human-first-title">
     <div class="pitch-section-meta">02 / HUMAN FIRST</div>
     <h2 id="human-first-title">Built for humans.</h2>
     <div class="pitch-story-copy pitch-story-copy--narrow">
@@ -91,7 +73,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <p class="pitch-result">No public confidence scores. No false precision. Just clearer authorship.</p>
   </section>
 
-  <section class="pitch-section pitch-platform" id="platform" aria-labelledby="platform-title" data-pitch-reveal>
+  <section class="pitch-section pitch-platform" id="platform" aria-labelledby="platform-title">
     <div class="pitch-section-meta">03 / THE PLATFORM</div>
     <div class="pitch-platform-grid">
       <div>
@@ -113,7 +95,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     </div>
   </section>
 
-  <section class="pitch-section pitch-discovery" id="authorship" aria-labelledby="authorship-title" data-pitch-reveal>
+  <section class="pitch-section pitch-discovery" id="authorship" aria-labelledby="authorship-title">
     <div class="pitch-section-meta">04 / AUTHORSHIP</div>
     <div class="pitch-platform-grid">
       <div>
@@ -131,7 +113,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <p class="pitch-emphasis">Clear authorship. Not manufactured certainty.</p>
   </section>
 
-  <section class="pitch-section pitch-discovery" id="discovery" aria-labelledby="discovery-title" data-pitch-reveal>
+  <section class="pitch-section pitch-discovery" id="discovery" aria-labelledby="discovery-title">
     <div class="pitch-section-meta">05 / DISCOVERY</div>
     <div class="pitch-discovery-grid">
       <div>
@@ -154,7 +136,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     </div>
   </section>
 
-  <section class="pitch-section pitch-reputation pitch-section--compact" id="reputation" aria-labelledby="reputation-title" data-pitch-reveal>
+  <section class="pitch-section pitch-reputation pitch-section--compact" id="reputation" aria-labelledby="reputation-title">
     <div class="pitch-section-meta">06 / REPUTATION</div>
     <h2 id="reputation-title">Contribution over attention.</h2>
     <div class="pitch-reputation-grid">
@@ -174,7 +156,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     </div>
   </section>
 
-  <section class="pitch-section pitch-platform pitch-section--compact" id="accountability" aria-labelledby="accountability-title" data-pitch-reveal>
+  <section class="pitch-section pitch-platform pitch-section--compact" id="accountability" aria-labelledby="accountability-title">
     <div class="pitch-section-meta">07 / ACCOUNTABILITY</div>
     <div class="pitch-platform-grid">
       <div>
@@ -193,7 +175,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <p class="pitch-emphasis">If Lythaus expects accountability from its members, members should be able to expect accountability from Lythaus.</p>
   </section>
 
-  <section class="pitch-section pitch-discovery" id="public-interest" aria-labelledby="public-interest-title" data-pitch-reveal>
+  <section class="pitch-section pitch-discovery" id="public-interest" aria-labelledby="public-interest-title">
     <div class="pitch-section-meta">08 / PUBLIC INTEREST</div>
     <div class="pitch-discovery-grid">
       <div>
@@ -216,7 +198,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <p class="pitch-result">Public-interest conversation does not have to mean institutional or political conversation. It means information and perspective that can be useful beyond the person posting it.</p>
   </section>
 
-  <section class="pitch-section pitch-ai pitch-section--compact" id="editorial" aria-labelledby="editorial-title" data-pitch-reveal>
+  <section class="pitch-section pitch-ai pitch-section--compact" id="editorial" aria-labelledby="editorial-title">
     <div class="pitch-section-meta">09 / EDITORIAL</div>
     <div class="pitch-ai-grid">
       <div>
@@ -235,7 +217,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     </div>
   </section>
 
-  <section class="pitch-section pitch-principles" id="why-lythaus" aria-labelledby="why-title" data-pitch-reveal>
+  <section class="pitch-section pitch-principles" id="why-lythaus" aria-labelledby="why-title">
     <div class="pitch-section-meta">10 / WHY LYTHAUS</div>
     <h2 id="why-title">A different set of incentives.</h2>
     <ol class="pitch-principle-list pitch-principle-list--plain">
@@ -247,7 +229,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <p class="pitch-result">We are building infrastructure for something simpler and increasingly valuable: people speaking for themselves, contributing with accountability and finding information without surrendering all control over how it reaches them.</p>
   </section>
 
-  <section class="home-waitlist pitch-waitlist" id="waitlist" aria-labelledby="waitlist-title" data-pitch-reveal>
+  <section class="home-waitlist pitch-waitlist" id="waitlist" aria-labelledby="waitlist-title">
     <div class="home-waitlist-copy">
       <p class="home-eyebrow"><span class="home-status-dot" aria-hidden="true"></span>Lythaus private beta</p>
       <h2 id="waitlist-title">For the living internet.</h2>
@@ -275,29 +257,6 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     <p class="pitch-waitlist-signoff">Human authorship. Accountable participation. Discovery you can understand.</p>
   </section>
 
-  <script>
-    (() => {
-      const revealTargets = Array.from(document.querySelectorAll('[data-pitch-reveal]'));
-
-      if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        revealTargets.forEach((target) => target.classList.add('pitch-reveal-pending'));
-        const revealObserver = new IntersectionObserver((entries) => {
-          for (const entry of entries) {
-            if (!entry.isIntersecting) continue;
-            entry.target.classList.add('is-visible');
-            revealObserver.unobserve(entry.target);
-          }
-        }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-        revealTargets.forEach((target) => revealObserver.observe(target));
-      }
-
-      const resolveOpening = () => document.documentElement.classList.add('pitch-opening-resolved');
-      ['pointerdown', 'keydown', 'scroll', 'touchstart', 'focusin'].forEach((eventName) => {
-        window.addEventListener(eventName, resolveOpening, { once: true, passive: eventName !== 'keydown' });
-      });
-      window.setTimeout(resolveOpening, 1700);
-    })();
-  </script>
 
   {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
   <script>

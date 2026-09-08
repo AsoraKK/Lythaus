@@ -9,6 +9,9 @@ const layout = fs.readFileSync(path.join(root, 'src/layouts/BaseLayout.astro'), 
 const privacy = fs.readFileSync(path.join(root, 'src/pages/privacy/index.astro'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'src/styles/global.css'), 'utf8');
 const homePitchStyles = fs.readFileSync(path.join(root, 'src/styles/home-pitch.css'), 'utf8');
+const wordmark = fs.readFileSync(path.join(root, 'src/components/OpeningWordmark.astro'), 'utf8');
+const openingStyles = fs.readFileSync(path.join(root, 'src/styles/home-opening.css'), 'utf8');
+const openingScript = fs.readFileSync(path.join(root, 'src/scripts/home-opening.js'), 'utf8');
 const homePitchCompactStyles = fs.readFileSync(path.join(root, 'src/styles/home-pitch-compact.css'), 'utf8');
 const headers = fs.readFileSync(path.join(root, 'public/_headers'), 'utf8');
 const manifest = fs.readFileSync(path.join(root, 'public/site.webmanifest'), 'utf8');
@@ -87,7 +90,7 @@ test('homepage story sections use the approved narrative labels and anchors', ()
     assert.match(homepage, new RegExp(`id="${anchor}"`));
   }
   assert.match(homepage, /class="pitch-section-meta">01 \/ THE PROBLEM<\/div>/);
-  assert.match(homepage, /data-pitch-reveal/);
+  assert.equal((homepage.match(/class="pitch-section /g) ?? []).length, 10);
   assert.doesNotMatch(homepage, /story-section|story-section--tint/);
 });
 
@@ -102,7 +105,7 @@ test('homepage story content is direct and withholds the product preview until t
 
 test('homepage story content remains visible without a JavaScript reveal dependency', () => {
   assert.match(homepage, /class="pitch-section/);
-  assert.match(homePitchStyles, /\.pitch-section\.pitch-reveal-pending/);
+  assert.doesNotMatch(homepage + homePitchStyles, /pitch-reveal-pending|data-pitch-reveal/);
   assert.doesNotMatch(homePitchStyles, /\.story-section/);
 });
 
@@ -125,32 +128,26 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
   assert.match(styles, /min-height: 44px/);
 });
 
-test('homepage hero carries the living internet signal', () => {
-  assert.match(homepage, /id="pitch-wordmark" aria-label="Lythaus"/);
-  assert.match(homepage, /class="pitch-beam" aria-hidden="true"/);
-  assert.doesNotMatch(homepage, /--letter-delay|--letter-index/);
-  assert.match(homepage, /class="pitch-presence" aria-hidden="true"/);
-  assert.doesNotMatch(homePitchStyles, /pitchWordmarkIlluminate|pitchBeamCross/);
-  assert.match(homePitchStyles, /animation: pitchSweep [^;]* linear/);
-  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-presence\s*\{[^}]*mask: none/);
-  assert.match(homePitchStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.pitch-presence\s*\{[^}]*animation: none;[^}]*mask: none/);
-  assert.doesNotMatch(homePitchStyles, /pitchLetterResolve|pitchLetterResolveMobile|pitchWordReveal|pitchLightPass/);
-  assert.match(homePitchStyles, /\.pitch-beam\s*\{[^}]*pointer-events: none/);
-  assert.match(homePitchStyles, /\.pitch-beam\s*\{[^}]*mask-image/);
-  assert.doesNotMatch(homePitchStyles, /\.pitch-intro::before/);
-  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-intro-support/);
-  assert.match(homePitchStyles, /\.pitch-opening-resolved \.pitch-beam\s*\{[^}]*animation: none;[^}]*opacity: 0/);
-  assert.match(homePitchStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.pitch-wordmark\s*\{[^}]*animation: none !important;[^}]*opacity: 1/);
-  assert.doesNotMatch(homePitchStyles, /\.pitch-wordmark\s*\{[^}]*mask-image/);
-  for (const event of ['pointerdown', 'keydown', 'scroll', 'touchstart', 'focusin']) assert.ok(homepage.includes(`'${event}'`));
+test('homepage hero has a single named heading and decorative vector lighting', () => {
+  assert.equal((wordmark.match(/<h1\b/g) ?? []).length, 1);
+  assert.match(wordmark, /aria-label="Lythaus"/);
+  assert.match(wordmark, /<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
+  assert.match(homepage, /<OpeningWordmark \/>/);
+  assert.doesNotMatch(wordmark + openingScript, /pitch-letter|letter-index|letter-delay/);
+  assert.doesNotMatch(homePitchStyles + openingStyles, /pitchSweep|pitch-presence|pitch-beam/);
   assert.ok(homepage.includes('Lythaus is a human-first social platform for public-interest conversation, built around clear authorship, accountable participation and feeds you can understand and control.'));
-  assert.match(homepage, /class="pitch-wordmark"/);
-  assert.match(homepage, /<p class="pitch-intro-statement">For the living internet\.<\/p>/);
-  assert.match(homepage, /class="pitch-intro-support"/);
-  assert.match(homepage, /class="pitch-letter"/);
-  assert.match(homepage, /pitch-opening-resolved/);
   assert.doesNotMatch(homepage, /hero-card--signal|label-card|signal-mark/);
-  assert.doesNotMatch(homepage, /Human authorship\.<br|Accountable participation\.<br/);
+});
+
+test('opening uses progressive enhancement without a new animation dependency', () => {
+  assert.match(layout, /homePage && <script is:inline set:html=\{homeOpening\}/);
+  assert.match(openingStyles, /prefers-reduced-motion: reduce/);
+  assert.match(openingScript, /sessionStorage/);
+  assert.doesNotMatch(openingScript, /setInterval|import\s|gsap|three|WebGL/);
+  assert.equal((openingScript.match(/requestAnimationFrame/g) ?? []).length, 1);
+  for (const event of ['pointerdown', 'keydown', 'scroll', 'touchstart', 'focusin']) {
+    assert.ok(openingScript.includes("'" + event + "'"));
+  }
 });
 
 test('homepage uses restrained authorship rows and natural copy wrapping', () => {
@@ -163,11 +160,7 @@ test('homepage uses restrained authorship rows and natural copy wrapping', () =>
   assert.doesNotMatch(homepage, /<br\s*\/?\s*>/i);
 });
 
-test('homepage resolves the added hero support copy for reduced motion', () => {
-  assert.match(homePitchStyles, /\.pitch-intro-support/);
-  assert.match(homePitchStyles, /\.pitch-intro-support[\s\S]*opacity:\s*1/);
-  assert.match(homePitchStyles, /\.pitch-intro-support[\s\S]*animation:\s*none !important/);
-});
+
 
 test('homepage navigation has stable cross-browser hit areas', () => {
   assert.match(homePitchStyles, /grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);

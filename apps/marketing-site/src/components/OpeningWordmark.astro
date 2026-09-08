@@ -1,0 +1,76 @@
+---
+import '../styles/home-opening.css';
+---
+<h1 class="pitch-wordmark" id="pitch-wordmark" aria-label="Lythaus">
+  <svg class="wordmark-scene" viewBox="0 0 1000 166" aria-hidden="true" focusable="false">
+    <defs>
+      <path id="wordmark-material" d="M17.88 160.0V-0.88H37.76V141.12H112.39V160.0ZM173.72 160.0V93.08L119.54 -0.88H142.67L183.78 70.29L224.78 -0.88H247.91L193.83 93.08V160.0ZM308.79 160.0V18.0H253.94V-0.88H383.53V18.0H328.68V160.0ZM405.21 160.0V-0.88H425.09V70.07H509.78V-0.88H529.66V160.0H509.78V88.95H425.09V160.0ZM553.57 160.0 607.42 -0.88H635.12L688.97 160.0H668.31L617.92 10.74H624.18L574.24 160.0ZM579.49 122.35V103.69H663.05V122.35ZM776.34 163.35Q757.68 163.35 743.38 155.67Q729.08 147.99 720.98 134.05Q712.88 120.12 712.88 101.35V-0.76L732.99 -0.88V99.67Q732.99 111.07 736.85 119.53Q740.7 127.99 747.04 133.55Q753.38 139.11 761.06 141.85Q768.74 144.58 776.34 144.58Q784.05 144.58 791.73 141.82Q799.41 139.05 805.72 133.49Q812.03 127.94 815.86 119.47Q819.68 111.01 819.68 99.67V-0.88H839.79V101.35Q839.79 120.06 831.69 134.0Q823.6 147.93 809.3 155.64Q794.99 163.35 776.34 163.35ZM931.96 163.35Q914.87 163.35 901.18 157.54Q887.5 151.73 878.62 140.98Q869.74 130.23 867.05 115.42L887.61 112.18Q891.46 127.38 903.81 135.92Q916.15 144.47 932.97 144.47Q943.75 144.47 952.52 141.06Q961.29 137.66 966.46 131.32Q971.62 124.98 971.62 116.21Q971.62 110.9 969.75 107.02Q967.88 103.13 964.72 100.43Q961.57 97.72 957.52 95.82Q953.47 93.92 949.17 92.63L908.17 80.46Q901.46 78.5 895.21 75.43Q888.95 72.36 884.04 67.72Q879.12 63.08 876.21 56.52Q873.31 49.96 873.31 41.02Q873.31 26.77 880.71 16.64Q888.11 6.5 900.85 1.16Q913.59 -4.17 929.62 -4.12Q945.82 -4.0 958.61 1.64Q971.4 7.28 979.81 17.78Q988.21 28.28 991.17 42.92L970.06 46.6Q968.38 36.83 962.63 29.71Q956.88 22.59 948.25 18.73Q939.62 14.88 929.39 14.76Q919.51 14.65 911.57 17.92Q903.64 21.19 898.98 26.94Q894.31 32.7 894.31 40.13Q894.31 47.55 898.53 52.08Q902.75 56.6 908.95 59.2Q915.15 61.8 921.13 63.47L951.74 72.3Q956.99 73.75 963.86 76.32Q970.73 78.89 977.21 83.56Q983.69 88.22 987.93 95.85Q992.18 103.47 992.18 115.09Q992.18 126.76 987.52 135.78Q982.85 144.81 974.58 150.92Q966.32 157.04 955.4 160.2Q944.48 163.35 931.96 163.35Z" />
+      <clipPath id="wordmark-contours"><use href="#wordmark-material" /></clipPath>
+      <clipPath id="wordmark-space"><rect x="-110" y="-140" width="1220" height="450" /></clipPath>
+      <linearGradient id="wordmark-exposure-edge">
+        <stop offset="0" stop-color="white" />
+        <stop offset="1" stop-color="black" />
+      </linearGradient>
+      <radialGradient id="wordmark-reflection">
+        <stop stop-color="#fff" />
+        <stop offset=".16" stop-color="var(--light-ivory)" stop-opacity=".98" />
+        <stop class="wordmark-reflection-shoulder" offset=".48" stop-color="var(--light-ivory)" stop-opacity=".5" />
+        <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
+      </radialGradient>
+      <radialGradient id="wordmark-bloom">
+        <stop stop-color="#fff" stop-opacity=".96" />
+        <stop offset=".12" stop-color="var(--light-ivory)" stop-opacity=".7" />
+        <stop offset=".36" stop-color="var(--light-gold)" stop-opacity=".22" />
+        <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
+      </radialGradient>
+      <radialGradient id="wordmark-atmosphere">
+        <stop stop-color="var(--light-ivory)" stop-opacity=".5" />
+        <stop offset=".35" stop-color="var(--light-gold)" stop-opacity=".2" />
+        <stop offset=".68" stop-color="var(--light-gold)" stop-opacity=".04" />
+        <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
+      </radialGradient>
+      <radialGradient id="wordmark-core">
+        <stop offset="0" stop-color="#fff" />
+        <stop offset=".3" stop-color="#fff" />
+        <stop offset="1" stop-color="var(--light-ivory)" stop-opacity="0" />
+      </radialGradient>
+      <linearGradient id="wordmark-projection" x1="0" y1="0" x2="0" y2="1">
+        <stop stop-color="var(--light-gold)" stop-opacity="0" />
+        <stop offset=".35" stop-color="var(--light-gold)" stop-opacity=".06" />
+        <stop offset=".5" stop-color="var(--light-ivory)" stop-opacity=".2" />
+        <stop offset=".65" stop-color="var(--light-gold)" stop-opacity=".06" />
+        <stop offset="1" stop-color="var(--light-gold)" stop-opacity="0" />
+      </linearGradient>
+      <mask id="wordmark-exposure" maskUnits="userSpaceOnUse" x="-110" y="-140" width="1220" height="450" style="mask-type: luminance">
+        <g data-light-position>
+          <rect x="-1300" y="-20" width="1288" height="210" fill="white" />
+          <rect x="-12" y="-20" width="12" height="210" fill="url(#wordmark-exposure-edge)" />
+        </g>
+      </mask>
+    </defs>
+    <g clip-path="url(#wordmark-space)">
+      <use class="wordmark-dark" href="#wordmark-material" />
+      <use class="wordmark-settled" href="#wordmark-material" />
+      <g class="wordmark-optics" visibility="hidden">
+        <g data-light-energy>
+          <path data-light-projection d="M0 0 Q.45 -12 1 -100 V100 Q.45 12 0 0Z" fill="url(#wordmark-projection)" />
+          <g clip-path="url(#wordmark-contours)">
+            <g data-light-position>
+              <ellipse class="wordmark-afterlight" cx="-38" cy="80" rx="80" ry="170" fill="url(#wordmark-reflection)" />
+              <ellipse cx="0" cy="80" rx="21" ry="155" fill="url(#wordmark-reflection)" />
+            </g>
+          </g>
+          <g data-light-position data-light-beam>
+            <ellipse class="wordmark-atmosphere" cx="-18" cy="80" rx="125" ry="150" fill="url(#wordmark-atmosphere)" />
+            <ellipse class="wordmark-bloom" cx="0" cy="80" rx="44" ry="82" fill="url(#wordmark-bloom)" />
+          </g>
+        </g>
+        <g data-light-core data-light-source>
+          <ellipse cx="500" cy="80" rx="42" ry="34" fill="url(#wordmark-atmosphere)" opacity=".42" />
+          <ellipse cx="500" cy="80" rx="16" ry="12" fill="url(#wordmark-bloom)" />
+          <ellipse class="wordmark-core" cx="500" cy="80" rx="3" ry="4" fill="url(#wordmark-core)" />
+        </g>
+      </g>
+    </g>
+  </svg>
+</h1>
