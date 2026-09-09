@@ -110,9 +110,6 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
       for (const [name, options, setup] of [
         ['no JavaScript', { javaScriptEnabled: false }],
         ['reduced motion', { reducedMotion: 'reduce' }],
-        ['unavailable session storage', {}, (page) => page.addInitScript(() => {
-          Object.defineProperty(window, 'sessionStorage', { get() { throw new Error('Unavailable'); } });
-        })],
         ['unavailable animation API', {}, (page) => page.addInitScript(() => { Element.prototype.animate = undefined; })],
         ['animation initialization failure', {}, (page) => page.addInitScript(() => {
           Element.prototype.animate = () => { throw new Error('Initialization failed'); };
@@ -163,12 +160,18 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
         }
       });
 
-      await t.test('refresh and route return stay static; anchors remain usable', async () => {
+      await t.test('refresh replays; route return stays static; anchors remain usable', async () => {
         const { context, page } = await open();
         try {
-          await page.keyboard.press('Tab');
-          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved');
           await finished(page);
+
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.waitForFunction(() => document.documentElement.dataset.opening === 'playing');
+          assert.equal(await page.evaluate(() => performance.getEntriesByType('navigation')[0]?.type), 'reload');
+          await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved');
+          await finished(page);
+
           await page.goto(origin + '/privacy');
           await page.goBack({ waitUntil: 'domcontentloaded' });
           await finished(page);
