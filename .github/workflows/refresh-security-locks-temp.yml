@@ -1,0 +1,46 @@
+name: Temporary security lockfile refresh
+
+on:
+  push:
+    branches:
+      - fix/homepage-light-and-type-system
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: fix/homepage-light-and-type-system
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Refresh root lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit
+      - name: Refresh marketing lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --prefix apps/marketing-site
+      - name: Sanitize marketing lockfile
+        run: node scripts/sanitize-provider-neutral-lockfile.mjs apps/marketing-site/package-lock.json
+      - name: Verify audits before commit
+        run: |
+          node scripts/check-npm-audit.js
+          node scripts/check-npm-audit.js apps/marketing-site
+      - name: Commit generated locks
+        run: |
+          if git diff --quiet -- package-lock.json apps/marketing-site/package-lock.json; then
+            echo 'Lockfiles already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json apps/marketing-site/package-lock.json
+          git commit -m 'security(deps): refresh patched lockfiles'
+          git push origin HEAD:fix/homepage-light-and-type-system
