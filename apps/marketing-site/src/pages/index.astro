@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import OpeningWordmark from '../components/OpeningWordmark.astro';
 import '../styles/home-pitch.css';
 import '../styles/home-pitch-compact.css';
+import '../styles/home-polish.css';
 
 const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
@@ -256,7 +257,6 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     </form>
     <p class="pitch-waitlist-signoff">Human authorship. Accountable participation. Discovery you can understand.</p>
   </section>
-
 
   {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
   <script>
