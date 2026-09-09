@@ -1,7 +1,6 @@
 (() => {
   const root = document.documentElement;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const sessionKey = 'lythaus-opening-seen';
   const animations = [];
   const listeners = new AbortController();
   let watchdog;
@@ -22,11 +21,10 @@
 
   try {
     const navigation = performance.getEntriesByType('navigation')[0];
+    // Deliberately not gated by sessionStorage: a normal full refresh should replay the opening.
     if (reducedMotion.matches || document.hidden || location.hash ||
-        navigation?.type === 'back_forward' || !Element.prototype.animate ||
-        sessionStorage.getItem(sessionKey)) return;
+        navigation?.type === 'back_forward' || !Element.prototype.animate) return;
 
-    sessionStorage.setItem(sessionKey, '1');
     root.dataset.opening = 'armed';
     watchdog = window.setTimeout(resolve, 2500);
 
@@ -67,7 +65,7 @@
           return animation;
         };
 
-        // The beam turns around a fixed source; one coordinate drives its footprint.
+        // The beam turns around a fixed central source; one coordinate drives its footprint.
         const passage = Array.from({ length: 61 }, (_, index) => {
           const progress = index / 60;
           const projected = (Math.tan((progress - 0.5) * 1.1) / Math.tan(0.55) + 1) / 2;
@@ -82,29 +80,29 @@
         })), { duration, delay });
         animate(scene.querySelector('[data-light-energy]'), [
           { offset: 0, opacity: 0 },
-          { offset: 0.12, opacity: 0.22 * intensity },
-          { offset: 0.32, opacity: 0.48 * intensity },
-          { offset: 0.46, opacity: intensity },
-          { offset: 0.52, opacity: intensity },
-          { offset: 0.62, opacity: 0.4 * intensity },
-          { offset: 0.84, opacity: 0.18 * intensity },
+          { offset: 0.08, opacity: 0.34 * intensity },
+          { offset: 0.26, opacity: 0.7 * intensity },
+          { offset: 0.43, opacity: intensity },
+          { offset: 0.56, opacity: intensity },
+          { offset: 0.7, opacity: 0.62 * intensity },
+          { offset: 0.88, opacity: 0.26 * intensity },
           { offset: 1, opacity: 0 },
         ], { duration: duration + settleDuration, delay, easing: 'linear' });
         animate(scene.querySelector('[data-light-core]'), [
           { offset: 0, opacity: 0 },
-          { offset: 0.08, opacity: 1 },
-          { offset: 0.88, opacity: 1 },
+          { offset: 0.05, opacity: 1 },
+          { offset: 0.9, opacity: 1 },
           { offset: 1, opacity: 0 },
         ], { duration, delay, easing: 'linear' });
 
         const enter = (selector, at, travel = true) => animate(document.querySelector(selector), [
-          { opacity: 0, ...(travel ? { transform: 'translateY(6px)' } : {}) },
+          { opacity: 0, ...(travel ? { transform: 'translateY(5px)' } : {}) },
           { opacity: 1, ...(travel ? { transform: 'translateY(0)' } : {}) },
         ], { delay: at, duration: 180, easing: 'cubic-bezier(.2,.7,.3,1)' });
         enter('.pitch-intro-statement', copyDelay);
-        enter('.pitch-intro-support .pitch-lede', copyDelay + 100);
-        enter('.pitch-intro-support .button', copyDelay + 180);
-        enter('.home-page .site-header', copyDelay + 180, false);
+        enter('.pitch-intro-support .pitch-lede', copyDelay + 90);
+        enter('.pitch-intro-support .button', copyDelay + 165);
+        enter('.home-page .site-header', copyDelay + 165, false);
         const timelineStart = performance.now();
         animations.forEach((animation) => { animation.startTime = timelineStart; });
         root.dataset.opening = 'playing';
