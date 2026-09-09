@@ -1,0 +1,461 @@
+/* Final homepage polish: one optical hero, one disciplined editorial type scale. */
+.home-page {
+  --pitch-max: 1200px;
+  --pitch-title: clamp(40px, 4.35vw, 60px);
+  --pitch-display: clamp(22px, 2.35vw, 32px);
+  --pitch-body: 16px;
+  --pitch-lede-size: clamp(18px, 1.45vw, 21px);
+  --pitch-hero-statement: clamp(28px, 2.75vw, 36px);
+}
+
+/* Optical treatment: keep the source fixed at the wordmark centre, but make it read as light rather than a faded mask. */
+.home-page .wordmark-scene {
+  --wordmark-ivory: #f8e8c8;
+  --light-ivory: #fff3c8;
+  --light-gold: #f0bc5d;
+  --light-warmth: 1;
+  --letter-reveal-gain: 1.9;
+}
+
+.home-page .wordmark-dark {
+  fill: #030303;
+}
+
+.home-page .wordmark-settled {
+  fill: var(--wordmark-ivory);
+  opacity: 1;
+}
+
+html[data-opening="armed"] .home-page .wordmark-afterlight,
+html[data-opening="playing"] .home-page .wordmark-afterlight {
+  opacity: 1;
+  filter: brightness(1.3) saturate(1.12);
+}
+
+html[data-opening="armed"] .home-page .wordmark-optics g[clip-path] [data-light-position] ellipse:not(.wordmark-afterlight),
+html[data-opening="playing"] .home-page .wordmark-optics g[clip-path] [data-light-position] ellipse:not(.wordmark-afterlight) {
+  opacity: 1;
+  filter:
+    brightness(1.55)
+    saturate(1.1)
+    drop-shadow(0 0 3px rgba(255, 252, 235, 0.95))
+    drop-shadow(0 0 9px rgba(255, 227, 166, 0.65));
+}
+
+html[data-opening="armed"] .home-page .wordmark-bloom,
+html[data-opening="playing"] .home-page .wordmark-bloom {
+  opacity: 1;
+  filter:
+    brightness(1.7)
+    saturate(1.15)
+    drop-shadow(0 0 5px rgba(255, 252, 232, 1))
+    drop-shadow(0 0 16px rgba(255, 222, 151, 0.88))
+    drop-shadow(0 0 36px rgba(238, 181, 83, 0.48));
+}
+
+html[data-opening="armed"] .home-page .wordmark-atmosphere,
+html[data-opening="playing"] .home-page .wordmark-atmosphere {
+  opacity: 1;
+  filter: brightness(1.35) saturate(1.2);
+}
+
+html[data-opening="armed"] .home-page [data-light-source] > ellipse:first-child,
+html[data-opening="playing"] .home-page [data-light-source] > ellipse:first-child {
+  opacity: 0.82;
+  filter:
+    brightness(1.35)
+    saturate(1.18)
+    drop-shadow(0 0 18px rgba(244, 190, 94, 0.55));
+}
+
+html[data-opening="armed"] .home-page [data-light-source] > ellipse:nth-child(2),
+html[data-opening="playing"] .home-page [data-light-source] > ellipse:nth-child(2) {
+  opacity: 1;
+  filter:
+    brightness(1.8)
+    drop-shadow(0 0 7px rgba(255, 255, 244, 1))
+    drop-shadow(0 0 20px rgba(255, 221, 145, 0.9))
+    drop-shadow(0 0 44px rgba(238, 177, 74, 0.5));
+}
+
+html[data-opening="armed"] .home-page .wordmark-core,
+html[data-opening="playing"] .home-page .wordmark-core {
+  opacity: 1;
+  filter:
+    brightness(2)
+    drop-shadow(0 0 3px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 8px rgba(255, 247, 211, 1))
+    drop-shadow(0 0 18px rgba(255, 216, 132, 0.98))
+    drop-shadow(0 0 34px rgba(236, 170, 65, 0.6));
+}
+
+html[data-opening="armed"] .home-page [data-light-projection],
+html[data-opening="playing"] .home-page [data-light-projection] {
+  opacity: 1;
+  filter: brightness(1.5) saturate(1.2);
+}
+
+/* Hero composition: large wordmark, then compact and orderly supporting type. */
+.home-page .site-header {
+  min-height: 70px;
+}
+
+.home-page .brand {
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home-page .brand img {
+  width: 26px;
+  height: 26px;
+}
+
+.home-page .site-nav {
+  gap: clamp(18px, 2vw, 26px);
+  font-size: 12.5px;
+}
+
+.home-page .header-cta {
+  min-height: 40px;
+  padding-inline: 14px;
+  font-size: 12.5px;
+}
+
+.home-page .pitch-intro {
+  min-height: max(680px, 100svh);
+  padding-block: clamp(145px, 21svh, 220px) 88px;
+}
+
+.home-page .pitch-intro-inner {
+  gap: clamp(24px, 3.3vh, 34px);
+}
+
+.home-page .pitch-intro-statement {
+  max-width: 30ch;
+  font-size: var(--pitch-hero-statement);
+  line-height: 1.18;
+  letter-spacing: -0.032em;
+}
+
+.home-page .pitch-intro-support {
+  gap: 20px;
+  max-width: 620px;
+}
+
+.home-page .pitch-intro-support .pitch-lede {
+  font-size: var(--pitch-lede-size);
+  line-height: 1.58;
+}
+
+.home-page .button {
+  min-height: 44px;
+  padding-inline: 18px;
+  font-size: 13px;
+}
+
+/* Editorial rhythm: stop changing headline scale chapter by chapter. */
+.home-page .pitch-section,
+.home-page .pitch-section--compact {
+  padding: clamp(74px, 7.5vw, 96px) 0;
+}
+
+.home-page .pitch-section-meta,
+.home-page .pitch-section--compact .pitch-section-meta {
+  margin-bottom: clamp(26px, 3.2vw, 38px);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.home-page .pitch-section h2,
+.home-page .pitch-section--compact h2,
+.home-page .pitch-human-first h2,
+.home-page .pitch-platform-grid h2,
+.home-page .pitch-waitlist h2 {
+  max-width: 18ch;
+  font-size: var(--pitch-title);
+  line-height: 1.08;
+  letter-spacing: -0.038em;
+}
+
+.home-page .pitch-section p,
+.home-page .pitch-waitlist p,
+.home-page .pitch-clean-list li,
+.home-page .pitch-control-line span {
+  font-size: var(--pitch-body);
+  line-height: 1.64;
+}
+
+.home-page .pitch-section .pitch-lede {
+  max-width: 60ch;
+  font-size: var(--pitch-lede-size);
+  line-height: 1.5;
+}
+
+.home-page .pitch-problem-grid,
+.home-page .pitch-platform-grid,
+.home-page .pitch-discovery-grid,
+.home-page .pitch-reputation-grid,
+.home-page .pitch-ai-grid {
+  gap: clamp(42px, 5.5vw, 72px);
+}
+
+.home-page .pitch-story-copy--narrow {
+  margin-top: 28px;
+}
+
+.home-page .pitch-result {
+  max-width: 38ch;
+  margin-top: clamp(36px, 4.2vw, 52px);
+  font-size: var(--pitch-display) !important;
+  line-height: 1.28 !important;
+  letter-spacing: -0.025em;
+}
+
+.home-page .pitch-four-lines {
+  gap: 0 34px;
+  margin-top: clamp(34px, 4.4vw, 52px);
+}
+
+.home-page .pitch-four-lines span {
+  padding: 18px 0;
+  font-size: clamp(17px, 1.5vw, 21px);
+  line-height: 1.42;
+}
+
+.home-page .pitch-control-line {
+  gap: clamp(32px, 5.5vw, 72px);
+  margin-top: clamp(46px, 5vw, 68px);
+  padding: 22px 0;
+}
+
+.home-page .pitch-control-line strong {
+  font-size: clamp(21px, 2.1vw, 29px);
+  line-height: 1.28;
+  letter-spacing: -0.026em;
+}
+
+.home-page .pitch-reputation-grid,
+.home-page .pitch-section--compact .pitch-reputation-grid {
+  margin-top: clamp(34px, 4vw, 50px);
+}
+
+.home-page .pitch-principle-list {
+  margin-top: clamp(34px, 4.2vw, 52px);
+}
+
+.home-page .pitch-principle-list li {
+  padding: 22px 0 22px 54px;
+  font-size: clamp(22px, 2.5vw, 33px);
+  line-height: 1.3;
+  letter-spacing: -0.028em;
+}
+
+.home-page .pitch-principle-list li::before {
+  top: 28px;
+}
+
+.home-page .pitch-authorship-list {
+  margin-top: clamp(34px, 4vw, 52px);
+}
+
+.home-page .pitch-authorship-list > div {
+  padding: 17px 0;
+}
+
+/* Remove the old boxed homepage treatment at the bottom. The waitlist is part of the editorial page, not a floating card. */
+.home-page .home-waitlist.pitch-waitlist {
+  position: static;
+  min-width: 0;
+  margin-bottom: 56px;
+  padding: clamp(64px, 7vw, 88px) 0;
+  transform: none !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid var(--pitch-line) !important;
+  border-bottom: 1px solid var(--pitch-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.home-page .pitch-waitlist .home-waitlist-copy h2 {
+  margin-top: 20px;
+}
+
+.home-page .pitch-waitlist .home-waitlist-form {
+  gap: 12px;
+}
+
+.home-page .pitch-waitlist .home-waitlist-fields input {
+  height: 48px;
+}
+
+.home-page .pitch-waitlist-signoff {
+  font-size: clamp(20px, 2vw, 27px) !important;
+  line-height: 1.34 !important;
+}
+
+.home-page .home-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: var(--pitch-warm);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.home-page .home-status-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--pitch-warm);
+  box-shadow: 0 0 0 4px rgba(242, 201, 141, 0.1);
+}
+
+.home-page .home-turnstile-shell:empty {
+  display: none;
+}
+
+.home-page .home-form-status[data-state="error"] {
+  min-height: 20px;
+  color: #f3b7a8;
+}
+
+.home-page .home-waitlist-fields button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.home-page .home-waitlist-form[data-state="success"] .home-waitlist-fields,
+.home-page .home-waitlist-form[data-state="success"] .home-turnstile-shell,
+.home-page .home-waitlist-form[data-state="success"] .home-consent-note {
+  display: none;
+}
+
+.home-page .home-footer {
+  min-height: 100px;
+  grid-template-columns: 1fr auto;
+}
+
+.home-page .home-footer .footer-links {
+  justify-self: end;
+}
+
+@media (max-width: 900px) {
+  .home-page .site-header,
+  .home-page .pitch-intro,
+  .home-page .pitch-section,
+  .home-page .pitch-waitlist,
+  .home-page .site-footer {
+    width: min(calc(100% - 40px), var(--pitch-max));
+  }
+}
+
+@media (max-width: 700px) {
+  .home-page {
+    --pitch-title: clamp(34px, 9.2vw, 46px);
+    --pitch-display: clamp(22px, 6.4vw, 27px);
+    --pitch-hero-statement: clamp(24px, 6.6vw, 29px);
+  }
+
+  .home-page .site-header {
+    min-height: 66px;
+  }
+
+  .home-page .pitch-intro {
+    min-height: max(630px, 100svh);
+    padding-block: clamp(150px, 23svh, 205px) 80px;
+  }
+
+  .home-page .pitch-intro-inner {
+    gap: 24px;
+  }
+
+  .home-page .pitch-intro-support {
+    max-width: 335px;
+    gap: 18px;
+  }
+
+  .home-page .pitch-intro-support .pitch-lede {
+    font-size: 16px;
+  }
+
+  .home-page .pitch-section,
+  .home-page .pitch-section--compact {
+    padding: 62px 0;
+  }
+
+  .home-page .pitch-section-meta,
+  .home-page .pitch-section--compact .pitch-section-meta {
+    margin-bottom: 26px;
+  }
+
+  .home-page .pitch-problem-grid,
+  .home-page .pitch-platform-grid,
+  .home-page .pitch-discovery-grid,
+  .home-page .pitch-reputation-grid,
+  .home-page .pitch-ai-grid,
+  .home-page .pitch-control-line {
+    gap: 28px;
+  }
+
+  .home-page .pitch-section p,
+  .home-page .pitch-waitlist p,
+  .home-page .pitch-clean-list li,
+  .home-page .pitch-control-line span {
+    font-size: 16px;
+  }
+
+  .home-page .pitch-four-lines {
+    margin-top: 30px;
+  }
+
+  .home-page .pitch-control-line {
+    margin-top: 38px;
+  }
+
+  .home-page .pitch-principle-list li {
+    padding-left: 38px;
+    font-size: clamp(22px, 6.6vw, 29px);
+  }
+
+  .home-page .pitch-principle-list li::before {
+    top: 27px;
+  }
+
+  .home-page .home-waitlist.pitch-waitlist {
+    margin-bottom: 42px;
+    padding: 58px 0;
+  }
+
+  .home-page .home-footer {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 26px 0;
+  }
+
+  .home-page .home-footer .footer-links {
+    justify-self: start;
+  }
+
+  html[data-opening="armed"] .home-page .wordmark-bloom,
+  html[data-opening="playing"] .home-page .wordmark-bloom,
+  html[data-opening="armed"] .home-page .wordmark-core,
+  html[data-opening="playing"] .home-page .wordmark-core {
+    filter:
+      brightness(1.65)
+      drop-shadow(0 0 5px rgba(255, 252, 232, 1))
+      drop-shadow(0 0 14px rgba(255, 219, 145, 0.82))
+      drop-shadow(0 0 28px rgba(238, 177, 74, 0.42));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page .wordmark-settled {
+    fill: #f8e8c8;
+  }
+}
