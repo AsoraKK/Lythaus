@@ -1,0 +1,28 @@
+name: WP004A OpenAI moderation smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  moderation_smoke:
+    name: One neutral-image moderation call
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Generate deterministic neutral PNG
+        run: node scripts/authenticity/create-neutral-png.mjs .artifacts/wp004a-neutral.png
+      - name: Call OpenAI moderation once
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node --experimental-strip-types scripts/authenticity/wp004a-openai-moderation-smoke.mjs .artifacts/wp004a-neutral.png
