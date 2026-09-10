@@ -1,5 +1,6 @@
 import type { OriginHypothesis } from './judge.ts';
 import type { GroundTruthEntry } from './research-manifests.ts';
+import type { VisionObserverComparison } from './vision-observer.ts';
 
 export interface ResearchPrediction {
   sampleId: string;
@@ -25,6 +26,23 @@ export interface ResearchEvaluationResult {
   agreementRate: number | null;
   rows: readonly ResearchEvaluationRow[];
   enforcementAuthority: false;
+}
+
+export interface VisionObserverComparisonSummary {
+  schemaVersion: 'lythaus-wp004a-observer-comparison-v1';
+  sampleCount: number;
+  directReasonedAgreementRate: number | null;
+  contradictoryCount: number;
+  directIndeterminateRate: number | null;
+  reasonedIndeterminateRate: number | null;
+  directMeanConfidence: number | null;
+  reasonedMeanConfidence: number | null;
+  directMeanLatencyMs: number | null;
+  reasonedMeanLatencyMs: number | null;
+  directCalls: number;
+  reasonedCalls: number;
+  observationGroundTruthAvailable: false;
+  limitations: readonly string[];
 }
 
 function expectedHypothesis(entry: GroundTruthEntry): OriginHypothesis | null {
@@ -68,4 +86,40 @@ export function evaluateResearchPredictions(input: { predictions: readonly Resea
 
 export function assertGroundTruthIsEvaluatorOnly(value: unknown): void {
   if (value && typeof value === 'object' && ('truth' in value || 'groundTruth' in value)) throw new Error('ground_truth_must_not_enter_runtime_packet');
+}
+
+function statusSignature(comparison: VisionObserverComparison, mode: 'direct' | 'reasoned'): string {
+  return comparison[mode].observations.map((observation) => `${observation.category}:${observation.status}`).sort().join('|');
+}
+
+function mean(values: readonly number[]): number | null {
+  return values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function indeterminate(comparison: VisionObserverComparison, mode: 'direct' | 'reasoned'): boolean {
+  return comparison[mode].observations.some((observation) => observation.status === 'INDETERMINATE');
+}
+
+function confidenceValues(comparisons: readonly VisionObserverComparison[], mode: 'direct' | 'reasoned'): number[] {
+  return comparisons.flatMap((comparison) => comparison[mode].observations.flatMap((observation) => observation.measurementConfidence === null ? [] : [observation.measurementConfidence]));
+}
+
+export function summarizeVisionObserverComparisons(comparisons: readonly VisionObserverComparison[]): VisionObserverComparisonSummary {
+  const sampleCount = comparisons.length;
+  return {
+    schemaVersion: 'lythaus-wp004a-observer-comparison-v1',
+    sampleCount,
+    directReasonedAgreementRate: sampleCount === 0 ? null : comparisons.filter((comparison) => statusSignature(comparison, 'direct') === statusSignature(comparison, 'reasoned')).length / sampleCount,
+    contradictoryCount: comparisons.filter((comparison) => comparison.contradictory).length,
+    directIndeterminateRate: sampleCount === 0 ? null : comparisons.filter((comparison) => indeterminate(comparison, 'direct')).length / sampleCount,
+    reasonedIndeterminateRate: sampleCount === 0 ? null : comparisons.filter((comparison) => indeterminate(comparison, 'reasoned')).length / sampleCount,
+    directMeanConfidence: mean(confidenceValues(comparisons, 'direct')),
+    reasonedMeanConfidence: mean(confidenceValues(comparisons, 'reasoned')),
+    directMeanLatencyMs: mean(comparisons.map((comparison) => comparison.direct.executionMs)),
+    reasonedMeanLatencyMs: mean(comparisons.map((comparison) => comparison.reasoned.executionMs)),
+    directCalls: sampleCount,
+    reasonedCalls: sampleCount,
+    observationGroundTruthAvailable: false,
+    limitations: ['No observation-level ground truth was supplied; agreement, confidence, and latency are descriptive only.', 'A higher confidence value is not evidence of better observation quality.'],
+  };
 }

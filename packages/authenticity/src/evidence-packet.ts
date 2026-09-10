@@ -90,11 +90,13 @@ export interface EvidencePacket {
   evidenceFamilies: Readonly<Record<EvidenceFamily, EvidenceFamilySummary>>;
   evidence: readonly PacketEvidence[];
   observations: readonly VisionObservation[];
+  observationHistory: readonly VisionObservation[];
   quality: {
     overall: EvidenceQualityStatus;
     missingEvidenceFamilies: readonly EvidenceFamily[];
     failedComponents: readonly string[];
     contradictoryEvidenceIds: readonly string[];
+    contradictoryObservationIds: readonly string[];
     limitations: readonly string[];
   };
   enforcementAuthority: false;
@@ -119,6 +121,8 @@ export interface BuildEvidencePacketInput {
   transformationState?: Partial<TransformationState> & Pick<TransformationState, 'sourceFamilyId'>;
   failedComponents?: readonly string[];
   contradictoryEvidenceIds?: readonly string[];
+  contradictoryObservationIds?: readonly string[];
+  observationHistory?: readonly VisionObservation[];
   now?: string;
 }
 
@@ -259,6 +263,7 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
 
   const observer = input.observer ?? null;
   const observations = observer?.observations ?? [];
+  const observationHistory = [...(input.observationHistory ?? [])];
   const safetyAnalysis = input.moderation ?? null;
   const providerEvidence = safetyAnalysis?.providerEvidence ?? null;
   const safetyQuality: EvidenceQualityStatus = safetyAnalysis === null
@@ -283,7 +288,7 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
   const missingEvidenceFamilies = familyOrder().filter((family) => summaries.get(family)?.status === 'UNAVAILABLE');
   const overall: EvidenceQualityStatus = failedComponents.length > 0
     ? 'FAILED'
-    : input.contradictoryEvidenceIds && input.contradictoryEvidenceIds.length > 0
+    : (input.contradictoryEvidenceIds && input.contradictoryEvidenceIds.length > 0) || (input.contradictoryObservationIds && input.contradictoryObservationIds.length > 0)
       ? 'CONTRADICTORY'
       : missingEvidenceFamilies.length > 0 ? 'UNAVAILABLE' : 'AVAILABLE';
   const cameraEvidence = forensic?.physicalAcquisition.cameraOrigin ?? 'CAMERA_ORIGIN_UNCERTAIN';
@@ -310,7 +315,7 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
       packet: EVIDENCE_PACKET_SCHEMA_VERSION,
       moderation: providerEvidence?.schemaVersion ?? null,
       forensics: forensic?.featureVersion ?? null,
-      observer: observer?.protocolVersion ?? null,
+      observer: observer?.protocolVersion ?? observationHistory[0]?.protocolVersion ?? null,
       observerPrompt: observer?.promptVersion ?? null,
     },
     originAxes: { cameraEvidence, syntheticEvidence },
@@ -318,11 +323,13 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
     evidenceFamilies: Object.fromEntries(familyOrder().map((family) => [family, summaries.get(family)])) as Record<EvidenceFamily, EvidenceFamilySummary>,
     evidence,
     observations,
+    observationHistory,
     quality: {
       overall,
       missingEvidenceFamilies,
       failedComponents: [...new Set(failedComponents)],
       contradictoryEvidenceIds: [...(input.contradictoryEvidenceIds ?? [])],
+      contradictoryObservationIds: [...(input.contradictoryObservationIds ?? [])],
       limitations: [
         'Research V1 preserves measurements and observations without collapsing them into a synthetic probability.',
         'The packet contains no ground truth and grants no enforcement authority.',
@@ -335,7 +342,7 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
 }
 
 export function packetReferenceIds(packet: EvidencePacket): ReadonlySet<string> {
-  return new Set([...packet.evidence.map((item) => item.evidenceId), ...packet.observations.map((item) => item.observationId)]);
+  return new Set([...packet.evidence.map((item) => item.evidenceId), ...packet.observations.map((item) => item.observationId), ...packet.observationHistory.map((item) => item.observationId)]);
 }
 
 export function assertEvidenceReferenceIds(packet: EvidencePacket, ids: readonly string[]): void {
@@ -359,7 +366,7 @@ export function assertEvidencePacket(packet: EvidencePacket): void {
     if (item.family === 'EF3_GENERATIVE_FORENSICS' && /moderation|safety|openai/i.test(item.provenance.sourceComponent)) throw new Error('safety_cannot_be_synthetic_evidence');
   }
   const observationIds = new Set<string>();
-  for (const observation of packet.observations) {
+  for (const observation of [...packet.observationHistory, ...packet.observations]) {
     if (observationIds.has(observation.observationId) || evidenceIds.has(observation.observationId)) throw new Error('evidence_packet_duplicate_observation_id');
     observationIds.add(observation.observationId);
     assertVisionObservation(observation);

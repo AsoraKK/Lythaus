@@ -1,6 +1,7 @@
-import { assertEvidencePacket, assertEvidenceReferenceIds, type EvidencePacket } from './evidence-packet.ts';
+import { assertEvidencePacket, assertEvidenceReferenceIds, packetReferenceIds, type EvidencePacket } from './evidence-packet.ts';
+import { type CloudflareRestTransport } from './cloudflare-rest.ts';
 import { CLOUDFLARE_REASONER_MODEL } from './research-config.ts';
-import type { CloudflareAiRunOptions } from './vision-observer.ts';
+import type { CloudflareAiRunOptions, VisionEscalationReason, VisionObservationCategory, VisionRegion } from './vision-observer.ts';
 
 export const JUDGE_RESULT_SCHEMA_VERSION = 'lythaus-judge-result-v1' as const;
 export const JUDGE_RECOMMENDATION_SCHEMA_VERSION = '1' as const;
@@ -25,6 +26,7 @@ export const WHITELISTED_ADDITIONAL_TESTS = [
   'INSPECT_OCCLUSION',
   'INSPECT_SHADOWS',
   'INSPECT_ANATOMY',
+  'REASONED_VISUAL_RECHECK',
 ] as const;
 export type WhitelistedAdditionalTest = (typeof WHITELISTED_ADDITIONAL_TESTS)[number];
 
@@ -37,6 +39,10 @@ export interface EvidenceRequest {
   requestId: string;
   request: string;
   evidenceFamily: string | null;
+  observationId?: string;
+  category?: VisionObservationCategory;
+  reasonCode?: VisionEscalationReason;
+  targetRegion?: VisionRegion | null;
 }
 
 export interface JudgeRecommendation {
@@ -86,8 +92,10 @@ export const JUDGE_SYSTEM_PROMPT = [
   'Safety evidence is SAFETY_CONTEXT_ONLY. Never use harmful-content categories, flags, or scores as origin evidence.',
   'Report contradictory evidence and missing evidence. Never fabricate an unavailable evidence family.',
   'Do not let eloquent reasoning substitute for weak measurements. Abstain with INSUFFICIENT_EVIDENCE when evidence is insufficient.',
+  'Observer reasoningMode is execution metadata. Never treat REASONED as synthetic-origin evidence.',
+  'The Vision Observer raw reasoning trace is not supplied and must never be requested, repeated, or used as evidence.',
   'Do not output numeric confidence, AI probability, human probability, enforcement actions, or a final product decision.',
-  'You may request only whitelisted bounded additional tests. Do not emit tool calls or execute tests.',
+  'You may request only whitelisted bounded additional tests. REASONED_VISUAL_RECHECK is valid only with a real observationId, category, reasonCode, and optional normalized targetRegion in missingEvidence. Do not emit tool calls or execute tests.',
   'Return JSON only with schemaVersion "1", primaryHypothesis, alternativeHypotheses, supportingEvidence, contradictoryEvidence, missingEvidence, uncertainty, requiresReview, recommendedAdditionalTests, rationale, and enforcementAuthority false.',
 ].join('\n');
 
@@ -117,7 +125,7 @@ function forbiddenDeep(value: unknown): boolean {
   if (Array.isArray(value)) return value.some(forbiddenDeep);
   if (!isRecord(value)) return false;
   for (const key of Object.keys(value)) {
-    if (['groundTruth', 'truth', 'aiProbability', 'humanProbability', 'rawImage', 'imageBytes', 'base64'].includes(key)) return true;
+    if (['groundTruth', 'truth', 'aiProbability', 'humanProbability', 'rawImage', 'imageBytes', 'base64', 'rawReasoning', 'reasoningTrace', 'chainOfThought', 'thinking'].includes(key)) return true;
     if (forbiddenDeep(value[key])) return true;
   }
   return false;
@@ -140,6 +148,28 @@ function parseReferences(value: unknown, packet: EvidencePacket): EvidenceRefere
   return result;
 }
 
+function normalizeTargetRegion(value: unknown): VisionRegion | null {
+  if (!isRecord(value) || value.coordinateSpace !== 'NORMALIZED') return null;
+  const coordinates = [value.x, value.y, value.width, value.height];
+  if (!coordinates.every((coordinate) => typeof coordinate === 'number' && Number.isFinite(coordinate) && coordinate >= 0 && coordinate <= 1)) return null;
+  if ((value.width as number) <= 0 || (value.height as number) <= 0 || (value.x as number) + (value.width as number) > 1 || (value.y as number) + (value.height as number) > 1) return null;
+  return {
+    coordinateSpace: 'NORMALIZED',
+    x: value.x as number,
+    y: value.y as number,
+    width: value.width as number,
+    height: value.height as number,
+    ...(typeof value.label === 'string' && value.label.trim() ? { label: value.label.trim().slice(0, 120) } : {}),
+  };
+}
+
+function observationCategoryForId(packet: EvidencePacket, observationId: string): VisionObservationCategory | null {
+  for (const observation of [...packet.observations, ...packet.observationHistory]) {
+    if (observation.observationId === observationId) return observation.category;
+  }
+  return null;
+}
+
 function parseRecommendation(value: unknown, packet: EvidencePacket): JudgeRecommendation {
   if (!isRecord(value)) throw new Error('judge_response_schema_invalid');
   if (value.schemaVersion !== JUDGE_RECOMMENDATION_SCHEMA_VERSION) throw new Error('judge_response_schema_version_invalid');
@@ -158,7 +188,22 @@ function parseRecommendation(value: unknown, packet: EvidencePacket): JudgeRecom
   if (!Array.isArray(value.missingEvidence)) throw new Error('judge_missing_evidence_invalid');
   const missingEvidence = value.missingEvidence.slice(0, 12).map((item) => {
     if (!isRecord(item) || typeof item.requestId !== 'string' || typeof item.request !== 'string' || (item.evidenceFamily !== null && typeof item.evidenceFamily !== 'string')) return null;
-    return { requestId: item.requestId.slice(0, 120), request: item.request.slice(0, 1200), evidenceFamily: item.evidenceFamily as string | null };
+    if (item.observationId !== undefined && typeof item.observationId !== 'string') return null;
+    if (typeof item.observationId === 'string' && !packetReferenceIds(packet).has(item.observationId)) return null;
+    if (item.category !== undefined && !(typeof item.category === 'string' && (['SCENE_INVENTORY', 'OBJECT_LOCALISATION', 'TEXT', 'GEOMETRY_OCCLUSION', 'LIGHTING_SHADOW', 'REFLECTION', 'REPETITION', 'ANATOMY', 'SCREEN_DISPLAY_RELATIONSHIP', 'SUSPICIOUS_REGION'] as readonly string[]).includes(item.category))) return null;
+    if (typeof item.observationId === 'string' && typeof item.category === 'string' && observationCategoryForId(packet, item.observationId) !== item.category) return null;
+    if (item.reasonCode !== undefined && !(typeof item.reasonCode === 'string' && (['LOW_OBSERVATION_CONFIDENCE', 'RELATIONAL_VISUAL_TASK', 'CONTRADICTORY_VISUAL_SIGNALS', 'PARTIAL_OCCLUSION', 'AMBIGUOUS_REFLECTION', 'AMBIGUOUS_LIGHTING', 'AMBIGUOUS_GEOMETRY', 'AMBIGUOUS_ANATOMY', 'SCREEN_RECAPTURE_UNCERTAINTY'] as readonly string[]).includes(item.reasonCode))) return null;
+    const targetRegion = item.targetRegion === undefined || item.targetRegion === null ? item.targetRegion : normalizeTargetRegion(item.targetRegion);
+    if (item.targetRegion !== undefined && item.targetRegion !== null && targetRegion === null) return null;
+    return {
+      requestId: item.requestId.slice(0, 120),
+      request: item.request.slice(0, 1200),
+      evidenceFamily: item.evidenceFamily as string | null,
+      ...(typeof item.observationId === 'string' ? { observationId: item.observationId.slice(0, 200) } : {}),
+      ...(typeof item.category === 'string' ? { category: item.category as VisionObservationCategory } : {}),
+      ...(typeof item.reasonCode === 'string' ? { reasonCode: item.reasonCode as VisionEscalationReason } : {}),
+      ...(item.targetRegion !== undefined ? { targetRegion: targetRegion as VisionRegion | null } : {}),
+    };
   });
   if (missingEvidence.some((item) => item === null)) throw new Error('judge_missing_evidence_invalid');
   const uncertainty = value.uncertainty;
@@ -166,6 +211,7 @@ function parseRecommendation(value: unknown, packet: EvidencePacket): JudgeRecom
   if (typeof value.requiresReview !== 'boolean' || typeof value.rationale !== 'string') throw new Error('judge_recommendation_fields_invalid');
   const additional = stringList(value.recommendedAdditionalTests, 8);
   if (!additional || additional.some((item) => !(WHITELISTED_ADDITIONAL_TESTS as readonly string[]).includes(item))) throw new Error('judge_additional_test_not_whitelisted');
+  if (additional.includes('REASONED_VISUAL_RECHECK') && !(missingEvidence as EvidenceRequest[]).some((item) => item.observationId && item.category && item.reasonCode)) throw new Error('judge_reasoned_recheck_request_invalid');
   return {
     schemaVersion: JUDGE_RECOMMENDATION_SCHEMA_VERSION,
     primaryHypothesis: value.primaryHypothesis as OriginHypothesis,
@@ -261,6 +307,28 @@ export function createCloudflareJudge(options: { ai: CloudflareAiRunOptions; mod
         const category: JudgeErrorCategory = message === 'judge_timeout'
           ? 'TIMEOUT'
           : message.startsWith('judge_') || message === 'evidence_packet_schema_invalid' ? 'UNEXPECTED_SCHEMA' : 'NETWORK_FAILURE';
+        return failedJudgeResult(provider, model, category, Date.now() - startedAt);
+      }
+    },
+  };
+}
+
+export function createCloudflareJudgeRest(options: { transport: CloudflareRestTransport; model?: string }): Judge & { isLive: true } {
+  const provider = 'cloudflare-workers-ai-rest';
+  const model = options.model ?? CLOUDFLARE_REASONER_MODEL;
+  return {
+    isLive: true,
+    async judge(input): Promise<JudgeResult> {
+      const startedAt = Date.now();
+      try {
+        const request = buildJudgeRequest(input.packet);
+        const raw = (await options.transport.run({ kind: 'JUDGE', model, payload: request })).result;
+        const parsed = parseJson(raw);
+        const recommendation = parseRecommendation(parsed, input.packet);
+        return { schemaVersion: JUDGE_RESULT_SCHEMA_VERSION, promptVersion: JUDGE_PROMPT_VERSION, prompt: JUDGE_SYSTEM_PROMPT, provider, model, status: 'SUCCESS', recommendation, executionMs: Date.now() - startedAt };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '';
+        const category: JudgeErrorCategory = message.startsWith('judge_') || message === 'evidence_packet_schema_invalid' ? 'UNEXPECTED_SCHEMA' : message.includes('timeout') ? 'TIMEOUT' : 'NETWORK_FAILURE';
         return failedJudgeResult(provider, model, category, Date.now() - startedAt);
       }
     },
