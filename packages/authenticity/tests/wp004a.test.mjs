@@ -13,10 +13,16 @@ import {
   assertSafetyIsolation,
   buildEvidencePacket,
   buildJudgeRequest,
+  cloudflareRestCredentialsFromEnvironment,
+  CloudflareRestError,
+  compareVisionObserverResults,
+  createCloudflareJudgeRest,
+  createCloudflareRestTransport,
   CLOUDFLARE_REASONER_MODEL,
   CLOUDFLARE_VISION_OBSERVER_MODEL,
   createCloudflareJudge,
   createCloudflareVisionObserver,
+  createCloudflareVisionObserverRest,
   createInsufficientEvidenceRecommendation,
   createMockJudge,
   createMockModerationProvider,
@@ -32,6 +38,8 @@ import {
   parseRuntimeResearchManifest,
   researchModelConfigFromEnvironment,
   runResearchTrial,
+  summarizeVisionObserverComparisons,
+  VISION_OBSERVER_ROUTING_POLICY,
   VISION_OBSERVER_PROTOCOL_VERSION,
   VISION_OBSERVER_PROMPT,
 } from '../src/wp004a.ts';
@@ -202,6 +210,47 @@ test('moderation evidence contract rejects missing success or failure fields', (
   assert.throws(() => assertModerationProviderEvidence({ schemaVersion: 'lythaus-moderation-provider-evidence-v1', provider: 'fixture', model: 'fixture', flagged: null, categories: {}, categoryScores: {}, categoryAppliedInputTypes: {}, executionMs: 0, status: 'PROVIDER_FAILURE' }), /error_missing/);
 });
 
+test('Cloudflare REST transport uses the documented endpoint, redacts failures, and enforces a hard cap', async () => {
+  let request;
+  const transport = createCloudflareRestTransport({
+    apiToken: 'cloudflare-secret-fixture',
+    accountId: 'account-fixture',
+    allowNetwork: true,
+    maxRequests: 1,
+    fetchImpl: async (url, init) => {
+      request = { url, init, body: JSON.parse(init.body) };
+      return jsonResponse({ success: true, result: { answer: 'fixture' }, errors: [], messages: [] });
+    },
+  });
+  const result = await transport.run({ kind: 'VISION_OBSERVER', model: CLOUDFLARE_VISION_OBSERVER_MODEL, payload: { task: 'query', reasoning: false } });
+  assert.equal(result.result.answer, 'fixture');
+  assert.match(request.url, /\/accounts\/account-fixture\/ai\/run\/%40cf\/moondream\/moondream3\.1-9B-A2B$/);
+  assert.equal(request.init.headers.Authorization, 'Bearer cloudflare-secret-fixture');
+  assert.equal(request.body.reasoning, false);
+  assert.equal(transport.snapshot().calls, 1);
+  assert.equal(transport.snapshot().successes, 1);
+  await assert.rejects(transport.run({ kind: 'VISION_OBSERVER', model: CLOUDFLARE_VISION_OBSERVER_MODEL, payload: {} }), (error) => error instanceof CloudflareRestError && error.category === 'INVOCATION_CAP_EXCEEDED');
+  assert.equal(transport.snapshot().calls, 1);
+  assert.equal(JSON.stringify(transport.snapshot()).includes('cloudflare-secret-fixture'), false);
+});
+
+test('Cloudflare REST transport defaults to no network and maps credential, HTTP, schema, and timeout failures', async () => {
+  const disabled = createCloudflareRestTransport({ apiToken: 'fixture', accountId: 'account', maxRequests: 1 });
+  await assert.rejects(disabled.run({ kind: 'JUDGE', model: CLOUDFLARE_REASONER_MODEL, payload: {} }), (error) => error instanceof CloudflareRestError && error.category === 'NETWORK_DISABLED');
+  const missing = createCloudflareRestTransport({ accountId: 'account', allowNetwork: true, maxRequests: 1, fetchImpl: async () => jsonResponse({ success: true, result: {} }) });
+  await assert.rejects(missing.run({ kind: 'JUDGE', model: CLOUDFLARE_REASONER_MODEL, payload: {} }), (error) => error instanceof CloudflareRestError && error.category === 'MISSING_CREDENTIAL');
+  for (const [status, category] of [[401, 'HTTP_AUTHENTICATION_FAILURE'], [429, 'HTTP_RATE_LIMITED'], [500, 'HTTP_SERVER_FAILURE']]) {
+    const transport = createCloudflareRestTransport({ apiToken: 'secret', accountId: 'account', allowNetwork: true, maxRequests: 1, fetchImpl: async () => jsonResponse({ error: 'redacted' }, status) });
+    await assert.rejects(transport.run({ kind: 'JUDGE', model: CLOUDFLARE_REASONER_MODEL, payload: {} }), (error) => error instanceof CloudflareRestError && error.category === category);
+    assert.equal(JSON.stringify(transport.snapshot()).includes('secret'), false);
+  }
+  const malformed = createCloudflareRestTransport({ apiToken: 'secret', accountId: 'account', allowNetwork: true, maxRequests: 1, fetchImpl: async () => jsonResponse({ success: true }) });
+  await assert.rejects(malformed.run({ kind: 'JUDGE', model: CLOUDFLARE_REASONER_MODEL, payload: {} }), (error) => error instanceof CloudflareRestError && error.category === 'MALFORMED_RESPONSE');
+  const timeout = createCloudflareRestTransport({ apiToken: 'secret', accountId: 'account', allowNetwork: true, maxRequests: 1, timeoutMs: 1, fetchImpl: async () => new Promise(() => {}) });
+  await assert.rejects(timeout.run({ kind: 'JUDGE', model: CLOUDFLARE_REASONER_MODEL, payload: {} }), (error) => error instanceof CloudflareRestError && error.category === 'TIMEOUT');
+  assert.deepEqual(cloudflareRestCredentialsFromEnvironment({ CLOUDFLARE_API_TOKEN: 'token', CLOUDFLARE_ACCOUNT_ID: 'id' }), { apiToken: 'token', accountId: 'id' });
+});
+
 test('Vision Observer sends only visual protocol instructions and returns observations without a verdict', async () => {
   let called;
   const observer = createCloudflareVisionObserver({
@@ -231,6 +280,60 @@ test('Vision Observer fails closed on malformed observations and invalid regions
   assert.equal(malformedResult.observations.length, 0);
   const invalidRegion = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status: 'OBSERVED', observation: 'fixture', regions: [{ coordinateSpace: 'PIXELS', x: 1, y: 1, width: 2, height: 2 }], measurementConfidence: null, limitations: [] }] }) }) } });
   assert.equal((await invalidRegion.observe({ sampleId: 'SAMPLE', inputHash: 'c'.repeat(64), mime: 'image/png', bytes: pngFixture() })).errorCategory, 'MALFORMED_RESPONSE');
+});
+
+test('Vision Observer maps direct and reasoned query modes, escalates only in the research layer, and discards raw reasoning', async () => {
+  const calls = [];
+  const observer = createCloudflareVisionObserver({
+    ai: { run: async (_model, input) => {
+      calls.push(input);
+      const observation = input.reasoning
+        ? { category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'The visible reflection is consistent with the scene.', regions: [], measurementConfidence: 0.78, limitations: [] }
+        : { category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'The reflective surface is partly obscured.', regions: [], measurementConfidence: 0.4, limitations: ['Partial visibility.'] };
+      return { answer: JSON.stringify({ observations: [observation] }), reasoning: { trace: 'PRIVATE_REASONING_TRACE_MUST_NOT_ESCAPE' } };
+    } },
+  });
+  const base = { sampleId: 'SAMPLE', inputHash: 'f'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'REFLECTION_01', category: 'REFLECTION', task: 'query', question: 'Describe reflection consistency without making an origin judgment.' } };
+  const direct = await observer.observe({ ...base, request: { ...base.request, reasoningMode: 'DIRECT' } });
+  const reasoned = await observer.observe({ ...base, request: { ...base.request, reasoningMode: 'REASONED' } });
+  assert.equal(calls[0].reasoning, false);
+  assert.equal(calls[1].reasoning, true);
+  assert.equal(direct.reasoningMode, 'DIRECT');
+  assert.equal(reasoned.reasoningMode, 'REASONED');
+  assert.equal(direct.escalationRecommendation, 'REASONED_VISUAL_RECHECK');
+  assert.equal(reasoned.escalationRecommendation, 'NONE');
+  assert.equal(JSON.stringify(direct).includes('PRIVATE_REASONING_TRACE_MUST_NOT_ESCAPE'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(direct, 'primaryHypothesis'), false);
+  const compared = compareVisionObserverResults({ sampleId: 'SAMPLE', inputHash: 'f'.repeat(64), direct, reasoned });
+  assert.equal(compared.contradictory, false);
+  assert.equal(compared.direct.reasoningMode, 'DIRECT');
+  assert.equal(compared.reasoned.reasoningMode, 'REASONED');
+  const built = buildEvidencePacket({ runId: 'reasoning-run', caseId: CASE_ID, sampleId: 'SAMPLE', sourceFamilyId: 'FAMILY', preflight: { inputHash: 'f'.repeat(64), mime: 'image/png', dimensions: null }, observer: reasoned, observationHistory: direct.observations });
+  assert.equal(JSON.stringify(buildJudgeRequest(built)).includes('PRIVATE_REASONING_TRACE_MUST_NOT_ESCAPE'), false);
+  assert.deepEqual(built.originAxes, { cameraEvidence: 'CAMERA_ORIGIN_UNCERTAIN', syntheticEvidence: 'NO_POSITIVE_SYNTHETIC_EVIDENCE' });
+
+  const sufficientDirect = createCloudflareVisionObserver({
+    ai: { run: async () => ({ answer: JSON.stringify({ observations: [{ category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'The reflection is visible and consistent.', regions: [], measurementConfidence: 0.9, limitations: [] }] }) }) },
+  });
+  const sufficient = await sufficientDirect.observe({ ...base, request: { ...base.request, reasoningMode: 'DIRECT' } });
+  assert.equal(sufficient.escalationRecommendation, 'NONE');
+});
+
+test('direct/reasoned disagreement remains contradictory and routing policy is versioned research metadata', async () => {
+  const observer = createCloudflareVisionObserver({
+    ai: { run: async (_model, input) => ({ answer: JSON.stringify({ observations: [{ category: 'GEOMETRY_OCCLUSION', applicable: true, status: input.reasoning ? 'NOT_OBSERVED' : 'OBSERVED', observation: 'fixture', regions: [], measurementConfidence: 0.7, limitations: [] }] }) }) },
+  });
+  const base = { sampleId: 'SAMPLE', inputHash: '1'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'GEOMETRY_01', category: 'GEOMETRY_OCCLUSION', task: 'query', question: 'Describe the visible overlap relationship.' } };
+  const direct = await observer.observe({ ...base, request: { ...base.request, reasoningMode: 'DIRECT' } });
+  const reasoned = await observer.observe({ ...base, request: { ...base.request, reasoningMode: 'REASONED' } });
+  const compared = compareVisionObserverResults({ sampleId: 'SAMPLE', inputHash: '1'.repeat(64), direct, reasoned });
+  assert.equal(compared.contradictory, true);
+  const packetWithHistory = buildEvidencePacket({ runId: 'contradiction-run', caseId: CASE_ID, sampleId: 'SAMPLE', sourceFamilyId: 'FAMILY', preflight: { inputHash: '1'.repeat(64), mime: 'image/png', dimensions: null }, observer: reasoned, observationHistory: direct.observations, contradictoryObservationIds: [direct.observations[0].observationId, reasoned.observations[0].observationId] });
+  assert.equal(packetWithHistory.quality.overall, 'CONTRADICTORY');
+  assert.equal(packetWithHistory.observationHistory.length, 1);
+  assert.equal(packetWithHistory.observations.length, 1);
+  assert.equal(VISION_OBSERVER_ROUTING_POLICY.version, 'lythaus-vision-observer-routing-policy-v1');
+  assert.equal(VISION_OBSERVER_ROUTING_POLICY.lowConfidenceThreshold, 0.65);
 });
 
 test('Evidence Packet preserves forensic families, missing evidence, and safety isolation', async () => {
@@ -284,6 +387,22 @@ test('Judge consumes structured packet evidence, can abstain, and cannot referen
   assert.equal((await untrusted.judge({ packet: inputPacket })).errorCategory, 'UNEXPECTED_SCHEMA');
 });
 
+test('Judge accepts only a packet-bound REASONED_VISUAL_RECHECK request', async () => {
+  const observer = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: [{ category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'fixture', regions: [], measurementConfidence: 0.4, limitations: [] }] }) }) } });
+  const observed = await observer.observe({ sampleId: 'fixture-sample', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: pngFixture() });
+  const inputPacket = packet({ observer: observed });
+  const validRequest = recommendation({
+    recommendedAdditionalTests: ['REASONED_VISUAL_RECHECK'],
+    missingEvidence: [{ requestId: 'recheck-1', request: 'Recheck the reflection visually.', evidenceFamily: 'VISION_OBSERVATION', observationId: inputPacket.observations[0].observationId, category: 'REFLECTION', reasonCode: 'AMBIGUOUS_REFLECTION' }],
+  });
+  const validJudge = createCloudflareJudge({ ai: { run: async () => ({ response: JSON.stringify(validRequest) }) } });
+  const validResult = await validJudge.judge({ packet: inputPacket });
+  assert.equal(validResult.status, 'SUCCESS');
+  assert.equal(validResult.recommendation.recommendedAdditionalTests[0], 'REASONED_VISUAL_RECHECK');
+  const unknownRequest = createCloudflareJudge({ ai: { run: async () => ({ response: JSON.stringify({ ...validRequest, missingEvidence: [{ ...validRequest.missingEvidence[0], observationId: 'not-real' }] }) }) } });
+  assert.equal((await unknownRequest.judge({ packet: inputPacket })).status, 'PROVIDER_FAILURE');
+});
+
 test('runtime and ground-truth manifests are separate and evaluator-only', async () => {
   const runtime = JSON.parse(await readFile(path.join(repositoryRoot, 'research/wp004a/runtime-manifest.example.json'), 'utf8'));
   const truth = JSON.parse(await readFile(path.join(repositoryRoot, 'research/wp004a/ground-truth-manifest.example.json'), 'utf8'));
@@ -323,7 +442,7 @@ test('bounded runner executes mock full pipeline and records exact invocation co
     judge: createMockJudge(),
   });
   assert.equal(result.cases.length, 2);
-  assert.deepEqual(result.invocationAccounting.calls, { moderation: 2, observer: 2, judge: 2, total: 6 });
+  assert.deepEqual(result.invocationAccounting.calls, { moderation: 2, observer: 2, observerDirect: 2, observerReasoned: 0, caption: 0, detect: 0, point: 0, judge: 2, total: 6 });
   assert.equal(result.groundTruthLoaded, false);
   assert.equal(result.enforcementAuthority, false);
   assert.equal(calls.moderation, 2);
@@ -367,6 +486,98 @@ test('runner hard-stops invocation caps and gate mode prevents expensive downstr
   assert.equal(observerCalls, 1);
 });
 
+test('observer A/B mode uses identical inputs, records two bounded calls, and exposes descriptive metrics only', async () => {
+  let observerCalls = 0;
+  const result = await runResearchTrial({
+    mode: 'OBSERVER_AB',
+    runtimeManifest: manifest(1),
+    maxSamples: 1,
+    observerRequest: { queryId: 'REFLECTION_AB', category: 'REFLECTION', task: 'query', question: 'Describe reflection consistency.' },
+  }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    observer: { isLive: false, observe: async (input) => {
+      observerCalls += 1;
+      const mode = input.request?.reasoningMode ?? 'DIRECT';
+      const base = createMockVisionObserver([{ category: 'REFLECTION', applicable: true, status: mode === 'REASONED' ? 'OBSERVED' : 'INDETERMINATE', observation: 'fixture', regions: [], measurementConfidence: mode === 'REASONED' ? 0.8 : 0.4, limitations: [] }]);
+      return base.observe(input);
+    } },
+  });
+  assert.equal(observerCalls, 2);
+  assert.equal(result.invocationAccounting.calls.observer, 2);
+  assert.equal(result.invocationAccounting.calls.observerDirect, 1);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 1);
+  assert.equal(result.cases[0].observerComparison.direct.reasoningMode, 'DIRECT');
+  assert.equal(result.cases[0].observerComparison.reasoned.reasoningMode, 'REASONED');
+  const summary = summarizeVisionObserverComparisons([result.cases[0].observerComparison]);
+  assert.equal(summary.sampleCount, 1);
+  assert.equal(summary.observationGroundTruthAvailable, false);
+  assert.equal(summary.reasonedCalls, 1);
+});
+
+test('FULL_RECHECK permits one whitelisted reasoned pass and two Judge passes, never an unbounded loop', async () => {
+  let judgeCalls = 0;
+  const fixtureObservation = { category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'The surface is partly obscured.', regions: [], measurementConfidence: 0.4, limitations: ['Partial visibility.'] };
+  const result = await runResearchTrial({
+    mode: 'FULL_RECHECK',
+    runtimeManifest: manifest(1),
+    maxSamples: 1,
+    enableRecheck: true,
+    observerRequest: { queryId: 'REFLECTION_RECHECK', category: 'REFLECTION', task: 'query', question: 'Describe reflection consistency.' },
+    caps: { maxSamples: 1, maxModerationCalls: 1, maxObserverCalls: 2, maxObserverDirectCalls: 1, maxObserverReasonedCalls: 1, maxJudgeCalls: 2, maxTotalCalls: 5, maxRecheckRounds: 1 },
+  }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    moderation: createMockModerationProvider(),
+    observer: createMockVisionObserver([fixtureObservation]),
+    judge: { isLive: false, judge: async ({ packet: inputPacket }) => {
+      judgeCalls += 1;
+      const base = judgeCalls === 1
+        ? recommendation({
+          primaryHypothesis: 'INSUFFICIENT_EVIDENCE',
+          recommendedAdditionalTests: ['REASONED_VISUAL_RECHECK'],
+          missingEvidence: [{ requestId: 'recheck-1', request: 'Recheck the reflection visually.', evidenceFamily: 'VISION_OBSERVATION', observationId: inputPacket.observations[0].observationId, category: 'REFLECTION', reasonCode: 'AMBIGUOUS_REFLECTION' }],
+        })
+        : createInsufficientEvidenceRecommendation('Second pass remains uncertain.');
+      return { schemaVersion: 'lythaus-judge-result-v1', promptVersion: JUDGE_PROMPT_VERSION, prompt: '', provider: 'mock-judge', model: 'mock-v1', status: 'SUCCESS', recommendation: base, executionMs: 0 };
+    } },
+  });
+  assert.equal(judgeCalls, 2);
+  assert.equal(result.cases[0].recheckRounds, 1);
+  assert.equal(result.cases[0].judgeHistory.length, 2);
+  assert.equal(result.invocationAccounting.calls.observerDirect, 1);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 1);
+  assert.equal(result.invocationAccounting.calls.judge, 2);
+  assert.equal(result.cases[0].packet.observationHistory.length, 1);
+  assert.equal(result.cases[0].packet.observations[0].reasoningMode, 'REASONED');
+});
+
+test('unknown truth is excluded from evaluation metrics', async () => {
+  const truth = JSON.parse(await readFile(path.join(repositoryRoot, 'research/wp004a/ground-truth-manifest.example.json'), 'utf8'));
+  const unknown = { ...truth.entries[0], truth: { ...truth.entries[0].truth, truthBasis: 'NEEDS_OWNER_CONFIRMATION', physicalCameraAcquisition: null, syntheticContent: null } };
+  const evaluation = evaluateResearchPredictions({ predictions: [{ sampleId: unknown.sampleId, primaryHypothesis: 'CAMERA_NATIVE', uncertainty: 'HIGH', requiresReview: true }], groundTruth: [unknown] });
+  assert.equal(evaluation.evaluatedCount, 0);
+  assert.equal(evaluation.agreementRate, null);
+  assert.equal(evaluation.rows[0].matches, null);
+});
+
+test('REST-backed Observer and Judge adapters preserve provider boundaries without live calls', async () => {
+  const calls = [];
+  const transport = createCloudflareRestTransport({ apiToken: 'fixture-token', accountId: 'fixture-account', allowNetwork: true, maxRequests: 2, fetchImpl: async (_url, init) => {
+    const body = JSON.parse(init.body);
+    calls.push(body);
+    if (body.task === 'query') return jsonResponse({ success: true, result: { answer: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status: 'NOT_OBSERVED', observation: 'No anomaly was observed.', regions: [], measurementConfidence: 0.7, limitations: [] }] }), reasoning: { hidden: 'must-not-persist' } } });
+    return jsonResponse({ success: true, result: { response: JSON.stringify(createInsufficientEvidenceRecommendation()) } });
+  } });
+  const observer = createCloudflareVisionObserverRest({ transport });
+  const observed = await observer.observe({ sampleId: 'SAMPLE', inputHash: '2'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.', reasoningMode: 'DIRECT' } });
+  const inputPacket = buildEvidencePacket({ runId: 'rest-run', caseId: CASE_ID, sampleId: 'SAMPLE', sourceFamilyId: 'FAMILY', preflight: { inputHash: '2'.repeat(64), mime: 'image/png', dimensions: null }, observer: observed });
+  const judge = createCloudflareJudgeRest({ transport });
+  const judged = await judge.judge({ packet: inputPacket });
+  assert.equal(judged.status, 'SUCCESS');
+  assert.equal(calls[0].reasoning, false);
+  assert.equal(JSON.stringify(inputPacket).includes('must-not-persist'), false);
+  assert.equal(JSON.stringify(buildJudgeRequest(inputPacket)).includes('must-not-persist'), false);
+});
+
 test('workflow is manual-only, uses the exact secret binding, and emits no media or key', async () => {
   const workflow = await readFile(path.join(repositoryRoot, '.github/workflows/wp004a-openai-moderation-smoke.yml'), 'utf8');
   assert.match(workflow, /workflow_dispatch:/);
@@ -374,4 +585,14 @@ test('workflow is manual-only, uses the exact secret binding, and emits no media
   assert.match(workflow, /OPENAI_API_KEY:\s*\$\{\{ secrets\.OPENAI_API_KEY \}\}/);
   assert.doesNotMatch(workflow, /OneDrive|research[-_]images|base64|echo\s+\$\{\{\s*secrets\.OPENAI_API_KEY/i);
   assert.match(workflow, /wp004a-openai-moderation-smoke\.mjs/);
+});
+
+test('Cloudflare smoke workflow is manual-only, secret-injected, bounded, and fixture-only', async () => {
+  const workflow = await readFile(path.join(repositoryRoot, '.github/workflows/wp004a-cloudflare-rest-smoke.yml'), 'utf8');
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /pull_request:|push:/);
+  assert.match(workflow, /CLOUDFLARE_API_TOKEN:\s*\$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
+  assert.match(workflow, /wp004a-cloudflare-smoke\.mjs/);
+  assert.doesNotMatch(workflow, /OneDrive|LythausForensicsData|research[-_]images|base64|echo\s+\$\{\{\s*secrets\./i);
 });

@@ -7,11 +7,14 @@ import {
   createMockModerationProvider,
   createMockVisionObserver,
   createOpenAIModerationProvider,
+  createCloudflareRestTransport,
+  createCloudflareJudgeRest,
+  createCloudflareVisionObserverRest,
   runResearchTrial,
 } from '../../packages/authenticity/src/wp004a.ts';
 
 function parseArgs(argv) {
-  const options = { mode: 'MOCK_ONLY', dataRoot: process.env.LYTHAUS_WP004A_DATA_ROOT, manifest: null, packet: null, output: null, maxSamples: undefined, allowNetwork: false, safetyMode: 'observe' };
+  const options = { mode: 'MOCK_ONLY', dataRoot: process.env.LYTHAUS_WP004A_DATA_ROOT, manifest: null, packet: null, output: null, maxSamples: undefined, allowNetwork: false, safetyMode: 'observe', recheck: false, observerRequest: {} };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--mode') options.mode = String(argv[++index] ?? '').toUpperCase().replaceAll('-', '_');
@@ -23,9 +26,15 @@ function parseArgs(argv) {
     else if (argument === '--max-samples') options.maxSamples = Number(argv[++index]);
     else if (argument === '--allow-network') options.allowNetwork = true;
     else if (argument === '--safety-mode') options.safetyMode = argv[++index];
+    else if (argument === '--recheck') options.recheck = true;
+    else if (argument === '--query-id') options.observerRequest.queryId = argv[++index];
+    else if (argument === '--category') options.observerRequest.category = argv[++index];
+    else if (argument === '--task') options.observerRequest.task = argv[++index];
+    else if (argument === '--question') options.observerRequest.question = argv[++index];
+    else if (argument === '--target') options.observerRequest.target = argv[++index];
     else throw new Error(`unknown_argument:${argument}`);
   }
-  if (!['MOCK_ONLY', 'MODERATION_ONLY', 'OBSERVER_ONLY', 'JUDGE_ONLY', 'FULL'].includes(options.mode)) throw new Error('research_mode_invalid');
+  if (!['MOCK_ONLY', 'MODERATION_ONLY', 'OBSERVER_ONLY', 'OBSERVER_REASONED', 'OBSERVER_AB', 'JUDGE_ONLY', 'FULL', 'FULL_RECHECK'].includes(options.mode)) throw new Error('research_mode_invalid');
   if (!['observe', 'gate'].includes(options.safetyMode)) throw new Error('safety_mode_invalid');
   if (options.maxSamples !== undefined && (!Number.isInteger(options.maxSamples) || options.maxSamples <= 0)) throw new Error('max_samples_invalid');
   return options;
@@ -67,11 +76,19 @@ try {
   }
 
   const isMock = !options.allowNetwork || options.mode === 'MOCK_ONLY';
-  if (!isMock && options.mode !== 'MODERATION_ONLY') throw new Error('cloudflare_workers_ai_binding_required_for_live_observer_or_judge');
-  const moderation = isMock ? createMockModerationProvider() : createOpenAIModerationProvider({ apiKey: process.env.OPENAI_API_KEY });
-  const observer = createMockVisionObserver();
-  const judge = createMockJudge();
-  const result = await runResearchTrial({ mode: options.mode, runtimeManifest, packets, maxSamples: options.maxSamples, allowNetwork: options.allowNetwork, safetyMode: options.safetyMode }, {
+  const cloudflareMode = ['OBSERVER_ONLY', 'OBSERVER_REASONED', 'OBSERVER_AB', 'JUDGE_ONLY', 'FULL', 'FULL_RECHECK'].includes(options.mode);
+  if (options.allowNetwork && cloudflareMode && (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID)) throw new Error('cloudflare_rest_credentials_required');
+  const moderation = isMock || !['MODERATION_ONLY', 'FULL', 'FULL_RECHECK'].includes(options.mode)
+    ? createMockModerationProvider()
+    : createOpenAIModerationProvider({ apiKey: process.env.OPENAI_API_KEY });
+  const observer = isMock
+    ? createMockVisionObserver()
+    : createCloudflareVisionObserverRest({ transport: createCloudflareRestTransport({ apiToken: process.env.CLOUDFLARE_API_TOKEN, accountId: process.env.CLOUDFLARE_ACCOUNT_ID, allowNetwork: true, maxRequests: Math.max(1, (options.maxSamples ?? 1) * (options.mode === 'OBSERVER_AB' || options.mode === 'FULL_RECHECK' ? 2 : 1)) }) });
+  const judge = isMock || !['JUDGE_ONLY', 'FULL', 'FULL_RECHECK'].includes(options.mode)
+    ? createMockJudge()
+    : createCloudflareJudgeRest({ transport: createCloudflareRestTransport({ apiToken: process.env.CLOUDFLARE_API_TOKEN, accountId: process.env.CLOUDFLARE_ACCOUNT_ID, allowNetwork: true, maxRequests: Math.max(1, (options.maxSamples ?? 1) * (options.mode === 'FULL_RECHECK' ? 2 : 1)) }) });
+  const observerRequest = Object.keys(options.observerRequest).length === 0 ? undefined : options.observerRequest;
+  const result = await runResearchTrial({ mode: options.mode, runtimeManifest, packets, maxSamples: options.maxSamples, allowNetwork: options.allowNetwork, safetyMode: options.safetyMode, enableRecheck: options.recheck, observerRequest }, {
     readSample: (entry) => readInside(options.dataRoot, entry),
     moderation,
     observer,
