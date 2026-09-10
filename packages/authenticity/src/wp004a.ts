@@ -3,6 +3,7 @@ export * from './research-image.ts';
 export * from './moderation.ts';
 export * from './forensics.ts';
 export * from './openai-moderation.ts';
+export * from './cloudflare-rest.ts';
 export * from './vision-observer.ts';
 export * from './evidence-packet.ts';
 export * from './judge.ts';
