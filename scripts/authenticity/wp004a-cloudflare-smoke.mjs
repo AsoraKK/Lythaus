@@ -78,6 +78,7 @@ function safeResponseDiagnostics(diagnostics) {
     observationsPresent: diagnostics.observationsPresent,
     observationCount: diagnostics.observationCount,
     normalizationFailureCode: diagnostics.normalizationFailureCode,
+    invalidStatusToken: diagnostics.invalidStatusToken ?? null,
   };
 }
 
@@ -92,6 +93,7 @@ function safeObserverResult(observer) {
     queryId: observer.queryId,
     task: observer.task,
     reasoningMode: observer.reasoningMode,
+    generationConfig: observer.generationConfig,
     status: observer.status,
     observations: observer.observations.map(safeObservation),
     escalationRecommendation: observer.escalationRecommendation,
@@ -122,6 +124,7 @@ function safeComparison(comparison) {
       model: comparison.direct.model,
       task: comparison.direct.task,
       reasoningMode: comparison.direct.reasoningMode,
+      generationConfig: comparison.direct.generationConfig,
       executionMs: comparison.direct.executionMs,
       escalationRecommendation: comparison.direct.escalationRecommendation,
       escalationReasons: comparison.direct.escalationReasons,
@@ -138,6 +141,7 @@ function safeComparison(comparison) {
       model: comparison.reasoned.model,
       task: comparison.reasoned.task,
       reasoningMode: comparison.reasoned.reasoningMode,
+      generationConfig: comparison.reasoned.generationConfig,
       executionMs: comparison.reasoned.executionMs,
       escalationRecommendation: comparison.reasoned.escalationRecommendation,
       escalationReasons: comparison.reasoned.escalationReasons,

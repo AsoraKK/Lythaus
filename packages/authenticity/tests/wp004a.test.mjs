@@ -49,6 +49,8 @@ import {
   VISION_OBSERVER_ROUTING_POLICY,
   VISION_OBSERVER_PROTOCOL_VERSION,
   VISION_OBSERVER_PROMPT,
+  VISION_OBSERVER_PROMPT_VERSION,
+  VISION_OBSERVER_QUERY_GENERATION_CONFIG,
 } from '../src/wp004a.ts';
 import { createNeutralPng, validateNeutralPng } from '../../../scripts/authenticity/neutral-png.mjs';
 
@@ -403,8 +405,19 @@ test('Vision Observer sends only visual protocol instructions and returns observ
   assert.match(called.input.image, /^data:image\/png;base64,/);
   assert.match(called.input.question, /do not determine whether the image is AI-generated/i);
   assert.equal(called.options.metadata.protocolVersion, VISION_OBSERVER_PROTOCOL_VERSION);
+  assert.equal(called.options.metadata.promptVersion, VISION_OBSERVER_PROMPT_VERSION);
+  assert.equal(called.options.metadata.observerTemperature, '0');
+  assert.equal(called.options.metadata.observerMaxTokens, String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.maxTokens));
+  assert.equal(called.options.metadata.observerStream, 'false');
+  assert.equal(called.input.temperature, 0);
+  assert.equal(called.input.max_tokens, VISION_OBSERVER_QUERY_GENERATION_CONFIG.maxTokens);
+  assert.equal(called.input.stream, false);
+  assert.match(called.input.question, /status MUST be exactly one of: OBSERVED, NOT_OBSERVED, INDETERMINATE, NOT_APPLICABLE/);
+  assert.match(called.input.question, /category MUST exactly equal TEXT/);
+  assert.match(called.input.question, /"category": "TEXT"/);
   assert.equal(result.protocolVersion, VISION_OBSERVER_PROTOCOL_VERSION);
-  assert.equal(result.promptVersion, 'lythaus-vision-observer-prompt-v1');
+  assert.equal(result.promptVersion, 'lythaus-vision-observer-prompt-v2');
+  assert.deepEqual(result.generationConfig, VISION_OBSERVER_QUERY_GENERATION_CONFIG);
   assert.equal(result.observations[0].status, 'INDETERMINATE');
   assert.equal(result.observations[0].regions[0].coordinateSpace, 'NORMALIZED');
   assert.equal(result.observations[0].provenance.evidenceFamily, 'VISION_OBSERVATION');
@@ -479,6 +492,53 @@ test('Moondream query parser accepts structured answer JSON and fenced JSON but 
   assert.equal(proseResult.status, 'PROVIDER_FAILURE');
   assert.equal(proseResult.responseDiagnostics.normalizationFailureCode, 'ANSWER_NOT_JSON');
   assert.equal(proseResult.observations.length, 0);
+});
+
+test('Vision Observer prompt v2 and parser enforce the canonical status contract', async () => {
+  assert.equal(VISION_OBSERVER_PROMPT_VERSION, 'lythaus-vision-observer-prompt-v2');
+  assert.match(VISION_OBSERVER_PROMPT, /Return JSON only/);
+  assert.match(VISION_OBSERVER_PROMPT, /OBSERVED, NOT_OBSERVED, INDETERMINATE, NOT_APPLICABLE/);
+  assert.match(VISION_OBSERVER_PROMPT, /NOT_APPLICABLE.*applicable MUST be false/s);
+  assert.match(VISION_OBSERVER_PROMPT, /For OBSERVED, NOT_OBSERVED, and INDETERMINATE, applicable MUST be true/s);
+  assert.match(VISION_OBSERVER_PROMPT, /between 1 and 8 concise observations/);
+
+  const base = { sampleId: 'STATUS', inputHash: '5'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'STATUS_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.' } };
+  for (const status of ['OBSERVED', 'NOT_OBSERVED', 'INDETERMINATE', 'NOT_APPLICABLE']) {
+    const applicable = status !== 'NOT_APPLICABLE';
+    const observer = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable, status, observation: 'A bounded visual observation.', regions: [], measurementConfidence: null, limitations: [] }] }) }) } });
+    const result = await observer.observe(base);
+    assert.equal(result.status, 'SUCCESS', status);
+    assert.equal(result.observations[0].status, status);
+    assert.equal(result.observations[0].applicable, applicable);
+  }
+
+  for (const status of ['VISIBLE', 'PRESENT', 'observed', 'YES', 'anything else']) {
+    const observer = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status, observation: 'Must be rejected.', regions: [], measurementConfidence: null, limitations: [] }] }) }) } });
+    const result = await observer.observe(base);
+    assert.equal(result.status, 'PROVIDER_FAILURE', status);
+    assert.equal(result.responseDiagnostics.normalizationFailureCode, 'STATUS_INVALID');
+    if (status === 'VISIBLE' || status === 'PRESENT' || status === 'YES') assert.equal(result.responseDiagnostics.invalidStatusToken, status);
+    else assert.equal(result.responseDiagnostics.invalidStatusToken, undefined);
+  }
+
+  const mismatchedNotApplicable = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status: 'NOT_APPLICABLE', observation: 'Mismatch.', regions: [], measurementConfidence: null, limitations: [] }] }) }) } });
+  assert.equal((await mismatchedNotApplicable.observe(base)).responseDiagnostics.normalizationFailureCode, 'APPLICABILITY_STATUS_MISMATCH');
+
+  const overLimit = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: Array.from({ length: 9 }, () => ({ category: 'SCENE_INVENTORY', applicable: true, status: 'OBSERVED', observation: 'Bounded.', regions: [], measurementConfidence: null, limitations: [] })) }) }) } });
+  const overLimitResult = await overLimit.observe(base);
+  assert.equal(overLimitResult.status, 'PROVIDER_FAILURE');
+  assert.equal(overLimitResult.responseDiagnostics.normalizationFailureCode, 'OBSERVATIONS_TOO_MANY');
+  assert.equal(overLimitResult.responseDiagnostics.observationCount, 9);
+});
+
+test('safe invalid status diagnostics never enter Evidence Packet or Judge input', async () => {
+  const observer = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status: 'VISIBLE', observation: 'Diagnostic-only token.', regions: [], measurementConfidence: null, limitations: [] }] }), reasoning: { private: 'PRIVATE_REASONING_TRACE' } }) } });
+  const result = await observer.observe({ sampleId: 'SAMPLE', inputHash: '6'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'STATUS_02', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.' } });
+  assert.equal(result.responseDiagnostics.invalidStatusToken, 'VISIBLE');
+  assert.equal(JSON.stringify(result).includes('PRIVATE_REASONING_TRACE'), false);
+  const packet = buildEvidencePacket({ runId: 'status-diagnostic', caseId: CASE_ID, sampleId: 'SAMPLE', sourceFamilyId: 'FAMILY', preflight: { inputHash: '6'.repeat(64), mime: 'image/png', dimensions: null }, observer: result });
+  assert.equal(JSON.stringify(packet).includes('VISIBLE'), false);
+  assert.equal(JSON.stringify(buildJudgeRequest(packet)).includes('VISIBLE'), false);
 });
 
 test('Moondream query diagnostics identify precise answer and observation schema failures', async () => {

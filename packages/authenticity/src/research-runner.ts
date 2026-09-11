@@ -21,6 +21,7 @@ import {
   type VisionObserverReasoningMode,
   VISION_OBSERVER_PROTOCOL_VERSION,
   VISION_OBSERVER_PROMPT_VERSION,
+  VISION_OBSERVER_QUERY_GENERATION_CONFIG,
 } from './vision-observer.ts';
 
 export const RESEARCH_RUN_SCHEMA_VERSION = 'lythaus-wp004a-research-run-v1' as const;
@@ -303,7 +304,7 @@ function requestForMode(input: ResearchRunnerInput, mode: VisionObserverReasonin
 }
 
 function failedObserverResult(provider: string, model: string, request: VisionObserverRequest): VisionObserverResult {
-  return { schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION, prompt: '', provider, model, queryId: request.queryId, task: request.task, reasoningMode: request.reasoningMode ?? 'DIRECT', status: 'PROVIDER_FAILURE', observations: [], escalationRecommendation: 'NONE', escalationReasons: [], executionMs: 0, errorCategory: 'NETWORK_FAILURE' };
+  return { schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION, prompt: '', provider, model, generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG, queryId: request.queryId, task: request.task, reasoningMode: request.reasoningMode ?? 'DIRECT', status: 'PROVIDER_FAILURE', observations: [], escalationRecommendation: 'NONE', escalationReasons: [], executionMs: 0, errorCategory: 'NETWORK_FAILURE' };
 }
 
 function failedJudgeResult(provider: string): JudgeResult {
