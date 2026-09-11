@@ -2,6 +2,15 @@ name: WP004A Cloudflare Workers AI access preflight
 
 on:
   workflow_dispatch:
+    inputs:
+      model:
+        description: 'Workers AI model schema to inspect (metadata only)'
+        required: true
+        default: '@cf/moondream/moondream3.1-9B-A2B'
+        type: choice
+        options:
+          - '@cf/moondream/moondream3.1-9B-A2B'
+          - '@cf/openai/gpt-oss-20b'
 
 permissions:
   contents: read
@@ -24,4 +33,4 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-access-preflight.mjs --model '@cf/moondream/moondream3.1-9B-A2B' --allow-network
+        run: node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-access-preflight.mjs --model '${{ inputs.model }}' --allow-network

@@ -673,6 +673,9 @@ test('Cloudflare model-schema access preflight is read-only, bounded, and saniti
   assert.deepEqual(success.inputSchemaPropertyNames, ['image', 'max_tokens', 'question', 'reasoning', 'stream', 'task', 'temperature', 'top_p']);
   assert.deepEqual(success.outputSchemaPropertyNames, ['answer', 'metrics', 'reasoning']);
   assert.equal(success.responseFormatSupport, 'MOONDREAM_RESPONSE_FORMAT_NOT_DECLARED');
+  assert.equal(success.responseFormatDeclared, false);
+  assert.equal(success.outputResponseType, null);
+  assert.equal(success.responseExpectation, null);
   assert.equal(new URL(request.url).pathname, '/client/v4/accounts/account-fixture/ai/models/schema');
   assert.equal(new URL(request.url).searchParams.get('model'), CLOUDFLARE_VISION_OBSERVER_MODEL);
   assert.equal(request.init.method, 'GET');
@@ -691,6 +694,29 @@ test('Cloudflare model-schema access preflight is read-only, bounded, and saniti
   const disabled = await runCloudflareModelSchemaPreflight({ apiToken: 'secret', accountId: 'account', fetchImpl: async () => { throw new Error('must not run'); } });
   assert.equal(disabled.status, 'PROVIDER_FAILURE');
   assert.equal(disabled.transportErrorCategory, 'NETWORK_DISABLED');
+});
+
+test('Cloudflare schema preflight reports GPT-OSS response expectation separately', async () => {
+  const result = await runCloudflareModelSchemaPreflight({
+    apiToken: 'cloudflare-secret-fixture',
+    accountId: 'account-fixture',
+    model: CLOUDFLARE_REASONER_MODEL,
+    allowNetwork: true,
+    fetchImpl: async () => jsonResponse({
+      success: true,
+      result: {
+        input: { type: 'object', properties: { messages: {}, response_format: {}, temperature: {}, max_tokens: {}, stream: {} } },
+        output: { type: 'object', properties: { response: { type: 'string' }, usage: { type: 'object' }, tool_calls: { type: 'array' } } },
+      },
+    }),
+  });
+  assert.equal(result.status, 'SUCCESS');
+  assert.equal(result.model, CLOUDFLARE_REASONER_MODEL);
+  assert.equal(result.responseFormatDeclared, true);
+  assert.equal(result.outputResponseType, 'STRING');
+  assert.equal(result.responseExpectation, 'GPT_OSS_RESPONSE_STRING_EXPECTED');
+  assert.deepEqual(result.outputSchemaPropertyNames, ['response', 'tool_calls', 'usage']);
+  assert.equal(JSON.stringify(result).includes('cloudflare-secret-fixture'), false);
 });
 
 test('live smoke exit code is non-zero for provider failure and zero for success', () => {
@@ -1040,6 +1066,89 @@ test('Judge consumes structured packet evidence, can abstain, and cannot referen
   assert.equal(invalidResult.recommendation, null);
   const untrusted = createCloudflareJudge({ ai: { run: async () => ({ response: JSON.stringify(recommendation({ recommendedAdditionalTests: ['RUN_ARBITRARY_TOOL'] })) }) } });
   assert.equal((await untrusted.judge({ packet: inputPacket })).errorCategory, 'UNEXPECTED_SCHEMA');
+});
+
+test('Judge normalizes one Cloudflare response envelope and exposes structural diagnostics only', async () => {
+  const inputPacket = packet();
+  const canonical = recommendation({ primaryHypothesis: 'INSUFFICIENT_EVIDENCE' });
+  const cases = [
+    ['direct canonical object', canonical, false],
+    ['response object', { response: canonical }, true],
+    ['response JSON string', { response: JSON.stringify(canonical) }, true],
+    ['legacy result JSON string', { result: JSON.stringify(canonical) }, false],
+    ['legacy output_text JSON string', { output_text: JSON.stringify(canonical) }, false],
+  ];
+  for (const [name, raw, responsePresent] of cases) {
+    const judge = createCloudflareJudge({ ai: { run: async () => raw } });
+    const result = await judge.judge({ packet: inputPacket });
+    assert.equal(result.status, 'SUCCESS', name);
+    assert.equal(result.recommendation.primaryHypothesis, 'INSUFFICIENT_EVIDENCE', name);
+    assert.equal(result.normalizationFailureCode, null, name);
+    assert.equal(result.responseDiagnostics.transportSucceeded, true, name);
+    assert.equal(result.responseDiagnostics.responsePresent, responsePresent, name);
+    assert.equal(result.responseDiagnostics.normalizationFailureCode, null, name);
+  }
+
+  const withPrivateReasoning = createCloudflareJudge({ ai: { run: async () => ({ response: canonical, reasoning: { private: 'PRIVATE_REASONING_TRACE_MUST_NOT_RETAIN' } }) } });
+  const reasoningResult = await withPrivateReasoning.judge({ packet: inputPacket });
+  assert.equal(reasoningResult.status, 'SUCCESS');
+  assert.equal(reasoningResult.responseDiagnostics.reasoningFieldPresent, true);
+  assert.equal(reasoningResult.responseDiagnostics.reasoningFieldType, 'object');
+  assert.equal(JSON.stringify(reasoningResult.responseDiagnostics).includes('PRIVATE_REASONING_TRACE_MUST_NOT_RETAIN'), false);
+  assert.equal(JSON.stringify(reasoningResult).includes('PRIVATE_REASONING_TRACE_MUST_NOT_RETAIN'), false);
+
+  const restTransport = createCloudflareRestTransport({
+    apiToken: 'cloudflare-secret-fixture',
+    accountId: 'account-fixture',
+    allowNetwork: true,
+    maxRequests: 1,
+    fetchImpl: async () => jsonResponse({ success: true, result: { response: canonical, reasoning: { private: 'PRIVATE_REST_REASONING' } } }),
+  });
+  const restResult = await createCloudflareJudgeRest({ transport: restTransport }).judge({ packet: inputPacket });
+  assert.equal(restResult.status, 'SUCCESS');
+  assert.equal(restResult.httpStatus, 200);
+  assert.equal(restResult.responseDiagnostics.responsePresent, true);
+  assert.equal(restResult.responseDiagnostics.responseType, 'object');
+  assert.equal(JSON.stringify(restResult).includes('PRIVATE_REST_REASONING'), false);
+  assert.equal(JSON.stringify(restResult).includes('cloudflare-secret-fixture'), false);
+});
+
+test('Judge response normalization fails closed with structural codes and never searches arbitrary nested objects', async () => {
+  const inputPacket = packet();
+  const canonical = recommendation({ primaryHypothesis: 'INSUFFICIENT_EVIDENCE' });
+  const cases = [
+    ['response prose', { response: 'The evidence is insufficient.' }, 'RESPONSE_STRING_NOT_JSON'],
+    ['response invalid hypothesis', { response: { ...canonical, primaryHypothesis: 'REAL' } }, 'PRIMARY_HYPOTHESIS_INVALID'],
+    ['response unknown evidence', { response: { ...canonical, supportingEvidence: [{ evidenceId: 'not-real', rationale: 'unknown' }] } }, 'UNKNOWN_EVIDENCE_REFERENCE'],
+    ['response missing required schema version', { response: { ...canonical, schemaVersion: undefined } }, 'SCHEMA_VERSION_INVALID'],
+    ['random nested canonical-looking object', { nested: canonical }, 'RESPONSE_MISSING'],
+  ];
+  for (const [name, raw, code] of cases) {
+    const judge = createCloudflareJudge({ ai: { run: async () => raw } });
+    const result = await judge.judge({ packet: inputPacket });
+    assert.equal(result.status, 'PROVIDER_FAILURE', name);
+    assert.equal(result.errorCategory, 'UNEXPECTED_SCHEMA', name);
+    assert.equal(result.normalizationFailureCode, code, name);
+    assert.equal(result.recommendation, null, name);
+    assert.equal(result.responseDiagnostics.transportSucceeded, true, name);
+    assert.equal(JSON.stringify(result.responseDiagnostics).includes('The evidence is insufficient'), false, name);
+  }
+});
+
+test('Judge structural diagnostics contain only response shape metadata', async () => {
+  const inputPacket = packet();
+  const canonical = recommendation({ rationale: 'PRIVATE_RATIONALE_VALUE' });
+  const judge = createCloudflareJudge({ ai: { run: async () => ({ response: canonical, reasoning: { private: 'PRIVATE_REASONING_VALUE' }, usage: { input_tokens: 12 }, tool_calls: [] }) } });
+  const result = await judge.judge({ packet: inputPacket });
+  assert.equal(result.status, 'SUCCESS');
+  assert.deepEqual(result.responseDiagnostics.providerTopLevelKeys, ['response', 'reasoning', 'tool_calls', 'usage'].sort());
+  assert.deepEqual(result.responseDiagnostics.responseTopLevelKeys, Object.keys(canonical).sort());
+  assert.equal(result.responseDiagnostics.reasoningFieldPresent, true);
+  assert.equal(result.responseDiagnostics.usageFieldPresent, true);
+  assert.equal(result.responseDiagnostics.toolCallsPresent, true);
+  assert.equal(result.responseDiagnostics.toolCallCount, 0);
+  assert.equal(JSON.stringify(result.responseDiagnostics).includes('PRIVATE_RATIONALE_VALUE'), false);
+  assert.equal(JSON.stringify(result.responseDiagnostics).includes('PRIVATE_REASONING_VALUE'), false);
 });
 
 test('Judge accepts only a packet-bound REASONED_VISUAL_RECHECK request', async () => {

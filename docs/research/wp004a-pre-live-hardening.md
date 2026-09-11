@@ -28,6 +28,18 @@ The runner reports aggregate and task-specific calls. Current first-trial semant
 
 The REST transport itself has a required request cap, timeout, sanitized error categories, and injected fetch. Local calls are network-disabled unless explicitly enabled.
 
+## Judge response-envelope boundary
+
+The Judge normalizer accepts a direct canonical recommendation, one Cloudflare
+`response` envelope containing that recommendation, or the existing documented
+string surfaces when they contain JSON. It does not recursively search nested
+objects or accept provider reasoning/tool-call content as a recommendation.
+Structural failures retain only allowlisted shape metadata and a controlled
+normalization code; raw provider responses and reasoning are never persisted.
+The read-only Workers AI schema preflight can inspect either the Moondream or
+GPT-OSS model and reports GPT-OSS response-shape expectations separately from
+the original Moondream response-format field.
+
 ## Pixel-domain forensic gate
 
 The runner preserves original compressed bytes for EF1 and uses the existing Sharp `raw().toBuffer({ resolveWithObject: true })` decode pattern for EF2/EF4 pixel measurements. A decode failure still permits EF1 container evidence, but records `forensics-decode` as a failed component and marks EF2/EF4 unavailable. Raw container bytes are never used as a substitute pixel grid.
