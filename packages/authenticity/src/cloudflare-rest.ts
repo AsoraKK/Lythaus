@@ -20,12 +20,20 @@ export interface CloudflareRestCredentials {
   accountId: string;
 }
 
+export interface CloudflareSafeProviderDiagnostics {
+  providerErrorCode: number | string | null;
+  providerErrorMessageCode: string | null;
+}
+
 export interface CloudflareRestInvocation {
   kind: CloudflareRestCallKind;
   model: string;
   status: 'SUCCESS' | 'PROVIDER_FAILURE';
   httpStatus: number | null;
   executionMs: number;
+  transportErrorCategory?: CloudflareRestErrorCategory;
+  providerErrorCode?: number | string | null;
+  providerErrorMessageCode?: string | null;
 }
 
 export interface CloudflareRestSnapshot {
@@ -65,12 +73,16 @@ export interface CloudflareRestTransportOptions {
 export class CloudflareRestError extends Error {
   readonly category: CloudflareRestErrorCategory;
   readonly httpStatus: number | null;
+  readonly providerErrorCode: number | string | null;
+  readonly providerErrorMessageCode: string | null;
 
-  constructor(category: CloudflareRestErrorCategory, httpStatus: number | null = null) {
+  constructor(category: CloudflareRestErrorCategory, httpStatus: number | null = null, diagnostics: Partial<CloudflareSafeProviderDiagnostics> = {}) {
     super(`cloudflare_rest_${category.toLowerCase()}`);
     this.name = 'CloudflareRestError';
     this.category = category;
     this.httpStatus = httpStatus;
+    this.providerErrorCode = diagnostics.providerErrorCode ?? null;
+    this.providerErrorMessageCode = diagnostics.providerErrorMessageCode ?? null;
   }
 }
 
@@ -86,7 +98,7 @@ function credentialsFromOptions(options: CloudflareRestTransportOptions): Cloudf
   return { apiToken: apiToken.trim(), accountId: accountId.trim() };
 }
 
-function errorCategoryForStatus(status: number): CloudflareRestErrorCategory {
+export function cloudflareRestErrorCategoryForStatus(status: number): CloudflareRestErrorCategory {
   if (status === 401 || status === 403) return 'HTTP_AUTHENTICATION_FAILURE';
   if (status === 429) return 'HTTP_RATE_LIMITED';
   if (status >= 500) return 'HTTP_SERVER_FAILURE';
@@ -95,6 +107,32 @@ function errorCategoryForStatus(status: number): CloudflareRestErrorCategory {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function safeProviderCode(value: unknown): number | string | null {
+  if (typeof value === 'number' && Number.isSafeInteger(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$/.test(trimmed)) return trimmed;
+  }
+  return null;
+}
+
+function safeProviderMessageCode(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$/.test(trimmed) ? trimmed : null;
+}
+
+export function cloudflareSafeProviderDiagnosticsFromBody(body: unknown): CloudflareSafeProviderDiagnostics {
+  if (!isRecord(body) || !Array.isArray(body.errors)) return { providerErrorCode: null, providerErrorMessageCode: null };
+  for (const item of body.errors) {
+    if (!isRecord(item)) continue;
+    const providerErrorCode = safeProviderCode(item.code);
+    const providerErrorMessageCode = safeProviderMessageCode(item.message_code ?? item.messageCode);
+    if (providerErrorCode !== null || providerErrorMessageCode !== null) return { providerErrorCode, providerErrorMessageCode };
+  }
+  return { providerErrorCode: null, providerErrorMessageCode: null };
 }
 
 export function createCloudflareRestTransport(options: CloudflareRestTransportOptions): CloudflareRestTransport {
@@ -120,10 +158,19 @@ export function createCloudflareRestTransport(options: CloudflareRestTransportOp
       const model = input.model;
       const kind = input.kind;
       let recorded = false;
-      const recordFailure = (httpStatus: number | null): void => {
+      const recordFailure = (error: CloudflareRestError): void => {
         if (recorded) return;
         recorded = true;
-        complete({ kind, model, status: 'PROVIDER_FAILURE', httpStatus, executionMs: Date.now() - startedAt });
+        complete({
+          kind,
+          model,
+          status: 'PROVIDER_FAILURE',
+          httpStatus: error.httpStatus,
+          executionMs: Date.now() - startedAt,
+          transportErrorCategory: error.category,
+          providerErrorCode: error.providerErrorCode,
+          providerErrorMessageCode: error.providerErrorMessageCode,
+        });
       };
       if (calls >= maxRequests) {
         throw new CloudflareRestError('INVOCATION_CAP_EXCEEDED');
@@ -131,12 +178,12 @@ export function createCloudflareRestTransport(options: CloudflareRestTransportOp
       calls += 1;
       if (!options.allowNetwork) {
         const error = new CloudflareRestError('NETWORK_DISABLED');
-        recordFailure(null);
+        recordFailure(error);
         throw error;
       }
       if (!credentials) {
         const error = new CloudflareRestError('MISSING_CREDENTIAL');
-        recordFailure(null);
+        recordFailure(error);
         throw error;
       }
       const url = `${baseUrl}/accounts/${encodeURIComponent(credentials.accountId)}/ai/run/${encodeModelPath(model)}`;
@@ -163,8 +210,14 @@ export function createCloudflareRestTransport(options: CloudflareRestTransportOp
         });
         const response = await Promise.race([request, timeout]);
         if (!response.ok) {
-          const error = new CloudflareRestError(errorCategoryForStatus(response.status), response.status);
-          recordFailure(response.status);
+          let body: unknown = null;
+          try {
+            body = await response.json();
+          } catch {
+            body = null;
+          }
+          const error = new CloudflareRestError(cloudflareRestErrorCategoryForStatus(response.status), response.status, cloudflareSafeProviderDiagnosticsFromBody(body));
+          recordFailure(error);
           throw error;
         }
         let body: unknown;
@@ -172,12 +225,12 @@ export function createCloudflareRestTransport(options: CloudflareRestTransportOp
           body = await response.json();
         } catch {
           const error = new CloudflareRestError('MALFORMED_RESPONSE', response.status);
-          recordFailure(response.status);
+          recordFailure(error);
           throw error;
         }
         if (!isRecord(body) || body.success !== true || !Object.prototype.hasOwnProperty.call(body, 'result')) {
-          const error = new CloudflareRestError(body && isRecord(body) && body.success === false ? 'PROVIDER_FAILURE' : 'MALFORMED_RESPONSE', response.status);
-          recordFailure(response.status);
+          const error = new CloudflareRestError(body && isRecord(body) && body.success === false ? 'PROVIDER_FAILURE' : 'MALFORMED_RESPONSE', response.status, cloudflareSafeProviderDiagnosticsFromBody(body));
+          recordFailure(error);
           throw error;
         }
         const executionMs = Date.now() - startedAt;
@@ -186,12 +239,12 @@ export function createCloudflareRestTransport(options: CloudflareRestTransportOp
         return { result: body.result, httpStatus: response.status, executionMs };
       } catch (error) {
         if (error instanceof CloudflareRestError) {
-          recordFailure(error.httpStatus);
+          recordFailure(error);
           throw error;
         }
         const category = timedOut ? 'TIMEOUT' : 'NETWORK_FAILURE';
         const normalized = new CloudflareRestError(category);
-        recordFailure(null);
+        recordFailure(normalized);
         throw normalized;
       } finally {
         if (timeoutHandle) clearTimeout(timeoutHandle);

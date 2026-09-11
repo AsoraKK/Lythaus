@@ -1,5 +1,5 @@
 import type { Applicability } from './contracts.ts';
-import { createCloudflareRestTransport, type CloudflareRestTransport } from './cloudflare-rest.ts';
+import { CloudflareRestError, createCloudflareRestTransport, type CloudflareRestTransport } from './cloudflare-rest.ts';
 import { CLOUDFLARE_VISION_OBSERVER_MODEL } from './research-config.ts';
 import { assertResearchImageInput, bytesToDataUrl, type ResearchImageMime } from './research-image.ts';
 
@@ -112,7 +112,14 @@ export interface VisionObserverInput {
   request?: VisionObserverRequest;
 }
 
-export type VisionObserverErrorCategory = 'EMPTY_RESPONSE' | 'INVALID_INPUT' | 'TIMEOUT' | 'NETWORK_FAILURE' | 'MALFORMED_RESPONSE' | 'UNEXPECTED_SCHEMA';
+export type VisionObserverErrorCategory = 'EMPTY_RESPONSE' | 'INVALID_INPUT' | 'TIMEOUT' | 'NETWORK_FAILURE' | 'MALFORMED_RESPONSE' | 'UNEXPECTED_SCHEMA' | 'AUTHENTICATION_FAILURE' | 'RATE_LIMITED' | 'SERVER_FAILURE' | 'HTTP_FAILURE' | 'PROVIDER_FAILURE';
+
+export interface VisionObserverTransportDiagnostics {
+  transportErrorCategory?: string;
+  httpStatus?: number | null;
+  providerErrorCode?: number | string | null;
+  providerErrorMessageCode?: string | null;
+}
 
 export interface VisionObserverResult {
   schemaVersion: typeof VISION_OBSERVER_PROTOCOL_VERSION;
@@ -130,6 +137,10 @@ export interface VisionObserverResult {
   escalationReasons: readonly VisionEscalationReason[];
   executionMs: number;
   errorCategory?: VisionObserverErrorCategory;
+  transportErrorCategory?: string;
+  httpStatus?: number | null;
+  providerErrorCode?: number | string | null;
+  providerErrorMessageCode?: string | null;
 }
 
 export interface VisionObserver {
@@ -456,7 +467,7 @@ function successfulObserverResult(input: VisionObserverInput, request: VisionObs
   };
 }
 
-function failedObserverResult(request: VisionObserverRequest, provider: string, model: string, errorCategory: VisionObserverErrorCategory, executionMs: number): VisionObserverResult {
+function failedObserverResult(request: VisionObserverRequest, provider: string, model: string, errorCategory: VisionObserverErrorCategory, executionMs: number, diagnostics: VisionObserverTransportDiagnostics = {}): VisionObserverResult {
   return {
     schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
@@ -473,6 +484,7 @@ function failedObserverResult(request: VisionObserverRequest, provider: string, 
     escalationReasons: [],
     executionMs,
     errorCategory,
+    ...diagnostics,
   };
 }
 
@@ -492,11 +504,26 @@ function buildMoondreamPayload(input: VisionObserverInput, request: VisionObserv
 
 function errorCategoryFrom(error: unknown): VisionObserverErrorCategory {
   const message = error instanceof Error ? error.message : '';
-  const category = error && typeof error === 'object' && 'category' in error ? (error as { category?: unknown }).category : null;
+  const category = error instanceof CloudflareRestError ? error.category : null;
   if (message === 'research_image_empty' || message === 'research_image_mime_invalid' || message === 'research_image_size_limit_exceeded' || message === 'vision_observer_request_invalid' || message === 'vision_observer_category_invalid' || message === 'vision_observer_task_invalid' || message === 'vision_observer_reasoning_mode_invalid' || message === 'vision_reasoned_task_must_be_query' || message === 'vision_observer_target_region_invalid') return 'INVALID_INPUT';
   if (message === 'observer_timeout' || category === 'TIMEOUT') return 'TIMEOUT';
-  if (category === 'MALFORMED_RESPONSE' || category === 'PROVIDER_FAILURE') return 'UNEXPECTED_SCHEMA';
+  if (category === 'HTTP_AUTHENTICATION_FAILURE') return 'AUTHENTICATION_FAILURE';
+  if (category === 'HTTP_RATE_LIMITED') return 'RATE_LIMITED';
+  if (category === 'HTTP_SERVER_FAILURE') return 'SERVER_FAILURE';
+  if (category === 'HTTP_FAILURE') return 'HTTP_FAILURE';
+  if (category === 'PROVIDER_FAILURE') return 'PROVIDER_FAILURE';
+  if (category === 'MALFORMED_RESPONSE') return 'UNEXPECTED_SCHEMA';
   return 'NETWORK_FAILURE';
+}
+
+function transportDiagnosticsFrom(error: unknown): VisionObserverTransportDiagnostics {
+  if (!(error instanceof CloudflareRestError)) return {};
+  return {
+    transportErrorCategory: error.category,
+    httpStatus: error.httpStatus,
+    providerErrorCode: error.providerErrorCode,
+    providerErrorMessageCode: error.providerErrorMessageCode,
+  };
 }
 
 async function invokeWithTimeout(run: () => Promise<unknown>, timeoutMs: number): Promise<unknown> {
@@ -534,7 +561,7 @@ function createVisionObserver(options: {
         if (observations.some((value) => value === null)) return failedObserverResult(request, options.provider, options.model, 'MALFORMED_RESPONSE', Date.now() - startedAt);
         return successfulObserverResult(input, request, options.provider, options.model, observations as VisionObservation[], Date.now() - startedAt);
       } catch (error) {
-        return failedObserverResult(request, options.provider, options.model, errorCategoryFrom(error), Date.now() - startedAt);
+        return failedObserverResult(request, options.provider, options.model, errorCategoryFrom(error), Date.now() - startedAt, transportDiagnosticsFrom(error));
       }
     },
   };
@@ -625,6 +652,10 @@ export interface VisionObserverPassSummary {
   executionMs: number;
   escalationRecommendation: VisionEscalationRecommendation;
   escalationReasons: readonly VisionEscalationReason[];
+  transportErrorCategory?: string;
+  httpStatus?: number | null;
+  providerErrorCode?: number | string | null;
+  providerErrorMessageCode?: string | null;
 }
 
 export interface VisionObserverComparison {
@@ -650,6 +681,10 @@ function passSummary(result: VisionObserverResult): VisionObserverPassSummary {
     executionMs: result.executionMs,
     escalationRecommendation: result.escalationRecommendation,
     escalationReasons: result.escalationReasons,
+    transportErrorCategory: result.transportErrorCategory,
+    httpStatus: result.httpStatus,
+    providerErrorCode: result.providerErrorCode,
+    providerErrorMessageCode: result.providerErrorMessageCode,
   };
 }
 
