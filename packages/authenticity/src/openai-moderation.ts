@@ -31,6 +31,12 @@ interface ParsedModerationResponse {
   categoryAppliedInputTypes: Record<string, string[]>;
 }
 
+interface SafeProviderErrorDetails {
+  errorType?: string;
+  errorCode?: string;
+  errorParam?: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -56,6 +62,27 @@ function parseAppliedInputTypes(value: unknown): Record<string, string[]> | null
   return Object.fromEntries(entries.map(([key, item]) => [key, (item as string[]).slice(0, 8)]));
 }
 
+function safeDiagnosticString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > 120 || !/^[A-Za-z0-9_.:/\[\]-]+$/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
+async function readSafeProviderError(response: Response): Promise<SafeProviderErrorDetails> {
+  try {
+    const raw = await response.json();
+    if (!isRecord(raw) || !isRecord(raw.error)) return {};
+    return {
+      errorType: safeDiagnosticString(raw.error.type),
+      errorCode: safeDiagnosticString(raw.error.code),
+      errorParam: safeDiagnosticString(raw.error.param),
+    };
+  } catch {
+    return {};
+  }
+}
+
 function parseModerationResponse(value: unknown, expectedModel: string): ParsedModerationResponse | null {
   if (!isRecord(value) || typeof value.model !== 'string' || value.model !== expectedModel || !Array.isArray(value.results) || value.results.length < 1) return null;
   const result = value.results[0];
@@ -78,6 +105,10 @@ function failureAnalysis(input: {
   model: string;
   errorCategory: ModerationProviderErrorCategory;
   executionMs: number;
+  httpStatus?: number;
+  errorType?: string;
+  errorCode?: string;
+  errorParam?: string;
 }): ModerationAnalysis {
   const providerEvidence: ModerationProviderEvidence = {
     schemaVersion: MODERATION_PROVIDER_EVIDENCE_SCHEMA_VERSION,
@@ -90,6 +121,10 @@ function failureAnalysis(input: {
     executionMs: input.executionMs,
     status: 'PROVIDER_FAILURE',
     errorCategory: input.errorCategory,
+    ...(input.httpStatus === undefined ? {} : { httpStatus: input.httpStatus }),
+    ...(input.errorType === undefined ? {} : { errorType: input.errorType }),
+    ...(input.errorCode === undefined ? {} : { errorCode: input.errorCode }),
+    ...(input.errorParam === undefined ? {} : { errorParam: input.errorParam }),
   };
   return {
     provider: 'openai',
@@ -166,15 +201,18 @@ export function createOpenAIModerationProvider(options: OpenAIModerationProvider
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
-      if (!response.ok) return failureAnalysis({ model, errorCategory: errorCategoryForStatus(response.status), executionMs: now() - startedAt });
+      if (!response.ok) {
+        const safeError = await readSafeProviderError(response);
+        return failureAnalysis({ model, errorCategory: errorCategoryForStatus(response.status), executionMs: now() - startedAt, httpStatus: response.status, ...safeError });
+      }
       let raw: unknown;
       try {
         raw = await response.json();
       } catch {
-        return failureAnalysis({ model, errorCategory: 'MALFORMED_RESPONSE', executionMs: now() - startedAt });
+        return failureAnalysis({ model, errorCategory: 'MALFORMED_RESPONSE', executionMs: now() - startedAt, httpStatus: response.status });
       }
       const parsed = parseModerationResponse(raw, model);
-      if (!parsed) return failureAnalysis({ model, errorCategory: 'UNEXPECTED_SCHEMA', executionMs: now() - startedAt });
+      if (!parsed) return failureAnalysis({ model, errorCategory: 'UNEXPECTED_SCHEMA', executionMs: now() - startedAt, httpStatus: response.status });
       return successAnalysis({ model, parsed, executionMs: now() - startedAt, flaggedResult });
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
@@ -195,6 +233,10 @@ export function createOpenAIModerationProvider(options: OpenAIModerationProvider
 export function assertModerationProviderEvidence(evidence: ModerationProviderEvidence): void {
   if (evidence.schemaVersion !== MODERATION_PROVIDER_EVIDENCE_SCHEMA_VERSION) throw new Error('moderation_provider_evidence_schema_invalid');
   if (!Number.isFinite(evidence.executionMs) || evidence.executionMs < 0) throw new Error('moderation_provider_evidence_execution_invalid');
+  if (evidence.httpStatus !== undefined && (!Number.isInteger(evidence.httpStatus) || evidence.httpStatus < 100 || evidence.httpStatus > 599)) throw new Error('moderation_provider_evidence_http_status_invalid');
+  for (const [name, value] of [['errorType', evidence.errorType], ['errorCode', evidence.errorCode], ['errorParam', evidence.errorParam]]) {
+    if (value !== undefined && safeDiagnosticString(value) !== value) throw new Error(`moderation_provider_evidence_${name}_invalid`);
+  }
   if (evidence.status === 'SUCCESS' && evidence.flagged === null) throw new Error('moderation_provider_evidence_flagged_missing');
   if (evidence.status === 'PROVIDER_FAILURE' && evidence.errorCategory === undefined) throw new Error('moderation_provider_evidence_error_missing');
 }

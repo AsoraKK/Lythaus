@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -9,6 +10,7 @@ import {
   assertGroundTruthResearchManifest,
   assertJudgeRecommendation,
   assertModerationProviderEvidence,
+  assertResearchImageInput,
   assertRuntimeResearchManifest,
   assertSafetyIsolation,
   buildEvidencePacket,
@@ -45,6 +47,7 @@ import {
   VISION_OBSERVER_PROTOCOL_VERSION,
   VISION_OBSERVER_PROMPT,
 } from '../src/wp004a.ts';
+import { createNeutralPng, validateNeutralPng } from '../../../scripts/authenticity/neutral-png.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CASE_ID = '0198a5d3-4a00-7000-8000-000000000123';
@@ -135,6 +138,32 @@ test('research model configuration keeps observer, reasoner, and forensic roles 
   assert.equal(configured.forensicsVersion, 'fixture-forensics');
 });
 
+test('generated moderation smoke fixture is a valid Sharp PNG accepted by the research image path', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'lythaus-wp004a-neutral-'));
+  try {
+    const outputPath = path.join(directory, 'neutral.png');
+    const generated = await createNeutralPng(outputPath);
+    const bytes = new Uint8Array(await readFile(outputPath));
+    const validation = await validateNeutralPng(bytes);
+    assert.equal(generated.valid, true);
+    assert.equal(validation.valid, true);
+    assert.equal(validation.format, 'png');
+    assert.equal(validation.width, 128);
+    assert.equal(validation.height, 128);
+    assert.equal(validation.channels, 3);
+    assert.equal(validation.pixelBytes, 128 * 128 * 3);
+    assert.equal(assertResearchImageInput({ bytes, mime: 'image/png' }), 'image/png');
+    const decoded = await decodeResearchImage({ bytes, mime: 'image/png' });
+    assert.equal(decoded.width, 128);
+    assert.equal(decoded.height, 128);
+    assert.equal(decoded.channels, 3);
+    assert.equal(decoded.pixels.byteLength, 128 * 128 * 3);
+    assert.ok(decoded.pixels.byteLength > 0);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('OpenAI moderation adapter sends one image data URL and preserves unsupported category applicability', async () => {
   let calls = 0;
   let requestBody;
@@ -196,12 +225,24 @@ test('moderation failures are sanitized, typed, and never retried', async () => 
     const result = await provider.analyseImage({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture() });
     assert.equal(calls, 1);
     assert.equal(result.providerEvidence.errorCategory, expected);
+    assert.equal(result.providerEvidence.httpStatus, status);
     assert.equal(JSON.stringify(result).includes(secret), false);
   }
+  const diagnostic = createOpenAIModerationProvider({ apiKey: secret, fetchImpl: async () => jsonResponse({ error: { type: 'invalid_request_error', code: 'invalid_image', param: 'input', message: `Bearer ${secret}` } }, 400) });
+  const diagnosticResult = await diagnostic.analyseImage({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture() });
+  assert.equal(diagnosticResult.providerEvidence.httpStatus, 400);
+  assert.equal(diagnosticResult.providerEvidence.errorType, 'invalid_request_error');
+  assert.equal(diagnosticResult.providerEvidence.errorCode, 'invalid_image');
+  assert.equal(diagnosticResult.providerEvidence.errorParam, 'input');
+  assert.equal(JSON.stringify(diagnosticResult).includes(secret), false);
   const malformed = createOpenAIModerationProvider({ apiKey: secret, fetchImpl: async () => new Response('{', { status: 200 }) });
-  assert.equal((await malformed.analyseImage({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture() })).providerEvidence.errorCategory, 'MALFORMED_RESPONSE');
+  const malformedResult = await malformed.analyseImage({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture() });
+  assert.equal(malformedResult.providerEvidence.errorCategory, 'MALFORMED_RESPONSE');
+  assert.equal(malformedResult.providerEvidence.httpStatus, 200);
   const missing = createOpenAIModerationProvider({ apiKey: secret, fetchImpl: async () => jsonResponse({ model: OPENAI_MODERATION_MODEL, results: [{}] }) });
-  assert.equal((await missing.analyseImage({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture() })).providerEvidence.errorCategory, 'UNEXPECTED_SCHEMA');
+  const missingResult = await missing.analyseImage({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture() });
+  assert.equal(missingResult.providerEvidence.errorCategory, 'UNEXPECTED_SCHEMA');
+  assert.equal(missingResult.providerEvidence.httpStatus, 200);
   const network = createOpenAIModerationProvider({ apiKey: secret, fetchImpl: async () => { throw new Error(`Bearer ${secret}`); } });
   const networkResult = await network.analyseImage({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture() });
   assert.equal(networkResult.providerEvidence.errorCategory, 'NETWORK_FAILURE');

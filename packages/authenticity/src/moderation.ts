@@ -31,6 +31,10 @@ export interface ModerationProviderEvidence {
   executionMs: number;
   status: ModerationProviderEvidenceStatus;
   errorCategory?: ModerationProviderErrorCategory;
+  httpStatus?: number;
+  errorType?: string;
+  errorCode?: string;
+  errorParam?: string;
 }
 
 export interface ModerationTextInput {
