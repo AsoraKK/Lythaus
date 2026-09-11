@@ -16,15 +16,9 @@ import {
   VISION_OBSERVER_QUERY_GENERATION_CONFIG,
 } from '../../packages/authenticity/src/wp004a.ts';
 import { validateGeometryOcclusionPng } from './geometry-occlusion-fixture.mjs';
+import { WP004A_CLOUDFLARE_TRIAL_MODES } from './wp004a-cloudflare-trial-config.mjs';
 
-const TRIAL_MODES = {
-  '0C': 'OBSERVER_ONLY',
-  '0C-R': 'OBSERVER_REASONED',
-  '0C-AB': 'OBSERVER_AB',
-  '0C-REL-AB': 'OBSERVER_RELATIONAL_AB',
-  '0D': 'FULL',
-  '0D-R': 'FULL_RECHECK',
-};
+const TRIAL_MODES = WP004A_CLOUDFLARE_TRIAL_MODES;
 
 const RELATIONAL_FIXTURE_SPEC = 'research/wp004a/geometry-occlusion-fixture-v1.json';
 
@@ -224,6 +218,9 @@ try {
     observer: createCloudflareVisionObserverRest({ transport: observerTransport }),
     judge: mode === 'FULL' || mode === 'FULL_RECHECK' ? createCloudflareJudgeRest({ transport: judgeTransport }) : createMockJudge(),
   });
+  if (relationalTrial && (result.mode !== 'OBSERVER_AB' || result.invocationAccounting.calls.observerDirect !== 1 || result.invocationAccounting.calls.observerReasoned !== 1 || result.invocationAccounting.calls.total !== 2)) {
+    throw new Error('relational_observer_call_accounting_mismatch');
+  }
   const relationalComparison = relationalTrial ? result.cases[0]?.observerComparison : null;
   const relationalEvaluation = relationalComparison && relationalSpec
     ? {

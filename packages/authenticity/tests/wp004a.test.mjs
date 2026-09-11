@@ -56,6 +56,7 @@ import {
 } from '../src/wp004a.ts';
 import { createNeutralPng, validateNeutralPng } from '../../../scripts/authenticity/neutral-png.mjs';
 import { renderGeometryOcclusionPng, validateGeometryOcclusionPng } from '../../../scripts/authenticity/geometry-occlusion-fixture.mjs';
+import { WP004A_CLOUDFLARE_TRIAL_MODES } from '../../../scripts/authenticity/wp004a-cloudflare-trial-config.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CASE_ID = '0198a5d3-4a00-7000-8000-000000000123';
@@ -1170,6 +1171,11 @@ test('Cloudflare smoke workflow is manual-only, secret-injected, bounded, and fi
   assert.match(workflow, /create-geometry-occlusion-fixture\.mjs/);
   assert.match(workflow, /wp004a-geometry-occlusion\.png/);
   assert.doesNotMatch(workflow, /OneDrive|LythausForensicsData|research[-_]images|base64|echo\s+\$\{\{\s*secrets\./i);
+});
+
+test('relational Cloudflare trial maps to the executable bounded Observer A/B mode', () => {
+  assert.equal(WP004A_CLOUDFLARE_TRIAL_MODES['0C-REL-AB'], 'OBSERVER_AB');
+  assert.equal(WP004A_CLOUDFLARE_TRIAL_MODES['0C-REL-AB'], WP004A_CLOUDFLARE_TRIAL_MODES['0C-AB']);
 });
 
 test('Cloudflare access preflight workflow is manual-only, read-only, and secret-injected', async () => {
