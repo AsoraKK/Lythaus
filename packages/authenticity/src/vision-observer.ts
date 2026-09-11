@@ -909,6 +909,7 @@ export interface VisionObserverPassSummary {
   observations: readonly VisionObservation[];
   provider: string;
   model: string;
+  promptVersion: typeof VISION_OBSERVER_PROMPT_VERSION;
   generationConfig: typeof VISION_OBSERVER_QUERY_GENERATION_CONFIG;
   task: VisionObserverTask;
   reasoningMode: VisionObserverReasoningMode;
@@ -940,6 +941,7 @@ function passSummary(result: VisionObserverResult): VisionObserverPassSummary {
     observations: result.observations,
     provider: result.provider,
     model: result.model,
+    promptVersion: result.promptVersion,
     generationConfig: result.generationConfig,
     task: result.task,
     reasoningMode: result.reasoningMode,
@@ -956,7 +958,7 @@ function passSummary(result: VisionObserverResult): VisionObserverPassSummary {
 
 export function compareVisionObserverResults(input: { sampleId: string; inputHash: string; direct: VisionObserverResult; reasoned: VisionObserverResult }): VisionObserverComparison {
   if (input.direct.reasoningMode !== 'DIRECT' || input.reasoned.reasoningMode !== 'REASONED') throw new Error('vision_ab_reasoning_modes_invalid');
-  if (input.direct.queryId !== input.reasoned.queryId || input.direct.task !== input.reasoned.task || input.direct.protocolVersion !== input.reasoned.protocolVersion) throw new Error('vision_ab_inputs_mismatch');
+  if (input.direct.queryId !== input.reasoned.queryId || input.direct.task !== input.reasoned.task || input.direct.protocolVersion !== input.reasoned.protocolVersion || input.direct.promptVersion !== input.reasoned.promptVersion || JSON.stringify(input.direct.generationConfig) !== JSON.stringify(input.reasoned.generationConfig)) throw new Error('vision_ab_inputs_mismatch');
   const directStatuses = new Set(input.direct.observations.map((observation) => `${observation.category}:${observation.status}`));
   const reasonedStatuses = new Set(input.reasoned.observations.map((observation) => `${observation.category}:${observation.status}`));
   const contradictory = [...directStatuses].some((status) => {
