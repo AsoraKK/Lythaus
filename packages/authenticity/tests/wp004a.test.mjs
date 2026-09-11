@@ -20,6 +20,7 @@ import {
   CloudflareRestError,
   compareVisionObserverResults,
   classifyGeometryOcclusionComparison,
+  classifyGeometryFrontBackComparison,
   createCloudflareJudgeRest,
   createCloudflareRestTransport,
   CLOUDFLARE_REASONER_MODEL,
@@ -37,6 +38,8 @@ import {
   DEFAULT_RESEARCH_MODEL_CONFIG,
   evaluateResearchPredictions,
   evaluateGeometryOcclusionObservation,
+  evaluateGeometryFrontBackObservation,
+  summarizeGeometryFrontBackEvaluations,
   generateForensicFeatureBundleV1,
   JUDGE_PROMPT_VERSION,
   OPENAI_MODERATION_MODEL,
@@ -56,6 +59,13 @@ import {
 } from '../src/wp004a.ts';
 import { createNeutralPng, validateNeutralPng } from '../../../scripts/authenticity/neutral-png.mjs';
 import { renderGeometryOcclusionPng, validateGeometryOcclusionPng } from '../../../scripts/authenticity/geometry-occlusion-fixture.mjs';
+import {
+  buildGeometryOcclusionFrontBackSvg,
+  GEOMETRY_FRONTBACK_ALLOWED_ANSWERS,
+  geometryFrontBackTruth,
+  renderGeometryOcclusionFrontBackPng,
+  validateGeometryOcclusionFrontBackPng,
+} from '../../../scripts/authenticity/geometry-occlusion-frontback-fixtures.mjs';
 import { WP004A_CLOUDFLARE_TRIAL_MODES } from '../../../scripts/authenticity/wp004a-cloudflare-trial-config.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -189,6 +199,147 @@ test('geometry occlusion fixture is deterministic, decodable RGB, and matches it
   assert.equal(validation.sha256, spec.sha256);
   assert.equal(spec.truth.truth.frontObject, 'BLUE_RECTANGLE');
   assert.equal(spec.truth.truth.backObject, 'RED_RECTANGLE');
+});
+
+function frontBackObservation(observation, status = 'OBSERVED', overrides = {}) {
+  return {
+    observationId: 'frontback-observation',
+    queryId: 'GEOMETRY_FRONTBACK_01',
+    protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
+    category: 'GEOMETRY_OCCLUSION',
+    task: 'query',
+    reasoningMode: 'DIRECT',
+    applicable: true,
+    status,
+    observation,
+    regions: [],
+    measurementConfidence: null,
+    limitations: [],
+    provider: 'fixture-provider',
+    model: 'fixture-model',
+    executionMs: 1,
+    provenance: {
+      evidenceFamily: 'VISION_OBSERVATION',
+      sourceComponent: 'lythaus-vision-observer',
+      provider: 'fixture-provider',
+      modelVersion: 'fixture-model',
+      schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
+      executionTimestamp: '2026-01-01T00:00:00.000Z',
+      inputHash: 'f'.repeat(64),
+      applicable: 'applicable',
+      limitations: [],
+      task: 'query',
+      reasoningMode: 'DIRECT',
+      executionMs: 1,
+    },
+    ...overrides,
+  };
+}
+
+test('counterbalanced front-back fixtures are deterministic and differ only by primary draw order', async () => {
+  const blueFirst = await renderGeometryOcclusionFrontBackPng('BLUE');
+  const blueSecond = await renderGeometryOcclusionFrontBackPng('BLUE');
+  const redFirst = await renderGeometryOcclusionFrontBackPng('RED');
+  const redSecond = await renderGeometryOcclusionFrontBackPng('RED');
+  assert.deepEqual(blueFirst, blueSecond);
+  assert.deepEqual(redFirst, redSecond);
+  const blueValidation = await validateGeometryOcclusionFrontBackPng(blueFirst, 'BLUE');
+  const redValidation = await validateGeometryOcclusionFrontBackPng(redFirst, 'RED');
+  assert.equal(blueValidation.valid, true);
+  assert.equal(redValidation.valid, true);
+  assert.equal(blueValidation.width, 512);
+  assert.equal(redValidation.height, 512);
+  assert.equal(blueValidation.channels, 3);
+  assert.equal(redValidation.channels, 3);
+  assert.notEqual(blueValidation.sha256, redValidation.sha256);
+  const blueSvg = buildGeometryOcclusionFrontBackSvg('BLUE');
+  const redSvg = buildGeometryOcclusionFrontBackSvg('RED');
+  assert.ok(blueSvg.indexOf('#d92d3f') < blueSvg.indexOf('#2f6fdb'));
+  assert.ok(redSvg.indexOf('#2f6fdb') < redSvg.indexOf('#d92d3f'));
+  assert.equal(geometryFrontBackTruth('BLUE').truth.front, 'BLUE');
+  assert.equal(geometryFrontBackTruth('RED').truth.front, 'RED');
+  const runtimeSpec = JSON.parse(await readFile(path.join(repositoryRoot, 'research/wp004a/geometry-occlusion-frontback-runtime-v1.json'), 'utf8'));
+  const truthSpec = JSON.parse(await readFile(path.join(repositoryRoot, 'research/wp004a/geometry-occlusion-frontback-truth-v1.json'), 'utf8'));
+  assert.equal(blueValidation.sha256, runtimeSpec.entries[0].sha256);
+  assert.equal(redValidation.sha256, runtimeSpec.entries[1].sha256);
+  assert.equal(runtimeSpec.observerInput.truthProvided, false);
+  assert.equal(Object.prototype.hasOwnProperty.call(runtimeSpec, 'truth'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(runtimeSpec.entries[0], 'front'), false);
+  assert.equal(truthSpec.entries.length, 2);
+  assert.equal(JSON.stringify(runtimeSpec.observerInput).includes('BLUE_RECTANGLE'), false);
+  assert.equal(JSON.stringify(runtimeSpec.observerInput).includes('RED_RECTANGLE'), false);
+  assert.deepEqual(GEOMETRY_FRONTBACK_ALLOWED_ANSWERS, [
+    'Blue rectangle is in front of red rectangle.',
+    'Red rectangle is in front of blue rectangle.',
+    'Front/back relationship is indeterminate.',
+  ]);
+});
+
+test('front-back evaluator uses exact answers, rejects non-empty regions, and detects same-answer bias', () => {
+  const blueTruth = geometryFrontBackTruth('BLUE');
+  const redTruth = geometryFrontBackTruth('RED');
+  const blueCorrect = evaluateGeometryFrontBackObservation({ observations: [frontBackObservation('Blue rectangle is in front of red rectangle.')] , truth: blueTruth });
+  const redCorrect = evaluateGeometryFrontBackObservation({ observations: [frontBackObservation('Red rectangle is in front of blue rectangle.')] , truth: redTruth });
+  const abstain = evaluateGeometryFrontBackObservation({ observations: [frontBackObservation('Front/back relationship is indeterminate.', 'INDETERMINATE')] , truth: blueTruth });
+  const wrong = evaluateGeometryFrontBackObservation({ observations: [frontBackObservation('Blue rectangle is in front of red rectangle.')] , truth: redTruth });
+  const invalidRegions = evaluateGeometryFrontBackObservation({ observations: [frontBackObservation('Blue rectangle is in front of red rectangle.', 'OBSERVED', { regions: [{ coordinateSpace: 'NORMALIZED', x: 0, y: 0, width: 0.1, height: 0.1 }] })], truth: blueTruth });
+  assert.equal(blueCorrect.outcome, 'CORRECT');
+  assert.equal(redCorrect.outcome, 'CORRECT');
+  assert.equal(abstain.outcome, 'ABSTAIN');
+  assert.equal(wrong.outcome, 'INCORRECT');
+  assert.equal(invalidRegions.outcome, 'PROTOCOL_FAILURE');
+  assert.equal(invalidRegions.regionsEmpty, false);
+  const direct = summarizeGeometryFrontBackEvaluations([blueCorrect, wrong]);
+  const reasoned = summarizeGeometryFrontBackEvaluations([blueCorrect, wrong]);
+  assert.equal(direct.correct, 1);
+  assert.equal(direct.incorrect, 1);
+  assert.equal(direct.possibleFrontObjectPrior, true);
+  assert.equal(classifyGeometryFrontBackComparison({ direct: [blueCorrect, wrong], reasoned: [blueCorrect, wrong] }), 'RELATIONAL_REASONING_SIGNAL_NEUTRAL');
+});
+
+test('region failure telemetry is structural only and does not retain coordinate values', async () => {
+  const observer = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status: 'OBSERVED', observation: 'A region was returned.', regions: [{ x1: 0.125, y1: 0.25, x2: 0.5, y2: 0.75 }], measurementConfidence: null, limitations: [] }] }), reasoning: { trace: 'PRIVATE_REGION_REASONING' } }) } });
+  const result = await observer.observe({ sampleId: 'REGION', inputHash: 'e'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_REGION_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Inspect the scene.', reasoningMode: 'DIRECT' } });
+  assert.equal(result.status, 'PROVIDER_FAILURE');
+  assert.equal(result.responseDiagnostics.normalizationFailureCode, 'REGIONS_INVALID');
+  assert.equal(result.responseDiagnostics.regionDiagnostics.regionCount, 1);
+  assert.equal(result.responseDiagnostics.regionDiagnostics.firstRegionType, 'OBJECT');
+  assert.deepEqual(result.responseDiagnostics.regionDiagnostics.firstRegionKeys, ['x1', 'x2', 'y1', 'y2']);
+  assert.equal(result.responseDiagnostics.regionDiagnostics.coordinateSpacePresent, false);
+  assert.deepEqual(result.responseDiagnostics.regionDiagnostics.coordinateValueTypes, { x1: 'number', x2: 'number', y1: 'number', y2: 'number' });
+  assert.equal(JSON.stringify(result).includes('0.125'), false);
+  assert.equal(JSON.stringify(result).includes('PRIVATE_REGION_REASONING'), false);
+});
+
+test('counterbalanced Observer A/B runner enforces two DIRECT and two REASONED calls', async () => {
+  const requests = [];
+  const runtimeManifest = manifest(2);
+  const result = await runResearchTrial({
+    mode: 'OBSERVER_AB',
+    runtimeManifest,
+    maxSamples: 2,
+    observerRequest: { queryId: 'GEOMETRY_FRONTBACK_01', category: 'GEOMETRY_OCCLUSION', task: 'query', question: 'Return one front/back observation with regions empty.' },
+    caps: { maxSamples: 2, maxModerationCalls: 0, maxObserverCalls: 4, maxObserverDirectCalls: 2, maxObserverReasonedCalls: 2, maxCaptionCalls: 0, maxDetectCalls: 0, maxPointCalls: 0, maxJudgeCalls: 0, maxTotalCalls: 4, maxRecheckRounds: 1 },
+  }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    observer: { isLive: false, observe: async (input) => {
+      requests.push({ sampleId: input.sampleId, request: input.request });
+      return createMockVisionObserver([frontBackObservation('Front/back relationship is indeterminate.', 'INDETERMINATE')]).observe(input);
+    } },
+  });
+  assert.equal(requests.length, 4);
+  assert.deepEqual(requests.map((item) => item.request.reasoningMode), ['DIRECT', 'REASONED', 'DIRECT', 'REASONED']);
+  for (const start of [0, 2]) {
+    const direct = { ...requests[start].request };
+    const reasoned = { ...requests[start + 1].request };
+    delete direct.reasoningMode;
+    delete reasoned.reasoningMode;
+    assert.deepEqual(direct, reasoned);
+  }
+  assert.equal(JSON.stringify(requests).includes('truth'), false);
+  assert.equal(result.invocationAccounting.calls.observerDirect, 2);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 2);
+  assert.equal(result.invocationAccounting.calls.total, 4);
 });
 
 test('relational evaluator is conservative and truth stays outside Observer input', async () => {
@@ -1168,14 +1319,18 @@ test('Cloudflare smoke workflow is manual-only, secret-injected, bounded, and fi
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
   assert.match(workflow, /wp004a-cloudflare-smoke\.mjs/);
   assert.match(workflow, /0C-REL-AB/);
+  assert.match(workflow, /0C-REL-FRONTBACK-AB/);
   assert.match(workflow, /create-geometry-occlusion-fixture\.mjs/);
+  assert.match(workflow, /create-geometry-occlusion-frontback-fixtures\.mjs/);
   assert.match(workflow, /wp004a-geometry-occlusion\.png/);
+  assert.match(workflow, /wp004a-frontback/);
   assert.doesNotMatch(workflow, /OneDrive|LythausForensicsData|research[-_]images|base64|echo\s+\$\{\{\s*secrets\./i);
 });
 
 test('relational Cloudflare trial maps to the executable bounded Observer A/B mode', () => {
   assert.equal(WP004A_CLOUDFLARE_TRIAL_MODES['0C-REL-AB'], 'OBSERVER_AB');
   assert.equal(WP004A_CLOUDFLARE_TRIAL_MODES['0C-REL-AB'], WP004A_CLOUDFLARE_TRIAL_MODES['0C-AB']);
+  assert.equal(WP004A_CLOUDFLARE_TRIAL_MODES['0C-REL-FRONTBACK-AB'], 'OBSERVER_AB');
 });
 
 test('Cloudflare access preflight workflow is manual-only, read-only, and secret-injected', async () => {

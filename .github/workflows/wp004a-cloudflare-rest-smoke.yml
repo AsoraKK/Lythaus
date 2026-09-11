@@ -13,6 +13,7 @@ on:
           - '0C-R'
           - '0C-AB'
           - '0C-REL-AB'
+          - '0C-REL-FRONTBACK-AB'
           - '0D'
           - '0D-R'
 
@@ -34,11 +35,14 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit
       - name: Generate deterministic neutral PNG
-        if: inputs.trial != '0C-REL-AB'
+        if: inputs.trial != '0C-REL-AB' && inputs.trial != '0C-REL-FRONTBACK-AB'
         run: node scripts/authenticity/create-neutral-png.mjs .artifacts/wp004a-neutral.png
       - name: Generate deterministic geometry occlusion PNG
         if: inputs.trial == '0C-REL-AB'
         run: node scripts/authenticity/create-geometry-occlusion-fixture.mjs .artifacts/wp004a-geometry-occlusion.png
+      - name: Generate counterbalanced front-back fixtures
+        if: inputs.trial == '0C-REL-FRONTBACK-AB'
+        run: node scripts/authenticity/create-geometry-occlusion-frontback-fixtures.mjs .artifacts/wp004a-frontback
       - name: Run selected bounded trial
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -47,7 +51,10 @@ jobs:
         run: |
           if [ '${{ inputs.trial }}' = '0C-REL-AB' ]; then
             image='.artifacts/wp004a-geometry-occlusion.png'
+            node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-smoke.mjs --trial '${{ inputs.trial }}' --image "$image" --allow-network
+          elif [ '${{ inputs.trial }}' = '0C-REL-FRONTBACK-AB' ]; then
+            node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-smoke.mjs --trial '${{ inputs.trial }}' --frontback-dir '.artifacts/wp004a-frontback' --allow-network
           else
             image='.artifacts/wp004a-neutral.png'
+            node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-smoke.mjs --trial '${{ inputs.trial }}' --image "$image" --allow-network
           fi
-          node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-smoke.mjs --trial '${{ inputs.trial }}' --image "$image" --allow-network
