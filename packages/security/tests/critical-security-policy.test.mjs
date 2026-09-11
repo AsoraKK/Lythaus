@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { hmac } from '@noble/hashes/hmac';
-import { scrypt } from '@noble/hashes/scrypt';
-import { sha256 } from '@noble/hashes/sha2';
+import { hmac } from '@noble/hashes/hmac.js';
+import { scrypt } from '@noble/hashes/scrypt.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { SignJWT, exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import {
   LYTHAUS_ACCESS_TOKEN_AUDIENCE,

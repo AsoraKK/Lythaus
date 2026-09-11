@@ -1,11 +1,12 @@
-import { argon2id } from '@noble/hashes/argon2';
-import { hmac } from '@noble/hashes/hmac';
-import { scrypt } from '@noble/hashes/scrypt';
-import { sha256 } from '@noble/hashes/sha2';
+import { argon2id } from '@noble/hashes/argon2.js';
+import { hmac } from '@noble/hashes/hmac.js';
+import { scrypt } from '@noble/hashes/scrypt.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 
 export const ARGON2ID_PROFILE = { m: 19_456, t: 2, p: 1 } as const;
 export const SCRYPT_PROFILE = { N: 2 ** 14, r: 8, p: 5 } as const;
 export const PASSWORD_HASH_VERSION = 1 as const;
+const utf8 = new TextEncoder();
 
 function encode(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
@@ -34,7 +35,7 @@ export function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean 
 }
 
 function pepperDigest(hash: Uint8Array, pepper: string): Uint8Array {
-  return hmac(sha256, new TextEncoder().encode(pepper), hash);
+  return hmac(sha256, utf8.encode(pepper), hash);
 }
 
 export interface PasswordHash {
@@ -89,15 +90,15 @@ export function verifyPassword(password: string, stored: PasswordHash, pepper: s
 }
 
 export function hashResetToken(token: string): string {
-  return encode(sha256(token));
+  return encode(sha256(utf8.encode(token)));
 }
 
 export function hashAuthToken(token: string, purpose: 'verification' | 'password_reset'): string {
-  return encode(sha256(`${purpose}:v1:${token}`));
+  return encode(sha256(utf8.encode(`${purpose}:v1:${token}`)));
 }
 
 export function hmacLookup(value: string, key: string): string {
-  return encode(hmac(sha256, new TextEncoder().encode(key), value.trim().toLowerCase()));
+  return encode(hmac(sha256, utf8.encode(key), utf8.encode(value.trim().toLowerCase())));
 }
 
 function decodeKey(value: string): Uint8Array {
