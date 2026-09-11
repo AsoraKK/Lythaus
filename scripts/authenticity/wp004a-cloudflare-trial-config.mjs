@@ -1,0 +1,8 @@
+export const WP004A_CLOUDFLARE_TRIAL_MODES = Object.freeze({
+  '0C': 'OBSERVER_ONLY',
+  '0C-R': 'OBSERVER_REASONED',
+  '0C-AB': 'OBSERVER_AB',
+  '0C-REL-AB': 'OBSERVER_AB',
+  '0D': 'FULL',
+  '0D-R': 'FULL_RECHECK',
+});
