@@ -40,6 +40,81 @@ function safeError(error) {
   return message.replace(/Bearer\s+[^\s]+/gi, 'Bearer [REDACTED]').replace(/CLOUDFLARE_API_TOKEN[^\s]*/gi, 'CLOUDFLARE_API_TOKEN_REDACTED').slice(0, 180);
 }
 
+function safeObservation(observation) {
+  return {
+    observationId: observation.observationId,
+    queryId: observation.queryId,
+    protocolVersion: observation.protocolVersion,
+    category: observation.category,
+    task: observation.task,
+    reasoningMode: observation.reasoningMode,
+    applicable: observation.applicable,
+    status: observation.status,
+    observation: observation.observation,
+    regions: observation.regions,
+    measurementConfidence: observation.measurementConfidence,
+    limitations: observation.limitations,
+    provider: observation.provider,
+    model: observation.model,
+    executionMs: observation.executionMs,
+  };
+}
+
+function safeObserverResult(observer) {
+  if (!observer) return null;
+  return {
+    schemaVersion: observer.schemaVersion,
+    protocolVersion: observer.protocolVersion,
+    promptVersion: observer.promptVersion,
+    provider: observer.provider,
+    model: observer.model,
+    queryId: observer.queryId,
+    task: observer.task,
+    reasoningMode: observer.reasoningMode,
+    status: observer.status,
+    observations: observer.observations.map(safeObservation),
+    escalationRecommendation: observer.escalationRecommendation,
+    escalationReasons: observer.escalationReasons,
+    executionMs: observer.executionMs,
+    errorCategory: observer.errorCategory ?? null,
+  };
+}
+
+function safeComparison(comparison) {
+  if (!comparison) return null;
+  return {
+    schemaVersion: comparison.schemaVersion,
+    sampleId: comparison.sampleId,
+    inputHash: comparison.inputHash,
+    queryId: comparison.queryId,
+    category: comparison.category,
+    protocolVersion: comparison.protocolVersion,
+    direct: {
+      status: comparison.direct.status,
+      observations: comparison.direct.observations.map(safeObservation),
+      provider: comparison.direct.provider,
+      model: comparison.direct.model,
+      task: comparison.direct.task,
+      reasoningMode: comparison.direct.reasoningMode,
+      executionMs: comparison.direct.executionMs,
+      escalationRecommendation: comparison.direct.escalationRecommendation,
+      escalationReasons: comparison.direct.escalationReasons,
+    },
+    reasoned: {
+      status: comparison.reasoned.status,
+      observations: comparison.reasoned.observations.map(safeObservation),
+      provider: comparison.reasoned.provider,
+      model: comparison.reasoned.model,
+      task: comparison.reasoned.task,
+      reasoningMode: comparison.reasoned.reasoningMode,
+      executionMs: comparison.reasoned.executionMs,
+      escalationRecommendation: comparison.reasoned.escalationRecommendation,
+      escalationReasons: comparison.reasoned.escalationReasons,
+    },
+    contradictory: comparison.contradictory,
+  };
+}
+
 const options = parseArgs(process.argv.slice(2));
 try {
   const bytes = new Uint8Array(await readFile(path.resolve(options.image)));
@@ -72,7 +147,14 @@ try {
     trial: options.trial,
     mode: result.mode,
     caseCount: result.cases.length,
-    statuses: result.cases.map((item) => ({ status: item.status, observerStatus: item.observer?.status ?? null, judgeStatus: item.judge?.status ?? null, recheckRounds: item.recheckRounds })),
+    cases: result.cases.map((item) => ({
+      sampleId: item.sampleId,
+      inputHash: item.inputHash,
+      status: item.status,
+      observer: safeObserverResult(item.observer),
+      observerComparison: safeComparison(item.observerComparison),
+      recheckRounds: item.recheckRounds,
+    })),
     invocationAccounting: result.invocationAccounting,
     enforcementAuthority: result.enforcementAuthority,
   };
