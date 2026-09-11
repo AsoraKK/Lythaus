@@ -16,6 +16,7 @@ import {
   buildEvidencePacket,
   buildJudgeRequest,
   cloudflareRestCredentialsFromEnvironment,
+  cloudflareSafeProviderDiagnosticsFromBody,
   CloudflareRestError,
   compareVisionObserverResults,
   createCloudflareJudgeRest,
@@ -39,7 +40,9 @@ import {
   OPENAI_MODERATION_MODEL,
   parseGroundTruthResearchManifest,
   parseRuntimeResearchManifest,
+  researchRunExitCode,
   researchModelConfigFromEnvironment,
+  runCloudflareModelSchemaPreflight,
   runResearchTrial,
   buildReasonedVisualRecheckRequest,
   summarizeVisionObserverComparisons,
@@ -296,6 +299,94 @@ test('Cloudflare REST transport defaults to no network and maps credential, HTTP
   const timeout = createCloudflareRestTransport({ apiToken: 'secret', accountId: 'account', allowNetwork: true, maxRequests: 1, timeoutMs: 1, fetchImpl: async () => new Promise(() => {}) });
   await assert.rejects(timeout.run({ kind: 'JUDGE', model: CLOUDFLARE_REASONER_MODEL, payload: {} }), (error) => error instanceof CloudflareRestError && error.category === 'TIMEOUT');
   assert.deepEqual(cloudflareRestCredentialsFromEnvironment({ CLOUDFLARE_API_TOKEN: 'token', CLOUDFLARE_ACCOUNT_ID: 'id' }), { apiToken: 'token', accountId: 'id' });
+});
+
+test('Cloudflare REST diagnostics preserve safe HTTP categories and Observer transport metadata', async () => {
+  const cases = [
+    [400, 'HTTP_FAILURE', 'HTTP_FAILURE'],
+    [401, 'HTTP_AUTHENTICATION_FAILURE', 'AUTHENTICATION_FAILURE'],
+    [403, 'HTTP_AUTHENTICATION_FAILURE', 'AUTHENTICATION_FAILURE'],
+    [429, 'HTTP_RATE_LIMITED', 'RATE_LIMITED'],
+    [500, 'HTTP_SERVER_FAILURE', 'SERVER_FAILURE'],
+  ];
+  for (const [status, transportCategory, observerCategory] of cases) {
+    const transport = createCloudflareRestTransport({
+      apiToken: 'cloudflare-secret-fixture',
+      accountId: 'account-fixture',
+      allowNetwork: true,
+      maxRequests: 1,
+      fetchImpl: async () => jsonResponse({ success: false, errors: [{ code: 10000 + status, message: 'sensitive provider text', message_code: `HTTP_${status}` }] }, status),
+    });
+    const observer = createCloudflareVisionObserverRest({ transport });
+    const result = await observer.observe({ sampleId: 'SAMPLE', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.', reasoningMode: 'DIRECT' } });
+    assert.equal(result.status, 'PROVIDER_FAILURE');
+    assert.equal(result.errorCategory, observerCategory);
+    assert.equal(result.transportErrorCategory, transportCategory);
+    assert.equal(result.httpStatus, status);
+    assert.equal(result.providerErrorCode, 10000 + status);
+    assert.equal(result.providerErrorMessageCode, `HTTP_${status}`);
+    assert.equal(transport.snapshot().invocations[0].httpStatus, status);
+    assert.equal(transport.snapshot().invocations[0].transportErrorCategory, transportCategory);
+    assert.equal(transport.snapshot().invocations[0].providerErrorCode, 10000 + status);
+    assert.equal(JSON.stringify(result).includes('sensitive provider text'), false);
+    assert.equal(JSON.stringify(result).includes('cloudflare-secret-fixture'), false);
+    assert.equal(JSON.stringify(result).includes('data:image'), false);
+  }
+  assert.deepEqual(cloudflareSafeProviderDiagnosticsFromBody({ success: false, errors: [{ code: 10000, message: 'do not retain this', message_code: 'AUTHENTICATION' }] }), { providerErrorCode: 10000, providerErrorMessageCode: 'AUTHENTICATION' });
+  assert.deepEqual(cloudflareSafeProviderDiagnosticsFromBody({ success: false, errors: [{ code: 10000, message: 'do not retain this' }] }), { providerErrorCode: 10000, providerErrorMessageCode: null });
+});
+
+test('Cloudflare Observer keeps true network rejection and timeout distinct', async () => {
+  const networkTransport = createCloudflareRestTransport({ apiToken: 'secret', accountId: 'account', allowNetwork: true, maxRequests: 1, fetchImpl: async () => { throw new Error('Bearer secret'); } });
+  const networkObserver = createCloudflareVisionObserverRest({ transport: networkTransport });
+  const networkResult = await networkObserver.observe({ sampleId: 'SAMPLE', inputHash: 'b'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.', reasoningMode: 'DIRECT' } });
+  assert.equal(networkResult.errorCategory, 'NETWORK_FAILURE');
+  assert.equal(networkResult.transportErrorCategory, 'NETWORK_FAILURE');
+  assert.equal(networkResult.httpStatus, null);
+  assert.equal(JSON.stringify(networkResult).includes('secret'), false);
+
+  const timeoutTransport = createCloudflareRestTransport({ apiToken: 'secret', accountId: 'account', allowNetwork: true, maxRequests: 1, timeoutMs: 1, fetchImpl: async () => new Promise(() => {}) });
+  const timeoutObserver = createCloudflareVisionObserverRest({ transport: timeoutTransport });
+  const timeoutResult = await timeoutObserver.observe({ sampleId: 'SAMPLE', inputHash: 'c'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.', reasoningMode: 'DIRECT' } });
+  assert.equal(timeoutResult.errorCategory, 'TIMEOUT');
+  assert.equal(timeoutResult.transportErrorCategory, 'TIMEOUT');
+  assert.equal(timeoutResult.httpStatus, null);
+});
+
+test('Cloudflare model-schema access preflight is read-only, bounded, and sanitized', async () => {
+  let request;
+  const success = await runCloudflareModelSchemaPreflight({ apiToken: 'cloudflare-secret-fixture', accountId: 'account-fixture', model: CLOUDFLARE_VISION_OBSERVER_MODEL, allowNetwork: true, timeoutMs: 100, fetchImpl: async (url, init) => {
+    request = { url, init };
+    return jsonResponse({ success: true, result: { input: { type: 'object' }, output: { type: 'object' } } });
+  } });
+  assert.equal(success.status, 'SUCCESS');
+  assert.equal(success.schemaAvailable, true);
+  assert.equal(success.httpStatus, 200);
+  assert.equal(new URL(request.url).pathname, '/client/v4/accounts/account-fixture/ai/models/schema');
+  assert.equal(new URL(request.url).searchParams.get('model'), CLOUDFLARE_VISION_OBSERVER_MODEL);
+  assert.equal(request.init.method, 'GET');
+  assert.equal(request.init.headers.Authorization, 'Bearer cloudflare-secret-fixture');
+  assert.equal(JSON.stringify(success).includes('cloudflare-secret-fixture'), false);
+
+  const denied = await runCloudflareModelSchemaPreflight({ apiToken: 'cloudflare-secret-fixture', accountId: 'account-fixture', model: CLOUDFLARE_VISION_OBSERVER_MODEL, allowNetwork: true, fetchImpl: async () => jsonResponse({ success: false, errors: [{ code: 10000, message: 'sensitive denial', message_code: 'AUTHENTICATION' }] }, 403) });
+  assert.equal(denied.status, 'PROVIDER_FAILURE');
+  assert.equal(denied.schemaAvailable, false);
+  assert.equal(denied.httpStatus, 403);
+  assert.equal(denied.transportErrorCategory, 'HTTP_AUTHENTICATION_FAILURE');
+  assert.equal(denied.providerErrorCode, 10000);
+  assert.equal(denied.providerErrorMessageCode, 'AUTHENTICATION');
+  assert.equal(JSON.stringify(denied).includes('sensitive denial'), false);
+
+  const disabled = await runCloudflareModelSchemaPreflight({ apiToken: 'secret', accountId: 'account', fetchImpl: async () => { throw new Error('must not run'); } });
+  assert.equal(disabled.status, 'PROVIDER_FAILURE');
+  assert.equal(disabled.transportErrorCategory, 'NETWORK_DISABLED');
+});
+
+test('live smoke exit code is non-zero for provider failure and zero for success', () => {
+  const base = { cases: [], judgeOnlyResults: [], invocationAccounting: { providerFailures: 0 } };
+  assert.equal(researchRunExitCode(base), 0);
+  assert.equal(researchRunExitCode({ ...base, invocationAccounting: { providerFailures: 1 } }), 1);
+  assert.equal(researchRunExitCode({ ...base, cases: [{ moderation: null, observer: { status: 'PROVIDER_FAILURE' }, judge: null, judgeHistory: [] }] }), 1);
 });
 
 test('Vision Observer sends only visual protocol instructions and returns observations without a verdict', async () => {
@@ -857,4 +948,14 @@ test('Cloudflare smoke workflow is manual-only, secret-injected, bounded, and fi
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
   assert.match(workflow, /wp004a-cloudflare-smoke\.mjs/);
   assert.doesNotMatch(workflow, /OneDrive|LythausForensicsData|research[-_]images|base64|echo\s+\$\{\{\s*secrets\./i);
+});
+
+test('Cloudflare access preflight workflow is manual-only, read-only, and secret-injected', async () => {
+  const workflow = await readFile(path.join(repositoryRoot, '.github/workflows/wp004a-cloudflare-access-preflight.yml'), 'utf8');
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /pull_request:|push:/);
+  assert.match(workflow, /CLOUDFLARE_API_TOKEN:\s*\$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
+  assert.match(workflow, /wp004a-cloudflare-access-preflight\.mjs/);
+  assert.doesNotMatch(workflow, /ai\/run|OneDrive|LythausForensicsData|base64|echo\s+\$\{\{\s*secrets\./i);
 });

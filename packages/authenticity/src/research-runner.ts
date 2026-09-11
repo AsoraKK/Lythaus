@@ -150,6 +150,16 @@ export interface ResearchRunResult {
   enforcementAuthority: false;
 }
 
+export function researchRunHasProviderFailure(result: ResearchRunResult): boolean {
+  return result.invocationAccounting.providerFailures > 0
+    || result.cases.some((item) => item.moderation?.result === 'PROVIDER_FAILURE' || item.observer?.status === 'PROVIDER_FAILURE' || item.judge?.status === 'PROVIDER_FAILURE' || item.judgeHistory.some((judge) => judge.status === 'PROVIDER_FAILURE'))
+    || result.judgeOnlyResults.some((judge) => judge.status === 'PROVIDER_FAILURE');
+}
+
+export function researchRunExitCode(result: ResearchRunResult): 0 | 1 {
+  return researchRunHasProviderFailure(result) ? 1 : 0;
+}
+
 function providerIsLive(provider: unknown): boolean {
   return Boolean(provider && typeof provider === 'object' && (provider as { isLive?: boolean }).isLive === true);
 }

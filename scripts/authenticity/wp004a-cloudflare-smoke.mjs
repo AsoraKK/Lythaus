@@ -7,6 +7,7 @@ import {
   createMockJudge,
   createMockModerationProvider,
   createOpenAIModerationProvider,
+  researchRunExitCode,
   runResearchTrial,
 } from '../../packages/authenticity/src/wp004a.ts';
 
@@ -77,6 +78,10 @@ function safeObserverResult(observer) {
     escalationReasons: observer.escalationReasons,
     executionMs: observer.executionMs,
     errorCategory: observer.errorCategory ?? null,
+    transportErrorCategory: observer.transportErrorCategory ?? null,
+    httpStatus: observer.httpStatus ?? null,
+    providerErrorCode: observer.providerErrorCode ?? null,
+    providerErrorMessageCode: observer.providerErrorMessageCode ?? null,
   };
 }
 
@@ -99,6 +104,10 @@ function safeComparison(comparison) {
       executionMs: comparison.direct.executionMs,
       escalationRecommendation: comparison.direct.escalationRecommendation,
       escalationReasons: comparison.direct.escalationReasons,
+      transportErrorCategory: comparison.direct.transportErrorCategory ?? null,
+      httpStatus: comparison.direct.httpStatus ?? null,
+      providerErrorCode: comparison.direct.providerErrorCode ?? null,
+      providerErrorMessageCode: comparison.direct.providerErrorMessageCode ?? null,
     },
     reasoned: {
       status: comparison.reasoned.status,
@@ -110,6 +119,10 @@ function safeComparison(comparison) {
       executionMs: comparison.reasoned.executionMs,
       escalationRecommendation: comparison.reasoned.escalationRecommendation,
       escalationReasons: comparison.reasoned.escalationReasons,
+      transportErrorCategory: comparison.reasoned.transportErrorCategory ?? null,
+      httpStatus: comparison.reasoned.httpStatus ?? null,
+      providerErrorCode: comparison.reasoned.providerErrorCode ?? null,
+      providerErrorMessageCode: comparison.reasoned.providerErrorMessageCode ?? null,
     },
     contradictory: comparison.contradictory,
   };
@@ -164,6 +177,7 @@ try {
     await writeFile(outputPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
   }
   console.log(JSON.stringify(summary));
+  if (researchRunExitCode(result) !== 0) process.exitCode = 1;
 } catch (error) {
   console.error(JSON.stringify({ schemaVersion: 'lythaus-wp004a-research-run-v1', status: 'FAILED', errorCategory: safeError(error) }));
   process.exitCode = 1;
