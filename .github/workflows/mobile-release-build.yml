@@ -165,7 +165,7 @@ jobs:
           rm -f "$KEYSTORE_PATH" "$KEY_PROPERTIES_PATH" android/app/google-services.json
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: android-release
           path: |
