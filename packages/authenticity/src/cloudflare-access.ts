@@ -16,6 +16,13 @@ export const CLOUDFLARE_MODEL_RESPONSE_FORMAT_SUPPORT = [
 ] as const;
 export type CloudflareModelResponseFormatSupport = (typeof CLOUDFLARE_MODEL_RESPONSE_FORMAT_SUPPORT)[number];
 
+export const CLOUDFLARE_MODEL_RESPONSE_EXPECTATIONS = [
+  'GPT_OSS_RESPONSE_OBJECT_EXPECTED',
+  'GPT_OSS_RESPONSE_STRING_EXPECTED',
+  'GPT_OSS_RESPONSE_SHAPE_AMBIGUOUS',
+] as const;
+export type CloudflareModelResponseExpectation = (typeof CLOUDFLARE_MODEL_RESPONSE_EXPECTATIONS)[number];
+
 export interface CloudflareModelSchemaPreflightOptions {
   apiToken?: string;
   accountId?: string;
@@ -39,6 +46,9 @@ export interface CloudflareModelSchemaPreflightResult {
   inputSchemaPropertyNames: readonly string[];
   outputSchemaPropertyNames: readonly string[];
   responseFormatSupport: CloudflareModelResponseFormatSupport;
+  responseFormatDeclared: boolean | null;
+  outputResponseType: string | null;
+  responseExpectation: CloudflareModelResponseExpectation | null;
   executionMs: number;
 }
 
@@ -54,11 +64,30 @@ function schemaPropertyNames(value: unknown): readonly string[] {
     .slice(0, 64);
 }
 
+function schemaPropertyType(value: unknown, propertyName: string): string | null {
+  if (!isRecord(value) || !isRecord(value.properties) || !isRecord(value.properties[propertyName])) return null;
+  const type = value.properties[propertyName].type;
+  return typeof type === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{0,31}$/.test(type) ? type.toUpperCase() : null;
+}
+
+function responseFormatDeclared(value: unknown): boolean | null {
+  if (!isRecord(value) || !isRecord(value.properties)) return null;
+  return Object.prototype.hasOwnProperty.call(value.properties, 'response_format');
+}
+
 function responseFormatSupport(value: unknown): CloudflareModelResponseFormatSupport {
   if (!isRecord(value) || !isRecord(value.properties)) return 'MOONDREAM_RESPONSE_FORMAT_UNCLEAR';
   return Object.prototype.hasOwnProperty.call(value.properties, 'response_format')
     ? 'MOONDREAM_RESPONSE_FORMAT_SUPPORTED'
     : 'MOONDREAM_RESPONSE_FORMAT_NOT_DECLARED';
+}
+
+function responseExpectation(model: string, output: unknown): CloudflareModelResponseExpectation | null {
+  if (!model.toLowerCase().startsWith('@cf/openai/gpt-oss')) return null;
+  const responseType = schemaPropertyType(output, 'response');
+  if (responseType === 'OBJECT') return 'GPT_OSS_RESPONSE_OBJECT_EXPECTED';
+  if (responseType === 'STRING') return 'GPT_OSS_RESPONSE_STRING_EXPECTED';
+  return 'GPT_OSS_RESPONSE_SHAPE_AMBIGUOUS';
 }
 
 function failure(model: string, startedAt: number, error: CloudflareRestError): CloudflareModelSchemaPreflightResult {
@@ -75,6 +104,9 @@ function failure(model: string, startedAt: number, error: CloudflareRestError): 
     inputSchemaPropertyNames: [],
     outputSchemaPropertyNames: [],
     responseFormatSupport: 'MOONDREAM_RESPONSE_FORMAT_UNCLEAR',
+    responseFormatDeclared: null,
+    outputResponseType: null,
+    responseExpectation: null,
     executionMs: Date.now() - startedAt,
   };
 }
@@ -127,6 +159,8 @@ export async function runCloudflareModelSchemaPreflight(options: CloudflareModel
     if (!isRecord(body) || body.success !== true || !isRecord(body.result) || !isRecord(body.result.input) || !isRecord(body.result.output)) {
       throw new CloudflareRestError(body && isRecord(body) && body.success === false ? 'PROVIDER_FAILURE' : 'MALFORMED_RESPONSE', response.status, cloudflareSafeProviderDiagnosticsFromBody(body));
     }
+    const inputSchema = body.result.input;
+    const outputSchema = body.result.output;
     return {
       schemaVersion: CLOUDFLARE_MODEL_SCHEMA_PREFLIGHT_SCHEMA_VERSION,
       provider: 'cloudflare-workers-ai-rest',
@@ -137,9 +171,12 @@ export async function runCloudflareModelSchemaPreflight(options: CloudflareModel
       transportErrorCategory: null,
       providerErrorCode: null,
       providerErrorMessageCode: null,
-      inputSchemaPropertyNames: schemaPropertyNames(body.result.input),
-      outputSchemaPropertyNames: schemaPropertyNames(body.result.output),
-      responseFormatSupport: responseFormatSupport(body.result.input),
+      inputSchemaPropertyNames: schemaPropertyNames(inputSchema),
+      outputSchemaPropertyNames: schemaPropertyNames(outputSchema),
+      responseFormatSupport: responseFormatSupport(inputSchema),
+      responseFormatDeclared: responseFormatDeclared(inputSchema),
+      outputResponseType: schemaPropertyType(outputSchema, 'response'),
+      responseExpectation: responseExpectation(model, outputSchema),
       executionMs: Date.now() - startedAt,
     };
   } catch (error) {

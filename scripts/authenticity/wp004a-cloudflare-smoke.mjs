@@ -190,6 +190,8 @@ function safeJudgeResult(judge) {
     transportErrorCategory: judge.transportErrorCategory ?? null,
     providerErrorCode: judge.providerErrorCode ?? null,
     providerErrorMessageCode: judge.providerErrorMessageCode ?? null,
+    normalizationFailureCode: judge.normalizationFailureCode ?? null,
+    responseDiagnostics: safeJudgeResponseDiagnostics(judge.responseDiagnostics),
     recommendation: recommendation ? {
       schemaVersion: recommendation.schemaVersion,
       primaryHypothesis: recommendation.primaryHypothesis,
@@ -203,6 +205,30 @@ function safeJudgeResult(judge) {
       rationale: recommendation.rationale,
       enforcementAuthority: recommendation.enforcementAuthority,
     } : null,
+  };
+}
+
+function safeJudgeResponseDiagnostics(diagnostics) {
+  if (!diagnostics) return null;
+  return {
+    transportSucceeded: diagnostics.transportSucceeded,
+    providerResultType: diagnostics.providerResultType,
+    providerTopLevelKeys: diagnostics.providerTopLevelKeys,
+    responsePresent: diagnostics.responsePresent,
+    responseType: diagnostics.responseType,
+    responseTopLevelKeys: diagnostics.responseTopLevelKeys,
+    resultPresent: diagnostics.resultPresent,
+    resultType: diagnostics.resultType,
+    outputTextPresent: diagnostics.outputTextPresent,
+    outputTextType: diagnostics.outputTextType,
+    reasoningFieldPresent: diagnostics.reasoningFieldPresent,
+    reasoningFieldType: diagnostics.reasoningFieldType,
+    usageFieldPresent: diagnostics.usageFieldPresent,
+    usageFieldType: diagnostics.usageFieldType,
+    toolCallsPresent: diagnostics.toolCallsPresent,
+    toolCallCount: diagnostics.toolCallCount,
+    stringJsonParseable: diagnostics.stringJsonParseable,
+    normalizationFailureCode: diagnostics.normalizationFailureCode,
   };
 }
 
