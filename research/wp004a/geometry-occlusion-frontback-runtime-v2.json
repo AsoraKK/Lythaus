@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "lythaus-wp004a-frontback-runtime-v2",
+  "manifestType": "RUNTIME",
+  "fixtureVersion": "v1",
+  "generatorVersion": "lythaus-wp004a-geometry-occlusion-frontback-generator-v1",
+  "format": "png",
+  "dimensions": { "width": 512, "height": 512, "channels": 3 },
+  "construction": {
+    "source": "deterministic SVG rendered locally through Sharp",
+    "background": "#eeeeea",
+    "redRectangle": { "x": 96, "y": 176, "width": 248, "height": 144, "color": "#d92d3f" },
+    "blueRectangle": { "x": 248, "y": 232, "width": 192, "height": 144, "color": "#2f6fdb" },
+    "greenCircle": { "cx": 426, "cy": 104, "radius": 42, "color": "#2e9e58" },
+    "overlapRegion": { "x": 248, "y": 232, "width": 96, "height": 88 }
+  },
+  "observerInput": {
+    "queryId": "GEOMETRY_FRONTBACK_01",
+    "category": "GEOMETRY_OCCLUSION",
+    "task": "query",
+    "regionPolicy": "FORBID",
+    "question": "Inspect the overlap between the red rectangle and blue rectangle. Determine which rectangle is visibly in front at their overlap. Return exactly one observation. The observation text must be exactly one of: Blue rectangle is in front of red rectangle.; Red rectangle is in front of blue rectangle.; Front/back relationship is indeterminate. Use OBSERVED for either definite front/back answer and INDETERMINATE if the relationship cannot be determined. Set applicable to true, regions to [], measurementConfidence to null, and limitations to [] unless a genuine visible limitation exists. Do not localize the rectangles. Do not return bounding boxes, points, positions, coordinates, or region descriptions. Localization is outside this task. Do not discuss whether the image is AI-generated, image origin, or how the image was constructed.",
+    "truthProvided": false
+  },
+  "entries": [
+    {
+      "sampleId": "WP004A_GEOMETRY_OCCLUSION_A_01",
+      "sourceFamilyId": "WP004A_GEOMETRY_OCCLUSION_A_01",
+      "path": "fixture-a.png",
+      "sha256": "7ab3c59f2a012398e79838efd95df63624ea177ef1ff7bffe6a18b755500b575"
+    },
+    {
+      "sampleId": "WP004A_GEOMETRY_OCCLUSION_B_01",
+      "sourceFamilyId": "WP004A_GEOMETRY_OCCLUSION_B_01",
+      "path": "fixture-b.png",
+      "sha256": "c477f25ebe303791bf8fb4c85224a3c9997b2910c7a738fa4f3a89ca7db9fa42"
+    }
+  ]
+}

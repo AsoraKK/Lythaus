@@ -304,7 +304,7 @@ function requestForMode(input: ResearchRunnerInput, mode: VisionObserverReasonin
 }
 
 function failedObserverResult(provider: string, model: string, request: VisionObserverRequest): VisionObserverResult {
-  return { schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION, prompt: '', provider, model, generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG, queryId: request.queryId, task: request.task, reasoningMode: request.reasoningMode ?? 'DIRECT', status: 'PROVIDER_FAILURE', observations: [], escalationRecommendation: 'NONE', escalationReasons: [], executionMs: 0, errorCategory: 'NETWORK_FAILURE' };
+  return { schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION, prompt: '', provider, model, generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG, queryId: request.queryId, task: request.task, reasoningMode: request.reasoningMode ?? 'DIRECT', regionPolicy: request.regionPolicy ?? 'CANONICAL', status: 'PROVIDER_FAILURE', observations: [], escalationRecommendation: 'NONE', escalationReasons: [], executionMs: 0, errorCategory: 'NETWORK_FAILURE' };
 }
 
 function failedJudgeResult(provider: string): JudgeResult {
@@ -459,7 +459,7 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
           const direct = await callObserver({ observer, baseInput, request: requestForMode(input, 'DIRECT'), allowNetwork, ledger });
           const reasoned = await callObserver({ observer, baseInput, request: requestForMode(input, 'REASONED'), allowNetwork, ledger });
           observerResult = direct;
-          observerComparison = compareVisionObserverResults({ sampleId: entry.sampleId, inputHash, direct, reasoned });
+          observerComparison = compareVisionObserverResults({ sampleId: entry.sampleId, inputHash, category: input.observerRequest?.category ?? 'SCENE_INVENTORY', direct, reasoned });
         } else {
           const reasoningMode: VisionObserverReasoningMode = mode === 'OBSERVER_REASONED' ? 'REASONED' : 'DIRECT';
           observerResult = await callObserver({ observer, baseInput, request: requestForMode(input, reasoningMode), allowNetwork, ledger });
@@ -496,6 +496,7 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
             category: judgeRecheck.category as NonNullable<EvidenceRequest['category']>,
             reasonCode: judgeRecheck.reasonCode as NonNullable<EvidenceRequest['reasonCode']>,
             targetRegion: judgeRecheck.targetRegion,
+            regionPolicy: observerResult?.regionPolicy ?? 'CANONICAL',
           });
         } catch {
           failedComponents.push('judge-recheck-request');

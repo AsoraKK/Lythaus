@@ -13,8 +13,12 @@ export const GEOMETRY_FRONTBACK_FIXTURE_VERSION = 'v1';
 export const GEOMETRY_FRONTBACK_GENERATOR_VERSION = 'lythaus-wp004a-geometry-occlusion-frontback-generator-v1';
 export const GEOMETRY_FRONTBACK_VARIANTS = ['BLUE', 'RED'];
 export const GEOMETRY_FRONTBACK_FIXTURE_IDS = Object.freeze({
-  BLUE: 'WP004A_GEOMETRY_OCCLUSION_BLUE_FRONT_01',
-  RED: 'WP004A_GEOMETRY_OCCLUSION_RED_FRONT_01',
+  BLUE: 'WP004A_GEOMETRY_OCCLUSION_A_01',
+  RED: 'WP004A_GEOMETRY_OCCLUSION_B_01',
+});
+export const GEOMETRY_FRONTBACK_RUNTIME_FILENAMES = Object.freeze({
+  BLUE: 'fixture-a.png',
+  RED: 'fixture-b.png',
 });
 export const GEOMETRY_FRONTBACK_QUERY_ID = 'GEOMETRY_FRONTBACK_01';
 export const GEOMETRY_FRONTBACK_ALLOWED_ANSWERS = Object.freeze([
@@ -81,8 +85,8 @@ function samePixel(actual, expected) {
   return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
 }
 
-export async function validateGeometryOcclusionFrontBackPng(bytes, front) {
-  assertVariant(front);
+export async function validateGeometryOcclusionFrontBackPng(bytes, front = null) {
+  if (front !== null) assertVariant(front);
   if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0) return { valid: false, reason: 'empty_input' };
   if (!hasPngSignature(bytes)) return { valid: false, reason: 'png_signature_invalid' };
   try {
@@ -93,27 +97,31 @@ export async function validateGeometryOcclusionFrontBackPng(bytes, front) {
     if (metadata.width !== GEOMETRY_OCCLUSION_WIDTH || metadata.height !== GEOMETRY_OCCLUSION_HEIGHT) return { valid: false, reason: 'dimensions_invalid' };
     if (decoded.info.channels !== GEOMETRY_OCCLUSION_CHANNELS) return { valid: false, reason: 'channels_invalid' };
     if (decoded.data.byteLength !== pixelBytes || decoded.data.byteLength === 0) return { valid: false, reason: 'pixel_bytes_invalid' };
-    const expectedFrontColor = front === 'BLUE' ? [47, 111, 219] : [217, 45, 63];
-    const expectedBackColor = front === 'BLUE' ? [217, 45, 63] : [47, 111, 219];
     if (!samePixel(pixelAt(decoded.data, decoded.info, 10, 10), [238, 238, 234])) return { valid: false, reason: 'background_pixel_invalid' };
     if (!samePixel(pixelAt(decoded.data, decoded.info, 120, 200), [217, 45, 63])) return { valid: false, reason: 'red_pixel_invalid' };
     if (!samePixel(pixelAt(decoded.data, decoded.info, 400, 300), [47, 111, 219])) return { valid: false, reason: 'blue_pixel_invalid' };
-    if (!samePixel(pixelAt(decoded.data, decoded.info, 280, 260), expectedFrontColor)) return { valid: false, reason: 'front_overlap_pixel_invalid' };
-    if (samePixel(pixelAt(decoded.data, decoded.info, 280, 260), expectedBackColor)) return { valid: false, reason: 'back_overlap_pixel_invalid' };
+    if (front !== null) {
+      const expectedFrontColor = front === 'BLUE' ? [47, 111, 219] : [217, 45, 63];
+      const expectedBackColor = front === 'BLUE' ? [217, 45, 63] : [47, 111, 219];
+      if (!samePixel(pixelAt(decoded.data, decoded.info, 280, 260), expectedFrontColor)) return { valid: false, reason: 'front_overlap_pixel_invalid' };
+      if (samePixel(pixelAt(decoded.data, decoded.info, 280, 260), expectedBackColor)) return { valid: false, reason: 'back_overlap_pixel_invalid' };
+    }
     if (!samePixel(pixelAt(decoded.data, decoded.info, 426, 104), [46, 158, 88])) return { valid: false, reason: 'green_pixel_invalid' };
     return {
       valid: true,
-      fixtureId: geometryFrontBackFixtureId(front),
       fixtureVersion: GEOMETRY_FRONTBACK_FIXTURE_VERSION,
       generatorVersion: GEOMETRY_FRONTBACK_GENERATOR_VERSION,
-      front,
-      back: front === 'BLUE' ? 'RED' : 'BLUE',
       format: metadata.format,
       width: metadata.width,
       height: metadata.height,
       channels: decoded.info.channels,
       pixelBytes: decoded.data.byteLength,
       sha256: sha256Hex(bytes),
+      ...(front !== null ? {
+        fixtureId: geometryFrontBackFixtureId(front),
+        front,
+        back: front === 'BLUE' ? 'RED' : 'BLUE',
+      } : {}),
     };
   } catch {
     return { valid: false, reason: 'decode_failed' };
