@@ -338,7 +338,7 @@ jobs:
       - name: Create sanitized manifest integrity digest
         run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256
       - name: Upload preflight manifest
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: canonical-release-preflight-${{ inputs.release_sha }}
           if-no-files-found: error
@@ -479,7 +479,7 @@ jobs:
           test "$PLANETSCALE_STATUS" = VERIFIED
       - name: Upload exact-SHA provider evidence
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: canonical-provider-evidence-${{ inputs.release_sha }}
           if-no-files-found: warn
@@ -837,7 +837,7 @@ jobs:
           exit "$rollback_failed"
       - name: Upload downstream rollback evidence
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: production-release-rollback-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/production-rollback
@@ -1003,7 +1003,7 @@ jobs:
       - name: Create sanitized manifest integrity digest
         run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256
       - name: Upload canonical release manifest
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: lythaus-release-manifest-${{ inputs.release_sha }}
           if-no-files-found: error
