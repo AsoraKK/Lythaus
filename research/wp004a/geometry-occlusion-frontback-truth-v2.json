@@ -1,15 +1,15 @@
 {
-  "schemaVersion": "lythaus-wp004a-frontback-truth-v1",
+  "schemaVersion": "lythaus-wp004a-frontback-truth-v2",
   "manifestType": "GROUND_TRUTH",
   "truthBasis": "DETERMINISTIC_FIXTURE_CONSTRUCTION",
   "entries": [
     {
-      "fixtureId": "WP004A_GEOMETRY_OCCLUSION_BLUE_FRONT_01",
+      "fixtureId": "WP004A_GEOMETRY_OCCLUSION_A_01",
       "category": "GEOMETRY_OCCLUSION",
       "truth": { "front": "BLUE", "back": "RED" }
     },
     {
-      "fixtureId": "WP004A_GEOMETRY_OCCLUSION_RED_FRONT_01",
+      "fixtureId": "WP004A_GEOMETRY_OCCLUSION_B_01",
       "category": "GEOMETRY_OCCLUSION",
       "truth": { "front": "RED", "back": "BLUE" }
     }

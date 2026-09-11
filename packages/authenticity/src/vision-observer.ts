@@ -33,6 +33,9 @@ export type VisionObserverTask = (typeof VISION_OBSERVER_TASKS)[number];
 export const VISION_OBSERVER_REASONING_MODES = ['DIRECT', 'REASONED'] as const;
 export type VisionObserverReasoningMode = (typeof VISION_OBSERVER_REASONING_MODES)[number];
 
+export const VISION_OBSERVER_REGION_POLICIES = ['CANONICAL', 'FORBID'] as const;
+export type VisionObserverRegionPolicy = (typeof VISION_OBSERVER_REGION_POLICIES)[number];
+
 export const VISION_OBSERVATION_STATUSES = ['OBSERVED', 'NOT_OBSERVED', 'INDETERMINATE', 'NOT_APPLICABLE'] as const;
 export type VisionObservationStatus = (typeof VISION_OBSERVATION_STATUSES)[number];
 
@@ -49,7 +52,7 @@ const VISION_OBSERVER_EXAMPLE_TEXT: Readonly<Record<VisionObservationCategory, s
   SUSPICIOUS_REGION: 'A region warrants further visual inspection.',
 };
 
-export function buildVisionObserverPrompt(category: VisionObservationCategory): string {
+export function buildVisionObserverPrompt(category: VisionObservationCategory, regionPolicy: VisionObserverRegionPolicy = 'CANONICAL'): string {
   const example = JSON.stringify({
     observations: [{
       category,
@@ -73,6 +76,7 @@ export function buildVisionObserverPrompt(category: VisionObservationCategory): 
     '',
     'TASK',
     `Requested category: ${category}. Every observation.category MUST exactly equal ${category}.`,
+    `Region policy: ${regionPolicy}.`,
     'Answer the supplied visual question for this category and no other category.',
     '',
     'OUTPUT CONTRACT',
@@ -90,7 +94,13 @@ export function buildVisionObserverPrompt(category: VisionObservationCategory): 
     'NOT_APPLICABLE means the requested category genuinely does not apply to the visible scene.',
     'Do not create other status labels or synonyms such as PRESENT, VISIBLE, UNKNOWN, YES, NO, or DETECTED.',
     'observation MUST be a short factual visual observation.',
-    'regions MUST be an array; region coordinates must use coordinateSpace NORMALIZED and values from 0 to 1.',
+    ...(regionPolicy === 'FORBID'
+      ? [
+        'Do not localize the requested objects or relationship.',
+        'Do not return bounding boxes, points, positions, coordinates, or region descriptions.',
+        'Localization is outside this task. regions MUST be exactly [] even if the provider has localization output.',
+      ]
+      : ['regions MUST be an array; region coordinates must use coordinateSpace NORMALIZED and values from 0 to 1.']),
     'measurementConfidence MUST be null or a number from 0 to 1 and refers only to confidence in the observation, never origin confidence.',
     'limitations MUST be an array of strings.',
     '',
@@ -135,6 +145,7 @@ export interface VisionObserverRequest {
   question?: string;
   target?: string;
   reasoningMode?: VisionObserverReasoningMode;
+  regionPolicy?: VisionObserverRegionPolicy;
   sourceObservationId?: string;
   reasonCode?: VisionEscalationReason;
   targetRegion?: VisionRegion | null;
@@ -246,6 +257,9 @@ export interface VisionRegionDiagnostics {
   coordinateFieldNames: readonly string[];
   coordinateValueTypes: Readonly<Record<string, string>>;
   normalizationFailureReason: string;
+  regionPolicy?: VisionObserverRegionPolicy;
+  providerRegionOutputPresent?: boolean;
+  providerRegionsDiscarded?: boolean;
 }
 
 export interface VisionObserverTransportDiagnostics {
@@ -266,6 +280,7 @@ export interface VisionObserverResult {
   queryId: string;
   task: VisionObserverTask;
   reasoningMode: VisionObserverReasoningMode;
+  regionPolicy: VisionObserverRegionPolicy;
   status: 'SUCCESS' | 'PROVIDER_FAILURE';
   observations: readonly VisionObservation[];
   escalationRecommendation: VisionEscalationRecommendation;
@@ -339,6 +354,7 @@ export function buildReasonedVisualRecheckRequest(input: {
   category: VisionObservationCategory;
   reasonCode: VisionEscalationReason;
   targetRegion?: VisionRegion | null;
+  regionPolicy?: VisionObserverRegionPolicy;
 }): VisionObserverRequest {
   const observation = input.observations.find((candidate) => candidate.observationId === input.observationId);
   if (!observation) throw new Error('vision_recheck_observation_unknown');
@@ -354,6 +370,7 @@ export function buildReasonedVisualRecheckRequest(input: {
     task: 'query',
     question: `${RECHECK_TEMPLATES[input.category as keyof typeof RECHECK_TEMPLATES]}\nReferenced observation ID: ${input.observationId}.\n${regionText}`,
     reasoningMode: 'REASONED',
+    regionPolicy: input.regionPolicy ?? 'CANONICAL',
     sourceObservationId: input.observationId,
     reasonCode: input.reasonCode,
     targetRegion,
@@ -366,23 +383,25 @@ export function buildObserverReasonedEscalationRequest(result: VisionObserverRes
   if (!observation) return null;
   const reasonCode = result.escalationReasons.find((candidate) => isReasonedRecheckReasonAllowed(observation.category, candidate));
   if (!reasonCode) return null;
-  return buildReasonedVisualRecheckRequest({ observations: result.observations, observationId: observation.observationId, category: observation.category, reasonCode, targetRegion: observation.regions[0] ?? null });
+  return buildReasonedVisualRecheckRequest({ observations: result.observations, observationId: observation.observationId, category: observation.category, reasonCode, targetRegion: observation.regions[0] ?? null, regionPolicy: result.regionPolicy });
 }
 
 function defaultRequest(): VisionObserverRequest {
-  return { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Inventory visible scene elements and report only structured visual observations.', reasoningMode: 'DIRECT' };
+  return { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Inventory visible scene elements and report only structured visual observations.', reasoningMode: 'DIRECT', regionPolicy: 'CANONICAL' };
 }
 
 function requestFor(input: VisionObserverInput): VisionObserverRequest {
   const request = input.request ?? defaultRequest();
   const reasoningMode = request.reasoningMode ?? 'DIRECT';
+  const regionPolicy = request.regionPolicy ?? 'CANONICAL';
   if (!request.queryId.trim() || !request.category || !request.task) throw new Error('vision_observer_request_invalid');
   if (!(VISION_OBSERVER_CATEGORIES as readonly string[]).includes(request.category)) throw new Error('vision_observer_category_invalid');
   if (!(VISION_OBSERVER_TASKS as readonly string[]).includes(request.task)) throw new Error('vision_observer_task_invalid');
   if (!(VISION_OBSERVER_REASONING_MODES as readonly string[]).includes(reasoningMode)) throw new Error('vision_observer_reasoning_mode_invalid');
+  if (!(VISION_OBSERVER_REGION_POLICIES as readonly string[]).includes(regionPolicy)) throw new Error('vision_observer_region_policy_invalid');
   if (reasoningMode === 'REASONED' && request.task !== 'query') throw new Error('vision_reasoned_task_must_be_query');
   if (request.targetRegion !== undefined && request.targetRegion !== null && normalizeVisionRegion(request.targetRegion) === null) throw new Error('vision_observer_target_region_invalid');
-  return { ...request, queryId: request.queryId.trim().slice(0, 120), reasoningMode };
+  return { ...request, queryId: request.queryId.trim().slice(0, 120), reasoningMode, regionPolicy };
 }
 
 function finite01(value: unknown): value is number {
@@ -443,7 +462,7 @@ const SAFE_REGION_DIAGNOSTIC_KEYS = new Set([
   'h',
 ]);
 
-function regionDiagnosticsFor(rawRegions: unknown, normalizationFailureReason: string): VisionRegionDiagnostics {
+function regionDiagnosticsFor(rawRegions: unknown, normalizationFailureReason: string, regionPolicy: VisionObserverRegionPolicy = 'CANONICAL'): VisionRegionDiagnostics {
   const regionFieldPresent = rawRegions !== undefined;
   const regionCount = Array.isArray(rawRegions) ? rawRegions.length : null;
   const firstRegion = Array.isArray(rawRegions) ? rawRegions[0] : undefined;
@@ -453,6 +472,7 @@ function regionDiagnosticsFor(rawRegions: unknown, normalizationFailureReason: s
   const coordinateValueTypes = firstRegionObject
     ? Object.fromEntries(coordinateFieldNames.map((key) => [key, runtimeType(firstRegion[key])]))
     : {};
+  const providerRegionOutputPresent = regionFieldPresent && (Array.isArray(rawRegions) ? rawRegions.length > 0 : true);
   return {
     regionFieldPresent,
     regionCount,
@@ -462,6 +482,11 @@ function regionDiagnosticsFor(rawRegions: unknown, normalizationFailureReason: s
     coordinateFieldNames,
     coordinateValueTypes,
     normalizationFailureReason,
+    ...(regionPolicy === 'FORBID' ? {
+      regionPolicy,
+      providerRegionOutputPresent,
+      providerRegionsDiscarded: providerRegionOutputPresent,
+    } : {}),
   };
 }
 
@@ -693,11 +718,20 @@ function normalizeObservationDetailed(value: unknown, index: number, input: Visi
     ? null
     : finite01(value.measurementConfidence) ? value.measurementConfidence : null;
   if (value.measurementConfidence !== null && value.measurementConfidence !== undefined && confidence === null) return { observation: null, failureCode: 'CONFIDENCE_INVALID' };
-  const rawRegions = value.regions === undefined ? [] : value.regions;
-  if (!Array.isArray(rawRegions)) return { observation: null, failureCode: 'REGIONS_INVALID', regionDiagnostics: regionDiagnosticsFor(rawRegions, 'REGIONS_NOT_ARRAY') };
-  const regions = rawRegions.map(normalizeVisionRegion);
-  const invalidRegionIndex = regions.findIndex((region) => region === null);
-  if (invalidRegionIndex >= 0) return { observation: null, failureCode: 'REGIONS_INVALID', regionDiagnostics: regionDiagnosticsFor(rawRegions, regionNormalizationFailureReason(rawRegions[invalidRegionIndex])) };
+  const rawRegions = Object.prototype.hasOwnProperty.call(value, 'regions') ? value.regions : undefined;
+  let regions: readonly VisionRegion[];
+  let regionDiagnostics: VisionRegionDiagnostics | undefined;
+  if (request.regionPolicy === 'FORBID') {
+    if (rawRegions !== undefined) regionDiagnostics = regionDiagnosticsFor(rawRegions, 'PROVIDER_REGIONS_DISCARDED', 'FORBID');
+    regions = [];
+  } else {
+    const canonicalRegions = rawRegions === undefined ? [] : rawRegions;
+    if (!Array.isArray(canonicalRegions)) return { observation: null, failureCode: 'REGIONS_INVALID', regionDiagnostics: regionDiagnosticsFor(canonicalRegions, 'REGIONS_NOT_ARRAY') };
+    const normalizedRegions = canonicalRegions.map(normalizeVisionRegion);
+    const invalidRegionIndex = normalizedRegions.findIndex((region) => region === null);
+    if (invalidRegionIndex >= 0) return { observation: null, failureCode: 'REGIONS_INVALID', regionDiagnostics: regionDiagnosticsFor(canonicalRegions, regionNormalizationFailureReason(canonicalRegions[invalidRegionIndex])) };
+    regions = normalizedRegions as VisionRegion[];
+  }
   const limitations = value.limitations === undefined ? [] : value.limitations;
   if (!Array.isArray(limitations) || !limitations.every((item) => typeof item === 'string')) return { observation: null, failureCode: 'LIMITATIONS_INVALID' };
   const reasoningMode = request.reasoningMode ?? 'DIRECT';
@@ -716,7 +750,7 @@ function normalizeObservationDetailed(value: unknown, index: number, input: Visi
       status: value.status as VisionObservationStatus,
       ...(occlusion ? { occlusion } : {}),
       observation: value.observation.slice(0, 1200),
-      regions: regions as VisionRegion[],
+      regions,
       measurementConfidence: confidence,
       limitations: safeLimitations,
       provider,
@@ -738,6 +772,7 @@ function normalizeObservationDetailed(value: unknown, index: number, input: Visi
       },
     },
     failureCode: null,
+    ...(regionDiagnostics ? { regionDiagnostics } : {}),
   };
 }
 
@@ -751,13 +786,14 @@ function successfulObserverResult(input: VisionObserverInput, request: VisionObs
     schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     promptVersion: VISION_OBSERVER_PROMPT_VERSION,
-    prompt: buildVisionObserverPrompt(request.category),
+    prompt: buildVisionObserverPrompt(request.category, request.regionPolicy),
     provider,
     model,
     generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG,
     queryId: request.queryId,
     task: request.task,
     reasoningMode: request.reasoningMode ?? 'DIRECT',
+    regionPolicy: request.regionPolicy ?? 'CANONICAL',
     status: 'SUCCESS',
     observations,
     escalationRecommendation: decision.recommendation,
@@ -773,13 +809,14 @@ function failedObserverResult(request: VisionObserverRequest, provider: string, 
     schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     promptVersion: VISION_OBSERVER_PROMPT_VERSION,
-    prompt: buildVisionObserverPrompt(request.category),
+    prompt: buildVisionObserverPrompt(request.category, request.regionPolicy),
     provider,
     model,
     generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG,
     queryId: request.queryId,
     task: request.task,
     reasoningMode: request.reasoningMode ?? 'DIRECT',
+    regionPolicy: request.regionPolicy ?? 'CANONICAL',
     status: 'PROVIDER_FAILURE',
     observations: [],
     escalationRecommendation: 'NONE',
@@ -796,7 +833,7 @@ function buildMoondreamPayload(input: VisionObserverInput, request: VisionObserv
     return {
       task: 'query',
       image,
-      question: `${buildVisionObserverPrompt(request.category)}\n\nTASK QUESTION: ${request.question?.trim() || 'Report only applicable visual observations for this category.'}${request.targetRegion ? `\nTARGET REGION: ${JSON.stringify(request.targetRegion)}` : ''}`,
+      question: `${buildVisionObserverPrompt(request.category, request.regionPolicy)}\n\nTASK QUESTION: ${request.question?.trim() || 'Report only applicable visual observations for this category.'}${request.targetRegion ? `\nTARGET REGION: ${JSON.stringify(request.targetRegion)}` : ''}`,
       reasoning: request.reasoningMode === 'REASONED',
       temperature: VISION_OBSERVER_QUERY_GENERATION_CONFIG.temperature,
       max_tokens: VISION_OBSERVER_QUERY_GENERATION_CONFIG.maxTokens,
@@ -810,7 +847,7 @@ function buildMoondreamPayload(input: VisionObserverInput, request: VisionObserv
 function errorCategoryFrom(error: unknown): VisionObserverErrorCategory {
   const message = error instanceof Error ? error.message : '';
   const category = error instanceof CloudflareRestError ? error.category : null;
-  if (message === 'research_image_empty' || message === 'research_image_mime_invalid' || message === 'research_image_size_limit_exceeded' || message === 'vision_observer_request_invalid' || message === 'vision_observer_category_invalid' || message === 'vision_observer_task_invalid' || message === 'vision_observer_reasoning_mode_invalid' || message === 'vision_reasoned_task_must_be_query' || message === 'vision_observer_target_region_invalid') return 'INVALID_INPUT';
+  if (message === 'research_image_empty' || message === 'research_image_mime_invalid' || message === 'research_image_size_limit_exceeded' || message === 'vision_observer_request_invalid' || message === 'vision_observer_category_invalid' || message === 'vision_observer_task_invalid' || message === 'vision_observer_reasoning_mode_invalid' || message === 'vision_observer_region_policy_invalid' || message === 'vision_reasoned_task_must_be_query' || message === 'vision_observer_target_region_invalid') return 'INVALID_INPUT';
   if (message === 'observer_timeout' || category === 'TIMEOUT') return 'TIMEOUT';
   if (category === 'HTTP_AUTHENTICATION_FAILURE') return 'AUTHENTICATION_FAILURE';
   if (category === 'HTTP_RATE_LIMITED') return 'RATE_LIMITED';
@@ -874,15 +911,17 @@ function createVisionObserver(options: {
         }
         const normalizedObservations = normalized.observations.map((value, index) => normalizeObservationDetailed(value, index, input, request, options.provider, options.model, Date.now() - startedAt));
         const invalidObservation = normalizedObservations.find((value) => value.observation === null);
+        const regionTelemetry = normalizedObservations.find((value) => value.regionDiagnostics)?.regionDiagnostics;
+        const diagnosticsWithRegionTelemetry = regionTelemetry ? { ...responseDiagnostics, regionDiagnostics: regionTelemetry } : responseDiagnostics;
         if (invalidObservation) {
           return failedObserverResult(request, options.provider, options.model, 'MALFORMED_RESPONSE', Date.now() - startedAt, responseTransportDiagnostics, {
-            ...responseDiagnostics,
+            ...diagnosticsWithRegionTelemetry,
             normalizationFailureCode: invalidObservation.failureCode,
             ...(invalidObservation.invalidStatusToken ? { invalidStatusToken: invalidObservation.invalidStatusToken } : {}),
             ...(invalidObservation.regionDiagnostics ? { regionDiagnostics: invalidObservation.regionDiagnostics } : {}),
           });
         }
-        return successfulObserverResult(input, request, options.provider, options.model, normalizedObservations.map((value) => value.observation as VisionObservation), Date.now() - startedAt, responseDiagnostics, providerResponse.httpStatus);
+        return successfulObserverResult(input, request, options.provider, options.model, normalizedObservations.map((value) => value.observation as VisionObservation), Date.now() - startedAt, diagnosticsWithRegionTelemetry, providerResponse.httpStatus);
       } catch (error) {
         return failedObserverResult(request, options.provider, options.model, errorCategoryFrom(error), Date.now() - startedAt, transportDiagnosticsFrom(error));
       }
@@ -977,6 +1016,7 @@ export interface VisionObserverPassSummary {
   generationConfig: typeof VISION_OBSERVER_QUERY_GENERATION_CONFIG;
   task: VisionObserverTask;
   reasoningMode: VisionObserverReasoningMode;
+  regionPolicy: VisionObserverRegionPolicy;
   executionMs: number;
   escalationRecommendation: VisionEscalationRecommendation;
   escalationReasons: readonly VisionEscalationReason[];
@@ -1009,6 +1049,7 @@ function passSummary(result: VisionObserverResult): VisionObserverPassSummary {
     generationConfig: result.generationConfig,
     task: result.task,
     reasoningMode: result.reasoningMode,
+    regionPolicy: result.regionPolicy,
     executionMs: result.executionMs,
     escalationRecommendation: result.escalationRecommendation,
     escalationReasons: result.escalationReasons,
@@ -1020,9 +1061,9 @@ function passSummary(result: VisionObserverResult): VisionObserverPassSummary {
   };
 }
 
-export function compareVisionObserverResults(input: { sampleId: string; inputHash: string; direct: VisionObserverResult; reasoned: VisionObserverResult }): VisionObserverComparison {
+export function compareVisionObserverResults(input: { sampleId: string; inputHash: string; category: VisionObservationCategory; direct: VisionObserverResult; reasoned: VisionObserverResult }): VisionObserverComparison {
   if (input.direct.reasoningMode !== 'DIRECT' || input.reasoned.reasoningMode !== 'REASONED') throw new Error('vision_ab_reasoning_modes_invalid');
-  if (input.direct.queryId !== input.reasoned.queryId || input.direct.task !== input.reasoned.task || input.direct.protocolVersion !== input.reasoned.protocolVersion || input.direct.promptVersion !== input.reasoned.promptVersion || JSON.stringify(input.direct.generationConfig) !== JSON.stringify(input.reasoned.generationConfig)) throw new Error('vision_ab_inputs_mismatch');
+  if (input.direct.queryId !== input.reasoned.queryId || input.direct.task !== input.reasoned.task || input.direct.protocolVersion !== input.reasoned.protocolVersion || input.direct.promptVersion !== input.reasoned.promptVersion || input.direct.regionPolicy !== input.reasoned.regionPolicy || JSON.stringify(input.direct.generationConfig) !== JSON.stringify(input.reasoned.generationConfig)) throw new Error('vision_ab_inputs_mismatch');
   const directStatuses = new Set(input.direct.observations.map((observation) => `${observation.category}:${observation.status}`));
   const reasonedStatuses = new Set(input.reasoned.observations.map((observation) => `${observation.category}:${observation.status}`));
   const contradictory = [...directStatuses].some((status) => {
@@ -1030,13 +1071,12 @@ export function compareVisionObserverResults(input: { sampleId: string; inputHas
     const opposite = value === 'OBSERVED' ? 'NOT_OBSERVED' : value === 'NOT_OBSERVED' ? 'OBSERVED' : null;
     return opposite !== null && reasonedStatuses.has(`${category}:${opposite}`);
   });
-  const category = input.direct.observations[0]?.category ?? input.reasoned.observations[0]?.category ?? 'SCENE_INVENTORY';
   return {
     schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     sampleId: input.sampleId,
     inputHash: input.inputHash,
     queryId: input.direct.queryId,
-    category,
+    category: input.category,
     protocolVersion: input.direct.protocolVersion,
     direct: passSummary(input.direct),
     reasoned: passSummary(input.reasoned),

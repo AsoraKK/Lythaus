@@ -25,8 +25,8 @@ import { WP004A_CLOUDFLARE_TRIAL_MODES } from './wp004a-cloudflare-trial-config.
 const TRIAL_MODES = WP004A_CLOUDFLARE_TRIAL_MODES;
 
 const RELATIONAL_FIXTURE_SPEC = 'research/wp004a/geometry-occlusion-fixture-v1.json';
-const FRONTBACK_RUNTIME_SPEC = 'research/wp004a/geometry-occlusion-frontback-runtime-v1.json';
-const FRONTBACK_TRUTH_SPEC = 'research/wp004a/geometry-occlusion-frontback-truth-v1.json';
+const FRONTBACK_RUNTIME_SPEC = 'research/wp004a/geometry-occlusion-frontback-runtime-v2.json';
+const FRONTBACK_TRUTH_SPEC = 'research/wp004a/geometry-occlusion-frontback-truth-v2.json';
 
 function parseArgs(argv) {
   const options = { trial: '0C', image: null, frontbackDir: null, output: null, allowNetwork: false };
@@ -105,6 +105,7 @@ function safeObserverResult(observer) {
     queryId: observer.queryId,
     task: observer.task,
     reasoningMode: observer.reasoningMode,
+    regionPolicy: observer.regionPolicy,
     generationConfig: observer.generationConfig,
     status: observer.status,
     observations: observer.observations.map(safeObservation),
@@ -137,6 +138,7 @@ function safeComparison(comparison) {
       promptVersion: comparison.direct.promptVersion,
       task: comparison.direct.task,
       reasoningMode: comparison.direct.reasoningMode,
+      regionPolicy: comparison.direct.regionPolicy,
       generationConfig: comparison.direct.generationConfig,
       executionMs: comparison.direct.executionMs,
       escalationRecommendation: comparison.direct.escalationRecommendation,
@@ -155,6 +157,7 @@ function safeComparison(comparison) {
       promptVersion: comparison.reasoned.promptVersion,
       task: comparison.reasoned.task,
       reasoningMode: comparison.reasoned.reasoningMode,
+      regionPolicy: comparison.reasoned.regionPolicy,
       generationConfig: comparison.reasoned.generationConfig,
       executionMs: comparison.reasoned.executionMs,
       escalationRecommendation: comparison.reasoned.escalationRecommendation,
@@ -222,11 +225,11 @@ try {
     frontbackTruthSpec = JSON.parse(await readFile(path.resolve(FRONTBACK_TRUTH_SPEC), 'utf8'));
     if (!Array.isArray(frontbackRuntimeSpec.entries) || frontbackRuntimeSpec.entries.length !== 2) throw new Error('geometry_frontback_runtime_entries_invalid');
     if (!Array.isArray(frontbackTruthSpec.entries) || frontbackTruthSpec.entries.length !== 2) throw new Error('geometry_frontback_truth_entries_invalid');
+    if (/BLUE_FRONT|RED_FRONT/.test(JSON.stringify(frontbackRuntimeSpec))) throw new Error('geometry_frontback_runtime_truth_label_present');
+    if (frontbackRuntimeSpec.observerInput?.truthProvided !== false || frontbackRuntimeSpec.observerInput?.regionPolicy !== 'FORBID') throw new Error('geometry_frontback_runtime_observer_input_invalid');
     for (const entry of frontbackRuntimeSpec.entries) {
       const entryBytes = new Uint8Array(await readFile(path.resolve(options.frontbackDir, entry.path)));
-      const front = entry.sampleId.includes('_BLUE_FRONT_') ? 'BLUE' : entry.sampleId.includes('_RED_FRONT_') ? 'RED' : null;
-      if (!front) throw new Error(`geometry_frontback_variant_missing:${entry.sampleId}`);
-      const validation = await validateGeometryOcclusionFrontBackPng(entryBytes, front);
+      const validation = await validateGeometryOcclusionFrontBackPng(entryBytes);
       if (!validation.valid) throw new Error(`geometry_frontback_fixture_invalid:${entry.sampleId}:${validation.reason}`);
       if (validation.sha256 !== entry.sha256) throw new Error(`geometry_frontback_fixture_hash_mismatch:${entry.sampleId}`);
       sampleBytes.set(entry.sampleId, entryBytes);
@@ -253,7 +256,7 @@ try {
     entries: runtimeEntries,
   };
   const observerRequest = frontbackTrial
-    ? { queryId: frontbackRuntimeSpec.observerInput.queryId, category: frontbackRuntimeSpec.observerInput.category, task: frontbackRuntimeSpec.observerInput.task, question: frontbackRuntimeSpec.observerInput.question, reasoningMode: 'DIRECT' }
+    ? { queryId: frontbackRuntimeSpec.observerInput.queryId, category: frontbackRuntimeSpec.observerInput.category, task: frontbackRuntimeSpec.observerInput.task, question: frontbackRuntimeSpec.observerInput.question, regionPolicy: frontbackRuntimeSpec.observerInput.regionPolicy, reasoningMode: 'DIRECT' }
     : relationalTrial
     ? { queryId: 'GEOMETRY_OCCLUSION_01', category: 'GEOMETRY_OCCLUSION', task: 'query', question: 'Inspect the visible overlap relationship between the two primary coloured rectangular shapes. Report only visible geometry. Determine whether one rectangle visibly occludes part of the other, which rectangle appears in front in the overlap region, whether the visible intersection is geometrically consistent, or whether the evidence is insufficient to decide. The separate circular object may be described only if relevant to the geometry assessment. Do not infer image origin. Do not determine whether the image is AI-generated.' }
     : { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the visible scene elements without making an origin or authenticity judgment.' };
@@ -295,15 +298,16 @@ try {
     : null;
   const frontbackDirectEvaluations = frontbackEvaluations?.map((item) => item.direct) ?? [];
   const frontbackReasonedEvaluations = frontbackEvaluations?.map((item) => item.reasoned) ?? [];
-  const frontbackDirectAggregate = frontbackTrial ? summarizeGeometryFrontBackEvaluations(frontbackDirectEvaluations) : null;
-  const frontbackReasonedAggregate = frontbackTrial ? summarizeGeometryFrontBackEvaluations(frontbackReasonedEvaluations) : null;
+  const truthFrontByFixture = frontbackTrial ? new Map(frontbackTruthSpec.entries.map((entry) => [entry.fixtureId, entry.truth.front])) : undefined;
+  const frontbackDirectAggregate = frontbackTrial ? summarizeGeometryFrontBackEvaluations(frontbackDirectEvaluations, truthFrontByFixture) : null;
+  const frontbackReasonedAggregate = frontbackTrial ? summarizeGeometryFrontBackEvaluations(frontbackReasonedEvaluations, truthFrontByFixture) : null;
   const summary = {
     schemaVersion: result.schemaVersion,
     trial: options.trial,
     mode: result.mode,
     caseCount: result.cases.length,
     fixture: relationalTrial ? { fixtureId: relationalSpec.fixtureId, fixtureVersion: relationalSpec.version, generatorVersion: relationalSpec.generatorVersion, format: relationalSpec.format, dimensions: relationalSpec.dimensions, sha256: relationalSpec.sha256 } : frontbackTrial ? { fixtureVersion: frontbackRuntimeSpec.fixtureVersion, generatorVersion: frontbackRuntimeSpec.generatorVersion, format: frontbackRuntimeSpec.format, dimensions: frontbackRuntimeSpec.dimensions, construction: frontbackRuntimeSpec.construction, entries: frontbackRuntimeSpec.entries.map((entry) => ({ sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, path: entry.path, sha256: entry.sha256 })) } : null,
-    inputControl: relationalTrial || frontbackTrial ? { queryId: observerRequest.queryId, category: observerRequest.category, task: observerRequest.task, question: observerRequest.question, promptVersion: VISION_OBSERVER_PROMPT_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG } : null,
+    inputControl: relationalTrial || frontbackTrial ? { queryId: observerRequest.queryId, category: observerRequest.category, task: observerRequest.task, question: observerRequest.question, regionPolicy: observerRequest.regionPolicy ?? 'CANONICAL', promptVersion: VISION_OBSERVER_PROMPT_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG } : null,
     cases: result.cases.map((item) => ({
       sampleId: item.sampleId,
       inputHash: item.inputHash,

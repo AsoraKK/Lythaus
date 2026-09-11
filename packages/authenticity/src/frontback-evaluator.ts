@@ -115,9 +115,9 @@ export function evaluateGeometryFrontBackObservation(input: {
   };
 }
 
-export function summarizeGeometryFrontBackEvaluations(evaluations: readonly GeometryFrontBackEvaluation[]): GeometryFrontBackAggregate {
+export function summarizeGeometryFrontBackEvaluations(evaluations: readonly GeometryFrontBackEvaluation[], truthFrontByFixture: ReadonlyMap<string, FrontBackColour> = new Map()): GeometryFrontBackAggregate {
   const selected = evaluations.filter((evaluation) => evaluation.canonicalProtocolValid && evaluation.selectedRelation !== null && evaluation.selectedRelation !== 'INDETERMINATE');
-  const truthFronts = new Set(evaluations.map((evaluation) => evaluation.fixtureId.includes('_BLUE_FRONT_') ? 'BLUE' : evaluation.fixtureId.includes('_RED_FRONT_') ? 'RED' : null).filter((value): value is FrontBackColour => value !== null));
+  const truthFronts = new Set(evaluations.map((evaluation) => truthFrontByFixture.get(evaluation.fixtureId) ?? null).filter((value): value is FrontBackColour => value !== null));
   const selectedRelations = new Set(selected.map((evaluation) => evaluation.selectedRelation));
   return {
     correct: evaluations.filter((evaluation) => evaluation.outcome === 'CORRECT').length,
