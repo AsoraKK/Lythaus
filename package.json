@@ -73,7 +73,7 @@
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.41.0",
     "@redocly/cli": "^2.51.2",
-    "@stoplight/spectral-cli": "6.15.0",
+    "@stoplight/spectral-cli": "6.16.3",
     "@types/jest": "^30.0.0",
     "@types/pg": "^8.23.1",
     "ajv": "^8.17.1",
