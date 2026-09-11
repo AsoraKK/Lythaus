@@ -2,6 +2,37 @@ import { createDecisionAudit, type ModerationDecision, type ModerationResult } f
 import type { AuthenticityContentKind } from './types.ts';
 import { uuidv7, type UUIDv7 } from './uuid.ts';
 
+export const MODERATION_PROVIDER_EVIDENCE_SCHEMA_VERSION = 'lythaus-moderation-provider-evidence-v1' as const;
+
+export type ModerationProviderEvidenceStatus = 'SUCCESS' | 'PROVIDER_FAILURE';
+
+export type ModerationProviderErrorCategory =
+  | 'MISSING_CREDENTIAL'
+  | 'EMPTY_INPUT'
+  | 'INVALID_MIME'
+  | 'IMAGE_SIZE_LIMIT_EXCEEDED'
+  | 'HTTP_AUTHENTICATION_FAILURE'
+  | 'HTTP_RATE_LIMITED'
+  | 'HTTP_SERVER_FAILURE'
+  | 'HTTP_FAILURE'
+  | 'TIMEOUT'
+  | 'NETWORK_FAILURE'
+  | 'MALFORMED_RESPONSE'
+  | 'UNEXPECTED_SCHEMA';
+
+export interface ModerationProviderEvidence {
+  schemaVersion: typeof MODERATION_PROVIDER_EVIDENCE_SCHEMA_VERSION;
+  provider: string;
+  model: string;
+  flagged: boolean | null;
+  categories: Readonly<Record<string, boolean>>;
+  categoryScores: Readonly<Record<string, number>>;
+  categoryAppliedInputTypes: Readonly<Record<string, readonly string[]>>;
+  executionMs: number;
+  status: ModerationProviderEvidenceStatus;
+  errorCategory?: ModerationProviderErrorCategory;
+}
+
 export interface ModerationTextInput {
   caseId: UUIDv7;
   text: string;
@@ -27,12 +58,35 @@ export interface ModerationAnalysis {
   modelVersion: string | null;
   executionMs: number;
   costEstimateUsd: number;
+  providerEvidence?: ModerationProviderEvidence;
 }
 
 export interface ModerationProvider {
   analyseText(input: ModerationTextInput): Promise<ModerationAnalysis>;
   analyseImage(input: ModerationImageInput): Promise<ModerationAnalysis>;
   analyseVideoFrame(input: ModerationVideoFrameInput): Promise<ModerationAnalysis>;
+}
+
+export interface MockModerationProviderOptions {
+  analyse?: (input: ModerationTextInput | ModerationImageInput | ModerationVideoFrameInput) => ModerationAnalysis | Promise<ModerationAnalysis>;
+}
+
+export function createMockModerationProvider(options: MockModerationProviderOptions = {}): ModerationProvider & { isLive: false } {
+  const analyse = options.analyse ?? (async () => ({
+    provider: 'mock-moderation',
+    result: 'ALLOW' as const,
+    reasonCodes: ['MOCK_PROVIDER'],
+    modelVersion: 'mock-v1',
+    executionMs: 0,
+    costEstimateUsd: 0,
+  }));
+  const run = async (input: ModerationTextInput | ModerationImageInput | ModerationVideoFrameInput): Promise<ModerationAnalysis> => analyse(input);
+  return {
+    isLive: false,
+    analyseText: run,
+    analyseImage: run,
+    analyseVideoFrame: run,
+  };
 }
 
 export function unavailableModerationProvider(provider = 'unconfigured'): ModerationProvider {

@@ -1,0 +1,42 @@
+name: WP004A Cloudflare REST research smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      trial:
+        description: 'Bounded research trial'
+        required: true
+        default: '0C'
+        type: choice
+        options:
+          - '0C'
+          - '0C-R'
+          - '0C-AB'
+          - '0D'
+          - '0D-R'
+
+permissions:
+  contents: read
+
+jobs:
+  cloudflare_rest_smoke:
+    name: Bounded Cloudflare REST research call
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Generate deterministic neutral PNG
+        run: node scripts/authenticity/create-neutral-png.mjs .artifacts/wp004a-neutral.png
+      - name: Run selected bounded trial
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-smoke.mjs --trial '${{ inputs.trial }}' --image .artifacts/wp004a-neutral.png --allow-network

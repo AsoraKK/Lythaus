@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "lythaus-wp004a-runtime-manifest-v1",
+  "manifestType": "RUNTIME",
+  "entries": [
+    {
+      "sampleId": "CAM_001",
+      "sourceFamilyId": "CAM_001",
+      "path": "originals/example.jpg",
+      "rightsClass": "C",
+      "evaluationAllowed": true,
+      "provenanceAssertion": "OWNER_ASSERTED_CAMERA_ORIGINAL"
+    }
+  ]
+}

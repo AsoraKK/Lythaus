@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "lythaus-wp004a-ground-truth-manifest-v1",
+  "manifestType": "GROUND_TRUTH",
+  "entries": [
+    {
+      "sampleId": "CAM_001",
+      "truth": {
+        "physicalCameraAcquisition": true,
+        "syntheticContent": false,
+        "screenRecapture": false,
+        "digitalScreenshot": false,
+        "localManipulation": false,
+        "originClass": "CAMERA_NATIVE",
+        "truthBasis": "OWNER_ASSERTED"
+      }
+    }
+  ]
+}
