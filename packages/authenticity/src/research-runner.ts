@@ -126,7 +126,7 @@ export interface ResearchCaseResult {
   caseId: string;
   inputHash: string | null;
   status: 'COMPLETED' | 'STOPPED' | 'FAILED';
-  stoppedAt: 'SAFETY_GATE' | null;
+  stoppedAt: 'SAFETY_GATE' | 'MODERATION_PROVIDER_FAILURE' | null;
   preflight: (PacketPreflight & { signatureMime: string | null; format: string | null; readable: boolean }) | null;
   moderation: ModerationAnalysis | null;
   observer: VisionObserverResult | null;
@@ -436,7 +436,12 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
     }
 
     const moderationFailed = moderationResult === null || moderationResult.result === 'PROVIDER_FAILURE';
-    if ((mode === 'FULL' || mode === 'FULL_RECHECK' || mode === 'MOCK_ONLY') && safetyMode === 'gate' && (moderationResult?.result === 'BLOCK' || moderationFailed)) {
+    const fullPipelineMode = mode === 'FULL' || mode === 'FULL_RECHECK' || mode === 'MOCK_ONLY';
+    if (usesModeration && moderationFailed) failedComponents.push('moderation');
+    if (fullPipelineMode && moderationFailed) {
+      status = 'STOPPED';
+      stoppedAt = safetyMode === 'gate' ? 'SAFETY_GATE' : 'MODERATION_PROVIDER_FAILURE';
+    } else if (fullPipelineMode && safetyMode === 'gate' && moderationResult?.result === 'BLOCK') {
       status = 'STOPPED';
       stoppedAt = 'SAFETY_GATE';
     } else {
