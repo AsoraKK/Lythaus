@@ -1,5 +1,5 @@
 import { assertEvidencePacket, assertEvidenceReferenceIds, packetReferenceIds, type EvidencePacket } from './evidence-packet.ts';
-import { type CloudflareRestTransport } from './cloudflare-rest.ts';
+import { CloudflareRestError, type CloudflareRestErrorCategory, type CloudflareRestTransport } from './cloudflare-rest.ts';
 import { CLOUDFLARE_REASONER_MODEL } from './research-config.ts';
 import { isReasonedRecheckReasonAllowed, VISION_ESCALATION_REASONS, VISION_OBSERVER_CATEGORIES } from './vision-observer.ts';
 import type { CloudflareAiRunOptions, VisionEscalationReason, VisionObservationCategory, VisionRegion } from './vision-observer.ts';
@@ -77,6 +77,10 @@ export interface JudgeResult {
   recommendation: JudgeRecommendation | null;
   executionMs: number;
   errorCategory?: JudgeErrorCategory;
+  httpStatus?: number | null;
+  transportErrorCategory?: CloudflareRestErrorCategory | null;
+  providerErrorCode?: number | string | null;
+  providerErrorMessageCode?: string | null;
 }
 
 export interface Judge {
@@ -264,7 +268,7 @@ export function buildJudgeRequest(packet: EvidencePacket): { messages: readonly 
   };
 }
 
-function failedJudgeResult(provider: string, model: string, errorCategory: JudgeErrorCategory, executionMs: number): JudgeResult {
+function failedJudgeResult(provider: string, model: string, errorCategory: JudgeErrorCategory, executionMs: number, diagnostics: Pick<JudgeResult, 'httpStatus' | 'transportErrorCategory' | 'providerErrorCode' | 'providerErrorMessageCode'> = {}): JudgeResult {
   return {
     schemaVersion: JUDGE_RESULT_SCHEMA_VERSION,
     promptVersion: JUDGE_PROMPT_VERSION,
@@ -275,6 +279,7 @@ function failedJudgeResult(provider: string, model: string, errorCategory: Judge
     recommendation: null,
     executionMs,
     errorCategory,
+    ...diagnostics,
   };
 }
 
@@ -322,16 +327,22 @@ export function createCloudflareJudgeRest(options: { transport: CloudflareRestTr
     isLive: true,
     async judge(input): Promise<JudgeResult> {
       const startedAt = Date.now();
+      let httpStatus: number | null = null;
       try {
         const request = buildJudgeRequest(input.packet);
-        const raw = (await options.transport.run({ kind: 'JUDGE', model, payload: request })).result;
+        const providerResponse = await options.transport.run({ kind: 'JUDGE', model, payload: request });
+        httpStatus = providerResponse.httpStatus;
+        const raw = providerResponse.result;
         const parsed = parseJson(raw);
         const recommendation = parseRecommendation(parsed, input.packet);
-        return { schemaVersion: JUDGE_RESULT_SCHEMA_VERSION, promptVersion: JUDGE_PROMPT_VERSION, prompt: JUDGE_SYSTEM_PROMPT, provider, model, status: 'SUCCESS', recommendation, executionMs: Date.now() - startedAt };
+        return { schemaVersion: JUDGE_RESULT_SCHEMA_VERSION, promptVersion: JUDGE_PROMPT_VERSION, prompt: JUDGE_SYSTEM_PROMPT, provider, model, status: 'SUCCESS', recommendation, executionMs: Date.now() - startedAt, httpStatus };
       } catch (error) {
         const message = error instanceof Error ? error.message : '';
         const category: JudgeErrorCategory = message.startsWith('judge_') || message === 'evidence_packet_schema_invalid' ? 'UNEXPECTED_SCHEMA' : message.includes('timeout') ? 'TIMEOUT' : 'NETWORK_FAILURE';
-        return failedJudgeResult(provider, model, category, Date.now() - startedAt);
+        const diagnostics = error instanceof CloudflareRestError
+          ? { httpStatus: error.httpStatus, transportErrorCategory: error.category, providerErrorCode: error.providerErrorCode, providerErrorMessageCode: error.providerErrorMessageCode }
+          : { httpStatus };
+        return failedJudgeResult(provider, model, category, Date.now() - startedAt, diagnostics);
       }
     },
   };

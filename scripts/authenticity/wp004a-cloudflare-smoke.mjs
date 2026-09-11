@@ -72,6 +72,140 @@ function safeObservation(observation) {
   };
 }
 
+function safeModerationResult(moderation) {
+  if (!moderation) return null;
+  const providerEvidence = moderation.providerEvidence;
+  return {
+    provider: moderation.provider,
+    modelVersion: moderation.modelVersion,
+    result: moderation.result,
+    reasonCodes: moderation.reasonCodes,
+    executionMs: moderation.executionMs,
+    costEstimateUsd: moderation.costEstimateUsd,
+    providerEvidence: providerEvidence ? {
+      schemaVersion: providerEvidence.schemaVersion,
+      provider: providerEvidence.provider,
+      model: providerEvidence.model,
+      flagged: providerEvidence.flagged,
+      categoryNames: Object.keys(providerEvidence.categories ?? {}).sort(),
+      flaggedCategoryNames: Object.entries(providerEvidence.categories ?? {}).filter(([, flagged]) => flagged === true).map(([name]) => name).sort(),
+      appliedInputTypeCategoryNames: Object.keys(providerEvidence.categoryAppliedInputTypes ?? {}).sort(),
+      executionMs: providerEvidence.executionMs,
+      status: providerEvidence.status,
+      errorCategory: providerEvidence.errorCategory ?? null,
+      httpStatus: providerEvidence.httpStatus ?? null,
+      errorType: providerEvidence.errorType ?? null,
+      errorCode: providerEvidence.errorCode ?? null,
+      errorParam: providerEvidence.errorParam ?? null,
+    } : null,
+  };
+}
+
+function safeEvidenceProvenance(provenance) {
+  return {
+    evidenceFamily: provenance.evidenceFamily,
+    sourceComponent: provenance.sourceComponent,
+    provider: provenance.provider,
+    modelVersion: provenance.modelVersion,
+    schemaVersion: provenance.schemaVersion,
+    executionTimestamp: provenance.executionTimestamp,
+    inputHash: provenance.inputHash,
+    applicable: provenance.applicable,
+    limitations: provenance.limitations,
+  };
+}
+
+function safePacketSummary(packet) {
+  if (!packet) return null;
+  return {
+    schemaVersion: packet.schemaVersion,
+    packetId: packet.packetId,
+    runId: packet.runId,
+    caseId: packet.caseId,
+    sampleId: packet.sampleId,
+    sourceFamilyId: packet.sourceFamilyId,
+    inputHash: packet.inputHash,
+    dimensions: packet.dimensions,
+    mime: packet.mime,
+    transformationState: {
+      operation: packet.transformationState.operation,
+      version: packet.transformationState.version,
+      sourceFamilyId: packet.transformationState.sourceFamilyId,
+    },
+    executionTimestamp: packet.executionTimestamp,
+    schemaVersions: packet.schemaVersions,
+    originAxes: packet.originAxes,
+    safetyContext: {
+      role: packet.safetyContext.role,
+      contextId: packet.safetyContext.contextId,
+      provider: packet.safetyContext.provider,
+      model: packet.safetyContext.model,
+      canonicalResult: packet.safetyContext.canonicalResult,
+      providerEvidence: packet.safetyContext.providerEvidence ? {
+        schemaVersion: packet.safetyContext.providerEvidence.schemaVersion,
+        provider: packet.safetyContext.providerEvidence.provider,
+        model: packet.safetyContext.providerEvidence.model,
+        flagged: packet.safetyContext.providerEvidence.flagged,
+        categoryNames: Object.keys(packet.safetyContext.providerEvidence.categories ?? {}).sort(),
+        flaggedCategoryNames: Object.entries(packet.safetyContext.providerEvidence.categories ?? {}).filter(([, flagged]) => flagged === true).map(([name]) => name).sort(),
+        executionMs: packet.safetyContext.providerEvidence.executionMs,
+        status: packet.safetyContext.providerEvidence.status,
+      } : null,
+      quality: packet.safetyContext.quality,
+      limitations: packet.safetyContext.limitations,
+    },
+    evidenceFamilies: Object.fromEntries(Object.entries(packet.evidenceFamilies).map(([family, summary]) => [family, {
+      family: summary.family,
+      status: summary.status,
+      evidenceIds: summary.evidenceIds,
+      limitations: summary.limitations,
+    }])),
+    evidence: packet.evidence.map((item) => ({
+      evidenceId: item.evidenceId,
+      family: item.family,
+      kind: item.kind,
+      name: item.name,
+      quality: item.quality,
+      provenance: safeEvidenceProvenance(item.provenance),
+    })),
+    observations: packet.observations.map(safeObservation),
+    observationHistory: packet.observationHistory.map(safeObservation),
+    quality: packet.quality,
+    enforcementAuthority: packet.enforcementAuthority,
+  };
+}
+
+function safeJudgeResult(judge) {
+  if (!judge) return null;
+  const recommendation = judge.recommendation;
+  return {
+    schemaVersion: judge.schemaVersion,
+    promptVersion: judge.promptVersion,
+    provider: judge.provider,
+    model: judge.model,
+    status: judge.status,
+    executionMs: judge.executionMs,
+    errorCategory: judge.errorCategory ?? null,
+    httpStatus: judge.httpStatus ?? null,
+    transportErrorCategory: judge.transportErrorCategory ?? null,
+    providerErrorCode: judge.providerErrorCode ?? null,
+    providerErrorMessageCode: judge.providerErrorMessageCode ?? null,
+    recommendation: recommendation ? {
+      schemaVersion: recommendation.schemaVersion,
+      primaryHypothesis: recommendation.primaryHypothesis,
+      alternativeHypotheses: recommendation.alternativeHypotheses,
+      supportingEvidence: recommendation.supportingEvidence,
+      contradictoryEvidence: recommendation.contradictoryEvidence,
+      missingEvidence: recommendation.missingEvidence,
+      uncertainty: recommendation.uncertainty,
+      requiresReview: recommendation.requiresReview,
+      recommendedAdditionalTests: recommendation.recommendedAdditionalTests,
+      rationale: recommendation.rationale,
+      enforcementAuthority: recommendation.enforcementAuthority,
+    } : null,
+  };
+}
+
 function safeResponseDiagnostics(diagnostics) {
   if (!diagnostics) return null;
   return {
@@ -259,7 +393,7 @@ try {
     ? { queryId: frontbackRuntimeSpec.observerInput.queryId, category: frontbackRuntimeSpec.observerInput.category, task: frontbackRuntimeSpec.observerInput.task, question: frontbackRuntimeSpec.observerInput.question, regionPolicy: frontbackRuntimeSpec.observerInput.regionPolicy, reasoningMode: 'DIRECT' }
     : relationalTrial
     ? { queryId: 'GEOMETRY_OCCLUSION_01', category: 'GEOMETRY_OCCLUSION', task: 'query', question: 'Inspect the visible overlap relationship between the two primary coloured rectangular shapes. Report only visible geometry. Determine whether one rectangle visibly occludes part of the other, which rectangle appears in front in the overlap region, whether the visible intersection is geometrically consistent, or whether the evidence is insufficient to decide. The separate circular object may be described only if relevant to the geometry assessment. Do not infer image origin. Do not determine whether the image is AI-generated.' }
-    : { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the visible scene elements without making an origin or authenticity judgment.' };
+    : { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the visible scene elements without making an origin or authenticity judgment.', regionPolicy: 'FORBID' };
   const result = await runResearchTrial({
     mode,
     runtimeManifest,
@@ -307,13 +441,18 @@ try {
     mode: result.mode,
     caseCount: result.cases.length,
     fixture: relationalTrial ? { fixtureId: relationalSpec.fixtureId, fixtureVersion: relationalSpec.version, generatorVersion: relationalSpec.generatorVersion, format: relationalSpec.format, dimensions: relationalSpec.dimensions, sha256: relationalSpec.sha256 } : frontbackTrial ? { fixtureVersion: frontbackRuntimeSpec.fixtureVersion, generatorVersion: frontbackRuntimeSpec.generatorVersion, format: frontbackRuntimeSpec.format, dimensions: frontbackRuntimeSpec.dimensions, construction: frontbackRuntimeSpec.construction, entries: frontbackRuntimeSpec.entries.map((entry) => ({ sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, path: entry.path, sha256: entry.sha256 })) } : null,
-    inputControl: relationalTrial || frontbackTrial ? { queryId: observerRequest.queryId, category: observerRequest.category, task: observerRequest.task, question: observerRequest.question, regionPolicy: observerRequest.regionPolicy ?? 'CANONICAL', promptVersion: VISION_OBSERVER_PROMPT_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG } : null,
+    inputControl: { queryId: observerRequest.queryId, category: observerRequest.category, task: observerRequest.task, question: observerRequest.question, regionPolicy: observerRequest.regionPolicy ?? 'CANONICAL', promptVersion: VISION_OBSERVER_PROMPT_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG },
     cases: result.cases.map((item) => ({
       sampleId: item.sampleId,
       inputHash: item.inputHash,
       status: item.status,
+      stoppedAt: item.stoppedAt,
+      moderation: safeModerationResult(item.moderation),
       observer: safeObserverResult(item.observer),
       observerComparison: safeComparison(item.observerComparison),
+      packet: safePacketSummary(item.packet),
+      judge: safeJudgeResult(item.judge),
+      judgeHistory: item.judgeHistory.map(safeJudgeResult),
       recheckRounds: item.recheckRounds,
     })),
     relationalEvaluation: relationalEvaluation ? { direct: safeRelationalEvaluation(relationalEvaluation.direct), reasoned: safeRelationalEvaluation(relationalEvaluation.reasoned), classification: classifyGeometryOcclusionComparison(relationalEvaluation) } : null,

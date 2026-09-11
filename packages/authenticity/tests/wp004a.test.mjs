@@ -1292,6 +1292,89 @@ test('runner hard-stops invocation caps and gate mode prevents expensive downstr
   assert.equal(observerCalls, 1);
 });
 
+test('FULL 0D composes decoded forensics, direct Observer, packet, and one conservative Judge pass', async () => {
+  let capturedPacket = null;
+  let capturedJudgeRequest = null;
+  const observer = {
+    isLive: false,
+    observe: async (input) => {
+      assert.equal(input.request.regionPolicy, 'FORBID');
+      return createMockVisionObserver([{
+        category: 'SCENE_INVENTORY',
+        applicable: true,
+        status: 'OBSERVED',
+        observation: 'A uniform neutral field is visible.',
+        regions: [],
+        measurementConfidence: null,
+        limitations: [],
+      }]).observe(input);
+    },
+  };
+  const judge = {
+    isLive: false,
+    judge: async ({ packet: inputPacket }) => {
+      capturedPacket = inputPacket;
+      capturedJudgeRequest = buildJudgeRequest(inputPacket);
+      assertSafetyIsolation(inputPacket);
+      assert.equal(inputPacket.safetyContext.role, 'SAFETY_CONTEXT_ONLY');
+      assert.equal(inputPacket.enforcementAuthority, false);
+      assert.equal(capturedJudgeRequest.messages[1].content.includes('groundTruth'), false);
+      assert.equal(capturedJudgeRequest.messages[1].content.includes('rawReasoning'), false);
+      return createMockJudge().judge({ packet: inputPacket });
+    },
+  };
+  const result = await runResearchTrial({
+    mode: 'FULL',
+    runtimeManifest: manifest(1),
+    maxSamples: 1,
+    observerRequest: { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the visible scene without making an origin judgment.', regionPolicy: 'FORBID' },
+    caps: { maxSamples: 1, maxModerationCalls: 1, maxObserverCalls: 1, maxObserverDirectCalls: 1, maxObserverReasonedCalls: 0, maxJudgeCalls: 1, maxTotalCalls: 3, maxRecheckRounds: 1 },
+  }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async () => decodedFixture(),
+    moderation: createMockModerationProvider(),
+    observer,
+    judge,
+  });
+  const current = result.cases[0];
+  assert.equal(current.status, 'COMPLETED');
+  assert.equal(current.stoppedAt, null);
+  assert.equal(current.packet, capturedPacket);
+  assert.equal(current.packet.evidenceFamilies.EF1_FILE_PROVENANCE.status, 'AVAILABLE');
+  assert.equal(current.packet.evidenceFamilies.EF2_PHYSICAL_ACQUISITION.status, 'AVAILABLE');
+  assert.equal(current.packet.evidenceFamilies.EF3_GENERATIVE_FORENSICS.status, 'UNAVAILABLE');
+  assert.equal(current.packet.evidenceFamilies.EF4_SPECTRAL_STABILITY.status, 'AVAILABLE');
+  assert.equal(current.packet.evidenceFamilies.EF5_RECONSTRUCTION_LOCAL_MANIPULATION.status, 'UNAVAILABLE');
+  assert.equal(current.packet.quality.overall, 'PARTIAL');
+  assert.equal(current.packet.quality.missingEvidenceFamilies.includes('EF3_GENERATIVE_FORENSICS'), true);
+  assert.equal(current.packet.quality.missingEvidenceFamilies.includes('EF5_RECONSTRUCTION_LOCAL_MANIPULATION'), true);
+  assert.equal(current.judge.status, 'SUCCESS');
+  assert.equal(current.judge.recommendation.primaryHypothesis, 'INSUFFICIENT_EVIDENCE');
+  assert.equal(current.judge.recommendation.enforcementAuthority, false);
+  assert.deepEqual(result.invocationAccounting.calls, { moderation: 1, observer: 1, observerDirect: 1, observerReasoned: 0, caption: 0, detect: 0, point: 0, judge: 1, total: 3 });
+  assert.equal(result.invocationAccounting.retries, 0);
+});
+
+test('FULL observe mode stops on moderation provider failure before expensive downstream calls', async () => {
+  const calls = { decode: 0, forensic: 0, observer: 0, judge: 0 };
+  const result = await runResearchTrial({ mode: 'FULL', runtimeManifest: manifest(1), maxSamples: 1, safetyMode: 'observe', caps: { maxSamples: 1, maxModerationCalls: 1, maxObserverCalls: 1, maxObserverDirectCalls: 1, maxObserverReasonedCalls: 0, maxJudgeCalls: 1, maxTotalCalls: 3, maxRecheckRounds: 1 } }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async () => { calls.decode += 1; return decodedFixture(); },
+    forensicGenerator: async () => { calls.forensic += 1; throw new Error('must-not-run'); },
+    moderation: createMockModerationProvider({ analyse: async () => ({ provider: 'fixture-moderation', result: 'PROVIDER_FAILURE', reasonCodes: ['fixture'], modelVersion: null, executionMs: 1, costEstimateUsd: 0 }) }),
+    observer: { isLive: false, observe: async () => { calls.observer += 1; return createMockVisionObserver().observe({ sampleId: 'SAMPLE', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: pngFixture() }); } },
+    judge: { isLive: false, judge: async () => { calls.judge += 1; return createMockJudge().judge({ packet: packet() }); } },
+  });
+  const current = result.cases[0];
+  assert.equal(current.status, 'STOPPED');
+  assert.equal(current.stoppedAt, 'MODERATION_PROVIDER_FAILURE');
+  assert.equal(current.packet.quality.overall, 'FAILED');
+  assert.equal(current.packet.quality.failedComponents.includes('moderation'), true);
+  assert.deepEqual(calls, { decode: 0, forensic: 0, observer: 0, judge: 0 });
+  assert.deepEqual(result.invocationAccounting.calls, { moderation: 1, observer: 0, observerDirect: 0, observerReasoned: 0, caption: 0, detect: 0, point: 0, judge: 0, total: 1 });
+  assert.equal(researchRunExitCode(result), 1);
+});
+
 test('observer A/B mode uses identical inputs, records two bounded calls, and exposes descriptive metrics only', async () => {
   let observerCalls = 0;
   const result = await runResearchTrial({
