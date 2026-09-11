@@ -9,6 +9,13 @@ import { CLOUDFLARE_VISION_OBSERVER_MODEL } from './research-config.ts';
 
 export const CLOUDFLARE_MODEL_SCHEMA_PREFLIGHT_SCHEMA_VERSION = 'lythaus-cloudflare-model-schema-preflight-v1' as const;
 
+export const CLOUDFLARE_MODEL_RESPONSE_FORMAT_SUPPORT = [
+  'MOONDREAM_RESPONSE_FORMAT_SUPPORTED',
+  'MOONDREAM_RESPONSE_FORMAT_NOT_DECLARED',
+  'MOONDREAM_RESPONSE_FORMAT_UNCLEAR',
+] as const;
+export type CloudflareModelResponseFormatSupport = (typeof CLOUDFLARE_MODEL_RESPONSE_FORMAT_SUPPORT)[number];
+
 export interface CloudflareModelSchemaPreflightOptions {
   apiToken?: string;
   accountId?: string;
@@ -29,11 +36,29 @@ export interface CloudflareModelSchemaPreflightResult {
   transportErrorCategory: CloudflareRestErrorCategory | null;
   providerErrorCode: number | string | null;
   providerErrorMessageCode: string | null;
+  inputSchemaPropertyNames: readonly string[];
+  outputSchemaPropertyNames: readonly string[];
+  responseFormatSupport: CloudflareModelResponseFormatSupport;
   executionMs: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function schemaPropertyNames(value: unknown): readonly string[] {
+  if (!isRecord(value) || !isRecord(value.properties)) return [];
+  return Object.keys(value.properties)
+    .filter((key) => /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(key))
+    .sort()
+    .slice(0, 64);
+}
+
+function responseFormatSupport(value: unknown): CloudflareModelResponseFormatSupport {
+  if (!isRecord(value) || !isRecord(value.properties)) return 'MOONDREAM_RESPONSE_FORMAT_UNCLEAR';
+  return Object.prototype.hasOwnProperty.call(value.properties, 'response_format')
+    ? 'MOONDREAM_RESPONSE_FORMAT_SUPPORTED'
+    : 'MOONDREAM_RESPONSE_FORMAT_NOT_DECLARED';
 }
 
 function failure(model: string, startedAt: number, error: CloudflareRestError): CloudflareModelSchemaPreflightResult {
@@ -47,6 +72,9 @@ function failure(model: string, startedAt: number, error: CloudflareRestError): 
     transportErrorCategory: error.category,
     providerErrorCode: error.providerErrorCode,
     providerErrorMessageCode: error.providerErrorMessageCode,
+    inputSchemaPropertyNames: [],
+    outputSchemaPropertyNames: [],
+    responseFormatSupport: 'MOONDREAM_RESPONSE_FORMAT_UNCLEAR',
     executionMs: Date.now() - startedAt,
   };
 }
@@ -109,6 +137,9 @@ export async function runCloudflareModelSchemaPreflight(options: CloudflareModel
       transportErrorCategory: null,
       providerErrorCode: null,
       providerErrorMessageCode: null,
+      inputSchemaPropertyNames: schemaPropertyNames(body.result.input),
+      outputSchemaPropertyNames: schemaPropertyNames(body.result.output),
+      responseFormatSupport: responseFormatSupport(body.result.input),
       executionMs: Date.now() - startedAt,
     };
   } catch (error) {

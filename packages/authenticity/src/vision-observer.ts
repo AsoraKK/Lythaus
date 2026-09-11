@@ -114,6 +114,54 @@ export interface VisionObserverInput {
 
 export type VisionObserverErrorCategory = 'EMPTY_RESPONSE' | 'INVALID_INPUT' | 'TIMEOUT' | 'NETWORK_FAILURE' | 'MALFORMED_RESPONSE' | 'UNEXPECTED_SCHEMA' | 'AUTHENTICATION_FAILURE' | 'RATE_LIMITED' | 'SERVER_FAILURE' | 'HTTP_FAILURE' | 'PROVIDER_FAILURE';
 
+export const VISION_PROVIDER_RESULT_TYPES = ['OBJECT', 'STRING', 'ARRAY', 'NULL', 'OTHER'] as const;
+export type VisionProviderResultType = (typeof VISION_PROVIDER_RESULT_TYPES)[number];
+
+export const VISION_PARSED_TOP_LEVEL_TYPES = ['OBJECT', 'ARRAY', 'OTHER'] as const;
+export type VisionParsedTopLevelType = (typeof VISION_PARSED_TOP_LEVEL_TYPES)[number] | null;
+
+export const VISION_NORMALIZATION_FAILURE_CODES = [
+  'ANSWER_MISSING',
+  'ANSWER_NOT_STRING',
+  'ANSWER_NOT_JSON',
+  'PARSED_NOT_OBJECT',
+  'OBSERVATIONS_MISSING',
+  'OBSERVATIONS_NOT_ARRAY',
+  'OBSERVATIONS_EMPTY',
+  'OBSERVATION_NOT_OBJECT',
+  'CATEGORY_MISSING',
+  'CATEGORY_MISMATCH',
+  'APPLICABLE_MISSING',
+  'APPLICABLE_INVALID',
+  'STATUS_MISSING',
+  'STATUS_INVALID',
+  'APPLICABILITY_STATUS_MISMATCH',
+  'OBSERVATION_TEXT_MISSING',
+  'OCCLUSION_INVALID',
+  'REGIONS_INVALID',
+  'CONFIDENCE_INVALID',
+  'LIMITATIONS_INVALID',
+  'UNKNOWN_RESPONSE_SHAPE',
+] as const;
+export type VisionNormalizationFailureCode = (typeof VISION_NORMALIZATION_FAILURE_CODES)[number];
+
+export interface VisionResponseDiagnostics {
+  transportSucceeded: boolean;
+  providerResultType: VisionProviderResultType;
+  providerTopLevelKeys: readonly string[];
+  answerPresent: boolean;
+  answerType: string | null;
+  answerLength: number | null;
+  reasoningFieldPresent: boolean;
+  reasoningFieldType: string | null;
+  answerJsonParseable: boolean | null;
+  parsedTopLevelType: VisionParsedTopLevelType;
+  parsedTopLevelKeys: readonly string[];
+  observationsPresent: boolean | null;
+  observationCount: number | null;
+  normalizationFailureCode: VisionNormalizationFailureCode | null;
+}
+
 export interface VisionObserverTransportDiagnostics {
   transportErrorCategory?: string;
   httpStatus?: number | null;
@@ -141,6 +189,7 @@ export interface VisionObserverResult {
   httpStatus?: number | null;
   providerErrorCode?: number | string | null;
   providerErrorMessageCode?: string | null;
+  responseDiagnostics?: VisionResponseDiagnostics;
 }
 
 export interface VisionObserver {
@@ -280,22 +329,107 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function textFromModelResponse(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (!isRecord(value)) return '';
-  for (const key of ['response', 'output_text', 'answer', 'caption', 'description', 'text']) if (typeof value[key] === 'string') return value[key] as string;
-  if (isRecord(value.result)) return textFromModelResponse(value.result);
-  if (typeof value.result === 'string') return value.result;
-  return '';
+interface VisionObserverProviderResponse {
+  value: unknown;
+  httpStatus: number | null;
+  transportSucceeded: boolean;
 }
 
-function parseJsonText(text: string): unknown {
+interface VisionTaskNormalizationResult {
+  observations: unknown[] | null;
+  diagnostics: VisionResponseDiagnostics;
+}
+
+function runtimeType(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+function safeProviderKeys(value: Record<string, unknown>): readonly string[] {
+  return Object.keys(value)
+    .filter((key) => /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(key))
+    .sort()
+    .slice(0, 32);
+}
+
+function providerResultType(value: unknown): VisionProviderResultType {
+  if (value === null) return 'NULL';
+  if (Array.isArray(value)) return 'ARRAY';
+  if (typeof value === 'object') return 'OBJECT';
+  if (typeof value === 'string') return 'STRING';
+  return 'OTHER';
+}
+
+function responseDiagnosticsFor(value: unknown, transportSucceeded: boolean): VisionResponseDiagnostics {
+  const object = isRecord(value);
+  const answerPresent = object && Object.prototype.hasOwnProperty.call(value, 'answer');
+  const reasoningFieldPresent = object && Object.prototype.hasOwnProperty.call(value, 'reasoning');
+  const answer = answerPresent ? value.answer : undefined;
+  return {
+    transportSucceeded,
+    providerResultType: providerResultType(value),
+    providerTopLevelKeys: object ? safeProviderKeys(value) : [],
+    answerPresent,
+    answerType: answerPresent ? runtimeType(answer) : null,
+    answerLength: typeof answer === 'string' ? answer.length : null,
+    reasoningFieldPresent,
+    reasoningFieldType: reasoningFieldPresent ? runtimeType(value.reasoning) : null,
+    answerJsonParseable: null,
+    parsedTopLevelType: null,
+    parsedTopLevelKeys: [],
+    observationsPresent: null,
+    observationCount: null,
+    normalizationFailureCode: null,
+  };
+}
+
+function withParsedDiagnostics(diagnostics: VisionResponseDiagnostics, parsed: unknown): VisionResponseDiagnostics {
+  const parsedTopLevelType: VisionParsedTopLevelType = isRecord(parsed) ? 'OBJECT' : Array.isArray(parsed) ? 'ARRAY' : 'OTHER';
+  const parsedTopLevelKeys = isRecord(parsed) ? safeProviderKeys(parsed) : [];
+  const observationsPresent = isRecord(parsed) && Object.prototype.hasOwnProperty.call(parsed, 'observations');
+  const observationCount = observationsPresent && Array.isArray(parsed.observations) ? parsed.observations.length : null;
+  return {
+    ...diagnostics,
+    answerJsonParseable: true,
+    parsedTopLevelType,
+    parsedTopLevelKeys,
+    observationsPresent,
+    observationCount,
+  };
+}
+
+function withObservationDiagnostics(diagnostics: VisionResponseDiagnostics, observations: unknown[]): VisionResponseDiagnostics {
+  return {
+    ...diagnostics,
+    observationsPresent: true,
+    observationCount: observations.length,
+    normalizationFailureCode: observations.length === 0 ? 'OBSERVATIONS_EMPTY' : null,
+  };
+}
+
+function withNormalizationFailure(diagnostics: VisionResponseDiagnostics, normalizationFailureCode: VisionNormalizationFailureCode): VisionResponseDiagnostics {
+  return { ...diagnostics, normalizationFailureCode };
+}
+
+function textFieldFromModelResponse(value: unknown): { key: string; value: string } | null {
+  if (typeof value === 'string') return { key: 'value', value };
+  if (!isRecord(value)) return null;
+  for (const key of ['response', 'output_text', 'answer', 'caption', 'description', 'text']) {
+    if (typeof value[key] === 'string') return { key, value: value[key] as string };
+  }
+  if (isRecord(value.result)) return textFieldFromModelResponse(value.result);
+  if (typeof value.result === 'string') return { key: 'result', value: value.result };
+  return null;
+}
+
+function tryParseJsonText(text: string): { ok: true; value: unknown } | { ok: false } {
   const trimmed = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-  if (!trimmed) return null;
+  if (!trimmed) return { ok: false };
   try {
-    return JSON.parse(trimmed);
+    return { ok: true, value: JSON.parse(trimmed) };
   } catch {
-    return null;
+    return { ok: false };
   }
 }
 
@@ -324,9 +458,13 @@ function regionFromObject(value: unknown): VisionRegion | null {
   return normalizeVisionRegion({ coordinateSpace: 'NORMALIZED', x, y, width, height });
 }
 
-function normalizeTaskOutput(value: unknown, request: VisionObserverRequest): { observations: unknown[] } | null {
-  if (isRecord(value) && Array.isArray(value.observations)) return { observations: value.observations };
-  if (isRecord(value) && isRecord(value.result)) return normalizeTaskOutput(value.result, request);
+function normalizeTaskOutput(value: unknown, request: VisionObserverRequest, transportSucceeded: boolean): VisionTaskNormalizationResult {
+  let diagnostics = responseDiagnosticsFor(value, transportSucceeded);
+  if (isRecord(value) && Array.isArray(value.observations)) {
+    diagnostics = withObservationDiagnostics(diagnostics, value.observations);
+    return { observations: value.observations, diagnostics };
+  }
+  if (isRecord(value) && isRecord(value.result)) return normalizeTaskOutput(value.result, request, transportSucceeded);
   if (isRecord(value) && Array.isArray(value.objects)) {
     return {
       observations: [{
@@ -338,6 +476,7 @@ function normalizeTaskOutput(value: unknown, request: VisionObserverRequest): { 
         measurementConfidence: null,
         limitations: ['Detection output was normalized from the provider response; coordinates are retained only when already normalized.'],
       }],
+      diagnostics,
     };
   }
   if (isRecord(value) && Array.isArray(value.points)) {
@@ -351,103 +490,137 @@ function normalizeTaskOutput(value: unknown, request: VisionObserverRequest): { 
         measurementConfidence: null,
         limitations: ['Point output is preserved as a visual observation without treating it as an origin conclusion.'],
       }],
+      diagnostics,
     };
   }
-  if (isRecord(value) && typeof value.response === 'string') {
-    const parsedResponse = parseJsonText(value.response);
-    if (parsedResponse && isRecord(parsedResponse) && Array.isArray(parsedResponse.observations)) return { observations: parsedResponse.observations };
-    if (request.task === 'caption') {
-      return {
-        observations: [{
-          category: request.category,
-          applicable: true,
-          status: 'OBSERVED',
-          observation: value.response,
-          regions: [],
-          measurementConfidence: null,
-          limitations: ['The provider returned a free-form caption; it was retained only as a caption observation.'],
-        }],
-      };
+  const textField = textFieldFromModelResponse(value);
+  if (request.task === 'query') {
+    const hasAnswer = isRecord(value) && Object.prototype.hasOwnProperty.call(value, 'answer');
+    const hasLegacyResponse = isRecord(value) && Object.prototype.hasOwnProperty.call(value, 'response');
+    if (!hasAnswer && !hasLegacyResponse) {
+      return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'ANSWER_MISSING') };
     }
-    return null;
+    const answer = hasAnswer ? value.answer : value.response;
+    if (typeof answer !== 'string') {
+      return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'ANSWER_NOT_STRING') };
+    }
+    if (!answer.trim()) {
+      return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'ANSWER_MISSING') };
+    }
+    const parsedAnswer = tryParseJsonText(answer);
+    if (!parsedAnswer.ok) {
+      return { observations: null, diagnostics: withNormalizationFailure({ ...diagnostics, answerJsonParseable: false }, 'ANSWER_NOT_JSON') };
+    }
+    diagnostics = withParsedDiagnostics(diagnostics, parsedAnswer.value);
+    if (!isRecord(parsedAnswer.value)) {
+      return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'PARSED_NOT_OBJECT') };
+    }
+    if (!Object.prototype.hasOwnProperty.call(parsedAnswer.value, 'observations')) {
+      return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'OBSERVATIONS_MISSING') };
+    }
+    if (!Array.isArray(parsedAnswer.value.observations)) {
+      return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'OBSERVATIONS_NOT_ARRAY') };
+    }
+    if (parsedAnswer.value.observations.length === 0) {
+      return { observations: [], diagnostics: withNormalizationFailure(diagnostics, 'OBSERVATIONS_EMPTY') };
+    }
+    return { observations: parsedAnswer.value.observations, diagnostics };
   }
-  const text = textFromModelResponse(value);
-  if (text) {
-    const parsed = parseJsonText(text);
-    if (parsed && isRecord(parsed) && Array.isArray(parsed.observations)) return { observations: parsed.observations };
-    if (request.task !== 'caption') return null;
+  if (textField) {
+    const parsed = tryParseJsonText(textField.value);
+    if (parsed.ok && isRecord(parsed.value) && Array.isArray(parsed.value.observations)) {
+      return { observations: parsed.value.observations, diagnostics: withObservationDiagnostics(withParsedDiagnostics(diagnostics, parsed.value), parsed.value.observations) };
+    }
+    if (request.task !== 'caption') return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'UNKNOWN_RESPONSE_SHAPE') };
     return {
       observations: [{
         category: request.category,
         applicable: true,
         status: 'OBSERVED',
-        observation: text,
+        observation: textField.value,
         regions: [],
         measurementConfidence: null,
         limitations: ['The provider returned free-form visual text; no origin conclusion was accepted.'],
-      }],
+        }],
+      diagnostics,
     };
   }
-  const parsed = parseJsonText(typeof value === 'string' ? value : '');
-  return parsed && isRecord(parsed) && Array.isArray(parsed.observations) ? { observations: parsed.observations } : null;
+  return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'UNKNOWN_RESPONSE_SHAPE') };
 }
 
-function normalizeObservation(value: unknown, index: number, input: VisionObserverInput, request: VisionObserverRequest, provider: string, model: string, executionMs: number): VisionObservation | null {
-  if (!isRecord(value)) return null;
-  if (value.category !== request.category) return null;
-  if (!(VISION_OBSERVATION_STATUSES as readonly string[]).includes(String(value.status))) return null;
-  if (typeof value.applicable !== 'boolean' || typeof value.observation !== 'string') return null;
-  if ((value.applicable === false && value.status !== 'NOT_APPLICABLE') || (value.status === 'NOT_APPLICABLE' && value.applicable !== false)) return null;
-  if (value.occlusion !== undefined && !['NONE', 'PARTIAL', 'UNKNOWN'].includes(String(value.occlusion))) return null;
+interface NormalizedObservationResult {
+  observation: VisionObservation | null;
+  failureCode: VisionNormalizationFailureCode | null;
+}
+
+function normalizeObservationDetailed(value: unknown, index: number, input: VisionObserverInput, request: VisionObserverRequest, provider: string, model: string, executionMs: number): NormalizedObservationResult {
+  if (!isRecord(value)) return { observation: null, failureCode: 'OBSERVATION_NOT_OBJECT' };
+  if (!Object.prototype.hasOwnProperty.call(value, 'category')) return { observation: null, failureCode: 'CATEGORY_MISSING' };
+  if (value.category !== request.category) return { observation: null, failureCode: 'CATEGORY_MISMATCH' };
+  if (!Object.prototype.hasOwnProperty.call(value, 'applicable')) return { observation: null, failureCode: 'APPLICABLE_MISSING' };
+  if (typeof value.applicable !== 'boolean') return { observation: null, failureCode: 'APPLICABLE_INVALID' };
+  if (!Object.prototype.hasOwnProperty.call(value, 'status')) return { observation: null, failureCode: 'STATUS_MISSING' };
+  if (!(VISION_OBSERVATION_STATUSES as readonly string[]).includes(String(value.status))) return { observation: null, failureCode: 'STATUS_INVALID' };
+  if (value.applicable === false && value.status !== 'NOT_APPLICABLE') return { observation: null, failureCode: 'APPLICABILITY_STATUS_MISMATCH' };
+  if (value.status === 'NOT_APPLICABLE' && value.applicable !== false) return { observation: null, failureCode: 'APPLICABILITY_STATUS_MISMATCH' };
+  if (typeof value.observation !== 'string' || !value.observation.trim()) return { observation: null, failureCode: 'OBSERVATION_TEXT_MISSING' };
+  if (value.occlusion !== undefined && !['NONE', 'PARTIAL', 'UNKNOWN'].includes(String(value.occlusion))) return { observation: null, failureCode: 'OCCLUSION_INVALID' };
   const confidence = value.measurementConfidence === null || value.measurementConfidence === undefined
     ? null
     : finite01(value.measurementConfidence) ? value.measurementConfidence : null;
-  if (value.measurementConfidence !== null && value.measurementConfidence !== undefined && confidence === null) return null;
+  if (value.measurementConfidence !== null && value.measurementConfidence !== undefined && confidence === null) return { observation: null, failureCode: 'CONFIDENCE_INVALID' };
   const rawRegions = value.regions === undefined ? [] : value.regions;
-  if (!Array.isArray(rawRegions)) return null;
+  if (!Array.isArray(rawRegions)) return { observation: null, failureCode: 'REGIONS_INVALID' };
   const regions = rawRegions.map(normalizeVisionRegion);
-  if (regions.some((region) => region === null)) return null;
+  if (regions.some((region) => region === null)) return { observation: null, failureCode: 'REGIONS_INVALID' };
   const limitations = value.limitations === undefined ? [] : value.limitations;
-  if (!Array.isArray(limitations) || !limitations.every((item) => typeof item === 'string')) return null;
+  if (!Array.isArray(limitations) || !limitations.every((item) => typeof item === 'string')) return { observation: null, failureCode: 'LIMITATIONS_INVALID' };
   const reasoningMode = request.reasoningMode ?? 'DIRECT';
   const occlusion = value.occlusion === undefined ? undefined : value.occlusion as 'NONE' | 'PARTIAL' | 'UNKNOWN';
   const safeLimitations = limitations.map((item) => item.slice(0, 300)).slice(0, 12);
   const observationId = `${input.inputHash.slice(0, 16)}-${request.queryId}-${reasoningMode}-${index + 1}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 180);
   return {
-    observationId,
-    queryId: request.queryId,
-    protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
-    category: value.category as VisionObservationCategory,
-    task: request.task,
-    reasoningMode,
-    applicable: value.applicable,
-    status: value.status as VisionObservationStatus,
-    ...(occlusion ? { occlusion } : {}),
-    observation: value.observation.slice(0, 1200),
-    regions: regions as VisionRegion[],
-    measurementConfidence: confidence,
-    limitations: safeLimitations,
-    provider,
-    model,
-    executionMs,
-    provenance: {
-      evidenceFamily: 'VISION_OBSERVATION',
-      sourceComponent: 'lythaus-vision-observer',
-      provider,
-      modelVersion: model,
-      schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
-      executionTimestamp: input.executionTimestamp ?? new Date().toISOString(),
-      inputHash: input.inputHash,
-      applicable: value.applicable ? 'applicable' : 'not_applicable',
-      limitations: safeLimitations,
+    observation: {
+      observationId,
+      queryId: request.queryId,
+      protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
+      category: value.category as VisionObservationCategory,
       task: request.task,
       reasoningMode,
+      applicable: value.applicable,
+      status: value.status as VisionObservationStatus,
+      ...(occlusion ? { occlusion } : {}),
+      observation: value.observation.slice(0, 1200),
+      regions: regions as VisionRegion[],
+      measurementConfidence: confidence,
+      limitations: safeLimitations,
+      provider,
+      model,
       executionMs,
+      provenance: {
+        evidenceFamily: 'VISION_OBSERVATION',
+        sourceComponent: 'lythaus-vision-observer',
+        provider,
+        modelVersion: model,
+        schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
+        executionTimestamp: input.executionTimestamp ?? new Date().toISOString(),
+        inputHash: input.inputHash,
+        applicable: value.applicable ? 'applicable' : 'not_applicable',
+        limitations: safeLimitations,
+        task: request.task,
+        reasoningMode,
+        executionMs,
+      },
     },
+    failureCode: null,
   };
 }
 
-function successfulObserverResult(input: VisionObserverInput, request: VisionObserverRequest, provider: string, model: string, observations: readonly VisionObservation[], executionMs: number): VisionObserverResult {
+function normalizeObservation(value: unknown, index: number, input: VisionObserverInput, request: VisionObserverRequest, provider: string, model: string, executionMs: number): VisionObservation | null {
+  return normalizeObservationDetailed(value, index, input, request, provider, model, executionMs).observation;
+}
+
+function successfulObserverResult(input: VisionObserverInput, request: VisionObserverRequest, provider: string, model: string, observations: readonly VisionObservation[], executionMs: number, responseDiagnostics?: VisionResponseDiagnostics, httpStatus?: number | null): VisionObserverResult {
   const decision = recommendVisionEscalation({ observations, reasoningMode: request.reasoningMode ?? 'DIRECT', category: request.category });
   return {
     schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
@@ -464,10 +637,12 @@ function successfulObserverResult(input: VisionObserverInput, request: VisionObs
     escalationRecommendation: decision.recommendation,
     escalationReasons: decision.reasons,
     executionMs,
+    ...(httpStatus !== undefined ? { httpStatus } : {}),
+    ...(responseDiagnostics ? { responseDiagnostics } : {}),
   };
 }
 
-function failedObserverResult(request: VisionObserverRequest, provider: string, model: string, errorCategory: VisionObserverErrorCategory, executionMs: number, diagnostics: VisionObserverTransportDiagnostics = {}): VisionObserverResult {
+function failedObserverResult(request: VisionObserverRequest, provider: string, model: string, errorCategory: VisionObserverErrorCategory, executionMs: number, diagnostics: VisionObserverTransportDiagnostics = {}, responseDiagnostics?: VisionResponseDiagnostics): VisionObserverResult {
   return {
     schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
@@ -485,6 +660,7 @@ function failedObserverResult(request: VisionObserverRequest, provider: string, 
     executionMs,
     errorCategory,
     ...diagnostics,
+    ...(responseDiagnostics ? { responseDiagnostics } : {}),
   };
 }
 
@@ -516,6 +692,12 @@ function errorCategoryFrom(error: unknown): VisionObserverErrorCategory {
   return 'NETWORK_FAILURE';
 }
 
+function errorCategoryFromNormalizationFailure(code: VisionNormalizationFailureCode | null): VisionObserverErrorCategory {
+  if (code === null) return 'MALFORMED_RESPONSE';
+  if (['ANSWER_MISSING', 'ANSWER_NOT_STRING', 'ANSWER_NOT_JSON', 'PARSED_NOT_OBJECT', 'OBSERVATIONS_MISSING', 'OBSERVATIONS_NOT_ARRAY', 'OBSERVATIONS_EMPTY', 'UNKNOWN_RESPONSE_SHAPE'].includes(code)) return 'UNEXPECTED_SCHEMA';
+  return 'MALFORMED_RESPONSE';
+}
+
 function transportDiagnosticsFrom(error: unknown): VisionObserverTransportDiagnostics {
   if (!(error instanceof CloudflareRestError)) return {};
   return {
@@ -526,7 +708,7 @@ function transportDiagnosticsFrom(error: unknown): VisionObserverTransportDiagno
   };
 }
 
-async function invokeWithTimeout(run: () => Promise<unknown>, timeoutMs: number): Promise<unknown> {
+async function invokeWithTimeout<T>(run: () => Promise<T>, timeoutMs: number): Promise<T> {
   if (timeoutMs <= 0) return run();
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -543,7 +725,7 @@ function createVisionObserver(options: {
   provider: string;
   maxImageBytes?: number;
   timeoutMs?: number;
-  run: (model: string, payload: Record<string, unknown>, request: VisionObserverRequest) => Promise<unknown>;
+  run: (model: string, payload: Record<string, unknown>, request: VisionObserverRequest) => Promise<VisionObserverProviderResponse>;
 }): VisionObserver & { isLive: true } {
   return {
     isLive: true,
@@ -554,12 +736,19 @@ function createVisionObserver(options: {
         request = requestFor(input);
         const mime = assertResearchImageInput({ bytes: input.bytes, mime: input.mime, maxBytes: options.maxImageBytes });
         const image = bytesToDataUrl(input.bytes, mime);
-        const raw = await invokeWithTimeout(() => options.run(options.model, buildMoondreamPayload(input, request, image), request), options.timeoutMs ?? 30_000);
-        const normalized = normalizeTaskOutput(raw, request);
-        if (!normalized) return failedObserverResult(request, options.provider, options.model, 'UNEXPECTED_SCHEMA', Date.now() - startedAt);
-        const observations = normalized.observations.map((value, index) => normalizeObservation(value, index, input, request, options.provider, options.model, Date.now() - startedAt));
-        if (observations.some((value) => value === null)) return failedObserverResult(request, options.provider, options.model, 'MALFORMED_RESPONSE', Date.now() - startedAt);
-        return successfulObserverResult(input, request, options.provider, options.model, observations as VisionObservation[], Date.now() - startedAt);
+        const providerResponse = await invokeWithTimeout(() => options.run(options.model, buildMoondreamPayload(input, request, image), request), options.timeoutMs ?? 30_000);
+        const normalized = normalizeTaskOutput(providerResponse.value, request, providerResponse.transportSucceeded);
+        const responseDiagnostics = normalized.diagnostics;
+        const responseTransportDiagnostics: VisionObserverTransportDiagnostics = providerResponse.httpStatus === null ? {} : { httpStatus: providerResponse.httpStatus };
+        if (normalized.observations === null || responseDiagnostics.normalizationFailureCode !== null) {
+          return failedObserverResult(request, options.provider, options.model, errorCategoryFromNormalizationFailure(responseDiagnostics.normalizationFailureCode), Date.now() - startedAt, responseTransportDiagnostics, responseDiagnostics);
+        }
+        const normalizedObservations = normalized.observations.map((value, index) => normalizeObservationDetailed(value, index, input, request, options.provider, options.model, Date.now() - startedAt));
+        const invalidObservation = normalizedObservations.find((value) => value.observation === null);
+        if (invalidObservation) {
+          return failedObserverResult(request, options.provider, options.model, 'MALFORMED_RESPONSE', Date.now() - startedAt, responseTransportDiagnostics, { ...responseDiagnostics, normalizationFailureCode: invalidObservation.failureCode });
+        }
+        return successfulObserverResult(input, request, options.provider, options.model, normalizedObservations.map((value) => value.observation as VisionObservation), Date.now() - startedAt, responseDiagnostics, providerResponse.httpStatus);
       } catch (error) {
         return failedObserverResult(request, options.provider, options.model, errorCategoryFrom(error), Date.now() - startedAt, transportDiagnosticsFrom(error));
       }
@@ -579,7 +768,7 @@ export function createCloudflareVisionObserver(options: {
     provider: 'cloudflare-workers-ai',
     maxImageBytes: options.maxImageBytes,
     timeoutMs: options.timeoutMs,
-    run: (selectedModel, payload) => options.ai.run(selectedModel, payload, { metadata: { protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION } }),
+    run: async (selectedModel, payload) => ({ value: await options.ai.run(selectedModel, payload, { metadata: { protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION } }), httpStatus: null, transportSucceeded: true }),
   });
 }
 
@@ -594,7 +783,10 @@ export function createCloudflareVisionObserverRest(options: {
     provider: 'cloudflare-workers-ai-rest',
     maxImageBytes: options.maxImageBytes,
     timeoutMs: 0,
-    run: async (selectedModel, payload) => (await options.transport.run({ kind: 'VISION_OBSERVER', model: selectedModel, payload })).result,
+    run: async (selectedModel, payload) => {
+      const result = await options.transport.run({ kind: 'VISION_OBSERVER', model: selectedModel, payload });
+      return { value: result.result, httpStatus: result.httpStatus, transportSucceeded: true };
+    },
   });
 }
 
@@ -656,6 +848,7 @@ export interface VisionObserverPassSummary {
   httpStatus?: number | null;
   providerErrorCode?: number | string | null;
   providerErrorMessageCode?: string | null;
+  responseDiagnostics?: VisionResponseDiagnostics;
 }
 
 export interface VisionObserverComparison {
@@ -685,6 +878,7 @@ function passSummary(result: VisionObserverResult): VisionObserverPassSummary {
     httpStatus: result.httpStatus,
     providerErrorCode: result.providerErrorCode,
     providerErrorMessageCode: result.providerErrorMessageCode,
+    responseDiagnostics: result.responseDiagnostics,
   };
 }
 
