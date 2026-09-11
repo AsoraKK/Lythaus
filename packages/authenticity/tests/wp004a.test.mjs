@@ -19,6 +19,7 @@ import {
   cloudflareSafeProviderDiagnosticsFromBody,
   CloudflareRestError,
   compareVisionObserverResults,
+  classifyGeometryOcclusionComparison,
   createCloudflareJudgeRest,
   createCloudflareRestTransport,
   CLOUDFLARE_REASONER_MODEL,
@@ -35,6 +36,7 @@ import {
   decodeResearchImage,
   DEFAULT_RESEARCH_MODEL_CONFIG,
   evaluateResearchPredictions,
+  evaluateGeometryOcclusionObservation,
   generateForensicFeatureBundleV1,
   JUDGE_PROMPT_VERSION,
   OPENAI_MODERATION_MODEL,
@@ -53,6 +55,7 @@ import {
   VISION_OBSERVER_QUERY_GENERATION_CONFIG,
 } from '../src/wp004a.ts';
 import { createNeutralPng, validateNeutralPng } from '../../../scripts/authenticity/neutral-png.mjs';
+import { renderGeometryOcclusionPng, validateGeometryOcclusionPng } from '../../../scripts/authenticity/geometry-occlusion-fixture.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CASE_ID = '0198a5d3-4a00-7000-8000-000000000123';
@@ -167,6 +170,86 @@ test('generated moderation smoke fixture is a valid Sharp PNG accepted by the re
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test('geometry occlusion fixture is deterministic, decodable RGB, and matches its reviewed spec hash', async () => {
+  const first = await renderGeometryOcclusionPng();
+  const second = await renderGeometryOcclusionPng();
+  assert.deepEqual(first, second);
+  const validation = await validateGeometryOcclusionPng(first);
+  const spec = JSON.parse(await readFile(path.join(repositoryRoot, 'research/wp004a/geometry-occlusion-fixture-v1.json'), 'utf8'));
+  assert.equal(validation.valid, true);
+  assert.equal(validation.fixtureId, 'WP004A_GEOMETRY_OCCLUSION_01');
+  assert.equal(validation.fixtureVersion, 'v1');
+  assert.equal(validation.width, 512);
+  assert.equal(validation.height, 512);
+  assert.equal(validation.channels, 3);
+  assert.equal(validation.pixelBytes, 512 * 512 * 3);
+  assert.equal(validation.sha256, spec.sha256);
+  assert.equal(spec.truth.truth.frontObject, 'BLUE_RECTANGLE');
+  assert.equal(spec.truth.truth.backObject, 'RED_RECTANGLE');
+});
+
+test('relational evaluator is conservative and truth stays outside Observer input', async () => {
+  const truth = {
+    fixtureId: 'WP004A_GEOMETRY_OCCLUSION_01',
+    category: 'GEOMETRY_OCCLUSION',
+    truth: {
+      occlusionPresent: true,
+      frontObject: 'BLUE_RECTANGLE',
+      backObject: 'RED_RECTANGLE',
+      geometryConsistent: true,
+      indeterminateExpected: false,
+      controlObject: { id: 'GREEN_CIRCLE', overlapsPrimaryObjects: false },
+    },
+  };
+  let capturedRequest;
+  const observer = createCloudflareVisionObserver({ ai: { run: async (_model, payload) => {
+    capturedRequest = payload;
+    return { answer: JSON.stringify({ observations: [{ category: 'GEOMETRY_OCCLUSION', applicable: true, status: 'OBSERVED', observation: 'The blue rectangle is in front of the red rectangle, and their overlap is geometrically consistent.', regions: [], measurementConfidence: null, limitations: [] }] }), reasoning: { trace: 'PRIVATE_RELATIONAL_REASONING' } };
+  } } });
+  const observed = await observer.observe({ sampleId: 'RELATIONAL', inputHash: 'r'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'GEOMETRY_01', category: 'GEOMETRY_OCCLUSION', task: 'query', question: 'Inspect the visible overlap relationship without inferring image origin.', reasoningMode: 'DIRECT' } });
+  const evaluation = evaluateGeometryOcclusionObservation({ observation: observed.observations[0], truth });
+  assert.equal(evaluation.occlusionIdentified, 'TRUE');
+  assert.equal(evaluation.frontBackCorrect, 'TRUE');
+  assert.equal(evaluation.geometryConsistencyCorrect, 'TRUE');
+  assert.equal(evaluation.controlObjectFalseRelation, 'TRUE');
+  assert.equal(evaluation.requiresReview, false);
+  assert.equal(JSON.stringify(capturedRequest).includes('BLUE_RECTANGLE'), false);
+  assert.equal(JSON.stringify(observed).includes('PRIVATE_RELATIONAL_REASONING'), false);
+  const unclear = evaluateGeometryOcclusionObservation({ observation: { ...observed.observations[0], observation: 'Two coloured shapes are present.' }, truth });
+  assert.equal(unclear.requiresReview, true);
+  assert.equal(unclear.frontBackCorrect, 'REQUIRES_REVIEW');
+  assert.equal(classifyGeometryOcclusionComparison({ direct: evaluation, reasoned: evaluation }), 'RELATIONAL_REASONING_SIGNAL_NEUTRAL');
+});
+
+test('relational A/B runner makes exactly one equal-input DIRECT and REASONED call', async () => {
+  const requests = [];
+  const truthLabels = ['BLUE_RECTANGLE', 'RED_RECTANGLE', 'GREEN_CIRCLE'];
+  const result = await runResearchTrial({
+    mode: 'OBSERVER_AB',
+    runtimeManifest: manifest(1),
+    maxSamples: 1,
+    observerRequest: { queryId: 'GEOMETRY_OCCLUSION_01', category: 'GEOMETRY_OCCLUSION', task: 'query', question: 'Inspect the visible overlap relationship between the two primary coloured rectangular shapes.' },
+    caps: { maxSamples: 1, maxObserverCalls: 2, maxObserverDirectCalls: 1, maxObserverReasonedCalls: 1, maxTotalCalls: 2 },
+  }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    observer: { isLive: false, observe: async (input) => {
+      requests.push(input.request);
+      const observation = { category: 'GEOMETRY_OCCLUSION', applicable: true, status: 'INDETERMINATE', observation: 'The overlap relationship is unclear.', regions: [], measurementConfidence: null, limitations: [] };
+      return createMockVisionObserver([observation]).observe(input);
+    } },
+  });
+  assert.equal(requests.length, 2);
+  const { reasoningMode: directMode, ...directRequest } = requests[0];
+  const { reasoningMode: reasonedMode, ...reasonedRequest } = requests[1];
+  assert.equal(directMode, 'DIRECT');
+  assert.equal(reasonedMode, 'REASONED');
+  assert.deepEqual(directRequest, reasonedRequest);
+  assert.equal(truthLabels.some((label) => JSON.stringify(requests).includes(label)), false);
+  assert.equal(result.invocationAccounting.calls.observerDirect, 1);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 1);
+  assert.equal(result.invocationAccounting.calls.total, 2);
 });
 
 test('OpenAI moderation adapter sends one image data URL and preserves unsupported category applicability', async () => {
@@ -1083,6 +1166,9 @@ test('Cloudflare smoke workflow is manual-only, secret-injected, bounded, and fi
   assert.match(workflow, /CLOUDFLARE_API_TOKEN:\s*\$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
   assert.match(workflow, /wp004a-cloudflare-smoke\.mjs/);
+  assert.match(workflow, /0C-REL-AB/);
+  assert.match(workflow, /create-geometry-occlusion-fixture\.mjs/);
+  assert.match(workflow, /wp004a-geometry-occlusion\.png/);
   assert.doesNotMatch(workflow, /OneDrive|LythausForensicsData|research[-_]images|base64|echo\s+\$\{\{\s*secrets\./i);
 });
 

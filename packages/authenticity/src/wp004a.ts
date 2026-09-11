@@ -13,3 +13,4 @@ export * from './research-evaluator.ts';
 export * from './research-runner.ts';
 export * from './research-decode.ts';
 export * from './adversarial-cases.ts';
+export * from './relational-evaluator.ts';

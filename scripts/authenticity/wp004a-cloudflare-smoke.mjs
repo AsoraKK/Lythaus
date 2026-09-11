@@ -1,23 +1,32 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
+  classifyGeometryOcclusionComparison,
   createCloudflareJudgeRest,
   createCloudflareRestTransport,
   createCloudflareVisionObserverRest,
   createMockJudge,
   createMockModerationProvider,
   createOpenAIModerationProvider,
+  evaluateGeometryOcclusionObservation,
   researchRunExitCode,
   runResearchTrial,
+  VISION_OBSERVER_PROMPT_VERSION,
+  VISION_OBSERVER_PROTOCOL_VERSION,
+  VISION_OBSERVER_QUERY_GENERATION_CONFIG,
 } from '../../packages/authenticity/src/wp004a.ts';
+import { validateGeometryOcclusionPng } from './geometry-occlusion-fixture.mjs';
 
 const TRIAL_MODES = {
   '0C': 'OBSERVER_ONLY',
   '0C-R': 'OBSERVER_REASONED',
   '0C-AB': 'OBSERVER_AB',
+  '0C-REL-AB': 'OBSERVER_RELATIONAL_AB',
   '0D': 'FULL',
   '0D-R': 'FULL_RECHECK',
 };
+
+const RELATIONAL_FIXTURE_SPEC = 'research/wp004a/geometry-occlusion-fixture-v1.json';
 
 function parseArgs(argv) {
   const options = { trial: '0C', image: null, output: null, allowNetwork: false };
@@ -122,6 +131,7 @@ function safeComparison(comparison) {
       observations: comparison.direct.observations.map(safeObservation),
       provider: comparison.direct.provider,
       model: comparison.direct.model,
+      promptVersion: comparison.direct.promptVersion,
       task: comparison.direct.task,
       reasoningMode: comparison.direct.reasoningMode,
       generationConfig: comparison.direct.generationConfig,
@@ -139,6 +149,7 @@ function safeComparison(comparison) {
       observations: comparison.reasoned.observations.map(safeObservation),
       provider: comparison.reasoned.provider,
       model: comparison.reasoned.model,
+      promptVersion: comparison.reasoned.promptVersion,
       task: comparison.reasoned.task,
       reasoningMode: comparison.reasoned.reasoningMode,
       generationConfig: comparison.reasoned.generationConfig,
@@ -155,26 +166,57 @@ function safeComparison(comparison) {
   };
 }
 
+function safeRelationalEvaluation(evaluation) {
+  if (!evaluation) return null;
+  return {
+    schemaVersion: evaluation.schemaVersion,
+    fixtureId: evaluation.fixtureId,
+    fixtureVersion: evaluation.fixtureVersion,
+    observationId: evaluation.observationId,
+    occlusionIdentified: evaluation.occlusionIdentified,
+    frontBackCorrect: evaluation.frontBackCorrect,
+    geometryConsistencyCorrect: evaluation.geometryConsistencyCorrect,
+    controlObjectFalseRelation: evaluation.controlObjectFalseRelation,
+    unsupportedAssertionCount: evaluation.unsupportedAssertionCount,
+    originVerdictViolation: evaluation.originVerdictViolation,
+    canonicalProtocolValid: evaluation.canonicalProtocolValid,
+    indeterminate: evaluation.indeterminate,
+    requiresReview: evaluation.requiresReview,
+    reviewReasons: evaluation.reviewReasons,
+  };
+}
+
 const options = parseArgs(process.argv.slice(2));
 try {
   const bytes = new Uint8Array(await readFile(path.resolve(options.image)));
   const mode = TRIAL_MODES[options.trial];
-  const observerRequests = options.trial === '0C-AB' || options.trial === '0D-R' ? 2 : 1;
+  const relationalTrial = options.trial === '0C-REL-AB';
+  let relationalSpec = null;
+  if (relationalTrial) {
+    const validation = await validateGeometryOcclusionPng(bytes);
+    if (!validation.valid) throw new Error(`geometry_fixture_invalid:${validation.reason}`);
+    relationalSpec = JSON.parse(await readFile(path.resolve(RELATIONAL_FIXTURE_SPEC), 'utf8'));
+    if (validation.sha256 !== relationalSpec.sha256) throw new Error('geometry_fixture_hash_mismatch');
+  }
+  const observerRequests = options.trial === '0C-AB' || options.trial === '0C-REL-AB' || options.trial === '0D-R' ? 2 : 1;
   const judgeRequests = options.trial === '0D-R' ? 2 : 1;
   const observerTransport = createCloudflareRestTransport({ apiToken: process.env.CLOUDFLARE_API_TOKEN, accountId: process.env.CLOUDFLARE_ACCOUNT_ID, allowNetwork: true, maxRequests: observerRequests });
   const judgeTransport = createCloudflareRestTransport({ apiToken: process.env.CLOUDFLARE_API_TOKEN, accountId: process.env.CLOUDFLARE_ACCOUNT_ID, allowNetwork: true, maxRequests: judgeRequests });
   const runtimeManifest = {
     schemaVersion: 'lythaus-wp004a-runtime-manifest-v1',
     manifestType: 'RUNTIME',
-    entries: [{ sampleId: 'WP004A_NEUTRAL', sourceFamilyId: 'WP004A_NEUTRAL', path: 'neutral.png', rightsClass: 'C', evaluationAllowed: false }],
+    entries: [{ sampleId: relationalTrial ? 'WP004A_GEOMETRY_OCCLUSION_01' : 'WP004A_NEUTRAL', sourceFamilyId: relationalTrial ? 'WP004A_GEOMETRY_OCCLUSION_01' : 'WP004A_NEUTRAL', path: relationalTrial ? 'geometry-occlusion.png' : 'neutral.png', rightsClass: 'C', evaluationAllowed: false }],
   };
+  const observerRequest = relationalTrial
+    ? { queryId: 'GEOMETRY_OCCLUSION_01', category: 'GEOMETRY_OCCLUSION', task: 'query', question: 'Inspect the visible overlap relationship between the two primary coloured rectangular shapes. Report only visible geometry. Determine whether one rectangle visibly occludes part of the other, which rectangle appears in front in the overlap region, whether the visible intersection is geometrically consistent, or whether the evidence is insufficient to decide. The separate circular object may be described only if relevant to the geometry assessment. Do not infer image origin. Do not determine whether the image is AI-generated.' }
+    : { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the visible scene elements without making an origin or authenticity judgment.' };
   const result = await runResearchTrial({
     mode,
     runtimeManifest,
     maxSamples: 1,
     allowNetwork: true,
     enableRecheck: mode === 'FULL_RECHECK',
-    observerRequest: { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the visible scene elements without making an origin or authenticity judgment.' },
+    observerRequest,
     caps: { maxSamples: 1, maxModerationCalls: mode === 'FULL' || mode === 'FULL_RECHECK' ? 1 : 0, maxObserverCalls: observerRequests, maxObserverDirectCalls: mode === 'OBSERVER_AB' || mode === 'FULL_RECHECK' ? 1 : 1, maxObserverReasonedCalls: observerRequests > 1 ? 1 : 1, maxJudgeCalls: judgeRequests, maxTotalCalls: mode === 'FULL_RECHECK' ? 5 : mode === 'FULL' ? 3 : observerRequests },
   }, {
     readSample: async () => ({ bytes, mime: 'image/png' }),
@@ -182,11 +224,20 @@ try {
     observer: createCloudflareVisionObserverRest({ transport: observerTransport }),
     judge: mode === 'FULL' || mode === 'FULL_RECHECK' ? createCloudflareJudgeRest({ transport: judgeTransport }) : createMockJudge(),
   });
+  const relationalComparison = relationalTrial ? result.cases[0]?.observerComparison : null;
+  const relationalEvaluation = relationalComparison && relationalSpec
+    ? {
+      direct: evaluateGeometryOcclusionObservation({ observation: relationalComparison.direct.observations[0] ?? null, truth: relationalSpec.truth }),
+      reasoned: evaluateGeometryOcclusionObservation({ observation: relationalComparison.reasoned.observations[0] ?? null, truth: relationalSpec.truth }),
+    }
+    : null;
   const summary = {
     schemaVersion: result.schemaVersion,
     trial: options.trial,
     mode: result.mode,
     caseCount: result.cases.length,
+    fixture: relationalTrial ? { fixtureId: relationalSpec.fixtureId, fixtureVersion: relationalSpec.version, generatorVersion: relationalSpec.generatorVersion, format: relationalSpec.format, dimensions: relationalSpec.dimensions, sha256: relationalSpec.sha256 } : null,
+    inputControl: relationalTrial ? { queryId: observerRequest.queryId, category: observerRequest.category, task: observerRequest.task, question: observerRequest.question, promptVersion: VISION_OBSERVER_PROMPT_VERSION, protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG } : null,
     cases: result.cases.map((item) => ({
       sampleId: item.sampleId,
       inputHash: item.inputHash,
@@ -195,6 +246,7 @@ try {
       observerComparison: safeComparison(item.observerComparison),
       recheckRounds: item.recheckRounds,
     })),
+    relationalEvaluation: relationalEvaluation ? { direct: safeRelationalEvaluation(relationalEvaluation.direct), reasoned: safeRelationalEvaluation(relationalEvaluation.reasoned), classification: classifyGeometryOcclusionComparison(relationalEvaluation) } : null,
     invocationAccounting: result.invocationAccounting,
     enforcementAuthority: result.enforcementAuthority,
   };

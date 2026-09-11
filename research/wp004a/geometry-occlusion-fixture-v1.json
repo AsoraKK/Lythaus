@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "lythaus-wp004a-relational-fixture-v1",
+  "fixtureId": "WP004A_GEOMETRY_OCCLUSION_01",
+  "version": "v1",
+  "generatorVersion": "lythaus-wp004a-geometry-occlusion-generator-v1",
+  "format": "png",
+  "dimensions": {
+    "width": 512,
+    "height": 512,
+    "channels": 3
+  },
+  "sha256": "7ab3c59f2a012398e79838efd95df63624ea177ef1ff7bffe6a18b755500b575",
+  "construction": {
+    "source": "deterministic SVG rendered locally through Sharp",
+    "background": {
+      "color": "#eeeeea"
+    },
+    "drawOrder": [
+      "BACKGROUND",
+      "RED_RECTANGLE",
+      "BLUE_RECTANGLE",
+      "GREEN_CIRCLE"
+    ],
+    "shapes": {
+      "RED_RECTANGLE": {
+        "x": 96,
+        "y": 176,
+        "width": 248,
+        "height": 144,
+        "color": "#d92d3f",
+        "drawOrder": 2
+      },
+      "BLUE_RECTANGLE": {
+        "x": 248,
+        "y": 232,
+        "width": 192,
+        "height": 144,
+        "color": "#2f6fdb",
+        "drawOrder": 3
+      },
+      "GREEN_CIRCLE": {
+        "cx": 426,
+        "cy": 104,
+        "radius": 42,
+        "color": "#2e9e58",
+        "drawOrder": 4
+      }
+    },
+    "overlapRegion": {
+      "x": 248,
+      "y": 232,
+      "width": 96,
+      "height": 88
+    }
+  },
+  "observerInput": {
+    "queryId": "GEOMETRY_OCCLUSION_01",
+    "category": "GEOMETRY_OCCLUSION",
+    "task": "query",
+    "question": "Inspect the visible overlap relationship between the two primary coloured rectangular shapes. Report only visible geometry. Determine whether one rectangle visibly occludes part of the other, which rectangle appears in front in the overlap region, whether the visible intersection is geometrically consistent, or whether the evidence is insufficient to decide. The separate circular object may be described only if relevant to the geometry assessment. Do not infer image origin. Do not determine whether the image is AI-generated.",
+    "truthProvided": false
+  },
+  "truth": {
+    "fixtureId": "WP004A_GEOMETRY_OCCLUSION_01",
+    "category": "GEOMETRY_OCCLUSION",
+    "truth": {
+      "truthBasis": "DETERMINISTIC_FIXTURE_CONSTRUCTION",
+      "occlusionPresent": true,
+      "frontObject": "BLUE_RECTANGLE",
+      "backObject": "RED_RECTANGLE",
+      "geometryConsistent": true,
+      "indeterminateExpected": false,
+      "controlObject": {
+        "id": "GREEN_CIRCLE",
+        "overlapsPrimaryObjects": false
+      }
+    }
+  }
+}

@@ -60,6 +60,7 @@
     "authenticity:cloudflare-smoke": "node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-smoke.mjs",
     "authenticity:inventory": "node --experimental-strip-types scripts/authenticity/wp004a-inventory.mjs",
     "authenticity:neutral-png": "node scripts/authenticity/create-neutral-png.mjs",
+    "authenticity:geometry-fixture": "node scripts/authenticity/create-geometry-occlusion-fixture.mjs",
     "test:product-contracts": "node --experimental-strip-types --test packages/contracts/tests/product-policy.test.mjs",
     "test:product-integrity-runtime": "node --test scripts/tests/product-integrity-runtime-invariants.test.mjs",
     "test:critical-coverage": "node scripts/critical-coverage-gate.mjs",
