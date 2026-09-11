@@ -234,6 +234,18 @@ export interface VisionResponseDiagnostics {
   observationCount: number | null;
   normalizationFailureCode: VisionNormalizationFailureCode | null;
   invalidStatusToken?: string;
+  regionDiagnostics?: VisionRegionDiagnostics;
+}
+
+export interface VisionRegionDiagnostics {
+  regionFieldPresent: boolean;
+  regionCount: number | null;
+  firstRegionType: VisionProviderResultType | null;
+  firstRegionKeys: readonly string[];
+  coordinateSpacePresent: boolean;
+  coordinateFieldNames: readonly string[];
+  coordinateValueTypes: Readonly<Record<string, string>>;
+  normalizationFailureReason: string;
 }
 
 export interface VisionObserverTransportDiagnostics {
@@ -411,6 +423,55 @@ function providerResultType(value: unknown): VisionProviderResultType {
   if (typeof value === 'object') return 'OBJECT';
   if (typeof value === 'string') return 'STRING';
   return 'OTHER';
+}
+
+const SAFE_REGION_DIAGNOSTIC_KEYS = new Set([
+  'coordinateSpace',
+  'x',
+  'y',
+  'width',
+  'height',
+  'x1',
+  'y1',
+  'x2',
+  'y2',
+  'x_min',
+  'y_min',
+  'x_max',
+  'y_max',
+  'w',
+  'h',
+]);
+
+function regionDiagnosticsFor(rawRegions: unknown, normalizationFailureReason: string): VisionRegionDiagnostics {
+  const regionFieldPresent = rawRegions !== undefined;
+  const regionCount = Array.isArray(rawRegions) ? rawRegions.length : null;
+  const firstRegion = Array.isArray(rawRegions) ? rawRegions[0] : undefined;
+  const firstRegionObject = isRecord(firstRegion);
+  const firstRegionKeys = firstRegionObject ? safeProviderKeys(firstRegion) : [];
+  const coordinateFieldNames = firstRegionKeys.filter((key) => SAFE_REGION_DIAGNOSTIC_KEYS.has(key));
+  const coordinateValueTypes = firstRegionObject
+    ? Object.fromEntries(coordinateFieldNames.map((key) => [key, runtimeType(firstRegion[key])]))
+    : {};
+  return {
+    regionFieldPresent,
+    regionCount,
+    firstRegionType: firstRegion === undefined ? null : providerResultType(firstRegion),
+    firstRegionKeys,
+    coordinateSpacePresent: firstRegionObject && Object.prototype.hasOwnProperty.call(firstRegion, 'coordinateSpace'),
+    coordinateFieldNames,
+    coordinateValueTypes,
+    normalizationFailureReason,
+  };
+}
+
+function regionNormalizationFailureReason(value: unknown): string {
+  if (!isRecord(value)) return 'REGION_NOT_OBJECT';
+  if (value.coordinateSpace !== 'NORMALIZED') return 'COORDINATE_SPACE_MISSING_OR_INVALID';
+  if (![value.x, value.y, value.width, value.height].every((item) => typeof item === 'number' && Number.isFinite(item))) return 'COORDINATE_VALUE_INVALID';
+  if ((value.width as number) <= 0 || (value.height as number) <= 0) return 'REGION_DIMENSION_INVALID';
+  if ((value.x as number) + (value.width as number) > 1 || (value.y as number) + (value.height as number) > 1) return 'REGION_OUT_OF_BOUNDS';
+  return 'REGION_INVALID';
 }
 
 function responseDiagnosticsFor(value: unknown, transportSucceeded: boolean): VisionResponseDiagnostics {
@@ -609,6 +670,7 @@ interface NormalizedObservationResult {
   observation: VisionObservation | null;
   failureCode: VisionNormalizationFailureCode | null;
   invalidStatusToken?: string;
+  regionDiagnostics?: VisionRegionDiagnostics;
 }
 
 function safeInvalidStatusToken(value: unknown): string | undefined {
@@ -632,9 +694,10 @@ function normalizeObservationDetailed(value: unknown, index: number, input: Visi
     : finite01(value.measurementConfidence) ? value.measurementConfidence : null;
   if (value.measurementConfidence !== null && value.measurementConfidence !== undefined && confidence === null) return { observation: null, failureCode: 'CONFIDENCE_INVALID' };
   const rawRegions = value.regions === undefined ? [] : value.regions;
-  if (!Array.isArray(rawRegions)) return { observation: null, failureCode: 'REGIONS_INVALID' };
+  if (!Array.isArray(rawRegions)) return { observation: null, failureCode: 'REGIONS_INVALID', regionDiagnostics: regionDiagnosticsFor(rawRegions, 'REGIONS_NOT_ARRAY') };
   const regions = rawRegions.map(normalizeVisionRegion);
-  if (regions.some((region) => region === null)) return { observation: null, failureCode: 'REGIONS_INVALID' };
+  const invalidRegionIndex = regions.findIndex((region) => region === null);
+  if (invalidRegionIndex >= 0) return { observation: null, failureCode: 'REGIONS_INVALID', regionDiagnostics: regionDiagnosticsFor(rawRegions, regionNormalizationFailureReason(rawRegions[invalidRegionIndex])) };
   const limitations = value.limitations === undefined ? [] : value.limitations;
   if (!Array.isArray(limitations) || !limitations.every((item) => typeof item === 'string')) return { observation: null, failureCode: 'LIMITATIONS_INVALID' };
   const reasoningMode = request.reasoningMode ?? 'DIRECT';
@@ -816,6 +879,7 @@ function createVisionObserver(options: {
             ...responseDiagnostics,
             normalizationFailureCode: invalidObservation.failureCode,
             ...(invalidObservation.invalidStatusToken ? { invalidStatusToken: invalidObservation.invalidStatusToken } : {}),
+            ...(invalidObservation.regionDiagnostics ? { regionDiagnostics: invalidObservation.regionDiagnostics } : {}),
           });
         }
         return successfulObserverResult(input, request, options.provider, options.model, normalizedObservations.map((value) => value.observation as VisionObservation), Date.now() - startedAt, responseDiagnostics, providerResponse.httpStatus);
