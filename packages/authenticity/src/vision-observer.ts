@@ -4,8 +4,14 @@ import { CLOUDFLARE_VISION_OBSERVER_MODEL } from './research-config.ts';
 import { assertResearchImageInput, bytesToDataUrl, type ResearchImageMime } from './research-image.ts';
 
 export const VISION_OBSERVER_PROTOCOL_VERSION = 'lythaus-vision-observer-protocol-v1' as const;
-export const VISION_OBSERVER_PROMPT_VERSION = 'lythaus-vision-observer-prompt-v1' as const;
+export const VISION_OBSERVER_PROMPT_VERSION = 'lythaus-vision-observer-prompt-v2' as const;
 export const VISION_OBSERVER_ROUTING_POLICY_VERSION = 'lythaus-vision-observer-routing-policy-v1' as const;
+export const VISION_OBSERVER_MAX_OBSERVATIONS = 8 as const;
+export const VISION_OBSERVER_QUERY_GENERATION_CONFIG = {
+  temperature: 0,
+  maxTokens: 1200,
+  stream: false,
+} as const;
 
 export const VISION_OBSERVER_CATEGORIES = [
   'SCENE_INVENTORY',
@@ -29,6 +35,72 @@ export type VisionObserverReasoningMode = (typeof VISION_OBSERVER_REASONING_MODE
 
 export const VISION_OBSERVATION_STATUSES = ['OBSERVED', 'NOT_OBSERVED', 'INDETERMINATE', 'NOT_APPLICABLE'] as const;
 export type VisionObservationStatus = (typeof VISION_OBSERVATION_STATUSES)[number];
+
+const VISION_OBSERVER_EXAMPLE_TEXT: Readonly<Record<VisionObservationCategory, string>> = {
+  SCENE_INVENTORY: 'A uniform light-grey field is visible.',
+  OBJECT_LOCALISATION: 'A visible object is present in the requested scene.',
+  TEXT: 'A text region is visible.',
+  GEOMETRY_OCCLUSION: 'Two visible shapes overlap in the requested region.',
+  LIGHTING_SHADOW: 'A visible object casts a shadow.',
+  REFLECTION: 'A reflective surface is visible.',
+  REPETITION: 'A repeated visual pattern is visible.',
+  ANATOMY: 'A visible anatomical feature is present.',
+  SCREEN_DISPLAY_RELATIONSHIP: 'A display-like rectangular surface is visible.',
+  SUSPICIOUS_REGION: 'A region warrants further visual inspection.',
+};
+
+export function buildVisionObserverPrompt(category: VisionObservationCategory): string {
+  const example = JSON.stringify({
+    observations: [{
+      category,
+      applicable: true,
+      status: 'OBSERVED',
+      observation: VISION_OBSERVER_EXAMPLE_TEXT[category],
+      regions: [],
+      measurementConfidence: null,
+      limitations: [],
+    }],
+  }, null, 2);
+  return [
+    'ROLE',
+    `You are the Lythaus Vision Observer. Protocol: ${VISION_OBSERVER_PROTOCOL_VERSION}. Prompt: ${VISION_OBSERVER_PROMPT_VERSION}.`,
+    'Collect visual observations only. You are not an authenticity or origin classifier. Do not determine whether the image is AI-generated.',
+    'Never emit an AI-generated label, human-authored label, synthetic probability, camera probability, authenticity label, or image-level origin verdict.',
+    'Use visible pixels only. Do not use metadata unless it is explicitly supplied in the task question.',
+    'Do not invent anomalies. The absence of an anomaly is valid. Uncertainty, partial visibility, and NOT_APPLICABLE are valid outcomes.',
+    'Unusual art, screenshots, CGI, game images, digital art, and composites are legitimate visual content; do not call them synthetic by default.',
+    'Describe text, geometry, lighting, reflections, repetition, anatomy, and displays as observations with limitations; do not call a visual irregularity an AI artifact.',
+    '',
+    'TASK',
+    `Requested category: ${category}. Every observation.category MUST exactly equal ${category}.`,
+    'Answer the supplied visual question for this category and no other category.',
+    '',
+    'OUTPUT CONTRACT',
+    'Return JSON only. Do not use Markdown. Do not return prose before or after the JSON.',
+    'The top-level object must contain an observations array.',
+    `Return between 1 and ${VISION_OBSERVER_MAX_OBSERVATIONS} concise observations. Do not return an unbounded list.`,
+    `category MUST exactly equal ${category}.`,
+    'applicable MUST be a boolean.',
+    'status MUST be exactly one of: OBSERVED, NOT_OBSERVED, INDETERMINATE, NOT_APPLICABLE.',
+    'If status is NOT_APPLICABLE, applicable MUST be false.',
+    'For OBSERVED, NOT_OBSERVED, and INDETERMINATE, applicable MUST be true.',
+    'OBSERVED means the requested visual feature or relationship can be positively described from visible evidence.',
+    'NOT_OBSERVED means the category applies but the queried feature or condition is not visibly present.',
+    'INDETERMINATE means the category applies but visibility or evidence is insufficient for a reliable observation.',
+    'NOT_APPLICABLE means the requested category genuinely does not apply to the visible scene.',
+    'Do not create other status labels or synonyms such as PRESENT, VISIBLE, UNKNOWN, YES, NO, or DETECTED.',
+    'observation MUST be a short factual visual observation.',
+    'regions MUST be an array; region coordinates must use coordinateSpace NORMALIZED and values from 0 to 1.',
+    'measurementConfidence MUST be null or a number from 0 to 1 and refers only to confidence in the observation, never origin confidence.',
+    'limitations MUST be an array of strings.',
+    '',
+    'VALID FORMAT EXAMPLE',
+    'The example is format guidance only. Describe the actual image; do not copy the example visual claim.',
+    example,
+  ].join('\n');
+}
+
+export const VISION_OBSERVER_PROMPT = buildVisionObserverPrompt('SCENE_INVENTORY');
 
 export const VISION_ESCALATION_RECOMMENDATIONS = ['NONE', 'REASONED_VISUAL_RECHECK'] as const;
 export type VisionEscalationRecommendation = (typeof VISION_ESCALATION_RECOMMENDATIONS)[number];
@@ -128,6 +200,7 @@ export const VISION_NORMALIZATION_FAILURE_CODES = [
   'OBSERVATIONS_MISSING',
   'OBSERVATIONS_NOT_ARRAY',
   'OBSERVATIONS_EMPTY',
+  'OBSERVATIONS_TOO_MANY',
   'OBSERVATION_NOT_OBJECT',
   'CATEGORY_MISSING',
   'CATEGORY_MISMATCH',
@@ -160,6 +233,7 @@ export interface VisionResponseDiagnostics {
   observationsPresent: boolean | null;
   observationCount: number | null;
   normalizationFailureCode: VisionNormalizationFailureCode | null;
+  invalidStatusToken?: string;
 }
 
 export interface VisionObserverTransportDiagnostics {
@@ -176,6 +250,7 @@ export interface VisionObserverResult {
   prompt: string;
   provider: string;
   model: string;
+  generationConfig: typeof VISION_OBSERVER_QUERY_GENERATION_CONFIG;
   queryId: string;
   task: VisionObserverTask;
   reasoningMode: VisionObserverReasoningMode;
@@ -281,29 +356,6 @@ export function buildObserverReasonedEscalationRequest(result: VisionObserverRes
   if (!reasonCode) return null;
   return buildReasonedVisualRecheckRequest({ observations: result.observations, observationId: observation.observationId, category: observation.category, reasonCode, targetRegion: observation.regions[0] ?? null });
 }
-
-export const VISION_OBSERVER_PROMPT = [
-  'You are the Lythaus Vision Observer, protocol lythaus-vision-observer-protocol-v1.',
-  'You are visual evidence collection only. Do not determine whether the image is AI-generated.',
-  'Do not assign synthetic probability, human probability, camera probability, authenticity labels, or an image-level verdict.',
-  'Report structured observations only. Do not invent anomalies. Absence of an anomaly is valid.',
-  'Uncertainty and NOT_APPLICABLE are valid outcomes. Partial visibility must not be treated as malformed.',
-  'Unusual artistic content is not automatically an error. Screenshots, CGI, game images, digital art, and composites are legitimate hard negatives.',
-  'Do not use metadata because this Observer is visual-only unless metadata is explicitly supplied in the question.',
-  'Inspect scene inventory: people, animals, objects, screens or displays, text regions, mirrors, reflective surfaces, shadows, repeated objects, and UI elements.',
-  'When text exists, identify text regions and transcribe or OCR where possible; report malformed or inconsistent glyph structures without calling them AI artifacts.',
-  'Inspect object intersections, impossible overlap, occlusion consistency, repeated structural discontinuities, and perspective conflicts.',
-  'Inspect apparent major light directions and shadow consistency; do not penalize complex multi-light scenes merely for having multiple shadow directions.',
-  'For mirrors and reflective surfaces, report expected reflected objects, gross inconsistencies, or indeterminate visibility.',
-  'Inspect suspicious repeated textures or duplicated local structures, while treating natural repetition as valid.',
-  'When applicable, inspect visible hands, digits, limbs, faces, and joints; do not hallucinate occluded anatomy.',
-  'Return suspicious regions or ROIs warranting further inspection when the model can localize them.',
-  'Only inspect anatomy when visible and applicable. Mark occluded or ambiguous anatomy INDETERMINATE.',
-  'Do not treat natural repetition or complex multi-light scenes as synthetic by default.',
-  'If asked a relational question, describe the visible relationship and uncertainty; do not turn it into an origin conclusion.',
-  'Return JSON only: {"observations":[{"category":"...","applicable":true,"status":"...","observation":"...","regions":[],"measurementConfidence":null,"limitations":[]}]}.',
-  'If regions are returned, coordinates must be normalized from 0 to 1 with coordinateSpace NORMALIZED.',
-].join('\n');
 
 function defaultRequest(): VisionObserverRequest {
   return { queryId: 'SCENE_INVENTORY_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Inventory visible scene elements and report only structured visual observations.', reasoningMode: 'DIRECT' };
@@ -412,6 +464,15 @@ function withNormalizationFailure(diagnostics: VisionResponseDiagnostics, normal
   return { ...diagnostics, normalizationFailureCode };
 }
 
+function normalizeObservationList(observations: unknown[], diagnostics: VisionResponseDiagnostics): VisionTaskNormalizationResult {
+  const withCount = withObservationDiagnostics(diagnostics, observations);
+  if (observations.length === 0) return { observations: null, diagnostics: withCount };
+  if (observations.length > VISION_OBSERVER_MAX_OBSERVATIONS) {
+    return { observations: null, diagnostics: withNormalizationFailure(withCount, 'OBSERVATIONS_TOO_MANY') };
+  }
+  return { observations, diagnostics: withCount };
+}
+
 function textFieldFromModelResponse(value: unknown): { key: string; value: string } | null {
   if (typeof value === 'string') return { key: 'value', value };
   if (!isRecord(value)) return null;
@@ -461,8 +522,7 @@ function regionFromObject(value: unknown): VisionRegion | null {
 function normalizeTaskOutput(value: unknown, request: VisionObserverRequest, transportSucceeded: boolean): VisionTaskNormalizationResult {
   let diagnostics = responseDiagnosticsFor(value, transportSucceeded);
   if (isRecord(value) && Array.isArray(value.observations)) {
-    diagnostics = withObservationDiagnostics(diagnostics, value.observations);
-    return { observations: value.observations, diagnostics };
+    return normalizeObservationList(value.observations, diagnostics);
   }
   if (isRecord(value) && isRecord(value.result)) return normalizeTaskOutput(value.result, request, transportSucceeded);
   if (isRecord(value) && Array.isArray(value.objects)) {
@@ -521,15 +581,12 @@ function normalizeTaskOutput(value: unknown, request: VisionObserverRequest, tra
     if (!Array.isArray(parsedAnswer.value.observations)) {
       return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'OBSERVATIONS_NOT_ARRAY') };
     }
-    if (parsedAnswer.value.observations.length === 0) {
-      return { observations: [], diagnostics: withNormalizationFailure(diagnostics, 'OBSERVATIONS_EMPTY') };
-    }
-    return { observations: parsedAnswer.value.observations, diagnostics };
+    return normalizeObservationList(parsedAnswer.value.observations, diagnostics);
   }
   if (textField) {
     const parsed = tryParseJsonText(textField.value);
     if (parsed.ok && isRecord(parsed.value) && Array.isArray(parsed.value.observations)) {
-      return { observations: parsed.value.observations, diagnostics: withObservationDiagnostics(withParsedDiagnostics(diagnostics, parsed.value), parsed.value.observations) };
+      return normalizeObservationList(parsed.value.observations, withParsedDiagnostics(diagnostics, parsed.value));
     }
     if (request.task !== 'caption') return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'UNKNOWN_RESPONSE_SHAPE') };
     return {
@@ -551,6 +608,11 @@ function normalizeTaskOutput(value: unknown, request: VisionObserverRequest, tra
 interface NormalizedObservationResult {
   observation: VisionObservation | null;
   failureCode: VisionNormalizationFailureCode | null;
+  invalidStatusToken?: string;
+}
+
+function safeInvalidStatusToken(value: unknown): string | undefined {
+  return typeof value === 'string' && /^[A-Z_]{1,32}$/.test(value) ? value : undefined;
 }
 
 function normalizeObservationDetailed(value: unknown, index: number, input: VisionObserverInput, request: VisionObserverRequest, provider: string, model: string, executionMs: number): NormalizedObservationResult {
@@ -560,7 +622,7 @@ function normalizeObservationDetailed(value: unknown, index: number, input: Visi
   if (!Object.prototype.hasOwnProperty.call(value, 'applicable')) return { observation: null, failureCode: 'APPLICABLE_MISSING' };
   if (typeof value.applicable !== 'boolean') return { observation: null, failureCode: 'APPLICABLE_INVALID' };
   if (!Object.prototype.hasOwnProperty.call(value, 'status')) return { observation: null, failureCode: 'STATUS_MISSING' };
-  if (!(VISION_OBSERVATION_STATUSES as readonly string[]).includes(String(value.status))) return { observation: null, failureCode: 'STATUS_INVALID' };
+  if (!(VISION_OBSERVATION_STATUSES as readonly string[]).includes(String(value.status))) return { observation: null, failureCode: 'STATUS_INVALID', invalidStatusToken: safeInvalidStatusToken(value.status) };
   if (value.applicable === false && value.status !== 'NOT_APPLICABLE') return { observation: null, failureCode: 'APPLICABILITY_STATUS_MISMATCH' };
   if (value.status === 'NOT_APPLICABLE' && value.applicable !== false) return { observation: null, failureCode: 'APPLICABILITY_STATUS_MISMATCH' };
   if (typeof value.observation !== 'string' || !value.observation.trim()) return { observation: null, failureCode: 'OBSERVATION_TEXT_MISSING' };
@@ -626,9 +688,10 @@ function successfulObserverResult(input: VisionObserverInput, request: VisionObs
     schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     promptVersion: VISION_OBSERVER_PROMPT_VERSION,
-    prompt: VISION_OBSERVER_PROMPT,
+    prompt: buildVisionObserverPrompt(request.category),
     provider,
     model,
+    generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG,
     queryId: request.queryId,
     task: request.task,
     reasoningMode: request.reasoningMode ?? 'DIRECT',
@@ -647,9 +710,10 @@ function failedObserverResult(request: VisionObserverRequest, provider: string, 
     schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
     promptVersion: VISION_OBSERVER_PROMPT_VERSION,
-    prompt: VISION_OBSERVER_PROMPT,
+    prompt: buildVisionObserverPrompt(request.category),
     provider,
     model,
+    generationConfig: VISION_OBSERVER_QUERY_GENERATION_CONFIG,
     queryId: request.queryId,
     task: request.task,
     reasoningMode: request.reasoningMode ?? 'DIRECT',
@@ -669,9 +733,11 @@ function buildMoondreamPayload(input: VisionObserverInput, request: VisionObserv
     return {
       task: 'query',
       image,
-      question: `${VISION_OBSERVER_PROMPT}\nTarget category: ${request.category}\nTarget visual question: ${request.question?.trim() || 'Report only applicable visual observations for this category.'}${request.targetRegion ? `\nTarget region: ${JSON.stringify(request.targetRegion)}` : ''}`,
+      question: `${buildVisionObserverPrompt(request.category)}\n\nTASK QUESTION: ${request.question?.trim() || 'Report only applicable visual observations for this category.'}${request.targetRegion ? `\nTARGET REGION: ${JSON.stringify(request.targetRegion)}` : ''}`,
       reasoning: request.reasoningMode === 'REASONED',
-      stream: false,
+      temperature: VISION_OBSERVER_QUERY_GENERATION_CONFIG.temperature,
+      max_tokens: VISION_OBSERVER_QUERY_GENERATION_CONFIG.maxTokens,
+      stream: VISION_OBSERVER_QUERY_GENERATION_CONFIG.stream,
     };
   }
   if (request.task === 'caption') return { task: 'caption', image, caption_length: 'normal', stream: false };
@@ -746,7 +812,11 @@ function createVisionObserver(options: {
         const normalizedObservations = normalized.observations.map((value, index) => normalizeObservationDetailed(value, index, input, request, options.provider, options.model, Date.now() - startedAt));
         const invalidObservation = normalizedObservations.find((value) => value.observation === null);
         if (invalidObservation) {
-          return failedObserverResult(request, options.provider, options.model, 'MALFORMED_RESPONSE', Date.now() - startedAt, responseTransportDiagnostics, { ...responseDiagnostics, normalizationFailureCode: invalidObservation.failureCode });
+          return failedObserverResult(request, options.provider, options.model, 'MALFORMED_RESPONSE', Date.now() - startedAt, responseTransportDiagnostics, {
+            ...responseDiagnostics,
+            normalizationFailureCode: invalidObservation.failureCode,
+            ...(invalidObservation.invalidStatusToken ? { invalidStatusToken: invalidObservation.invalidStatusToken } : {}),
+          });
         }
         return successfulObserverResult(input, request, options.provider, options.model, normalizedObservations.map((value) => value.observation as VisionObservation), Date.now() - startedAt, responseDiagnostics, providerResponse.httpStatus);
       } catch (error) {
@@ -768,7 +838,7 @@ export function createCloudflareVisionObserver(options: {
     provider: 'cloudflare-workers-ai',
     maxImageBytes: options.maxImageBytes,
     timeoutMs: options.timeoutMs,
-    run: async (selectedModel, payload) => ({ value: await options.ai.run(selectedModel, payload, { metadata: { protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION } }), httpStatus: null, transportSucceeded: true }),
+    run: async (selectedModel, payload) => ({ value: await options.ai.run(selectedModel, payload, { metadata: { protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION, observerTemperature: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.temperature), observerMaxTokens: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.maxTokens), observerStream: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.stream) } }), httpStatus: null, transportSucceeded: true }),
   });
 }
 
@@ -839,6 +909,7 @@ export interface VisionObserverPassSummary {
   observations: readonly VisionObservation[];
   provider: string;
   model: string;
+  generationConfig: typeof VISION_OBSERVER_QUERY_GENERATION_CONFIG;
   task: VisionObserverTask;
   reasoningMode: VisionObserverReasoningMode;
   executionMs: number;
@@ -869,6 +940,7 @@ function passSummary(result: VisionObserverResult): VisionObserverPassSummary {
     observations: result.observations,
     provider: result.provider,
     model: result.model,
+    generationConfig: result.generationConfig,
     task: result.task,
     reasoningMode: result.reasoningMode,
     executionMs: result.executionMs,
