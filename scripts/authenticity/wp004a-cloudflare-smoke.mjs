@@ -61,6 +61,26 @@ function safeObservation(observation) {
   };
 }
 
+function safeResponseDiagnostics(diagnostics) {
+  if (!diagnostics) return null;
+  return {
+    transportSucceeded: diagnostics.transportSucceeded,
+    providerResultType: diagnostics.providerResultType,
+    providerTopLevelKeys: diagnostics.providerTopLevelKeys,
+    answerPresent: diagnostics.answerPresent,
+    answerType: diagnostics.answerType,
+    answerLength: diagnostics.answerLength,
+    reasoningFieldPresent: diagnostics.reasoningFieldPresent,
+    reasoningFieldType: diagnostics.reasoningFieldType,
+    answerJsonParseable: diagnostics.answerJsonParseable,
+    parsedTopLevelType: diagnostics.parsedTopLevelType,
+    parsedTopLevelKeys: diagnostics.parsedTopLevelKeys,
+    observationsPresent: diagnostics.observationsPresent,
+    observationCount: diagnostics.observationCount,
+    normalizationFailureCode: diagnostics.normalizationFailureCode,
+  };
+}
+
 function safeObserverResult(observer) {
   if (!observer) return null;
   return {
@@ -82,6 +102,7 @@ function safeObserverResult(observer) {
     httpStatus: observer.httpStatus ?? null,
     providerErrorCode: observer.providerErrorCode ?? null,
     providerErrorMessageCode: observer.providerErrorMessageCode ?? null,
+    responseDiagnostics: safeResponseDiagnostics(observer.responseDiagnostics),
   };
 }
 
@@ -108,6 +129,7 @@ function safeComparison(comparison) {
       httpStatus: comparison.direct.httpStatus ?? null,
       providerErrorCode: comparison.direct.providerErrorCode ?? null,
       providerErrorMessageCode: comparison.direct.providerErrorMessageCode ?? null,
+      responseDiagnostics: safeResponseDiagnostics(comparison.direct.responseDiagnostics),
     },
     reasoned: {
       status: comparison.reasoned.status,
@@ -123,6 +145,7 @@ function safeComparison(comparison) {
       httpStatus: comparison.reasoned.httpStatus ?? null,
       providerErrorCode: comparison.reasoned.providerErrorCode ?? null,
       providerErrorMessageCode: comparison.reasoned.providerErrorMessageCode ?? null,
+      responseDiagnostics: safeResponseDiagnostics(comparison.reasoned.responseDiagnostics),
     },
     contradictory: comparison.contradictory,
   };

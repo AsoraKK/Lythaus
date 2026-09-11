@@ -357,11 +357,14 @@ test('Cloudflare model-schema access preflight is read-only, bounded, and saniti
   let request;
   const success = await runCloudflareModelSchemaPreflight({ apiToken: 'cloudflare-secret-fixture', accountId: 'account-fixture', model: CLOUDFLARE_VISION_OBSERVER_MODEL, allowNetwork: true, timeoutMs: 100, fetchImpl: async (url, init) => {
     request = { url, init };
-    return jsonResponse({ success: true, result: { input: { type: 'object' }, output: { type: 'object' } } });
+    return jsonResponse({ success: true, result: { input: { type: 'object', properties: { image: {}, task: {}, question: {}, reasoning: {}, stream: {}, temperature: {}, top_p: {}, max_tokens: {} } }, output: { type: 'object', properties: { answer: {}, reasoning: {}, metrics: {} } } } });
   } });
   assert.equal(success.status, 'SUCCESS');
   assert.equal(success.schemaAvailable, true);
   assert.equal(success.httpStatus, 200);
+  assert.deepEqual(success.inputSchemaPropertyNames, ['image', 'max_tokens', 'question', 'reasoning', 'stream', 'task', 'temperature', 'top_p']);
+  assert.deepEqual(success.outputSchemaPropertyNames, ['answer', 'metrics', 'reasoning']);
+  assert.equal(success.responseFormatSupport, 'MOONDREAM_RESPONSE_FORMAT_NOT_DECLARED');
   assert.equal(new URL(request.url).pathname, '/client/v4/accounts/account-fixture/ai/models/schema');
   assert.equal(new URL(request.url).searchParams.get('model'), CLOUDFLARE_VISION_OBSERVER_MODEL);
   assert.equal(request.init.method, 'GET');
@@ -418,6 +421,79 @@ test('Vision Observer fails closed on malformed observations and invalid regions
   assert.equal(malformedResult.observations.length, 0);
   const invalidRegion = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status: 'OBSERVED', observation: 'fixture', regions: [{ coordinateSpace: 'PIXELS', x: 1, y: 1, width: 2, height: 2 }], measurementConfidence: null, limitations: [] }] }) }) } });
   assert.equal((await invalidRegion.observe({ sampleId: 'SAMPLE', inputHash: 'c'.repeat(64), mime: 'image/png', bytes: pngFixture() })).errorCategory, 'MALFORMED_RESPONSE');
+});
+
+test('Moondream query diagnostics preserve successful HTTP metadata without retaining answer or reasoning text', async () => {
+  const transport = createCloudflareRestTransport({
+    apiToken: 'fixture-token',
+    accountId: 'fixture-account',
+    allowNetwork: true,
+    maxRequests: 1,
+    fetchImpl: async () => jsonResponse({ success: true, result: { answer: 'The image appears to be a plain grey square.', reasoning: { trace: 'PRIVATE_REASONING_TRACE' }, metrics: { inputTokens: 1 } } }),
+  });
+  const observer = createCloudflareVisionObserverRest({ transport });
+  const result = await observer.observe({ sampleId: 'SAMPLE', inputHash: 'diag'.repeat(16), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.' } });
+  assert.equal(result.status, 'PROVIDER_FAILURE');
+  assert.equal(result.errorCategory, 'UNEXPECTED_SCHEMA');
+  assert.equal(result.httpStatus, 200);
+  assert.deepEqual(result.responseDiagnostics, {
+    transportSucceeded: true,
+    providerResultType: 'OBJECT',
+    providerTopLevelKeys: ['answer', 'metrics', 'reasoning'],
+    answerPresent: true,
+    answerType: 'string',
+    answerLength: 44,
+    reasoningFieldPresent: true,
+    reasoningFieldType: 'object',
+    answerJsonParseable: false,
+    parsedTopLevelType: null,
+    parsedTopLevelKeys: [],
+    observationsPresent: null,
+    observationCount: null,
+    normalizationFailureCode: 'ANSWER_NOT_JSON',
+  });
+  assert.equal(JSON.stringify(result).includes('plain grey square'), false);
+  assert.equal(JSON.stringify(result).includes('PRIVATE_REASONING_TRACE'), false);
+  assert.equal(JSON.stringify(result).includes('fixture-token'), false);
+});
+
+test('Moondream query parser accepts structured answer JSON and fenced JSON but never prose', async () => {
+  const observation = { category: 'SCENE_INVENTORY', applicable: true, status: 'OBSERVED', observation: 'A uniform grey image is visible.', regions: [], measurementConfidence: null, limitations: [] };
+  const structured = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: [observation] }), reasoning: { trace: 'PRIVATE_REASONING_TRACE' } }) } });
+  const structuredResult = await structured.observe({ sampleId: 'SAMPLE', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.' } });
+  assert.equal(structuredResult.status, 'SUCCESS');
+  assert.equal(structuredResult.responseDiagnostics.answerJsonParseable, true);
+  assert.equal(structuredResult.responseDiagnostics.parsedTopLevelType, 'OBJECT');
+  assert.equal(structuredResult.responseDiagnostics.observationsPresent, true);
+  assert.equal(structuredResult.responseDiagnostics.observationCount, 1);
+  assert.equal(structuredResult.responseDiagnostics.normalizationFailureCode, null);
+  assert.equal(JSON.stringify(structuredResult).includes('PRIVATE_REASONING_TRACE'), false);
+
+  const fenced = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: `\`\`\`json\n${JSON.stringify({ observations: [observation] })}\n\`\`\`` }) } });
+  const fencedResult = await fenced.observe({ sampleId: 'SAMPLE', inputHash: 'b'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_02', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.' } });
+  assert.equal(fencedResult.status, 'SUCCESS');
+  assert.equal(fencedResult.responseDiagnostics.answerJsonParseable, true);
+
+  const prose = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: 'The image appears to be a plain grey square.' }) } });
+  const proseResult = await prose.observe({ sampleId: 'SAMPLE', inputHash: 'c'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_03', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.' } });
+  assert.equal(proseResult.status, 'PROVIDER_FAILURE');
+  assert.equal(proseResult.responseDiagnostics.normalizationFailureCode, 'ANSWER_NOT_JSON');
+  assert.equal(proseResult.observations.length, 0);
+});
+
+test('Moondream query diagnostics identify precise answer and observation schema failures', async () => {
+  const run = (answer) => createCloudflareVisionObserver({ ai: { run: async () => ({ answer }) } });
+  const base = { sampleId: 'SAMPLE', inputHash: 'd'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_04', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.' } };
+  const missingAnswer = await run('').observe(base);
+  assert.equal(missingAnswer.responseDiagnostics.normalizationFailureCode, 'ANSWER_MISSING');
+  const missingObservations = await run(JSON.stringify({ result: 'no observations' })).observe(base);
+  assert.equal(missingObservations.responseDiagnostics.normalizationFailureCode, 'OBSERVATIONS_MISSING');
+  const wrongCategory = await run(JSON.stringify({ observations: [{ category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'wrong target', regions: [], measurementConfidence: null, limitations: [] }] })).observe(base);
+  assert.equal(wrongCategory.responseDiagnostics.normalizationFailureCode, 'CATEGORY_MISMATCH');
+  const missingApplicable = await run(JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', status: 'OBSERVED', observation: 'missing applicability', regions: [], measurementConfidence: null, limitations: [] }] })).observe(base);
+  assert.equal(missingApplicable.responseDiagnostics.normalizationFailureCode, 'APPLICABLE_MISSING');
+  const invalidStatus = await run(JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status: 'MAYBE', observation: 'invalid status', regions: [], measurementConfidence: null, limitations: [] }] })).observe(base);
+  assert.equal(invalidStatus.responseDiagnostics.normalizationFailureCode, 'STATUS_INVALID');
 });
 
 test('Vision Observer maps direct and reasoned query modes, escalates only in the research layer, and discards raw reasoning', async () => {
