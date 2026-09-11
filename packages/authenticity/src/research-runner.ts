@@ -1,18 +1,22 @@
 import { createAuthenticityCase, type ForensicFeatureBundle } from './contracts.ts';
 import { buildEvidencePacket, packetReferenceIds, type EvidencePacket, type PacketPreflight } from './evidence-packet.ts';
-import { generateForensicFeatureBundleV1, inspectMedia, sha256Hex } from './forensics.ts';
-import { createMockJudge, type Judge, type JudgeResult } from './judge.ts';
+import { generateForensicFeatureBundleV1, inspectMedia, sha256Hex, type DecodedImage, type ForensicInput } from './forensics.ts';
+import { createMockJudge, type EvidenceRequest, type Judge, type JudgeResult } from './judge.ts';
 import { createMockModerationProvider, type ModerationAnalysis, type ModerationProvider } from './moderation.ts';
 import { detectMediaMime } from './media-intake.ts';
 import { mimeFromResearchFilename } from './research-image.ts';
+import { decodeResearchImage } from './research-decode.ts';
 import { type RuntimeManifestEntry, type RuntimeResearchManifest } from './research-manifests.ts';
 import {
   compareVisionObserverResults,
+  buildObserverReasonedEscalationRequest,
+  buildReasonedVisualRecheckRequest,
   createMockVisionObserver,
   type VisionObserver,
   type VisionObserverComparison,
   type VisionObserverRequest,
   type VisionObserverResult,
+  type VisionObservation,
   type VisionObserverTask,
   type VisionObserverReasoningMode,
   VISION_OBSERVER_PROTOCOL_VERSION,
@@ -97,6 +101,8 @@ export interface ResearchRunnerDependencies {
   moderation?: ModerationProvider;
   observer?: VisionObserver;
   judge?: Judge;
+  decodeImage?: (input: { bytes: Uint8Array; mime: string }) => Promise<DecodedImage | null>;
+  forensicGenerator?: (input: ForensicInput) => Promise<ForensicFeatureBundle>;
   now?: () => string;
 }
 
@@ -326,10 +332,18 @@ async function callJudge(input: { judge: Judge; packet: EvidencePacket; requestI
   }
 }
 
-function recheckRequested(result: JudgeResult, packet: EvidencePacket): boolean {
-  if (result.status !== 'SUCCESS' || !result.recommendation?.recommendedAdditionalTests.includes('REASONED_VISUAL_RECHECK')) return false;
+function recheckRequested(result: JudgeResult, packet: EvidencePacket): EvidenceRequest | null {
+  if (result.status !== 'SUCCESS' || !result.recommendation?.recommendedAdditionalTests.includes('REASONED_VISUAL_RECHECK')) return null;
   const references = packetReferenceIds(packet);
-  return result.recommendation.missingEvidence.some((request) => Boolean(request.observationId && request.category && request.reasonCode && references.has(request.observationId)));
+  return result.recommendation.missingEvidence.find((request) => Boolean(request.observationId && request.category && request.reasonCode && references.has(request.observationId))) ?? null;
+}
+
+function findContradictoryObservationIds(previous: readonly VisionObservation[], next: readonly VisionObservation[]): string[] {
+  const previousStatuses = new Set(previous.map((observation) => `${observation.category}:${observation.status}`));
+  return next.filter((observation) => {
+    const opposite = observation.status === 'OBSERVED' ? 'NOT_OBSERVED' : observation.status === 'NOT_OBSERVED' ? 'OBSERVED' : null;
+    return opposite !== null && previousStatuses.has(`${observation.category}:${opposite}`);
+  }).flatMap((observation) => [observation.observationId, ...previous.filter((item) => item.category === observation.category).map((item) => item.observationId)]);
 }
 
 export async function runResearchTrial(input: ResearchRunnerInput, dependencies: ResearchRunnerDependencies): Promise<ResearchRunResult> {
@@ -339,6 +353,8 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
   const moderation = dependencies.moderation ?? createMockModerationProvider();
   const observer = dependencies.observer ?? createMockVisionObserver();
   const judge = dependencies.judge ?? createMockJudge();
+  const decodeImage = dependencies.decodeImage ?? decodeResearchImage;
+  const forensicGenerator = dependencies.forensicGenerator ?? generateForensicFeatureBundleV1;
   const usesModeration = mode === 'MODERATION_ONLY' || mode === 'FULL' || mode === 'FULL_RECHECK' || mode === 'MOCK_ONLY';
   const usesObserver = mode === 'OBSERVER_ONLY' || mode === 'OBSERVER_REASONED' || mode === 'OBSERVER_AB' || mode === 'FULL' || mode === 'FULL_RECHECK' || mode === 'MOCK_ONLY';
   const usesJudge = mode === 'JUDGE_ONLY' || mode === 'FULL' || mode === 'FULL_RECHECK' || mode === 'MOCK_ONLY';
@@ -388,6 +404,9 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
     let judgeResult: JudgeResult | null = null;
     let judgeHistory: JudgeResult[] = [];
     let recheckRounds = 0;
+    let reasonedRecheckConsumed = false;
+    let observationHistory: VisionObservation[] = [];
+    let contradictoryObservationIds: string[] = [];
     const failedComponents: string[] = [];
     let status: ResearchCaseResult['status'] = 'COMPLETED';
     let stoppedAt: ResearchCaseResult['stoppedAt'] = null;
@@ -411,8 +430,15 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
       stoppedAt = 'SAFETY_GATE';
     } else {
       if (mode === 'FULL' || mode === 'FULL_RECHECK' || mode === 'MOCK_ONLY') {
+        let decoded: DecodedImage | null = null;
         try {
-          forensic = sanitizeForensicBundle(await generateForensicFeatureBundleV1({ caseId: caseRecord.id, mime, bytes: sample.bytes, now: timestamp }));
+          decoded = await decodeImage({ bytes: sample.bytes, mime });
+        } catch {
+          decoded = null;
+        }
+        if (!decoded) failedComponents.push('forensics-decode');
+        try {
+          forensic = sanitizeForensicBundle(await forensicGenerator({ caseId: caseRecord.id, mime, bytes: sample.bytes, ...(decoded ? { decoded } : {}), now: timestamp }));
         } catch {
           failedComponents.push('forensics');
         }
@@ -426,33 +452,60 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
         } else {
           const reasoningMode: VisionObserverReasoningMode = mode === 'OBSERVER_REASONED' ? 'REASONED' : 'DIRECT';
           observerResult = await callObserver({ observer, baseInput, request: requestForMode(input, reasoningMode), allowNetwork, ledger });
+          if ((mode === 'FULL' || mode === 'FULL_RECHECK' || mode === 'MOCK_ONLY') && observerResult.status === 'SUCCESS' && caps.maxRecheckRounds >= 1) {
+            const escalationRequest = buildObserverReasonedEscalationRequest(observerResult);
+            if (escalationRequest) {
+              reasonedRecheckConsumed = true;
+              recheckRounds = 1;
+              observationHistory = [...observerResult.observations];
+              const direct = observerResult;
+              const reasoned = await callObserver({ observer, baseInput, request: escalationRequest, allowNetwork, ledger });
+              contradictoryObservationIds = contradictoryObservationIds.concat(findContradictoryObservationIds(direct.observations, reasoned.observations));
+              observerResult = reasoned;
+            }
+          }
         }
         if (observerResult.status === 'PROVIDER_FAILURE') failedComponents.push('vision-observer');
       }
     }
 
-    packet = buildEvidencePacket({ runId, caseId: caseRecord.id, sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, preflight, forensicBundle: forensic, moderation: moderationResult, observer: observerResult, failedComponents, now: timestamp });
+    packet = buildEvidencePacket({ runId, caseId: caseRecord.id, sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, preflight, forensicBundle: forensic, moderation: moderationResult, observer: observerResult, observationHistory, contradictoryObservationIds, failedComponents, now: timestamp });
 
     if (usesJudge && stoppedAt === null) {
       judgeResult = await callJudge({ judge, packet, requestId: `${runId}:${entry.sampleId}:1`, allowNetwork, ledger });
       judgeHistory = [judgeResult];
-      const wantsRecheck = (mode === 'FULL_RECHECK' || input.enableRecheck === true) && recheckRequested(judgeResult, packet) && caps.maxRecheckRounds >= 1 && observerResult?.status === 'SUCCESS';
-      if (wantsRecheck && judgeHistory.length < MAX_JUDGE_PASSES_V1) {
-        recheckRounds = 1;
-        const directObservations = observerResult?.observations ?? [];
-        const reasoned = await callObserver({ observer, baseInput, request: requestForMode(input, 'REASONED'), allowNetwork, ledger });
-        const directStatuses = new Set(directObservations.map((observation) => `${observation.category}:${observation.status}`));
-        const contradictoryObservationIds = reasoned.observations.filter((observation) => {
-          const opposite = observation.status === 'OBSERVED' ? 'NOT_OBSERVED' : observation.status === 'NOT_OBSERVED' ? 'OBSERVED' : null;
-          return opposite !== null && directStatuses.has(`${observation.category}:${opposite}`);
-        }).flatMap((observation) => [observation.observationId, ...directObservations.filter((item) => item.category === observation.category).map((item) => item.observationId)]);
-        packet = buildEvidencePacket({ runId, caseId: caseRecord.id, sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, preflight, forensicBundle: forensic, moderation: moderationResult, observer: reasoned, observationHistory: directObservations, contradictoryObservationIds, failedComponents, now: timestamp });
-        const finalJudge = await callJudge({ judge, packet, requestId: `${runId}:${entry.sampleId}:2`, allowNetwork, ledger });
-        judgeHistory.push(finalJudge);
-        judgeResult = finalJudge;
+      const judgeRecheck = (mode === 'FULL_RECHECK' || input.enableRecheck === true) && recheckRequested(judgeResult, packet);
+      if (judgeRecheck && !reasonedRecheckConsumed && caps.maxRecheckRounds >= 1 && observerResult?.status === 'SUCCESS' && judgeHistory.length < MAX_JUDGE_PASSES_V1) {
+        const allObservations = [...packet.observationHistory, ...packet.observations];
+        let recheckRequest: VisionObserverRequest | null = null;
+        try {
+          recheckRequest = buildReasonedVisualRecheckRequest({
+            observations: allObservations,
+            observationId: judgeRecheck.observationId as string,
+            category: judgeRecheck.category as NonNullable<EvidenceRequest['category']>,
+            reasonCode: judgeRecheck.reasonCode as NonNullable<EvidenceRequest['reasonCode']>,
+            targetRegion: judgeRecheck.targetRegion,
+          });
+        } catch {
+          failedComponents.push('judge-recheck-request');
+        }
+        if (recheckRequest) {
+          reasonedRecheckConsumed = true;
+          recheckRounds = 1;
+          const priorObservations = [...packet.observationHistory, ...packet.observations];
+          const reasoned = await callObserver({ observer, baseInput, request: recheckRequest, allowNetwork, ledger });
+          contradictoryObservationIds = contradictoryObservationIds.concat(findContradictoryObservationIds(priorObservations, reasoned.observations));
+          observationHistory = priorObservations;
+          observerResult = reasoned;
+          if (reasoned.status === 'PROVIDER_FAILURE') failedComponents.push('vision-observer');
+          packet = buildEvidencePacket({ runId, caseId: caseRecord.id, sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, preflight, forensicBundle: forensic, moderation: moderationResult, observer: reasoned, observationHistory, contradictoryObservationIds, failedComponents, now: timestamp });
+          const finalJudge = await callJudge({ judge, packet, requestId: `${runId}:${entry.sampleId}:2`, allowNetwork, ledger });
+          judgeHistory.push(finalJudge);
+          judgeResult = finalJudge;
+        }
       }
     }
-    results.push({ sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, caseId: caseRecord.id, inputHash, status, stoppedAt, preflight, moderation: moderationResult, observer: observerResult, observerComparison, forensic, packet, judge: judgeResult, judgeHistory, recheckRounds, errorCategory: failedComponents.includes('forensics') ? 'FORENSIC_FAILURE' : null });
+    results.push({ sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, caseId: caseRecord.id, inputHash, status, stoppedAt, preflight, moderation: moderationResult, observer: observerResult, observerComparison, forensic, packet, judge: judgeResult, judgeHistory, recheckRounds, errorCategory: failedComponents.some((component) => component.startsWith('forensics')) ? 'FORENSIC_FAILURE' : null });
   }
   return { schemaVersion: RESEARCH_RUN_SCHEMA_VERSION, runId, mode, safetyMode, groundTruthLoaded: false, cases: results, judgeOnlyResults: [], invocationAccounting: ledger.snapshot(), enforcementAuthority: false };
 }

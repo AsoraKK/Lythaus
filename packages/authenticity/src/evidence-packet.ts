@@ -13,7 +13,7 @@ import { type VisionObservation, type VisionObserverResult, assertVisionObservat
 export const EVIDENCE_PACKET_SCHEMA_VERSION = 'lythaus-evidence-packet-v1' as const;
 export const SAFETY_CONTEXT_ROLE = 'SAFETY_CONTEXT_ONLY' as const;
 
-export const EVIDENCE_QUALITY_STATUSES = ['AVAILABLE', 'UNAVAILABLE', 'NOT_APPLICABLE', 'INDETERMINATE', 'FAILED', 'CONTRADICTORY'] as const;
+export const EVIDENCE_QUALITY_STATUSES = ['AVAILABLE', 'PARTIAL', 'UNAVAILABLE', 'NOT_APPLICABLE', 'INDETERMINATE', 'FAILED', 'CONTRADICTORY'] as const;
 export type EvidenceQualityStatus = (typeof EVIDENCE_QUALITY_STATUSES)[number];
 
 export interface EvidenceProvenance {
@@ -227,7 +227,9 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
     }));
     summaries.set('EF1_FILE_PROVENANCE', familySummary('EF1_FILE_PROVENANCE', 'AVAILABLE', [ef1Id], ['Metadata is descriptive and not ground truth.']));
 
-    const ef2Quality: EvidenceQualityStatus = forensic.physicalAcquisition.cameraEvidenceApplicability === 'unavailable' ? 'UNAVAILABLE' : 'AVAILABLE';
+    const ef2Quality: EvidenceQualityStatus = forensic.physicalAcquisition.cameraEvidenceApplicability === 'applicable'
+      ? 'AVAILABLE'
+      : forensic.physicalAcquisition.cameraEvidenceApplicability === 'invalid' ? 'FAILED' : 'UNAVAILABLE';
     const ef2Id = `${forensic.id}:EF2`;
     evidence.push(deterministicEvidence({
       ...common,
@@ -241,6 +243,9 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
     }));
     summaries.set('EF2_PHYSICAL_ACQUISITION', familySummary('EF2_PHYSICAL_ACQUISITION', ef2Quality, [ef2Id], ['Decoded pixels or sensor evidence may be unavailable.']));
 
+    const ef4Quality: EvidenceQualityStatus = forensic.audit.applicability === 'applicable'
+      ? 'AVAILABLE'
+      : forensic.audit.applicability === 'invalid' ? 'FAILED' : 'UNAVAILABLE';
     const ef4Id = `${forensic.id}:EF4`;
     evidence.push(deterministicEvidence({
       ...common,
@@ -248,11 +253,14 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
       family: 'EF4_SPECTRAL_STABILITY',
       name: 'spectral_transformation_measurements',
       value: { spectralStability: forensic.spectralStability, featureVectorLength: forensic.featureVector.length, imagePyramid: forensic.imagePyramid },
-      quality: 'AVAILABLE',
+      quality: ef4Quality,
       applicable: forensic.audit.applicability,
-      limitations: ['Experimental spectral/residual measurements are evidence, not a calibrated detector score.'],
+      limitations: [
+        'Experimental spectral/residual measurements are evidence, not a calibrated detector score.',
+        ...(ef4Quality === 'UNAVAILABLE' ? ['Decoded pixels were unavailable; pixel-domain EF4 measurements were not run.'] : []),
+      ],
     }));
-    summaries.set('EF4_SPECTRAL_STABILITY', familySummary('EF4_SPECTRAL_STABILITY', 'AVAILABLE', [ef4Id], ['No interpretation is upgraded beyond the deterministic extractor contract.']));
+    summaries.set('EF4_SPECTRAL_STABILITY', familySummary('EF4_SPECTRAL_STABILITY', ef4Quality, [ef4Id], ['No interpretation is upgraded beyond the deterministic extractor contract.']));
   } else {
     summaries.set('EF1_FILE_PROVENANCE', familySummary('EF1_FILE_PROVENANCE', 'UNAVAILABLE', [], ['Deterministic forensics was not run.']));
     summaries.set('EF2_PHYSICAL_ACQUISITION', familySummary('EF2_PHYSICAL_ACQUISITION', 'UNAVAILABLE', [], ['Deterministic forensics was not run.']));
@@ -290,7 +298,7 @@ export function buildEvidencePacket(input: BuildEvidencePacketInput): EvidencePa
     ? 'FAILED'
     : (input.contradictoryEvidenceIds && input.contradictoryEvidenceIds.length > 0) || (input.contradictoryObservationIds && input.contradictoryObservationIds.length > 0)
       ? 'CONTRADICTORY'
-      : missingEvidenceFamilies.length > 0 ? 'UNAVAILABLE' : 'AVAILABLE';
+      : missingEvidenceFamilies.length > 0 ? 'PARTIAL' : 'AVAILABLE';
   const cameraEvidence = forensic?.physicalAcquisition.cameraOrigin ?? 'CAMERA_ORIGIN_UNCERTAIN';
   const syntheticEvidence = forensic?.generativeForensics.syntheticEvidence ?? 'NO_POSITIVE_SYNTHETIC_EVIDENCE';
   const transformationState: TransformationState = {
@@ -354,6 +362,8 @@ export function assertEvidencePacket(packet: EvidencePacket): void {
   if (packet.schemaVersion !== EVIDENCE_PACKET_SCHEMA_VERSION) throw new Error('evidence_packet_schema_invalid');
   if (packet.enforcementAuthority !== false) throw new Error('evidence_packet_enforcement_authority_invalid');
   if (packet.safetyContext.role !== SAFETY_CONTEXT_ROLE) throw new Error('evidence_packet_safety_role_invalid');
+  if (!(EVIDENCE_QUALITY_STATUSES as readonly string[]).includes(packet.quality.overall)) throw new Error('evidence_packet_quality_invalid');
+  if (!(EVIDENCE_QUALITY_STATUSES as readonly string[]).includes(packet.safetyContext.quality)) throw new Error('evidence_packet_safety_quality_invalid');
   for (const forbidden of ['groundTruth', 'truth', 'aiProbability', 'humanProbability', 'authenticityVerdict']) {
     if (Object.prototype.hasOwnProperty.call(packet, forbidden)) throw new Error(`evidence_packet_forbidden_field:${forbidden}`);
   }
@@ -362,6 +372,7 @@ export function assertEvidencePacket(packet: EvidencePacket): void {
     if (evidenceIds.has(item.evidenceId)) throw new Error('evidence_packet_duplicate_evidence_id');
     evidenceIds.add(item.evidenceId);
     if (item.kind !== 'MEASUREMENT') throw new Error('evidence_packet_measurement_kind_invalid');
+    if (!(EVIDENCE_QUALITY_STATUSES as readonly string[]).includes(item.quality)) throw new Error('evidence_packet_evidence_quality_invalid');
     if (item.provenance.evidenceFamily !== item.family) throw new Error('evidence_packet_provenance_family_mismatch');
     if (item.family === 'EF3_GENERATIVE_FORENSICS' && /moderation|safety|openai/i.test(item.provenance.sourceComponent)) throw new Error('safety_cannot_be_synthetic_evidence');
   }
@@ -376,6 +387,7 @@ export function assertEvidencePacket(packet: EvidencePacket): void {
   for (const family of familyOrder()) {
     const summary = packet.evidenceFamilies[family];
     if (!summary || summary.family !== family) throw new Error(`evidence_packet_family_missing:${family}`);
+    if (!(EVIDENCE_QUALITY_STATUSES as readonly string[]).includes(summary.status)) throw new Error('evidence_packet_family_quality_invalid');
     assertEvidenceReferenceIds(packet, summary.evidenceIds);
   }
 }

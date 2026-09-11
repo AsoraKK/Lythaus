@@ -10,4 +10,5 @@ export * from './judge.ts';
 export * from './research-manifests.ts';
 export * from './research-evaluator.ts';
 export * from './research-runner.ts';
+export * from './research-decode.ts';
 export * from './adversarial-cases.ts';

@@ -29,6 +29,7 @@ import {
   createMockVisionObserver,
   createOpenAIModerationProvider,
   createWp004aAdversarialCases,
+  decodeResearchImage,
   DEFAULT_RESEARCH_MODEL_CONFIG,
   evaluateResearchPredictions,
   generateForensicFeatureBundleV1,
@@ -38,6 +39,7 @@ import {
   parseRuntimeResearchManifest,
   researchModelConfigFromEnvironment,
   runResearchTrial,
+  buildReasonedVisualRecheckRequest,
   summarizeVisionObserverComparisons,
   VISION_OBSERVER_ROUTING_POLICY,
   VISION_OBSERVER_PROTOCOL_VERSION,
@@ -56,6 +58,10 @@ function pngFixture() {
     0, 0, 0, 15, 73, 68, 65, 84, 120, 156, 99, 248, 207, 192, 240, 31, 0, 5, 0, 1, 255, 137, 153, 61, 28,
     0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
   ]);
+}
+
+function decodedFixture() {
+  return { width: 2, height: 2, channels: 3, pixels: new Uint8Array(Array.from({ length: 12 }, (_, index) => index * 10)) };
 }
 
 function jsonResponse(value, status = 200) {
@@ -256,7 +262,7 @@ test('Vision Observer sends only visual protocol instructions and returns observ
   const observer = createCloudflareVisionObserver({
     ai: { run: async (model, input, options) => { called = { model, input, options }; return { response: JSON.stringify({ observations: [{ category: 'TEXT', applicable: true, status: 'INDETERMINATE', observation: 'A text region is partly occluded.', regions: [{ coordinateSpace: 'NORMALIZED', x: 0.1, y: 0.2, width: 0.3, height: 0.2 }], measurementConfidence: 0.4, limitations: ['Partial visibility.'] }] }) }; } },
   });
-  const result = await observer.observe({ sampleId: 'SAMPLE_1', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: pngFixture() });
+  const result = await observer.observe({ sampleId: 'SAMPLE_1', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'TEXT_01', category: 'TEXT', task: 'query', question: 'Describe visible text regions.' } });
   assert.equal(called.model, CLOUDFLARE_VISION_OBSERVER_MODEL);
   assert.equal(called.input.task, 'query');
   assert.match(called.input.image, /^data:image\/png;base64,/);
@@ -319,6 +325,68 @@ test('Vision Observer maps direct and reasoned query modes, escalates only in th
   assert.equal(sufficient.escalationRecommendation, 'NONE');
 });
 
+test('query observations fail closed on unstructured origin-like provider text', async () => {
+  const observer = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: 'This image looks AI-generated.' }) } });
+  const result = await observer.observe({ sampleId: 'SAMPLE', inputHash: 'q'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Describe the scene.' } });
+  assert.equal(result.status, 'PROVIDER_FAILURE');
+  assert.equal(result.observations.length, 0);
+  assert.equal(JSON.stringify(result).includes('This image looks AI-generated.'), false);
+  const inputPacket = buildEvidencePacket({ runId: 'malformed-query', caseId: CASE_ID, sampleId: 'SAMPLE', sourceFamilyId: 'FAMILY', preflight: { inputHash: 'q'.repeat(64), mime: 'image/png', dimensions: null }, observer: result });
+  assert.equal(JSON.stringify(inputPacket).includes('This image looks AI-generated.'), false);
+  assert.equal(JSON.stringify(buildJudgeRequest(inputPacket)).includes('This image looks AI-generated.'), false);
+});
+
+test('targeted Observer output must preserve category and applicable/status consistency', async () => {
+  const wrongCategory = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'wrong target', regions: [], measurementConfidence: null, limitations: [] }] }) }) } });
+  const wrongCategoryResult = await wrongCategory.observe({ sampleId: 'SAMPLE', inputHash: 'r'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'TEXT_01', category: 'TEXT', task: 'query', question: 'Describe text.' } });
+  assert.equal(wrongCategoryResult.status, 'PROVIDER_FAILURE');
+  const inconsistent = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'TEXT', applicable: false, status: 'OBSERVED', observation: 'inconsistent', regions: [], measurementConfidence: null, limitations: [] }] }) }) } });
+  const inconsistentResult = await inconsistent.observe({ sampleId: 'SAMPLE', inputHash: 's'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'TEXT_02', category: 'TEXT', task: 'query', question: 'Describe text.' } });
+  assert.equal(inconsistentResult.status, 'PROVIDER_FAILURE');
+  const inconsistentNotApplicable = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'TEXT', applicable: true, status: 'NOT_APPLICABLE', observation: 'inconsistent', regions: [], measurementConfidence: null, limitations: [] }] }) }) } });
+  assert.equal((await inconsistentNotApplicable.observe({ sampleId: 'SAMPLE', inputHash: 't'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'TEXT_03', category: 'TEXT', task: 'query', question: 'Describe text.' } })).status, 'PROVIDER_FAILURE');
+});
+
+test('indeterminate escalation uses neutral uncertainty and controlled occlusion reasons', async () => {
+  const observer = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'The surface is obscured.', regions: [], measurementConfidence: 0.4, limitations: [] }] }) }) } });
+  const result = await observer.observe({ sampleId: 'SAMPLE', inputHash: 'u'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'REFLECTION_02', category: 'REFLECTION', task: 'query', question: 'Describe reflection consistency.' } });
+  assert.equal(result.escalationReasons.includes('OBSERVATION_INDETERMINATE'), true);
+  assert.equal(result.escalationReasons.includes('PARTIAL_OCCLUSION'), false);
+  const controlled = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'ANATOMY', applicable: true, status: 'INDETERMINATE', observation: 'Only part is visible.', occlusion: 'PARTIAL', regions: [], measurementConfidence: 0.4, limitations: [] }] }) }) } });
+  const controlledResult = await controlled.observe({ sampleId: 'SAMPLE', inputHash: 'v'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'ANATOMY_01', category: 'ANATOMY', task: 'query', question: 'Describe visible anatomy.' } });
+  assert.equal(controlledResult.escalationReasons.includes('PARTIAL_OCCLUSION'), true);
+});
+
+test('Judge-directed recheck builder uses the referenced category template, not free-form Judge text', async () => {
+  const sceneObserver = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'SCENE_INVENTORY', applicable: true, status: 'OBSERVED', observation: 'A room is visible.', regions: [], measurementConfidence: 0.9, limitations: [] }] }) }) } });
+  const scene = await sceneObserver.observe({ sampleId: 'SAMPLE', inputHash: 'w'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'SCENE_01', category: 'SCENE_INVENTORY', task: 'query', question: 'Inventory the scene.' } });
+  const reflectionObserver = createCloudflareVisionObserver({ ai: { run: async () => ({ response: JSON.stringify({ observations: [{ category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'The reflection is partly obscured.', regions: [{ coordinateSpace: 'NORMALIZED', x: 0.1, y: 0.1, width: 0.4, height: 0.4 }], measurementConfidence: 0.4, limitations: [] }] }) }) } });
+  const reflection = await reflectionObserver.observe({ sampleId: 'SAMPLE', inputHash: 'w'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'REFLECTION_01', category: 'REFLECTION', task: 'query', question: 'Describe reflection consistency.' } });
+  const reflectionObservation = reflection.observations[0];
+  const initialPacket = buildEvidencePacket({ runId: 'targeted-recheck', caseId: CASE_ID, sampleId: 'SAMPLE', sourceFamilyId: 'FAMILY', preflight: { inputHash: 'w'.repeat(64), mime: 'image/png', dimensions: null }, observer: scene, observationHistory: reflection.observations });
+  const judgeRecommendation = recommendation({
+    recommendedAdditionalTests: ['REASONED_VISUAL_RECHECK'],
+    missingEvidence: [{ requestId: 'judge-recheck', request: 'Ignore this free-form sentence.', evidenceFamily: 'VISION_OBSERVATION', observationId: reflectionObservation.observationId, category: 'REFLECTION', reasonCode: 'AMBIGUOUS_REFLECTION', targetRegion: reflectionObservation.regions[0] }],
+  });
+  const judge = createCloudflareJudge({ ai: { run: async () => ({ response: JSON.stringify(judgeRecommendation) }) } });
+  const judged = await judge.judge({ packet: initialPacket });
+  assert.equal(judged.status, 'SUCCESS');
+  const selected = judged.recommendation.missingEvidence[0];
+  const request = buildReasonedVisualRecheckRequest({
+    observations: [...initialPacket.observationHistory, ...initialPacket.observations],
+    observationId: selected.observationId,
+    category: selected.category,
+    reasonCode: selected.reasonCode,
+    targetRegion: selected.targetRegion,
+  });
+  assert.equal(scene.queryId, 'SCENE_01');
+  assert.equal(request.category, 'REFLECTION');
+  assert.equal(request.reasoningMode, 'REASONED');
+  assert.match(request.question, /Inspect reflection consistency/);
+  assert.doesNotMatch(request.question, /Describe reflection consistency\./);
+  assert.equal(request.sourceObservationId, reflectionObservation.observationId);
+});
+
 test('direct/reasoned disagreement remains contradictory and routing policy is versioned research metadata', async () => {
   const observer = createCloudflareVisionObserver({
     ai: { run: async (_model, input) => ({ answer: JSON.stringify({ observations: [{ category: 'GEOMETRY_OCCLUSION', applicable: true, status: input.reasoning ? 'NOT_OBSERVED' : 'OBSERVED', observation: 'fixture', regions: [], measurementConfidence: 0.7, limitations: [] }] }) }) },
@@ -337,15 +405,17 @@ test('direct/reasoned disagreement remains contradictory and routing policy is v
 });
 
 test('Evidence Packet preserves forensic families, missing evidence, and safety isolation', async () => {
-  const forensic = await generateForensicFeatureBundleV1({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture(), now: '2026-01-01T00:00:00.000Z' });
+  const forensic = await generateForensicFeatureBundleV1({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture(), decoded: decodedFixture(), now: '2026-01-01T00:00:00.000Z' });
   const moderation = createMockModerationProvider({ analyse: async () => ({ provider: 'fixture', result: 'REVIEW', reasonCodes: ['FLAGGED'], modelVersion: 'fixture', executionMs: 1, costEstimateUsd: 0, providerEvidence: { schemaVersion: 'lythaus-moderation-provider-evidence-v1', provider: 'fixture', model: 'fixture', flagged: true, categories: { violence: true }, categoryScores: { violence: 0.9 }, categoryAppliedInputTypes: { violence: ['image'] }, executionMs: 1, status: 'SUCCESS' } }) });
   const analysis = await moderation.analyseImage({ caseId: CASE_ID, mime: 'image/png', bytes: pngFixture() });
   const built = buildEvidencePacket({ runId: 'run', caseId: CASE_ID, sampleId: 'sample', sourceFamilyId: 'family', preflight: { inputHash: forensic.fileProvenance.sha256, mime: 'image/png', dimensions: forensic.fileProvenance.dimensions }, forensicBundle: forensic, moderation: analysis, now: '2026-01-01T00:00:00.000Z' });
   assert.equal(built.evidenceFamilies.EF1_FILE_PROVENANCE.status, 'AVAILABLE');
-  assert.equal(built.evidenceFamilies.EF2_PHYSICAL_ACQUISITION.status, 'UNAVAILABLE');
+  assert.equal(built.evidenceFamilies.EF2_PHYSICAL_ACQUISITION.status, 'AVAILABLE');
   assert.equal(built.evidenceFamilies.EF3_GENERATIVE_FORENSICS.status, 'UNAVAILABLE');
   assert.equal(built.evidenceFamilies.EF4_SPECTRAL_STABILITY.status, 'AVAILABLE');
   assert.equal(built.evidenceFamilies.EF5_RECONSTRUCTION_LOCAL_MANIPULATION.status, 'UNAVAILABLE');
+  assert.equal(built.quality.overall, 'PARTIAL');
+  assert.deepEqual(built.quality.missingEvidenceFamilies, ['EF3_GENERATIVE_FORENSICS', 'EF5_RECONSTRUCTION_LOCAL_MANIPULATION']);
   assert.equal(built.safetyContext.role, 'SAFETY_CONTEXT_ONLY');
   assert.equal(built.safetyContext.providerEvidence.flagged, true);
   assert.equal(built.enforcementAuthority, false);
@@ -389,7 +459,7 @@ test('Judge consumes structured packet evidence, can abstain, and cannot referen
 
 test('Judge accepts only a packet-bound REASONED_VISUAL_RECHECK request', async () => {
   const observer = createCloudflareVisionObserver({ ai: { run: async () => ({ answer: JSON.stringify({ observations: [{ category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'fixture', regions: [], measurementConfidence: 0.4, limitations: [] }] }) }) } });
-  const observed = await observer.observe({ sampleId: 'fixture-sample', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: pngFixture() });
+  const observed = await observer.observe({ sampleId: 'fixture-sample', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: pngFixture(), request: { queryId: 'REFLECTION_01', category: 'REFLECTION', task: 'query', question: 'Describe reflection consistency.' } });
   const inputPacket = packet({ observer: observed });
   const validRequest = recommendation({
     recommendedAdditionalTests: ['REASONED_VISUAL_RECHECK'],
@@ -431,6 +501,157 @@ test('adversarial packet fixtures preserve the requested hard cases', () => {
   assert.equal(harmful.packet.safetyContext.providerEvidence.categories.violence, true);
   assert.equal(harmful.packet.originAxes.syntheticEvidence, 'NO_POSITIVE_SYNTHETIC_EVIDENCE');
   assert.equal(cases.find((item) => item.caseId === 'case-contradictory-weak').expectedHypothesis, 'INSUFFICIENT_EVIDENCE');
+});
+
+test('FULL runner supplies decoded pixels while preserving the original-byte hash and EF1 input', async () => {
+  let forensicInput;
+  const result = await runResearchTrial({ mode: 'FULL', runtimeManifest: manifest(1), maxSamples: 1 }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async (input) => {
+      assert.equal(input.bytes[0], 137);
+      return decodedFixture();
+    },
+    forensicGenerator: async (input) => {
+      forensicInput = input;
+      return generateForensicFeatureBundleV1(input);
+    },
+    moderation: createMockModerationProvider(),
+    observer: createMockVisionObserver(),
+    judge: createMockJudge(),
+  });
+  const current = result.cases[0];
+  assert.ok(forensicInput.decoded);
+  assert.equal(forensicInput.decoded.width, 2);
+  assert.equal(current.forensic.fileProvenance.sha256, current.inputHash);
+  assert.equal(current.packet.evidenceFamilies.EF1_FILE_PROVENANCE.status, 'AVAILABLE');
+  assert.equal(current.packet.evidenceFamilies.EF2_PHYSICAL_ACQUISITION.status, 'AVAILABLE');
+  assert.equal(current.packet.evidenceFamilies.EF4_SPECTRAL_STABILITY.status, 'AVAILABLE');
+});
+
+test('decode failure preserves EF1 but cannot masquerade as pixel-domain EF2 or EF4', async () => {
+  let forensicInput;
+  const result = await runResearchTrial({ mode: 'FULL', runtimeManifest: manifest(1), maxSamples: 1 }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async () => null,
+    forensicGenerator: async (input) => {
+      forensicInput = input;
+      return generateForensicFeatureBundleV1(input);
+    },
+    moderation: createMockModerationProvider(),
+    observer: createMockVisionObserver(),
+    judge: createMockJudge(),
+  });
+  const current = result.cases[0];
+  assert.equal(forensicInput.decoded, undefined);
+  assert.equal(current.forensic.fileProvenance.sha256, current.inputHash);
+  assert.equal(current.forensic.audit.reasonCodes.includes('PIXEL_DOMAIN_MEASUREMENTS_NOT_RUN'), true);
+  assert.equal(current.forensic.spectralStability.edgeStatistics.sampleCount, 0);
+  assert.equal(current.packet.evidenceFamilies.EF1_FILE_PROVENANCE.status, 'AVAILABLE');
+  assert.equal(current.packet.evidenceFamilies.EF2_PHYSICAL_ACQUISITION.status, 'UNAVAILABLE');
+  assert.equal(current.packet.evidenceFamilies.EF4_SPECTRAL_STABILITY.status, 'UNAVAILABLE');
+  assert.equal(current.packet.quality.overall, 'FAILED');
+  assert.equal(current.packet.quality.failedComponents.includes('forensics-decode'), true);
+});
+
+test('research Sharp decode boundary supports the JPEG, PNG, and WebP trial formats', async () => {
+  const sharp = (await import('sharp')).default;
+  const formats = [['jpeg', 'image/jpeg'], ['png', 'image/png'], ['webp', 'image/webp']];
+  for (const [format, mime] of formats) {
+    const bytes = await sharp({ create: { width: 2, height: 2, channels: 3, background: { r: 10, g: 20, b: 30 } } })[format]().toBuffer();
+    const decoded = await decodeResearchImage({ bytes, mime });
+    assert.equal(decoded.width, 2, format);
+    assert.equal(decoded.height, 2, format);
+    assert.equal(decoded.pixels.length >= 12, true, format);
+  }
+});
+
+async function runFullObserverFixture({ category, direct, reasoned, enableRecheck = false, judge: judgeDependency } = {}) {
+  const requests = [];
+  const observer = {
+    isLive: false,
+    observe: async (input) => {
+      requests.push(input.request);
+      const fixture = input.request.reasoningMode === 'REASONED' ? reasoned : direct;
+      return createMockVisionObserver([fixture]).observe(input);
+    },
+  };
+  const result = await runResearchTrial({ mode: enableRecheck ? 'FULL_RECHECK' : 'FULL', runtimeManifest: manifest(1), maxSamples: 1, enableRecheck, observerRequest: { queryId: `${category}_RUN`, category, task: 'query', question: `Describe ${category}.` }, caps: { maxSamples: 1, maxModerationCalls: 1, maxObserverCalls: 2, maxObserverDirectCalls: 1, maxObserverReasonedCalls: 1, maxJudgeCalls: 2, maxTotalCalls: 6, maxRecheckRounds: 1 } }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async () => decodedFixture(),
+    moderation: createMockModerationProvider(),
+    observer,
+    judge: judgeDependency ?? createMockJudge(),
+  });
+  return { result, requests };
+}
+
+test('FULL direct-to-reasoned escalation is bounded and retains both observations', async () => {
+  const { result, requests } = await runFullObserverFixture({
+    category: 'REFLECTION',
+    direct: { category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'The surface is obscured.', regions: [], measurementConfidence: 0.4, limitations: [] },
+    reasoned: { category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'The visible reflection is consistent.', regions: [], measurementConfidence: 0.8, limitations: [] },
+  });
+  const current = result.cases[0];
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].reasoningMode, 'DIRECT');
+  assert.equal(requests[1].reasoningMode, 'REASONED');
+  assert.equal(result.invocationAccounting.calls.observerDirect, 1);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 1);
+  assert.equal(current.recheckRounds, 1);
+  assert.equal(current.judgeHistory.length, 1);
+  assert.equal(current.packet.observationHistory.length, 1);
+  assert.equal(current.packet.observations[0].reasoningMode, 'REASONED');
+});
+
+test('confident direct Observer output does not spend a reasoned call', async () => {
+  const { result, requests } = await runFullObserverFixture({
+    category: 'REFLECTION',
+    direct: { category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'The reflection is visible.', regions: [], measurementConfidence: 0.95, limitations: [] },
+    reasoned: { category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'unused', regions: [], measurementConfidence: 0.95, limitations: [] },
+  });
+  assert.equal(requests.length, 1);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 0);
+  assert.equal(result.cases[0].recheckRounds, 0);
+});
+
+test('low-confidence eligible direct output escalates exactly once', async () => {
+  const { result, requests } = await runFullObserverFixture({
+    category: 'LIGHTING_SHADOW',
+    direct: { category: 'LIGHTING_SHADOW', applicable: true, status: 'OBSERVED', observation: 'Light direction is uncertain.', regions: [], measurementConfidence: 0.4, limitations: [] },
+    reasoned: { category: 'LIGHTING_SHADOW', applicable: true, status: 'OBSERVED', observation: 'The visible shadow is consistent.', regions: [], measurementConfidence: 0.8, limitations: [] },
+  });
+  assert.equal(requests.length, 2);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 1);
+  assert.equal(result.cases[0].recheckRounds, 1);
+});
+
+test('ineligible direct category does not automatically escalate', async () => {
+  const { result, requests } = await runFullObserverFixture({
+    category: 'SCENE_INVENTORY',
+    direct: { category: 'SCENE_INVENTORY', applicable: true, status: 'INDETERMINATE', observation: 'Scene unclear.', regions: [], measurementConfidence: 0.2, limitations: [] },
+    reasoned: { category: 'SCENE_INVENTORY', applicable: true, status: 'OBSERVED', observation: 'unused', regions: [], measurementConfidence: 0.9, limitations: [] },
+  });
+  assert.equal(requests.length, 1);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 0);
+  assert.equal(result.cases[0].recheckRounds, 0);
+});
+
+test('Observer-triggered reasoned pass consumes the global budget and blocks recursive Judge rechecks', async () => {
+  let judgeCalls = 0;
+  const { result, requests } = await runFullObserverFixture({
+    category: 'REFLECTION',
+    direct: { category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'The surface is unclear.', regions: [], measurementConfidence: 0.4, limitations: [] },
+    reasoned: { category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'Still unclear.', regions: [], measurementConfidence: 0.4, limitations: [] },
+    enableRecheck: true,
+    judge: { isLive: false, judge: async ({ packet: inputPacket }) => {
+      judgeCalls += 1;
+      return { schemaVersion: 'lythaus-judge-result-v1', promptVersion: JUDGE_PROMPT_VERSION, prompt: '', provider: 'mock-judge', model: 'mock-v1', status: 'SUCCESS', recommendation: recommendation({ recommendedAdditionalTests: ['REASONED_VISUAL_RECHECK'], missingEvidence: [{ requestId: 'recheck', request: 'free-form must be ignored', evidenceFamily: 'VISION_OBSERVATION', observationId: inputPacket.observations[0].observationId, category: 'REFLECTION', reasonCode: 'AMBIGUOUS_REFLECTION' }] }), executionMs: 0 };
+    } },
+  });
+  assert.equal(requests.length, 2);
+  assert.equal(judgeCalls, 1);
+  assert.equal(result.cases[0].judgeHistory.length, 1);
+  assert.equal(result.cases[0].recheckRounds, 1);
 });
 
 test('bounded runner executes mock full pipeline and records exact invocation counts', async () => {
@@ -516,7 +737,7 @@ test('observer A/B mode uses identical inputs, records two bounded calls, and ex
 
 test('FULL_RECHECK permits one whitelisted reasoned pass and two Judge passes, never an unbounded loop', async () => {
   let judgeCalls = 0;
-  const fixtureObservation = { category: 'REFLECTION', applicable: true, status: 'INDETERMINATE', observation: 'The surface is partly obscured.', regions: [], measurementConfidence: 0.4, limitations: ['Partial visibility.'] };
+  const fixtureObservation = { category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'The surface is visible.', regions: [], measurementConfidence: 0.9, limitations: [] };
   const result = await runResearchTrial({
     mode: 'FULL_RECHECK',
     runtimeManifest: manifest(1),

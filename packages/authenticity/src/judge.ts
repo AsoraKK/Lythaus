@@ -1,6 +1,7 @@
 import { assertEvidencePacket, assertEvidenceReferenceIds, packetReferenceIds, type EvidencePacket } from './evidence-packet.ts';
 import { type CloudflareRestTransport } from './cloudflare-rest.ts';
 import { CLOUDFLARE_REASONER_MODEL } from './research-config.ts';
+import { isReasonedRecheckReasonAllowed, VISION_ESCALATION_REASONS, VISION_OBSERVER_CATEGORIES } from './vision-observer.ts';
 import type { CloudflareAiRunOptions, VisionEscalationReason, VisionObservationCategory, VisionRegion } from './vision-observer.ts';
 
 export const JUDGE_RESULT_SCHEMA_VERSION = 'lythaus-judge-result-v1' as const;
@@ -190,9 +191,10 @@ function parseRecommendation(value: unknown, packet: EvidencePacket): JudgeRecom
     if (!isRecord(item) || typeof item.requestId !== 'string' || typeof item.request !== 'string' || (item.evidenceFamily !== null && typeof item.evidenceFamily !== 'string')) return null;
     if (item.observationId !== undefined && typeof item.observationId !== 'string') return null;
     if (typeof item.observationId === 'string' && !packetReferenceIds(packet).has(item.observationId)) return null;
-    if (item.category !== undefined && !(typeof item.category === 'string' && (['SCENE_INVENTORY', 'OBJECT_LOCALISATION', 'TEXT', 'GEOMETRY_OCCLUSION', 'LIGHTING_SHADOW', 'REFLECTION', 'REPETITION', 'ANATOMY', 'SCREEN_DISPLAY_RELATIONSHIP', 'SUSPICIOUS_REGION'] as readonly string[]).includes(item.category))) return null;
+    if (item.category !== undefined && !(typeof item.category === 'string' && (VISION_OBSERVER_CATEGORIES as readonly string[]).includes(item.category))) return null;
     if (typeof item.observationId === 'string' && typeof item.category === 'string' && observationCategoryForId(packet, item.observationId) !== item.category) return null;
-    if (item.reasonCode !== undefined && !(typeof item.reasonCode === 'string' && (['LOW_OBSERVATION_CONFIDENCE', 'RELATIONAL_VISUAL_TASK', 'CONTRADICTORY_VISUAL_SIGNALS', 'PARTIAL_OCCLUSION', 'AMBIGUOUS_REFLECTION', 'AMBIGUOUS_LIGHTING', 'AMBIGUOUS_GEOMETRY', 'AMBIGUOUS_ANATOMY', 'SCREEN_RECAPTURE_UNCERTAINTY'] as readonly string[]).includes(item.reasonCode))) return null;
+    if (item.reasonCode !== undefined && !(typeof item.reasonCode === 'string' && (VISION_ESCALATION_REASONS as readonly string[]).includes(item.reasonCode))) return null;
+    if (typeof item.category === 'string' && typeof item.reasonCode === 'string' && !isReasonedRecheckReasonAllowed(item.category as VisionObservationCategory, item.reasonCode as VisionEscalationReason)) return null;
     const targetRegion = item.targetRegion === undefined || item.targetRegion === null ? item.targetRegion : normalizeTargetRegion(item.targetRegion);
     if (item.targetRegion !== undefined && item.targetRegion !== null && targetRegion === null) return null;
     return {

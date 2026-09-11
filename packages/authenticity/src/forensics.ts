@@ -276,7 +276,7 @@ export function inspectMedia(bytes: Uint8Array, mime = ''): MediaInspection {
   };
 }
 
-function grayscaleGrid(decoded: DecodedImage | undefined, bytes: Uint8Array, size: number): { grid: number[]; decoded: boolean; width: number; height: number } {
+function grayscaleGrid(decoded: DecodedImage | undefined, size: number, rawBytes?: Uint8Array): { grid: number[]; decoded: boolean; width: number; height: number } {
   if (decoded && decoded.width > 0 && decoded.height > 0 && decoded.pixels.length >= decoded.width * decoded.height * decoded.channels) {
     const grid: number[] = [];
     for (let gy = 0; gy < size; gy += 1) {
@@ -292,7 +292,8 @@ function grayscaleGrid(decoded: DecodedImage | undefined, bytes: Uint8Array, siz
     }
     return { grid, decoded: true, width: decoded.width, height: decoded.height };
   }
-  const grid = Array.from({ length: size * size }, (_, index) => (bytes.length === 0 ? 0 : bytes[index % bytes.length] / 255));
+  if (!rawBytes) return { grid: [], decoded: false, width: 0, height: 0 };
+  const grid = Array.from({ length: size * size }, (_, index) => (rawBytes.length === 0 ? 0 : rawBytes[index % rawBytes.length] / 255));
   return { grid, decoded: false, width: 0, height: 0 };
 }
 
@@ -376,7 +377,7 @@ function perceptualHash(grid: readonly number[], size: number): string {
 }
 
 export function computePerceptualHash(bytes: Uint8Array, decoded?: DecodedImage): string {
-  return perceptualHash(grayscaleGrid(decoded, bytes, 8).grid, 8);
+  return perceptualHash(grayscaleGrid(decoded, 8, bytes).grid, 8);
 }
 
 function imagePyramid(width: number, height: number, grid: readonly number[]): readonly { scale: number; width: number; height: number; mean: number; variance: number }[] {
@@ -505,7 +506,7 @@ export async function sha256Hex(bytes: Uint8Array): Promise<string> {
 export async function generateForensicFeatureBundle(input: ForensicInput): Promise<ForensicFeatureBundle> {
   const startedAt = Date.now();
   const parsed = inspectMedia(input.bytes, input.mime);
-  const samples = grayscaleGrid(input.decoded, input.bytes, 8);
+  const samples = grayscaleGrid(input.decoded, 8, input.bytes);
   const dft = dftFeatures(samples.grid, 8);
   const dct = dctFeatures(samples.grid, 8);
   const wavelets = waveletFeatures(samples.grid, 8);
@@ -596,7 +597,7 @@ export async function generateForensicFeatureBundleV1(input: ForensicInput): Pro
   const parsed = inspectMedia(input.bytes, input.mime);
   const scaleDefinitions = [8, 16];
   const scaleFeatures = scaleDefinitions.map((scale) => {
-    const samples = grayscaleGrid(input.decoded, input.bytes, scale);
+    const samples = grayscaleGrid(input.decoded, scale);
     const dft = dftFeatures(samples.grid, scale);
     return {
       scale,
@@ -688,7 +689,7 @@ export async function generateForensicFeatureBundleV1(input: ForensicInput): Pro
     featureVector,
     audit: createDecisionAudit({
       timestamp: input.now,
-      reasonCodes: base.grid.decoded ? ['DETERMINISTIC_V1_SPECTRAL_FEATURES_GENERATED', 'CAMERA_ORIGIN_EVIDENCE_ONLY', 'NO_ENFORCEMENT'] : ['DECODED_PIXELS_UNAVAILABLE', 'RAW_CONTAINER_FEATURES_ONLY', 'NO_ENFORCEMENT'],
+      reasonCodes: base.grid.decoded ? ['DETERMINISTIC_V1_SPECTRAL_FEATURES_GENERATED', 'CAMERA_ORIGIN_EVIDENCE_ONLY', 'NO_ENFORCEMENT'] : ['DECODED_PIXELS_UNAVAILABLE', 'PIXEL_DOMAIN_MEASUREMENTS_NOT_RUN', 'NO_ENFORCEMENT'],
       applicability: base.grid.decoded ? 'applicable' : 'unavailable',
       executionMs: Date.now() - startedAt,
       costEstimateUsd: 0,

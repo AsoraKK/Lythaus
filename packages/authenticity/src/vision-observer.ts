@@ -34,6 +34,7 @@ export const VISION_ESCALATION_RECOMMENDATIONS = ['NONE', 'REASONED_VISUAL_RECHE
 export type VisionEscalationRecommendation = (typeof VISION_ESCALATION_RECOMMENDATIONS)[number];
 
 export const VISION_ESCALATION_REASONS = [
+  'OBSERVATION_INDETERMINATE',
   'LOW_OBSERVATION_CONFIDENCE',
   'RELATIONAL_VISUAL_TASK',
   'CONTRADICTORY_VISUAL_SIGNALS',
@@ -62,6 +63,9 @@ export interface VisionObserverRequest {
   question?: string;
   target?: string;
   reasoningMode?: VisionObserverReasoningMode;
+  sourceObservationId?: string;
+  reasonCode?: VisionEscalationReason;
+  targetRegion?: VisionRegion | null;
 }
 
 export interface VisionObservationProvenance {
@@ -88,6 +92,7 @@ export interface VisionObservation {
   reasoningMode: VisionObserverReasoningMode;
   applicable: boolean;
   status: VisionObservationStatus;
+  occlusion?: 'NONE' | 'PARTIAL' | 'UNKNOWN';
   observation: string;
   regions: readonly VisionRegion[];
   measurementConfidence: number | null;
@@ -150,6 +155,73 @@ export const VISION_OBSERVER_ROUTING_POLICY: VisionRoutingPolicy = {
   reasonedAllowed: ['GEOMETRY_OCCLUSION', 'LIGHTING_SHADOW', 'REFLECTION', 'ANATOMY', 'SCREEN_DISPLAY_RELATIONSHIP'],
 };
 
+export const VISION_RECHECK_TEMPLATE_VERSION = 'lythaus-vision-recheck-templates-v1' as const;
+
+const GENERIC_RECHECK_REASONS: readonly VisionEscalationReason[] = [
+  'OBSERVATION_INDETERMINATE',
+  'LOW_OBSERVATION_CONFIDENCE',
+  'RELATIONAL_VISUAL_TASK',
+  'CONTRADICTORY_VISUAL_SIGNALS',
+];
+
+const RECHECK_REASON_CODES: Readonly<Record<Extract<VisionObservationCategory, 'GEOMETRY_OCCLUSION' | 'LIGHTING_SHADOW' | 'REFLECTION' | 'ANATOMY' | 'SCREEN_DISPLAY_RELATIONSHIP'>, readonly VisionEscalationReason[]>> = {
+  GEOMETRY_OCCLUSION: [...GENERIC_RECHECK_REASONS, 'PARTIAL_OCCLUSION', 'AMBIGUOUS_GEOMETRY'],
+  LIGHTING_SHADOW: [...GENERIC_RECHECK_REASONS, 'AMBIGUOUS_LIGHTING'],
+  REFLECTION: [...GENERIC_RECHECK_REASONS, 'AMBIGUOUS_REFLECTION'],
+  ANATOMY: [...GENERIC_RECHECK_REASONS, 'PARTIAL_OCCLUSION', 'AMBIGUOUS_ANATOMY'],
+  SCREEN_DISPLAY_RELATIONSHIP: [...GENERIC_RECHECK_REASONS, 'SCREEN_RECAPTURE_UNCERTAINTY'],
+};
+
+const RECHECK_TEMPLATES: Readonly<Record<keyof typeof RECHECK_REASON_CODES, string>> = {
+  GEOMETRY_OCCLUSION: 'Inspect the referenced object intersection, occlusion, and perspective relationship. Report only visible geometry, contradictions, or indeterminate visibility. Do not infer image origin.',
+  LIGHTING_SHADOW: 'Inspect apparent major light directions and shadow geometry for visible consistency. Account for complex multi-light scenes and report uncertainty. Do not infer image origin.',
+  REFLECTION: 'Inspect reflection consistency for the referenced surface or region. Report expected reflected objects, gross inconsistencies, or indeterminate visibility. Do not infer image origin.',
+  ANATOMY: 'Inspect only visible anatomy in the referenced region while explicitly considering occlusion and partial visibility. Report observations or indeterminate visibility. Do not infer image origin.',
+  SCREEN_DISPLAY_RELATIONSHIP: 'Inspect whether the referenced region is consistent with a physical display or screen recapture relationship. Report visible display boundaries, moire or recapture cues, or uncertainty. Do not infer image origin.',
+};
+
+export function isReasonedRecheckReasonAllowed(category: VisionObservationCategory, reasonCode: VisionEscalationReason): boolean {
+  if (!(VISION_OBSERVER_ROUTING_POLICY.reasonedAllowed as readonly string[]).includes(category)) return false;
+  const allowed = RECHECK_REASON_CODES[category as keyof typeof RECHECK_REASON_CODES];
+  return Boolean(allowed?.includes(reasonCode));
+}
+
+export function buildReasonedVisualRecheckRequest(input: {
+  observations: readonly VisionObservation[];
+  observationId: string;
+  category: VisionObservationCategory;
+  reasonCode: VisionEscalationReason;
+  targetRegion?: VisionRegion | null;
+}): VisionObserverRequest {
+  const observation = input.observations.find((candidate) => candidate.observationId === input.observationId);
+  if (!observation) throw new Error('vision_recheck_observation_unknown');
+  if (observation.category !== input.category) throw new Error('vision_recheck_category_mismatch');
+  if (!isReasonedRecheckReasonAllowed(input.category, input.reasonCode)) throw new Error('vision_recheck_request_not_allowed');
+  const targetRegion = input.targetRegion === undefined ? observation.regions[0] ?? null : input.targetRegion;
+  if (targetRegion !== null && normalizeVisionRegion(targetRegion) === null) throw new Error('vision_recheck_target_region_invalid');
+  const safeObservationId = input.observationId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
+  const regionText = targetRegion === null ? 'Target region: none.' : `Target region: ${JSON.stringify(targetRegion)}.`;
+  return {
+    queryId: `RECHECK_${safeObservationId}`.slice(0, 120),
+    category: input.category,
+    task: 'query',
+    question: `${RECHECK_TEMPLATES[input.category as keyof typeof RECHECK_TEMPLATES]}\nReferenced observation ID: ${input.observationId}.\n${regionText}`,
+    reasoningMode: 'REASONED',
+    sourceObservationId: input.observationId,
+    reasonCode: input.reasonCode,
+    targetRegion,
+  };
+}
+
+export function buildObserverReasonedEscalationRequest(result: VisionObserverResult): VisionObserverRequest | null {
+  if (result.status !== 'SUCCESS' || result.reasoningMode !== 'DIRECT' || result.escalationRecommendation !== 'REASONED_VISUAL_RECHECK') return null;
+  const observation = result.observations.find((candidate) => (VISION_OBSERVER_ROUTING_POLICY.reasonedAllowed as readonly string[]).includes(candidate.category));
+  if (!observation) return null;
+  const reasonCode = result.escalationReasons.find((candidate) => isReasonedRecheckReasonAllowed(observation.category, candidate));
+  if (!reasonCode) return null;
+  return buildReasonedVisualRecheckRequest({ observations: result.observations, observationId: observation.observationId, category: observation.category, reasonCode, targetRegion: observation.regions[0] ?? null });
+}
+
 export const VISION_OBSERVER_PROMPT = [
   'You are the Lythaus Vision Observer, protocol lythaus-vision-observer-protocol-v1.',
   'You are visual evidence collection only. Do not determine whether the image is AI-generated.',
@@ -185,6 +257,7 @@ function requestFor(input: VisionObserverInput): VisionObserverRequest {
   if (!(VISION_OBSERVER_TASKS as readonly string[]).includes(request.task)) throw new Error('vision_observer_task_invalid');
   if (!(VISION_OBSERVER_REASONING_MODES as readonly string[]).includes(reasoningMode)) throw new Error('vision_observer_reasoning_mode_invalid');
   if (reasoningMode === 'REASONED' && request.task !== 'query') throw new Error('vision_reasoned_task_must_be_query');
+  if (request.targetRegion !== undefined && request.targetRegion !== null && normalizeVisionRegion(request.targetRegion) === null) throw new Error('vision_observer_target_region_invalid');
   return { ...request, queryId: request.queryId.trim().slice(0, 120), reasoningMode };
 }
 
@@ -215,7 +288,7 @@ function parseJsonText(text: string): unknown {
   }
 }
 
-function normalizeRegion(value: unknown): VisionRegion | null {
+export function normalizeVisionRegion(value: unknown): VisionRegion | null {
   if (!isRecord(value) || value.coordinateSpace !== 'NORMALIZED') return null;
   if (![value.x, value.y, value.width, value.height].every(finite01)) return null;
   if ((value.width as number) <= 0 || (value.height as number) <= 0) return null;
@@ -237,7 +310,7 @@ function regionFromObject(value: unknown): VisionRegion | null {
   const width = typeof value.width === 'number' ? value.width : typeof value.w === 'number' ? value.w : typeof value.x_max === 'number' && x !== null ? value.x_max - x : null;
   const height = typeof value.height === 'number' ? value.height : typeof value.h === 'number' ? value.h : typeof value.y_max === 'number' && y !== null ? value.y_max - y : null;
   if (![x, y, width, height].every((item) => typeof item === 'number' && Number.isFinite(item))) return null;
-  return normalizeRegion({ coordinateSpace: 'NORMALIZED', x, y, width, height });
+  return normalizeVisionRegion({ coordinateSpace: 'NORMALIZED', x, y, width, height });
 }
 
 function normalizeTaskOutput(value: unknown, request: VisionObserverRequest): { observations: unknown[] } | null {
@@ -271,12 +344,27 @@ function normalizeTaskOutput(value: unknown, request: VisionObserverRequest): { 
   }
   if (isRecord(value) && typeof value.response === 'string') {
     const parsedResponse = parseJsonText(value.response);
-    return parsedResponse && isRecord(parsedResponse) && Array.isArray(parsedResponse.observations) ? { observations: parsedResponse.observations } : null;
+    if (parsedResponse && isRecord(parsedResponse) && Array.isArray(parsedResponse.observations)) return { observations: parsedResponse.observations };
+    if (request.task === 'caption') {
+      return {
+        observations: [{
+          category: request.category,
+          applicable: true,
+          status: 'OBSERVED',
+          observation: value.response,
+          regions: [],
+          measurementConfidence: null,
+          limitations: ['The provider returned a free-form caption; it was retained only as a caption observation.'],
+        }],
+      };
+    }
+    return null;
   }
   const text = textFromModelResponse(value);
   if (text) {
     const parsed = parseJsonText(text);
     if (parsed && isRecord(parsed) && Array.isArray(parsed.observations)) return { observations: parsed.observations };
+    if (request.task !== 'caption') return null;
     return {
       observations: [{
         category: request.category,
@@ -295,20 +383,23 @@ function normalizeTaskOutput(value: unknown, request: VisionObserverRequest): { 
 
 function normalizeObservation(value: unknown, index: number, input: VisionObserverInput, request: VisionObserverRequest, provider: string, model: string, executionMs: number): VisionObservation | null {
   if (!isRecord(value)) return null;
-  if (!(VISION_OBSERVER_CATEGORIES as readonly string[]).includes(String(value.category))) return null;
+  if (value.category !== request.category) return null;
   if (!(VISION_OBSERVATION_STATUSES as readonly string[]).includes(String(value.status))) return null;
   if (typeof value.applicable !== 'boolean' || typeof value.observation !== 'string') return null;
+  if ((value.applicable === false && value.status !== 'NOT_APPLICABLE') || (value.status === 'NOT_APPLICABLE' && value.applicable !== false)) return null;
+  if (value.occlusion !== undefined && !['NONE', 'PARTIAL', 'UNKNOWN'].includes(String(value.occlusion))) return null;
   const confidence = value.measurementConfidence === null || value.measurementConfidence === undefined
     ? null
     : finite01(value.measurementConfidence) ? value.measurementConfidence : null;
   if (value.measurementConfidence !== null && value.measurementConfidence !== undefined && confidence === null) return null;
   const rawRegions = value.regions === undefined ? [] : value.regions;
   if (!Array.isArray(rawRegions)) return null;
-  const regions = rawRegions.map(normalizeRegion);
+  const regions = rawRegions.map(normalizeVisionRegion);
   if (regions.some((region) => region === null)) return null;
   const limitations = value.limitations === undefined ? [] : value.limitations;
   if (!Array.isArray(limitations) || !limitations.every((item) => typeof item === 'string')) return null;
   const reasoningMode = request.reasoningMode ?? 'DIRECT';
+  const occlusion = value.occlusion === undefined ? undefined : value.occlusion as 'NONE' | 'PARTIAL' | 'UNKNOWN';
   const safeLimitations = limitations.map((item) => item.slice(0, 300)).slice(0, 12);
   const observationId = `${input.inputHash.slice(0, 16)}-${request.queryId}-${reasoningMode}-${index + 1}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 180);
   return {
@@ -320,6 +411,7 @@ function normalizeObservation(value: unknown, index: number, input: VisionObserv
     reasoningMode,
     applicable: value.applicable,
     status: value.status as VisionObservationStatus,
+    ...(occlusion ? { occlusion } : {}),
     observation: value.observation.slice(0, 1200),
     regions: regions as VisionRegion[],
     measurementConfidence: confidence,
@@ -389,7 +481,7 @@ function buildMoondreamPayload(input: VisionObserverInput, request: VisionObserv
     return {
       task: 'query',
       image,
-      question: `${VISION_OBSERVER_PROMPT}\nTarget category: ${request.category}\nTarget visual question: ${request.question?.trim() || 'Report only applicable visual observations for this category.'}`,
+      question: `${VISION_OBSERVER_PROMPT}\nTarget category: ${request.category}\nTarget visual question: ${request.question?.trim() || 'Report only applicable visual observations for this category.'}${request.targetRegion ? `\nTarget region: ${JSON.stringify(request.targetRegion)}` : ''}`,
       reasoning: request.reasoningMode === 'REASONED',
       stream: false,
     };
@@ -401,7 +493,7 @@ function buildMoondreamPayload(input: VisionObserverInput, request: VisionObserv
 function errorCategoryFrom(error: unknown): VisionObserverErrorCategory {
   const message = error instanceof Error ? error.message : '';
   const category = error && typeof error === 'object' && 'category' in error ? (error as { category?: unknown }).category : null;
-  if (message === 'research_image_empty' || message === 'research_image_mime_invalid' || message === 'research_image_size_limit_exceeded' || message === 'vision_observer_request_invalid' || message === 'vision_observer_category_invalid' || message === 'vision_observer_task_invalid' || message === 'vision_observer_reasoning_mode_invalid' || message === 'vision_reasoned_task_must_be_query') return 'INVALID_INPUT';
+  if (message === 'research_image_empty' || message === 'research_image_mime_invalid' || message === 'research_image_size_limit_exceeded' || message === 'vision_observer_request_invalid' || message === 'vision_observer_category_invalid' || message === 'vision_observer_task_invalid' || message === 'vision_observer_reasoning_mode_invalid' || message === 'vision_reasoned_task_must_be_query' || message === 'vision_observer_target_region_invalid') return 'INVALID_INPUT';
   if (message === 'observer_timeout' || category === 'TIMEOUT') return 'TIMEOUT';
   if (category === 'MALFORMED_RESPONSE' || category === 'PROVIDER_FAILURE') return 'UNEXPECTED_SCHEMA';
   return 'NETWORK_FAILURE';
@@ -487,37 +579,9 @@ export function createMockVisionObserver(observations: readonly VisionObservatio
       const model = 'mock-v1';
       const request = requestFor(input);
       const startedAt = Date.now();
-      const normalized = observations.map((observation, index) => {
-        const reasoningMode = request.reasoningMode ?? 'DIRECT';
-        const observationId = `${input.inputHash.slice(0, 16)}-${request.queryId}-${reasoningMode}-${index + 1}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 180);
-        return {
-          ...observation,
-          observationId,
-          queryId: request.queryId,
-          protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION,
-          category: observation.category ?? request.category,
-          task: request.task,
-          reasoningMode,
-          provider,
-          model,
-          executionMs: 0,
-          provenance: {
-            evidenceFamily: 'VISION_OBSERVATION' as const,
-            sourceComponent: 'lythaus-vision-observer' as const,
-            provider,
-            modelVersion: model,
-            schemaVersion: VISION_OBSERVER_PROTOCOL_VERSION,
-            executionTimestamp: input.executionTimestamp ?? new Date().toISOString(),
-            inputHash: input.inputHash,
-            applicable: observation.applicable ? 'applicable' as const : 'not_applicable' as const,
-            limitations: observation.limitations,
-            task: request.task,
-            reasoningMode,
-            executionMs: 0,
-          },
-        } satisfies VisionObservation;
-      });
-      return successfulObserverResult(input, request, provider, model, normalized, Date.now() - startedAt);
+      const normalized = observations.map((observation, index) => normalizeObservation(observation, index, input, request, provider, model, 0));
+      if (normalized.some((observation) => observation === null)) return failedObserverResult(request, provider, model, 'MALFORMED_RESPONSE', Date.now() - startedAt);
+      return successfulObserverResult(input, request, provider, model, normalized as VisionObservation[], Date.now() - startedAt);
     },
   };
 }
@@ -536,7 +600,8 @@ export function recommendVisionEscalation(input: {
   const uncertain = input.observations.some((observation) => observation.status === 'INDETERMINATE' || (observation.measurementConfidence !== null && observation.measurementConfidence < VISION_OBSERVER_ROUTING_POLICY.lowConfidenceThreshold));
   const escalationTrigger = uncertain || input.contradictoryVisualSignals === true || input.deterministicEvidenceConflict === true || input.explicitExperiment === true;
   if (allowed && escalationTrigger) reasons.add('RELATIONAL_VISUAL_TASK');
-  if (input.observations.some((observation) => observation.status === 'INDETERMINATE')) reasons.add('PARTIAL_OCCLUSION');
+  if (input.observations.some((observation) => observation.status === 'INDETERMINATE')) reasons.add('OBSERVATION_INDETERMINATE');
+  if (input.observations.some((observation) => observation.occlusion === 'PARTIAL')) reasons.add('PARTIAL_OCCLUSION');
   if (input.observations.some((observation) => observation.measurementConfidence !== null && observation.measurementConfidence < VISION_OBSERVER_ROUTING_POLICY.lowConfidenceThreshold)) reasons.add('LOW_OBSERVATION_CONFIDENCE');
   if (input.contradictoryVisualSignals || input.deterministicEvidenceConflict) reasons.add('CONTRADICTORY_VISUAL_SIGNALS');
   if (input.explicitExperiment) reasons.add('RELATIONAL_VISUAL_TASK');
@@ -618,6 +683,9 @@ export function assertVisionObservation(observation: VisionObservation): void {
   if (!(VISION_OBSERVER_TASKS as readonly string[]).includes(observation.task)) throw new Error('vision_observation_task_invalid');
   if (!(VISION_OBSERVER_REASONING_MODES as readonly string[]).includes(observation.reasoningMode)) throw new Error('vision_observation_reasoning_mode_invalid');
   if (!(VISION_OBSERVATION_STATUSES as readonly string[]).includes(observation.status)) throw new Error('vision_observation_status_invalid');
+  if (typeof observation.applicable !== 'boolean' || typeof observation.observation !== 'string') throw new Error('vision_observation_shape_invalid');
+  if ((observation.applicable === false && observation.status !== 'NOT_APPLICABLE') || (observation.status === 'NOT_APPLICABLE' && observation.applicable !== false)) throw new Error('vision_observation_applicability_invalid');
+  if (observation.occlusion !== undefined && !['NONE', 'PARTIAL', 'UNKNOWN'].includes(observation.occlusion)) throw new Error('vision_observation_occlusion_invalid');
   if (observation.measurementConfidence !== null && !finite01(observation.measurementConfidence)) throw new Error('vision_observation_confidence_invalid');
   if (observation.provenance.evidenceFamily !== 'VISION_OBSERVATION' || observation.provenance.sourceComponent !== 'lythaus-vision-observer') throw new Error('vision_observation_provenance_invalid');
   if (observation.provenance.schemaVersion !== VISION_OBSERVER_PROTOCOL_VERSION || !observation.provenance.inputHash || observation.provenance.task !== observation.task || observation.provenance.reasoningMode !== observation.reasoningMode) throw new Error('vision_observation_provenance_invalid');
