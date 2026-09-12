@@ -156,10 +156,17 @@ test('Phase B workflow is manual, GPT-OSS-only, and does not inject OpenAI crede
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*secrets\.CLOUDFLARE_ACCOUNT_ID\s*\}\}/);
   assert.doesNotMatch(workflow, /OPENAI_API_KEY/);
   assert.match(workflow, /wp004b-live-calibration/);
+  assert.match(workflow, /Finalize sanitized budget accounting/);
+  assert.match(workflow, /if: always\(\)/);
+  assert.match(workflow, /wp004b-budget-finalizer/);
+  assert.match(workflow, /path: \.artifacts/);
 });
 
-test('live runner declares its sanitized report dependencies', async () => {
+test('live runner declares its sanitized report and budget dependencies', async () => {
   const runner = await readFile(path.resolve('scripts/authenticity/wp004b-judge-calibration.mjs'), 'utf8');
-  assert.match(runner, /import \{ mkdir, writeFile \} from 'node:fs\/promises';/);
-  assert.match(runner, /WP004B_LIVE_CALIBRATION_SCHEMA_VERSION,\s*createWp004bLiveCalibrationCases/);
+  assert.match(runner, /createWp004bBudgetLedger/);
+  assert.match(runner, /writeWp004bAtomicJson/);
+  assert.match(runner, /WP004B_LIVE_CALIBRATION_SCHEMA_VERSION,\s*createWp004bBudgetLedger/);
+  assert.match(runner, /ledger\.reserveCall\(currentCaseId\)/);
+  assert.match(runner, /finally\s*\{/);
 });
