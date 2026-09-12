@@ -8,6 +8,9 @@ export const JUDGE_RESULT_SCHEMA_VERSION = 'lythaus-judge-result-v1' as const;
 export const JUDGE_RECOMMENDATION_SCHEMA_VERSION = '1' as const;
 export const JUDGE_PROMPT_VERSION = 'lythaus-gpt-oss-judge-prompt-v3' as const;
 export const JUDGE_MAX_OUTPUT_TOKENS = 2400 as const;
+export const JUDGE_JSON_SCHEMA_VERSION = 'lythaus-judge-json-schema-v1' as const;
+export const JUDGE_STRUCTURED_OUTPUT_MODES = ['JSON_OBJECT', 'JSON_SCHEMA'] as const;
+export type JudgeStructuredOutputMode = (typeof JUDGE_STRUCTURED_OUTPUT_MODES)[number];
 
 export const ORIGIN_HYPOTHESES = [
   'CAMERA_NATIVE',
@@ -59,6 +62,27 @@ export interface JudgeRecommendation {
   recommendedAdditionalTests: readonly WhitelistedAdditionalTest[];
   rationale: string;
   enforcementAuthority: false;
+}
+
+export interface JudgeJsonSchema {
+  readonly $id: typeof JUDGE_JSON_SCHEMA_VERSION;
+  readonly type: 'object';
+  readonly additionalProperties: false;
+  readonly required: readonly string[];
+  readonly properties: Readonly<Record<string, unknown>>;
+}
+
+export interface JudgeRequest {
+  readonly messages: readonly { role: 'system' | 'user'; content: string }[];
+  readonly response_format:
+    | { readonly type: 'json_object' }
+    | { readonly type: 'json_schema'; readonly json_schema: JudgeJsonSchema };
+  readonly temperature: 0;
+  readonly max_tokens: typeof JUDGE_MAX_OUTPUT_TOKENS;
+}
+
+export interface JudgeRequestOptions {
+  structuredOutputMode?: JudgeStructuredOutputMode;
 }
 
 export interface JudgeInput {
@@ -597,15 +621,150 @@ export function createInsufficientEvidenceRecommendation(rationale = 'The availa
   };
 }
 
-export function buildJudgeRequest(packet: EvidencePacket): { messages: readonly { role: 'system' | 'user'; content: string }[]; response_format: { type: 'json_object' }; temperature: 0; max_tokens: typeof JUDGE_MAX_OUTPUT_TOKENS } {
+const JUDGE_JSON_SCHEMA_REQUIRED_FIELDS = [
+  'schemaVersion',
+  'primaryHypothesis',
+  'alternativeHypotheses',
+  'supportingEvidence',
+  'contradictoryEvidence',
+  'missingEvidence',
+  'uncertainty',
+  'requiresReview',
+  'recommendedAdditionalTests',
+  'rationale',
+  'enforcementAuthority',
+] as const;
+
+function jsonSchemaString(maxLength: number): Record<string, unknown> {
+  return { type: 'string', maxLength };
+}
+
+function jsonSchemaEnum(values: readonly string[]): Record<string, unknown> {
+  return { type: 'string', enum: [...values] };
+}
+
+function jsonSchemaTargetRegion(): Record<string, unknown> {
+  return {
+    anyOf: [
+      {
+        type: 'object',
+        additionalProperties: false,
+        required: ['coordinateSpace', 'x', 'y', 'width', 'height'],
+        properties: {
+          coordinateSpace: { const: 'NORMALIZED' },
+          x: { type: 'number', minimum: 0, maximum: 1 },
+          y: { type: 'number', minimum: 0, maximum: 1 },
+          width: { type: 'number', exclusiveMinimum: 0, maximum: 1 },
+          height: { type: 'number', exclusiveMinimum: 0, maximum: 1 },
+          label: jsonSchemaString(120),
+        },
+      },
+      { type: 'null' },
+    ],
+  };
+}
+
+function jsonSchemaEvidenceReferences(referenceIds: readonly string[]): Record<string, unknown> {
+  if (referenceIds.length === 0) return { type: 'array', maxItems: 0 };
+  return {
+    type: 'array',
+    maxItems: 20,
+    items: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['evidenceId', 'rationale'],
+      properties: {
+        evidenceId: { ...jsonSchemaString(200), enum: [...referenceIds] },
+        rationale: jsonSchemaString(1200),
+      },
+    },
+  };
+}
+
+function jsonSchemaMissingEvidence(observationIds: readonly string[]): Record<string, unknown> {
+  const properties: Record<string, unknown> = {
+    requestId: jsonSchemaString(120),
+    request: jsonSchemaString(1200),
+    evidenceFamily: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    category: jsonSchemaEnum(VISION_OBSERVER_CATEGORIES),
+    reasonCode: jsonSchemaEnum(VISION_ESCALATION_REASONS),
+    targetRegion: jsonSchemaTargetRegion(),
+  };
+  if (observationIds.length > 0) properties.observationId = { ...jsonSchemaString(200), enum: [...observationIds] };
+  return {
+    type: 'array',
+    maxItems: 12,
+    items: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['requestId', 'request', 'evidenceFamily'],
+      properties,
+    },
+  };
+}
+
+export function buildJudgeJsonSchema(packet: EvidencePacket): JudgeJsonSchema {
+  assertEvidencePacket(packet);
+  const safetyContextId = packet.safetyContext.contextId;
+  const referenceIds = [...packetReferenceIds(packet)]
+    .filter((evidenceId) => evidenceId !== safetyContextId)
+    .sort();
+  const observationIds = [...new Set([
+    ...packet.observations.map((observation) => observation.observationId),
+    ...packet.observationHistory.map((observation) => observation.observationId),
+  ])]
+    .filter((observationId) => observationId !== safetyContextId)
+    .sort();
+  return {
+    $id: JUDGE_JSON_SCHEMA_VERSION,
+    type: 'object',
+    additionalProperties: false,
+    required: [...JUDGE_JSON_SCHEMA_REQUIRED_FIELDS],
+    properties: {
+      schemaVersion: { const: JUDGE_RECOMMENDATION_SCHEMA_VERSION },
+      primaryHypothesis: jsonSchemaEnum(ORIGIN_HYPOTHESES),
+      alternativeHypotheses: {
+        type: 'array',
+        maxItems: 6,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['hypothesis', 'rationale'],
+          properties: {
+            hypothesis: jsonSchemaEnum(ORIGIN_HYPOTHESES),
+            rationale: jsonSchemaString(1200),
+          },
+        },
+      },
+      supportingEvidence: jsonSchemaEvidenceReferences(referenceIds),
+      contradictoryEvidence: jsonSchemaEvidenceReferences(referenceIds),
+      missingEvidence: jsonSchemaMissingEvidence(observationIds),
+      uncertainty: jsonSchemaEnum(['LOW', 'MODERATE', 'HIGH', 'VERY_HIGH']),
+      requiresReview: { type: 'boolean' },
+      recommendedAdditionalTests: {
+        type: 'array',
+        maxItems: 8,
+        items: jsonSchemaEnum(WHITELISTED_ADDITIONAL_TESTS),
+      },
+      rationale: jsonSchemaString(2400),
+      enforcementAuthority: { const: false },
+    },
+  };
+}
+
+export function buildJudgeRequest(packet: EvidencePacket, options: JudgeRequestOptions = {}): JudgeRequest {
   assertEvidencePacket(packet);
   if (forbiddenDeep(packet)) throw new Error('judge_input_forbidden_data');
+  const structuredOutputMode = options.structuredOutputMode ?? 'JSON_OBJECT';
+  if (!(JUDGE_STRUCTURED_OUTPUT_MODES as readonly string[]).includes(structuredOutputMode)) throw new Error('judge_structured_output_mode_invalid');
   return {
     messages: [
       { role: 'system', content: JUDGE_SYSTEM_PROMPT },
       { role: 'user', content: JSON.stringify(packet) },
     ],
-    response_format: { type: 'json_object' },
+    response_format: structuredOutputMode === 'JSON_SCHEMA'
+      ? { type: 'json_schema', json_schema: buildJudgeJsonSchema(packet) }
+      : { type: 'json_object' },
     temperature: 0,
     max_tokens: JUDGE_MAX_OUTPUT_TOKENS,
   };
@@ -626,7 +785,7 @@ function failedJudgeResult(provider: string, model: string, errorCategory: Judge
   };
 }
 
-export function createCloudflareJudge(options: { ai: CloudflareAiRunOptions; model?: string; timeoutMs?: number }): Judge & { isLive: true } {
+export function createCloudflareJudge(options: { ai: CloudflareAiRunOptions; model?: string; timeoutMs?: number; structuredOutputMode?: JudgeStructuredOutputMode }): Judge & { isLive: true } {
   const provider = 'cloudflare-workers-ai';
   const model = options.model ?? CLOUDFLARE_REASONER_MODEL;
   return {
@@ -634,7 +793,7 @@ export function createCloudflareJudge(options: { ai: CloudflareAiRunOptions; mod
     async judge(input): Promise<JudgeResult> {
       const startedAt = Date.now();
       try {
-        const request = buildJudgeRequest(input.packet);
+        const request = buildJudgeRequest(input.packet, { structuredOutputMode: options.structuredOutputMode });
         const timeoutMs = options.timeoutMs ?? 30_000;
         let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
         const call = options.ai.run(model, request, { metadata: { promptVersion: JUDGE_PROMPT_VERSION } });
@@ -665,7 +824,7 @@ export function createCloudflareJudge(options: { ai: CloudflareAiRunOptions; mod
   };
 }
 
-export function createCloudflareJudgeRest(options: { transport: CloudflareRestTransport; model?: string }): Judge & { isLive: true } {
+export function createCloudflareJudgeRest(options: { transport: CloudflareRestTransport; model?: string; structuredOutputMode?: JudgeStructuredOutputMode }): Judge & { isLive: true } {
   const provider = 'cloudflare-workers-ai-rest';
   const model = options.model ?? CLOUDFLARE_REASONER_MODEL;
   return {
@@ -674,7 +833,7 @@ export function createCloudflareJudgeRest(options: { transport: CloudflareRestTr
       const startedAt = Date.now();
       let httpStatus: number | null = null;
       try {
-        const request = buildJudgeRequest(input.packet);
+        const request = buildJudgeRequest(input.packet, { structuredOutputMode: options.structuredOutputMode });
         const providerResponse = await options.transport.run({ kind: 'JUDGE', model, payload: request });
         httpStatus = providerResponse.httpStatus;
         const raw = providerResponse.result;
