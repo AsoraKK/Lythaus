@@ -7,6 +7,7 @@ import type { CloudflareAiRunOptions, VisionEscalationReason, VisionObservationC
 export const JUDGE_RESULT_SCHEMA_VERSION = 'lythaus-judge-result-v1' as const;
 export const JUDGE_RECOMMENDATION_SCHEMA_VERSION = '1' as const;
 export const JUDGE_PROMPT_VERSION = 'lythaus-gpt-oss-judge-prompt-v2' as const;
+export const JUDGE_MAX_OUTPUT_TOKENS = 2400 as const;
 
 export const ORIGIN_HYPOTHESES = [
   'CAMERA_NATIVE',
@@ -583,7 +584,7 @@ export function createInsufficientEvidenceRecommendation(rationale = 'The availa
   };
 }
 
-export function buildJudgeRequest(packet: EvidencePacket): { messages: readonly { role: 'system' | 'user'; content: string }[]; response_format: { type: 'json_object' }; temperature: 0; max_tokens: 1200 } {
+export function buildJudgeRequest(packet: EvidencePacket): { messages: readonly { role: 'system' | 'user'; content: string }[]; response_format: { type: 'json_object' }; temperature: 0; max_tokens: typeof JUDGE_MAX_OUTPUT_TOKENS } {
   assertEvidencePacket(packet);
   if (forbiddenDeep(packet)) throw new Error('judge_input_forbidden_data');
   return {
@@ -593,7 +594,7 @@ export function buildJudgeRequest(packet: EvidencePacket): { messages: readonly 
     ],
     response_format: { type: 'json_object' },
     temperature: 0,
-    max_tokens: 1200,
+    max_tokens: JUDGE_MAX_OUTPUT_TOKENS,
   };
 }
 
