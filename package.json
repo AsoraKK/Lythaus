@@ -56,6 +56,7 @@
     "test:authenticity-foundation": "node --experimental-strip-types --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test packages/authenticity/tests/evaluation.test.mjs packages/authenticity/tests/foundation.test.mjs packages/authenticity/tests/wp002.test.mjs packages/authenticity/tests/wp003.test.mjs",
     "test:authenticity-wp003": "node --experimental-strip-types --test packages/authenticity/tests/wp003.test.mjs",
     "test:authenticity-wp004a": "node --experimental-strip-types --test packages/authenticity/tests/wp004a.test.mjs",
+    "test:authenticity-wp004b": "node --experimental-strip-types --test packages/authenticity/tests/wp004b.test.mjs",
     "authenticity:observer-trial": "node --experimental-strip-types scripts/authenticity/wp004a-observer-trial.mjs",
     "authenticity:cloudflare-smoke": "node --experimental-strip-types scripts/authenticity/wp004a-cloudflare-smoke.mjs",
     "authenticity:inventory": "node --experimental-strip-types scripts/authenticity/wp004a-inventory.mjs",
