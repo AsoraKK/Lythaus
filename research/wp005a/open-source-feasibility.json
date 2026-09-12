@@ -1,7 +1,7 @@
 {
   "schemaVersion": "lythaus-wp005a-open-source-feasibility-v1",
   "researchDate": "2026-09-12",
-  "evaluationStatus": "OPEN_SOURCE_FEASIBILITY_VALID",
+  "evaluationStatus": "OPEN_SOURCE_DESK_AUDIT_VALID_RUNTIME_UNRESOLVED",
   "localConstraint": { "cpu": "Ryzen 7 class, 16GB RAM, no assumed CUDA", "preferredWorkingMemoryGb": 12, "preferredCheckpointGb": 4, "candidateRuntimeMinutes": 20, "training": "forbidden" },
   "candidates": [
     { "project": "AIGCDetectBenchmark", "repository": "https://github.com/Ekko-zn/AIGCDetectBenchmark", "paper": null, "evidenceFamily": "EF3", "purpose": "Benchmark and implementations for CNNSpot, FreDect, LGrad, DIRE, UnivFD, PatchCraft and related AIGC detectors.", "codeLicense": "UNREPORTED", "checkpointLicense": "UNRESOLVED", "datasetRestrictions": "External links and benchmark datasets require separate rights audit.", "activity": "pushed 2026-03-09; 25 issues at audit", "requirements": "PyTorch, torchvision, OpenCV, SciPy and model-specific dependencies", "checkpoint": "External Baidu/ModelScope links; size/runtime not pinned", "cpu": "UNVERIFIED", "signal": "Mostly learned image-level synthetic/texture signals; candidate methods are not automatically independent.", "decision": "RESEARCH_WATCHLIST", "licenseGate": "RESEARCH_ONLY_LICENSE_UNRESOLVED" },

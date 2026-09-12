@@ -38,7 +38,7 @@ The Judge remains valuable for calibrated EF3/EF5 synthesis and camera-plus-synt
 | B — visual Observer quality | Six deterministic visual fixture tasks and four candidate slots | `OBSERVER_BENCHMARK_HARNESS_VALID_LIVE_RESULTS_PENDING` | Protocol and scoring harness exist; no natural-image performance claim is made. |
 | C — Judge/reasoning quality | Six-smoke / 32-screen / finalist / ledger / repeatability plan over 16 blind cases | `JUDGE_BENCHMARK_HARNESS_VALID_LIVE_RESULTS_PENDING` | The prompt, blind input, canonical parser, and evaluator are implemented; no current finalist has a live score in this run. |
 | D — end-to-end architecture | Routing, compiler, Observer, specialist, and Judge combinations | `END_TO_END_ACCURACY_UNRESOLVED` | No rights-cleared representative image corpus was available for an honest end-to-end accuracy claim. |
-| Open-source feasibility | Repository, checkpoint, data, license, CPU/RAM/dependency desk audit | `OPEN_SOURCE_FEASIBILITY_VALID` | Feasibility and adoption gates are documented; no large checkpoint was downloaded and no training was run. |
+| Open-source feasibility | Repository, checkpoint, data, license, CPU/RAM/dependency desk audit | `OPEN_SOURCE_DESK_AUDIT_VALID_RUNTIME_UNRESOLVED` | Desk gates are documented; no checkpoint was legally/runtime-safe to download, so installation, peak RAM, and CPU latency remain unmeasured. |
 
 The local run was executed with network disabled: `reservedRequests=0`, `reservedEstimatedNeurons=0`, `reservedEstimatedCostUsd=0`, and `retryCount=0`. The manual workflow is bounded at 80 requests, 7,500 estimated neurons, and US$0.15.
 

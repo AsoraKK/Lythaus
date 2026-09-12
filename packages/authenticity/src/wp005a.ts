@@ -133,7 +133,7 @@ const CANDIDATES: readonly Wp005aModelCandidate[] = [
   },
   {
     candidate: 'llama-3.2-11b-vision-instruct', family: 'OBSERVER', model: '@cf/meta/llama-3.2-11b-vision-instruct', status: 'LIVE_CANDIDATE', liveEligible: true,
-    contextWindow: null, capabilities: ['vision', 'text', 'json_object'], inputPricePerMillionUsd: 0.049, outputPricePerMillionUsd: 0.676,
+    contextWindow: 128000, capabilities: ['vision', 'text', 'json_object'], inputPricePerMillionUsd: 0.049, outputPricePerMillionUsd: 0.676,
     inputNeuronsPerMillion: 4455, outputNeuronsPerMillion: 61455,
     evidenceContribution: 'Lower-cost multimodal observation control.',
     independenceRisk: 'Semantic VLM signal; may duplicate Moondream scene descriptions.',
