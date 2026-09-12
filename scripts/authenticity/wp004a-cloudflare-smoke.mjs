@@ -255,6 +255,7 @@ function safeJudgeResponseDiagnostics(diagnostics) {
     messageContentTopLevelKeys: diagnostics.messageContentTopLevelKeys,
     stringJsonParseable: diagnostics.stringJsonParseable,
     normalizationFailureCode: diagnostics.normalizationFailureCode,
+    invalidPrimaryHypothesisToken: diagnostics.invalidPrimaryHypothesisToken ?? null,
   };
 }
 

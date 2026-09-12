@@ -1,7 +1,7 @@
 import { createAuthenticityCase, type ForensicFeatureBundle } from './contracts.ts';
 import { buildEvidencePacket, packetReferenceIds, type EvidencePacket, type PacketPreflight } from './evidence-packet.ts';
 import { generateForensicFeatureBundleV1, inspectMedia, sha256Hex, type DecodedImage, type ForensicInput } from './forensics.ts';
-import { createMockJudge, type EvidenceRequest, type Judge, type JudgeResult } from './judge.ts';
+import { createMockJudge, JUDGE_PROMPT_VERSION, type EvidenceRequest, type Judge, type JudgeResult } from './judge.ts';
 import { createMockModerationProvider, type ModerationAnalysis, type ModerationProvider } from './moderation.ts';
 import { detectMediaMime } from './media-intake.ts';
 import { mimeFromResearchFilename } from './research-image.ts';
@@ -126,7 +126,7 @@ export interface ResearchCaseResult {
   caseId: string;
   inputHash: string | null;
   status: 'COMPLETED' | 'STOPPED' | 'FAILED';
-  stoppedAt: 'SAFETY_GATE' | 'MODERATION_PROVIDER_FAILURE' | null;
+  stoppedAt: 'SAFETY_GATE' | 'MODERATION_PROVIDER_FAILURE' | 'FORENSIC_FAILURE' | 'OBSERVER_PROVIDER_FAILURE' | 'EVIDENCE_PACKET_FAILURE' | null;
   preflight: (PacketPreflight & { signatureMime: string | null; format: string | null; readable: boolean }) | null;
   moderation: ModerationAnalysis | null;
   observer: VisionObserverResult | null;
@@ -158,7 +158,8 @@ export function researchRunHasProviderFailure(result: ResearchRunResult): boolea
 }
 
 export function researchRunExitCode(result: ResearchRunResult): 0 | 1 {
-  return researchRunHasProviderFailure(result) ? 1 : 0;
+  return researchRunHasProviderFailure(result)
+    || result.cases.some((item) => item.status === 'FAILED' || item.packet?.quality.overall === 'FAILED') ? 1 : 0;
 }
 
 function providerIsLive(provider: unknown): boolean {
@@ -308,7 +309,7 @@ function failedObserverResult(provider: string, model: string, request: VisionOb
 }
 
 function failedJudgeResult(provider: string): JudgeResult {
-  return { schemaVersion: 'lythaus-judge-result-v1', promptVersion: 'lythaus-gpt-oss-judge-prompt-v1', prompt: '', provider, model: null, status: 'PROVIDER_FAILURE', recommendation: null, executionMs: 0, errorCategory: 'NETWORK_FAILURE' };
+  return { schemaVersion: 'lythaus-judge-result-v1', promptVersion: JUDGE_PROMPT_VERSION, prompt: '', provider, model: null, status: 'PROVIDER_FAILURE', recommendation: null, executionMs: 0, errorCategory: 'NETWORK_FAILURE' };
 }
 
 async function callObserver(input: { observer: VisionObserver; baseInput: { sampleId: string; inputHash: string; mime: string; bytes: Uint8Array; executionTimestamp: string }; request: VisionObserverRequest; allowNetwork: boolean; ledger: InvocationLedger }): Promise<VisionObserverResult> {
@@ -455,11 +456,16 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
         if (!decoded) failedComponents.push('forensics-decode');
         try {
           forensic = sanitizeForensicBundle(await forensicGenerator({ caseId: caseRecord.id, mime, bytes: sample.bytes, ...(decoded ? { decoded } : {}), now: timestamp }));
+          if (forensic.audit.applicability === 'invalid' || forensic.physicalAcquisition.cameraEvidenceApplicability === 'invalid') failedComponents.push('forensics');
         } catch {
           failedComponents.push('forensics');
         }
+        if (failedComponents.some((component) => component.startsWith('forensics'))) {
+          status = 'STOPPED';
+          stoppedAt = 'FORENSIC_FAILURE';
+        }
       }
-      if (usesObserver) {
+      if (usesObserver && stoppedAt === null) {
         if (mode === 'OBSERVER_AB') {
           const direct = await callObserver({ observer, baseInput, request: requestForMode(input, 'DIRECT'), allowNetwork, ledger });
           const reasoned = await callObserver({ observer, baseInput, request: requestForMode(input, 'REASONED'), allowNetwork, ledger });
@@ -481,11 +487,22 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
             }
           }
         }
-        if (observerResult.status === 'PROVIDER_FAILURE') failedComponents.push('vision-observer');
+        if (observerResult.status === 'PROVIDER_FAILURE') {
+          failedComponents.push('vision-observer');
+          if (fullPipelineMode) {
+            status = 'STOPPED';
+            stoppedAt = 'OBSERVER_PROVIDER_FAILURE';
+          }
+        }
       }
     }
 
     packet = buildEvidencePacket({ runId, caseId: caseRecord.id, sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, preflight, forensicBundle: forensic, moderation: moderationResult, observer: observerResult, observationHistory, contradictoryObservationIds, failedComponents, now: timestamp });
+
+    if (usesJudge && stoppedAt === null && packet.quality.overall === 'FAILED') {
+      status = 'STOPPED';
+      stoppedAt = 'EVIDENCE_PACKET_FAILURE';
+    }
 
     if (usesJudge && stoppedAt === null) {
       judgeResult = await callJudge({ judge, packet, requestId: `${runId}:${entry.sampleId}:1`, allowNetwork, ledger });
@@ -516,9 +533,14 @@ export async function runResearchTrial(input: ResearchRunnerInput, dependencies:
           observerResult = reasoned;
           if (reasoned.status === 'PROVIDER_FAILURE') failedComponents.push('vision-observer');
           packet = buildEvidencePacket({ runId, caseId: caseRecord.id, sampleId: entry.sampleId, sourceFamilyId: entry.sourceFamilyId, preflight, forensicBundle: forensic, moderation: moderationResult, observer: reasoned, observationHistory, contradictoryObservationIds, failedComponents, now: timestamp });
-          const finalJudge = await callJudge({ judge, packet, requestId: `${runId}:${entry.sampleId}:2`, allowNetwork, ledger });
-          judgeHistory.push(finalJudge);
-          judgeResult = finalJudge;
+          if (packet.quality.overall === 'FAILED') {
+            status = 'STOPPED';
+            stoppedAt = 'OBSERVER_PROVIDER_FAILURE';
+          } else {
+            const finalJudge = await callJudge({ judge, packet, requestId: `${runId}:${entry.sampleId}:2`, allowNetwork, ledger });
+            judgeHistory.push(finalJudge);
+            judgeResult = finalJudge;
+          }
         }
       }
     }
