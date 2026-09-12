@@ -6,7 +6,7 @@ import type { CloudflareAiRunOptions, VisionEscalationReason, VisionObservationC
 
 export const JUDGE_RESULT_SCHEMA_VERSION = 'lythaus-judge-result-v1' as const;
 export const JUDGE_RECOMMENDATION_SCHEMA_VERSION = '1' as const;
-export const JUDGE_PROMPT_VERSION = 'lythaus-gpt-oss-judge-prompt-v2' as const;
+export const JUDGE_PROMPT_VERSION = 'lythaus-gpt-oss-judge-prompt-v3' as const;
 export const JUDGE_MAX_OUTPUT_TOKENS = 2400 as const;
 
 export const ORIGIN_HYPOTHESES = [
@@ -220,6 +220,19 @@ export const JUDGE_SYSTEM_PROMPT = [
   'The Vision Observer raw reasoning trace is not supplied and must never be requested, repeated, or used as evidence.',
   'Return only a concise evidence-grounded rationale, never hidden reasoning, a scratchpad, or chain-of-thought.',
   'Do not output numeric confidence, AI probability, human probability, enforcement actions, or a final product decision.',
+  'EVIDENCE DIRECTIONALITY',
+  'Evidence being compatible with a hypothesis does not make it supporting evidence. A measurement may be descriptive without being origin-directional.',
+  'Use an evidence item in supportingEvidence only when the supplied packet, provenance, limitations, and/or explicit calibration establish a validated directional relationship supporting the selected hypothesis.',
+  'Use an evidence item in contradictoryEvidence only when a validated directional relationship establishes that it weighs against the selected hypothesis. Absence of supporting evidence is not contradictory evidence.',
+  'Experimental, uncalibrated, proxy, or otherwise unvalidated measurements must not be used as positive or contradictory origin evidence merely because their value appears suggestive.',
+  'Research V1 contract: EF1 file-format and metadata observations are descriptive and nondirectional unless explicitly calibrated; current EF2 experimental physical-acquisition proxies and current EF4 experimental spectral/residual measurements are not validated origin-directional evidence; Vision Observer descriptions are fallible and nondirectional by themselves; Safety is never origin evidence; unavailable EF3 and EF5 are missing evidence, not support or contradiction.',
+  'Current EF2 may describe camera/pipeline/acquisition characteristics, but unless the packet explicitly establishes calibrated directional validity, EF2 MUST NOT support CAMERA_NATIVE or SYNTHETIC or contradict either origin.',
+  'Current EF4 measurements are descriptive experimental observations; do not infer origin direction from their values unless the evidence contract explicitly establishes calibrated direction.',
+  'Explicitly calibrated directional evidence may and should be used as supporting evidence when applicable; validated directional contradiction may be used as contradictory evidence. These rules do not require always abstaining.',
+  'Incorrect: an uncalibrated EF2 proxy looks camera-like, therefore it supports CAMERA_NATIVE. Correct: it is an experimental measurement without validated origin direction and is not supporting evidence.',
+  'Positive example: an evidence item explicitly calibrated as directional support for LOCALLY_MANIPULATED may be cited in supportingEvidence for that hypothesis.',
+  'Do not include an evidence ID in supportingEvidence or contradictoryEvidence merely because it was measured or observed. Each reference must be directionally eligible for the selected primary hypothesis.',
+  'If the packet is PARTIAL and no validated directional origin evidence exists, prefer INSUFFICIENT_EVIDENCE, HIGH or VERY_HIGH uncertainty, and requiresReview true. Do not apply this preference when validated directional evidence supports a bounded conclusion.',
   'HYPOTHESES',
   `primaryHypothesis MUST be exactly one of: ${ORIGIN_HYPOTHESES.join(', ')}.`,
   'Do not create synonyms, abbreviate these values, or return any other hypothesis token.',

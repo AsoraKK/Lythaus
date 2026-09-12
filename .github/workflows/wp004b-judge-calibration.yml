@@ -28,11 +28,28 @@ jobs:
       - name: Finalize sanitized budget accounting
         if: always()
         run: node --experimental-strip-types scripts/authenticity/wp004b-budget-finalizer.mjs --journal .artifacts/wp004b-call-accounting.json --output .artifacts/wp004b-budget-finalizer.json
+      - name: Stage sanitized calibration artifacts
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="wp004b-sanitized-artifacts"
+          mkdir -p "$target"
+          if [[ -s .artifacts/wp004b-live-calibration.json ]]; then
+            cp -- .artifacts/wp004b-live-calibration.json "$target/final-result.json"
+          fi
+          if [[ -s .artifacts/wp004b-call-accounting.json ]]; then
+            cp -- .artifacts/wp004b-call-accounting.json "$target/call-accounting.json"
+          fi
+          if [[ -s .artifacts/wp004b-budget-finalizer.json ]]; then
+            cp -- .artifacts/wp004b-budget-finalizer.json "$target/budget-finalizer.json"
+          fi
+          test -s "$target/budget-finalizer.json"
       - name: Upload sanitized calibration result
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: wp004b-live-calibration-result
-          path: .artifacts
-          if-no-files-found: ignore
+          path: wp004b-sanitized-artifacts
+          if-no-files-found: error
           retention-days: 7

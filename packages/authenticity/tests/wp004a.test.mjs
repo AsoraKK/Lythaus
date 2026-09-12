@@ -82,8 +82,8 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 const CASE_ID = '0198a5d3-4a00-7000-8000-000000000123';
 const execFileAsync = promisify(execFile);
 
-test('Judge prompt v2 explicitly binds canonical enums and retains the provider request contract', async () => {
-  assert.equal(JUDGE_PROMPT_VERSION, 'lythaus-gpt-oss-judge-prompt-v2');
+test('Judge prompt v3 explicitly binds canonical enums and retains the provider request contract', async () => {
+  assert.equal(JUDGE_PROMPT_VERSION, 'lythaus-gpt-oss-judge-prompt-v3');
   assert.deepEqual(ORIGIN_HYPOTHESES, ['CAMERA_NATIVE', 'SYNTHETIC', 'CAMERA_CAPTURE_OF_SYNTHETIC', 'DIGITAL_ART_OR_CGI', 'SCREENSHOT_OR_COMPOSITE', 'LOCALLY_MANIPULATED', 'INSUFFICIENT_EVIDENCE']);
   for (const token of [...ORIGIN_HYPOTHESES, ...WHITELISTED_ADDITIONAL_TESTS, 'LOW', 'MODERATE', 'HIGH', 'VERY_HIGH']) assert.ok(JUDGE_SYSTEM_PROMPT.includes(token));
   assert.ok(JUDGE_SYSTEM_PROMPT.includes('Every alternativeHypotheses[].hypothesis MUST use exactly the same vocabulary'));
