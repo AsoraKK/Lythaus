@@ -44,6 +44,7 @@ import {
   summarizeGeometryFrontBackEvaluations,
   generateForensicFeatureBundleV1,
   JUDGE_PROMPT_VERSION,
+  JUDGE_MAX_OUTPUT_TOKENS,
   JUDGE_SYSTEM_PROMPT,
   ORIGIN_HYPOTHESES,
   WHITELISTED_ADDITIONAL_TESTS,
@@ -90,7 +91,8 @@ test('Judge prompt v2 explicitly binds canonical enums and retains the provider 
   const example = JSON.parse(JUDGE_SYSTEM_PROMPT.split('EXAMPLE (structure only)\n')[1]);
   assertJudgeRecommendation(example, packet());
   const request = buildJudgeRequest(packet());
-  assert.deepEqual(request, { messages: [{ role: 'system', content: JUDGE_SYSTEM_PROMPT }, { role: 'user', content: JSON.stringify(packet()) }], response_format: { type: 'json_object' }, temperature: 0, max_tokens: 1200 });
+  assert.equal(JUDGE_MAX_OUTPUT_TOKENS, 2400);
+  assert.deepEqual(request, { messages: [{ role: 'system', content: JUDGE_SYSTEM_PROMPT }, { role: 'user', content: JSON.stringify(packet()) }], response_format: { type: 'json_object' }, temperature: 0, max_tokens: JUDGE_MAX_OUTPUT_TOKENS });
   const result = await createCloudflareJudge({ ai: { run: async () => example } }).judge({ packet: packet() });
   assert.equal(result.promptVersion, JUDGE_PROMPT_VERSION);
   assert.equal(result.status, 'SUCCESS');

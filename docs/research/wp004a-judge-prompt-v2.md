@@ -14,8 +14,13 @@ remain epistemically neutral limitations. Observer statements remain fallible,
 safety remains context only, and camera/synthetic evidence stays independent.
 
 The result/recommendation/Evidence Packet schemas, Chat Completions extraction,
-strict canonical validation and provider request settings are unchanged:
-messages, json_object, temperature 0, max_tokens 1200, non-streaming.
+strict canonical validation and provider request settings remain unchanged
+except for the bounded Judge output allowance. The request uses messages,
+json_object, temperature 0, max_tokens 2400, and non-streaming execution.
+The first post-merge 0D reached GPT-OSS successfully but ended with
+`finish_reason=LENGTH` and no assistant content at max_tokens 1200; this
+focused correction raises only that cap and preserves the same route and
+response format.
 
 Optional invalid-primary telemetry retains only a token matching
 `^[A-Z][A-Z0-9_]{0,63}$`, only on PRIMARY_HYPOTHESIS_INVALID. It is diagnostics,
