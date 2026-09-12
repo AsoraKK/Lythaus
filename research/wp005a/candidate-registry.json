@@ -3,7 +3,7 @@
   "researchDate": "2026-09-12",
   "catalogSource": "https://developers.cloudflare.com/workers-ai/models/",
   "pricingSource": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
-  "liveTestStatus": "NOT_RUN_LOCAL_CREDENTIALS",
+  "liveTestStatus": "BOUNDED_LIVE_RUN_34723558073_COMPLETED_WITH_ADAPTER_GAPS",
   "candidates": [
     { "candidate": "gpt-oss-20b", "family": "JUDGE", "model": "@cf/openai/gpt-oss-20b", "status": "LIVE_CANDIDATE", "contextWindow": 128000, "capabilities": ["text", "reasoning", "json_object"], "priceUsdPerMillion": { "input": 0.2, "output": 0.3 }, "evidenceContribution": "Evidence synthesis only; no new forensic sensor.", "source": "https://developers.cloudflare.com/workers-ai/models/gpt-oss-20b/", "decisionNote": "Baseline retained for escalation comparison; historical WP004B JSON_OBJECT evidence exists." },
     { "candidate": "qwen3-30b-a3b-fp8", "family": "JUDGE", "model": "@cf/qwen/qwen3-30b-a3b-fp8", "status": "LIVE_CANDIDATE", "contextWindow": 32768, "capabilities": ["text", "reasoning", "function_calling", "json_object"], "priceUsdPerMillion": { "input": 0.051, "output": 0.335 }, "evidenceContribution": "Alternative text reasoner.", "source": "https://developers.cloudflare.com/workers-ai/models/qwen3-30b-a3b-fp8/", "decisionNote": "Strong cost candidate; actual epistemic behavior unmeasured." },

@@ -3,9 +3,10 @@
 ## WP005A — Architecture, Model & Forensic Evidence Tournament
 
 Research date: 2026-09-12
-Repository baseline: `b75edaa8c02dae37a745f219d1676b86d13d29bb` (`origin/main`)
-Research branch: `agent/wp005a-architecture-tournament`
-Report status: partial live execution; no production change
+Repository baseline before WP005A: `b75edaa8c02dae37a745f219d1676b86d13d29bb`
+Verified post-merge `origin/main`: `6e55aab997ae9081e30806b5140caef353fa2c81`
+Implementation branch: `agent/wp005a-architecture-tournament`; results update branch: `agent/wp005a-live-results-report`
+Report status: protected bounded live execution completed; no production change
 
 Safety: keep the existing moderation abstraction as `SAFETY_CONTEXT_ONLY`; it remains outside origin inference.
 Forensics: keep deterministic EF1/EF2/EF4 as evidence-only inputs; do not treat current EF2/EF4 proxies as calibrated origin classifiers. Add EF3/EF5 only after specialist calibration and license gates.
@@ -13,11 +14,11 @@ Vision Observer: keep Moondream as the primary bounded Observer for scene, OCR, 
 Epistemic Compiler: add the research compiler from Evidence Packet v1 to a compact Evidence Ledger; it must preserve independent axes and never add ground truth.
 Fast-path policy: use the Selective Resolution Gate. No validated directional evidence produces deterministic `INSUFFICIENT_EVIDENCE`; one calibrated supported hypothesis with no calibrated contradiction may receive a bounded advisory recommendation.
 Escalation trigger: calibrated/mixed evidence, contradictions, unresolved partial packets, and explicitly requested difficult visual adjudication.
-Escalation Judge: keep GPT-OSS as escalation-only until the bounded live tournament compares it with Qwen3-30B-A3B-FP8, GLM-4.7-Flash, and Llama 3.3 70B.
+Escalation Judge: keep GPT-OSS as escalation-only provisionally; the protected run produced no qualified Judge finalist because all six J1 smokes failed canonical output or transport gates.
 Output validation: continue canonical JSON object output, normalize before evaluation, reject unknown IDs and forbidden fields, and keep `retryCount=0`.
 Final deterministic policy: retains enforcement authority; every Judge and Observer has advisory status and `enforcementAuthority=false`.
 
-This is a provisional migration direction, not a production switch. The local isolated run had no Cloudflare credentials, so current live model metrics remain pending. The correct conclusion is therefore `WP005A_MORE_EVIDENCE_REQUIRED`, not a fabricated winner.
+This is a provisional migration direction, not a production switch. The protected run completed, but it was a J1 smoke-only result: four Judge calls returned HTTP 2xx and failed canonical normalization, two timed out, and no candidate reached J2. The Observer challenger calls likewise exposed native-response adapter gaps. The correct conclusion is therefore `WP005A_MORE_EVIDENCE_REQUIRED`, not a fabricated winner.
 
 ## Direct answer
 
@@ -25,7 +26,7 @@ This is a provisional migration direction, not a production switch. The local is
 
 An LLM Judge is not justified on every image. The local blind fixture harness found that the deterministic selective gate resolved 13/16 cases without an LLM, including the single-hypothesis calibrated EF5 case, and escalated the 3 cases needing multi-hypothesis or conflicting interpretation. It made 0 incorrect deterministic resolutions on this benchmark-only fixture set. That is not image-detector accuracy, and it does not establish a production escalation rate; it does establish a measurable routing hypothesis worth live testing.
 
-The Judge remains valuable for calibrated EF3/EF5 synthesis and camera-plus-synthetic coexistence, but its incremental value versus deterministic policy is not yet quantified on live finalists. Historical WP004B GPT-OSS evidence shows useful JSON_OBJECT semantics and roughly 5–9 second Judge timing, but also contains a documented unvalidated-evidence failure. That supports escalation-only retention, not critical-path invocation.
+The Judge remains potentially valuable for calibrated EF3/EF5 synthesis and camera-plus-synthetic coexistence, but this run measured no canonical Judge result and therefore no incremental value versus deterministic policy. Historical WP004B GPT-OSS evidence shows useful JSON_OBJECT semantics and roughly 5–9 second Judge timing, but also contains a documented unvalidated-evidence failure. That supports escalation-only retention, not critical-path invocation.
 
 `KEEP_GPT_OSS_ESCALATION_ONLY`
 `KEEP_MOONDREAM_PRIMARY_OBSERVER`
@@ -35,12 +36,20 @@ The Judge remains valuable for calibrated EF3/EF5 synthesis and camera-plus-synt
 | Layer | Scope | Status | What is and is not established |
 |---|---|---|---|
 | A — forensic evidence quality | Evidence Packet v1, EF family semantics, policy direction | `LAYER_A_VALID_WITH_GAPS` | Safety isolation, independent axes, missingness, and current calibration boundaries are validated; EF3/EF5 are still unavailable and EF2/EF4 are uncalibrated. |
-| B — visual Observer quality | Six deterministic visual fixture tasks and four candidate slots | `OBSERVER_BENCHMARK_HARNESS_VALID_LIVE_RESULTS_PENDING` | Protocol and scoring harness exist; no natural-image performance claim is made. |
-| C — Judge/reasoning quality | Six-smoke / 32-screen / finalist / ledger / repeatability plan over 16 blind cases | `JUDGE_BENCHMARK_HARNESS_VALID_LIVE_RESULTS_PENDING` | The prompt, blind input, canonical parser, and evaluator are implemented; no current finalist has a live score in this run. |
+| B — visual Observer quality | Six deterministic visual fixture tasks and four candidate slots | `OBSERVER_LIVE_PROTOCOL_RESULTS_WITH_NATIVE_ADAPTER_GAPS` | Moondream produced 5/5 canonical observations and 3/5 fixture task matches; native challengers did not produce canonical observations, so comparative quality is unresolved. |
+| C — Judge/reasoning quality | Six-smoke / 32-screen / finalist / ledger / repeatability plan over 16 blind cases | `JUDGE_BENCHMARK_LIVE_SMOKE_ONLY_NO_QUALIFIED_FINALIST` | Four 2xx responses failed canonical normalization and two candidates timed out; J2, holdout, ledger, and repeatability comparisons did not run. |
 | D — end-to-end architecture | Routing, compiler, Observer, specialist, and Judge combinations | `END_TO_END_ACCURACY_UNRESOLVED` | No rights-cleared representative image corpus was available for an honest end-to-end accuracy claim. |
 | Open-source feasibility | Repository, checkpoint, data, license, CPU/RAM/dependency desk audit | `OPEN_SOURCE_DESK_AUDIT_VALID_RUNTIME_UNRESOLVED` | Desk gates are documented; no checkpoint was legally/runtime-safe to download, so installation, peak RAM, and CPU latency remain unmeasured. |
 
-The local run was executed with network disabled: `reservedRequests=0`, `reservedEstimatedNeurons=0`, `reservedEstimatedCostUsd=0`, and `retryCount=0`. The manual workflow is bounded at 80 requests, 7,500 estimated neurons, and US$0.15.
+The local contract run was network-disabled, while the protected [workflow run 34723558073](https://github.com/AsoraKK/Lythaus/actions/runs/34723558073) executed on merged `main` SHA `6e55aab997ae9081e30806b5140caef353fa2c81`. It reserved 24 requests, 4,716 estimated neurons, and US$0.051713762, with `retryCount=0`; 56 requests and 2,784 estimated neurons remained unused. The manual workflow is bounded at 80 requests, 7,500 estimated neurons, and US$0.15.
+
+### Protected live result
+
+The run completed successfully as a bounded experiment, not as a successful model tournament. Judge J1 used six calls: GPT-OSS 20B, Qwen3-30B-A3B-FP8, Llama 3.3 70B fast, and Gemma 4 returned HTTP 2xx but failed canonical normalization; GLM-4.7-Flash and Qwen3.8-27B timed out at approximately 30 seconds. Consequently `canonicalOutputSuccess=0/6`, `screeningCandidates=0`, and no Judge quality, Ledger, holdout, repeatability, or LLM-value comparison is valid.
+
+Observer screening used 18 calls. Moondream returned 5/5 canonical observations, matched 3/5 controlled fixture tasks, matched the repetition count 2/2, and had normalized OCR error 1 on both text probes at a descriptive p50 of 1.891 seconds. Qwen3.8-27B and Llama 4 Scout completed transport but failed the existing canonical Observer envelope on 5/5 and 4/4 calls respectively; Llama 3.2 Vision returned HTTP 403 with provider code 5016 on 4/4 calls. These challenger observations are unresolved, not zero-quality scores. No natural-image or end-to-end detector claim follows from this fixture run.
+
+The checked-in [live-run-summary.json](live-run-summary.json) and protected workflow artifact contain only sanitized counters, timings, model IDs, canonical outputs/diagnostics, and evaluation fields; no media, headers, raw provider responses, or reasoning traces are retained.
 
 ## Current Cloudflare snapshot
 
@@ -75,28 +84,28 @@ The selective gate’s one additional resolution is the `LOCALLY_MANIPULATED` be
 
 ### Judge candidates
 
-This is a desk-priority ranking, not a live performance ranking. Live metrics are pending.
+This is a quality ranking only where valid measurements exist. The protected run supplies operational J1 evidence but no valid live Judge quality ranking.
 
-| Rank | Candidate | Role | Why it enters | Main risk |
+| Rank | Candidate | Role | Live J1 result | Main risk |
 |---:|---|---|---|---|
-| 1 | GPT-OSS 20B | Baseline escalation Judge | Existing Lythaus integration and historical JSON_OBJECT evidence | Prior unvalidated-evidence failure; 5–9s historical timing |
-| 2 | GLM-4.7-Flash | Low-latency challenger | Current catalog, reasoning controls, long context | Actual canonical reliability and epistemic behavior unmeasured |
-| 3 | Qwen3-30B-A3B-FP8 | Cost challenger | Low input price and reasoning support | 32k context and output behavior unmeasured |
-| 4 | Llama 3.3 70B fast | Capacity control | Current fast model and higher reasoning capacity | High output price and only 24k context |
-| 5 | Gemma 4 26B A4B | Unified multimodal challenger | Current vision/reasoning model with efficient active parameters | Observer/Judge role fit and structured output unmeasured |
-| 6 | Qwen3.8-27B | Unified multimodal challenger | New current vision/reasoning candidate | Highest output price among practical challengers; adapter fit unmeasured |
+| 1 | GPT-OSS 20B | Baseline escalation Judge | HTTP 2xx; canonical normalization failed; 10.389s | Existing integration, but live smoke did not establish canonical reliability |
+| 2 | Qwen3-30B-A3B-FP8 | Cost challenger | HTTP 2xx; canonical normalization failed; 2.407s | Low price is irrelevant until the response contract is usable |
+| 3 | Llama 3.3 70B fast | Capacity control | HTTP 2xx; canonical normalization failed; 4.000s | High output price and no usable live result |
+| 4 | Gemma 4 26B A4B | Unified multimodal challenger | HTTP 2xx; canonical normalization failed; 25.103s | Slow and no usable live result |
+| 5 | GLM-4.7-Flash | Low-latency challenger | Transport timeout at 30.005s | No result; retry-free failure is operational evidence |
+| 6 | Qwen3.8-27B | Unified multimodal challenger | Transport timeout at 30.001s | No result; expensive output and timeout |
 | — | GPT-OSS 120B | Research oracle | Accuracy-ceiling control | Not safe to sample under current research neuron cap |
 
 ### Observer candidates
 
-| Rank | Candidate | Intended evidence | Main risk |
+| Rank | Candidate | Intended evidence | Protected live result |
 |---:|---|---|---|
-| 1 | Moondream 3.1 | Bounded observations, OCR, point/detect, geometry, display | Relational weaknesses; no authenticity classification authority |
-| 2 | Llama 4 Scout | Larger multimodal observation control | Semantic VLM correlation and adapter/contract differences |
-| 3 | Llama 3.2 11B Vision | Lower-cost visual control | Older visual reasoning and current access/quality uncertainty |
-| 4 | Qwen3.8-27B | Unified observation plus ambiguity research | Expensive output, no proven Observer schema adapter |
+| 1 | Moondream 3.1 | Bounded observations, OCR, point/detect, geometry, display | 5/5 canonical; 3/5 controlled task matches; no authenticity authority |
+| 2 | Llama 4 Scout | Larger multimodal observation control | 4/4 transport success but 0/4 canonical; quality unresolved |
+| 3 | Qwen3.8-27B | Unified observation plus ambiguity research | 5/5 transport success but 0/5 canonical; mean about 18.338s |
+| 4 | Llama 3.2 11B Vision | Lower-cost multimodal control | HTTP 403/provider code 5016 on 4/4; Meta agreement remains unaccepted |
 
-The Observer benchmark scores observation quality: counts, OCR error, spatial relation, localization, structured output, indeterminate behavior, repeatability, and latency. It does not score “AI” verdict accuracy. Moondream therefore remains the provisional primary Observer because its specialized interface maps directly to Lythaus observation tasks; the live challenger data needed to replace it was not collected.
+The Observer benchmark scores observation quality: counts, OCR error, spatial relation, localization, structured output, indeterminate behavior, repeatability, and latency. It does not score “AI” verdict accuracy. Moondream is the only candidate with canonical live observations in this run, so it remains the primary Observer provisionally; the native challenger envelope must be hardened before a replacement decision.
 
 ### Open-source forensic candidates
 
@@ -139,11 +148,11 @@ Original repositories inspected include [AIGCDetectBenchmark](https://github.com
 `MINIMUM_EFFECTIVE_ARCHITECTURE = Safety context + deterministic EF1/EF2/EF4 evidence + Evidence Compiler + Selective Gate; Moondream only for bounded visual observations; no routine Judge`
 `RECOMMENDED_LYTHAUS_VNEXT = Safety context + deterministic evidence + Moondream primary Observer + Evidence Compiler + Selective Gate + GPT-OSS escalation-only`
 
-Every profile is provisional until the manual bounded workflow supplies live Judge/Observer metrics. No production model ID is changed here.
+The live run did not produce enough comparable model metrics to change these profiles. No production model ID is changed here.
 
 ## Judge value and ablation
 
-The required live ablation fields are implemented: cases deterministic got right, cases the LLM fixed, cases the LLM broke, cases unchanged, epistemic violations, latency, reliability, tokens, and cost. They are empty in this local run because no provider attempt was authorized without existing Cloudflare credentials.
+The required live ablation fields are implemented. The protected run recorded 6 Judge attempts, but no canonical Judge output survived normalization, so `casesLLMFixed`, `casesLLMBroke`, `casesUnchanged`, epistemic violations, and incremental correctness are `UNRESOLVED`, not zero. It recorded 18 Observer attempts, of which only the five Moondream responses were canonical.
 
 What is already measurable:
 
@@ -152,20 +161,21 @@ What is already measurable:
 - The deterministic layer can safely resolve a single calibrated EF5 hypothesis in the research fixture.
 - Existing WP004B evidence demonstrates that a Judge can use calibrated EF5 and isolate Safety, but a documented run also cited unvalidated EF2/EF4 in B1. The sample is too small for a reliability claim.
 
-Therefore the research answer is not “LLM never helps.” It is “LLM should be charged only for the cases where deterministic policy cannot safely decide.”
+Therefore the research answer is not “LLM never helps.” It is “LLM should be charged only for the cases where deterministic policy cannot safely decide, and only after the selected provider response contract is demonstrably reliable.”
 
 ## Latency and economics
 
 | Metric | Result |
 |---|---|
-| Fast-path p50 | `NOT MEASURED` in WP005A; no provider call was made |
+| Fast-path p50 | `NOT MEASURED`; deterministic compiler timing was not instrumented |
 | Fast-path max | `NOT MEASURED`; deterministic runtime timing must be added to the next run |
-| Escalation-path p50 | `NOT AVAILABLE`; 0 current calls |
-| Escalation-path max | `NOT AVAILABLE`; 0 current calls |
-| Provider timeouts | 0 observed because no provider was invoked; this is not a reliability pass |
+| Escalation-path p50 | `17.746s` across six J1 smoke attempts, descriptive only; 0 canonical Judge results |
+| Escalation-path max | `30.005s` across six J1 smoke attempts; two transport timeouts |
+| Provider timeouts | 2/6 Judge smokes; no retries |
+| Moondream Observer p50 / max | `1.891s / 2.219s` across five canonical fixture observations |
 | Fixture selective escalation estimate | 18.75%, benchmark-only and not a traffic estimate |
 
-Illustrative cost sensitivity uses current GPT-OSS 20B list pricing and excludes any free-neuron consumption. At 1,000 input + 600 output tokens, one Judge call is about $0.00038; at 18.75% escalation that is about $0.000071 per analysis, $0.071 per 1,000, and $7.13 per 100,000. At the bounded 4,000 input + 2,400 output ceiling, the same calculation is about $0.00152 per Judge call, $0.000285 per analysis, $0.285 per 1,000, and $28.50 per 100,000. Actual usage must replace these assumptions after live measurement. A deterministic-only fast path has no incremental Workers AI inference cost.
+Illustrative cost sensitivity uses current GPT-OSS 20B list pricing and excludes any free-neuron consumption. At 1,000 input + 600 output tokens, one Judge call is about $0.00038; at 18.75% escalation that is about $0.000071 per analysis, $0.071 per 1,000, and $7.13 per 100,000. At the bounded 4,000 input + 2,400 output ceiling, the same calculation is about $0.00152 per Judge call, $0.000285 per analysis, $0.285 per 1,000, and $28.50 per 100,000. The protected run reserved US$0.051713762 for 24 calls; usage tokens were unavailable. These are estimates, not measured production unit costs. A deterministic-only fast path has no incremental Workers AI inference cost.
 
 Cloudflare’s documented free allocation is applied before paid overage. The tournament’s research guard is stricter: it reserves no more than 7,500 estimated neurons, 80 requests, and US$0.15, with no retries. No new service or paid account was used.
 
@@ -179,28 +189,28 @@ The user target of human false-positive eligibility at or below 1% overall, with
 
 1. `HIGH IMPACT` — calibrated independent evidence is missing in EF3 and EF5, while EF2 and EF4 remain uncalibrated. This is the main reason the deterministic compiler currently abstains.
 2. `HIGH IMPACT` — a rights-cleared, transformation-controlled, source-family-separated evaluation corpus is not yet available for honest end-to-end false-positive and generalization measurement.
-3. `MODERATE/HIGH IMPACT` — current live Judge and Observer finalist reliability/latency are unmeasured because the existing Cloudflare account credentials are only available in protected GitHub execution.
+3. `HIGH IMPACT` — native multimodal response normalization and model access are not yet a portable research contract: nine native Observer calls were transport-successful but uncanonical, while Llama 3.2 Vision was gated with HTTP 403/provider code 5016.
 
 ## Next work packages
 
 | Objective | Why it matters | Expected value | Cost / complexity |
 |---|---|---|---|
-| Run the manual 80-call Cloudflare tournament from the protected workflow | Quantifies GPT-OSS versus current reasoners, full packet versus Ledger, Observer quality, reliability, and escalation economics | High; directly resolves the central LLM value question | Within existing free allocation guard; low implementation complexity |
+| Harden and contract-test native multimodal response normalization, then seek explicit approval for a future bounded rerun | The completed run could not compare Judge quality or native Observer quality after transport | High; resolves the current adapter validity blocker before spending more inference budget | Low/medium adapter work; no automatic rerun in WP005A |
 | Close a rights-cleared microbenchmark with camera-native, synthetic, screenshot, composite, local-edit, and recapture families plus transformations | Enables end-to-end performance, human false-positive, and generalization evidence | High; turns routing evidence into product-relevant evidence | Low/medium data curation complexity; no new service required |
 | Prototype one EF2 candidate (SDAIE) and one EF5 candidate (IMDLBenCo/ForensicHub path) behind license, CPU/RAM, and calibration gates | Adds independent evidence rather than another generic VLM | High if either fills a current weak family | Medium/high local engineering; no training permitted |
 
-Do not begin all three in parallel if the protected live tournament remains unavailable; the first step has the highest information value.
+Do not begin a second live tournament until native response normalization and candidate access are fixed and explicitly approved; the completed WP005A run is not silently repeated.
 
 ## Research debt
 
-- No live Cloudflare calls in this worktree; all current Judge/Observer comparative metrics are pending.
+- The protected run used 24 calls and completed, but Judge comparison stopped at J1 with 0/6 canonical results; no Judge quality or LLM incremental-value claim is available.
 - Provider token usage is not exposed by the existing REST transport snapshot and is recorded as unavailable rather than inferred.
-- The Moondream task adapter and native `messages` + `image` challenger payload are contract-covered; provider response behavior and candidate-specific quality remain live-validation work.
+- The Moondream task adapter produced canonical results; native `messages` + `image` challenger payloads reached providers but their response envelopes were not accepted by the existing canonical Observer adapter. A future run needs a separate adapter-fix validation.
 - No suitable rights-cleared natural-image sample was available for an end-to-end score.
 - Open-source checkpoint licenses, dataset terms, and redistribution rights remain unresolved for every external specialist considered.
 - CPU peak RAM and latency for external checkpoints were not measured because the hard license/checkpoint gates stopped downloads.
 - The benchmark-only calibrated fixtures test epistemic compilation and routing, not detector performance or calibration of a real forensic model.
-- Small-sample p50/p95 claims are intentionally not reported.
+- Small-sample p50 values are descriptive only; p95 claims are intentionally not reported.
 
 ## No-go findings
 
@@ -219,7 +229,7 @@ Do not begin all three in parallel if the protected live tournament remains unav
 `Moondream = KEEP_MOONDREAM_PRIMARY_OBSERVER`
 `RECOMMENDATION_CONFIDENCE = LOW`
 
-Confidence is low because the deterministic result is reproducible but benchmark-only, while the live model tournament and end-to-end image truth data were not available in the local execution. The architecture direction is still evidence-supported: deterministic-first routing protects human false positives and preserves cost/latency headroom; an advisory reasoner remains available for cases requiring synthesis.
+Confidence is low because deterministic routing is reproducible but benchmark-only, the live Judge tournament stopped at canonical smoke failure, native Observer challengers were not comparable, and end-to-end image truth data remains unavailable. The architecture direction is still evidence-supported: deterministic-first routing protects human false positives and preserves cost/latency headroom; an advisory reasoner remains available for cases requiring synthesis after adapter validity is established.
 
 `WP005A_ARCHITECTURE_RECOMMENDATION_READY` is not honest yet.
 `WP005A_MORE_EVIDENCE_REQUIRED`
