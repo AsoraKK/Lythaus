@@ -8,6 +8,7 @@ import {
 import {
   JUDGE_EPISTEMIC_POLICY_VERSION,
   JUDGE_EPISTEMIC_EVALUATOR_SCHEMA_VERSION,
+  WP004B_LIVE_CALIBRATION_SCHEMA_VERSION,
   createWp004bLiveCalibrationCases,
   assertWp004bExpectationsNotInJudgeRequest,
   evaluateWp004bLiveRecommendation,
