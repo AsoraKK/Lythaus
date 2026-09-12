@@ -50,6 +50,8 @@ Relevant current candidates include GPT-OSS 20B at 128k context and $0.20/$0.30 
 
 Current multimodal challengers include Qwen3.8-27B, which Cloudflare documents as vision/reasoning with 262k context and $0.45/$3.20 ([model page](https://developers.cloudflare.com/workers-ai/models/qwen3.8-27b/)); Llama 4 Scout, documented as natively multimodal with 131k context and $0.27/$0.85 ([model page](https://developers.cloudflare.com/workers-ai/models/llama-4-scout-17b-16e-instruct/)); and Gemma 4 26B A4B, documented as vision/reasoning with 256k context and $0.10/$0.30 ([model page](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/)). Moondream remains the specialized Observer baseline ([model page](https://developers.cloudflare.com/ai/models/%40cf/moondream/moondream3.1-9B-A2B/)).
 
+Cloudflare documents a one-time Meta License and Acceptable Use agreement for Llama 3.2 11B Vision. The workflow does not auto-accept that agreement; any resulting access failure is recorded as provider/access evidence, not silently retried.
+
 The catalog also contains GPT-OSS 120B, but it is retained as a research oracle rather than live-tested in this bounded run. Paid-only models were desk-researched and no new paid access was requested. JSON object output remains the tournament mode; the prior JSON Schema latency experiment is closed and was not repeated.
 
 ## Benchmark design
