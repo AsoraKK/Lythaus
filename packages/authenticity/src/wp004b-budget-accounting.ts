@@ -8,6 +8,8 @@ export const WP004B_MAX_TOTAL_CALLS = 3 as const;
 export const WP004B_RETRIES_ALLOWED = 0 as const;
 export const WP004B_ACCOUNTING_PROVIDER = 'cloudflare-workers-ai' as const;
 export const WP004B_ACCOUNTING_CASE_IDS = ['B1', 'B2', 'B3'] as const;
+export const WP004B_JSON_SCHEMA_CAPABILITY_CASE_IDS = ['G1', 'G2'] as const;
+export const WP004B_JSON_SCHEMA_CAPABILITY_MAX_CALLS = 2 as const;
 const SAFE_ENVELOPE_CLASSIFICATIONS = new Set([
   'DIRECT_CANONICAL', 'RESPONSE_OBJECT', 'RESPONSE_STRING', 'RESULT_STRING', 'OUTPUT_TEXT_STRING', 'CHAT_COMPLETION', 'UNKNOWN',
 ]);
@@ -19,7 +21,7 @@ const SAFE_NORMALIZATION_FAILURE_CODES = new Set([
   'ENFORCEMENT_AUTHORITY_INVALID', 'FORBIDDEN_FIELD_PRESENT', 'CHOICES_MISSING', 'CHOICES_TYPE_UNSUPPORTED',
   'CHOICES_EMPTY', 'CHOICE_COUNT_INVALID', 'CHOICE_INVALID', 'MESSAGE_MISSING', 'MESSAGE_INVALID',
   'MESSAGE_CONTENT_MISSING', 'MESSAGE_CONTENT_TYPE_UNSUPPORTED', 'MESSAGE_CONTENT_NOT_JSON', 'FINISH_REASON_TRUNCATED',
-  'FINISH_REASON_UNSUPPORTED', 'UNEXPECTED_TOOL_CALL', 'UNKNOWN_RESPONSE_SHAPE',
+  'FINISH_REASON_UNSUPPORTED', 'UNEXPECTED_TOOL_CALL', 'UNKNOWN_RESPONSE_SHAPE', 'MINIMAL_SCHEMA_INVALID',
 ]);
 
 export const WP004B_ACCOUNTING_FAILURE_STAGES = [
@@ -72,8 +74,8 @@ export interface Wp004bCaseAccounting {
 export interface Wp004bBudgetJournal {
   schemaVersion: typeof WP004B_BUDGET_ACCOUNTING_SCHEMA_VERSION;
   budget: {
-    maxJudgeCalls: typeof WP004B_MAX_JUDGE_CALLS;
-    maxTotalCalls: typeof WP004B_MAX_TOTAL_CALLS;
+    maxJudgeCalls: number;
+    maxTotalCalls: number;
     retriesAllowed: typeof WP004B_RETRIES_ALLOWED;
   };
   caseOrder: readonly string[];
@@ -216,7 +218,10 @@ export class Wp004bBudgetLedger {
     this.caseOrder = [...caseIds];
     this.maxJudgeCalls = options.maxJudgeCalls ?? WP004B_MAX_JUDGE_CALLS;
     this.maxTotalCalls = options.maxTotalCalls ?? WP004B_MAX_TOTAL_CALLS;
-    if (this.maxJudgeCalls !== WP004B_MAX_JUDGE_CALLS || this.maxTotalCalls !== WP004B_MAX_TOTAL_CALLS) throw new Error('WP004B_ACCOUNTING_BUDGET_INVALID');
+    if (!Number.isInteger(this.maxJudgeCalls) || !Number.isInteger(this.maxTotalCalls)
+      || this.maxJudgeCalls < 1 || this.maxTotalCalls < 1
+      || this.maxJudgeCalls > WP004B_MAX_JUDGE_CALLS || this.maxTotalCalls > WP004B_MAX_TOTAL_CALLS
+      || this.maxJudgeCalls !== this.maxTotalCalls) throw new Error('WP004B_ACCOUNTING_BUDGET_INVALID');
     for (const caseId of this.caseOrder) {
       this.caseState.set(caseId, {
         caseId,
@@ -339,7 +344,7 @@ export class Wp004bBudgetLedger {
       : 'INVALID_FOR_SCIENTIFIC_SCORING';
     return {
       schemaVersion: WP004B_BUDGET_ACCOUNTING_SCHEMA_VERSION,
-      budget: { maxJudgeCalls: WP004B_MAX_JUDGE_CALLS, maxTotalCalls: WP004B_MAX_TOTAL_CALLS, retriesAllowed: WP004B_RETRIES_ALLOWED },
+      budget: { maxJudgeCalls: this.maxJudgeCalls, maxTotalCalls: this.maxTotalCalls, retriesAllowed: WP004B_RETRIES_ALLOWED },
       caseOrder: [...this.caseOrder],
       observed: { judgeCallsAttempted: attempts.length, totalCallsAttempted: attempts.length, retries: attempts.reduce((sum, item) => sum + item.retryCount, 0) },
       attempts,
@@ -350,7 +355,7 @@ export class Wp004bBudgetLedger {
   }
 
   private isBudgetIntact(attempts: readonly Wp004bCallRecord[], cases: readonly Wp004bCaseAccounting[]): boolean {
-    if (attempts.length > WP004B_MAX_JUDGE_CALLS || attempts.length > WP004B_MAX_TOTAL_CALLS) return false;
+    if (attempts.length > this.maxJudgeCalls || attempts.length > this.maxTotalCalls) return false;
     if (attempts.some((item, index) => item.sequenceNumber !== index + 1 || item.retryCount !== 0 || item.callAttempted !== true || item.provider !== this.provider || item.model !== this.model)) return false;
     if (cases.some((item) => {
       const attempt = attempts.find((candidate) => candidate.caseId === item.caseId);
@@ -378,10 +383,42 @@ export function createWp004bBudgetLedger(options: ConstructorParameters<typeof W
   return new Wp004bBudgetLedger(options);
 }
 
-export function buildWp004bBudgetFinalizerSummary(input: unknown): Wp004bBudgetFinalizerSummary {
+function sameCaseOrder(actual: readonly string[], expected: readonly string[]): boolean {
+  return actual.length === expected.length && actual.every((caseId, index) => caseId === expected[index]);
+}
+
+function isSupportedAccountingProfile(caseOrder: readonly string[], maxJudgeCalls: number | null, maxTotalCalls: number | null): boolean {
+  return (maxJudgeCalls === WP004B_MAX_JUDGE_CALLS && maxTotalCalls === WP004B_MAX_TOTAL_CALLS && sameCaseOrder(caseOrder, WP004B_ACCOUNTING_CASE_IDS))
+    || (maxJudgeCalls === WP004B_JSON_SCHEMA_CAPABILITY_MAX_CALLS && maxTotalCalls === WP004B_JSON_SCHEMA_CAPABILITY_MAX_CALLS
+      && sameCaseOrder(caseOrder, WP004B_JSON_SCHEMA_CAPABILITY_CASE_IDS));
+}
+
+export interface Wp004bFinalizerProfile {
+  caseOrder: readonly string[];
+  maxJudgeCalls: number;
+  maxTotalCalls: number;
+}
+
+function profileForFinalizer(profile: Partial<Wp004bFinalizerProfile> = {}): Wp004bFinalizerProfile {
+  const capability = profile.maxJudgeCalls === WP004B_JSON_SCHEMA_CAPABILITY_MAX_CALLS
+    && profile.maxTotalCalls === WP004B_JSON_SCHEMA_CAPABILITY_MAX_CALLS
+    && sameCaseOrder(profile.caseOrder ?? WP004B_JSON_SCHEMA_CAPABILITY_CASE_IDS, WP004B_JSON_SCHEMA_CAPABILITY_CASE_IDS);
+  if (capability) return {
+    caseOrder: [...WP004B_JSON_SCHEMA_CAPABILITY_CASE_IDS],
+    maxJudgeCalls: WP004B_JSON_SCHEMA_CAPABILITY_MAX_CALLS,
+    maxTotalCalls: WP004B_JSON_SCHEMA_CAPABILITY_MAX_CALLS,
+  };
+  return {
+    caseOrder: [...WP004B_ACCOUNTING_CASE_IDS],
+    maxJudgeCalls: WP004B_MAX_JUDGE_CALLS,
+    maxTotalCalls: WP004B_MAX_TOTAL_CALLS,
+  };
+}
+
+export function buildWp004bBudgetFinalizerSummary(input: unknown, expectedProfile: Partial<Wp004bFinalizerProfile> = {}): Wp004bBudgetFinalizerSummary {
   if (!isRecord(input) || input.schemaVersion !== WP004B_BUDGET_ACCOUNTING_SCHEMA_VERSION
     || !isRecord(input.budget) || !isRecord(input.observed) || !Array.isArray(input.cases) || !Array.isArray(input.attempts) || !Array.isArray(input.caseOrder)) {
-    return emergencyFinalizerSummary();
+    return emergencyFinalizerSummary(expectedProfile);
   }
   const observed = {
     judgeCallsAttempted: safeInteger(input.observed.judgeCallsAttempted),
@@ -445,14 +482,12 @@ export function buildWp004bBudgetFinalizerSummary(input: unknown): Wp004bBudgetF
     && observed.judgeCallsAttempted !== null
     && observed.totalCallsAttempted !== null
     && observed.retries === 0
-    && budget.maxJudgeCalls === WP004B_MAX_JUDGE_CALLS
-    && budget.maxTotalCalls === WP004B_MAX_TOTAL_CALLS
+    && isSupportedAccountingProfile(caseOrder, budget.maxJudgeCalls, budget.maxTotalCalls)
     && budget.retriesAllowed === WP004B_RETRIES_ALLOWED
     && observed.judgeCallsAttempted <= WP004B_MAX_JUDGE_CALLS
     && observed.totalCallsAttempted <= WP004B_MAX_TOTAL_CALLS
     && observed.judgeCallsAttempted === attempts.length
     && observed.totalCallsAttempted === attempts.length
-    && caseOrder.length === WP004B_ACCOUNTING_CASE_IDS.length
     && new Set(caseOrder).size === caseOrder.length
     && attemptsValid
     && casesStructurallySafe
@@ -465,12 +500,13 @@ export function buildWp004bBudgetFinalizerSummary(input: unknown): Wp004bBudgetF
   return { schemaVersion: WP004B_BUDGET_FINALIZER_SCHEMA_VERSION, budget: budget as Wp004bBudgetFinalizerSummary['budget'], observed: observed as Wp004bBudgetFinalizerSummary['observed'], cases, budgetIntegrity, scientificValidity };
 }
 
-export function emergencyFinalizerSummary(): Wp004bBudgetFinalizerSummary {
+export function emergencyFinalizerSummary(profile: Partial<Wp004bFinalizerProfile> = {}): Wp004bBudgetFinalizerSummary {
+  const selected = profileForFinalizer(profile);
   return {
     schemaVersion: WP004B_BUDGET_FINALIZER_SCHEMA_VERSION,
-    budget: { maxJudgeCalls: WP004B_MAX_JUDGE_CALLS, maxTotalCalls: WP004B_MAX_TOTAL_CALLS, retriesAllowed: WP004B_RETRIES_ALLOWED },
+    budget: { maxJudgeCalls: selected.maxJudgeCalls, maxTotalCalls: selected.maxTotalCalls, retriesAllowed: WP004B_RETRIES_ALLOWED },
     observed: { judgeCallsAttempted: 0, totalCallsAttempted: 0, retries: 0 },
-    cases: WP004B_ACCOUNTING_CASE_IDS.map((caseId) => ({
+    cases: selected.caseOrder.map((caseId) => ({
       caseId, sequenceNumber: null, callAttempted: false, transportCompleted: false, canonicalSuccess: false, failureStage: 'NOT_STARTED' as const,
       executionMs: null, retryCount: 0 as const, httpStatus: null, providerEnvelopeClassification: null,
       normalizationFailureCode: null, resultAvailable: false, ambiguousSend: false,
