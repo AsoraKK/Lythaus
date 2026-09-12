@@ -152,6 +152,9 @@ test('calibrated EF5 is directional only for the intended hypothesis', () => {
 test('Phase B workflow is manual, GPT-OSS-only, and does not inject OpenAI credentials', async () => {
   const workflow = await readFile(path.resolve(' .github/workflows/wp004b-judge-calibration.yml'.trim()), 'utf8');
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /structured_output_mode:/);
+  assert.match(workflow, /type: choice/);
+  assert.match(workflow, /--structured-output-mode.*inputs\.structured_output_mode/);
   assert.match(workflow, /CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\.CLOUDFLARE_API_TOKEN\s*\}\}/);
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*secrets\.CLOUDFLARE_ACCOUNT_ID\s*\}\}/);
   assert.doesNotMatch(workflow, /OPENAI_API_KEY/);
@@ -175,5 +178,12 @@ test('live runner declares its sanitized report and budget dependencies', async 
   assert.match(runner, /writeWp004bAtomicJson/);
   assert.match(runner, /WP004B_LIVE_CALIBRATION_SCHEMA_VERSION,\s*createWp004bBudgetLedger/);
   assert.match(runner, /ledger\.reserveCall\(currentCaseId\)/);
+  assert.match(runner, /--structured-output-mode/);
+  assert.match(runner, /structuredOutputMode/);
+  assert.match(runner, /createCloudflareJudgeRest\(\{ transport, model: GPT_OSS_MODEL, structuredOutputMode/);
+  assert.match(runner, /schemaFingerprint/);
+  assert.match(runner, /structuredOutputMode === 'JSON_SCHEMA'/);
+  assert.match(runner, /HTTP_FAILURE/);
+  assert.match(runner, /RESPONSE_MISSING/);
   assert.match(runner, /finally\s*\{/);
 });
