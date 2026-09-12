@@ -2,6 +2,15 @@ name: WP004B Judge Calibration
 
 on:
   workflow_dispatch:
+    inputs:
+      structured_output_mode:
+        description: Structured-output mode for the bounded Judge run
+        required: false
+        default: JSON_OBJECT
+        type: choice
+        options:
+          - JSON_OBJECT
+          - JSON_SCHEMA
 
 permissions:
   contents: read
@@ -24,7 +33,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npm run authenticity:wp004b-live-calibration -- --allow-network --output .artifacts/wp004b-live-calibration.json --journal .artifacts/wp004b-call-accounting.json
+        run: npm run authenticity:wp004b-live-calibration -- --allow-network --structured-output-mode "${{ inputs.structured_output_mode }}" --output .artifacts/wp004b-live-calibration.json --journal .artifacts/wp004b-call-accounting.json
       - name: Finalize sanitized budget accounting
         if: always()
         run: node --experimental-strip-types scripts/authenticity/wp004b-budget-finalizer.mjs --journal .artifacts/wp004b-call-accounting.json --output .artifacts/wp004b-budget-finalizer.json

@@ -1,7 +1,11 @@
+import { createHash } from 'node:crypto';
+import Ajv from 'ajv';
 import {
   buildJudgeRequest,
   createCloudflareJudgeRest,
   createCloudflareRestTransport,
+  JUDGE_JSON_SCHEMA_VERSION,
+  JUDGE_STRUCTURED_OUTPUT_MODES,
 } from '../../packages/authenticity/src/wp004a.ts';
 import {
   JUDGE_EPISTEMIC_POLICY_VERSION,
@@ -19,11 +23,15 @@ const GPT_OSS_MODEL = '@cf/openai/gpt-oss-20b';
 const MAX_REQUESTS = 3;
 
 function parseArgs(argv) {
-  const options = { allowNetwork: false, output: null, journal: '.artifacts/wp004b-call-accounting.json' };
+  const options = { allowNetwork: false, output: null, journal: '.artifacts/wp004b-call-accounting.json', structuredOutputMode: 'JSON_OBJECT' };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--allow-network') options.allowNetwork = true;
     else if (argument === '--output') options.output = argv[++index] ?? null;
+    else if (argument === '--structured-output-mode') {
+      options.structuredOutputMode = argv[++index] ?? null;
+      if (!JUDGE_STRUCTURED_OUTPUT_MODES.includes(options.structuredOutputMode)) throw new Error('WP004B_STRUCTURED_OUTPUT_MODE_INVALID');
+    }
     else if (argument === '--journal') {
       options.journal = argv[++index] ?? null;
       if (!options.journal) throw new Error('WP004B_ARGUMENT_INVALID');
@@ -32,6 +40,37 @@ function parseArgs(argv) {
   }
   if (!options.allowNetwork) throw new Error('WP004B_NETWORK_OPT_IN_REQUIRED');
   return options;
+}
+
+function schemaProvenance(packet, structuredOutputMode) {
+  if (structuredOutputMode !== 'JSON_SCHEMA') return null;
+  const request = buildJudgeRequest(packet, { structuredOutputMode });
+  if (request.response_format.type !== 'json_schema') throw new Error('WP004B_JSON_SCHEMA_PREFLIGHT_FAILED');
+  const schemaJson = JSON.stringify(request.response_format.json_schema);
+  try {
+    new Ajv({ strict: true }).compile(request.response_format.json_schema);
+  } catch {
+    throw new Error('WP004B_JSON_SCHEMA_PREFLIGHT_FAILED');
+  }
+  return {
+    schemaVersion: request.response_format.json_schema.$id,
+    schemaFingerprint: createHash('sha256').update(schemaJson, 'utf8').digest('hex'),
+    schemaCharacterLength: schemaJson.length,
+  };
+}
+
+function prepareJudgeRequest(packet, structuredOutputMode) {
+  const objectRequest = buildJudgeRequest(packet, { structuredOutputMode: 'JSON_OBJECT' });
+  const request = buildJudgeRequest(packet, { structuredOutputMode });
+  if (JSON.stringify(request.messages) !== JSON.stringify(objectRequest.messages)
+    || request.temperature !== objectRequest.temperature
+    || request.max_tokens !== objectRequest.max_tokens
+    || request.messages.find((message) => message.role === 'user')?.content !== objectRequest.messages.find((message) => message.role === 'user')?.content) {
+    throw new Error('WP004B_REQUEST_INVARIANTS_INVALID');
+  }
+  if (structuredOutputMode === 'JSON_SCHEMA' && request.response_format.type !== 'json_schema') throw new Error('WP004B_REQUEST_MODE_INVALID');
+  if (structuredOutputMode === 'JSON_OBJECT' && request.response_format.type !== 'json_object') throw new Error('WP004B_REQUEST_MODE_INVALID');
+  return { request, schemaProvenance: schemaProvenance(packet, structuredOutputMode) };
 }
 
 function safeResponseDiagnostics(diagnostics) {
@@ -167,11 +206,16 @@ function safePacketSummary(packet) {
   };
 }
 
-function isSharedFailure(judge) {
+function isSharedFailure(judge, structuredOutputMode = 'JSON_OBJECT') {
   if (judge.status !== 'PROVIDER_FAILURE') return false;
   if (['TIMEOUT', 'NETWORK_FAILURE'].includes(judge.errorCategory)) return true;
   if (['MISSING_CREDENTIAL', 'NETWORK_DISABLED', 'HTTP_AUTHENTICATION_FAILURE', 'HTTP_RATE_LIMITED', 'HTTP_SERVER_FAILURE'].includes(judge.transportErrorCategory)) return true;
-  return ['CHOICES_MISSING', 'CHOICES_TYPE_UNSUPPORTED', 'CHOICES_EMPTY', 'CHOICE_COUNT_INVALID', 'CHOICE_INVALID', 'MESSAGE_MISSING', 'MESSAGE_INVALID', 'MESSAGE_CONTENT_MISSING', 'MESSAGE_CONTENT_TYPE_UNSUPPORTED', 'MESSAGE_CONTENT_NOT_JSON', 'FINISH_REASON_TRUNCATED', 'FINISH_REASON_UNSUPPORTED', 'UNEXPECTED_TOOL_CALL'].includes(judge.normalizationFailureCode);
+  if (structuredOutputMode === 'JSON_SCHEMA'
+    && ['HTTP_FAILURE', 'PROVIDER_FAILURE', 'MALFORMED_RESPONSE'].includes(judge.transportErrorCategory)) return true;
+  const providerEnvelopeFailures = ['RESPONSE_MISSING', 'RESPONSE_TYPE_UNSUPPORTED', 'RESPONSE_STRING_NOT_JSON', 'RESPONSE_OBJECT_UNWRAP_FAILED'];
+  const chatCompletionFailures = ['CHOICES_MISSING', 'CHOICES_TYPE_UNSUPPORTED', 'CHOICES_EMPTY', 'CHOICE_COUNT_INVALID', 'CHOICE_INVALID', 'MESSAGE_MISSING', 'MESSAGE_INVALID', 'MESSAGE_CONTENT_MISSING', 'MESSAGE_CONTENT_TYPE_UNSUPPORTED', 'MESSAGE_CONTENT_NOT_JSON', 'FINISH_REASON_TRUNCATED', 'FINISH_REASON_UNSUPPORTED', 'UNEXPECTED_TOOL_CALL'];
+  return [...providerEnvelopeFailures, ...chatCompletionFailures].includes(judge.normalizationFailureCode)
+    && (structuredOutputMode === 'JSON_SCHEMA' || chatCompletionFailures.includes(judge.normalizationFailureCode));
 }
 
 function caseStatus(judge, evaluation) {
@@ -193,6 +237,10 @@ function safeFailure(error) {
     'WP004B_ACCOUNTING_BUDGET_INVALID',
     'WP004B_ACCOUNTING_CASES_INVALID',
     'WP004B_ACCOUNTING_MODEL_INVALID',
+    'WP004B_STRUCTURED_OUTPUT_MODE_INVALID',
+    'WP004B_JSON_SCHEMA_PREFLIGHT_FAILED',
+    'WP004B_REQUEST_INVARIANTS_INVALID',
+    'WP004B_REQUEST_MODE_INVALID',
   ]);
   if (error instanceof Error && allowed.has(error.message)) return error.message;
   return 'WP004B_RUNNER_FAILURE';
@@ -227,15 +275,17 @@ function safeThrownJudgeResult(error, executionMs) {
   };
 }
 
-function buildSummary({ calibrationCases, results, stoppedAfter, ledger, transport, fatalFailure = null }) {
+function buildSummary({ calibrationCases, results, stoppedAfter, ledger, transport, structuredOutputMode, fatalFailure = null }) {
   const budgetAccounting = ledger.snapshot();
   const snapshot = transport?.snapshot?.() ?? { calls: budgetAccounting.observed.judgeCallsAttempted, invocations: [] };
   return {
     schemaVersion: WP004B_LIVE_CALIBRATION_SCHEMA_VERSION,
     policyVersion: JUDGE_EPISTEMIC_POLICY_VERSION,
     evaluatorSchemaVersion: JUDGE_EPISTEMIC_EVALUATOR_SCHEMA_VERSION,
-    trial: 'WP004B_PHASE_B_LIVE_CALIBRATION',
+    trial: structuredOutputMode === 'JSON_SCHEMA' ? 'WP004B_PHASE_F_JSON_SCHEMA_CONFIRMATION' : 'WP004B_PHASE_B_LIVE_CALIBRATION',
     model: GPT_OSS_MODEL,
+    structuredOutputMode,
+    jsonSchemaVersion: structuredOutputMode === 'JSON_SCHEMA' ? JUDGE_JSON_SCHEMA_VERSION : null,
     promptVersion: results[0]?.judge.promptVersion ?? null,
     generationConfig: { temperature: 0, max_tokens: 2400, stream: false },
     caseOrder: calibrationCases.map((item) => item.caseId),
@@ -272,7 +322,7 @@ function buildSummary({ calibrationCases, results, stoppedAfter, ledger, transpo
 async function main() {
   const calibrationCases = createWp004bLiveCalibrationCases();
   const ledger = createWp004bBudgetLedger({ model: GPT_OSS_MODEL, caseIds: calibrationCases.map((item) => item.caseId) });
-  let options = { allowNetwork: false, output: null, journal: '.artifacts/wp004b-call-accounting.json' };
+  let options = { allowNetwork: false, output: null, journal: '.artifacts/wp004b-call-accounting.json', structuredOutputMode: 'JSON_OBJECT' };
   let transport = null;
   let judge = null;
   const results = [];
@@ -292,13 +342,13 @@ async function main() {
       allowNetwork: options.allowNetwork,
       maxRequests: MAX_REQUESTS,
     });
-    judge = createCloudflareJudgeRest({ transport, model: GPT_OSS_MODEL });
+    judge = createCloudflareJudgeRest({ transport, model: GPT_OSS_MODEL, structuredOutputMode: options.structuredOutputMode });
 
     for (const calibrationCase of calibrationCases) {
       currentCaseId = calibrationCase.caseId;
       ledger.preCallValidation(currentCaseId);
-      const request = buildJudgeRequest(calibrationCase.packet);
-      assertWp004bExpectationsNotInJudgeRequest(request, calibrationCase.expectation);
+      const preparedRequest = prepareJudgeRequest(calibrationCase.packet, options.structuredOutputMode);
+      assertWp004bExpectationsNotInJudgeRequest(preparedRequest.request, calibrationCase.expectation);
       await persistJournal();
       ledger.reserveCall(currentCaseId);
       currentCallReserved = true;
@@ -311,7 +361,7 @@ async function main() {
         ledger.markAmbiguousSend(currentCaseId, Date.now() - startedAt);
         ledger.markResultAvailable(currentCaseId);
         await persistJournal();
-        results.push({ caseId: calibrationCase.caseId, description: calibrationCase.description, packet: safePacketSummary(calibrationCase.packet), judge: safeThrownJudgeResult(error, Date.now() - startedAt), evaluation: null, caseStatus: 'PROVIDER_OR_SCHEMA_FAILURE' });
+        results.push({ caseId: calibrationCase.caseId, description: calibrationCase.description, packet: safePacketSummary(calibrationCase.packet), schemaProvenance: preparedRequest.schemaProvenance, judge: safeThrownJudgeResult(error, Date.now() - startedAt), evaluation: null, caseStatus: 'PROVIDER_OR_SCHEMA_FAILURE' });
         stoppedAfter = currentCaseId;
         break;
       }
@@ -338,6 +388,7 @@ async function main() {
         caseId: calibrationCase.caseId,
         description: calibrationCase.description,
         packet: safePacketSummary(calibrationCase.packet),
+        schemaProvenance: preparedRequest.schemaProvenance,
         judge: safeJudgeResult(judgeResult),
         evaluation: evaluation ? {
           schemaValid: evaluation.schemaValid,
@@ -351,7 +402,7 @@ async function main() {
       ledger.markResultAvailable(currentCaseId);
       if (evaluation) ledger.setStage(currentCaseId, 'COMPLETED');
       await persistJournal();
-      if (isSharedFailure(judgeResult)) {
+      if (isSharedFailure(judgeResult, options.structuredOutputMode)) {
         stoppedAfter = calibrationCase.caseId;
         break;
       }
@@ -369,7 +420,7 @@ async function main() {
     let summary;
     try {
       await persistJournal();
-      summary = buildSummary({ calibrationCases, results, stoppedAfter, ledger, transport, fatalFailure });
+      summary = buildSummary({ calibrationCases, results, stoppedAfter, ledger, transport, structuredOutputMode: options.structuredOutputMode, fatalFailure });
       if (options.output) await writeWp004bAtomicJson(options.output, summary);
       console.log(JSON.stringify(summary));
     } catch (error) {
