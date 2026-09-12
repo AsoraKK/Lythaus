@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "lythaus-wp005a-blind-benchmark-manifest-v1",
+  "researchDate": "2026-09-12",
+  "layer": "LAYER_C_JUDGE_REASONING",
+  "blindness": { "expectedFieldsExcludedFromModelInput": true, "groundTruthExcludedFromPackets": true, "oracleMetadataIsEvaluatorOnly": true },
+  "cases": [
+    { "caseId": "missing-exif", "family": "missing-metadata", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "safety-block", "family": "safety-isolation", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "safety-allow", "family": "safety-isolation", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "png-neutral", "family": "file-format", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "jpeg-neutral", "family": "file-format", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "strong-ef2", "family": "weak-camera-proxy", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "low-spectral", "family": "uncalibrated-spectral", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "observer-anomaly", "family": "observer-anomaly", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "calibrated-local-edit", "family": "calibrated-ef5", "oracle": "LOCALLY_MANIPULATED" },
+    { "caseId": "calibrated-synthetic", "family": "calibrated-ef3", "oracle": "SYNTHETIC" },
+    { "caseId": "camera-capture-synthetic", "family": "mixed-origin", "oracle": "CAMERA_CAPTURE_OF_SYNTHETIC" },
+    { "caseId": "conflicting-calibrated", "family": "conflicting-calibrated", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "partial-overconfidence", "family": "partial-packet", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "absence-not-contradiction", "family": "absence-of-support", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "contradiction", "family": "contradiction", "oracle": "INSUFFICIENT_EVIDENCE" },
+    { "caseId": "camera-uncertain", "family": "mixed-origin-ambiguity", "oracle": "INSUFFICIENT_EVIDENCE" }
+  ],
+  "fixtureNotice": "Calibrated cases are BENCHMARK_ONLY_CALIBRATED_FIXTURE semantics and are not production calibration.",
+  "outputMode": "JSON_OBJECT"
+}

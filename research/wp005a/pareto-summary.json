@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "lythaus-wp005a-pareto-summary-v1",
+  "researchDate": "2026-09-12",
+  "status": "PARTIAL_DESK_AND_DETERMINISTIC_ONLY",
+  "liveModelMetrics": "PENDING_EXISTING_CLOUDFLARE_ACCOUNT_RUN",
+  "hardGates": ["Safety leakage", "Origin-axis collapse", "Unsupported evidence direction", "Unknown evidence references", "Frequent malformed canonical output", "Raw reasoning persistence", "Unresolved code/checkpoint/data licensing", "Unaffordable or unbounded runtime"],
+  "frontier": [
+    { "architecture": "D_DETERMINISTIC_FIRST", "quality": "bounded and auditable", "humanFalsePositiveProtection": "strongest observed in fixtures", "latency": "fast path", "cost": "zero incremental inference", "complexity": "lowest", "limitation": "cannot resolve uncalibrated EF2/EF4 or missing EF3/EF5" },
+    { "architecture": "C_COMPILER_SELECTIVE_ESCALATION", "quality": "best provisional balance", "humanFalsePositiveProtection": "deterministic gate plus review", "latency": "bimodal", "cost": "escalation-dependent", "complexity": "moderate", "limitation": "Judge finalist and live ledger comparison pending" },
+    { "architecture": "A_CURRENT_OBSERVER_ALWAYS_JUDGE", "quality": "historical GPT-OSS semantic evidence only", "humanFalsePositiveProtection": "depends on Judge compliance", "latency": "5-9s historical Judge plus Observer", "cost": "100% Judge calls", "complexity": "current", "limitation": "critical-path cost and prior B1 epistemic violation" },
+    { "architecture": "E_UNIFIED_MULTIMODAL", "quality": "unresolved", "humanFalsePositiveProtection": "must remain behind compiler", "latency": "unresolved", "cost": "Qwen3.8/Gemma4 priced", "complexity": "adapter and calibration burden", "limitation": "not a forensic specialist" },
+    { "architecture": "F_SPECIALIST_FORENSIC_ENSEMBLE", "quality": "frontier potential", "humanFalsePositiveProtection": "depends on calibration", "latency": "likely escalation-only", "cost": "local/offline candidate dependent", "complexity": "high", "limitation": "no production-licensed CPU-ready specialist verified" },
+    { "architecture": "G_MONOLITHIC_VERDICT", "quality": "not acceptable evidence discipline", "humanFalsePositiveProtection": "weak", "latency": "unknown", "cost": "unknown", "complexity": "low surface/high hidden risk", "limitation": "rejected as production design" }
+  ],
+  "provisionalProfiles": { "bestBalanced": "C_COMPILER_SELECTIVE_ESCALATION", "bestAccuracyFirst": "F_SPECIALIST_FORENSIC_ENSEMBLE_WITH_RESEARCH_ORACLE", "bestLowLatency": "D_DETERMINISTIC_FIRST", "bestLowCost": "D_DETERMINISTIC_FIRST", "bestResearchFrontier": "F_SPECIALIST_FORENSIC_ENSEMBLE" }
+}

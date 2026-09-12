@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "lythaus-wp005a-run-status-v1",
+  "researchDate": "2026-09-12",
+  "liveStatus": "NOT_RUN_LOCAL_CREDENTIALS",
+  "allowNetwork": false,
+  "credentialsPresent": false,
+  "hardCaps": { "requests": 80, "estimatedNeurons": 7500, "estimatedIncrementalCostUsd": 0.15 },
+  "budget": { "reservedRequests": 0, "reservedEstimatedNeurons": 0, "reservedEstimatedCostUsd": 0, "remainingRequests": 80, "remainingEstimatedNeurons": 7500, "remainingEstimatedCostUsd": 0.15 },
+  "retryCount": 0,
+  "calls": [],
+  "note": "No provider call was attempted in the local run. The workflow is manual and bounded for an operator-authorized run with existing repository secrets."
+}

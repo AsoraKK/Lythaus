@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "lythaus-wp005a-judge-results-v1",
+  "researchDate": "2026-09-12",
+  "status": "NOT_RUN_LOCAL_CREDENTIALS",
+  "layerValidity": "JUDGE_BENCHMARK_HARNESS_VALID_LIVE_RESULTS_PENDING",
+  "representations": ["FULL_EVIDENCE_PACKET", "COMPACT_EVIDENCE_LEDGER"],
+  "results": [],
+  "summary": null
+}
