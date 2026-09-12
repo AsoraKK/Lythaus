@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./wp004a": "./src/wp004a.ts"
+    "./wp004a": "./src/wp004a.ts",
+    "./wp004b": "./src/wp004b.ts"
   }
 }
