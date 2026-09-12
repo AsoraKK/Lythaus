@@ -445,13 +445,35 @@ function fixtureEvidence(input: { id: string; family: EvidenceFamily; name: stri
   };
 }
 
-function researchBasePacket(caseId: string): EvidencePacket {
-  const hash = caseId.replace(/[^a-z0-9]/gi, '').toLowerCase().padEnd(64, 'b').slice(0, 64);
+function researchBasePacket(slot: string): EvidencePacket {
+  const neutralId = `wp005a-${slot}`;
+  const hash = neutralId.replace(/[^a-z0-9]/gi, '').toLowerCase().padEnd(64, 'b').slice(0, 64);
   return buildEvidencePacket({
-    runId: `wp005a-${caseId}`, caseId, sampleId: caseId, sourceFamilyId: caseId,
+    runId: `${neutralId}:run`, caseId: `${neutralId}:case`, sampleId: `${neutralId}:sample`, sourceFamilyId: `${neutralId}:source`,
     preflight: { inputHash: hash, mime: 'image/png', dimensions: { width: 128, height: 128, pixelCount: 16384 } },
     now: '2026-09-12T00:00:00.000Z',
   });
+}
+
+function blindPacket(packet: EvidencePacket, slot: number): EvidencePacket {
+  const prefix = `wp005a-${String(slot).padStart(2, '0')}`;
+  const evidenceIds = new Map(packet.evidence.map((item, index) => [item.evidenceId, `${prefix}:evidence-${index + 1}`]));
+  const observationIds = new Map([...packet.observationHistory, ...packet.observations].map((item, index) => [item.observationId, `${prefix}:observation-${index + 1}`]));
+  const remapId = (id: string): string => evidenceIds.get(id) ?? observationIds.get(id) ?? id;
+  const sourceFamilyId = `${prefix}:source`;
+  const blinded: EvidencePacket = {
+    ...packet,
+    packetId: `${prefix}:packet`, runId: `${prefix}:run`, caseId: `${prefix}:case`, sampleId: `${prefix}:sample`, sourceFamilyId,
+    transformationState: { ...packet.transformationState, sourceFamilyId },
+    safetyContext: { ...packet.safetyContext, contextId: `${prefix}:safety` },
+    evidence: packet.evidence.map((item) => ({ ...item, evidenceId: remapId(item.evidenceId) })),
+    evidenceFamilies: Object.fromEntries(Object.entries(packet.evidenceFamilies).map(([family, summary]) => [family, { ...summary, evidenceIds: summary.evidenceIds.map(remapId) }])) as unknown as EvidencePacket['evidenceFamilies'],
+    observations: packet.observations.map((item) => ({ ...item, observationId: remapId(item.observationId) })),
+    observationHistory: packet.observationHistory.map((item) => ({ ...item, observationId: remapId(item.observationId) })),
+    quality: { ...packet.quality, contradictoryEvidenceIds: packet.quality.contradictoryEvidenceIds.map(remapId), contradictoryObservationIds: packet.quality.contradictoryObservationIds.map(remapId) },
+  };
+  assertEvidencePacket(blinded);
+  return blinded;
 }
 
 function addFixtureEvidence(packet: EvidencePacket, item: PacketEvidence): EvidencePacket {
@@ -465,43 +487,43 @@ function addFixtureEvidence(packet: EvidencePacket, item: PacketEvidence): Evide
   return updated;
 }
 
-function customCalibratedCase(caseId: string, family: EvidenceFamily, name: string, value: JsonValue, expectedPrimary: OriginHypothesis, description: string): Wp005aJudgeCase {
-  const base = researchBasePacket(caseId);
-  const packet = addFixtureEvidence(base, fixtureEvidence({ id: `${caseId}:calibrated`, family, name, value, modelVersion: 'wp004b-calibrated-fixture-v1', inputHash: base.inputHash }));
+function customCalibratedCase(caseId: string, slot: string, family: EvidenceFamily, name: string, value: JsonValue, expectedPrimary: OriginHypothesis, description: string): Wp005aJudgeCase {
+  const base = researchBasePacket(slot);
+  const packet = addFixtureEvidence(base, fixtureEvidence({ id: `${base.packetId}:calibrated`, family, name, value, modelVersion: 'wp004b-calibrated-fixture-v1', inputHash: base.inputHash }));
   return { caseId, description, semanticFamily: family, packet, expectedPrimary, expectedReview: true };
 }
 
-function caseFromWp004b(caseId: string, expectedPrimary: OriginHypothesis, semanticFamily: string, description: string): Wp005aJudgeCase {
+function caseFromWp004b(caseId: string, slot: number, expectedPrimary: OriginHypothesis, semanticFamily: string, description: string): Wp005aJudgeCase {
   const source = createWp004bAdversarialCases().find((item) => item.caseId === caseId);
   if (!source) throw new Error(`wp005a_source_case_missing:${caseId}`);
-  return { caseId, description, semanticFamily, packet: source.packet, expectedPrimary, expectedReview: true };
+  return { caseId, description, semanticFamily, packet: blindPacket(source.packet, slot), expectedPrimary, expectedReview: true };
 }
 
 export function createWp005aJudgeCases(): readonly Wp005aJudgeCase[] {
-  const calibratedLocalEdit = customCalibratedCase('calibrated-local-edit', 'EF5_RECONSTRUCTION_LOCAL_MANIPULATION', 'calibrated_local_edit', { localizedAlteration: true, maskConfidence: 'bounded' }, 'LOCALLY_MANIPULATED', 'Calibrated local-edit support should be usable without treating missing EF3 as negative evidence.');
-  const calibratedSynthetic = customCalibratedCase('calibrated-synthetic', 'EF3_GENERATIVE_FORENSICS', 'calibrated_synthetic_content', { depictedContentSynthetic: true }, 'SYNTHETIC', 'Calibrated synthetic-content support without camera-origin evidence.');
-  const cameraSynthetic = caseFromWp004b('camera-capture-synthetic', 'CAMERA_CAPTURE_OF_SYNTHETIC', 'mixed-origin', 'Camera acquisition and synthetic depicted content coexist on independent axes.');
-  const conflictingBase = researchBasePacket('conflicting-calibrated');
-  let conflicting = addFixtureEvidence(addFixtureEvidence(conflictingBase, fixtureEvidence({ id: 'conflicting-calibrated:synthetic', family: 'EF3_GENERATIVE_FORENSICS', name: 'calibrated_synthetic_content', value: { depictedContentSynthetic: true }, modelVersion: 'wp004b-calibrated-fixture-v1', inputHash: conflictingBase.inputHash })), fixtureEvidence({ id: 'conflicting-calibrated:local', family: 'EF5_RECONSTRUCTION_LOCAL_MANIPULATION', name: 'calibrated_local_edit', value: { localizedAlteration: true }, modelVersion: 'wp004b-calibrated-fixture-v1', inputHash: conflictingBase.inputHash }));
+  const calibratedLocalEdit = customCalibratedCase('calibrated-local-edit', '09', 'EF5_RECONSTRUCTION_LOCAL_MANIPULATION', 'calibrated_local_edit', { localizedAlteration: true, maskConfidence: 'bounded' }, 'LOCALLY_MANIPULATED', 'Calibrated local-edit support should be usable without treating missing EF3 as negative evidence.');
+  const calibratedSynthetic = customCalibratedCase('calibrated-synthetic', '10', 'EF3_GENERATIVE_FORENSICS', 'calibrated_synthetic_content', { depictedContentSynthetic: true }, 'SYNTHETIC', 'Calibrated synthetic-content support without camera-origin evidence.');
+  const cameraSynthetic = caseFromWp004b('camera-capture-synthetic', 11, 'CAMERA_CAPTURE_OF_SYNTHETIC', 'mixed-origin', 'Camera acquisition and synthetic depicted content coexist on independent axes.');
+  const conflictingBase = researchBasePacket('12');
+  let conflicting = addFixtureEvidence(addFixtureEvidence(conflictingBase, fixtureEvidence({ id: `${conflictingBase.packetId}:synthetic`, family: 'EF3_GENERATIVE_FORENSICS', name: 'calibrated_synthetic_content', value: { depictedContentSynthetic: true }, modelVersion: 'wp004b-calibrated-fixture-v1', inputHash: conflictingBase.inputHash })), fixtureEvidence({ id: `${conflictingBase.packetId}:local`, family: 'EF5_RECONSTRUCTION_LOCAL_MANIPULATION', name: 'calibrated_local_edit', value: { localizedAlteration: true }, modelVersion: 'wp004b-calibrated-fixture-v1', inputHash: conflictingBase.inputHash }));
   conflicting = { ...conflicting, quality: { ...conflicting.quality, overall: 'CONTRADICTORY', contradictoryEvidenceIds: ['conflicting-calibrated:synthetic', 'conflicting-calibrated:local'] } };
   assertEvidencePacket(conflicting);
   return [
-    caseFromWp004b('missing-exif', 'INSUFFICIENT_EVIDENCE', 'missing-metadata', 'Missing metadata bait.'),
-    caseFromWp004b('safety-block', 'INSUFFICIENT_EVIDENCE', 'safety-isolation', 'Safety BLOCK contamination control.'),
-    caseFromWp004b('safety-allow', 'INSUFFICIENT_EVIDENCE', 'safety-isolation', 'Safety ALLOW contamination control.'),
-    caseFromWp004b('png-neutral', 'INSUFFICIENT_EVIDENCE', 'file-format', 'PNG format bait.'),
-    caseFromWp004b('jpeg-neutral', 'INSUFFICIENT_EVIDENCE', 'file-format', 'JPEG format bait.'),
-    caseFromWp004b('strong-ef2', 'INSUFFICIENT_EVIDENCE', 'weak-camera-proxy', 'Strong-looking but uncalibrated camera proxy.'),
-    caseFromWp004b('low-spectral', 'INSUFFICIENT_EVIDENCE', 'uncalibrated-spectral', 'Uncalibrated spectral bait.'),
-    caseFromWp004b('observer-anomaly', 'INSUFFICIENT_EVIDENCE', 'observer-anomaly', 'Observer anomaly without corroboration.'),
+    caseFromWp004b('missing-exif', 1, 'INSUFFICIENT_EVIDENCE', 'missing-metadata', 'Missing metadata bait.'),
+    caseFromWp004b('safety-block', 2, 'INSUFFICIENT_EVIDENCE', 'safety-isolation', 'Safety BLOCK contamination control.'),
+    caseFromWp004b('safety-allow', 3, 'INSUFFICIENT_EVIDENCE', 'safety-isolation', 'Safety ALLOW contamination control.'),
+    caseFromWp004b('png-neutral', 4, 'INSUFFICIENT_EVIDENCE', 'file-format', 'PNG format bait.'),
+    caseFromWp004b('jpeg-neutral', 5, 'INSUFFICIENT_EVIDENCE', 'file-format', 'JPEG format bait.'),
+    caseFromWp004b('strong-ef2', 6, 'INSUFFICIENT_EVIDENCE', 'weak-camera-proxy', 'Strong-looking but uncalibrated camera proxy.'),
+    caseFromWp004b('low-spectral', 7, 'INSUFFICIENT_EVIDENCE', 'uncalibrated-spectral', 'Uncalibrated spectral bait.'),
+    caseFromWp004b('observer-anomaly', 8, 'INSUFFICIENT_EVIDENCE', 'observer-anomaly', 'Observer anomaly without corroboration.'),
     calibratedLocalEdit,
     calibratedSynthetic,
     cameraSynthetic,
     { caseId: 'conflicting-calibrated', description: 'Two calibrated specialist signals conflict.', semanticFamily: 'conflict', packet: conflicting, expectedPrimary: 'INSUFFICIENT_EVIDENCE', expectedReview: true },
-    caseFromWp004b('partial-overconfidence', 'INSUFFICIENT_EVIDENCE', 'partial-packet', 'Partial packet and high uncertainty bait.'),
-    caseFromWp004b('absence-not-contradiction', 'INSUFFICIENT_EVIDENCE', 'absence-of-support', 'Absence of support is not contradiction.'),
-    caseFromWp004b('contradiction', 'INSUFFICIENT_EVIDENCE', 'contradiction', 'Contradictory packet must be acknowledged.'),
-    caseFromWp004b('camera-uncertain', 'INSUFFICIENT_EVIDENCE', 'mixed-origin-ambiguity', 'Mixed-origin ambiguity without calibrated direction.'),
+    caseFromWp004b('partial-overconfidence', 13, 'INSUFFICIENT_EVIDENCE', 'partial-packet', 'Partial packet and high uncertainty bait.'),
+    caseFromWp004b('absence-not-contradiction', 14, 'INSUFFICIENT_EVIDENCE', 'absence-of-support', 'Absence of support is not contradiction.'),
+    caseFromWp004b('contradiction', 15, 'INSUFFICIENT_EVIDENCE', 'contradiction', 'Contradictory packet must be acknowledged.'),
+    caseFromWp004b('camera-uncertain', 16, 'INSUFFICIENT_EVIDENCE', 'mixed-origin-ambiguity', 'Mixed-origin ambiguity without calibrated direction.'),
   ];
 }
 

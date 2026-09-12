@@ -38,8 +38,10 @@ test('Epistemic Compiler preserves packet v1, safety isolation, and no hidden or
   assert.equal(ledger.safetyContext.excludedFromOriginInference, true);
   assert.equal(ledger.independentOriginAxes.relationship, 'INDEPENDENT_AXES');
   assert.equal(JSON.stringify(cases[10].packet), packetBefore);
+  assert.notEqual(cases[10].packet.caseId, cases[10].caseId);
+  assert.doesNotMatch(JSON.stringify(cases[10].packet), /camera-capture-synthetic/);
   assert.doesNotMatch(JSON.stringify(ledger), /expectedPrimary|caseExpectation|passCriteria|groundTruth/);
-  const synthetic = ledger.evidence.find((item) => item.evidenceId === 'camera-capture-synthetic:ef3');
+  const synthetic = ledger.evidence.find((item) => item.family === 'EF3_GENERATIVE_FORENSICS');
   assert.deepEqual(synthetic.supportedHypotheses, ['SYNTHETIC', 'CAMERA_CAPTURE_OF_SYNTHETIC']);
 });
 
