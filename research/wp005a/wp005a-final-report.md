@@ -193,7 +193,7 @@ Do not begin all three in parallel if the protected live tournament remains unav
 
 - No live Cloudflare calls in this worktree; all current Judge/Observer comparative metrics are pending.
 - Provider token usage is not exposed by the existing REST transport snapshot and is recorded as unavailable rather than inferred.
-- The generic Observer adapter is proven for Moondream’s task interface; current multimodal challengers need candidate-specific request/response adapter validation.
+- The Moondream task adapter and native `messages` + `image` challenger payload are contract-covered; provider response behavior and candidate-specific quality remain live-validation work.
 - No suitable rights-cleared natural-image sample was available for an end-to-end score.
 - Open-source checkpoint licenses, dataset terms, and redistribution rights remain unresolved for every external specialist considered.
 - CPU peak RAM and latency for external checkpoints were not measured because the hard license/checkpoint gates stopped downloads.

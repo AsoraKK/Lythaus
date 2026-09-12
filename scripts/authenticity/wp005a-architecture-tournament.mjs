@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createCloudflareRestTransport } from '../../packages/authenticity/src/cloudflare-rest.ts';
-import { createCloudflareVisionObserverRest } from '../../packages/authenticity/src/vision-observer.ts';
+import { buildVisionObserverPrompt, createCloudflareVisionObserverRest } from '../../packages/authenticity/src/vision-observer.ts';
 import {
   WP005A_JUDGE_MAX_OUTPUT_TOKENS,
   WP005A_MAX_LIVE_WORKERS_AI_REQUESTS,
@@ -116,6 +116,20 @@ function observerScore(fixture, result) {
   };
 }
 
+function nativeMultimodalPayload(_input, request, image) {
+  const question = request.question?.trim() || 'Report only applicable visual observations for this category.';
+  return {
+    messages: [
+      { role: 'system', content: 'Return only the requested visual observations. Do not infer image origin.' },
+      { role: 'user', content: `${buildVisionObserverPrompt(request.category, request.regionPolicy)}\n\nTASK QUESTION: ${question}` },
+    ],
+    image,
+    temperature: 0,
+    max_tokens: 1200,
+    stream: false,
+  };
+}
+
 async function main() {
   await mkdir(outputDirectory, { recursive: true });
   const registry = getWp005aCandidateRegistry();
@@ -212,7 +226,11 @@ async function main() {
         if (String(error?.message ?? '').startsWith('wp005a_budget_')) { budgetStopReason = String(error.message); break; }
         throw error;
       }
-      const observer = createCloudflareVisionObserverRest({ transport, model: candidate.model });
+      const observer = createCloudflareVisionObserverRest({
+        transport,
+        model: candidate.model,
+        payloadBuilder: candidate.candidate === 'moondream3.1-9B-A2B' ? undefined : nativeMultimodalPayload,
+      });
       const startedAt = Date.now();
       const result = await observer.observe({ sampleId: fixture.fixtureId, inputHash, mime: 'image/png', bytes: fixture.bytes, request });
       const canonical = result.status === 'SUCCESS';

@@ -423,6 +423,8 @@ interface VisionTaskNormalizationResult {
   diagnostics: VisionResponseDiagnostics;
 }
 
+export type VisionObserverPayloadBuilder = (input: VisionObserverInput, request: VisionObserverRequest, image: string) => Record<string, unknown>;
+
 function runtimeType(value: unknown): string {
   if (value === null) return 'null';
   if (Array.isArray(value)) return 'array';
@@ -891,6 +893,7 @@ function createVisionObserver(options: {
   provider: string;
   maxImageBytes?: number;
   timeoutMs?: number;
+  payloadBuilder?: VisionObserverPayloadBuilder;
   run: (model: string, payload: Record<string, unknown>, request: VisionObserverRequest) => Promise<VisionObserverProviderResponse>;
 }): VisionObserver & { isLive: true } {
   return {
@@ -902,7 +905,8 @@ function createVisionObserver(options: {
         request = requestFor(input);
         const mime = assertResearchImageInput({ bytes: input.bytes, mime: input.mime, maxBytes: options.maxImageBytes });
         const image = bytesToDataUrl(input.bytes, mime);
-        const providerResponse = await invokeWithTimeout(() => options.run(options.model, buildMoondreamPayload(input, request, image), request), options.timeoutMs ?? 30_000);
+        const payload = options.payloadBuilder?.(input, request, image) ?? buildMoondreamPayload(input, request, image);
+        const providerResponse = await invokeWithTimeout(() => options.run(options.model, payload, request), options.timeoutMs ?? 30_000);
         const normalized = normalizeTaskOutput(providerResponse.value, request, providerResponse.transportSucceeded);
         const responseDiagnostics = normalized.diagnostics;
         const responseTransportDiagnostics: VisionObserverTransportDiagnostics = providerResponse.httpStatus === null ? {} : { httpStatus: providerResponse.httpStatus };
@@ -949,6 +953,7 @@ export function createCloudflareVisionObserverRest(options: {
   transport: CloudflareRestTransport;
   model?: string;
   maxImageBytes?: number;
+  payloadBuilder?: VisionObserverPayloadBuilder;
 }): VisionObserver & { isLive: true } {
   const model = options.model ?? CLOUDFLARE_VISION_OBSERVER_MODEL;
   return createVisionObserver({
@@ -956,6 +961,7 @@ export function createCloudflareVisionObserverRest(options: {
     provider: 'cloudflare-workers-ai-rest',
     maxImageBytes: options.maxImageBytes,
     timeoutMs: 0,
+    payloadBuilder: options.payloadBuilder,
     run: async (selectedModel, payload) => {
       const result = await options.transport.run({ kind: 'VISION_OBSERVER', model: selectedModel, payload });
       return { value: result.result, httpStatus: result.httpStatus, transportSucceeded: true };

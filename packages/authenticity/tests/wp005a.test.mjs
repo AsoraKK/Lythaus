@@ -14,6 +14,7 @@ import {
   getWp005aCandidateRegistry,
   runWp005aJudgeAttempt,
 } from '../src/wp005a.ts';
+import { createCloudflareVisionObserverRest } from '../src/vision-observer.ts';
 
 const cases = createWp005aJudgeCases();
 
@@ -84,4 +85,41 @@ test('Judge adapter records one no-retry canonical attempt without persisting re
   assert.equal(attempt.record.reasoningMode, 'DEFAULT_PROVIDER_REASONING');
   assert.equal(Object.hasOwn(attempt.record, 'reasoning'), false);
   assert.equal(attempt.recommendation.primaryHypothesis, 'LOCALLY_MANIPULATED');
+});
+
+test('Observer research adapter permits native multimodal payloads without changing canonical observations', async () => {
+  let capturedPayload = null;
+  const transport = {
+    isLive: true,
+    async run(input) {
+      capturedPayload = input.payload;
+      return {
+        httpStatus: 200,
+        executionMs: 2,
+        result: {
+          answer: JSON.stringify({ observations: [{
+            category: 'TEXT', applicable: true, status: 'OBSERVED', observation: 'LYTHAUS AUTHENTICITY is visible.', regions: [], measurementConfidence: 0.9, limitations: [],
+          }] }),
+        },
+      };
+    },
+    snapshot() { return { calls: 1, successes: 1, providerFailures: 0, invocations: [] }; },
+  };
+  const observer = createCloudflareVisionObserverRest({
+    transport,
+    model: '@cf/meta/llama-4-scout-17b-16e-instruct',
+    payloadBuilder: (_input, request, image) => ({
+      messages: [{ role: 'user', content: request.question }], image, temperature: 0, max_tokens: 1200, stream: false,
+    }),
+  });
+  const result = await observer.observe({
+    sampleId: 'wp005a-observer-contract', inputHash: 'a'.repeat(64), mime: 'image/png', bytes: new Uint8Array([1, 2, 3]),
+    request: { queryId: 'TEXT_01', category: 'TEXT', task: 'query', question: 'Read the visible text.', reasoningMode: 'DIRECT', regionPolicy: 'CANONICAL' },
+  });
+  assert.equal(result.status, 'SUCCESS');
+  assert.equal(result.observations[0].observation, 'LYTHAUS AUTHENTICITY is visible.');
+  assert.equal(capturedPayload.messages[0].role, 'user');
+  assert.match(capturedPayload.image, /^data:image\/png;base64,/);
+  assert.equal(capturedPayload.temperature, 0);
+  assert.equal(capturedPayload.stream, false);
 });
