@@ -12,6 +12,8 @@ export const WP004B_JSON_SCHEMA_CAPABILITY_CASE_IDS = ['G1', 'G2'] as const;
 export const WP004B_JSON_SCHEMA_CAPABILITY_MAX_CALLS = 2 as const;
 export const WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_CASE_IDS = ['H1'] as const;
 export const WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_MAX_CALLS = 1 as const;
+export const WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_CASE_IDS = ['B1'] as const;
+export const WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_MAX_CALLS = 1 as const;
 const SAFE_ENVELOPE_CLASSIFICATIONS = new Set([
   'DIRECT_CANONICAL', 'RESPONSE_OBJECT', 'RESPONSE_STRING', 'RESULT_STRING', 'OUTPUT_TEXT_STRING', 'CHAT_COMPLETION', 'UNKNOWN',
 ]);
@@ -395,7 +397,10 @@ function isSupportedAccountingProfile(caseOrder: readonly string[], maxJudgeCall
       && sameCaseOrder(caseOrder, WP004B_JSON_SCHEMA_CAPABILITY_CASE_IDS))
     || (maxJudgeCalls === WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_MAX_CALLS
       && maxTotalCalls === WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_MAX_CALLS
-      && sameCaseOrder(caseOrder, WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_CASE_IDS));
+      && sameCaseOrder(caseOrder, WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_CASE_IDS))
+    || (maxJudgeCalls === WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_MAX_CALLS
+      && maxTotalCalls === WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_MAX_CALLS
+      && sameCaseOrder(caseOrder, WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_CASE_IDS));
 }
 
 export interface Wp004bFinalizerProfile {
@@ -405,6 +410,14 @@ export interface Wp004bFinalizerProfile {
 }
 
 function profileForFinalizer(profile: Partial<Wp004bFinalizerProfile> = {}): Wp004bFinalizerProfile {
+  const fullB1Confirmation = profile.maxJudgeCalls === WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_MAX_CALLS
+    && profile.maxTotalCalls === WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_MAX_CALLS
+    && sameCaseOrder(profile.caseOrder ?? WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_CASE_IDS, WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_CASE_IDS);
+  if (fullB1Confirmation) return {
+    caseOrder: [...WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_CASE_IDS],
+    maxJudgeCalls: WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_MAX_CALLS,
+    maxTotalCalls: WP004B_JSON_SCHEMA_FULL_B1_CONFIRMATION_MAX_CALLS,
+  };
   const minimalConfirmation = profile.maxJudgeCalls === WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_MAX_CALLS
     && profile.maxTotalCalls === WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_MAX_CALLS
     && sameCaseOrder(profile.caseOrder ?? WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_CASE_IDS, WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_CASE_IDS);
