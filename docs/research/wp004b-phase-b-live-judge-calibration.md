@@ -73,3 +73,9 @@ The runner emits controlled, human-reviewable rationale audit categories for the
 All three cases completing is not sufficient for scientific success if the Judge misuses nondirectional evidence. Conversely, a B1/B2 concern does not erase a valid B3 positive-control result. Phase B reports canonical success, epistemic validity, and case-expectation validity separately.
 
 If B1 or B2 violates policy while B3 uses calibrated support correctly, the next prompt change should be limited to observed evidence-direction failures. If all three cases pass, JSON Schema hardening can be evaluated as a separate transport experiment. No Phase B result establishes authenticity accuracy or production readiness.
+
+## Observed baseline
+
+Run `34696470549` (job `103560706411`) completed the three approved cases with exactly three GPT-OSS calls and zero retries, so it is valid for scientific scoring. B1 selected `CAMERA_NATIVE` with `LOW` uncertainty and cited unvalidated EF2/EF4 measurements as support. The deterministic evaluator reported `EVIDENCE_DIRECTIONALITY_UNSUPPORTED`, `WEAK_CAMERA_PROXY_USED_AS_CAMERA_PROOF`, and `OVERCONFIDENT_PARTIAL_PACKET`. B2 passed complete Safety isolation, and B3 correctly used the explicitly calibrated EF5 local-edit control.
+
+This result supports a surgical prompt-v3 directionality clarification. It does not justify changing the ontology, Evidence Packet v1, transport adapter, generation controls, or evaluator policy. Phase C also corrects a supplementary B3 rationale-audit false positive by consulting evaluator direction classifications before applying text heuristics.

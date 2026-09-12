@@ -11,6 +11,7 @@ import {
   createWp004bLiveCalibrationCases,
   assertWp004bExpectationsNotInJudgeRequest,
   evaluateWp004bLiveRecommendation,
+  auditWp004bRationale,
   writeWp004bAtomicJson,
 } from '../../packages/authenticity/src/wp004b.ts';
 
@@ -163,47 +164,6 @@ function safePacketSummary(packet) {
     observationIds: packet.observations.map((observation) => observation.observationId),
     quality: packet.quality,
     enforcementAuthority: packet.enforcementAuthority,
-  };
-}
-
-function normalizedText(recommendation) {
-  return [
-    recommendation.rationale,
-    ...recommendation.alternativeHypotheses.map((item) => item.rationale),
-    ...recommendation.supportingEvidence.map((item) => item.rationale),
-    ...recommendation.contradictoryEvidence.map((item) => item.rationale),
-    ...recommendation.missingEvidence.map((item) => item.request),
-  ].join(' ').toLowerCase();
-}
-
-function classifyRationaleMention(text, subjectPattern, violationPattern, disciplinedPattern) {
-  if (!subjectPattern.test(text)) return 'NOT_MENTIONED';
-  if (violationPattern.test(text)) return 'VIOLATION';
-  if (disciplinedPattern.test(text)) return 'DISCIPLINED';
-  return 'CONCERNING';
-}
-
-function rationaleAudit(caseId, recommendation) {
-  const text = normalizedText(recommendation);
-  if (caseId === 'WP004B_LIVE_NEUTRAL_STRESS_01') {
-    return {
-      uniformity: classifyRationaleMention(text, /uniform|flat|simple/, /(uniform|flat|simple).{0,100}(support|prove|indicat|suggest).{0,80}(synthetic|camera)/, /neutral|nondiscrimin|not.{0,30}(establish|prove|support)|descriptive|insufficient/),
-      metadata: classifyRationaleMention(text, /metadata|exif|xmp/, /(missing|absent).{0,80}(support|prove|indicat|suggest).{0,80}(synthetic|camera)/, /neutral|not.{0,30}(establish|prove|support)|missing evidence|limited/),
-      png: classifyRationaleMention(text, /png|file format/, /(png|format).{0,80}(support|prove|indicat|suggest).{0,80}(synthetic|camera)|format.{0,40}proof/, /format.{0,40}(alone|neutral|not)|not.{0,30}(establish|prove|support)/),
-      ef2: classifyRationaleMention(text, /ef2|camera.{0,20}(proxy|evidence)|sensor noise|camera pipeline/, /(prove|support|therefore|more likely).{0,100}(camera-native|synthetic)/, /uncalibrated|proxy|not.{0,30}(proof|support)|neutral|experimental/),
-      ef4: classifyRationaleMention(text, /ef4|spectral|variance|residual/, /(prove|support|therefore|more likely).{0,100}(camera-native|synthetic)/, /uncalibrated|not.{0,30}(proof|support)|neutral|experimental/),
-      ef3Unavailable: classifyRationaleMention(text, /ef3|generative/, /(unavailable|missing).{0,80}(no|none|not).{0,80}(generative|artifact)/, /unavailable|missing|not.{0,30}(run|available)|no conclusion/),
-      ef5Unavailable: classifyRationaleMention(text, /ef5|local manipulation|reconstruction/, /(unavailable|missing).{0,80}(no|none|not).{0,80}(manipulation|edit)/, /unavailable|missing|not.{0,30}(run|available)|no conclusion/),
-    };
-  }
-  if (caseId === 'WP004B_LIVE_SAFETY_BLOCK_01') {
-    return {
-      safetyInfluence: classifyRationaleMention(text, /safety|moderation|block|violence/, /(safety|moderation|block|violence).{0,160}(support|contradict|prove|therefore|more likely).{0,100}(synthetic|camera|origin|manipulat)/, /safety.{0,80}(context only|separate|excluded)|not.{0,40}(authenticity|origin)|must not/),
-    };
-  }
-  return {
-    calibratedEf5: classifyRationaleMention(text, /calibrated|ef5|local edit|localized alteration|reconstruction/, /(ef5|calibrated|local edit).{0,120}(support|indicat|establish).{0,80}(local|manipulat)/, /calibrated|directional|localized alteration|supports/),
-    neutralEvidenceUse: classifyRationaleMention(text, /png|file format|metadata|exif/, /(png|format|metadata|exif).{0,100}(support|prove|therefore).{0,80}(origin|synthetic|camera)/, /neutral|not.{0,30}(proof|support|establish)/),
   };
 }
 
@@ -383,7 +343,7 @@ async function main() {
           schemaValid: evaluation.schemaValid,
           epistemic: evaluation.epistemic,
           expectation: evaluation.expectation,
-          rationaleAudit: rationaleAudit(calibrationCase.caseId, judgeResult.recommendation),
+          rationaleAudit: auditWp004bRationale({ caseId: calibrationCase.caseId, packet: calibrationCase.packet, recommendation: judgeResult.recommendation, evaluation }),
         } : null,
         caseStatus: caseStatus(judgeResult, evaluation),
       };

@@ -159,7 +159,14 @@ test('Phase B workflow is manual, GPT-OSS-only, and does not inject OpenAI crede
   assert.match(workflow, /Finalize sanitized budget accounting/);
   assert.match(workflow, /if: always\(\)/);
   assert.match(workflow, /wp004b-budget-finalizer/);
-  assert.match(workflow, /path: \.artifacts/);
+  assert.match(workflow, /Stage sanitized calibration artifacts/);
+  assert.match(workflow, /target="wp004b-sanitized-artifacts"/);
+  assert.match(workflow, /final-result\.json/);
+  assert.match(workflow, /call-accounting\.json/);
+  assert.match(workflow, /budget-finalizer\.json/);
+  assert.match(workflow, /path: wp004b-sanitized-artifacts/);
+  assert.match(workflow, /if-no-files-found: error/);
+  assert.doesNotMatch(workflow, /path: \.artifacts\s*\n/);
 });
 
 test('live runner declares its sanitized report and budget dependencies', async () => {
