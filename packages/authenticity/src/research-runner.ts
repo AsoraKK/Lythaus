@@ -1,7 +1,7 @@
 import { createAuthenticityCase, type ForensicFeatureBundle } from './contracts.ts';
 import { buildEvidencePacket, packetReferenceIds, type EvidencePacket, type PacketPreflight } from './evidence-packet.ts';
 import { generateForensicFeatureBundleV1, inspectMedia, sha256Hex, type DecodedImage, type ForensicInput } from './forensics.ts';
-import { createMockJudge, type EvidenceRequest, type Judge, type JudgeResult } from './judge.ts';
+import { createMockJudge, JUDGE_PROMPT_VERSION, type EvidenceRequest, type Judge, type JudgeResult } from './judge.ts';
 import { createMockModerationProvider, type ModerationAnalysis, type ModerationProvider } from './moderation.ts';
 import { detectMediaMime } from './media-intake.ts';
 import { mimeFromResearchFilename } from './research-image.ts';
@@ -308,7 +308,7 @@ function failedObserverResult(provider: string, model: string, request: VisionOb
 }
 
 function failedJudgeResult(provider: string): JudgeResult {
-  return { schemaVersion: 'lythaus-judge-result-v1', promptVersion: 'lythaus-gpt-oss-judge-prompt-v1', prompt: '', provider, model: null, status: 'PROVIDER_FAILURE', recommendation: null, executionMs: 0, errorCategory: 'NETWORK_FAILURE' };
+  return { schemaVersion: 'lythaus-judge-result-v1', promptVersion: JUDGE_PROMPT_VERSION, prompt: '', provider, model: null, status: 'PROVIDER_FAILURE', recommendation: null, executionMs: 0, errorCategory: 'NETWORK_FAILURE' };
 }
 
 async function callObserver(input: { observer: VisionObserver; baseInput: { sampleId: string; inputHash: string; mime: string; bytes: Uint8Array; executionTimestamp: string }; request: VisionObserverRequest; allowNetwork: boolean; ledger: InvocationLedger }): Promise<VisionObserverResult> {

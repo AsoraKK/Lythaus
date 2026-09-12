@@ -6,7 +6,7 @@ import type { CloudflareAiRunOptions, VisionEscalationReason, VisionObservationC
 
 export const JUDGE_RESULT_SCHEMA_VERSION = 'lythaus-judge-result-v1' as const;
 export const JUDGE_RECOMMENDATION_SCHEMA_VERSION = '1' as const;
-export const JUDGE_PROMPT_VERSION = 'lythaus-gpt-oss-judge-prompt-v1' as const;
+export const JUDGE_PROMPT_VERSION = 'lythaus-gpt-oss-judge-prompt-v2' as const;
 
 export const ORIGIN_HYPOTHESES = [
   'CAMERA_NATIVE',
@@ -161,6 +161,7 @@ export interface JudgeResponseDiagnostics {
   messageContentTopLevelKeys: readonly string[];
   stringJsonParseable: boolean | null;
   normalizationFailureCode: JudgeNormalizationFailureCode | null;
+  invalidPrimaryHypothesisToken?: string;
 }
 
 export class JudgeNormalizationError extends Error {
@@ -199,19 +200,47 @@ export interface Judge {
 }
 
 export const JUDGE_SYSTEM_PROMPT = [
+  'ROLE',
   'You are the Lythaus GPT-OSS Judge for lythaus-evidence-packet-v1.',
   'This is Research V1. Evaluate competing origin hypotheses from the supplied Evidence Packet; do not act as a product policy engine.',
+  'EVIDENCE RULES',
   'Distinguish measured facts, visual observer descriptions, provider safety signals, and your interpretation.',
   'Treat missing metadata as neutral. Low camera evidence is insufficient to prove synthetic origin.',
+  'Camera-origin evidence and synthetic-origin evidence are independent axes. Never reason REAL = 1 - AI. Never infer SYNTHETIC merely because camera evidence is weak. Never infer CAMERA_NATIVE merely because synthetic evidence is absent.',
+  'Do not infer provenance from PNG/JPEG format, AI origin from missing EXIF, or human authorship from camera metadata. Uniform content and weak experimental measurements do not establish origin.',
   'Camera acquisition and synthetic depicted content may both be true. Account for photographs of displays, screenshots, recaptures, CGI, digital art, composites, and local manipulation.',
   'Safety evidence is SAFETY_CONTEXT_ONLY. Never use harmful-content categories, flags, or scores as origin evidence.',
+  'safetyContext has role SAFETY_CONTEXT_ONLY. Moderation categories, flags, scores, and ALLOW/REVIEW/BLOCK status MUST NOT support or contradict any origin hypothesis. Safety handling belongs outside this Judge; enforcementAuthority MUST be false.',
   'Report contradictory evidence and missing evidence. Never fabricate an unavailable evidence family.',
+  'A PARTIAL Evidence Packet is valid. UNAVAILABLE families are missing evidence, not negative evidence. Unavailable EF3 does not mean no synthetic signal exists; unavailable EF5 does not mean no local manipulation exists. Acknowledge these limitations.',
   'Do not let eloquent reasoning substitute for weak measurements. Abstain with INSUFFICIENT_EVIDENCE when evidence is insufficient.',
+  'Vision observations are fallible evidence, not ground truth merely because they are structured.',
   'Observer reasoningMode is execution metadata. Never treat REASONED as synthetic-origin evidence.',
   'The Vision Observer raw reasoning trace is not supplied and must never be requested, repeated, or used as evidence.',
+  'Return only a concise evidence-grounded rationale, never hidden reasoning, a scratchpad, or chain-of-thought.',
   'Do not output numeric confidence, AI probability, human probability, enforcement actions, or a final product decision.',
+  'HYPOTHESES',
+  `primaryHypothesis MUST be exactly one of: ${ORIGIN_HYPOTHESES.join(', ')}.`,
+  'Do not create synonyms, abbreviate these values, or return any other hypothesis token.',
+  `Every alternativeHypotheses[].hypothesis MUST use exactly the same vocabulary: ${ORIGIN_HYPOTHESES.join(', ')}. Each alternative must include a brief rationale. Prefer genuinely competing alternatives rather than repeating the primary hypothesis.`,
+  'CAMERA_NATIVE: Evidence supports native physical-camera acquisition of the visible scene; absence of synthetic evidence alone is insufficient.',
+  'SYNTHETIC: Evidence positively supports directly generated/synthetic visual content; weak or absent camera evidence alone is insufficient.',
+  'CAMERA_CAPTURE_OF_SYNTHETIC: Evidence supports a physical camera capturing synthetic/digital depicted content, such as a display or printed synthetic image. Camera acquisition and synthetic depicted content can coexist.',
+  'DIGITAL_ART_OR_CGI: Evidence supports digital artwork, rendering, or CGI, without sufficient basis to classify it as generative-AI output.',
+  'SCREENSHOT_OR_COMPOSITE: Evidence supports screenshot, UI capture, compositing, or other native-digital assembly.',
+  'LOCALLY_MANIPULATED: Evidence supports localized alteration of otherwise distinct source content.',
+  'INSUFFICIENT_EVIDENCE: Available evidence is insufficient to responsibly rank another origin hypothesis. This is a valid first-class outcome.',
+  'OUTPUT CONTRACT',
+  'Return JSON only. No Markdown or prose outside JSON. The top-level object must contain exactly the twelve fields in the example. schemaVersion MUST be "1"; requiresReview MUST be a boolean; enforcementAuthority MUST be false.',
+  'uncertainty MUST be exactly one of: LOW, MODERATE, HIGH, VERY_HIGH. It describes uncertainty in the assessment, not rhetorical confidence. Do not use MEDIUM, UNKNOWN, CERTAIN, numbers, or percentages.',
+  `recommendedAdditionalTests MUST contain only: ${WHITELISTED_ADDITIONAL_TESTS.join(', ')}. Return [] if no additional test is justified. Do not invent test names.`,
+  'supportingEvidence and contradictoryEvidence MUST be arrays of {"evidenceId":"<exact ID from packet>","rationale":"<brief rationale>"}. Copy IDs exactly from the packet. Never invent or shorten IDs, omit the real ID from a reference, or reference safety context as origin evidence. Return [] when there is no relevant evidence.',
+  'missingEvidence MUST be an array of {"requestId":"short-stable-id","request":"Description of missing evidence","evidenceFamily":null}. Use a valid evidence family instead of null only when known. Missing evidence is a request, never a claim that an unavailable family was observed.',
   'You may request only whitelisted bounded additional tests. REASONED_VISUAL_RECHECK is valid only with a real observationId, category, reasonCode, and optional normalized targetRegion in missingEvidence. Do not emit tool calls or execute tests.',
-  'Return JSON only with schemaVersion "1", primaryHypothesis, alternativeHypotheses, supportingEvidence, contradictoryEvidence, missingEvidence, uncertainty, requiresReview, recommendedAdditionalTests, rationale, and enforcementAuthority false.',
+  'For a recheck, category must match the referenced observation and be eligible under the supplied policy; reasonCode must be allowed for that category. Include optional observation/category/reason/region fields only when valid. Never supply an arbitrary executable prompt.',
+  'Select the primary hypothesis from the supplied evidence. Do not copy the example\'s hypothesis unless the evidence warrants it.',
+  'EXAMPLE (structure only)',
+  '{"schemaVersion":"1","primaryHypothesis":"INSUFFICIENT_EVIDENCE","alternativeHypotheses":[],"supportingEvidence":[],"contradictoryEvidence":[],"missingEvidence":[],"uncertainty":"VERY_HIGH","requiresReview":true,"recommendedAdditionalTests":[],"rationale":"Brief evidence-grounded rationale.","enforcementAuthority":false}',
 ].join('\n');
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -515,14 +544,20 @@ function unwrapJudgeProviderResult(value: unknown, diagnostics: JudgeResponseDia
 
 export function normalizeJudgeProviderResult(value: unknown, packet: EvidencePacket, transportSucceeded = true): { recommendation: JudgeRecommendation; responseDiagnostics: JudgeResponseDiagnostics } {
   const diagnostics = createJudgeResponseDiagnostics(value, transportSucceeded);
+  let candidate: unknown;
   try {
-    const candidate = unwrapJudgeProviderResult(value, diagnostics);
+    candidate = unwrapJudgeProviderResult(value, diagnostics);
     const recommendation = parseRecommendation(candidate, packet);
     diagnostics.normalizationFailureCode = null;
     return { recommendation, responseDiagnostics: diagnostics };
   } catch (error) {
     const code = error instanceof JudgeNormalizationError ? error.code : 'UNKNOWN_RESPONSE_SHAPE';
     diagnostics.normalizationFailureCode = code;
+    if (code === 'PRIMARY_HYPOTHESIS_INVALID' && isRecord(candidate)
+      && typeof candidate.primaryHypothesis === 'string'
+      && /^[A-Z][A-Z0-9_]{0,63}$/.test(candidate.primaryHypothesis)) {
+      diagnostics.invalidPrimaryHypothesisToken = candidate.primaryHypothesis;
+    }
     throw new JudgeNormalizationError(code, diagnostics);
   }
 }

@@ -44,6 +44,10 @@ import {
   summarizeGeometryFrontBackEvaluations,
   generateForensicFeatureBundleV1,
   JUDGE_PROMPT_VERSION,
+  JUDGE_SYSTEM_PROMPT,
+  ORIGIN_HYPOTHESES,
+  WHITELISTED_ADDITIONAL_TESTS,
+  normalizeJudgeProviderResult,
   OPENAI_MODERATION_MODEL,
   parseGroundTruthResearchManifest,
   parseRuntimeResearchManifest,
@@ -76,6 +80,48 @@ import { WP004A_CLOUDFLARE_TRIAL_MODES } from '../../../scripts/authenticity/wp0
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CASE_ID = '0198a5d3-4a00-7000-8000-000000000123';
 const execFileAsync = promisify(execFile);
+
+test('Judge prompt v2 explicitly binds canonical enums and retains the provider request contract', async () => {
+  assert.equal(JUDGE_PROMPT_VERSION, 'lythaus-gpt-oss-judge-prompt-v2');
+  assert.deepEqual(ORIGIN_HYPOTHESES, ['CAMERA_NATIVE', 'SYNTHETIC', 'CAMERA_CAPTURE_OF_SYNTHETIC', 'DIGITAL_ART_OR_CGI', 'SCREENSHOT_OR_COMPOSITE', 'LOCALLY_MANIPULATED', 'INSUFFICIENT_EVIDENCE']);
+  for (const token of [...ORIGIN_HYPOTHESES, ...WHITELISTED_ADDITIONAL_TESTS, 'LOW', 'MODERATE', 'HIGH', 'VERY_HIGH']) assert.ok(JUDGE_SYSTEM_PROMPT.includes(token));
+  assert.ok(JUDGE_SYSTEM_PROMPT.includes('Every alternativeHypotheses[].hypothesis MUST use exactly the same vocabulary'));
+  for (const text of ['independent axes', 'SAFETY_CONTEXT_ONLY', 'PARTIAL', 'Unavailable EF3', 'unavailable EF5', 'fallible evidence']) assert.ok(JUDGE_SYSTEM_PROMPT.includes(text));
+  const example = JSON.parse(JUDGE_SYSTEM_PROMPT.split('EXAMPLE (structure only)\n')[1]);
+  assertJudgeRecommendation(example, packet());
+  const request = buildJudgeRequest(packet());
+  assert.deepEqual(request, { messages: [{ role: 'system', content: JUDGE_SYSTEM_PROMPT }, { role: 'user', content: JSON.stringify(packet()) }], response_format: { type: 'json_object' }, temperature: 0, max_tokens: 1200 });
+  const result = await createCloudflareJudge({ ai: { run: async () => example } }).judge({ packet: packet() });
+  assert.equal(result.promptVersion, JUDGE_PROMPT_VERSION);
+  assert.equal(result.status, 'SUCCESS');
+});
+
+test('Judge retains exact primary and alternative enums without synonym mapping', () => {
+  for (const hypothesis of ORIGIN_HYPOTHESES) {
+    assertJudgeRecommendation(recommendation({ primaryHypothesis: hypothesis, alternativeHypotheses: [{ hypothesis, rationale: 'Competing interpretation.' }] }), packet());
+  }
+  for (const hypothesis of ['UNKNOWN', 'INCONCLUSIVE', 'AI_GENERATED', 'REAL', 'FAKE', 'HUMAN_AUTHORED', 'CAMERA']) {
+    assert.throws(() => assertJudgeRecommendation(recommendation({ primaryHypothesis: hypothesis }), packet()), /PRIMARY_HYPOTHESIS_INVALID/);
+    assert.throws(() => assertJudgeRecommendation(recommendation({ alternativeHypotheses: [{ hypothesis, rationale: 'Invalid alternative.' }] }), packet()), /ALTERNATIVES_INVALID/);
+  }
+});
+
+test('Invalid hypothesis telemetry is grammar limited and excluded from canonical evidence', () => {
+  for (const token of ['UNKNOWN', 'lowercase', 'arbitrary private text', 'A'.repeat(65), '1UNKNOWN', null]) {
+    const envelope = { response: recommendation({ primaryHypothesis: token }), reasoning: { private: 'PRIVATE_REASONING_SENTINEL' } };
+    assert.throws(() => normalizeJudgeProviderResult(envelope, packet()), (error) => {
+      assert.equal(error.code, 'PRIMARY_HYPOTHESIS_INVALID');
+      assert.equal(error.responseDiagnostics.invalidPrimaryHypothesisToken, token === 'UNKNOWN' ? token : undefined);
+      const diagnostics = JSON.stringify(error.responseDiagnostics);
+      assert.ok(!diagnostics.includes('PRIVATE_REASONING_SENTINEL'));
+      assert.ok(!diagnostics.includes('arbitrary private text'));
+      return true;
+    });
+  }
+  const canonical = normalizeJudgeProviderResult(recommendation({ invalidPrimaryHypothesisToken: 'PRIVATE_TOKEN_SENTINEL' }), packet()).recommendation;
+  assert.ok(!JSON.stringify(canonical).includes('PRIVATE_TOKEN_SENTINEL'));
+  assert.ok(!JSON.stringify(buildJudgeRequest(packet())).includes('invalidPrimaryHypothesisToken'));
+});
 
 function pngFixture() {
   return new Uint8Array([
