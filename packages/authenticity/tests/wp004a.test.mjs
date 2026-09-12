@@ -1559,6 +1559,7 @@ test('bounded runner executes mock full pipeline and records exact invocation co
   const calls = { moderation: 0, observer: 0, judge: 0 };
   const result = await runResearchTrial({ mode: 'MOCK_ONLY', runtimeManifest: manifest(2), maxSamples: 2 }, {
     readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async () => decodedFixture(),
     moderation: createMockModerationProvider({ analyse: async () => { calls.moderation += 1; return { provider: 'mock-moderation', result: 'ALLOW', reasonCodes: [], modelVersion: 'mock', executionMs: 1, costEstimateUsd: 0 }; } }),
     observer: createMockVisionObserver(),
     judge: createMockJudge(),
@@ -1601,8 +1602,9 @@ test('runner hard-stops invocation caps and gate mode prevents expensive downstr
   assert.equal(failedGate.invocationAccounting.calls.judge, 0);
   await assert.rejects(runResearchTrial({ mode: 'FULL', runtimeManifest: manifest(2), maxSamples: 2, caps: { maxModerationCalls: 1, maxObserverCalls: 2, maxJudgeCalls: 2, maxTotalCalls: 5 } }, {
     readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async () => decodedFixture(),
     moderation: createMockModerationProvider({ analyse: async () => ({ provider: 'mock', result: 'ALLOW', reasonCodes: [], modelVersion: 'mock', executionMs: 0, costEstimateUsd: 0 }) }),
-    observer: { isLive: false, observe: async () => { observerCalls += 1; return createMockVisionObserver().observe({ sampleId: 's', inputHash: 'e'.repeat(64), mime: 'image/png', bytes: pngFixture() }); } },
+    observer: { isLive: false, observe: async (input) => { observerCalls += 1; return createMockVisionObserver().observe(input); } },
     judge: createMockJudge(),
   }), /research_invocation_cap_exceeded:moderation/);
   assert.equal(observerCalls, 1);
@@ -1671,6 +1673,60 @@ test('FULL 0D composes decoded forensics, direct Observer, packet, and one conse
   assert.equal(result.invocationAccounting.retries, 0);
 });
 
+test('FULL required forensic failures stop Observer and Judge calls', async () => {
+  for (const failure of ['decode-null', 'decode-throws', 'extractor-throws', 'invalid-extractor']) {
+    let observerCalls = 0;
+    let judgeCalls = 0;
+    const result = await runResearchTrial({ mode: 'FULL', runtimeManifest: manifest(1), maxSamples: 1 }, {
+      readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+      decodeImage: async () => {
+        if (failure === 'decode-throws') throw new Error('fixture decode failure');
+        return failure === 'decode-null' ? null : decodedFixture();
+      },
+      forensicGenerator: async (input) => {
+        if (failure === 'extractor-throws') throw new Error('fixture extractor failure');
+        const bundle = await generateForensicFeatureBundleV1(input);
+        return failure === 'invalid-extractor' ? { ...bundle, audit: { ...bundle.audit, applicability: 'invalid' } } : bundle;
+      },
+      moderation: createMockModerationProvider(),
+      observer: { observe: async (input) => { observerCalls += 1; return createMockVisionObserver().observe(input); } },
+      judge: { judge: async (input) => { judgeCalls += 1; return createMockJudge().judge(input); } },
+    });
+    assert.equal(observerCalls, 0, failure);
+    assert.equal(judgeCalls, 0, failure);
+    assert.equal(result.cases[0].stoppedAt, 'FORENSIC_FAILURE', failure);
+    assert.equal(result.cases[0].packet.quality.overall, 'FAILED', failure);
+    assert.equal(result.invocationAccounting.calls.total, 1, failure);
+    assert.equal(result.invocationAccounting.retries, 0, failure);
+    assert.equal(researchRunExitCode(result), 1, failure);
+  }
+});
+
+test('FULL required Observer failures stop before reserving a Judge call', async () => {
+  for (const failure of ['malformed-response', 'fetch-rejection']) {
+    let judgeCalls = 0;
+    const observer = createCloudflareVisionObserver({ ai: { run: async () => {
+      if (failure === 'fetch-rejection') throw new Error('fixture network failure');
+      return { answer: 'not structured observation JSON' };
+    } } });
+    const result = await runResearchTrial({ mode: 'FULL', runtimeManifest: manifest(1), maxSamples: 1, allowNetwork: true }, {
+      readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+      decodeImage: async () => decodedFixture(),
+      moderation: createMockModerationProvider(),
+      observer,
+      judge: { judge: async (input) => { judgeCalls += 1; return createMockJudge().judge(input); } },
+    });
+    assert.equal(judgeCalls, 0, failure);
+    assert.equal(result.cases[0].stoppedAt, 'OBSERVER_PROVIDER_FAILURE', failure);
+    assert.equal(result.cases[0].judge, null, failure);
+    assert.equal(result.cases[0].packet.quality.overall, 'FAILED', failure);
+    assert.equal(result.invocationAccounting.calls.total, 2, failure);
+    assert.equal(result.invocationAccounting.calls.judge, 0, failure);
+    assert.equal(result.invocationAccounting.retries, 0, failure);
+    assert.equal(researchRunExitCode(result), 1, failure);
+  }
+});
+
 test('FULL observe mode stops on moderation provider failure before expensive downstream calls', async () => {
   const calls = { decode: 0, forensic: 0, observer: 0, judge: 0 };
   const result = await runResearchTrial({ mode: 'FULL', runtimeManifest: manifest(1), maxSamples: 1, safetyMode: 'observe', caps: { maxSamples: 1, maxModerationCalls: 1, maxObserverCalls: 1, maxObserverDirectCalls: 1, maxObserverReasonedCalls: 0, maxJudgeCalls: 1, maxTotalCalls: 3, maxRecheckRounds: 1 } }, {
@@ -1731,6 +1787,7 @@ test('FULL_RECHECK permits one whitelisted reasoned pass and two Judge passes, n
     caps: { maxSamples: 1, maxModerationCalls: 1, maxObserverCalls: 2, maxObserverDirectCalls: 1, maxObserverReasonedCalls: 1, maxJudgeCalls: 2, maxTotalCalls: 5, maxRecheckRounds: 1 },
   }, {
     readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async () => decodedFixture(),
     moderation: createMockModerationProvider(),
     observer: createMockVisionObserver([fixtureObservation]),
     judge: { isLive: false, judge: async ({ packet: inputPacket }) => {
@@ -1753,6 +1810,30 @@ test('FULL_RECHECK permits one whitelisted reasoned pass and two Judge passes, n
   assert.equal(result.invocationAccounting.calls.judge, 2);
   assert.equal(result.cases[0].packet.observationHistory.length, 1);
   assert.equal(result.cases[0].packet.observations[0].reasoningMode, 'REASONED');
+});
+
+test('failed reasoned recheck cannot trigger a second Judge pass', async () => {
+  let judgeCalls = 0;
+  const result = await runResearchTrial({ mode: 'FULL_RECHECK', runtimeManifest: manifest(1), maxSamples: 1, enableRecheck: true, observerRequest: { queryId: 'REFLECTION_FAIL', category: 'REFLECTION', task: 'query', question: 'Describe reflection consistency.' } }, {
+    readSample: async () => ({ bytes: pngFixture(), mime: 'image/png' }),
+    decodeImage: async () => decodedFixture(),
+    moderation: createMockModerationProvider(),
+    observer: { observe: async (input) => {
+      if (input.request.reasoningMode === 'REASONED') throw new Error('fixture recheck failure');
+      return createMockVisionObserver([{ category: 'REFLECTION', applicable: true, status: 'OBSERVED', observation: 'The surface is visible.', regions: [], measurementConfidence: 0.9, limitations: [] }]).observe(input);
+    } },
+    judge: { judge: async (input) => {
+      judgeCalls += 1;
+      return createMockJudge(recommendation({ primaryHypothesis: 'INSUFFICIENT_EVIDENCE', recommendedAdditionalTests: ['REASONED_VISUAL_RECHECK'], missingEvidence: [{ requestId: 'recheck', request: 'Inspect reflection.', evidenceFamily: 'VISION_OBSERVATION', observationId: input.packet.observations[0].observationId, category: 'REFLECTION', reasonCode: 'AMBIGUOUS_REFLECTION' }] })).judge(input);
+    } },
+  });
+  assert.equal(judgeCalls, 1);
+  assert.equal(result.cases[0].stoppedAt, 'OBSERVER_PROVIDER_FAILURE');
+  assert.equal(result.cases[0].judgeHistory.length, 1);
+  assert.equal(result.invocationAccounting.calls.judge, 1);
+  assert.equal(result.invocationAccounting.calls.observerReasoned, 1);
+  assert.equal(result.invocationAccounting.retries, 0);
+  assert.equal(researchRunExitCode(result), 1);
 });
 
 test('unknown truth is excluded from evaluation metrics', async () => {

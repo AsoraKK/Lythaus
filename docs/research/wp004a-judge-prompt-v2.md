@@ -24,3 +24,13 @@ never canonical evidence. No raw answer or reasoning is retained.
 After protected merge, one separately authorized 0D confirmation may use at most
 one moderation, one DIRECT Observer and one Judge call, zero retries. No 0D-R,
 deployment, enforcement or Observer benchmark changes are included.
+
+## Pre-live orchestration audit
+
+Software-only failure injection established that required decode/extractor or
+Observer failures could still reach the Judge: a FAILED packet is structurally
+valid. The runner now stops downstream provider calls on these failures,
+preserves the failed packet and available EF1 evidence for diagnosis, and exits
+nonzero. A failed reasoned recheck likewise cannot trigger another Judge pass.
+This is an execution guard, not a change to the evidence ontology or provider
+prompt. Healthy PARTIAL packets with unavailable EF3/EF5 still reach the Judge.
