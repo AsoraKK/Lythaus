@@ -32,10 +32,17 @@ The REST transport itself has a required request cap, timeout, sanitized error c
 
 The Judge normalizer accepts a direct canonical recommendation, one Cloudflare
 `response` envelope containing that recommendation, or the existing documented
-string surfaces when they contain JSON. It does not recursively search nested
-objects or accept provider reasoning/tool-call content as a recommendation.
-Structural failures retain only allowlisted shape metadata and a controlled
-normalization code; raw provider responses and reasoning are never persisted.
+string surfaces when they contain JSON. It also accepts exactly one
+OpenAI-compatible Chat Completions choice at `choices[0].message.content` when
+the choice finishes with `stop`, has an assistant message, contains no tool
+calls, and its content passes the existing strict Judge schema. Truncated or
+unsupported finish reasons, multiple choices, missing content, tool calls, and
+malformed JSON fail closed with controlled diagnostic codes. It does not
+recursively search nested objects or accept provider reasoning/tool-call
+content as a recommendation. Structural failures retain only allowlisted shape
+metadata and a controlled normalization code; raw provider responses,
+message content, tool arguments, and reasoning are never persisted. The
+provider-envelope classification is execution metadata only.
 The read-only Workers AI schema preflight can inspect either the Moondream or
 GPT-OSS model and reports GPT-OSS response-shape expectations separately from
 the original Moondream response-format field.

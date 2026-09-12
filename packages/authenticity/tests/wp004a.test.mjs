@@ -1113,6 +1113,167 @@ test('Judge normalizes one Cloudflare response envelope and exposes structural d
   assert.equal(JSON.stringify(restResult).includes('cloudflare-secret-fixture'), false);
 });
 
+test('Judge normalizes exactly one strict Chat Completions choice and preserves legacy envelopes', async () => {
+  const inputPacket = packet();
+  const canonical = recommendation({ primaryHypothesis: 'INSUFFICIENT_EVIDENCE' });
+  const chatCompletion = (content, { finishReason = 'stop', message = {}, choice = {}, root = {} } = {}) => ({
+    object: 'chat.completion',
+    choices: [{
+      index: 0,
+      message: { role: 'assistant', content, ...message },
+      finish_reason: finishReason,
+      ...choice,
+    }],
+    usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 },
+    ...root,
+  });
+
+  const valid = createCloudflareJudge({ ai: { run: async () => chatCompletion(JSON.stringify(canonical)) } });
+  const validResult = await valid.judge({ packet: inputPacket });
+  assert.equal(validResult.status, 'SUCCESS');
+  assert.equal(validResult.recommendation.primaryHypothesis, 'INSUFFICIENT_EVIDENCE');
+  assert.equal(validResult.responseDiagnostics.providerEnvelopeClassification, 'CHAT_COMPLETION');
+  assert.equal(validResult.responseDiagnostics.choicesPresent, true);
+  assert.equal(validResult.responseDiagnostics.choiceCount, 1);
+  assert.equal(validResult.responseDiagnostics.firstChoiceType, 'object');
+  assert.deepEqual(validResult.responseDiagnostics.firstChoiceKeys, ['finish_reason', 'index', 'message']);
+  assert.equal(validResult.responseDiagnostics.firstChoiceIndexPresent, true);
+  assert.equal(validResult.responseDiagnostics.firstChoiceIndexType, 'number');
+  assert.equal(validResult.responseDiagnostics.messagePresent, true);
+  assert.equal(validResult.responseDiagnostics.messageType, 'object');
+  assert.deepEqual(validResult.responseDiagnostics.messageKeys, ['content', 'role']);
+  assert.equal(validResult.responseDiagnostics.messageRolePresent, true);
+  assert.equal(validResult.responseDiagnostics.messageRoleType, 'string');
+  assert.equal(validResult.responseDiagnostics.messageContentPresent, true);
+  assert.equal(validResult.responseDiagnostics.messageContentType, 'string');
+  assert.equal(validResult.responseDiagnostics.messageContentLength, JSON.stringify(canonical).length);
+  assert.equal(validResult.responseDiagnostics.finishReasonPresent, true);
+  assert.equal(validResult.responseDiagnostics.finishReasonType, 'string');
+  assert.equal(validResult.responseDiagnostics.finishReasonValueCode, 'STOP');
+  assert.equal(validResult.responseDiagnostics.messageContentJsonParseable, true);
+  assert.deepEqual(validResult.responseDiagnostics.messageContentTopLevelKeys, Object.keys(canonical).sort());
+  assert.equal(validResult.responseDiagnostics.normalizationFailureCode, null);
+
+  for (const raw of [
+    canonical,
+    { response: canonical },
+    { response: JSON.stringify(canonical) },
+    { result: JSON.stringify(canonical) },
+    { output_text: JSON.stringify(canonical) },
+  ]) {
+    const legacy = createCloudflareJudge({ ai: { run: async () => raw } });
+    const legacyResult = await legacy.judge({ packet: inputPacket });
+    assert.equal(legacyResult.status, 'SUCCESS');
+  }
+});
+
+test('Judge Chat Completions normalization fails closed with controlled structural codes', async () => {
+  const inputPacket = packet();
+  const canonical = recommendation({ primaryHypothesis: 'INSUFFICIENT_EVIDENCE' });
+  const chatCompletion = (content, { finishReason = 'stop', message = {}, choice = {}, root = {} } = {}) => ({
+    object: 'chat.completion',
+    choices: [{
+      index: 0,
+      message: { role: 'assistant', content, ...message },
+      finish_reason: finishReason,
+      ...choice,
+    }],
+    ...root,
+  });
+  const cases = [
+    ['content prose', chatCompletion('The evidence is insufficient.'), 'MESSAGE_CONTENT_NOT_JSON'],
+    ['invalid Judge schema', chatCompletion(JSON.stringify({ ...canonical, primaryHypothesis: 'REAL' })), 'PRIMARY_HYPOTHESIS_INVALID'],
+    ['unknown evidence reference', chatCompletion(JSON.stringify({ ...canonical, supportingEvidence: [{ evidenceId: 'not-real', rationale: 'unknown' }] })), 'UNKNOWN_EVIDENCE_REFERENCE'],
+    ['truncated finish reason', chatCompletion(JSON.stringify(canonical), { finishReason: 'length' }), 'FINISH_REASON_TRUNCATED'],
+    ['unsupported finish reason', chatCompletion(JSON.stringify(canonical), { finishReason: 'mystery' }), 'FINISH_REASON_UNSUPPORTED'],
+    ['missing finish reason', { object: 'chat.completion', choices: [{ index: 0, message: { role: 'assistant', content: JSON.stringify(canonical) } }] }, 'FINISH_REASON_UNSUPPORTED'],
+    ['missing message', { object: 'chat.completion', choices: [{ index: 0, finish_reason: 'stop' }] }, 'MESSAGE_MISSING'],
+    ['missing content', { object: 'chat.completion', choices: [{ index: 0, message: { role: 'assistant' }, finish_reason: 'stop' }] }, 'MESSAGE_CONTENT_MISSING'],
+    ['content wrong type', chatCompletion(17), 'MESSAGE_CONTENT_TYPE_UNSUPPORTED'],
+    ['empty content', chatCompletion('   '), 'MESSAGE_CONTENT_MISSING'],
+    ['empty choices', { object: 'chat.completion', choices: [] }, 'CHOICES_EMPTY'],
+    ['multiple choices', { object: 'chat.completion', choices: [{ index: 0 }, { index: 1 }] }, 'CHOICE_COUNT_INVALID'],
+    ['choices wrong type', { object: 'chat.completion', choices: {} }, 'CHOICES_TYPE_UNSUPPORTED'],
+    ['choice wrong index', chatCompletion(JSON.stringify(canonical), { choice: { index: 1 } }), 'CHOICE_INVALID'],
+    ['message wrong role', chatCompletion(JSON.stringify(canonical), { message: { role: 'system' } }), 'MESSAGE_INVALID'],
+    ['non-empty tool calls', chatCompletion(JSON.stringify(canonical), { message: { tool_calls: [{ id: 'PRIVATE_TOOL_ARGUMENTS' }] } }), 'UNEXPECTED_TOOL_CALL'],
+    ['missing choices', { object: 'chat.completion' }, 'CHOICES_MISSING'],
+    ['random nested canonical object', { choices: [{ nested: canonical, finish_reason: 'stop' }] }, 'MESSAGE_MISSING'],
+  ];
+
+  for (const [name, raw, code] of cases) {
+    const judge = createCloudflareJudge({ ai: { run: async () => raw } });
+    const result = await judge.judge({ packet: inputPacket });
+    assert.equal(result.status, 'PROVIDER_FAILURE', name);
+    assert.equal(result.errorCategory, 'UNEXPECTED_SCHEMA', name);
+    assert.equal(result.normalizationFailureCode, code, name);
+    assert.equal(result.recommendation, null, name);
+    assert.equal(result.responseDiagnostics.providerEnvelopeClassification, 'CHAT_COMPLETION', name);
+    assert.equal(JSON.stringify(result).includes('The evidence is insufficient.'), false, name);
+    assert.equal(JSON.stringify(result).includes('PRIVATE_TOOL_ARGUMENTS'), false, name);
+  }
+});
+
+test('Judge Chat Completions diagnostics isolate reasoning and provider content', async () => {
+  const inputPacket = packet();
+  const canonical = recommendation({ primaryHypothesis: 'INSUFFICIENT_EVIDENCE' });
+  const result = await createCloudflareJudge({
+    ai: {
+      run: async () => ({
+        object: 'chat.completion',
+        choices: [{
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: JSON.stringify(canonical),
+            reasoning: { private: 'PRIVATE_MESSAGE_REASONING' },
+            tool_calls: [],
+          },
+          finish_reason: 'stop',
+        }],
+        reasoning: { private: 'PRIVATE_TOP_LEVEL_REASONING' },
+        usage: { prompt_tokens: 1 },
+        privateProviderField: 'PRIVATE_UNKNOWN_PROVIDER_FIELD',
+      }),
+    },
+  }).judge({ packet: inputPacket });
+
+  assert.equal(result.status, 'SUCCESS');
+  assert.equal(result.responseDiagnostics.providerEnvelopeClassification, 'CHAT_COMPLETION');
+  assert.equal(result.responseDiagnostics.messageReasoningFieldPresent, true);
+  assert.equal(result.responseDiagnostics.messageReasoningFieldType, 'object');
+  assert.equal(result.responseDiagnostics.topLevelReasoningFieldPresent, true);
+  assert.equal(result.responseDiagnostics.topLevelReasoningFieldType, 'object');
+  assert.equal(result.responseDiagnostics.messageToolCallsPresent, true);
+  assert.equal(result.responseDiagnostics.messageToolCallCount, 0);
+  assert.equal(result.responseDiagnostics.toolCallsPresent, true);
+  assert.equal(result.responseDiagnostics.toolCallCount, 0);
+  assert.equal(JSON.stringify(result).includes('PRIVATE_MESSAGE_REASONING'), false);
+  assert.equal(JSON.stringify(result).includes('PRIVATE_TOP_LEVEL_REASONING'), false);
+  assert.equal(JSON.stringify(result).includes('PRIVATE_UNKNOWN_PROVIDER_FIELD'), false);
+});
+
+test('Judge Chat Completions diagnostics retain only structural metadata on failed content parsing', async () => {
+  const inputPacket = packet();
+  const privateContent = 'PRIVATE_CHAT_CONTENT_MUST_NOT_RETAIN';
+  const result = await createCloudflareJudge({
+    ai: {
+      run: async () => ({
+        object: 'chat.completion',
+        choices: [{ index: 0, message: { role: 'assistant', content: privateContent }, finish_reason: 'stop' }],
+      }),
+    },
+  }).judge({ packet: inputPacket });
+
+  assert.equal(result.status, 'PROVIDER_FAILURE');
+  assert.equal(result.normalizationFailureCode, 'MESSAGE_CONTENT_NOT_JSON');
+  assert.equal(result.responseDiagnostics.providerEnvelopeClassification, 'CHAT_COMPLETION');
+  assert.equal(result.responseDiagnostics.messageContentType, 'string');
+  assert.equal(result.responseDiagnostics.messageContentLength, privateContent.length);
+  assert.equal(result.responseDiagnostics.messageContentJsonParseable, false);
+  assert.equal(JSON.stringify(result).includes(privateContent), false);
+});
+
 test('Judge response normalization fails closed with structural codes and never searches arbitrary nested objects', async () => {
   const inputPacket = packet();
   const canonical = recommendation({ primaryHypothesis: 'INSUFFICIENT_EVIDENCE' });

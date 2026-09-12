@@ -86,15 +86,40 @@ export const JUDGE_NORMALIZATION_FAILURE_CODES = [
   'RATIONALE_INVALID',
   'ENFORCEMENT_AUTHORITY_INVALID',
   'FORBIDDEN_FIELD_PRESENT',
+  'CHOICES_MISSING',
+  'CHOICES_TYPE_UNSUPPORTED',
+  'CHOICES_EMPTY',
+  'CHOICE_COUNT_INVALID',
+  'CHOICE_INVALID',
+  'MESSAGE_MISSING',
+  'MESSAGE_INVALID',
+  'MESSAGE_CONTENT_MISSING',
+  'MESSAGE_CONTENT_TYPE_UNSUPPORTED',
+  'MESSAGE_CONTENT_NOT_JSON',
+  'FINISH_REASON_TRUNCATED',
+  'FINISH_REASON_UNSUPPORTED',
+  'UNEXPECTED_TOOL_CALL',
   'UNKNOWN_RESPONSE_SHAPE',
 ] as const;
 export type JudgeNormalizationFailureCode = (typeof JUDGE_NORMALIZATION_FAILURE_CODES)[number];
 
 export type JudgeProviderResultType = 'OBJECT' | 'STRING' | 'ARRAY' | 'NULL' | 'OTHER';
 
+export type JudgeProviderEnvelopeClassification =
+  | 'DIRECT_CANONICAL'
+  | 'RESPONSE_OBJECT'
+  | 'RESPONSE_STRING'
+  | 'RESULT_STRING'
+  | 'OUTPUT_TEXT_STRING'
+  | 'CHAT_COMPLETION'
+  | 'UNKNOWN';
+
+export type JudgeFinishReasonValueCode = 'STOP' | 'LENGTH' | 'TOOL_CALLS' | 'OTHER';
+
 export interface JudgeResponseDiagnostics {
   transportSucceeded: boolean;
   providerResultType: JudgeProviderResultType;
+  providerEnvelopeClassification: JudgeProviderEnvelopeClassification;
   providerTopLevelKeys: readonly string[];
   responsePresent: boolean;
   responseType: string | null;
@@ -109,6 +134,31 @@ export interface JudgeResponseDiagnostics {
   usageFieldType: string | null;
   toolCallsPresent: boolean;
   toolCallCount: number | null;
+  choicesPresent: boolean;
+  choiceCount: number | null;
+  firstChoiceType: string | null;
+  firstChoiceKeys: readonly string[];
+  firstChoiceIndexPresent: boolean;
+  firstChoiceIndexType: string | null;
+  messagePresent: boolean;
+  messageType: string | null;
+  messageKeys: readonly string[];
+  messageRolePresent: boolean;
+  messageRoleType: string | null;
+  messageContentPresent: boolean;
+  messageContentType: string | null;
+  messageContentLength: number | null;
+  finishReasonPresent: boolean;
+  finishReasonType: string | null;
+  finishReasonValueCode: JudgeFinishReasonValueCode | null;
+  messageToolCallsPresent: boolean;
+  messageToolCallCount: number | null;
+  messageReasoningFieldPresent: boolean;
+  messageReasoningFieldType: string | null;
+  topLevelReasoningFieldPresent: boolean;
+  topLevelReasoningFieldType: string | null;
+  messageContentJsonParseable: boolean | null;
+  messageContentTopLevelKeys: readonly string[];
   stringJsonParseable: boolean | null;
   normalizationFailureCode: JudgeNormalizationFailureCode | null;
 }
@@ -194,12 +244,25 @@ function hasOwn(value: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
+function finishReasonValueCode(value: unknown): JudgeFinishReasonValueCode | null {
+  if (typeof value !== 'string') return value === undefined ? null : 'OTHER';
+  if (value === 'stop') return 'STOP';
+  if (value === 'length') return 'LENGTH';
+  if (value === 'tool_calls') return 'TOOL_CALLS';
+  return 'OTHER';
+}
+
 function createJudgeResponseDiagnostics(value: unknown, transportSucceeded: boolean): JudgeResponseDiagnostics {
   const root = isRecord(value) ? value : null;
   const toolCalls = root && hasOwn(root, 'tool_calls') ? root.tool_calls : root && hasOwn(root, 'toolCalls') ? root.toolCalls : undefined;
+  const choices = root && hasOwn(root, 'choices') ? root.choices : undefined;
+  const firstChoice = Array.isArray(choices) && choices.length > 0 ? choices[0] : undefined;
+  const message = isRecord(firstChoice) && hasOwn(firstChoice, 'message') ? firstChoice.message : undefined;
+  const messageToolCalls = isRecord(message) && hasOwn(message, 'tool_calls') ? message.tool_calls : undefined;
   return {
     transportSucceeded,
     providerResultType: providerResultType(value),
+    providerEnvelopeClassification: 'UNKNOWN',
     providerTopLevelKeys: safeObjectKeys(value),
     responsePresent: Boolean(root && hasOwn(root, 'response')),
     responseType: root && hasOwn(root, 'response') ? valueType(root.response) : null,
@@ -212,8 +275,33 @@ function createJudgeResponseDiagnostics(value: unknown, transportSucceeded: bool
     reasoningFieldType: root && hasOwn(root, 'reasoning') ? valueType(root.reasoning) : null,
     usageFieldPresent: Boolean(root && hasOwn(root, 'usage')),
     usageFieldType: root && hasOwn(root, 'usage') ? valueType(root.usage) : null,
-    toolCallsPresent: Boolean(root && (hasOwn(root, 'tool_calls') || hasOwn(root, 'toolCalls'))),
-    toolCallCount: Array.isArray(toolCalls) ? Math.min(toolCalls.length, 1000) : null,
+    toolCallsPresent: Boolean(root && (hasOwn(root, 'tool_calls') || hasOwn(root, 'toolCalls'))) || Boolean(isRecord(message) && hasOwn(message, 'tool_calls')),
+    toolCallCount: Array.isArray(messageToolCalls) ? Math.min(messageToolCalls.length, 1000) : Array.isArray(toolCalls) ? Math.min(toolCalls.length, 1000) : null,
+    choicesPresent: Boolean(root && hasOwn(root, 'choices')),
+    choiceCount: Array.isArray(choices) ? Math.min(choices.length, 1000) : null,
+    firstChoiceType: choices === undefined || !Array.isArray(choices) || choices.length === 0 ? null : valueType(firstChoice),
+    firstChoiceKeys: safeObjectKeys(firstChoice),
+    firstChoiceIndexPresent: Boolean(isRecord(firstChoice) && hasOwn(firstChoice, 'index')),
+    firstChoiceIndexType: isRecord(firstChoice) && hasOwn(firstChoice, 'index') ? valueType(firstChoice.index) : null,
+    messagePresent: Boolean(isRecord(firstChoice) && hasOwn(firstChoice, 'message')),
+    messageType: isRecord(firstChoice) && hasOwn(firstChoice, 'message') ? valueType(firstChoice.message) : null,
+    messageKeys: safeObjectKeys(message),
+    messageRolePresent: Boolean(isRecord(message) && hasOwn(message, 'role')),
+    messageRoleType: isRecord(message) && hasOwn(message, 'role') ? valueType(message.role) : null,
+    messageContentPresent: Boolean(isRecord(message) && hasOwn(message, 'content')),
+    messageContentType: isRecord(message) && hasOwn(message, 'content') ? valueType(message.content) : null,
+    messageContentLength: isRecord(message) && typeof message.content === 'string' ? message.content.length : null,
+    finishReasonPresent: Boolean(isRecord(firstChoice) && hasOwn(firstChoice, 'finish_reason')),
+    finishReasonType: isRecord(firstChoice) && hasOwn(firstChoice, 'finish_reason') ? valueType(firstChoice.finish_reason) : null,
+    finishReasonValueCode: isRecord(firstChoice) && hasOwn(firstChoice, 'finish_reason') ? finishReasonValueCode(firstChoice.finish_reason) : null,
+    messageToolCallsPresent: Boolean(isRecord(message) && hasOwn(message, 'tool_calls')),
+    messageToolCallCount: Array.isArray(messageToolCalls) ? Math.min(messageToolCalls.length, 1000) : null,
+    messageReasoningFieldPresent: Boolean(isRecord(message) && hasOwn(message, 'reasoning')),
+    messageReasoningFieldType: isRecord(message) && hasOwn(message, 'reasoning') ? valueType(message.reasoning) : null,
+    topLevelReasoningFieldPresent: Boolean(root && hasOwn(root, 'reasoning')),
+    topLevelReasoningFieldType: root && hasOwn(root, 'reasoning') ? valueType(root.reasoning) : null,
+    messageContentJsonParseable: null,
+    messageContentTopLevelKeys: [],
     stringJsonParseable: null,
     normalizationFailureCode: null,
   };
@@ -346,26 +434,70 @@ function parseRecommendation(value: unknown, packet: EvidencePacket): JudgeRecom
   };
 }
 
-function parseJsonSurface(text: string, diagnostics: JudgeResponseDiagnostics): unknown {
+function parseJsonSurface(text: string, diagnostics: JudgeResponseDiagnostics, failureCode: 'RESPONSE_STRING_NOT_JSON' | 'MESSAGE_CONTENT_NOT_JSON' = 'RESPONSE_STRING_NOT_JSON', surface: 'response' | 'message' = 'response'): unknown {
   const normalized = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   try {
     const parsed = JSON.parse(normalized);
-    diagnostics.stringJsonParseable = true;
-    if (isRecord(parsed)) diagnostics.responseTopLevelKeys = safeObjectKeys(parsed);
+    if (surface === 'message') {
+      diagnostics.messageContentJsonParseable = true;
+      if (isRecord(parsed)) diagnostics.messageContentTopLevelKeys = safeObjectKeys(parsed);
+    } else {
+      diagnostics.stringJsonParseable = true;
+      if (isRecord(parsed)) diagnostics.responseTopLevelKeys = safeObjectKeys(parsed);
+    }
     return parsed;
   } catch {
-    diagnostics.stringJsonParseable = false;
-    throw new JudgeNormalizationError('RESPONSE_STRING_NOT_JSON');
+    if (surface === 'message') diagnostics.messageContentJsonParseable = false;
+    else diagnostics.stringJsonParseable = false;
+    throw new JudgeNormalizationError(failureCode);
   }
 }
 
+function unwrapJudgeChatCompletion(value: Record<string, unknown>, diagnostics: JudgeResponseDiagnostics): unknown {
+  diagnostics.providerEnvelopeClassification = 'CHAT_COMPLETION';
+  if (!hasOwn(value, 'choices')) throw new JudgeNormalizationError('CHOICES_MISSING');
+  if (!Array.isArray(value.choices)) throw new JudgeNormalizationError('CHOICES_TYPE_UNSUPPORTED');
+  if (value.choices.length === 0) throw new JudgeNormalizationError('CHOICES_EMPTY');
+  if (value.choices.length !== 1) throw new JudgeNormalizationError('CHOICE_COUNT_INVALID');
+
+  const choice = value.choices[0];
+  if (!isRecord(choice)) throw new JudgeNormalizationError('CHOICE_INVALID');
+  if (hasOwn(choice, 'index') && choice.index !== 0) throw new JudgeNormalizationError('CHOICE_INVALID');
+
+  if (!hasOwn(choice, 'finish_reason')) throw new JudgeNormalizationError('FINISH_REASON_UNSUPPORTED');
+  if (choice.finish_reason === 'length') throw new JudgeNormalizationError('FINISH_REASON_TRUNCATED');
+  if (choice.finish_reason !== 'stop') throw new JudgeNormalizationError('FINISH_REASON_UNSUPPORTED');
+
+  if (!hasOwn(choice, 'message')) throw new JudgeNormalizationError('MESSAGE_MISSING');
+  if (!isRecord(choice.message)) throw new JudgeNormalizationError('MESSAGE_INVALID');
+  const message = choice.message;
+  if (hasOwn(message, 'role') && message.role !== 'assistant') throw new JudgeNormalizationError('MESSAGE_INVALID');
+  if (hasOwn(message, 'tool_calls')) {
+    if (!Array.isArray(message.tool_calls) || message.tool_calls.length > 0) throw new JudgeNormalizationError('UNEXPECTED_TOOL_CALL');
+  }
+  if (!hasOwn(message, 'content')) throw new JudgeNormalizationError('MESSAGE_CONTENT_MISSING');
+  if (typeof message.content !== 'string') throw new JudgeNormalizationError('MESSAGE_CONTENT_TYPE_UNSUPPORTED');
+  if (!message.content.trim()) throw new JudgeNormalizationError('MESSAGE_CONTENT_MISSING');
+  return parseJsonSurface(message.content, diagnostics, 'MESSAGE_CONTENT_NOT_JSON', 'message');
+}
+
 function unwrapJudgeProviderResult(value: unknown, diagnostics: JudgeResponseDiagnostics): unknown {
-  if (typeof value === 'string') return parseJsonSurface(value, diagnostics);
+  if (typeof value === 'string') {
+    diagnostics.providerEnvelopeClassification = 'RESPONSE_STRING';
+    return parseJsonSurface(value, diagnostics);
+  }
   if (!isRecord(value)) throw new JudgeNormalizationError('RESPONSE_TYPE_UNSUPPORTED');
-  if (typeof value.primaryHypothesis === 'string') return value;
+  if (typeof value.primaryHypothesis === 'string') {
+    diagnostics.providerEnvelopeClassification = 'DIRECT_CANONICAL';
+    return value;
+  }
   if (hasOwn(value, 'response')) {
-    if (typeof value.response === 'string') return parseJsonSurface(value.response, diagnostics);
+    if (typeof value.response === 'string') {
+      diagnostics.providerEnvelopeClassification = 'RESPONSE_STRING';
+      return parseJsonSurface(value.response, diagnostics);
+    }
     if (isRecord(value.response)) {
+      diagnostics.providerEnvelopeClassification = 'RESPONSE_OBJECT';
       diagnostics.responseTopLevelKeys = safeObjectKeys(value.response);
       return value.response;
     }
@@ -374,8 +506,10 @@ function unwrapJudgeProviderResult(value: unknown, diagnostics: JudgeResponseDia
   for (const key of ['result', 'output_text']) {
     if (!hasOwn(value, key)) continue;
     if (typeof value[key] !== 'string') throw new JudgeNormalizationError('RESPONSE_TYPE_UNSUPPORTED');
+    diagnostics.providerEnvelopeClassification = key === 'result' ? 'RESULT_STRING' : 'OUTPUT_TEXT_STRING';
     return parseJsonSurface(value[key] as string, diagnostics);
   }
+  if (value.object === 'chat.completion' || hasOwn(value, 'choices')) return unwrapJudgeChatCompletion(value, diagnostics);
   throw new JudgeNormalizationError('RESPONSE_MISSING');
 }
 
