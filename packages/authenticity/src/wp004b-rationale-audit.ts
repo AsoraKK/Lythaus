@@ -37,10 +37,15 @@ function normalizedText(recommendation: JudgeRecommendation): string {
   ].join(' ').toLowerCase();
 }
 
+function rationaleSegments(text: string): readonly string[] {
+  return text.split(/[.!?;\n]+/).map((segment) => segment.trim()).filter(Boolean);
+}
+
 function classifyRationaleMention(text: string, subjectPattern: RegExp, violationPattern: RegExp, disciplinedPattern: RegExp): Wp004bRationaleAuditLabel {
-  if (!subjectPattern.test(text)) return 'NOT_MENTIONED';
-  if (violationPattern.test(text)) return 'VIOLATION';
-  if (disciplinedPattern.test(text)) return 'DISCIPLINED';
+  const relevantSegments = rationaleSegments(text).filter((segment) => subjectPattern.test(segment));
+  if (relevantSegments.length === 0) return 'NOT_MENTIONED';
+  if (relevantSegments.some((segment) => violationPattern.test(segment))) return 'VIOLATION';
+  if (relevantSegments.some((segment) => disciplinedPattern.test(segment))) return 'DISCIPLINED';
   return 'CONCERNING';
 }
 
@@ -79,8 +84,8 @@ export function auditWp004bRationale(input: RationaleAuditInput): Wp004bRational
       uniformity: classifyRationaleMention(text, /uniform|flat|simple/, /(uniform|flat|simple).{0,100}(support|prove|indicat|suggest).{0,80}(synthetic|camera)/, /neutral|nondiscrimin|not.{0,30}(establish|prove|support)|descriptive|insufficient/),
       metadata: classifyRationaleMention(text, /metadata|exif|xmp/, /(missing|absent).{0,80}(support|prove|indicat|suggest).{0,80}(synthetic|camera)/, /neutral|not.{0,30}(establish|prove|support)|missing evidence|limited/),
       png: classifyRationaleMention(text, /png|file format/, /(png|format).{0,80}(support|prove|indicat|suggest).{0,80}(synthetic|camera)|format.{0,40}proof/, /format.{0,40}(alone|neutral|not)|not.{0,30}(establish|prove|support)/),
-      ef2: directionAwareLabel(input, (item) => item.family === 'EF2_PHYSICAL_ACQUISITION') ?? classifyRationaleMention(text, /ef2|camera.{0,20}(proxy|evidence)|sensor noise|camera pipeline/, /(prove|support|therefore|more likely).{0,100}(camera-native|synthetic)/, /uncalibrated|proxy|not.{0,30}(proof|support)|neutral|experimental/),
-      ef4: directionAwareLabel(input, (item) => item.family === 'EF4_SPECTRAL_STABILITY') ?? classifyRationaleMention(text, /ef4|spectral|variance|residual/, /(prove|support|therefore|more likely).{0,100}(camera-native|synthetic)/, /uncalibrated|not.{0,30}(proof|support)|neutral|experimental/),
+      ef2: directionAwareLabel(input, (item) => item.family === 'EF2_PHYSICAL_ACQUISITION') ?? classifyRationaleMention(text, /ef2|camera.{0,20}(proxy|evidence)|sensor noise|camera pipeline/, /(prove|support|therefore|more likely).{0,100}(camera[-_ ]native|synthetic)/, /uncalibrated|proxy|not.{0,30}(proof|support)|neutral|experimental|directional evidence/),
+      ef4: directionAwareLabel(input, (item) => item.family === 'EF4_SPECTRAL_STABILITY') ?? classifyRationaleMention(text, /ef4|spectral|variance|residual/, /(prove|support|therefore|more likely).{0,100}(camera[-_ ]native|synthetic)/, /uncalibrated|not.{0,30}(proof|support)|neutral|experimental|directional evidence/),
       ef3Unavailable: classifyRationaleMention(text, /ef3|generative/, /(unavailable|missing).{0,80}(no|none|not).{0,80}(generative|artifact)/, /unavailable|missing|not.{0,30}(run|available)|no conclusion/),
       ef5Unavailable: classifyRationaleMention(text, /ef5|local manipulation|reconstruction/, /(unavailable|missing).{0,80}(no|none|not).{0,80}(manipulation|edit)/, /unavailable|missing|not.{0,30}(run|available)|no conclusion/),
     };
