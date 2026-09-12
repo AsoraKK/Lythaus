@@ -1,0 +1,35 @@
+name: WP004B Judge Calibration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  judge_calibration:
+    name: Bounded GPT-OSS Judge calibration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Run three-case Judge calibration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run authenticity:wp004b-live-calibration -- --allow-network --output .artifacts/wp004b-live-calibration.json
+      - name: Upload sanitized calibration result
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp004b-live-calibration-result
+          path: .artifacts/wp004b-live-calibration.json
+          if-no-files-found: ignore
+          retention-days: 7
