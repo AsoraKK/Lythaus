@@ -1,5 +1,3 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import {
   buildJudgeRequest,
   createCloudflareJudgeRest,
@@ -9,24 +7,29 @@ import {
   JUDGE_EPISTEMIC_POLICY_VERSION,
   JUDGE_EPISTEMIC_EVALUATOR_SCHEMA_VERSION,
   WP004B_LIVE_CALIBRATION_SCHEMA_VERSION,
+  createWp004bBudgetLedger,
   createWp004bLiveCalibrationCases,
   assertWp004bExpectationsNotInJudgeRequest,
   evaluateWp004bLiveRecommendation,
+  writeWp004bAtomicJson,
 } from '../../packages/authenticity/src/wp004b.ts';
 
 const GPT_OSS_MODEL = '@cf/openai/gpt-oss-20b';
 const MAX_REQUESTS = 3;
 
 function parseArgs(argv) {
-  const options = { allowNetwork: false, output: null };
+  const options = { allowNetwork: false, output: null, journal: '.artifacts/wp004b-call-accounting.json' };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--allow-network') options.allowNetwork = true;
     else if (argument === '--output') options.output = argv[++index] ?? null;
+    else if (argument === '--journal') {
+      options.journal = argv[++index] ?? null;
+      if (!options.journal) throw new Error('WP004B_ARGUMENT_INVALID');
+    }
     else throw new Error('WP004B_ARGUMENT_INVALID');
   }
   if (!options.allowNetwork) throw new Error('WP004B_NETWORK_OPT_IN_REQUIRED');
-  if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) throw new Error('WP004B_CLOUDFLARE_CREDENTIALS_REQUIRED');
   return options;
 }
 
@@ -219,52 +222,55 @@ function caseStatus(judge, evaluation) {
 }
 
 function safeFailure(error) {
-  if (error instanceof Error && /^[A-Z0-9_]+$/.test(error.message)) return error.message;
+  const allowed = new Set([
+    'WP004B_ARGUMENT_INVALID',
+    'WP004B_NETWORK_OPT_IN_REQUIRED',
+    'WP004B_CLOUDFLARE_CREDENTIALS_REQUIRED',
+    'WP004B_CALL_CAP_EXCEEDED',
+    'WP004B_CASE_CALL_CAP_EXCEEDED',
+    'WP004B_CASE_UNKNOWN',
+    'WP004B_CALL_NOT_RESERVED',
+    'WP004B_ACCOUNTING_BUDGET_INVALID',
+    'WP004B_ACCOUNTING_CASES_INVALID',
+    'WP004B_ACCOUNTING_MODEL_INVALID',
+  ]);
+  if (error instanceof Error && allowed.has(error.message)) return error.message;
   return 'WP004B_RUNNER_FAILURE';
 }
 
-const options = parseArgs(process.argv.slice(2));
-const calibrationCases = createWp004bLiveCalibrationCases();
-const transport = createCloudflareRestTransport({
-  apiToken: process.env.CLOUDFLARE_API_TOKEN,
-  accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-  allowNetwork: options.allowNetwork,
-  maxRequests: MAX_REQUESTS,
-});
-const judge = createCloudflareJudgeRest({ transport, model: GPT_OSS_MODEL });
-const results = [];
-let stoppedAfter = null;
+function accountingUpdateForJudge(judgeResult) {
+  const transportCompleted = judgeResult.responseDiagnostics?.transportSucceeded === true || judgeResult.httpStatus !== null && judgeResult.httpStatus !== undefined;
+  return {
+    transportCompleted,
+    canonicalSuccess: judgeResult.status === 'SUCCESS',
+    executionMs: judgeResult.executionMs,
+    httpStatus: judgeResult.httpStatus ?? null,
+    providerEnvelopeClassification: judgeResult.responseDiagnostics?.providerEnvelopeClassification ?? null,
+    normalizationFailureCode: judgeResult.normalizationFailureCode ?? null,
+    failureStage: judgeResult.status === 'SUCCESS'
+      ? 'PROVIDER_ENVELOPE'
+      : judgeResult.normalizationFailureCode ? 'CANONICAL_SCHEMA' : 'TRANSPORT',
+  };
+}
 
-try {
-  for (const calibrationCase of calibrationCases) {
-    const request = buildJudgeRequest(calibrationCase.packet);
-    assertWp004bExpectationsNotInJudgeRequest(request, calibrationCase.expectation);
-    const judgeResult = await judge.judge({ packet: calibrationCase.packet });
-    const evaluation = judgeResult.status === 'SUCCESS' && judgeResult.recommendation
-      ? evaluateWp004bLiveRecommendation(calibrationCase.packet, judgeResult.recommendation, calibrationCase.expectation)
-      : null;
-    results.push({
-      caseId: calibrationCase.caseId,
-      description: calibrationCase.description,
-      packet: safePacketSummary(calibrationCase.packet),
-      judge: safeJudgeResult(judgeResult),
-      evaluation: evaluation ? {
-        schemaValid: evaluation.schemaValid,
-        epistemic: evaluation.epistemic,
-        expectation: evaluation.expectation,
-        rationaleAudit: rationaleAudit(calibrationCase.caseId, judgeResult.recommendation),
-      } : null,
-      caseStatus: caseStatus(judgeResult, evaluation),
-    });
-    if (isSharedFailure(judgeResult)) {
-      stoppedAfter = calibrationCase.caseId;
-      break;
-    }
-  }
+function safeThrownJudgeResult(error, executionMs) {
+  return {
+    schemaVersion: 'lythaus-judge-result-v1',
+    promptVersion: null,
+    provider: 'cloudflare-workers-ai-rest',
+    model: GPT_OSS_MODEL,
+    status: 'PROVIDER_FAILURE',
+    executionMs,
+    errorCategory: 'NETWORK_FAILURE',
+    failureCategory: safeFailure(error),
+    recommendation: null,
+  };
+}
 
-  const snapshot = transport.snapshot();
-  if (snapshot.calls > MAX_REQUESTS) throw new Error('WP004B_CALL_CAP_EXCEEDED');
-  const summary = {
+function buildSummary({ calibrationCases, results, stoppedAfter, ledger, transport, fatalFailure = null }) {
+  const budgetAccounting = ledger.snapshot();
+  const snapshot = transport?.snapshot?.() ?? { calls: budgetAccounting.observed.judgeCallsAttempted, invocations: [] };
+  return {
     schemaVersion: WP004B_LIVE_CALIBRATION_SCHEMA_VERSION,
     policyVersion: JUDGE_EPISTEMIC_POLICY_VERSION,
     evaluatorSchemaVersion: JUDGE_EPISTEMIC_EVALUATOR_SCHEMA_VERSION,
@@ -287,24 +293,134 @@ try {
       epistemicViolationCount: results.reduce((sum, item) => sum + (item.evaluation?.epistemic.violations.length ?? 0), 0),
     },
     invocationAccounting: {
-      judgeCalls: snapshot.calls,
-      totalProviderCalls: snapshot.calls,
-      retries: 0,
+      judgeCalls: budgetAccounting.observed.judgeCallsAttempted,
+      totalProviderCalls: budgetAccounting.observed.totalCallsAttempted,
+      retries: budgetAccounting.observed.retries,
       openAiCalls: 0,
       moondreamCalls: 0,
       otherInferenceCalls: 0,
       transportInvocations: snapshot.invocations,
+      budgetIntegrity: budgetAccounting.budgetIntegrity,
+      scientificValidity: budgetAccounting.scientificValidity,
     },
+    budgetAccounting,
+    fatalFailure: fatalFailure ? safeFailure(fatalFailure) : null,
     enforcementAuthority: false,
   };
-  if (options.output) {
-    const outputPath = path.resolve(options.output);
-    await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
-  }
-  console.log(JSON.stringify(summary));
-  if (results.length !== calibrationCases.length || results.some((item) => item.caseStatus !== 'PASS')) process.exitCode = 1;
-} catch (error) {
-  console.error(JSON.stringify({ schemaVersion: WP004B_LIVE_CALIBRATION_SCHEMA_VERSION, status: 'FAILED', errorCategory: safeFailure(error), invocationAccounting: { judgeCalls: transport.snapshot().calls, retries: 0, openAiCalls: 0, moondreamCalls: 0, otherInferenceCalls: 0 } }));
-  process.exitCode = 1;
 }
+
+async function main() {
+  const calibrationCases = createWp004bLiveCalibrationCases();
+  const ledger = createWp004bBudgetLedger({ model: GPT_OSS_MODEL, caseIds: calibrationCases.map((item) => item.caseId) });
+  let options = { allowNetwork: false, output: null, journal: '.artifacts/wp004b-call-accounting.json' };
+  let transport = null;
+  let judge = null;
+  const results = [];
+  let stoppedAfter = null;
+  let currentCaseId = null;
+  let currentCallReserved = false;
+  let fatalFailure = null;
+  const persistJournal = async () => writeWp004bAtomicJson(options.journal, ledger.snapshot());
+
+  try {
+    options = parseArgs(process.argv.slice(2));
+    await persistJournal();
+    if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) throw new Error('WP004B_CLOUDFLARE_CREDENTIALS_REQUIRED');
+    transport = createCloudflareRestTransport({
+      apiToken: process.env.CLOUDFLARE_API_TOKEN,
+      accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+      allowNetwork: options.allowNetwork,
+      maxRequests: MAX_REQUESTS,
+    });
+    judge = createCloudflareJudgeRest({ transport, model: GPT_OSS_MODEL });
+
+    for (const calibrationCase of calibrationCases) {
+      currentCaseId = calibrationCase.caseId;
+      ledger.preCallValidation(currentCaseId);
+      const request = buildJudgeRequest(calibrationCase.packet);
+      assertWp004bExpectationsNotInJudgeRequest(request, calibrationCase.expectation);
+      await persistJournal();
+      ledger.reserveCall(currentCaseId);
+      currentCallReserved = true;
+      await persistJournal();
+      const startedAt = Date.now();
+      let judgeResult;
+      try {
+        judgeResult = await judge.judge({ packet: calibrationCase.packet });
+      } catch (error) {
+        ledger.markAmbiguousSend(currentCaseId, Date.now() - startedAt);
+        ledger.markResultAvailable(currentCaseId);
+        await persistJournal();
+        results.push({ caseId: calibrationCase.caseId, description: calibrationCase.description, packet: safePacketSummary(calibrationCase.packet), judge: safeThrownJudgeResult(error, Date.now() - startedAt), evaluation: null, caseStatus: 'PROVIDER_OR_SCHEMA_FAILURE' });
+        stoppedAfter = currentCaseId;
+        break;
+      }
+      ledger.postTransport(currentCaseId, accountingUpdateForJudge(judgeResult));
+      currentCallReserved = false;
+      await persistJournal();
+      let evaluation = null;
+      try {
+        if (judgeResult.status === 'SUCCESS' && judgeResult.recommendation) {
+          ledger.setStage(currentCaseId, 'EPISTEMIC_EVALUATION');
+          await persistJournal();
+        }
+        evaluation = judgeResult.status === 'SUCCESS' && judgeResult.recommendation
+          ? evaluateWp004bLiveRecommendation(calibrationCase.packet, judgeResult.recommendation, calibrationCase.expectation)
+          : null;
+      } catch (error) {
+        ledger.setStage(currentCaseId, 'EPISTEMIC_EVALUATION');
+        await persistJournal();
+        throw error;
+      }
+      if (evaluation) ledger.setStage(currentCaseId, 'CASE_EXPECTATION');
+      else if (judgeResult.status === 'SUCCESS') ledger.setStage(currentCaseId, 'CANONICAL_SCHEMA');
+      const result = {
+        caseId: calibrationCase.caseId,
+        description: calibrationCase.description,
+        packet: safePacketSummary(calibrationCase.packet),
+        judge: safeJudgeResult(judgeResult),
+        evaluation: evaluation ? {
+          schemaValid: evaluation.schemaValid,
+          epistemic: evaluation.epistemic,
+          expectation: evaluation.expectation,
+          rationaleAudit: rationaleAudit(calibrationCase.caseId, judgeResult.recommendation),
+        } : null,
+        caseStatus: caseStatus(judgeResult, evaluation),
+      };
+      results.push(result);
+      ledger.markResultAvailable(currentCaseId);
+      if (evaluation) ledger.setStage(currentCaseId, 'COMPLETED');
+      await persistJournal();
+      if (isSharedFailure(judgeResult)) {
+        stoppedAfter = calibrationCase.caseId;
+        break;
+      }
+    }
+  } catch (error) {
+    fatalFailure = error;
+    if (currentCallReserved && currentCaseId) {
+      try {
+        ledger.markAmbiguousSend(currentCaseId);
+        ledger.markResultAvailable(currentCaseId);
+      } catch { }
+    }
+    try { await persistJournal(); } catch { }
+  } finally {
+    let summary;
+    try {
+      await persistJournal();
+      summary = buildSummary({ calibrationCases, results, stoppedAfter, ledger, transport, fatalFailure });
+      if (options.output) await writeWp004bAtomicJson(options.output, summary);
+      console.log(JSON.stringify(summary));
+    } catch (error) {
+      try { await persistJournal(); } catch { }
+      console.error(JSON.stringify({ schemaVersion: WP004B_LIVE_CALIBRATION_SCHEMA_VERSION, status: 'FAILED', errorCategory: safeFailure(error), budgetAccounting: ledger.snapshot() }));
+      process.exitCode = 1;
+      return;
+    }
+    const snapshot = ledger.snapshot();
+    if (fatalFailure || results.length !== calibrationCases.length || results.some((item) => item.caseStatus !== 'PASS') || snapshot.budgetIntegrity !== 'PASS') process.exitCode = 1;
+  }
+}
+
+await main();
