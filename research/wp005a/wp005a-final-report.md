@@ -41,7 +41,7 @@ The Judge remains potentially valuable for calibrated EF3/EF5 synthesis and came
 | D — end-to-end architecture | Routing, compiler, Observer, specialist, and Judge combinations | `END_TO_END_ACCURACY_UNRESOLVED` | No rights-cleared representative image corpus was available for an honest end-to-end accuracy claim. |
 | Open-source feasibility | Repository, checkpoint, data, license, CPU/RAM/dependency desk audit | `OPEN_SOURCE_DESK_AUDIT_VALID_RUNTIME_UNRESOLVED` | Desk gates are documented; no checkpoint was legally/runtime-safe to download, so installation, peak RAM, and CPU latency remain unmeasured. |
 
-The local contract run was network-disabled, while the protected [workflow run 34723558073](https://github.com/AsoraKK/Lythaus/actions/runs/34723558073) executed on merged `main` SHA `6e55aab997ae9081e30806b5140caef353fa2c81`. It reserved 24 requests, 4,716 estimated neurons, and US$0.051713762, with `retryCount=0`; 56 requests and 2,784 estimated neurons remained unused. The manual workflow is bounded at 80 requests, 7,500 estimated neurons, and US$0.15.
+The local contract run was network-disabled, while protected workflow run `#34723558073` executed on merged `main` SHA `6e55aab997ae9081e30806b5140caef353fa2c81`. It reserved 24 requests, 4,716 estimated neurons, and US$0.051713762, with `retryCount=0`; 56 requests and 2,784 estimated neurons remained unused. The manual workflow is bounded at 80 requests, 7,500 estimated neurons, and US$0.15.
 
 ### Protected live result
 

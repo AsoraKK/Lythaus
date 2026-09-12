@@ -3,7 +3,7 @@
   "researchDate": "2026-09-12",
   "runId": 34723558073,
   "headSha": "6e55aab997ae9081e30806b5140caef353fa2c81",
-  "runUrl": "https://github.com/AsoraKK/Lythaus/actions/runs/34723558073",
+  "workflow": "wp005a-architecture-tournament.yml",
   "artifactName": "lythaus-wp005a-34723558073",
   "liveStatus": "COMPLETED_BOUNDED_LIVE_RUN",
   "caps": { "requests": 80, "estimatedNeurons": 7500, "estimatedCostUsd": 0.15, "automaticRetries": 0 },
