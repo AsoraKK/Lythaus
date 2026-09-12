@@ -1,10 +1,16 @@
 {
   "schemaVersion": "lythaus-wp005a-observer-results-v1",
   "researchDate": "2026-09-12",
-  "status": "NOT_RUN_LOCAL_CREDENTIALS",
-  "layerValidity": "OBSERVER_BENCHMARK_HARNESS_VALID_LIVE_RESULTS_PENDING",
+  "status": "BOUNDED_LIVE_RUN_COMPLETED",
+  "liveRunId": 34723558073,
+  "layerValidity": "OBSERVER_LIVE_PROTOCOL_RESULTS_WITH_NATIVE_ADAPTER_GAPS",
   "fixtureCount": 6,
   "candidateCount": 4,
-  "results": [],
-  "note": "Controlled visual fixtures are generated in memory by the runner. No personal media is used."
+  "candidateOutcomes": [
+    { "candidate": "moondream3.1-9B-A2B", "model": "@cf/moondream/moondream3.1-9B-A2B", "attempts": 5, "transportSuccesses": 5, "canonicalSuccesses": 5, "taskCorrect": "3/5", "structuredOutputReliability": "5/5", "ocrNormalizedError": "1 on 2/2 text fixtures", "latencyMs": { "p50": 1891, "max": 2219 } },
+    { "candidate": "qwen3.8-27b", "model": "@cf/qwen/qwen3.8-27b", "attempts": 5, "transportSuccesses": 5, "canonicalSuccesses": 0, "normalizationFailures": 5, "latencyMs": { "p50": 19604, "max": 23625 } },
+    { "candidate": "llama-4-scout-17b-16e-instruct", "model": "@cf/meta/llama-4-scout-17b-16e-instruct", "attempts": 4, "transportSuccesses": 4, "canonicalSuccesses": 0, "normalizationFailures": 4, "latencyMs": { "p50": 1876, "max": 2722 } },
+    { "candidate": "llama-3.2-11b-vision-instruct", "model": "@cf/meta/llama-3.2-11b-vision-instruct", "attempts": 4, "transportSuccesses": 0, "canonicalSuccesses": 0, "http403Failures": 4, "providerErrorCode": 5016, "latencyMs": { "p50": 101, "max": 156 } }
+  ],
+  "note": "Controlled visual fixtures are generated in memory by the runner. No personal media is used. Native multimodal challengers were transport-successful but did not pass the existing canonical Observer envelope; their observation quality is therefore unresolved, not zero."
 }

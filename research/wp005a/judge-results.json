@@ -1,9 +1,19 @@
 {
   "schemaVersion": "lythaus-wp005a-judge-results-v1",
   "researchDate": "2026-09-12",
-  "status": "NOT_RUN_LOCAL_CREDENTIALS",
-  "layerValidity": "JUDGE_BENCHMARK_HARNESS_VALID_LIVE_RESULTS_PENDING",
+  "status": "BOUNDED_LIVE_RUN_COMPLETED",
+  "liveRunId": 34723558073,
+  "layerValidity": "JUDGE_BENCHMARK_LIVE_SMOKE_ONLY_NO_QUALIFIED_FINALIST",
   "representations": ["FULL_EVIDENCE_PACKET", "COMPACT_EVIDENCE_LEDGER"],
-  "results": [],
-  "summary": null
+  "stageCounts": { "J1_CAPABILITY_SMOKE": 6, "J2_SCREENING": 0, "J3_HOLDOUT": 0, "LEDGER_COMPARISON": 0, "REPEATABILITY": 0 },
+  "candidateOutcomes": [
+    { "candidate": "gpt-oss-20b", "model": "@cf/openai/gpt-oss-20b", "httpClass": "2xx", "latencyMs": 10389, "canonicalOutputSuccess": false, "failureStage": "NORMALIZATION", "retryCount": 0 },
+    { "candidate": "qwen3-30b-a3b-fp8", "model": "@cf/qwen/qwen3-30b-a3b-fp8", "httpClass": "2xx", "latencyMs": 2407, "canonicalOutputSuccess": false, "failureStage": "NORMALIZATION", "retryCount": 0 },
+    { "candidate": "glm-4.7-flash", "model": "@cf/zai-org/glm-4.7-flash", "httpClass": null, "latencyMs": 30005, "canonicalOutputSuccess": false, "failureStage": "TRANSPORT", "transportErrorCategory": "TIMEOUT", "retryCount": 0 },
+    { "candidate": "llama-3.3-70b-instruct-fp8-fast", "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "httpClass": "2xx", "latencyMs": 4000, "canonicalOutputSuccess": false, "failureStage": "NORMALIZATION", "retryCount": 0 },
+    { "candidate": "gemma-4-26b-a4b-it", "model": "@cf/google/gemma-4-26b-a4b-it", "httpClass": "2xx", "latencyMs": 25103, "canonicalOutputSuccess": false, "failureStage": "NORMALIZATION", "retryCount": 0 },
+    { "candidate": "qwen3.8-27b", "model": "@cf/qwen/qwen3.8-27b", "httpClass": null, "latencyMs": 30001, "canonicalOutputSuccess": false, "failureStage": "TRANSPORT", "transportErrorCategory": "TIMEOUT", "retryCount": 0 }
+  ],
+  "summary": { "calls": 6, "http2xx": 4, "transportTimeouts": 2, "canonicalOutputSuccess": 0, "epistemicScoresAvailable": false, "tokenUsage": "UNAVAILABLE", "noFinalistSelected": true },
+  "note": "A 2xx response was not treated as a valid Judge result when canonical normalization failed. No J2/J3/ledger/repeatability claim is made. See live-run-summary.json for the run and adapter caveat."
 }

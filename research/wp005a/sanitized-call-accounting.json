@@ -1,12 +1,14 @@
 {
   "schemaVersion": "lythaus-wp005a-run-status-v1",
   "researchDate": "2026-09-12",
-  "liveStatus": "NOT_RUN_LOCAL_CREDENTIALS",
-  "allowNetwork": false,
-  "credentialsPresent": false,
+  "liveStatus": "COMPLETED_BOUNDED_LIVE_RUN",
+  "liveRunId": 34723558073,
+  "allowNetwork": true,
+  "credentialsPresent": true,
   "hardCaps": { "requests": 80, "estimatedNeurons": 7500, "estimatedIncrementalCostUsd": 0.15 },
-  "budget": { "reservedRequests": 0, "reservedEstimatedNeurons": 0, "reservedEstimatedCostUsd": 0, "remainingRequests": 80, "remainingEstimatedNeurons": 7500, "remainingEstimatedCostUsd": 0.15 },
+  "budget": { "reservedRequests": 24, "reservedEstimatedNeurons": 4716, "reservedEstimatedCostUsd": 0.051713762, "remainingRequests": 56, "remainingEstimatedNeurons": 2784, "remainingEstimatedCostUsd": 0.098286238 },
+  "stageCounts": { "J1_CAPABILITY_SMOKE": 6, "OBSERVER_SCREENING": 18, "plannedButNotRunJudgeScreening": 32, "plannedButNotRunHoldout": 8, "plannedButNotRunLedger": 8, "plannedButNotRunRepeatability": 8 },
+  "transport": { "calls": 24, "successes": 18, "providerFailures": 6, "judgeCanonicalSuccesses": 0, "observerCanonicalSuccesses": 5 },
   "retryCount": 0,
-  "calls": [],
-  "note": "No provider call was attempted in the local run. The workflow is manual and bounded for an operator-authorized run with existing repository secrets."
+  "note": "Full sanitized per-call records are retained in the protected workflow artifact. This checked-in summary deliberately contains no provider payloads, media, headers, or reasoning."
 }

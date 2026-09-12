@@ -1,8 +1,9 @@
 {
   "schemaVersion": "lythaus-wp005a-pareto-summary-v1",
   "researchDate": "2026-09-12",
-  "status": "PARTIAL_DESK_AND_DETERMINISTIC_ONLY",
-  "liveModelMetrics": "PENDING_EXISTING_CLOUDFLARE_ACCOUNT_RUN",
+  "status": "PARTIAL_LIVE_NO_QUALIFIED_JUDGE_FINALIST",
+  "liveModelMetrics": "J1_SMOKE_ONLY_NATIVE_ADAPTER_GAPS",
+  "liveRunId": 34723558073,
   "hardGates": ["Safety leakage", "Origin-axis collapse", "Unsupported evidence direction", "Unknown evidence references", "Frequent malformed canonical output", "Raw reasoning persistence", "Unresolved code/checkpoint/data licensing", "Unaffordable or unbounded runtime"],
   "frontier": [
     { "architecture": "D_DETERMINISTIC_FIRST", "quality": "bounded and auditable", "humanFalsePositiveProtection": "strongest observed in fixtures", "latency": "fast path", "cost": "zero incremental inference", "complexity": "lowest", "limitation": "cannot resolve uncalibrated EF2/EF4 or missing EF3/EF5" },
@@ -12,5 +13,6 @@
     { "architecture": "F_SPECIALIST_FORENSIC_ENSEMBLE", "quality": "frontier potential", "humanFalsePositiveProtection": "depends on calibration", "latency": "likely escalation-only", "cost": "local/offline candidate dependent", "complexity": "high", "limitation": "no production-licensed CPU-ready specialist verified" },
     { "architecture": "G_MONOLITHIC_VERDICT", "quality": "not acceptable evidence discipline", "humanFalsePositiveProtection": "weak", "latency": "unknown", "cost": "unknown", "complexity": "low surface/high hidden risk", "limitation": "rejected as production design" }
   ],
-  "provisionalProfiles": { "bestBalanced": "C_COMPILER_SELECTIVE_ESCALATION", "bestAccuracyFirst": "F_SPECIALIST_FORENSIC_ENSEMBLE_WITH_RESEARCH_ORACLE", "bestLowLatency": "D_DETERMINISTIC_FIRST", "bestLowCost": "D_DETERMINISTIC_FIRST", "bestResearchFrontier": "F_SPECIALIST_FORENSIC_ENSEMBLE" }
+  "provisionalProfiles": { "bestBalanced": "C_COMPILER_SELECTIVE_ESCALATION", "bestAccuracyFirst": "F_SPECIALIST_FORENSIC_ENSEMBLE_WITH_RESEARCH_ORACLE", "bestLowLatency": "D_DETERMINISTIC_FIRST", "bestLowCost": "D_DETERMINISTIC_FIRST", "bestResearchFrontier": "F_SPECIALIST_FORENSIC_ENSEMBLE" },
+  "liveCaveat": "The protected run completed 6 Judge smokes and 18 Observer probes. Four Judge 2xx responses and nine native Observer 2xx responses failed canonical normalization; two Judge candidates timed out and Llama 3.2 Vision returned HTTP 403. No live quality Pareto ranking is valid."
 }

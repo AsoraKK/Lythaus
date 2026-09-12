@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "lythaus-wp005a-live-run-summary-v1",
+  "researchDate": "2026-09-12",
+  "runId": 34723558073,
+  "headSha": "6e55aab997ae9081e30806b5140caef353fa2c81",
+  "workflow": "wp005a-architecture-tournament.yml",
+  "artifactName": "lythaus-wp005a-34723558073",
+  "liveStatus": "COMPLETED_BOUNDED_LIVE_RUN",
+  "caps": { "requests": 80, "estimatedNeurons": 7500, "estimatedCostUsd": 0.15, "automaticRetries": 0 },
+  "reserved": { "requests": 24, "estimatedNeurons": 4716, "estimatedCostUsd": 0.051713762 },
+  "judge": { "smokes": 6, "http2xx": 4, "canonicalSuccesses": 0, "normalizationFailures": 4, "timeouts": 2, "screeningCandidates": 0, "finalists": 0, "qualityComparison": "UNRESOLVED" },
+  "observer": { "probes": 18, "canonicalSuccesses": 5, "moondreamCanonicalSuccesses": 5, "nativeChallengerCanonicalSuccesses": 0, "llama32Http403Failures": 4, "qualityComparison": "MOONDREAM_ONLY_PROTOCOL_RESULT" },
+  "routing": { "conservativeResolvedWithoutLlm": 12, "conservativeEscalationRate": 0.25, "selectiveResolvedWithoutLlm": 13, "selectiveEscalationRate": 0.1875, "incorrectDeterministicResolutions": 0 },
+  "validity": { "layerA": "VALID_WITH_GAPS", "layerB": "LIVE_PROTOCOL_RESULTS_WITH_ADAPTER_GAPS", "layerC": "LIVE_SMOKE_ONLY_NO_QUALIFIED_FINALIST", "layerD": "END_TO_END_ACCURACY_UNRESOLVED", "openSource": "DESK_AUDIT_RUNTIME_UNRESOLVED" },
+  "caveat": "Transport completion is not canonical success. Native chat-completion response normalization must be hardened and explicitly revalidated before any future comparative tournament. No second live tournament was run in WP005A."
+}
