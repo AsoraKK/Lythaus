@@ -157,3 +157,9 @@ test('Phase B workflow is manual, GPT-OSS-only, and does not inject OpenAI crede
   assert.doesNotMatch(workflow, /OPENAI_API_KEY/);
   assert.match(workflow, /wp004b-live-calibration/);
 });
+
+test('live runner declares its sanitized report dependencies', async () => {
+  const runner = await readFile(path.resolve('scripts/authenticity/wp004b-judge-calibration.mjs'), 'utf8');
+  assert.match(runner, /import \{ mkdir, writeFile \} from 'node:fs\/promises';/);
+  assert.match(runner, /WP004B_LIVE_CALIBRATION_SCHEMA_VERSION,\s*createWp004bLiveCalibrationCases/);
+});
