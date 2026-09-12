@@ -1,0 +1,52 @@
+name: WP004B Full B1 JSON Schema Confirmation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full_b1_json_schema_confirmation:
+    name: Single GPT-OSS full B1 JSON Schema confirmation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Run single bounded full B1 JSON Schema confirmation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run authenticity:wp004b-full-b1-json-schema -- --allow-network --output .artifacts/wp004b-full-b1-json-schema-confirmation.json --journal .artifacts/wp004b-full-b1-json-schema-confirmation-call-accounting.json
+      - name: Finalize sanitized B1 accounting
+        if: always()
+        run: node --experimental-strip-types scripts/authenticity/wp004b-budget-finalizer.mjs --journal .artifacts/wp004b-full-b1-json-schema-confirmation-call-accounting.json --output .artifacts/wp004b-full-b1-json-schema-confirmation-budget-finalizer.json --case-order B1 --max-calls 1
+      - name: Stage sanitized B1 artifacts
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="wp004b-full-b1-json-schema-confirmation-sanitized-artifacts"
+          mkdir -p "$target"
+          test -s .artifacts/wp004b-full-b1-json-schema-confirmation.json
+          test -s .artifacts/wp004b-full-b1-json-schema-confirmation-call-accounting.json
+          test -s .artifacts/wp004b-full-b1-json-schema-confirmation-budget-finalizer.json
+          cp -- .artifacts/wp004b-full-b1-json-schema-confirmation.json "$target/final-result.json"
+          cp -- .artifacts/wp004b-full-b1-json-schema-confirmation-call-accounting.json "$target/call-accounting.json"
+          cp -- .artifacts/wp004b-full-b1-json-schema-confirmation-budget-finalizer.json "$target/budget-finalizer.json"
+          test "$(find "$target" -maxdepth 1 -type f | wc -l)" -eq 3
+      - name: Upload sanitized B1 artifacts
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp004b-full-b1-json-schema-confirmation-result
+          path: wp004b-full-b1-json-schema-confirmation-sanitized-artifacts
+          if-no-files-found: error
+          retention-days: 7
