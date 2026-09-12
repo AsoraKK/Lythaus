@@ -2,6 +2,8 @@ export const WP004B_JSON_SCHEMA_PROBE_TIMEOUT_MS = 90_000 as const;
 export const WP004B_JSON_SCHEMA_CAPABILITY_SCHEMA_VERSION = 'lythaus-wp004b-json-schema-capability-v1' as const;
 export const WP004B_JSON_SCHEMA_CAPABILITY_MODEL = '@cf/openai/gpt-oss-20b' as const;
 export const WP004B_JSON_SCHEMA_MINIMAL_SCHEMA_VERSION = 'lythaus-wp004b-minimal-json-schema-v1' as const;
+export const WP004B_JSON_SCHEMA_MINIMAL_DEFAULT_MAX_TOKENS = 64 as const;
+export const WP004B_JSON_SCHEMA_MINIMAL_CONFIRMATION_MAX_TOKENS = 512 as const;
 
 export const WP004B_MINIMAL_JSON_SCHEMA = {
   type: 'object',
@@ -92,7 +94,7 @@ export interface Wp004bJsonSchemaProbeRequest {
     readonly json_schema: typeof WP004B_MINIMAL_JSON_SCHEMA;
   };
   readonly temperature: 0;
-  readonly max_tokens: 64;
+  readonly max_tokens: 64 | 512;
   readonly stream: false;
 }
 
@@ -303,7 +305,7 @@ export function normalizeWp004bJsonSchemaProbeResult(value: unknown): { result: 
   }
 }
 
-export function buildWp004bJsonSchemaCapabilityRequest(): Wp004bJsonSchemaProbeRequest {
+export function buildWp004bJsonSchemaCapabilityRequest(options: { maxTokens?: 64 | 512 } = {}): Wp004bJsonSchemaProbeRequest {
   return {
     messages: [
       { role: 'system', content: WP004B_JSON_SCHEMA_PROBE_SYSTEM_PROMPT },
@@ -311,7 +313,7 @@ export function buildWp004bJsonSchemaCapabilityRequest(): Wp004bJsonSchemaProbeR
     ],
     response_format: { type: 'json_schema', json_schema: WP004B_MINIMAL_JSON_SCHEMA },
     temperature: 0,
-    max_tokens: 64,
+    max_tokens: options.maxTokens ?? WP004B_JSON_SCHEMA_MINIMAL_DEFAULT_MAX_TOKENS,
     stream: false,
   };
 }
