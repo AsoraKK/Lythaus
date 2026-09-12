@@ -13,6 +13,7 @@ import {
   WP004B_JSON_SCHEMA_CAPABILITY_MODEL,
   WP004B_JSON_SCHEMA_CAPABILITY_SCHEMA_VERSION,
   WP004B_JSON_SCHEMA_EXPECTED_B1_FINGERPRINT,
+  WP004B_JSON_SCHEMA_MINIMAL_DEFAULT_MAX_TOKENS,
   WP004B_JSON_SCHEMA_MINIMAL_SCHEMA_VERSION,
   WP004B_JSON_SCHEMA_PROBE_TIMEOUT_MS,
   WP004B_MINIMAL_JSON_SCHEMA,
@@ -35,7 +36,7 @@ import {
   writeWp004bAtomicJson,
 } from '../../packages/authenticity/src/wp004b.ts';
 
-const G1_MAX_TOKENS = 64;
+const G1_MAX_TOKENS = WP004B_JSON_SCHEMA_MINIMAL_DEFAULT_MAX_TOKENS;
 const G2_TIMEOUT_CLASSIFICATION = Object.freeze({
   underThirtySeconds: 'JSON_SCHEMA_FULL_CONFIRMED_TRANSIENT_PHASE_F_TIMEOUT',
   overThirtySeconds: 'JSON_SCHEMA_FULL_CONFIRMED_SLOW',
@@ -244,7 +245,7 @@ function validateMinimalPreflight() {
   if (!validator({ success: true }) || validator({ success: false }) || validator({ success: true, extra: true })) {
     throw new Error('WP004B_JSON_SCHEMA_PROBE_PREFLIGHT_FAILED');
   }
-  const request = buildWp004bJsonSchemaCapabilityRequest();
+  const request = buildWp004bJsonSchemaCapabilityRequest({ maxTokens: G1_MAX_TOKENS });
   const serialized = JSON.stringify(request);
   if (request.response_format.type !== 'json_schema'
     || request.response_format.json_schema !== WP004B_MINIMAL_JSON_SCHEMA
