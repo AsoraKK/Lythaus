@@ -352,11 +352,13 @@ function candidateCallCost(candidate, kind, inputTokens = 3000) {
   return { estimatedCostUsd, estimatedNeurons };
 }
 
+function recordOf(row) { return row?.record ?? row ?? {}; }
+
 function economics(observerCandidate, judgeCandidate, observerRows, judgeRows) {
-  const observedObserverCost = median(observerRows.filter((row) => row.candidate === observerCandidate?.candidate).map((row) => row.record.estimatedCostUsd)) ?? candidateCallCost(observerCandidate, 'OBSERVER').estimatedCostUsd;
-  const observedJudgeCost = median(judgeRows.filter((row) => row.candidate === judgeCandidate?.candidate && row.stage === 'J3_HOLDOUT').map((row) => row.record.estimatedCostUsd)) ?? candidateCallCost(judgeCandidate, 'JUDGE').estimatedCostUsd;
-  const observerNeurons = median(observerRows.filter((row) => row.candidate === observerCandidate?.candidate).map((row) => row.record.estimatedNeurons)) ?? candidateCallCost(observerCandidate, 'OBSERVER').estimatedNeurons;
-  const judgeNeurons = median(judgeRows.filter((row) => row.candidate === judgeCandidate?.candidate && row.stage === 'J3_HOLDOUT').map((row) => row.record.estimatedNeurons)) ?? candidateCallCost(judgeCandidate, 'JUDGE').estimatedNeurons;
+  const observedObserverCost = median(observerRows.filter((row) => row.candidate === observerCandidate?.candidate).map((row) => recordOf(row).estimatedCostUsd)) ?? candidateCallCost(observerCandidate, 'OBSERVER').estimatedCostUsd;
+  const observedJudgeCost = median(judgeRows.filter((row) => row.candidate === judgeCandidate?.candidate && row.stage === 'J3_HOLDOUT').map((row) => recordOf(row).estimatedCostUsd)) ?? candidateCallCost(judgeCandidate, 'JUDGE').estimatedCostUsd;
+  const observerNeurons = median(observerRows.filter((row) => row.candidate === observerCandidate?.candidate).map((row) => recordOf(row).estimatedNeurons)) ?? candidateCallCost(observerCandidate, 'OBSERVER').estimatedNeurons;
+  const judgeNeurons = median(judgeRows.filter((row) => row.candidate === judgeCandidate?.candidate && row.stage === 'J3_HOLDOUT').map((row) => recordOf(row).estimatedNeurons)) ?? candidateCallCost(judgeCandidate, 'JUDGE').estimatedNeurons;
   const scenarios = [0.05, 0.10, 0.20].map((escalationRate) => ({
     escalationRate,
     costPerAnalysisUsd: observedObserverCost + (escalationRate * observedJudgeCost),
@@ -371,13 +373,15 @@ function economics(observerCandidate, judgeCandidate, observerRows, judgeRows) {
 function latency(offline, observerRows, judgeRows, observerCandidate, judgeCandidate) {
   const observer = observerRows.filter((row) => row.candidate === observerCandidate?.candidate);
   const judge = judgeRows.filter((row) => row.candidate === judgeCandidate?.candidate && row.stage === 'J3_HOLDOUT');
+  const observerRecords = observer.map(recordOf);
+  const judgeRecords = judge.map(recordOf);
   const compiler = offline.compilerLatenciesMs;
   const gate = offline.gateLatenciesMs;
-  const fastP50 = (median(compiler) ?? 0) + (median(gate) ?? 0) + (median(observer.map((row) => row.record.latencyMs)) ?? 0);
-  const fastMax = (compiler.length ? Math.max(...compiler) : 0) + (gate.length ? Math.max(...gate) : 0) + (observer.length ? Math.max(...observer.map((row) => row.record.latencyMs)) : 0);
-  const escalationP50 = fastP50 + (median(judge.map((row) => row.record.latencyMs)) ?? 0);
-  const escalationMax = fastMax + (judge.length ? Math.max(...judge.map((row) => row.record.latencyMs)) : 0);
-  return { compilerP50Ms: median(compiler), compilerMaxMs: compiler.length ? Math.max(...compiler) : null, gateP50Ms: median(gate), gateMaxMs: gate.length ? Math.max(...gate) : null, observerP50Ms: median(observer.map((row) => row.record.latencyMs)), observerMaxMs: observer.length ? Math.max(...observer.map((row) => row.record.latencyMs)) : null, judgeEscalationP50Ms: median(judge.map((row) => row.record.latencyMs)), judgeEscalationMaxMs: judge.length ? Math.max(...judge.map((row) => row.record.latencyMs)) : null, fastPathP50Ms: fastP50, fastPathMaxMs: fastMax, escalationPathP50Ms: escalationP50, escalationPathMaxMs: escalationMax, timeouts: [...observerRows, ...judgeRows].filter((row) => row.record.transportErrorCategory === 'TIMEOUT').length };
+  const fastP50 = (median(compiler) ?? 0) + (median(gate) ?? 0) + (median(observerRecords.map((record) => record.latencyMs)) ?? 0);
+  const fastMax = (compiler.length ? Math.max(...compiler) : 0) + (gate.length ? Math.max(...gate) : 0) + (observerRecords.length ? Math.max(...observerRecords.map((record) => record.latencyMs)) : 0);
+  const escalationP50 = fastP50 + (median(judgeRecords.map((record) => record.latencyMs)) ?? 0);
+  const escalationMax = fastMax + (judgeRecords.length ? Math.max(...judgeRecords.map((record) => record.latencyMs)) : 0);
+  return { compilerP50Ms: median(compiler), compilerMaxMs: compiler.length ? Math.max(...compiler) : null, gateP50Ms: median(gate), gateMaxMs: gate.length ? Math.max(...gate) : null, observerP50Ms: median(observerRecords.map((record) => record.latencyMs)), observerMaxMs: observerRecords.length ? Math.max(...observerRecords.map((record) => record.latencyMs)) : null, judgeEscalationP50Ms: median(judgeRecords.map((record) => record.latencyMs)), judgeEscalationMaxMs: judgeRecords.length ? Math.max(...judgeRecords.map((record) => record.latencyMs)) : null, fastPathP50Ms: fastP50, fastPathMaxMs: fastMax, escalationPathP50Ms: escalationP50, escalationPathMaxMs: escalationMax, timeouts: [...observerRows, ...judgeRows].filter((row) => recordOf(row).transportErrorCategory === 'TIMEOUT').length };
 }
 
 async function main() {
