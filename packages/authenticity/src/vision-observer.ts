@@ -229,6 +229,18 @@ export const VISION_NORMALIZATION_FAILURE_CODES = [
 ] as const;
 export type VisionNormalizationFailureCode = (typeof VISION_NORMALIZATION_FAILURE_CODES)[number];
 
+export const VISION_ADAPTER_FAILURE_CLASSES = [
+  'PROVIDER_ENVELOPE_UNSUPPORTED',
+  'CONTENT_FIELD_SHAPE_UNSUPPORTED',
+  'CONTENT_JSON_EXTRACTION_UNSUPPORTED',
+  'MODEL_OUTPUT_CONTRACT_FAILURE',
+  'FINISH_REASON_FAILURE',
+  'TOOL_CALL_FAILURE',
+  'CANONICAL_SCHEMA_FAILURE',
+  'UNKNOWN',
+] as const;
+export type VisionAdapterFailureClass = (typeof VISION_ADAPTER_FAILURE_CLASSES)[number];
+
 export interface VisionResponseDiagnostics {
   transportSucceeded: boolean;
   providerResultType: VisionProviderResultType;
@@ -236,6 +248,15 @@ export interface VisionResponseDiagnostics {
   answerPresent: boolean;
   answerType: string | null;
   answerLength: number | null;
+  messageContentLength?: number | null;
+  responseEnvelopeClassification?: 'DIRECT' | 'RESPONSE_OBJECT' | 'CHAT_COMPLETION' | 'UNKNOWN';
+  choicesPresent?: boolean;
+  choiceCount?: number | null;
+  messagePresent?: boolean;
+  messageContentType?: string | null;
+  messageContentBlockTypes?: readonly string[];
+  finishReason?: string | null;
+  toolCallCount?: number | null;
   reasoningFieldPresent: boolean;
   reasoningFieldType: string | null;
   answerJsonParseable: boolean | null;
@@ -506,7 +527,12 @@ function responseDiagnosticsFor(value: unknown, transportSucceeded: boolean): Vi
   const answerPresent = object && Object.prototype.hasOwnProperty.call(value, 'answer');
   const reasoningFieldPresent = object && Object.prototype.hasOwnProperty.call(value, 'reasoning');
   const answer = answerPresent ? value.answer : undefined;
-  return {
+  const choices = object && Array.isArray(value.choices) ? value.choices : null;
+  const firstChoice = choices && choices.length > 0 && isRecord(choices[0]) ? choices[0] : null;
+  const message = firstChoice && isRecord(firstChoice.message) ? firstChoice.message : null;
+  const messageContent = message && Object.prototype.hasOwnProperty.call(message, 'content') ? message.content : undefined;
+  const toolCalls = message && Array.isArray(message.tool_calls) ? message.tool_calls : object && Array.isArray(value.tool_calls) ? value.tool_calls : null;
+  const diagnostics: VisionResponseDiagnostics = {
     transportSucceeded,
     providerResultType: providerResultType(value),
     providerTopLevelKeys: object ? safeProviderKeys(value) : [],
@@ -522,6 +548,19 @@ function responseDiagnosticsFor(value: unknown, transportSucceeded: boolean): Vi
     observationCount: null,
     normalizationFailureCode: null,
   };
+  if (choices || message) {
+    diagnostics.responseEnvelopeClassification = 'CHAT_COMPLETION';
+    diagnostics.choicesPresent = Boolean(object && Object.prototype.hasOwnProperty.call(value, 'choices'));
+    diagnostics.choiceCount = choices ? Math.min(choices.length, 1000) : null;
+    diagnostics.messagePresent = Boolean(message);
+    diagnostics.messageContentType = message && Object.prototype.hasOwnProperty.call(message, 'content') ? runtimeType(messageContent) : null;
+    diagnostics.messageContentBlockTypes = message && Array.isArray(messageContent)
+      ? messageContent.map((block) => isRecord(block) && typeof block.type === 'string' ? block.type.slice(0, 64) : 'UNKNOWN').slice(0, 32)
+      : [];
+    diagnostics.finishReason = firstChoice && Object.prototype.hasOwnProperty.call(firstChoice, 'finish_reason') && typeof firstChoice.finish_reason === 'string' ? firstChoice.finish_reason.slice(0, 64) : null;
+    diagnostics.toolCallCount = toolCalls ? Math.min(toolCalls.length, 1000) : null;
+  }
+  return diagnostics;
 }
 
 function withParsedDiagnostics(diagnostics: VisionResponseDiagnostics, parsed: unknown): VisionResponseDiagnostics {
@@ -561,13 +600,41 @@ function normalizeObservationList(observations: unknown[], diagnostics: VisionRe
   return { observations, diagnostics: withCount };
 }
 
-function textFieldFromModelResponse(value: unknown): { key: string; value: string } | null {
+function textFromContent(value: unknown, diagnostics: VisionResponseDiagnostics): string | null {
+  if (typeof value === 'string') return value;
+  if (!Array.isArray(value)) return null;
+  const blocks: string[] = [];
+  for (const block of value.slice(0, 32)) {
+    if (!isRecord(block) || block.type !== 'text' || typeof block.text !== 'string') return null;
+    blocks.push(block.text.slice(0, 12000));
+  }
+  if (blocks.length === 0) return null;
+  diagnostics.messageContentLength = blocks.reduce((sum, item) => sum + item.length, 0);
+  return blocks.join('\n');
+}
+
+function textFieldFromModelResponse(value: unknown, diagnostics: VisionResponseDiagnostics): { key: string; value: string } | null {
   if (typeof value === 'string') return { key: 'value', value };
   if (!isRecord(value)) return null;
+  if (value.object === 'chat.completion' || Object.prototype.hasOwnProperty.call(value, 'choices')) {
+    diagnostics.responseEnvelopeClassification = 'CHAT_COMPLETION';
+    const choices = value.choices;
+    if (!Array.isArray(choices) || choices.length !== 1 || !isRecord(choices[0])) return null;
+    const choice = choices[0];
+    if (choice.finish_reason !== undefined && choice.finish_reason !== 'stop') return null;
+    const message = isRecord(choice.message) ? choice.message : null;
+    if (!message || (Array.isArray(message.tool_calls) && message.tool_calls.length > 0)) return null;
+    const content = message && Object.prototype.hasOwnProperty.call(message, 'content') ? textFromContent(message.content, diagnostics) : null;
+    return content === null ? null : { key: 'message.content', value: content };
+  }
   for (const key of ['response', 'output_text', 'answer', 'caption', 'description', 'text']) {
     if (typeof value[key] === 'string') return { key, value: value[key] as string };
+    if (isRecord(value[key])) {
+      const nested = textFieldFromModelResponse(value[key], diagnostics);
+      if (nested) return { key: `${key}.${nested.key}`, value: nested.value };
+    }
   }
-  if (isRecord(value.result)) return textFieldFromModelResponse(value.result);
+  if (isRecord(value.result)) return textFieldFromModelResponse(value.result, diagnostics);
   if (typeof value.result === 'string') return { key: 'result', value: value.result };
   return null;
 }
@@ -641,14 +708,18 @@ function normalizeTaskOutput(value: unknown, request: VisionObserverRequest, tra
       diagnostics,
     };
   }
-  const textField = textFieldFromModelResponse(value);
+  const textField = textFieldFromModelResponse(value, diagnostics);
   if (request.task === 'query') {
     const hasAnswer = isRecord(value) && Object.prototype.hasOwnProperty.call(value, 'answer');
     const hasLegacyResponse = isRecord(value) && Object.prototype.hasOwnProperty.call(value, 'response');
-    if (!hasAnswer && !hasLegacyResponse) {
+    if (!hasAnswer && !hasLegacyResponse && !textField) {
       return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'ANSWER_MISSING') };
     }
-    const answer = hasAnswer ? value.answer : value.response;
+    const answer = hasAnswer && typeof value.answer === 'string'
+      ? value.answer
+      : hasLegacyResponse && typeof value.response === 'string'
+      ? value.response
+      : textField?.value;
     if (typeof answer !== 'string') {
       return { observations: null, diagnostics: withNormalizationFailure(diagnostics, 'ANSWER_NOT_STRING') };
     }
@@ -866,6 +937,15 @@ function errorCategoryFromNormalizationFailure(code: VisionNormalizationFailureC
   return 'MALFORMED_RESPONSE';
 }
 
+export function classifyVisionAdapterFailure(code: VisionNormalizationFailureCode | null): VisionAdapterFailureClass {
+  if (code === null) return 'UNKNOWN';
+  if (['ANSWER_MISSING', 'UNKNOWN_RESPONSE_SHAPE', 'PARSED_NOT_OBJECT', 'OBSERVATIONS_MISSING', 'OBSERVATIONS_NOT_ARRAY'].includes(code)) return 'PROVIDER_ENVELOPE_UNSUPPORTED';
+  if (['ANSWER_NOT_STRING'].includes(code)) return 'CONTENT_FIELD_SHAPE_UNSUPPORTED';
+  if (['ANSWER_NOT_JSON'].includes(code)) return 'CONTENT_JSON_EXTRACTION_UNSUPPORTED';
+  if (['OBSERVATION_NOT_OBJECT', 'CATEGORY_MISSING', 'CATEGORY_MISMATCH', 'APPLICABLE_MISSING', 'APPLICABLE_INVALID', 'STATUS_MISSING', 'STATUS_INVALID', 'APPLICABILITY_STATUS_MISMATCH', 'OBSERVATION_TEXT_MISSING', 'OCCLUSION_INVALID', 'REGIONS_INVALID', 'CONFIDENCE_INVALID', 'LIMITATIONS_INVALID', 'OBSERVATIONS_EMPTY', 'OBSERVATIONS_TOO_MANY'].includes(code)) return 'CANONICAL_SCHEMA_FAILURE';
+  return 'UNKNOWN';
+}
+
 function transportDiagnosticsFrom(error: unknown): VisionObserverTransportDiagnostics {
   if (!(error instanceof CloudflareRestError)) return {};
   return {
@@ -953,6 +1033,7 @@ export function createCloudflareVisionObserverRest(options: {
   transport: CloudflareRestTransport;
   model?: string;
   maxImageBytes?: number;
+  timeoutMs?: number;
   payloadBuilder?: VisionObserverPayloadBuilder;
 }): VisionObserver & { isLive: true } {
   const model = options.model ?? CLOUDFLARE_VISION_OBSERVER_MODEL;
@@ -960,7 +1041,7 @@ export function createCloudflareVisionObserverRest(options: {
     model,
     provider: 'cloudflare-workers-ai-rest',
     maxImageBytes: options.maxImageBytes,
-    timeoutMs: 0,
+    timeoutMs: options.timeoutMs,
     payloadBuilder: options.payloadBuilder,
     run: async (selectedModel, payload) => {
       const result = await options.transport.run({ kind: 'VISION_OBSERVER', model: selectedModel, payload });
@@ -1122,5 +1203,5 @@ export function createCloudflareVisionObserverRestFromEnvironment(options: {
     maxRequests: options.maxRequests,
     timeoutMs: options.timeoutMs,
   });
-  return createCloudflareVisionObserverRest({ transport, model: options.model });
+  return createCloudflareVisionObserverRest({ transport, model: options.model, timeoutMs: options.timeoutMs });
 }
