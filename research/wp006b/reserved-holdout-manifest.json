@@ -38,17 +38,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -59,7 +59,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_210215.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_210215"
     },
     {
       "sampleId": "CAMERA_20190727_210238",
@@ -94,17 +98,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -115,7 +119,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_210238.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_210238"
     },
     {
       "sampleId": "CAMERA_20190727_210348",
@@ -149,17 +157,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -170,7 +178,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_210348.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_210348"
     },
     {
       "sampleId": "CAMERA_20190727_210410",
@@ -205,17 +217,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -226,7 +238,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_210410.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_210410"
     },
     {
       "sampleId": "CAMERA_20190727_211026",
@@ -261,17 +277,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -282,7 +298,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_211026.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_211026"
     },
     {
       "sampleId": "CAMERA_20190727_211827",
@@ -316,17 +336,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -337,7 +357,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_211827.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_211827"
     },
     {
       "sampleId": "CAMERA_20190727_211836",
@@ -372,17 +396,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -393,7 +417,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_211836.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_211836"
     },
     {
       "sampleId": "CAMERA_20190727_212036",
@@ -428,17 +456,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -449,7 +477,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212036.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212036"
     },
     {
       "sampleId": "CAMERA_20190727_212040",
@@ -482,17 +514,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -503,7 +535,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212040.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212040"
     },
     {
       "sampleId": "CAMERA_20190727_212128",
@@ -537,17 +573,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -558,7 +594,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212128.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212128"
     },
     {
       "sampleId": "CAMERA_20190727_212232",
@@ -593,17 +633,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -614,7 +654,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212232.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212232"
     },
     {
       "sampleId": "CAMERA_20190727_212237",
@@ -650,17 +694,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -671,7 +715,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212237.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212237"
     },
     {
       "sampleId": "CAMERA_20190727_212413",
@@ -706,17 +754,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -727,7 +775,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212413.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212413"
     },
     {
       "sampleId": "CAMERA_20190727_212554",
@@ -762,17 +814,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -783,7 +835,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212554.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212554"
     },
     {
       "sampleId": "CAMERA_20190727_212557",
@@ -817,17 +873,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -838,7 +894,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212557.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212557"
     },
     {
       "sampleId": "CAMERA_20190727_212723",
@@ -873,17 +933,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -894,7 +954,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212723.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212723"
     },
     {
       "sampleId": "CAMERA_20190727_213455",
@@ -928,17 +992,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -949,7 +1013,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_213455.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_213455"
     },
     {
       "sampleId": "CAMERA_20190727_213458",
@@ -982,17 +1050,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1003,7 +1071,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_213458.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_213458"
     },
     {
       "sampleId": "CAMERA_20190727_213503",
@@ -1038,17 +1110,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1059,7 +1131,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_213503.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_213503"
     },
     {
       "sampleId": "CAMERA_20190727_213508",
@@ -1094,17 +1170,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1115,7 +1191,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_213508.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_213508"
     },
     {
       "sampleId": "CAMERA_20190728_104229",
@@ -1150,17 +1230,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1171,7 +1251,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190728_104229.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190728_104229"
     },
     {
       "sampleId": "CAMERA_20190801_142721",
@@ -1206,17 +1290,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1227,7 +1311,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190801_142721.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190801_142721"
     },
     {
       "sampleId": "CAMERA_20190901_103851",
@@ -1262,17 +1350,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1283,7 +1371,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_103851.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_103851"
     },
     {
       "sampleId": "CAMERA_20190901_104834",
@@ -1318,17 +1410,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1339,7 +1431,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_104834.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_104834"
     },
     {
       "sampleId": "CAMERA_20190901_105352",
@@ -1374,17 +1470,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1395,7 +1491,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_105352.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_105352"
     },
     {
       "sampleId": "CAMERA_20190901_105841",
@@ -1430,17 +1530,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1451,7 +1551,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_105841.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_105841"
     },
     {
       "sampleId": "CAMERA_20190901_105929",
@@ -1485,17 +1589,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1506,7 +1610,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_105929.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_105929"
     },
     {
       "sampleId": "CAMERA_20190901_110048",
@@ -1541,17 +1649,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1562,7 +1670,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_110048.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_110048"
     },
     {
       "sampleId": "CAMERA_20191013_110023",
@@ -1597,17 +1709,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1618,7 +1730,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20191013_110023.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20191013_110023"
     },
     {
       "sampleId": "CAMERA_20191013_110026",
@@ -1653,17 +1769,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1674,7 +1790,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20191013_110026.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20191013_110026"
     },
     {
       "sampleId": "CAMERA_20191013_110028",
@@ -1709,17 +1829,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1730,7 +1850,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20191013_110028.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20191013_110028"
     },
     {
       "sampleId": "CAMERA_20191129_163202",
@@ -1765,17 +1889,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1786,7 +1910,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20191129_163202.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20191129_163202"
     },
     {
       "sampleId": "CAMERA_20210527_144058",
@@ -6752,17 +6880,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -6773,7 +6901,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_e97040410dfef6b7.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_e97040410dfef6b7"
     },
     {
       "sampleId": "SCREENSHOT_20251105_073307_2d8d2888",
@@ -10610,7 +10742,8 @@
     "reservedCameraFamilies": 122,
     "reservedSyntheticFamilies": 9,
     "reservedHardNegativeFamilies": 61,
-    "reservedMixedOriginFamilies": 0
+    "reservedMixedOriginFamilies": 0,
+    "ef2DeviceHoldoutLineageAttestedFamilies": 33
   },
   "holdoutBoundaries": {
     "deviceHoldoutFamilies": [

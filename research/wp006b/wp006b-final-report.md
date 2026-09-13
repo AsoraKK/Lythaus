@@ -8,6 +8,8 @@
 
 `RECOMMENDATION_CONFIDENCE = HIGH` for the bounded data-foundation decision; specialist performance, commercial detector readiness, unseen-generator generalization, and the human-FPR target remain unresolved because no specialist inference was run.
 
+`EF2_DATA_READINESS = READY_FOR_BOUNDED_FEASIBILITY` after applying the owner batch camera-lineage attestation to the 32 active camera families and 33 complete device-holdout families. This authorizes bounded EF2 feasibility preparation only; it does not establish EF2 directional validity.
+
 The owner-controlled pool is now large enough to establish a bounded active benchmark and substantial untouched future holdouts. The benchmark uses independent origin axes, exact-hash duplicate exclusion, conservative pHash isolation, three known camera device families, and eight deterministic conventional partial-edit descendants. It does not claim detector performance.
 
 ## Scope and safety
@@ -104,7 +106,7 @@ Rights are kept separate from truth. Training and distillation remain disabled b
 
 ## Truth axes
 
-The canonical benchmark has no binary REAL/FAKE field. Camera samples carry owner-confirmed physical-camera acquisition; synthetic samples carry owner-confirmed synthetic depicted content; hard negatives are explicitly typed, with screenshot-heavy coverage and legacy digital-art/UI examples. Native/export status, synthetic generator lineage, and possible post-processing remain separately represented as UNKNOWN when not established.
+The canonical benchmark has no binary REAL/FAKE field. Camera samples carry owner-confirmed physical-camera acquisition, owner-confirmed no known editing, owner-confirmed no screen recapture, and owner-confirmed no synthetic depicted content under the batch attestation. Native/export byte status and native-original availability remain separately represented as UNKNOWN; EXIF remains corroboration only. Synthetic generator lineage and other post-processing remain UNKNOWN when not established.
 
 A mixed-origin record may still carry both physical camera acquisition and synthetic depicted content as TRUE. No axis is derived as the complement of another.
 
@@ -125,9 +127,12 @@ A mixed-origin record may still carry both physical camera acquisition and synth
 
 The active benchmark meets the count-based revised thresholds for limited calibration; hard-negative subtype diversity remains weak and limits generalization claims: camera >=20 (32), synthetic >=12 (20), diverse hard-negative families >=12 (20), and exact-mask partial edits >=8 (8). This is sufficient for limited specialist calibration only; it is not statistically sufficient for commercial accuracy or human-FPR claims.
 
+`EF2_DATA_READINESS = READY_FOR_BOUNDED_FEASIBILITY`: 32 active families across two Samsung device families and 33 complete LGE LM-G710 holdout families. The owner states the LGE photos are from an old LG smartphone. Source-family and device-holdout boundaries remain intact. No EF2 specialist has been run.
+
 ## Owner actions required
 
-- Confirm active camera technical lineage in batch: native original vs export, known edits, screen recapture, and synthetic depicted content.
+- No camera-lineage confirmation remains required for the selected EF2 scope; it is resolved by `WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1` with `OWNER_KNOWN_EXCEPTIONS = NONE`.
+- Native/export byte lineage and native-original availability remain `UNKNOWN` rather than guessed.
 - Provide generator family/model/version for active synthetic families where known; UNKNOWN is valid.
 - Resolve the small pHash<=2 probable-near groups if those samples will later be split across distinct experiments.
 
@@ -135,7 +140,7 @@ No further permission question is required for the supplied pool.
 
 ## Next experiment
 
-`NEXT_EXPERIMENT = WP006C — EF2 camera-acquisition enrollment and device-holdout feasibility on the active owner-controlled camera slice`
+`NEXT_EXPERIMENT = WP006C — EF2 camera-acquisition enrollment and device-holdout feasibility on the active owner-controlled camera slice` (recommended after WP006B review/merge; not started here).
 
 This is selected because the pool has three known device families and one complete device holdout, while synthetic generator diversity is currently unknown and AI partial edits are absent. Do not infer EF2 validity until that experiment is blinded and calibrated.
 
@@ -157,6 +162,8 @@ This is selected because the pool has three known device families and one comple
 - `benchmark-splits.json` — predeclared source-family/device boundaries.
 - `benchmark-fingerprint.json` — deterministic membership, truth, rights, split, and pool-boundary fingerprint.
 - `owner-confirmation-template.json` — minimal technical-lineage questions only.
+- `ef2-owner-batch-attestation.json` — owner-supplied batch lineage statement and the exact 65-family application scope.
+- `ef2-data-readiness.json` — EF2-specific bounded-feasibility readiness and limitations.
 - `partial-edit-plan.json` — deterministic EF5 derivative plan; generated media remains external.
 - `video-future-inventory.json` — hash-only image-excluded video inventory.
 

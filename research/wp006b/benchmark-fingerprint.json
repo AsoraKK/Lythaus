@@ -2,7 +2,7 @@
   "schemaVersion": "lythaus-wp006b-benchmark-fingerprint-v1",
   "benchmarkVersion": "lythaus-forensic-microbench-v0",
   "fingerprintAlgorithm": "SHA-256(stableStringify(canonicalInput))",
-  "fingerprintSha256": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645",
+  "fingerprintSha256": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
   "canonicalInput": {
     "manifestVersion": "lythaus-forensic-microbench-v0",
     "samples": [
@@ -14,17 +14,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -39,17 +39,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -64,17 +64,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -89,17 +89,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -114,17 +114,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -139,17 +139,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -164,17 +164,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -189,17 +189,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -214,17 +214,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -239,17 +239,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -264,17 +264,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -289,17 +289,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -314,17 +314,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -339,17 +339,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -364,17 +364,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -389,17 +389,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -414,17 +414,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -439,17 +439,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -464,17 +464,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -489,17 +489,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -514,17 +514,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -539,17 +539,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -564,17 +564,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -589,17 +589,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -614,17 +614,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -639,17 +639,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -664,17 +664,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -689,17 +689,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -714,17 +714,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "CALIBRATION",
@@ -739,17 +739,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "EVALUATION",
@@ -764,17 +764,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "EVALUATION",
@@ -789,17 +789,17 @@
         "mask": null,
         "truthAxes": {
           "physicalCameraAcquisition": "TRUE",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
           "digitalCapture": "FALSE",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "FALSE"
         },
         "truthConfidence": {
           "physicalCameraAcquisition": "OWNER_CONFIRMED",
-          "syntheticDepictedContent": "UNKNOWN",
-          "localManipulation": "UNKNOWN",
+          "syntheticDepictedContent": "OWNER_CONFIRMED",
+          "localManipulation": "OWNER_CONFIRMED",
           "digitalCapture": "OWNER_CONFIRMED",
-          "screenRecapture": "UNKNOWN"
+          "screenRecapture": "OWNER_CONFIRMED"
         },
         "hardNegativeType": null,
         "split": "EVALUATION",

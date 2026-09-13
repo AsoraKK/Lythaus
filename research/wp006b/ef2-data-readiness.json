@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "lythaus-wp006b-ef2-data-readiness-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "readinessDate": "2026-09-13",
+  "benchmarkCommit": "3dc22f117d1106b570251b80286bb9bb18a7bbe4",
+  "EF2_DATA_READINESS": "READY_FOR_BOUNDED_FEASIBILITY",
+  "attestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1",
+  "activeFamilies": 32,
+  "deviceHoldoutFamilies": 33,
+  "deviceFamilies": {
+    "active": [
+      "samsung Galaxy A56 5G",
+      "samsung SM-A526B"
+    ],
+    "holdout": [
+      "LGE LM-G710"
+    ]
+  },
+  "ownerAttestedLineage": {
+    "nativeStatus": "UNKNOWN",
+    "knownEdited": "NO",
+    "screenRecapture": "NO",
+    "syntheticDepictedContent": "NO",
+    "nativeOriginalAvailable": "UNKNOWN"
+  },
+  "prerequisites": {
+    "ownerBatchAttestationApplied": true,
+    "sourceFamilyLeakage": "PASS",
+    "deviceHoldoutLeakage": "PASS",
+    "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+    "specialistInferenceRun": false
+  },
+  "boundedUse": "EF2 pixel-domain feasibility and enrollment/device-holdout preparation only.",
+  "deferredClaims": [
+    "EF2_DIRECTIONAL_VALIDATION",
+    "NATIVE_BYTE_ORIGINALITY",
+    "UNSEEN_DEVICE_GENERALIZATION",
+    "COMMERCIAL_ACCURACY",
+    "HUMAN_FALSE_POSITIVE_RATE"
+  ],
+  "nextStep": "WP006C may be prepared only after WP006B PR review and merge; WP006C is not started by this artifact."
+}

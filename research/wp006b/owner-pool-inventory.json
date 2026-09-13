@@ -85,17 +85,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -106,7 +106,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAM_001.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAM_001"
     },
     {
       "sampleId": "CAMERA_20190727_210215",
@@ -140,17 +144,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -161,7 +165,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_210215.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_210215"
     },
     {
       "sampleId": "CAMERA_20190727_210238",
@@ -196,17 +204,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -217,7 +225,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_210238.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_210238"
     },
     {
       "sampleId": "CAMERA_20190727_210348",
@@ -251,17 +263,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -272,7 +284,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_210348.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_210348"
     },
     {
       "sampleId": "CAMERA_20190727_210410",
@@ -307,17 +323,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -328,7 +344,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_210410.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_210410"
     },
     {
       "sampleId": "CAMERA_20190727_211026",
@@ -363,17 +383,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -384,7 +404,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_211026.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_211026"
     },
     {
       "sampleId": "CAMERA_20190727_211827",
@@ -418,17 +442,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -439,7 +463,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_211827.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_211827"
     },
     {
       "sampleId": "CAMERA_20190727_211836",
@@ -474,17 +502,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -495,7 +523,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_211836.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_211836"
     },
     {
       "sampleId": "CAMERA_20190727_212036",
@@ -530,17 +562,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -551,7 +583,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212036.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212036"
     },
     {
       "sampleId": "CAMERA_20190727_212040",
@@ -584,17 +620,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -605,7 +641,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212040.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212040"
     },
     {
       "sampleId": "CAMERA_20190727_212128",
@@ -639,17 +679,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -660,7 +700,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212128.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212128"
     },
     {
       "sampleId": "CAMERA_20190727_212232",
@@ -695,17 +739,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -716,7 +760,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212232.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212232"
     },
     {
       "sampleId": "CAMERA_20190727_212237",
@@ -752,17 +800,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -773,7 +821,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212237.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212237"
     },
     {
       "sampleId": "CAMERA_20190727_212413",
@@ -808,17 +860,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -829,7 +881,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212413.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212413"
     },
     {
       "sampleId": "CAMERA_20190727_212554",
@@ -864,17 +920,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -885,7 +941,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212554.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212554"
     },
     {
       "sampleId": "CAMERA_20190727_212557",
@@ -919,17 +979,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -940,7 +1000,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212557.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212557"
     },
     {
       "sampleId": "CAMERA_20190727_212723",
@@ -975,17 +1039,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -996,7 +1060,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_212723.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_212723"
     },
     {
       "sampleId": "CAMERA_20190727_213455",
@@ -1030,17 +1098,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1051,7 +1119,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_213455.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_213455"
     },
     {
       "sampleId": "CAMERA_20190727_213458",
@@ -1084,17 +1156,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1105,7 +1177,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_213458.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_213458"
     },
     {
       "sampleId": "CAMERA_20190727_213503",
@@ -1140,17 +1216,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1161,7 +1237,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_213503.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_213503"
     },
     {
       "sampleId": "CAMERA_20190727_213508",
@@ -1196,17 +1276,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1217,7 +1297,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190727_213508.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190727_213508"
     },
     {
       "sampleId": "CAMERA_20190728_104229",
@@ -1252,17 +1336,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1273,7 +1357,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190728_104229.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190728_104229"
     },
     {
       "sampleId": "CAMERA_20190801_142721",
@@ -1308,17 +1396,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1329,7 +1417,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190801_142721.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190801_142721"
     },
     {
       "sampleId": "CAMERA_20190901_103851",
@@ -1364,17 +1456,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1385,7 +1477,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_103851.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_103851"
     },
     {
       "sampleId": "CAMERA_20190901_104834",
@@ -1420,17 +1516,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1441,7 +1537,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_104834.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_104834"
     },
     {
       "sampleId": "CAMERA_20190901_105352",
@@ -1476,17 +1576,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1497,7 +1597,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_105352.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_105352"
     },
     {
       "sampleId": "CAMERA_20190901_105841",
@@ -1532,17 +1636,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1553,7 +1657,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_105841.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_105841"
     },
     {
       "sampleId": "CAMERA_20190901_105929",
@@ -1587,17 +1695,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1608,7 +1716,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_105929.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_105929"
     },
     {
       "sampleId": "CAMERA_20190901_110048",
@@ -1643,17 +1755,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1664,7 +1776,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20190901_110048.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20190901_110048"
     },
     {
       "sampleId": "CAMERA_20191013_110023",
@@ -1699,17 +1815,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1720,7 +1836,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20191013_110023.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20191013_110023"
     },
     {
       "sampleId": "CAMERA_20191013_110026",
@@ -1755,17 +1875,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1776,7 +1896,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20191013_110026.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20191013_110026"
     },
     {
       "sampleId": "CAMERA_20191013_110028",
@@ -1811,17 +1935,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1832,7 +1956,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20191013_110028.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20191013_110028"
     },
     {
       "sampleId": "CAMERA_20191129_163202",
@@ -1867,17 +1995,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -1888,7 +2016,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20191129_163202.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20191129_163202"
     },
     {
       "sampleId": "CAMERA_20210527_091257",
@@ -1923,17 +2055,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -1944,7 +2076,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_091257.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_091257"
     },
     {
       "sampleId": "CAMERA_20210527_091317",
@@ -1979,17 +2115,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2000,7 +2136,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_091317.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_091317"
     },
     {
       "sampleId": "CAMERA_20210527_104722",
@@ -2034,17 +2174,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2055,7 +2195,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_104722.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_104722"
     },
     {
       "sampleId": "CAMERA_20210527_104800",
@@ -2089,17 +2233,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2110,7 +2254,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_104800.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_104800"
     },
     {
       "sampleId": "CAMERA_20210527_104834",
@@ -2144,17 +2292,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2165,7 +2313,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_104834.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_104834"
     },
     {
       "sampleId": "CAMERA_20210527_120226",
@@ -2199,17 +2351,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2220,7 +2372,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_120226.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120226"
     },
     {
       "sampleId": "CAMERA_20210527_120228",
@@ -2254,17 +2410,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2275,7 +2431,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_120228.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120228"
     },
     {
       "sampleId": "CAMERA_20210527_120234",
@@ -2310,17 +2470,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2331,7 +2491,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_120234.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120234"
     },
     {
       "sampleId": "CAMERA_20210527_120236",
@@ -2365,17 +2529,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2386,7 +2550,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_120236.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120236"
     },
     {
       "sampleId": "CAMERA_20210527_120237",
@@ -2420,17 +2588,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2441,7 +2609,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_120237.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120237"
     },
     {
       "sampleId": "CAMERA_20210527_144008",
@@ -2475,17 +2647,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2496,7 +2668,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_144008.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144008"
     },
     {
       "sampleId": "CAMERA_20210527_144011",
@@ -2531,17 +2707,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2552,7 +2728,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_144011.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 22,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144011"
     },
     {
       "sampleId": "CAMERA_20210527_144014",
@@ -2587,17 +2767,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2608,7 +2788,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_144014.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144014"
     },
     {
       "sampleId": "CAMERA_20210527_144019",
@@ -2643,17 +2827,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2664,7 +2848,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_144019.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144019"
     },
     {
       "sampleId": "CAMERA_20210527_144046",
@@ -2698,17 +2886,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2719,7 +2907,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_144046.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144046"
     },
     {
       "sampleId": "CAMERA_20210527_144054",
@@ -2751,17 +2943,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung SM-A526B",
@@ -2772,7 +2964,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20210527_144054.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144054"
     },
     {
       "sampleId": "CAMERA_20210527_144058",
@@ -19283,17 +19479,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19304,7 +19500,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20251009_162038.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251009_162038"
     },
     {
       "sampleId": "CAMERA_20251219_113126",
@@ -19340,17 +19540,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19361,7 +19561,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20251219_113126.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251219_113126"
     },
     {
       "sampleId": "CAMERA_20251226_173231",
@@ -19397,17 +19601,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19418,7 +19622,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20251226_173231.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251226_173231"
     },
     {
       "sampleId": "CAMERA_20251226_173415",
@@ -19453,17 +19661,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19474,7 +19682,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20251226_173415.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251226_173415"
     },
     {
       "sampleId": "CAMERA_20251226_173420",
@@ -19510,17 +19722,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19531,7 +19743,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20251226_173420.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251226_173420"
     },
     {
       "sampleId": "CAMERA_20251231_130552",
@@ -19567,17 +19783,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19588,7 +19804,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20251231_130552.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251231_130552"
     },
     {
       "sampleId": "CAMERA_20260105_202251",
@@ -19624,17 +19844,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19645,7 +19865,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260105_202251.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260105_202251"
     },
     {
       "sampleId": "CAMERA_20260203_123405",
@@ -19681,17 +19905,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19702,7 +19926,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260203_123405.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 18,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260203_123405"
     },
     {
       "sampleId": "CAMERA_20260214_161934",
@@ -19738,17 +19966,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19759,7 +19987,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260214_161934.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260214_161934"
     },
     {
       "sampleId": "CAMERA_20260222_154932",
@@ -19793,17 +20025,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19814,7 +20046,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260222_154932.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 16,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260222_154932"
     },
     {
       "sampleId": "CAMERA_20260227_163207",
@@ -19849,17 +20085,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19870,7 +20106,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260227_163207.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 14,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260227_163207"
     },
     {
       "sampleId": "CAMERA_20260228_122831",
@@ -19906,17 +20146,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19927,7 +20167,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260228_122831.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260228_122831"
     },
     {
       "sampleId": "CAMERA_20260313_060829",
@@ -19962,17 +20206,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -19983,7 +20227,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260313_060829.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 8,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260313_060829"
     },
     {
       "sampleId": "CAMERA_20260313_060845",
@@ -20017,17 +20265,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -20038,7 +20286,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260313_060845.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 8,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260313_060845"
     },
     {
       "sampleId": "CAMERA_20260317_073114",
@@ -20074,17 +20326,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "samsung Galaxy A56 5G",
@@ -20095,7 +20347,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_20260317_073114.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260317_073114"
     },
     {
       "sampleId": "CAMERA_20260320_064920",
@@ -25638,17 +25894,17 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
       "hardNegativeType": null,
       "cameraDeviceFamily": "LGE LM-G710",
@@ -25659,7 +25915,11 @@
       "logicalFileReference": "external-owner-seed/wp004a-observer-v0/originals/camera/CAMERA_e97040410dfef6b7.jpg",
       "duplicateOfSampleId": null,
       "nearestPerceptualDistance": 20,
-      "nearDuplicateGroupId": null
+      "nearDuplicateGroupId": null,
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
+      "truthBasis": "OWNER_CONFIRMED",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_e97040410dfef6b7"
     },
     {
       "sampleId": "HN_001",

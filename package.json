@@ -75,6 +75,7 @@
     "authenticity:wp004b-live-calibration": "node --experimental-strip-types scripts/authenticity/wp004b-judge-calibration.mjs",
     "authenticity:wp005a-tournament": "node --experimental-strip-types scripts/authenticity/wp005a-architecture-tournament.mjs",
     "authenticity:wp005b-architecture-lock": "node --experimental-strip-types scripts/authenticity/wp005b-architecture-lock.mjs",
+    "authenticity:wp006b-apply-ef2-batch-attestation": "node scripts/authenticity/wp006b-apply-ef2-owner-batch-attestation.mjs",
     "authenticity:wp004b-full-b1-json-schema": "node --experimental-strip-types scripts/authenticity/wp004b-full-b1-json-schema-confirmation.mjs",
     "authenticity:wp004b-json-schema-b2-b3": "node --experimental-strip-types scripts/authenticity/wp004b-json-schema-b2-b3-completion.mjs",
     "authenticity:neutral-png": "node scripts/authenticity/create-neutral-png.mjs",

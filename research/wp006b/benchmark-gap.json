@@ -50,7 +50,9 @@
     "activeCameraDeviceFamilies": 2,
     "activeGeneratorFamilies": 0,
     "generatorHoldoutFamilies": 0,
-    "calibrationReadyFamilies": 29
+    "calibrationReadyFamilies": 29,
+    "ef2ActiveLineageAttestedFamilies": 32,
+    "ef2DeviceHoldoutLineageAttestedFamilies": 33
   },
   "reservedFutureHoldout": {
     "reservedCameraFamilies": 122,
@@ -66,7 +68,7 @@
   },
   "technicalGaps": {
     "generatorHoldout": "GENERATOR_HOLDOUT_NOT_READY",
-    "cameraTechnicalLineage": "OWNER_BATCH_CONFIRMATION_RECOMMENDED_BEFORE_EF2_SCORING",
+    "cameraTechnicalLineage": "OWNER_BATCH_ATTESTATION_APPLIED; NATIVE_BYTE_LINEAGE_REMAINS_UNKNOWN",
     "aiPartialEdits": "AI_INPAINTING_SLICE_NOT_READY",
     "broadPHashPairs": 708
   },
@@ -114,5 +116,7 @@
       "CAM_008"
     ]
   },
-  "readiness": "READY_FOR_LIMITED_SPECIALIST_CALIBRATION"
+  "readiness": "READY_FOR_LIMITED_SPECIALIST_CALIBRATION",
+  "ef2DataReadiness": "READY_FOR_BOUNDED_FEASIBILITY",
+  "ef2ReadinessArtifact": "research/wp006b/ef2-data-readiness.json"
 }

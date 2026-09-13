@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "lythaus-wp006b-ef2-owner-lineage-review-v1",
+  "schemaVersion": "lythaus-wp006b-ef2-owner-lineage-review-v2",
   "benchmarkVersion": "lythaus-forensic-microbench-v0",
   "reviewDate": "2026-09-13",
-  "benchmarkCommit": "6f4154af3781efcf4ed643f0c08caa2a51ddf5a1",
-  "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645",
+  "benchmarkCommit": "3dc22f117d1106b570251b80286bb9bb18a7bbe4",
+  "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
   "purpose": "Small owner-facing technical lineage confirmation set for EF2 active enrollment and the predeclared complete device holdout. This does not request rights permission and does not change benchmark truth.",
   "ownerAuthorization": "ALREADY_RECORDED; NO_PERMISSION_QUESTIONS",
   "responseRules": [
@@ -60,8 +60,8 @@
     }
   ],
   "summary": {
-    "EF2_ACTIVE_FAMILIES_REQUIRING_CONFIRMATION": 32,
-    "EF2_HOLDOUT_FAMILIES_REQUIRING_CONFIRMATION": 33,
+    "EF2_ACTIVE_FAMILIES_REQUIRING_CONFIRMATION": 0,
+    "EF2_HOLDOUT_FAMILIES_REQUIRING_CONFIRMATION": 0,
     "EF2_FAMILIES_ALREADY_SATISFACTORY": 0,
     "EF2_FAMILIES_EXCLUDED_BEFORE_OWNER_REVIEW": 0,
     "EF2_CAMERA_FAMILIES_OUT_OF_REVIEW_SCOPE": 394,
@@ -73,7 +73,8 @@
       "LGE LM-G710"
     ],
     "deterministicExclusionReason": "No selected active or complete-device-holdout camera family was excluded; all selected families pass the existing image, hash, and source-family checks.",
-    "outOfScopeReason": "Other camera families remain reserved or future expansion material and are not needed for this EF2 review."
+    "outOfScopeReason": "Other camera families remain reserved or future expansion material and are not needed for this EF2 review.",
+    "EF2_FAMILIES_RESOLVED_BY_BATCH_ATTESTATION": 65
   },
   "records": [
     {
@@ -86,20 +87,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_210215",
@@ -111,20 +114,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_210238",
@@ -136,20 +141,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_210348",
@@ -161,20 +168,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_210410",
@@ -186,20 +195,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_211026",
@@ -211,20 +222,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_211827",
@@ -236,20 +249,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_211836",
@@ -261,20 +276,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212036",
@@ -286,20 +303,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212040",
@@ -311,20 +330,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212128",
@@ -336,20 +357,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212232",
@@ -361,20 +384,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212237",
@@ -386,20 +411,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212413",
@@ -411,20 +438,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212554",
@@ -436,20 +465,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212557",
@@ -461,20 +492,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_212723",
@@ -486,20 +519,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_213455",
@@ -511,20 +546,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_213458",
@@ -536,20 +573,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_213503",
@@ -561,20 +600,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190727_213508",
@@ -586,20 +627,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190728_104229",
@@ -611,20 +654,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190801_142721",
@@ -636,20 +681,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190901_103851",
@@ -661,20 +708,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190901_104834",
@@ -686,20 +735,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190901_105352",
@@ -711,20 +762,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190901_105841",
@@ -736,20 +789,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190901_105929",
@@ -761,20 +816,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20190901_110048",
@@ -786,20 +843,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20191013_110023",
@@ -811,20 +870,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20191013_110026",
@@ -836,20 +897,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20191013_110028",
@@ -861,20 +924,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20191129_163202",
@@ -886,20 +951,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_091257",
@@ -911,20 +978,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_091317",
@@ -936,20 +1005,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_104722",
@@ -961,20 +1032,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_104800",
@@ -986,20 +1059,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_104834",
@@ -1011,20 +1086,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_120226",
@@ -1036,20 +1113,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_120228",
@@ -1061,20 +1140,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_120234",
@@ -1086,20 +1167,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_120236",
@@ -1111,20 +1194,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_120237",
@@ -1136,20 +1221,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_144008",
@@ -1161,20 +1248,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_144011",
@@ -1186,20 +1275,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_144014",
@@ -1211,20 +1302,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_144019",
@@ -1236,20 +1329,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_144046",
@@ -1261,20 +1356,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20210527_144054",
@@ -1286,20 +1383,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20251009_162038",
@@ -1311,20 +1410,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20251219_113126",
@@ -1336,20 +1437,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20251226_173231",
@@ -1361,20 +1464,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20251226_173415",
@@ -1386,20 +1491,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20251226_173420",
@@ -1411,20 +1518,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20251231_130552",
@@ -1436,20 +1545,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260105_202251",
@@ -1461,20 +1572,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260203_123405",
@@ -1486,20 +1599,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260214_161934",
@@ -1511,20 +1626,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260222_154932",
@@ -1536,20 +1653,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260227_163207",
@@ -1561,20 +1680,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260228_122831",
@@ -1586,20 +1707,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260313_060829",
@@ -1611,20 +1734,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260313_060845",
@@ -1636,20 +1761,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_20260317_073114",
@@ -1661,20 +1788,22 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     },
     {
       "sampleId": "CAMERA_e97040410dfef6b7",
@@ -1686,20 +1815,25 @@
       "currentLineageStatus": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
         "nativeStatus": "UNKNOWN",
-        "knownEdited": "UNKNOWN",
-        "screenRecapture": "UNKNOWN",
-        "syntheticDepictedContent": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
         "nativeOriginalAvailable": "UNKNOWN"
       },
-      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "reasonHumanConfirmationIsRequired": "NONE; resolved by the owner batch attestation. Native/export byte lineage remains UNKNOWN.",
       "answers": {
-        "nativeStatus": null,
-        "knownEdited": null,
-        "screenRecapture": null,
-        "syntheticDepictedContent": null,
-        "nativeOriginalAvailable": null
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "NO",
+        "screenRecapture": "NO",
+        "syntheticDepictedContent": "NO",
+        "nativeOriginalAvailable": "UNKNOWN"
       },
-      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+      "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+      "resolutionStatus": "RESOLVED_BY_OWNER_BATCH_ATTESTATION",
+      "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1"
     }
-  ]
+  ],
+  "ownerBatchAttestationId": "WP006B-OWNER-BATCH-CAMERA-LINEAGE-V1",
+  "manualReviewStatus": "NOT_REQUIRED_BATCH_ATTESTATION_APPLIED",
+  "OWNER_KNOWN_EXCEPTIONS": "NONE"
 }

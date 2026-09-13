@@ -47,20 +47,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -90,7 +90,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAM_001",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -139,20 +139,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -182,7 +182,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_091257",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -231,20 +231,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -274,7 +274,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_091317",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -322,20 +322,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -365,7 +365,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_104722",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -413,20 +413,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -456,7 +456,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_104800",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -504,20 +504,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -547,7 +547,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_104834",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -595,20 +595,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -638,7 +638,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120226",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -686,20 +686,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -729,7 +729,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120228",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -778,20 +778,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -821,7 +821,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120234",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -869,20 +869,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -912,7 +912,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120236",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -960,20 +960,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1003,7 +1003,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_120237",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1051,20 +1051,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1094,7 +1094,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144008",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1143,20 +1143,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1186,7 +1186,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144011",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1235,20 +1235,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1278,7 +1278,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144014",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1327,20 +1327,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1370,7 +1370,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144019",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1418,20 +1418,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1461,7 +1461,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144046",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1507,20 +1507,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1550,7 +1550,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20210527_144054",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1598,20 +1598,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1641,7 +1641,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251009_162038",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1691,20 +1691,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1734,7 +1734,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251219_113126",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1784,20 +1784,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1827,7 +1827,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251226_173231",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1876,20 +1876,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -1919,7 +1919,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251226_173415",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -1969,20 +1969,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2012,7 +2012,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251226_173420",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2062,20 +2062,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2105,7 +2105,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20251231_130552",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2155,20 +2155,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2198,7 +2198,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260105_202251",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2248,20 +2248,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2291,7 +2291,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260203_123405",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2341,20 +2341,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2384,7 +2384,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260214_161934",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2432,20 +2432,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2475,7 +2475,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260222_154932",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2523,20 +2523,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2566,7 +2566,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260227_163207",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2616,20 +2616,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2659,7 +2659,7 @@
       "evaluationEligible": false,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260228_122831",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2708,20 +2708,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2751,7 +2751,7 @@
       "evaluationEligible": true,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260313_060829",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2799,20 +2799,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2842,7 +2842,7 @@
       "evaluationEligible": true,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260313_060845",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -2892,20 +2892,20 @@
       },
       "truthAxes": {
         "physicalCameraAcquisition": "TRUE",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "FALSE",
+        "localManipulation": "FALSE",
         "digitalCapture": "FALSE",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "FALSE"
       },
       "truthConfidence": {
         "physicalCameraAcquisition": "OWNER_CONFIRMED",
-        "syntheticDepictedContent": "UNKNOWN",
-        "localManipulation": "UNKNOWN",
+        "syntheticDepictedContent": "OWNER_CONFIRMED",
+        "localManipulation": "OWNER_CONFIRMED",
         "digitalCapture": "OWNER_CONFIRMED",
-        "screenRecapture": "UNKNOWN"
+        "screenRecapture": "OWNER_CONFIRMED"
       },
-      "truthSynthetic": "UNKNOWN",
-      "truthLocalManipulation": "UNKNOWN",
+      "truthSynthetic": "FALSE",
+      "truthLocalManipulation": "FALSE",
       "truthBasis": "OWNER_CONFIRMED",
       "hardNegativeType": null,
       "generatorFamily": null,
@@ -2935,7 +2935,7 @@
       "evaluationEligible": true,
       "trainingEligible": false,
       "readiness": "READY_FOR_CALIBRATION",
-      "ownerConfirmationReference": "owner-confirmation-template.json#/authorizationScope/ownerControlledPool",
+      "ownerConfirmationReference": "ef2-owner-batch-attestation.json#/records/CAMERA_20260317_073114",
       "poolRole": "ACTIVE_MICROBENCH",
       "retentionClass": "MEDIA_EXTERNAL_CACHE",
       "privacyFlags": [
@@ -7513,6 +7513,9 @@
     "mixedOriginFamilies": 0,
     "partialEditFamilies": 8,
     "cameraDeviceFamilies": 3,
-    "generatorFamilies": 0
+    "generatorFamilies": 0,
+    "ef2ActiveLineageAttestedFamilies": 32,
+    "ef2DeviceHoldoutLineageAttestedFamilies": 33,
+    "ef2LineageAttestedFamilies": 65
   }
 }
