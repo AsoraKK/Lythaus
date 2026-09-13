@@ -3,10 +3,13 @@ import { assertEvidencePacket, assertSafetyIsolation, buildEvidencePacket, type 
 import type { EvidenceFamily, JsonValue } from './contracts.ts';
 import {
   assertJudgeRecommendation,
+  classifyJudgeAdapterFailure,
   createInsufficientEvidenceRecommendation,
+  JudgeNormalizationError,
   normalizeJudgeProviderResult,
   ORIGIN_HYPOTHESES,
   type JudgeRecommendation,
+  type JudgeResponseDiagnostics,
   type OriginHypothesis,
 } from './judge.ts';
 import {
@@ -677,7 +680,7 @@ export class Wp005aBudget {
   private reservedNeurons = 0;
   private reservedCostUsd = 0;
   private readonly limits: { maxRequests: number; maxEstimatedNeurons: number; maxEstimatedCostUsd: number };
-  constructor(limits = { maxRequests: WP005A_MAX_LIVE_WORKERS_AI_REQUESTS, maxEstimatedNeurons: WP005A_MAX_ESTIMATED_NEURONS, maxEstimatedCostUsd: WP005A_MAX_ESTIMATED_COST_USD }) { this.limits = limits; }
+  constructor(limits: { maxRequests: number; maxEstimatedNeurons: number; maxEstimatedCostUsd: number } = { maxRequests: WP005A_MAX_LIVE_WORKERS_AI_REQUESTS, maxEstimatedNeurons: WP005A_MAX_ESTIMATED_NEURONS, maxEstimatedCostUsd: WP005A_MAX_ESTIMATED_COST_USD }) { this.limits = limits; }
 
   reserve(candidate: Wp005aModelCandidate, input: { kind: 'JUDGE' | 'OBSERVER'; inputText?: string; imageBytes?: number; maxOutputTokens: number }): Wp005aBudgetReservation {
     const inputTokens = input.kind === 'JUDGE'
@@ -726,6 +729,10 @@ export interface Wp005aCallRecord {
   retryCount: 0;
   estimatedNeurons: number;
   estimatedCostUsd: number;
+  normalizationFailureCode?: string | null;
+  adapterFailureClass?: string | null;
+  responseDiagnostics?: JudgeResponseDiagnostics | null;
+  transportErrorCategory?: string | null;
 }
 
 export interface Wp005aJudgeAttempt {
@@ -762,10 +769,14 @@ export async function runWp005aJudgeAttempt(input: {
         transportCompleted: true, httpClass: httpClass(status), latencyMs: Date.now() - startedAt, envelopeClass: normalized.responseDiagnostics.providerEnvelopeClassification,
         canonicalSuccess: true, failureStage: null, usage: null, reasoningMode: 'DEFAULT_PROVIDER_REASONING', retryCount: 0,
         estimatedNeurons: reservation.estimatedNeurons, estimatedCostUsd: reservation.estimatedCostUsd,
+        normalizationFailureCode: null, adapterFailureClass: null, responseDiagnostics: normalized.responseDiagnostics,
+        transportErrorCategory: null,
       },
     };
   } catch (error) {
-    const responseDiagnostics = error && typeof error === 'object' && 'responseDiagnostics' in error ? (error as { responseDiagnostics?: { providerEnvelopeClassification?: string } }).responseDiagnostics : undefined;
+    const normalizationError = error instanceof JudgeNormalizationError ? error : null;
+    const responseDiagnostics = normalizationError?.responseDiagnostics;
+    const normalizationFailureCode = normalizationError?.code ?? null;
     const transportError = error instanceof CloudflareRestError;
     const errorStatus = transportError ? error.httpStatus : status;
     return {
@@ -775,6 +786,8 @@ export async function runWp005aJudgeAttempt(input: {
         transportCompleted: errorStatus !== null, httpClass: httpClass(errorStatus), latencyMs: Date.now() - startedAt, envelopeClass: responseDiagnostics?.providerEnvelopeClassification ?? null,
         canonicalSuccess: false, failureStage: transportError ? 'TRANSPORT' : 'NORMALIZATION', usage: null, reasoningMode: 'DEFAULT_PROVIDER_REASONING', retryCount: 0,
         estimatedNeurons: reservation.estimatedNeurons, estimatedCostUsd: reservation.estimatedCostUsd,
+        normalizationFailureCode, adapterFailureClass: classifyJudgeAdapterFailure(normalizationFailureCode), responseDiagnostics: responseDiagnostics ?? null,
+        transportErrorCategory: transportError ? error.category : null,
       },
     };
   }

@@ -134,7 +134,9 @@ export type JudgeProviderEnvelopeClassification =
   | 'DIRECT_CANONICAL'
   | 'RESPONSE_OBJECT'
   | 'RESPONSE_STRING'
+  | 'RESULT_OBJECT'
   | 'RESULT_STRING'
+  | 'OUTPUT_TEXT_OBJECT'
   | 'OUTPUT_TEXT_STRING'
   | 'CHAT_COMPLETION'
   | 'UNKNOWN';
@@ -173,6 +175,7 @@ export interface JudgeResponseDiagnostics {
   messageContentPresent: boolean;
   messageContentType: string | null;
   messageContentLength: number | null;
+  messageContentBlockTypes?: readonly string[];
   finishReasonPresent: boolean;
   finishReasonType: string | null;
   finishReasonValueCode: JudgeFinishReasonValueCode | null;
@@ -188,6 +191,18 @@ export interface JudgeResponseDiagnostics {
   normalizationFailureCode: JudgeNormalizationFailureCode | null;
   invalidPrimaryHypothesisToken?: string;
 }
+
+export const JUDGE_ADAPTER_FAILURE_CLASSES = [
+  'PROVIDER_ENVELOPE_UNSUPPORTED',
+  'CONTENT_FIELD_SHAPE_UNSUPPORTED',
+  'CONTENT_JSON_EXTRACTION_UNSUPPORTED',
+  'MODEL_OUTPUT_CONTRACT_FAILURE',
+  'FINISH_REASON_FAILURE',
+  'TOOL_CALL_FAILURE',
+  'CANONICAL_SCHEMA_FAILURE',
+  'UNKNOWN',
+] as const;
+export type JudgeAdapterFailureClass = (typeof JUDGE_ADAPTER_FAILURE_CLASSES)[number];
 
 export class JudgeNormalizationError extends Error {
   readonly code: JudgeNormalizationFailureCode;
@@ -358,6 +373,9 @@ function createJudgeResponseDiagnostics(value: unknown, transportSucceeded: bool
     messageContentPresent: Boolean(isRecord(message) && hasOwn(message, 'content')),
     messageContentType: isRecord(message) && hasOwn(message, 'content') ? valueType(message.content) : null,
     messageContentLength: isRecord(message) && typeof message.content === 'string' ? message.content.length : null,
+    messageContentBlockTypes: isRecord(message) && Array.isArray(message.content)
+      ? message.content.map((block) => isRecord(block) && typeof block.type === 'string' ? block.type.slice(0, 64) : 'UNKNOWN').slice(0, 32)
+      : [],
     finishReasonPresent: Boolean(isRecord(firstChoice) && hasOwn(firstChoice, 'finish_reason')),
     finishReasonType: isRecord(firstChoice) && hasOwn(firstChoice, 'finish_reason') ? valueType(firstChoice.finish_reason) : null,
     finishReasonValueCode: isRecord(firstChoice) && hasOwn(firstChoice, 'finish_reason') ? finishReasonValueCode(firstChoice.finish_reason) : null,
@@ -520,6 +538,21 @@ function parseJsonSurface(text: string, diagnostics: JudgeResponseDiagnostics, f
   }
 }
 
+function chatMessageContentText(value: unknown, diagnostics: JudgeResponseDiagnostics): string {
+  if (typeof value === 'string') return value;
+  if (!Array.isArray(value)) throw new JudgeNormalizationError('MESSAGE_CONTENT_TYPE_UNSUPPORTED');
+  const textBlocks: string[] = [];
+  for (const block of value.slice(0, 32)) {
+    if (!isRecord(block) || block.type !== 'text' || typeof block.text !== 'string') {
+      throw new JudgeNormalizationError('MESSAGE_CONTENT_TYPE_UNSUPPORTED');
+    }
+    textBlocks.push(block.text.slice(0, 12000));
+  }
+  if (textBlocks.length === 0) throw new JudgeNormalizationError('MESSAGE_CONTENT_MISSING');
+  diagnostics.messageContentLength = textBlocks.reduce((sum, item) => sum + item.length, 0);
+  return textBlocks.join('\n');
+}
+
 function unwrapJudgeChatCompletion(value: Record<string, unknown>, diagnostics: JudgeResponseDiagnostics): unknown {
   diagnostics.providerEnvelopeClassification = 'CHAT_COMPLETION';
   if (!hasOwn(value, 'choices')) throw new JudgeNormalizationError('CHOICES_MISSING');
@@ -535,6 +568,10 @@ function unwrapJudgeChatCompletion(value: Record<string, unknown>, diagnostics: 
   if (choice.finish_reason === 'length') throw new JudgeNormalizationError('FINISH_REASON_TRUNCATED');
   if (choice.finish_reason !== 'stop') throw new JudgeNormalizationError('FINISH_REASON_UNSUPPORTED');
 
+  if (hasOwn(value, 'tool_calls')) {
+    if (!Array.isArray(value.tool_calls) || value.tool_calls.length > 0) throw new JudgeNormalizationError('UNEXPECTED_TOOL_CALL');
+  }
+
   if (!hasOwn(choice, 'message')) throw new JudgeNormalizationError('MESSAGE_MISSING');
   if (!isRecord(choice.message)) throw new JudgeNormalizationError('MESSAGE_INVALID');
   const message = choice.message;
@@ -543,9 +580,23 @@ function unwrapJudgeChatCompletion(value: Record<string, unknown>, diagnostics: 
     if (!Array.isArray(message.tool_calls) || message.tool_calls.length > 0) throw new JudgeNormalizationError('UNEXPECTED_TOOL_CALL');
   }
   if (!hasOwn(message, 'content')) throw new JudgeNormalizationError('MESSAGE_CONTENT_MISSING');
-  if (typeof message.content !== 'string') throw new JudgeNormalizationError('MESSAGE_CONTENT_TYPE_UNSUPPORTED');
-  if (!message.content.trim()) throw new JudgeNormalizationError('MESSAGE_CONTENT_MISSING');
-  return parseJsonSurface(message.content, diagnostics, 'MESSAGE_CONTENT_NOT_JSON', 'message');
+  const content = chatMessageContentText(message.content, diagnostics);
+  if (!content.trim()) throw new JudgeNormalizationError('MESSAGE_CONTENT_MISSING');
+  return parseJsonSurface(content, diagnostics, 'MESSAGE_CONTENT_NOT_JSON', 'message');
+}
+
+function unwrapExplicitObject(value: Record<string, unknown>, diagnostics: JudgeResponseDiagnostics): unknown {
+  if (value.object === 'chat.completion' || hasOwn(value, 'choices')) return unwrapJudgeChatCompletion(value, diagnostics);
+  for (const key of ['response', 'result', 'output_text']) {
+    if (!hasOwn(value, key)) continue;
+    if (typeof value[key] === 'string') {
+      diagnostics.providerEnvelopeClassification = key === 'response' ? 'RESPONSE_STRING' : key === 'result' ? 'RESULT_STRING' : 'OUTPUT_TEXT_STRING';
+      return parseJsonSurface(value[key] as string, diagnostics);
+    }
+    if (isRecord(value[key])) return unwrapExplicitObject(value[key] as Record<string, unknown>, diagnostics);
+    throw new JudgeNormalizationError('RESPONSE_TYPE_UNSUPPORTED');
+  }
+  return value;
 }
 
 function unwrapJudgeProviderResult(value: unknown, diagnostics: JudgeResponseDiagnostics): unknown {
@@ -566,15 +617,23 @@ function unwrapJudgeProviderResult(value: unknown, diagnostics: JudgeResponseDia
     if (isRecord(value.response)) {
       diagnostics.providerEnvelopeClassification = 'RESPONSE_OBJECT';
       diagnostics.responseTopLevelKeys = safeObjectKeys(value.response);
-      return value.response;
+      return unwrapExplicitObject(value.response, diagnostics);
     }
     throw new JudgeNormalizationError('RESPONSE_TYPE_UNSUPPORTED');
   }
   for (const key of ['result', 'output_text']) {
     if (!hasOwn(value, key)) continue;
-    if (typeof value[key] !== 'string') throw new JudgeNormalizationError('RESPONSE_TYPE_UNSUPPORTED');
-    diagnostics.providerEnvelopeClassification = key === 'result' ? 'RESULT_STRING' : 'OUTPUT_TEXT_STRING';
-    return parseJsonSurface(value[key] as string, diagnostics);
+    if (typeof value[key] === 'string') {
+      diagnostics.providerEnvelopeClassification = key === 'result' ? 'RESULT_STRING' : 'OUTPUT_TEXT_STRING';
+      return parseJsonSurface(value[key] as string, diagnostics);
+    }
+    if (isRecord(value[key])) {
+      diagnostics.providerEnvelopeClassification = key === 'result' ? 'RESULT_OBJECT' : 'OUTPUT_TEXT_OBJECT';
+      if (key === 'result') diagnostics.resultType = 'object';
+      if (key === 'output_text') diagnostics.outputTextType = 'object';
+      return unwrapExplicitObject(value[key] as Record<string, unknown>, diagnostics);
+    }
+    throw new JudgeNormalizationError('RESPONSE_TYPE_UNSUPPORTED');
   }
   if (value.object === 'chat.completion' || hasOwn(value, 'choices')) return unwrapJudgeChatCompletion(value, diagnostics);
   throw new JudgeNormalizationError('RESPONSE_MISSING');
@@ -598,6 +657,18 @@ export function normalizeJudgeProviderResult(value: unknown, packet: EvidencePac
     }
     throw new JudgeNormalizationError(code, diagnostics);
   }
+}
+
+export function classifyJudgeAdapterFailure(code: JudgeNormalizationFailureCode | null): JudgeAdapterFailureClass {
+  if (code === null) return 'UNKNOWN';
+  if (['CHOICES_MISSING', 'CHOICES_TYPE_UNSUPPORTED', 'CHOICES_EMPTY', 'CHOICE_COUNT_INVALID', 'CHOICE_INVALID', 'MESSAGE_MISSING', 'MESSAGE_INVALID', 'MESSAGE_CONTENT_MISSING', 'RESPONSE_MISSING', 'RESPONSE_TYPE_UNSUPPORTED', 'RESPONSE_OBJECT_UNWRAP_FAILED', 'UNKNOWN_RESPONSE_SHAPE'].includes(code)) return 'PROVIDER_ENVELOPE_UNSUPPORTED';
+  if (['MESSAGE_CONTENT_TYPE_UNSUPPORTED'].includes(code)) return 'CONTENT_FIELD_SHAPE_UNSUPPORTED';
+  if (['RESPONSE_STRING_NOT_JSON', 'MESSAGE_CONTENT_NOT_JSON'].includes(code)) return 'CONTENT_JSON_EXTRACTION_UNSUPPORTED';
+  if (['FINISH_REASON_TRUNCATED', 'FINISH_REASON_UNSUPPORTED'].includes(code)) return 'FINISH_REASON_FAILURE';
+  if (code === 'UNEXPECTED_TOOL_CALL') return 'TOOL_CALL_FAILURE';
+  if (['SCHEMA_VERSION_INVALID', 'ALTERNATIVES_INVALID', 'SUPPORTING_EVIDENCE_INVALID', 'CONTRADICTORY_EVIDENCE_INVALID', 'MISSING_EVIDENCE_INVALID', 'UNCERTAINTY_INVALID', 'REQUIRES_REVIEW_INVALID', 'ADDITIONAL_TEST_INVALID', 'REASONED_RECHECK_INVALID', 'RATIONALE_INVALID'].includes(code)) return 'CANONICAL_SCHEMA_FAILURE';
+  if (['PRIMARY_HYPOTHESIS_INVALID', 'UNKNOWN_EVIDENCE_REFERENCE', 'FORBIDDEN_FIELD_PRESENT', 'ENFORCEMENT_AUTHORITY_INVALID'].includes(code)) return 'MODEL_OUTPUT_CONTRACT_FAILURE';
+  return 'UNKNOWN';
 }
 
 export function assertJudgeRecommendation(recommendation: JudgeRecommendation, packet: EvidencePacket): void {
