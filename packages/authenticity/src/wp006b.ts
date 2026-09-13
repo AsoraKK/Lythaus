@@ -4,10 +4,40 @@ export const WP006B_BENCHMARK_SCHEMA_VERSION = 'lythaus-forensic-microbench-v0' 
 export const WP006B_RIGHTS_SCHEMA_VERSION = 'lythaus-wp006b-benchmark-rights-v1' as const;
 export const WP006B_SPLITS_SCHEMA_VERSION = 'lythaus-wp006b-benchmark-splits-v1' as const;
 export const WP006B_FINGERPRINT_SCHEMA_VERSION = 'lythaus-wp006b-benchmark-fingerprint-v1' as const;
-export const WP006B_INVENTORY_SCHEMA_VERSION = 'lythaus-wp006b-owner-seed-inventory-v1' as const;
+export const WP006B_INVENTORY_SCHEMA_VERSION = 'lythaus-wp006b-owner-pool-inventory-v2' as const;
 
 export const WP006B_TRUTH_VALUES = ['TRUE', 'FALSE', 'UNKNOWN'] as const;
 export type Wp006bTruthValue = (typeof WP006B_TRUTH_VALUES)[number];
+
+export const WP006B_TRUTH_CONFIDENCE_VALUES = ['OWNER_CONFIRMED', 'METADATA_CORROBORATED', 'DERIVED_DETERMINISTICALLY', 'UNKNOWN'] as const;
+export type Wp006bTruthConfidence = (typeof WP006B_TRUTH_CONFIDENCE_VALUES)[number];
+
+export const WP006B_HARD_NEGATIVE_TYPES = [
+  'SCREENSHOT',
+  'UI_CAPTURE',
+  'DIGITAL_ART',
+  'CGI_OR_3D_RENDER',
+  'CHART',
+  'DIAGRAM',
+  'MEME',
+  'COMPOSITE',
+  'SCAN',
+  'HEAVILY_EDITED_PHOTO',
+  'TEXT_GRAPHIC',
+  'VECTOR_GRAPHIC',
+  'OTHER_DIGITAL_NON_AI',
+  'UNKNOWN',
+] as const;
+export type Wp006bHardNegativeType = (typeof WP006B_HARD_NEGATIVE_TYPES)[number];
+
+export const WP006B_POOL_ROLES = [
+  'ACTIVE_MICROBENCH',
+  'OWNER_RESERVED_FUTURE_HOLDOUT',
+  'FUTURE_EXPANSION_POOL',
+  'AMBIGUOUS_OR_EXCLUDED',
+  'VIDEO_FUTURE_POOL',
+] as const;
+export type Wp006bPoolRole = (typeof WP006B_POOL_ROLES)[number];
 
 export const WP006B_SPLIT_VALUES = [
   'CALIBRATION',
@@ -91,6 +121,14 @@ export interface Wp006bTruthAxes {
   screenRecapture: Wp006bTruthValue;
 }
 
+export interface Wp006bTruthConfidenceAxes {
+  physicalCameraAcquisition: Wp006bTruthConfidence;
+  syntheticDepictedContent: Wp006bTruthConfidence;
+  localManipulation: Wp006bTruthConfidence;
+  digitalCapture: Wp006bTruthConfidence;
+  screenRecapture: Wp006bTruthConfidence;
+}
+
 export interface Wp006bSafeMetadata {
   exifPresent: boolean;
   xmpPresent: boolean;
@@ -100,6 +138,9 @@ export interface Wp006bSafeMetadata {
   safeKeys: readonly string[];
   orientationTag: number | null;
   privacySensitiveMetadataFlags: readonly string[];
+  cameraMakePresent: boolean;
+  cameraModelPresent: boolean;
+  captureTimestampPresent: boolean;
 }
 
 export interface Wp006bSourceLineage {
@@ -128,6 +169,8 @@ export interface Wp006bRightsRecord {
   internalResearchRights: Wp006bRightsValue;
   commercialProductEvaluationRights: Wp006bRightsValue;
   redistributionRights: Wp006bRightsValue;
+  publicRedistributionRights: Wp006bRightsValue;
+  thirdPartyRedistributionRights: Wp006bRightsValue;
   readiness: Wp006bReadiness;
   reasonCodes: readonly string[];
 }
@@ -151,9 +194,11 @@ export interface Wp006bSampleRecord {
   mime: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/avif';
   safeMetadata: Wp006bSafeMetadata;
   truthAxes: Wp006bTruthAxes;
+  truthConfidence: Wp006bTruthConfidenceAxes;
   truthSynthetic: Wp006bTruthValue;
   truthLocalManipulation: Wp006bTruthValue;
   truthBasis: 'OWNER_CONFIRMATION_REQUIRED' | 'OWNER_CONFIRMED' | 'SOURCE_DOCUMENTED';
+  hardNegativeType: Wp006bHardNegativeType | null;
   generatorFamily: string | null;
   generatorModel: string | null;
   generatorVersion: string | null;
@@ -165,7 +210,7 @@ export interface Wp006bSampleRecord {
   evaluationGate: Wp006bEvaluationGate;
   trainingGate: Wp006bTrainingGate;
   distillationGate: Wp006bDistillationGate;
-  consentStatus: 'OWNER_CONFIRMATION_REQUIRED' | 'RELEASE_REQUIRED' | 'SOURCE_TERMS_RECORDED' | 'NOT_APPLICABLE';
+  consentStatus: 'OWNER_CONFIRMATION_REQUIRED' | 'OWNER_AUTHORIZED' | 'RELEASE_REQUIRED' | 'SOURCE_TERMS_RECORDED' | 'NOT_APPLICABLE';
   sourceLineage: Wp006bSourceLineage;
   parentSampleId: string | null;
   mask: Wp006bMaskLinkage | null;
@@ -178,6 +223,7 @@ export interface Wp006bSampleRecord {
   trainingEligible: boolean;
   readiness: Wp006bReadiness;
   ownerConfirmationReference: string;
+  poolRole: Wp006bPoolRole;
   retentionClass: 'MEDIA_EXTERNAL_CACHE' | 'DERIVED_MASK_EXTERNAL_CACHE' | 'MANIFEST_ONLY' | 'DELETE_AFTER_RUN';
   privacyFlags: readonly Wp006bPrivacyFlag[];
   privacyReview: 'PENDING_OWNER_REVIEW' | 'SENSITIVE_METADATA_FLAGGED' | 'CLEARED' | 'REJECTED';
@@ -239,6 +285,8 @@ const RIGHTS_FIELDS = [
   'internalResearchRights',
   'commercialProductEvaluationRights',
   'redistributionRights',
+  'publicRedistributionRights',
+  'thirdPartyRedistributionRights',
 ] as const;
 
 const FORBIDDEN_KEYS = [
@@ -308,9 +356,16 @@ function assertTruthAxes(value: unknown): asserts value is Wp006bTruthAxes {
   }
 }
 
+function assertTruthConfidence(value: unknown): asserts value is Wp006bTruthConfidenceAxes {
+  if (!isRecord(value)) throw new Error('wp006b_truth_confidence_invalid');
+  for (const key of ['physicalCameraAcquisition', 'syntheticDepictedContent', 'localManipulation', 'digitalCapture', 'screenRecapture']) {
+    if (!(WP006B_TRUTH_CONFIDENCE_VALUES as readonly string[]).includes(String(value[key]))) throw new Error(`wp006b_truth_confidence_invalid:${key}`);
+  }
+}
+
 function assertSafeMetadata(value: unknown): asserts value is Wp006bSafeMetadata {
   if (!isRecord(value)) throw new Error('wp006b_safe_metadata_invalid');
-  for (const key of ['exifPresent', 'xmpPresent', 'c2paPresent', 'encoderPresent', 'metadataAbsent']) {
+  for (const key of ['exifPresent', 'xmpPresent', 'c2paPresent', 'encoderPresent', 'metadataAbsent', 'cameraMakePresent', 'cameraModelPresent', 'captureTimestampPresent']) {
     if (typeof value[key] !== 'boolean') throw new Error(`wp006b_safe_metadata_boolean_invalid:${key}`);
   }
   if (!Array.isArray(value.safeKeys) || value.safeKeys.some((item) => typeof item !== 'string')) throw new Error('wp006b_safe_metadata_keys_invalid');
@@ -353,14 +408,18 @@ function assertSample(value: unknown): asserts value is Wp006bSampleRecord {
   if (!['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(String(value.mime))) throw new Error('wp006b_sample_mime_invalid');
   assertSafeMetadata(value.safeMetadata);
   assertTruthAxes(value.truthAxes);
+  assertTruthConfidence(value.truthConfidence);
   if (value.truthSynthetic !== value.truthAxes.syntheticDepictedContent || value.truthLocalManipulation !== value.truthAxes.localManipulation) throw new Error('wp006b_truth_alias_mismatch');
   if (!['OWNER_CONFIRMATION_REQUIRED', 'OWNER_CONFIRMED', 'SOURCE_DOCUMENTED'].includes(String(value.truthBasis))) throw new Error('wp006b_truth_basis_invalid');
+  if (value.hardNegativeType !== null && !(WP006B_HARD_NEGATIVE_TYPES as readonly string[]).includes(String(value.hardNegativeType))) throw new Error('wp006b_hard_negative_type_invalid');
+  if (value.candidateCategory === 'HARD_NEGATIVE_CANDIDATE' && value.hardNegativeType === null) throw new Error('wp006b_hard_negative_type_missing');
+  if (value.candidateCategory !== 'HARD_NEGATIVE_CANDIDATE' && value.hardNegativeType !== null) throw new Error('wp006b_hard_negative_type_unexpected');
   if (typeof value.licenceClassification !== 'string' || value.licenceClassification.trim().length === 0) throw new Error('wp006b_licence_classification_invalid');
   if (!['CLASS_A_COMMERCIAL_TRAINING', 'CLASS_B_EVALUATION_ONLY', 'CLASS_C_LYTHAUS_OWNED', 'MIXED_OR_UNCLEAR'].includes(String(value.rightsClass))) throw new Error('wp006b_rights_class_invalid');
   if (!(WP006B_EVALUATION_GATE_VALUES as readonly string[]).includes(String(value.evaluationGate))) throw new Error('wp006b_gate_invalid:evaluationGate');
   if (!(WP006B_TRAINING_GATE_VALUES as readonly string[]).includes(String(value.trainingGate))) throw new Error('wp006b_gate_invalid:trainingGate');
   if (!(WP006B_DISTILLATION_GATE_VALUES as readonly string[]).includes(String(value.distillationGate))) throw new Error('wp006b_gate_invalid:distillationGate');
-  if (!['OWNER_CONFIRMATION_REQUIRED', 'RELEASE_REQUIRED', 'SOURCE_TERMS_RECORDED', 'NOT_APPLICABLE'].includes(String(value.consentStatus))) throw new Error('wp006b_consent_status_invalid');
+  if (!['OWNER_CONFIRMATION_REQUIRED', 'OWNER_AUTHORIZED', 'RELEASE_REQUIRED', 'SOURCE_TERMS_RECORDED', 'NOT_APPLICABLE'].includes(String(value.consentStatus))) throw new Error('wp006b_consent_status_invalid');
   assertLineage(value.sourceLineage);
   if (value.sourceUrl !== null && typeof value.sourceUrl !== 'string') throw new Error('wp006b_source_url_invalid');
   if (value.parentSampleId !== value.sourceLineage.parentSampleId) throw new Error('wp006b_parent_alias_mismatch');
@@ -369,6 +428,8 @@ function assertSample(value: unknown): asserts value is Wp006bSampleRecord {
     if (!isRecord(mask) || typeof mask.maskReference !== 'string' || typeof mask.maskSha256 !== 'string' || !isRecord(mask.region)) throw new Error('wp006b_mask_invalid');
     assertRelativeReference(mask.maskReference, 'wp006b_mask_reference_invalid');
     assertHex(mask.maskSha256, 64, 'wp006b_mask_hash_invalid');
+    for (const key of ['x', 'y']) if (typeof mask.region[key] !== 'number' || !Number.isFinite(mask.region[key]) || mask.region[key] < 0) throw new Error(`wp006b_mask_region_invalid:${key}`);
+    for (const key of ['width', 'height']) if (typeof mask.region[key] !== 'number' || !Number.isFinite(mask.region[key]) || mask.region[key] <= 0) throw new Error(`wp006b_mask_region_invalid:${key}`);
   }
   if (value.maskPathOrId !== null && typeof value.maskPathOrId !== 'string') throw new Error('wp006b_mask_path_invalid');
   if (value.maskSha256 !== null) assertHex(value.maskSha256, 64, 'wp006b_mask_hash_alias_invalid');
@@ -377,6 +438,7 @@ function assertSample(value: unknown): asserts value is Wp006bSampleRecord {
   if (!(WP006B_SPLIT_VALUES as readonly string[]).includes(String(value.split))) throw new Error('wp006b_sample_split_invalid');
   for (const key of ['calibrationEligible', 'evaluationEligible', 'trainingEligible']) if (typeof value[key] !== 'boolean') throw new Error(`wp006b_sample_eligibility_invalid:${key}`);
   if (!(WP006B_READINESS_VALUES as readonly string[]).includes(String(value.readiness))) throw new Error('wp006b_sample_readiness_invalid');
+  if (!(WP006B_POOL_ROLES as readonly string[]).includes(String(value.poolRole))) throw new Error('wp006b_pool_role_invalid');
   if (!['MEDIA_EXTERNAL_CACHE', 'DERIVED_MASK_EXTERNAL_CACHE', 'MANIFEST_ONLY', 'DELETE_AFTER_RUN'].includes(String(value.retentionClass))) throw new Error('wp006b_retention_invalid');
   if (!Array.isArray(value.privacyFlags) || value.privacyFlags.some((item) => !(WP006B_PRIVACY_FLAG_VALUES as readonly string[]).includes(String(item)))) throw new Error('wp006b_privacy_flags_invalid');
   if (!['PENDING_OWNER_REVIEW', 'SENSITIVE_METADATA_FLAGGED', 'CLEARED', 'REJECTED'].includes(String(value.privacyReview))) throw new Error('wp006b_privacy_review_invalid');
@@ -506,6 +568,16 @@ function jsonTruthAxes(value: Wp006bTruthAxes): Record<string, JsonValue> {
   };
 }
 
+function jsonTruthConfidence(value: Wp006bTruthConfidenceAxes): Record<string, JsonValue> {
+  return {
+    physicalCameraAcquisition: value.physicalCameraAcquisition,
+    syntheticDepictedContent: value.syntheticDepictedContent,
+    localManipulation: value.localManipulation,
+    digitalCapture: value.digitalCapture,
+    screenRecapture: value.screenRecapture,
+  };
+}
+
 export function buildWp006bFingerprintInput(input: {
   manifest: Pick<Wp006bBenchmarkManifest, 'schemaVersion' | 'samples'>;
   rights: { records: readonly Wp006bRightsRecord[] };
@@ -517,8 +589,19 @@ export function buildWp006bFingerprintInput(input: {
       sampleId: sample.sampleId,
       sourceFamilyId: sample.sourceFamilyId,
       contentSha256: sample.contentSha256,
+      parentSampleId: sample.parentSampleId,
+      mask: sample.mask === null ? null : {
+        maskReference: sample.mask.maskReference,
+        maskSha256: sample.mask.maskSha256,
+        operation: sample.mask.operation,
+        parameters: sample.mask.parameters,
+        region: sample.mask.region,
+      },
       truthAxes: jsonTruthAxes(sample.truthAxes),
+      truthConfidence: jsonTruthConfidence(sample.truthConfidence),
+      hardNegativeType: sample.hardNegativeType,
       split: sample.split,
+      poolRole: sample.poolRole,
       rightsRecordId: sample.rightsRecordId,
     })).sort((left, right) => left.sampleId.localeCompare(right.sampleId)),
     rights: input.rights.records.map((record) => ({

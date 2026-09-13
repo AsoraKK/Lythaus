@@ -1,28 +1,118 @@
 {
+  "schemaVersion": "lythaus-wp006b-benchmark-gap-v2",
   "minimumResearchThresholds": {
-    "camera": 12,
-    "synthetic": 8,
-    "hardNegative": 6,
-    "partialEdit": 6
+    "camera": 20,
+    "synthetic": 12,
+    "hardNegative": 12,
+    "partialEdit": 8
+  },
+  "preferredActiveRanges": {
+    "camera": [
+      24,
+      40
+    ],
+    "synthetic": [
+      16,
+      24
+    ],
+    "hardNegative": [
+      16,
+      24
+    ],
+    "partialEdit": [
+      8,
+      12
+    ]
+  },
+  "fullPool": {
+    "ownerPoolFilesTotal": 735,
+    "ownerPoolImages": 710,
+    "ownerPoolVideos": 25,
+    "cameraFilesTotal": 459,
+    "syntheticFilesTotal": 33,
+    "hardNegativeFilesTotal": 218,
+    "mixedOriginFilesTotal": 0,
+    "unknownFilesTotal": 0,
+    "independentSourceFamilies": 706,
+    "independentCameraFamilies": 459,
+    "independentSyntheticFamilies": 31,
+    "independentHardNegativeFamilies": 216,
+    "mimeSignatureMismatchImages": 2
+  },
+  "activeMicrobench": {
+    "activeBenchmarkSourceFamilies": 72,
+    "activeBenchmarkSamples": 80,
+    "activeCameraFamilies": 32,
+    "activeSyntheticFamilies": 20,
+    "activeHardNegativeFamilies": 20,
+    "activeMixedOriginFamilies": 0,
+    "activePartialEditFamilies": 8,
+    "activeCameraDeviceFamilies": 2,
+    "activeGeneratorFamilies": 0,
+    "generatorHoldoutFamilies": 0,
+    "calibrationReadyFamilies": 29
+  },
+  "reservedFutureHoldout": {
+    "reservedCameraFamilies": 122,
+    "reservedSyntheticFamilies": 9,
+    "reservedHardNegativeFamilies": 61,
+    "reservedMixedOriginFamilies": 0
   },
   "shortfallBySlice": {
-    "camera": 4,
-    "synthetic": 2,
-    "hardNegative": 2,
-    "partialEdit": 6
-  },
-  "candidateFamiliesPresent": {
-    "camera": 8,
-    "synthetic": 6,
-    "hardNegative": 4,
+    "camera": 0,
+    "synthetic": 0,
+    "hardNegative": 0,
     "partialEdit": 0
   },
-  "ownerConfirmationRequiredFamilies": {
-    "camera": 8,
-    "synthetic": 6,
-    "hardNegative": 4,
-    "partialEdit": 0
+  "technicalGaps": {
+    "generatorHoldout": "GENERATOR_HOLDOUT_NOT_READY",
+    "cameraTechnicalLineage": "OWNER_BATCH_CONFIRMATION_RECOMMENDED_BEFORE_EF2_SCORING",
+    "aiPartialEdits": "AI_INPAINTING_SLICE_NOT_READY",
+    "broadPHashPairs": 708
   },
-  "unseenGeneratorHoldout": "NOT_READY",
-  "mixedOriginFamilies": 0
+  "historicalSeedReconciliation": {
+    "expected": [
+      "CAM_001",
+      "CAM_002",
+      "CAM_003",
+      "CAM_004",
+      "CAM_005",
+      "CAM_006",
+      "CAM_007",
+      "CAM_008",
+      "HN_001",
+      "HN_002",
+      "HN_003",
+      "HN_004",
+      "SYN_001",
+      "SYN_002",
+      "SYN_003",
+      "SYN_004",
+      "SYN_005",
+      "SYN_006"
+    ],
+    "present": [
+      "CAM_001",
+      "HN_001",
+      "HN_002",
+      "HN_003",
+      "HN_004",
+      "SYN_001",
+      "SYN_002",
+      "SYN_003",
+      "SYN_004",
+      "SYN_005",
+      "SYN_006"
+    ],
+    "missing": [
+      "CAM_002",
+      "CAM_003",
+      "CAM_004",
+      "CAM_005",
+      "CAM_006",
+      "CAM_007",
+      "CAM_008"
+    ]
+  },
+  "readiness": "READY_FOR_LIMITED_SPECIALIST_CALIBRATION"
 }

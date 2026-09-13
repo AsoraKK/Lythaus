@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "lythaus-wp006b-partial-edit-plan-v1",
+  "sourceDatasetId": "lythaus-owner-controlled-partial-edit-wp006b-v1",
+  "originalFilesModified": false,
+  "mediaCommittedToGit": false,
+  "specialistInferenceRun": false,
+  "purpose": "Eight deterministic conventional local-edit descendants for exact EF5 parent/mask linkage. This is not an AI-inpainting set and is not a specialist evaluation.",
+  "records": [
+    {
+      "parentSampleId": "CAM_001",
+      "parentContentSha256": "b84f31aece7276073b34020df4f4a6c7bc15fe5dc6e4b3f60886222b1ec35ba3",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+      "operation": "COPY_MOVE",
+      "editedSampleId": "EDIT_CAM_001_COPY_MOVE",
+      "split": "CALIBRATION"
+    },
+    {
+      "parentSampleId": "CAMERA_20210527_091257",
+      "parentContentSha256": "eaf8076f01748d97071dd437376cca58d28fe76d3670d8e470e57a0006f67c1b",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091257",
+      "operation": "LOCAL_BLUR",
+      "editedSampleId": "EDIT_CAMERA_20210527_091257_LOCAL_BLUR",
+      "split": "CALIBRATION"
+    },
+    {
+      "parentSampleId": "CAMERA_20210527_091317",
+      "parentContentSha256": "38b704391dc8e25d798b05950121475d6bce78a1a9d91f2b630239fb8c62240e",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091317",
+      "operation": "LOCAL_RESIZE",
+      "editedSampleId": "EDIT_CAMERA_20210527_091317_LOCAL_RESIZE",
+      "split": "CALIBRATION"
+    },
+    {
+      "parentSampleId": "CAMERA_20210527_104722",
+      "parentContentSha256": "72e37f9fe43119df80b83077a446b4e09a6cd330e1c60c16c5e0da40d79ec36e",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104722",
+      "operation": "SPLICE",
+      "editedSampleId": "EDIT_CAMERA_20210527_104722_SPLICE",
+      "split": "CALIBRATION"
+    },
+    {
+      "parentSampleId": "CAMERA_20210527_104800",
+      "parentContentSha256": "f83602c755e4c5037c6e4979cb5f35e8d3554ec343d3dfa442cd8d10c7a05bc7",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104800",
+      "operation": "REGION_REPLACEMENT",
+      "editedSampleId": "EDIT_CAMERA_20210527_104800_REGION_REPLACEMENT",
+      "split": "CALIBRATION"
+    },
+    {
+      "parentSampleId": "CAMERA_20210527_104834",
+      "parentContentSha256": "7575455b833ff1d866bdc94b850e71e794cd68654fb8aac0608bcce609a16c37",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104834",
+      "operation": "OBJECT_PASTE",
+      "editedSampleId": "EDIT_CAMERA_20210527_104834_OBJECT_PASTE",
+      "split": "CALIBRATION"
+    },
+    {
+      "parentSampleId": "CAMERA_20210527_120226",
+      "parentContentSha256": "2dca35178c84b38ad90a5828da5c5167e5e358eeafbc1b67687ec0a4304ae201",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120226",
+      "operation": "LOCAL_RESAMPLING",
+      "editedSampleId": "EDIT_CAMERA_20210527_120226_LOCAL_RESAMPLING",
+      "split": "CALIBRATION"
+    },
+    {
+      "parentSampleId": "CAMERA_20210527_120228",
+      "parentContentSha256": "f143a7e402d3a7ba7e5e0c10b18efbb76b5fac4d52f5e3931ab5c1abc54bcf41",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120228",
+      "operation": "COMPOSITE_INSERTION",
+      "editedSampleId": "EDIT_CAMERA_20210527_120228_COMPOSITE_INSERTION",
+      "split": "CALIBRATION"
+    }
+  ]
+}

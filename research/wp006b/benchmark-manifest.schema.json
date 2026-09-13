@@ -61,7 +61,7 @@
     "safeMetadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["exifPresent", "xmpPresent", "c2paPresent", "encoderPresent", "metadataAbsent", "safeKeys", "orientationTag", "privacySensitiveMetadataFlags"],
+      "required": ["exifPresent", "xmpPresent", "c2paPresent", "encoderPresent", "metadataAbsent", "safeKeys", "orientationTag", "privacySensitiveMetadataFlags", "cameraMakePresent", "cameraModelPresent", "captureTimestampPresent"],
       "properties": {
         "exifPresent": { "type": "boolean" },
         "xmpPresent": { "type": "boolean" },
@@ -70,7 +70,10 @@
         "metadataAbsent": { "type": "boolean" },
         "safeKeys": { "type": "array", "items": { "type": "string" } },
         "orientationTag": { "type": ["integer", "null"] },
-        "privacySensitiveMetadataFlags": { "type": "array", "items": { "type": "string" } }
+        "privacySensitiveMetadataFlags": { "type": "array", "items": { "type": "string" } },
+        "cameraMakePresent": { "type": "boolean" },
+        "cameraModelPresent": { "type": "boolean" },
+        "captureTimestampPresent": { "type": "boolean" }
       }
     },
     "sample": {
@@ -79,10 +82,10 @@
       "required": [
         "sampleId", "groupId", "sourceFamilyId", "ownerProvidedName", "candidateCategory", "origin", "transformation", "logicalFileReference", "sourceUrlOrAcquisitionId",
         "contentSha256", "perceptualHash", "perceptualHashAlgorithm", "byteSize", "width", "height", "mime",
-        "safeMetadata", "truthAxes", "truthSynthetic", "truthLocalManipulation", "truthBasis", "generatorFamily",
+        "safeMetadata", "truthAxes", "truthConfidence", "truthSynthetic", "truthLocalManipulation", "truthBasis", "hardNegativeType", "generatorFamily",
         "generatorModel", "generatorVersion", "cameraDeviceFamily", "sourceDatasetId", "sourceUrl", "licenceClassification", "rightsClass",
         "evaluationGate", "trainingGate", "distillationGate", "consentStatus", "sourceLineage", "parentSampleId", "mask", "maskPathOrId", "maskSha256", "rightsRecordId", "split", "calibrationEligible", "evaluationEligible",
-        "trainingEligible", "readiness", "ownerConfirmationReference", "retentionClass", "privacyReview",
+        "trainingEligible", "readiness", "ownerConfirmationReference", "poolRole", "retentionClass", "privacyReview",
         "privacyFlags", "duplicateOfSampleId", "nearestPerceptualDistance"
       ],
       "properties": {
@@ -104,9 +107,22 @@
         "mime": { "enum": ["image/jpeg", "image/png", "image/webp", "image/avif"] },
         "safeMetadata": { "$ref": "#/$defs/safeMetadata" },
         "truthAxes": { "$ref": "#/$defs/truthAxes" },
+        "truthConfidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["physicalCameraAcquisition", "syntheticDepictedContent", "localManipulation", "digitalCapture", "screenRecapture"],
+          "properties": {
+            "physicalCameraAcquisition": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] },
+            "syntheticDepictedContent": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] },
+            "localManipulation": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] },
+            "digitalCapture": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] },
+            "screenRecapture": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] }
+          }
+        },
         "truthSynthetic": { "enum": ["TRUE", "FALSE", "UNKNOWN"] },
         "truthLocalManipulation": { "enum": ["TRUE", "FALSE", "UNKNOWN"] },
         "truthBasis": { "enum": ["OWNER_CONFIRMATION_REQUIRED", "OWNER_CONFIRMED", "SOURCE_DOCUMENTED"] },
+        "hardNegativeType": { "type": ["string", "null"], "enum": ["SCREENSHOT", "UI_CAPTURE", "DIGITAL_ART", "CGI_OR_3D_RENDER", "CHART", "DIAGRAM", "MEME", "COMPOSITE", "SCAN", "HEAVILY_EDITED_PHOTO", "TEXT_GRAPHIC", "VECTOR_GRAPHIC", "OTHER_DIGITAL_NON_AI", "UNKNOWN", null] },
         "generatorFamily": { "type": ["string", "null"] },
         "generatorModel": { "type": ["string", "null"] },
         "generatorVersion": { "type": ["string", "null"] },
@@ -118,7 +134,7 @@
         "evaluationGate": { "enum": ["ALLOW", "DO_NOT_USE", "REVIEW_REQUIRED", "UNKNOWN"] },
         "trainingGate": { "enum": ["ALLOW", "DO_NOT_TRAIN", "REVIEW_REQUIRED", "UNKNOWN"] },
         "distillationGate": { "enum": ["ALLOW", "DO_NOT_DISTILL", "REVIEW_REQUIRED", "UNKNOWN"] },
-        "consentStatus": { "enum": ["OWNER_CONFIRMATION_REQUIRED", "RELEASE_REQUIRED", "SOURCE_TERMS_RECORDED", "NOT_APPLICABLE"] },
+        "consentStatus": { "enum": ["OWNER_CONFIRMATION_REQUIRED", "OWNER_AUTHORIZED", "RELEASE_REQUIRED", "SOURCE_TERMS_RECORDED", "NOT_APPLICABLE"] },
         "sourceLineage": {
           "type": "object",
           "additionalProperties": false,
@@ -161,6 +177,7 @@
         "trainingEligible": { "type": "boolean" },
         "readiness": { "enum": ["READY_FOR_CALIBRATION", "READY_FOR_EVALUATION_ONLY", "PROVENANCE_CONFIRMATION_REQUIRED", "RIGHTS_REVIEW_REQUIRED", "NOT_AVAILABLE", "REJECT"] },
         "ownerConfirmationReference": { "type": "string", "minLength": 1 },
+        "poolRole": { "enum": ["ACTIVE_MICROBENCH", "OWNER_RESERVED_FUTURE_HOLDOUT", "FUTURE_EXPANSION_POOL", "AMBIGUOUS_OR_EXCLUDED", "VIDEO_FUTURE_POOL"] },
         "retentionClass": { "enum": ["MEDIA_EXTERNAL_CACHE", "DERIVED_MASK_EXTERNAL_CACHE", "MANIFEST_ONLY", "DELETE_AFTER_RUN"] },
         "privacyFlags": { "type": "array", "uniqueItems": true, "items": { "enum": ["NONE", "PERSONAL_MEDIA", "BIOMETRIC_CONTENT", "GPS_PRESENT", "SERIAL_PRESENT", "PII_PRESENT", "OWNER_RESTRICTED"] } },
         "privacyReview": { "enum": ["PENDING_OWNER_REVIEW", "SENSITIVE_METADATA_FLAGGED", "CLEARED", "REJECTED"] },

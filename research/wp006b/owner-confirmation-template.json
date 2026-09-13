@@ -1,537 +1,954 @@
 {
-  "schemaVersion": "lythaus-wp006b-owner-confirmation-template-v1",
-  "purpose": "Human-only provenance and permission questions for the owner-supplied seed. Technical hashes, dimensions, MIME, and metadata were derived automatically and are intentionally not requested here.",
+  "schemaVersion": "lythaus-wp006b-owner-confirmation-template-v2",
+  "purpose": "Batch technical-lineage confirmation only. Blanket owner authorization is already recorded and is not repeated per image. Hashes, dimensions, MIME, and metadata markers were derived automatically and are not requested here.",
+  "authorizationScope": {
+    "ownerControlledPool": {
+      "sourceMediaRights": "CONFIRMED_OWNER_CONTROLLED",
+      "internalResearchRights": "AUTHORIZED",
+      "lythausProductResearchAndEvaluationRights": "AUTHORIZED",
+      "commercialProductDevelopmentEvaluation": "AUTHORIZED",
+      "publicRedistributionRights": "NOT_AUTHORIZED_UNLESS_SEPARATELY_GRANTED",
+      "thirdPartyRedistributionRights": "NOT_AUTHORIZED_UNLESS_SEPARATELY_GRANTED"
+    }
+  },
   "responseRules": [
-    "Answer only facts known from the source history; use UNKNOWN instead of guessing.",
+    "Answer only facts known from source history; use UNKNOWN instead of guessing.",
     "Do not provide GPS, addresses, account identifiers, camera serial numbers, or private filenames.",
-    "Internal research permission and commercial product-evaluation permission are separate answers."
+    "The authorization scope above is already YES; do not repeat permission questions for each source."
   ],
-  "collectionQuestion": "Are any supplied files exports, recompressions, crops, screenshots, or other descendants of another supplied file? If yes, list only the logical sample IDs; otherwise answer NO or UNKNOWN.",
+  "collectionQuestions": [
+    "Confirm whether the camera collection contains any known exports, edits, screenshots, or AI/synthetic depicted content.",
+    "Confirm whether synthetic files have one generator family or multiple families where known; UNKNOWN is acceptable.",
+    "Confirm any source-family relationships among the listed near-duplicate candidate groups."
+  ],
+  "historicalSeedReconciliation": {
+    "expected": [
+      "CAM_001",
+      "CAM_002",
+      "CAM_003",
+      "CAM_004",
+      "CAM_005",
+      "CAM_006",
+      "CAM_007",
+      "CAM_008",
+      "HN_001",
+      "HN_002",
+      "HN_003",
+      "HN_004",
+      "SYN_001",
+      "SYN_002",
+      "SYN_003",
+      "SYN_004",
+      "SYN_005",
+      "SYN_006"
+    ],
+    "present": [
+      "CAM_001",
+      "HN_001",
+      "HN_002",
+      "HN_003",
+      "HN_004",
+      "SYN_001",
+      "SYN_002",
+      "SYN_003",
+      "SYN_004",
+      "SYN_005",
+      "SYN_006"
+    ],
+    "missing": [
+      "CAM_002",
+      "CAM_003",
+      "CAM_004",
+      "CAM_005",
+      "CAM_006",
+      "CAM_007",
+      "CAM_008"
+    ]
+  },
+  "nearDuplicateReview": [],
   "samples": [
     {
       "sampleId": "CAM_001",
       "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "physicalCameraCaptureConfirmed",
         "nativeOriginalOrExport",
-        "cameraDeviceFamily",
         "knownEdits",
         "screenRecapture",
         "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
-        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
-        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
-        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
-        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
-        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "CAM_002",
+      "sampleId": "CAMERA_20210527_091257",
       "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "physicalCameraCaptureConfirmed",
         "nativeOriginalOrExport",
-        "cameraDeviceFamily",
         "knownEdits",
         "screenRecapture",
         "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
-        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
-        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
-        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
-        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
-        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "CAM_003",
+      "sampleId": "CAMERA_20210527_091317",
       "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "physicalCameraCaptureConfirmed",
         "nativeOriginalOrExport",
-        "cameraDeviceFamily",
         "knownEdits",
         "screenRecapture",
         "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
-        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
-        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
-        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
-        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
-        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "CAM_004",
+      "sampleId": "CAMERA_20210527_104722",
       "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "physicalCameraCaptureConfirmed",
         "nativeOriginalOrExport",
-        "cameraDeviceFamily",
         "knownEdits",
         "screenRecapture",
         "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
-        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
-        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
-        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
-        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
-        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "CAM_005",
+      "sampleId": "CAMERA_20210527_104800",
       "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "physicalCameraCaptureConfirmed",
         "nativeOriginalOrExport",
-        "cameraDeviceFamily",
         "knownEdits",
         "screenRecapture",
         "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
-        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
-        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
-        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
-        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
-        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "CAM_006",
+      "sampleId": "CAMERA_20210527_104834",
       "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "physicalCameraCaptureConfirmed",
         "nativeOriginalOrExport",
-        "cameraDeviceFamily",
         "knownEdits",
         "screenRecapture",
         "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
-        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
-        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
-        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
-        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
-        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "CAM_007",
+      "sampleId": "CAMERA_20210527_120226",
       "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "physicalCameraCaptureConfirmed",
         "nativeOriginalOrExport",
-        "cameraDeviceFamily",
         "knownEdits",
         "screenRecapture",
         "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
-        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
-        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
-        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
-        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
-        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "CAM_008",
+      "sampleId": "CAMERA_20210527_120228",
       "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "physicalCameraCaptureConfirmed",
         "nativeOriginalOrExport",
-        "cameraDeviceFamily",
         "knownEdits",
         "screenRecapture",
         "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
-        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
-        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
-        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
-        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
-        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "HN_001",
-      "candidateCategory": "HARD_NEGATIVE_CANDIDATE",
+      "sampleId": "CAMERA_20210527_120234",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "hardNegativeType",
-        "sourceLineageDescription",
-        "physicalCameraAcquisition",
-        "syntheticDepictedContent",
-        "digitalCapture",
+        "nativeOriginalOrExport",
+        "knownEdits",
         "screenRecapture",
-        "localManipulation",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Which explicit hard-negative type applies: CGI, 3D_RENDER, DIGITAL_ILLUSTRATION, SCREENSHOT, UI_CAPTURE, CHART, DIAGRAM, MEME_COMPOSITE, EDITED_GENUINE_PHOTO, SCAN, or OTHER?",
-        "Describe the source lineage in one short phrase: owner-created, licensed source, screenshot, export, or UNKNOWN.",
-        "Confirm physical camera acquisition, synthetic depicted content, digital capture, screen recapture, and local manipulation independently as YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "HN_002",
-      "candidateCategory": "HARD_NEGATIVE_CANDIDATE",
+      "sampleId": "CAMERA_20210527_120236",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "hardNegativeType",
-        "sourceLineageDescription",
-        "physicalCameraAcquisition",
-        "syntheticDepictedContent",
-        "digitalCapture",
+        "nativeOriginalOrExport",
+        "knownEdits",
         "screenRecapture",
-        "localManipulation",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Which explicit hard-negative type applies: CGI, 3D_RENDER, DIGITAL_ILLUSTRATION, SCREENSHOT, UI_CAPTURE, CHART, DIAGRAM, MEME_COMPOSITE, EDITED_GENUINE_PHOTO, SCAN, or OTHER?",
-        "Describe the source lineage in one short phrase: owner-created, licensed source, screenshot, export, or UNKNOWN.",
-        "Confirm physical camera acquisition, synthetic depicted content, digital capture, screen recapture, and local manipulation independently as YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "HN_003",
-      "candidateCategory": "HARD_NEGATIVE_CANDIDATE",
+      "sampleId": "CAMERA_20210527_120237",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "hardNegativeType",
-        "sourceLineageDescription",
-        "physicalCameraAcquisition",
-        "syntheticDepictedContent",
-        "digitalCapture",
+        "nativeOriginalOrExport",
+        "knownEdits",
         "screenRecapture",
-        "localManipulation",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Which explicit hard-negative type applies: CGI, 3D_RENDER, DIGITAL_ILLUSTRATION, SCREENSHOT, UI_CAPTURE, CHART, DIAGRAM, MEME_COMPOSITE, EDITED_GENUINE_PHOTO, SCAN, or OTHER?",
-        "Describe the source lineage in one short phrase: owner-created, licensed source, screenshot, export, or UNKNOWN.",
-        "Confirm physical camera acquisition, synthetic depicted content, digital capture, screen recapture, and local manipulation independently as YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
-      "sampleId": "HN_004",
-      "candidateCategory": "HARD_NEGATIVE_CANDIDATE",
+      "sampleId": "CAMERA_20210527_144008",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "hardNegativeType",
-        "sourceLineageDescription",
-        "physicalCameraAcquisition",
-        "syntheticDepictedContent",
-        "digitalCapture",
+        "nativeOriginalOrExport",
+        "knownEdits",
         "screenRecapture",
-        "localManipulation",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
       ],
       "questions": [
-        "Which explicit hard-negative type applies: CGI, 3D_RENDER, DIGITAL_ILLUSTRATION, SCREENSHOT, UI_CAPTURE, CHART, DIAGRAM, MEME_COMPOSITE, EDITED_GENUINE_PHOTO, SCAN, or OTHER?",
-        "Describe the source lineage in one short phrase: owner-created, licensed source, screenshot, export, or UNKNOWN.",
-        "Confirm physical camera acquisition, synthetic depicted content, digital capture, screen recapture, and local manipulation independently as YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20210527_144011",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20210527_144014",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20210527_144019",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20210527_144046",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20210527_144054",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20251009_162038",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20251219_113126",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20251226_173231",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20251226_173415",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20251226_173420",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20251231_130552",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260105_202251",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260203_123405",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260214_161934",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260222_154932",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260227_163207",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260228_122831",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260313_060829",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260313_060845",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
+      ]
+    },
+    {
+      "sampleId": "CAMERA_20260317_073114",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "nativeOriginalOrExport",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "cameraDeviceFamilyIfKnown"
+      ],
+      "questions": [
+        "Native original, export, or UNKNOWN?",
+        "Any known edit/export operation class?",
+        "Was a screen recapture involved?",
+        "Does the depicted content include synthetic/AI material?"
       ]
     },
     {
       "sampleId": "SYN_001",
       "candidateCategory": "SYNTHETIC_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "generatedByOwnerOrAuthorizedContributor",
         "generatorFamily",
         "generatorModel",
         "generatorVersion",
         "provider",
-        "promptReference",
-        "seed",
-        "generationDate",
-        "postProcessing",
-        "physicalCameraAcquisition",
-        "screenRecapture",
-        "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
       ],
       "questions": [
-        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
-        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
-        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
-        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
-        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
       ]
     },
     {
       "sampleId": "SYN_002",
       "candidateCategory": "SYNTHETIC_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "generatedByOwnerOrAuthorizedContributor",
         "generatorFamily",
         "generatorModel",
         "generatorVersion",
         "provider",
-        "promptReference",
-        "seed",
-        "generationDate",
-        "postProcessing",
-        "physicalCameraAcquisition",
-        "screenRecapture",
-        "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
       ],
       "questions": [
-        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
-        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
-        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
-        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
-        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
       ]
     },
     {
       "sampleId": "SYN_003",
       "candidateCategory": "SYNTHETIC_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "generatedByOwnerOrAuthorizedContributor",
         "generatorFamily",
         "generatorModel",
         "generatorVersion",
         "provider",
-        "promptReference",
-        "seed",
-        "generationDate",
-        "postProcessing",
-        "physicalCameraAcquisition",
-        "screenRecapture",
-        "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
       ],
       "questions": [
-        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
-        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
-        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
-        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
-        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
       ]
     },
     {
       "sampleId": "SYN_004",
       "candidateCategory": "SYNTHETIC_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "generatedByOwnerOrAuthorizedContributor",
         "generatorFamily",
         "generatorModel",
         "generatorVersion",
         "provider",
-        "promptReference",
-        "seed",
-        "generationDate",
-        "postProcessing",
-        "physicalCameraAcquisition",
-        "screenRecapture",
-        "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
       ],
       "questions": [
-        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
-        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
-        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
-        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
-        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
       ]
     },
     {
       "sampleId": "SYN_005",
       "candidateCategory": "SYNTHETIC_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "generatedByOwnerOrAuthorizedContributor",
         "generatorFamily",
         "generatorModel",
         "generatorVersion",
         "provider",
-        "promptReference",
-        "seed",
-        "generationDate",
-        "postProcessing",
-        "physicalCameraAcquisition",
-        "screenRecapture",
-        "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
       ],
       "questions": [
-        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
-        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
-        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
-        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
-        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
       ]
     },
     {
       "sampleId": "SYN_006",
       "candidateCategory": "SYNTHETIC_CANDIDATE",
       "responseFields": [
-        "ownerConfirmed",
-        "generatedByOwnerOrAuthorizedContributor",
         "generatorFamily",
         "generatorModel",
         "generatorVersion",
         "provider",
-        "promptReference",
-        "seed",
-        "generationDate",
-        "postProcessing",
-        "physicalCameraAcquisition",
-        "screenRecapture",
-        "syntheticDepictedContent",
-        "permissionForInternalLythausResearch",
-        "permissionForCommercialProductEvaluation",
-        "permissionForRedistribution"
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
       ],
       "questions": [
-        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
-        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
-        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
-        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
-        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
-        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
-        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_160ef96a3f22bf2e",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_1694ffbeb08ec2e7",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_1792d74543769df6",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_19f11c9d9fc6d62d",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_372f1157c4818b50",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_37b0763e0586d892",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_45f90d76c8270446",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_48086b0ae92b64bd",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_48a4728b903a3123",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_618b4432f43d5e35",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_7d307d7fc08c0bfc",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_8c1a405cc099c985",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_8d5dda145e61367b",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
+      ]
+    },
+    {
+      "sampleId": "SYNTHETIC_9f242bb4f40aefbb",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReferenceIfKnown",
+        "seedIfKnown",
+        "postProcessing"
+      ],
+      "questions": [
+        "Which generator/provider/model/version are known? Use UNKNOWN rather than guessing.",
+        "Was any post-processing, export, screenshot, or camera capture applied?"
       ]
     }
   ]

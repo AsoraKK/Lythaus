@@ -28,6 +28,11 @@ const rights = readArtifact('benchmark-rights.json');
 const splits = readArtifact('benchmark-splits.json');
 const fingerprint = readArtifact('benchmark-fingerprint.json');
 const ownerTemplate = readArtifact('owner-confirmation-template.json');
+const ownerPool = readArtifact('owner-pool-inventory.json');
+const reservedHoldout = readArtifact('reserved-holdout-manifest.json');
+const videoInventory = readArtifact('video-future-inventory.json');
+const benchmarkGap = readArtifact('benchmark-gap.json');
+const partialEditPlan = readArtifact('partial-edit-plan.json');
 
 function sample(overrides = {}) {
   return {
@@ -56,8 +61,18 @@ function sample(overrides = {}) {
       safeKeys: [],
       orientationTag: null,
       privacySensitiveMetadataFlags: [],
+      cameraMakePresent: false,
+      cameraModelPresent: false,
+      captureTimestampPresent: false,
     },
     truthAxes: {
+      physicalCameraAcquisition: 'UNKNOWN',
+      syntheticDepictedContent: 'UNKNOWN',
+      localManipulation: 'UNKNOWN',
+      digitalCapture: 'UNKNOWN',
+      screenRecapture: 'UNKNOWN',
+    },
+    truthConfidence: {
       physicalCameraAcquisition: 'UNKNOWN',
       syntheticDepictedContent: 'UNKNOWN',
       localManipulation: 'UNKNOWN',
@@ -67,6 +82,7 @@ function sample(overrides = {}) {
     truthSynthetic: 'UNKNOWN',
     truthLocalManipulation: 'UNKNOWN',
     truthBasis: 'OWNER_CONFIRMATION_REQUIRED',
+    hardNegativeType: null,
     generatorFamily: null,
     generatorModel: null,
     generatorVersion: null,
@@ -95,6 +111,7 @@ function sample(overrides = {}) {
     trainingEligible: false,
     readiness: 'PROVENANCE_CONFIRMATION_REQUIRED',
     ownerConfirmationReference: 'owner-confirmation-template.json#/samples/sample-a',
+    poolRole: 'ACTIVE_MICROBENCH',
     retentionClass: 'MEDIA_EXTERNAL_CACHE',
     privacyFlags: ['NONE'],
     privacyReview: 'PENDING_OWNER_REVIEW',
@@ -117,30 +134,64 @@ function rightsRecord(overrides = {}) {
     internalResearchRights: 'UNRESOLVED',
     commercialProductEvaluationRights: 'UNRESOLVED',
     redistributionRights: 'UNRESOLVED',
+    publicRedistributionRights: 'UNRESOLVED',
+    thirdPartyRedistributionRights: 'UNRESOLVED',
     readiness: 'PROVENANCE_CONFIRMATION_REQUIRED',
     reasonCodes: ['OWNER_CONFIRMATION_REQUIRED'],
     ...overrides,
   };
 }
 
-test('WP006B materializes and validates the owner seed without inference', () => {
+test('WP006B materializes and validates the owner-controlled pool without inference', () => {
   assert.doesNotThrow(() => assertWp006bBenchmarkManifest(manifest));
   assert.doesNotThrow(() => assertWp006bRightsManifest(rights));
   assert.doesNotThrow(() => assertWp006bSplitsManifest(splits));
   assert.doesNotThrow(() => assertWp006bFingerprint(fingerprint));
   assert.equal(manifest.schemaVersion, WP006B_BENCHMARK_SCHEMA_VERSION);
   assert.equal(manifest.specialistInferenceRun, false);
-  assert.equal(manifest.counts.ownerSeedImages, 18);
-  assert.equal(manifest.counts.independentSourceFamilies, 18);
-  assert.equal(manifest.counts.cameraFamilies, 8);
-  assert.equal(manifest.counts.syntheticFamilies, 6);
-  assert.equal(manifest.counts.hardNegativeFamilies, 4);
+  assert.equal(manifest.benchmarkStatus, 'READY_FOR_LIMITED_SPECIALIST_CALIBRATION');
+  assert.equal(manifest.counts.ownerPoolFilesTotal, 735);
+  assert.equal(manifest.counts.ownerPoolImages, 710);
+  assert.equal(manifest.counts.ownerPoolVideos, 25);
+  assert.equal(manifest.counts.independentSourceFamilies, 706);
+  assert.equal(manifest.counts.independentCameraFamilies, 459);
+  assert.equal(manifest.counts.independentSyntheticFamilies, 31);
+  assert.equal(manifest.counts.independentHardNegativeFamilies, 216);
+  assert.equal(manifest.counts.mimeSignatureMismatchImages, 2);
+  assert.equal(manifest.counts.cameraFamilies, 32);
+  assert.equal(manifest.counts.syntheticFamilies, 20);
+  assert.equal(manifest.counts.hardNegativeFamilies, 20);
   assert.equal(manifest.counts.mixedOriginFamilies, 0);
-  assert.equal(manifest.counts.partialEditFamilies, 0);
-  assert.equal(new Set(manifest.samples.map((item) => item.sourceFamilyId)).size, 18);
-  assert.ok(manifest.samples.every((item) => Object.values(item.truthAxes).every((axis) => axis === 'UNKNOWN')));
-  assert.ok(rights.records.every((item) => item.readiness === 'PROVENANCE_CONFIRMATION_REQUIRED'));
-  assert.ok(splits.assignments.every((item) => item.eligible === false));
+  assert.equal(manifest.counts.partialEditFamilies, 8);
+  assert.equal(manifest.counts.activeBenchmarkSourceFamilies, 72);
+  assert.equal(manifest.counts.activeBenchmarkSamples, 80);
+  assert.equal(new Set(manifest.samples.map((item) => item.sourceFamilyId)).size, 72);
+  assert.ok(manifest.samples.every((item) => item.poolRole === 'ACTIVE_MICROBENCH'));
+  assert.equal(manifest.samples.filter((item) => item.candidateCategory === 'PARTIAL_EDIT_CANDIDATE').length, 8);
+  assert.ok(manifest.samples.filter((item) => item.candidateCategory === 'PARTIAL_EDIT_CANDIDATE').every((item) => item.parentSampleId && item.mask && item.truthAxes.localManipulation === 'TRUE'));
+  assert.equal(partialEditPlan.records.length, 8);
+  assert.ok(partialEditPlan.records.every((item) => /^[a-f0-9]{64}$/.test(item.parentContentSha256)));
+  assert.ok(rights.records.every((item) => item.sourceMediaRights === 'CONFIRMED' && item.evaluationRights === 'CONFIRMED' && item.internalResearchRights === 'CONFIRMED' && item.commercialProductEvaluationRights === 'CONFIRMED'));
+  assert.ok(rights.records.every((item) => item.publicRedistributionRights === 'REVIEW_REQUIRED' && item.thirdPartyRedistributionRights === 'REVIEW_REQUIRED'));
+  assert.equal(splits.assignments.length, 80);
+  assert.ok(splits.assignments.every((item) => item.eligible === true));
+  assert.ok(splits.assignments.some((item) => item.split === 'HOLDOUT'));
+  assert.equal(splits.deviceHoldout.status, 'PREDECLARED');
+  assert.equal(splits.generatorHoldout.status, 'NOT_READY');
+  assert.equal(reservedHoldout.records.length, 192);
+  assert.ok(reservedHoldout.records.every((item) => item.poolRole === 'OWNER_RESERVED_FUTURE_HOLDOUT'));
+  const activeFamilies = new Set(manifest.samples.map((item) => item.sourceFamilyId));
+  assert.ok(reservedHoldout.records.every((item) => !activeFamilies.has(item.sourceFamilyId)));
+  assert.equal(videoInventory.records.length, 25);
+  assert.ok(videoInventory.records.every((item) => item.frameExtraction === false));
+  assert.equal(ownerPool.entries.filter((item) => item.mediaType === 'video').length, 25);
+  assert.ok(ownerPool.entries.filter((item) => item.mediaType === 'video').every((item) => item.poolRole === 'VIDEO_FUTURE_POOL' && item.width === null && item.height === null));
+  assert.equal(ownerPool.entries.filter((item) => item.poolRole === 'AMBIGUOUS_OR_EXCLUDED').length, 6);
+  assert.equal(benchmarkGap.shortfallBySlice.camera, 0);
+  assert.equal(benchmarkGap.shortfallBySlice.synthetic, 0);
+  assert.equal(benchmarkGap.shortfallBySlice.hardNegative, 0);
+  assert.equal(benchmarkGap.shortfallBySlice.partialEdit, 0);
+  assert.equal(benchmarkGap.readiness, 'READY_FOR_LIMITED_SPECIALIST_CALIBRATION');
   assert.deepEqual(splits.policy, {
     sourceFamilyBoundary: true,
     cameraDeviceBoundary: true,
@@ -149,8 +200,22 @@ test('WP006B materializes and validates the owner seed without inference', () =>
     scoringRequiresOwnerConfirmation: true,
     scoringRequiresRightsClosure: true,
   });
-  assert.equal(ownerTemplate.samples.length, 18);
-  assert.ok(ownerTemplate.samples.every((item) => Array.isArray(item.responseFields) && item.responseFields.includes('ownerConfirmed')));
+  assert.equal(ownerTemplate.samples.length, 52);
+  assert.ok(ownerTemplate.samples.every((item) => Array.isArray(item.responseFields)));
+  assert.ok(ownerTemplate.samples.every((item) => !item.responseFields.includes('permissionForInternalResearch')));
+});
+
+test('WP006B keeps duplicates, near-duplicates, and reserved media out of active leakage', () => {
+  const activeHashes = manifest.samples.map((item) => item.contentSha256);
+  assert.equal(new Set(activeHashes).size, activeHashes.length);
+  const splitBySampleId = new Map(splits.assignments.map((item) => [item.sampleId, item.split]));
+  for (const group of ownerPool.duplicateAnalysis.nearDuplicateGroups) {
+    const splitsInGroup = new Set(group.sampleIds.map((sampleId) => splitBySampleId.get(sampleId)).filter(Boolean));
+    assert.ok(splitsInGroup.size <= 1, group.groupId);
+  }
+  assert.ok(ownerPool.entries.every((entry) => !Object.hasOwn(entry, 'relativePath')));
+  assert.ok(ownerPool.entries.every((entry) => !Object.hasOwn(entry, 'absolutePath')));
+  assert.ok(ownerPool.entries.every((entry) => !Object.hasOwn(entry, 'gpsCoordinates')));
 });
 
 test('WP006B keeps independent truth axes and never emits a binary verdict', () => {
@@ -203,7 +268,7 @@ test('WP006B groups exact duplicate bytes inside one family only', () => {
 });
 
 test('WP006B requires parent, family, relation, and mask linkage for edits', () => {
-  const parent = sample({ sampleId: 'parent', sourceFamilyId: 'edit-family' });
+  const parent = sample({ sampleId: 'parent', groupId: 'edit-family', sourceFamilyId: 'edit-family' });
   const child = sample({
     sampleId: 'child',
     sourceFamilyId: 'edit-family',
@@ -223,6 +288,10 @@ test('WP006B requires parent, family, relation, and mask linkage for edits', () 
   assert.throws(() => assertWp006bParentEditLinkage([child]), /parent_missing/);
   assert.throws(() => assertWp006bParentEditLinkage([parent, { ...child, sourceFamilyId: 'other-family' }]), /parent_family_mismatch/);
   assert.throws(() => assertWp006bParentEditLinkage([parent, { ...child, mask: null }]), /edit_mask_missing/);
+  assert.throws(() => assertWp006bBenchmarkManifest({
+    ...manifest,
+    samples: [parent, { ...child, groupId: 'edit-family', mask: { ...child.mask, region: { x: 1, y: 1, width: 0, height: 2 } } }],
+  }), /mask_region_invalid/);
 });
 
 test('WP006B keeps device and generator holdouts isolated', () => {
@@ -246,6 +315,12 @@ test('WP006B fingerprint input is deterministic and contains no oracle fields', 
     splits: { assignments: [...splits.assignments].reverse(), policy: splits.policy },
   });
   assert.equal(stableStringify(first), stableStringify(second));
+  const parentChanged = buildWp006bFingerprintInput({
+    manifest: { ...manifest, samples: manifest.samples.map((item, index) => index === 0 ? { ...item, parentSampleId: 'changed-parent' } : item) },
+    rights,
+    splits,
+  });
+  assert.notEqual(stableStringify(first), stableStringify(parentChanged));
   assert.equal(JSON.stringify(first).includes('groundTruth'), false);
   assert.equal(JSON.stringify(first).includes('caseExpectation'), false);
   assert.equal(fingerprint.schemaVersion, WP006B_FINGERPRINT_SCHEMA_VERSION);
