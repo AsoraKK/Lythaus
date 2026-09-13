@@ -33,6 +33,7 @@ const reservedHoldout = readArtifact('reserved-holdout-manifest.json');
 const videoInventory = readArtifact('video-future-inventory.json');
 const benchmarkGap = readArtifact('benchmark-gap.json');
 const partialEditPlan = readArtifact('partial-edit-plan.json');
+const ef2LineageReview = readArtifact('ef2-owner-lineage-review.json');
 
 function sample(overrides = {}) {
   return {
@@ -342,4 +343,27 @@ test('WP006B owner questions do not request technical or private fields', () => 
   collectKeys(ownerTemplate);
   for (const forbidden of ['contentSha256', 'perceptualHash', 'byteSize', 'width', 'height', 'logicalFileReference', 'fullPath', 'gps', 'serialNumber']) assert.equal(keys.has(forbidden), false, forbidden);
   for (const forbidden of ['groundTruth', 'expectedPrimary', 'authenticityVerdict', 'recommendation']) assert.equal(keys.has(forbidden), false, forbidden);
+});
+
+test('WP006B EF2 lineage review scopes only active and complete device-holdout camera families', () => {
+  assert.equal(ef2LineageReview.schemaVersion, 'lythaus-wp006b-ef2-owner-lineage-review-v1');
+  assert.equal(ef2LineageReview.benchmarkCommit, '6f4154af3781efcf4ed643f0c08caa2a51ddf5a1');
+  assert.equal(ef2LineageReview.benchmarkFingerprint, fingerprint.fingerprintSha256);
+  assert.deepEqual(ef2LineageReview.summary.EF2_ACTIVE_FAMILIES_REQUIRING_CONFIRMATION, 32);
+  assert.deepEqual(ef2LineageReview.summary.EF2_HOLDOUT_FAMILIES_REQUIRING_CONFIRMATION, 33);
+  assert.equal(ef2LineageReview.summary.EF2_FAMILIES_ALREADY_SATISFACTORY, 0);
+  assert.equal(ef2LineageReview.summary.EF2_FAMILIES_EXCLUDED_BEFORE_OWNER_REVIEW, 0);
+  assert.equal(ef2LineageReview.summary.EF2_CAMERA_FAMILIES_OUT_OF_REVIEW_SCOPE, 394);
+  assert.equal(ef2LineageReview.records.length, 65);
+  assert.equal(new Set(ef2LineageReview.records.map((item) => item.sourceFamilyId)).size, 65);
+  const questionFields = ef2LineageReview.questionContract.map((item) => item.field);
+  assert.deepEqual(questionFields, ['nativeStatus', 'knownEdited', 'screenRecapture', 'syntheticDepictedContent', 'nativeOriginalAvailable']);
+  assert.ok(ef2LineageReview.records.every((item) => JSON.stringify(Object.keys(item.answers)) === JSON.stringify(questionFields)));
+  assert.ok(ef2LineageReview.records.every((item) => Object.values(item.answers).every((answer) => answer === null)));
+  assert.equal(ef2LineageReview.records.filter((item) => item.reviewScope === 'EF2_ACTIVE_BENCHMARK').length, 32);
+  assert.equal(ef2LineageReview.records.filter((item) => item.reviewScope === 'EF2_COMPLETE_DEVICE_HOLDOUT').length, 33);
+  assert.ok(ef2LineageReview.records.every((item) => item.sanitizedLogicalReference.startsWith('camera/')));
+  const reviewText = JSON.stringify(ef2LineageReview);
+  for (const forbidden of ['relativePath', 'absolutePath', 'ownerProvidedName', 'perceptualHash', 'contentSha256', 'gpsCoordinates', 'serialNumber']) assert.equal(reviewText.includes(forbidden), false, forbidden);
+  assert.equal(questionFields.includes('permissionForInternalResearch'), false);
 });

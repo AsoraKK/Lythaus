@@ -1,0 +1,1705 @@
+{
+  "schemaVersion": "lythaus-wp006b-ef2-owner-lineage-review-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "reviewDate": "2026-09-13",
+  "benchmarkCommit": "6f4154af3781efcf4ed643f0c08caa2a51ddf5a1",
+  "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645",
+  "purpose": "Small owner-facing technical lineage confirmation set for EF2 active enrollment and the predeclared complete device holdout. This does not request rights permission and does not change benchmark truth.",
+  "ownerAuthorization": "ALREADY_RECORDED; NO_PERMISSION_QUESTIONS",
+  "responseRules": [
+    "Answer only facts known from source history; UNKNOWN is valid.",
+    "Do not infer native status, edits, recapture, or depicted-content status from EXIF alone.",
+    "No GPS, serial numbers, private paths, or personal metadata are requested."
+  ],
+  "questionContract": [
+    {
+      "field": "nativeStatus",
+      "prompt": "Was this file retained as a native camera original, or is it an export?",
+      "allowedValues": [
+        "NATIVE_ORIGINAL",
+        "EXPORT",
+        "UNKNOWN"
+      ]
+    },
+    {
+      "field": "knownEdited",
+      "prompt": "Is any known editing present?",
+      "allowedValues": [
+        "YES",
+        "NO",
+        "UNKNOWN"
+      ]
+    },
+    {
+      "field": "screenRecapture",
+      "prompt": "Was a screen recapture involved?",
+      "allowedValues": [
+        "YES",
+        "NO",
+        "UNKNOWN"
+      ]
+    },
+    {
+      "field": "syntheticDepictedContent",
+      "prompt": "Does the depicted content include synthetic or AI-generated material?",
+      "allowedValues": [
+        "YES",
+        "NO",
+        "UNKNOWN"
+      ]
+    },
+    {
+      "field": "nativeOriginalAvailable",
+      "prompt": "Is the native original available for this source family?",
+      "allowedValues": [
+        "YES",
+        "NO",
+        "UNKNOWN",
+        "NOT_APPLICABLE"
+      ]
+    }
+  ],
+  "summary": {
+    "EF2_ACTIVE_FAMILIES_REQUIRING_CONFIRMATION": 32,
+    "EF2_HOLDOUT_FAMILIES_REQUIRING_CONFIRMATION": 33,
+    "EF2_FAMILIES_ALREADY_SATISFACTORY": 0,
+    "EF2_FAMILIES_EXCLUDED_BEFORE_OWNER_REVIEW": 0,
+    "EF2_CAMERA_FAMILIES_OUT_OF_REVIEW_SCOPE": 394,
+    "activeDeviceFamilies": [
+      "samsung Galaxy A56 5G",
+      "samsung SM-A526B"
+    ],
+    "completeDeviceHoldoutFamilies": [
+      "LGE LM-G710"
+    ],
+    "deterministicExclusionReason": "No selected active or complete-device-holdout camera family was excluded; all selected families pass the existing image, hash, and source-family checks.",
+    "outOfScopeReason": "Other camera families remain reserved or future expansion material and are not needed for this EF2 review."
+  },
+  "records": [
+    {
+      "sampleId": "CAM_001",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+      "sanitizedLogicalReference": "camera/CAM_001.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_210215",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_210215",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_210215.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_210238",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_210238",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_210238.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_210348",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_210348",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_210348.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_210410",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_210410",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_210410.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_211026",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_211026",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_211026.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_211827",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_211827",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_211827.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_211836",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_211836",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_211836.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212036",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212036",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212036.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212040",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212040",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212040.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212128",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212128",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212128.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212232",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212232",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212232.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212237",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212237",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212237.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212413",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212413",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212413.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212554",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212554",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212554.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212557",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212557",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212557.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_212723",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_212723",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_212723.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_213455",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_213455",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_213455.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_213458",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_213458",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_213458.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_213503",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_213503",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_213503.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190727_213508",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190727_213508",
+      "sanitizedLogicalReference": "camera/CAMERA_20190727_213508.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190728_104229",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190728_104229",
+      "sanitizedLogicalReference": "camera/CAMERA_20190728_104229.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190801_142721",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190801_142721",
+      "sanitizedLogicalReference": "camera/CAMERA_20190801_142721.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190901_103851",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190901_103851",
+      "sanitizedLogicalReference": "camera/CAMERA_20190901_103851.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190901_104834",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190901_104834",
+      "sanitizedLogicalReference": "camera/CAMERA_20190901_104834.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190901_105352",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190901_105352",
+      "sanitizedLogicalReference": "camera/CAMERA_20190901_105352.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190901_105841",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190901_105841",
+      "sanitizedLogicalReference": "camera/CAMERA_20190901_105841.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190901_105929",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190901_105929",
+      "sanitizedLogicalReference": "camera/CAMERA_20190901_105929.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20190901_110048",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20190901_110048",
+      "sanitizedLogicalReference": "camera/CAMERA_20190901_110048.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20191013_110023",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20191013_110023",
+      "sanitizedLogicalReference": "camera/CAMERA_20191013_110023.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20191013_110026",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20191013_110026",
+      "sanitizedLogicalReference": "camera/CAMERA_20191013_110026.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20191013_110028",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20191013_110028",
+      "sanitizedLogicalReference": "camera/CAMERA_20191013_110028.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20191129_163202",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20191129_163202",
+      "sanitizedLogicalReference": "camera/CAMERA_20191129_163202.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_091257",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091257",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_091257.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_091317",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091317",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_091317.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104722",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104722",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_104722.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104800",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104800",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_104800.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104834",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104834",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_104834.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120226",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120226",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_120226.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120228",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120228",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_120228.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120234",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120234",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_120234.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120236",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120236",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_120236.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120237",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120237",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_120237.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144008",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144008",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_144008.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144011",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144011",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_144011.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144014",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144014",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_144014.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144019",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144019",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_144019.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144046",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144046",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_144046.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144054",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144054",
+      "sanitizedLogicalReference": "camera/CAMERA_20210527_144054.jpg",
+      "deviceFamily": "samsung SM-A526B",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20251009_162038",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251009_162038",
+      "sanitizedLogicalReference": "camera/CAMERA_20251009_162038.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20251219_113126",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251219_113126",
+      "sanitizedLogicalReference": "camera/CAMERA_20251219_113126.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173231",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173231",
+      "sanitizedLogicalReference": "camera/CAMERA_20251226_173231.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173415",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173415",
+      "sanitizedLogicalReference": "camera/CAMERA_20251226_173415.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173420",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173420",
+      "sanitizedLogicalReference": "camera/CAMERA_20251226_173420.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20251231_130552",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251231_130552",
+      "sanitizedLogicalReference": "camera/CAMERA_20251231_130552.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260105_202251",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260105_202251",
+      "sanitizedLogicalReference": "camera/CAMERA_20260105_202251.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260203_123405",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260203_123405",
+      "sanitizedLogicalReference": "camera/CAMERA_20260203_123405.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260214_161934",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260214_161934",
+      "sanitizedLogicalReference": "camera/CAMERA_20260214_161934.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260222_154932",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260222_154932",
+      "sanitizedLogicalReference": "camera/CAMERA_20260222_154932.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260227_163207",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260227_163207",
+      "sanitizedLogicalReference": "camera/CAMERA_20260227_163207.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260228_122831",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260228_122831",
+      "sanitizedLogicalReference": "camera/CAMERA_20260228_122831.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "CALIBRATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260313_060829",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260313_060829",
+      "sanitizedLogicalReference": "camera/CAMERA_20260313_060829.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "EVALUATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260313_060845",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260313_060845",
+      "sanitizedLogicalReference": "camera/CAMERA_20260313_060845.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "EVALUATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_20260317_073114",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260317_073114",
+      "sanitizedLogicalReference": "camera/CAMERA_20260317_073114.jpg",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "reviewScope": "EF2_ACTIVE_BENCHMARK",
+      "split": "EVALUATION",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    },
+    {
+      "sampleId": "CAMERA_e97040410dfef6b7",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_e97040410dfef6b7",
+      "sanitizedLogicalReference": "camera/CAMERA_e97040410dfef6b7.jpg",
+      "deviceFamily": "LGE LM-G710",
+      "reviewScope": "EF2_COMPLETE_DEVICE_HOLDOUT",
+      "split": "DEVICE_HOLDOUT",
+      "currentLineageStatus": {
+        "physicalCameraAcquisition": "OWNER_CONFIRMED",
+        "nativeStatus": "UNKNOWN",
+        "knownEdited": "UNKNOWN",
+        "screenRecapture": "UNKNOWN",
+        "syntheticDepictedContent": "UNKNOWN",
+        "nativeOriginalAvailable": "UNKNOWN"
+      },
+      "reasonHumanConfirmationIsRequired": "Owner category and physical-camera evidence are recorded, but EF2-sensitive native/export, edit, recapture, depicted-content, and native-original-availability lineage is not established. EXIF and safe metadata are corroboration only.",
+      "answers": {
+        "nativeStatus": null,
+        "knownEdited": null,
+        "screenRecapture": null,
+        "syntheticDepictedContent": null,
+        "nativeOriginalAvailable": null
+      },
+      "benchmarkFingerprint": "6f1b38144c6aae49dcb599c0065caedbc168f8dff3843e876d44831ef9317645"
+    }
+  ]
+}
