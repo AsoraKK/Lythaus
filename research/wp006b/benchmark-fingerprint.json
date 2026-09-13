@@ -1,0 +1,653 @@
+{
+  "schemaVersion": "lythaus-wp006b-benchmark-fingerprint-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "fingerprintAlgorithm": "SHA-256(stableStringify(canonicalInput))",
+  "fingerprintSha256": "be97f0818ecece2509588dbc228e5da885985d4e5c2a075e947289041734c8ac",
+  "canonicalInput": {
+    "manifestVersion": "lythaus-forensic-microbench-v0",
+    "samples": [
+      {
+        "sampleId": "CAM_001",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+        "contentSha256": "b84f31aece7276073b34020df4f4a6c7bc15fe5dc6e4b3f60886222b1ec35ba3",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-CAM_001"
+      },
+      {
+        "sampleId": "CAM_002",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_002",
+        "contentSha256": "29a5a554492be528e82a93e9541d4cf72e04e26215f7c9c0276f2a3c0c87a79a",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-CAM_002"
+      },
+      {
+        "sampleId": "CAM_003",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_003",
+        "contentSha256": "e800238a586bd6547d63aeba5e68ac28b8dfbcf6294179b1bc9b7bdfc4865f95",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-CAM_003"
+      },
+      {
+        "sampleId": "CAM_004",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_004",
+        "contentSha256": "5ff7bbd7df118deb9dd22a3e13a13ad8c3bc1217bc086c1539a2bf3475385983",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-CAM_004"
+      },
+      {
+        "sampleId": "CAM_005",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_005",
+        "contentSha256": "a918331fbcd6b4f5b60c562d528bf5319f40fca58b6975688a31f50fbf0388da",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-CAM_005"
+      },
+      {
+        "sampleId": "CAM_006",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_006",
+        "contentSha256": "1d29748cbf2d925958cd2816d5e6f7370def58717b2168df8cccf26bca660a6b",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-CAM_006"
+      },
+      {
+        "sampleId": "CAM_007",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_007",
+        "contentSha256": "b5d737ec9fab0b6559e36b881337f74276b86c99afda81729758e987eb913158",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-CAM_007"
+      },
+      {
+        "sampleId": "CAM_008",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_008",
+        "contentSha256": "c2c3ef0191fb54d550a7cf8930413e8247fe00e1951314ab94b60a4546c6c486",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-CAM_008"
+      },
+      {
+        "sampleId": "HN_001",
+        "sourceFamilyId": "WP006B-FAMILY-HN_001",
+        "contentSha256": "5d79ae4c59841da51a0edc5c08e9c9da55bc9d975283d566c5ffb30b974c0747",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-HN_001"
+      },
+      {
+        "sampleId": "HN_002",
+        "sourceFamilyId": "WP006B-FAMILY-HN_002",
+        "contentSha256": "aeeb8bd3f40939785c9f8caf00d71a1fd0dd616449f0c0ab687e907f17d38e96",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-HN_002"
+      },
+      {
+        "sampleId": "HN_003",
+        "sourceFamilyId": "WP006B-FAMILY-HN_003",
+        "contentSha256": "cadeb3cabe61fb4019c3ab1f327faa5b0bd8316125db388dd9d490b8ba7e861e",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-HN_003"
+      },
+      {
+        "sampleId": "HN_004",
+        "sourceFamilyId": "WP006B-FAMILY-HN_004",
+        "contentSha256": "ef0dc8fca9aac4ebfbf2e8bada607a0b7a31c55392ea8e6aba25172bf8865166",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-HN_004"
+      },
+      {
+        "sampleId": "SYN_001",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_001",
+        "contentSha256": "6bf83641d4e5ed8f01497965fe3eb9e3345b2f2ed86ddc848b2ef27a81f8fb4e",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-SYN_001"
+      },
+      {
+        "sampleId": "SYN_002",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_002",
+        "contentSha256": "96a87d57fe43a299ed45c370f6f883a23f94be832a5755898c460d98990d18c5",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-SYN_002"
+      },
+      {
+        "sampleId": "SYN_003",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_003",
+        "contentSha256": "ed8e5c84aca177b034f1d5755ecbdad0e3b620974c672b22fbb8d193d9035bec",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-SYN_003"
+      },
+      {
+        "sampleId": "SYN_004",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_004",
+        "contentSha256": "0d91b4a0bac861bdb7253d4e4f443ead9ee1cca0cd0b09401d2fa922a7b63b5a",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-SYN_004"
+      },
+      {
+        "sampleId": "SYN_005",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_005",
+        "contentSha256": "c65b7905ab1e52b2d607528084f6d0c22ce3662d1007843d05129cfbb008a40e",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-SYN_005"
+      },
+      {
+        "sampleId": "SYN_006",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_006",
+        "contentSha256": "b4625db0195346e011946e4c75cc4be541e5f6db46d4a1294af2a6aa7e6273d1",
+        "truthAxes": {
+          "physicalCameraAcquisition": "UNKNOWN",
+          "syntheticDepictedContent": "UNKNOWN",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "UNKNOWN",
+          "screenRecapture": "UNKNOWN"
+        },
+        "split": "EVALUATION",
+        "rightsRecordId": "WP006B-RIGHTS-SYN_006"
+      }
+    ],
+    "rights": [
+      {
+        "rightsRecordId": "WP006B-RIGHTS-CAM_001",
+        "sampleId": "CAM_001",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-CAM_002",
+        "sampleId": "CAM_002",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_002",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-CAM_003",
+        "sampleId": "CAM_003",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_003",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-CAM_004",
+        "sampleId": "CAM_004",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_004",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-CAM_005",
+        "sampleId": "CAM_005",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_005",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-CAM_006",
+        "sampleId": "CAM_006",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_006",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-CAM_007",
+        "sampleId": "CAM_007",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_007",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-CAM_008",
+        "sampleId": "CAM_008",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_008",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-HN_001",
+        "sampleId": "HN_001",
+        "sourceFamilyId": "WP006B-FAMILY-HN_001",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-HN_002",
+        "sampleId": "HN_002",
+        "sourceFamilyId": "WP006B-FAMILY-HN_002",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-HN_003",
+        "sampleId": "HN_003",
+        "sourceFamilyId": "WP006B-FAMILY-HN_003",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-HN_004",
+        "sampleId": "HN_004",
+        "sourceFamilyId": "WP006B-FAMILY-HN_004",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-SYN_001",
+        "sampleId": "SYN_001",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_001",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-SYN_002",
+        "sampleId": "SYN_002",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_002",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-SYN_003",
+        "sampleId": "SYN_003",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_003",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-SYN_004",
+        "sampleId": "SYN_004",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_004",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-SYN_005",
+        "sampleId": "SYN_005",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_005",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      },
+      {
+        "rightsRecordId": "WP006B-RIGHTS-SYN_006",
+        "sampleId": "SYN_006",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_006",
+        "rights": {
+          "codeRights": "NOT_APPLICABLE",
+          "weightRights": "NOT_APPLICABLE",
+          "sourceMediaRights": "UNRESOLVED",
+          "dataRights": "UNRESOLVED",
+          "evaluationRights": "UNRESOLVED",
+          "internalResearchRights": "UNRESOLVED",
+          "commercialProductEvaluationRights": "UNRESOLVED",
+          "redistributionRights": "UNRESOLVED"
+        },
+        "readiness": "PROVENANCE_CONFIRMATION_REQUIRED"
+      }
+    ],
+    "splitAssignments": [
+      {
+        "sampleId": "CAM_001",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "CAM_002",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_002",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "CAM_003",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_003",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "CAM_004",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_004",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "CAM_005",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_005",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "CAM_006",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_006",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "CAM_007",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_007",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "CAM_008",
+        "sourceFamilyId": "WP006B-FAMILY-CAM_008",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "HN_001",
+        "sourceFamilyId": "WP006B-FAMILY-HN_001",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "HN_002",
+        "sourceFamilyId": "WP006B-FAMILY-HN_002",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "HN_003",
+        "sourceFamilyId": "WP006B-FAMILY-HN_003",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "HN_004",
+        "sourceFamilyId": "WP006B-FAMILY-HN_004",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "SYN_001",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_001",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "SYN_002",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_002",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "SYN_003",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_003",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "SYN_004",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_004",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "SYN_005",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_005",
+        "split": "EVALUATION"
+      },
+      {
+        "sampleId": "SYN_006",
+        "sourceFamilyId": "WP006B-FAMILY-SYN_006",
+        "split": "EVALUATION"
+      }
+    ],
+    "splitPolicy": {
+      "sourceFamilyBoundary": true,
+      "cameraDeviceBoundary": true,
+      "generatorFamilyHoldout": true,
+      "descendantsStayWithParent": true,
+      "scoringRequiresOwnerConfirmation": true,
+      "scoringRequiresRightsClosure": true
+    }
+  }
+}

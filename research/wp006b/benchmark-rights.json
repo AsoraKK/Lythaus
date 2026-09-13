@@ -1,0 +1,366 @@
+{
+  "schemaVersion": "lythaus-wp006b-benchmark-rights-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "records": [
+    {
+      "rightsRecordId": "WP006B-RIGHTS-CAM_001",
+      "sampleId": "CAM_001",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-CAM_002",
+      "sampleId": "CAM_002",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_002",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-CAM_003",
+      "sampleId": "CAM_003",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_003",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-CAM_004",
+      "sampleId": "CAM_004",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_004",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-CAM_005",
+      "sampleId": "CAM_005",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_005",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-CAM_006",
+      "sampleId": "CAM_006",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_006",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-CAM_007",
+      "sampleId": "CAM_007",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_007",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-CAM_008",
+      "sampleId": "CAM_008",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_008",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-HN_001",
+      "sampleId": "HN_001",
+      "sourceFamilyId": "WP006B-FAMILY-HN_001",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-HN_002",
+      "sampleId": "HN_002",
+      "sourceFamilyId": "WP006B-FAMILY-HN_002",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-HN_003",
+      "sampleId": "HN_003",
+      "sourceFamilyId": "WP006B-FAMILY-HN_003",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-HN_004",
+      "sampleId": "HN_004",
+      "sourceFamilyId": "WP006B-FAMILY-HN_004",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-SYN_001",
+      "sampleId": "SYN_001",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_001",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-SYN_002",
+      "sampleId": "SYN_002",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_002",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-SYN_003",
+      "sampleId": "SYN_003",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_003",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-SYN_004",
+      "sampleId": "SYN_004",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_004",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-SYN_005",
+      "sampleId": "SYN_005",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_005",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    },
+    {
+      "rightsRecordId": "WP006B-RIGHTS-SYN_006",
+      "sampleId": "SYN_006",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_006",
+      "codeRights": "NOT_APPLICABLE",
+      "weightRights": "NOT_APPLICABLE",
+      "sourceMediaRights": "UNRESOLVED",
+      "dataRights": "UNRESOLVED",
+      "evaluationRights": "UNRESOLVED",
+      "internalResearchRights": "UNRESOLVED",
+      "commercialProductEvaluationRights": "UNRESOLVED",
+      "redistributionRights": "UNRESOLVED",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "reasonCodes": [
+        "OWNER_CAPTURE_OR_GENERATION_PROVENANCE_UNCONFIRMED",
+        "INTERNAL_RESEARCH_PERMISSION_UNCONFIRMED",
+        "COMMERCIAL_PRODUCT_EVALUATION_PERMISSION_UNCONFIRMED",
+        "REDISTRIBUTION_PERMISSION_UNCONFIRMED"
+      ]
+    }
+  ]
+}

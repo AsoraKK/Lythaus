@@ -1,0 +1,538 @@
+{
+  "schemaVersion": "lythaus-wp006b-owner-confirmation-template-v1",
+  "purpose": "Human-only provenance and permission questions for the owner-supplied seed. Technical hashes, dimensions, MIME, and metadata were derived automatically and are intentionally not requested here.",
+  "responseRules": [
+    "Answer only facts known from the source history; use UNKNOWN instead of guessing.",
+    "Do not provide GPS, addresses, account identifiers, camera serial numbers, or private filenames.",
+    "Internal research permission and commercial product-evaluation permission are separate answers."
+  ],
+  "collectionQuestion": "Are any supplied files exports, recompressions, crops, screenshots, or other descendants of another supplied file? If yes, list only the logical sample IDs; otherwise answer NO or UNKNOWN.",
+  "samples": [
+    {
+      "sampleId": "CAM_001",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "physicalCameraCaptureConfirmed",
+        "nativeOriginalOrExport",
+        "cameraDeviceFamily",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
+        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
+        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
+        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
+        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
+        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "CAM_002",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "physicalCameraCaptureConfirmed",
+        "nativeOriginalOrExport",
+        "cameraDeviceFamily",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
+        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
+        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
+        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
+        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
+        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "CAM_003",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "physicalCameraCaptureConfirmed",
+        "nativeOriginalOrExport",
+        "cameraDeviceFamily",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
+        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
+        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
+        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
+        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
+        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "CAM_004",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "physicalCameraCaptureConfirmed",
+        "nativeOriginalOrExport",
+        "cameraDeviceFamily",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
+        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
+        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
+        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
+        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
+        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "CAM_005",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "physicalCameraCaptureConfirmed",
+        "nativeOriginalOrExport",
+        "cameraDeviceFamily",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
+        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
+        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
+        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
+        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
+        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "CAM_006",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "physicalCameraCaptureConfirmed",
+        "nativeOriginalOrExport",
+        "cameraDeviceFamily",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
+        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
+        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
+        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
+        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
+        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "CAM_007",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "physicalCameraCaptureConfirmed",
+        "nativeOriginalOrExport",
+        "cameraDeviceFamily",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
+        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
+        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
+        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
+        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
+        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "CAM_008",
+      "candidateCategory": "CAMERA_ORIGINAL_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "physicalCameraCaptureConfirmed",
+        "nativeOriginalOrExport",
+        "cameraDeviceFamily",
+        "knownEdits",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this file produced by a physical camera capture? Answer YES, NO, or UNKNOWN.",
+        "Is this a native camera original, an export, or UNKNOWN? Do not provide a serial number.",
+        "Which camera device family was used, if known? Model family only; do not provide a serial number.",
+        "Were any edits or exports performed after capture? Answer YES, NO, or UNKNOWN, and name only the operation class.",
+        "Was a screen or display recapture involved? Answer YES, NO, or UNKNOWN.",
+        "Does the depicted content include synthetic or AI-generated material? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "HN_001",
+      "candidateCategory": "HARD_NEGATIVE_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "hardNegativeType",
+        "sourceLineageDescription",
+        "physicalCameraAcquisition",
+        "syntheticDepictedContent",
+        "digitalCapture",
+        "screenRecapture",
+        "localManipulation",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Which explicit hard-negative type applies: CGI, 3D_RENDER, DIGITAL_ILLUSTRATION, SCREENSHOT, UI_CAPTURE, CHART, DIAGRAM, MEME_COMPOSITE, EDITED_GENUINE_PHOTO, SCAN, or OTHER?",
+        "Describe the source lineage in one short phrase: owner-created, licensed source, screenshot, export, or UNKNOWN.",
+        "Confirm physical camera acquisition, synthetic depicted content, digital capture, screen recapture, and local manipulation independently as YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "HN_002",
+      "candidateCategory": "HARD_NEGATIVE_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "hardNegativeType",
+        "sourceLineageDescription",
+        "physicalCameraAcquisition",
+        "syntheticDepictedContent",
+        "digitalCapture",
+        "screenRecapture",
+        "localManipulation",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Which explicit hard-negative type applies: CGI, 3D_RENDER, DIGITAL_ILLUSTRATION, SCREENSHOT, UI_CAPTURE, CHART, DIAGRAM, MEME_COMPOSITE, EDITED_GENUINE_PHOTO, SCAN, or OTHER?",
+        "Describe the source lineage in one short phrase: owner-created, licensed source, screenshot, export, or UNKNOWN.",
+        "Confirm physical camera acquisition, synthetic depicted content, digital capture, screen recapture, and local manipulation independently as YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "HN_003",
+      "candidateCategory": "HARD_NEGATIVE_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "hardNegativeType",
+        "sourceLineageDescription",
+        "physicalCameraAcquisition",
+        "syntheticDepictedContent",
+        "digitalCapture",
+        "screenRecapture",
+        "localManipulation",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Which explicit hard-negative type applies: CGI, 3D_RENDER, DIGITAL_ILLUSTRATION, SCREENSHOT, UI_CAPTURE, CHART, DIAGRAM, MEME_COMPOSITE, EDITED_GENUINE_PHOTO, SCAN, or OTHER?",
+        "Describe the source lineage in one short phrase: owner-created, licensed source, screenshot, export, or UNKNOWN.",
+        "Confirm physical camera acquisition, synthetic depicted content, digital capture, screen recapture, and local manipulation independently as YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "HN_004",
+      "candidateCategory": "HARD_NEGATIVE_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "hardNegativeType",
+        "sourceLineageDescription",
+        "physicalCameraAcquisition",
+        "syntheticDepictedContent",
+        "digitalCapture",
+        "screenRecapture",
+        "localManipulation",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Which explicit hard-negative type applies: CGI, 3D_RENDER, DIGITAL_ILLUSTRATION, SCREENSHOT, UI_CAPTURE, CHART, DIAGRAM, MEME_COMPOSITE, EDITED_GENUINE_PHOTO, SCAN, or OTHER?",
+        "Describe the source lineage in one short phrase: owner-created, licensed source, screenshot, export, or UNKNOWN.",
+        "Confirm physical camera acquisition, synthetic depicted content, digital capture, screen recapture, and local manipulation independently as YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "SYN_001",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "generatedByOwnerOrAuthorizedContributor",
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReference",
+        "seed",
+        "generationDate",
+        "postProcessing",
+        "physicalCameraAcquisition",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
+        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
+        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
+        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
+        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "SYN_002",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "generatedByOwnerOrAuthorizedContributor",
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReference",
+        "seed",
+        "generationDate",
+        "postProcessing",
+        "physicalCameraAcquisition",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
+        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
+        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
+        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
+        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "SYN_003",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "generatedByOwnerOrAuthorizedContributor",
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReference",
+        "seed",
+        "generationDate",
+        "postProcessing",
+        "physicalCameraAcquisition",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
+        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
+        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
+        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
+        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "SYN_004",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "generatedByOwnerOrAuthorizedContributor",
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReference",
+        "seed",
+        "generationDate",
+        "postProcessing",
+        "physicalCameraAcquisition",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
+        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
+        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
+        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
+        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "SYN_005",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "generatedByOwnerOrAuthorizedContributor",
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReference",
+        "seed",
+        "generationDate",
+        "postProcessing",
+        "physicalCameraAcquisition",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
+        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
+        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
+        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
+        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    },
+    {
+      "sampleId": "SYN_006",
+      "candidateCategory": "SYNTHETIC_CANDIDATE",
+      "responseFields": [
+        "ownerConfirmed",
+        "generatedByOwnerOrAuthorizedContributor",
+        "generatorFamily",
+        "generatorModel",
+        "generatorVersion",
+        "provider",
+        "promptReference",
+        "seed",
+        "generationDate",
+        "postProcessing",
+        "physicalCameraAcquisition",
+        "screenRecapture",
+        "syntheticDepictedContent",
+        "permissionForInternalLythausResearch",
+        "permissionForCommercialProductEvaluation",
+        "permissionForRedistribution"
+      ],
+      "questions": [
+        "Was this source generated directly by the owner or an authorized contributor? Answer YES, NO, or UNKNOWN.",
+        "What generator family, model, version, provider, prompt reference, seed, and generation date are known? Use UNKNOWN for each unavailable field.",
+        "Was any post-processing, export, screenshot, or physical-camera capture applied after generation? Answer YES, NO, or UNKNOWN and name only the operation class.",
+        "Does the source depict synthetic or AI-generated content? Answer YES, NO, or UNKNOWN.",
+        "Was physical camera acquisition involved? Answer YES, NO, or UNKNOWN.",
+        "Are you the owner or an authorized contributor for this source? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus retain and use this source for internal authenticity research? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus use this source for commercial product evaluation? Answer YES, NO, or UNKNOWN.",
+        "May Lythaus redistribute the source media outside controlled research storage? Answer YES, NO, or UNKNOWN. If redistribution is not planned, answer NO."
+      ]
+    }
+  ]
+}

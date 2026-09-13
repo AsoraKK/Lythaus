@@ -1,0 +1,155 @@
+{
+  "schemaVersion": "lythaus-wp006b-benchmark-splits-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "splitBoundary": "SOURCE_FAMILY",
+  "policy": {
+    "sourceFamilyBoundary": true,
+    "cameraDeviceBoundary": true,
+    "generatorFamilyHoldout": true,
+    "descendantsStayWithParent": true,
+    "scoringRequiresOwnerConfirmation": true,
+    "scoringRequiresRightsClosure": true
+  },
+  "assignments": [
+    {
+      "sampleId": "CAM_001",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "CAM_002",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_002",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "CAM_003",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_003",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "CAM_004",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_004",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "CAM_005",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_005",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "CAM_006",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_006",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "CAM_007",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_007",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "CAM_008",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_008",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "HN_001",
+      "sourceFamilyId": "WP006B-FAMILY-HN_001",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "HN_002",
+      "sourceFamilyId": "WP006B-FAMILY-HN_002",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "HN_003",
+      "sourceFamilyId": "WP006B-FAMILY-HN_003",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "HN_004",
+      "sourceFamilyId": "WP006B-FAMILY-HN_004",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "SYN_001",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_001",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "SYN_002",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_002",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "SYN_003",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_003",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "SYN_004",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_004",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "SYN_005",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_005",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    },
+    {
+      "sampleId": "SYN_006",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_006",
+      "split": "EVALUATION",
+      "eligible": false,
+      "eligibilityReason": "OWNER_PROVENANCE_AND_PERMISSION_CONFIRMATION_REQUIRED"
+    }
+  ],
+  "deviceHoldout": {
+    "status": "NOT_READY",
+    "families": [],
+    "reason": "No owner-confirmed device-family identities are present; no device holdout is asserted."
+  },
+  "generatorHoldout": {
+    "status": "NOT_READY",
+    "families": [],
+    "reason": "No owner-confirmed generator-family identities are present; no unseen-generator holdout is asserted."
+  },
+  "transformationStress": {
+    "status": "DEFERRED",
+    "descendantsRemainWithParentFamily": true
+  }
+}

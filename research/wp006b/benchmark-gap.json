@@ -1,0 +1,28 @@
+{
+  "minimumResearchThresholds": {
+    "camera": 12,
+    "synthetic": 8,
+    "hardNegative": 6,
+    "partialEdit": 6
+  },
+  "shortfallBySlice": {
+    "camera": 4,
+    "synthetic": 2,
+    "hardNegative": 2,
+    "partialEdit": 6
+  },
+  "candidateFamiliesPresent": {
+    "camera": 8,
+    "synthetic": 6,
+    "hardNegative": 4,
+    "partialEdit": 0
+  },
+  "ownerConfirmationRequiredFamilies": {
+    "camera": 8,
+    "synthetic": 6,
+    "hardNegative": 4,
+    "partialEdit": 0
+  },
+  "unseenGeneratorHoldout": "NOT_READY",
+  "mixedOriginFamilies": 0
+}
