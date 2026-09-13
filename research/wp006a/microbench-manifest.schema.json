@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lythaus.co/research/wp006a/microbench-manifest.schema.json",
+  "title": "Lythaus Forensic Microbenchmark v0",
+  "description": "Rights- and provenance-first research manifest. This manifest is not a production detector dataset and must not be passed to a model as ground truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "splitPolicy", "samples"],
+  "properties": {
+    "schemaVersion": { "const": "lythaus-forensic-microbench-v0" },
+    "status": {
+      "enum": [
+        "FOUNDATION_ONLY_INSUFFICIENT_TRUTH",
+        "READY_FOR_LIMITED_FEASIBILITY_ONLY",
+        "READY_FOR_SPECIALIST_CALIBRATION"
+      ]
+    },
+    "splitPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceFamilyBoundary", "cameraDeviceBoundary", "generatorFamilyHoldout", "descendantsStayWithParent"],
+      "properties": {
+        "sourceFamilyBoundary": { "const": true },
+        "cameraDeviceBoundary": { "const": true },
+        "generatorFamilyHoldout": { "const": true },
+        "descendantsStayWithParent": { "const": true }
+      }
+    },
+    "samples": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sample" }
+    }
+  },
+  "$defs": {
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sampleId",
+        "sourceFamilyId",
+        "origin",
+        "truthSynthetic",
+        "truthLocalManipulation",
+        "truthPhysicalCameraAcquisition",
+        "truthScreenRecapture",
+        "truthDigitalScreenshot",
+        "truthBasis",
+        "generatorFamily",
+        "generatorVersion",
+        "cameraDeviceFamily",
+        "sourceDatasetId",
+        "sourceUrlOrAcquisitionId",
+        "licenceClassification",
+        "rightsClass",
+        "evaluationGate",
+        "trainingGate",
+        "distillationGate",
+        "contentSha256",
+        "perceptualHash",
+        "width",
+        "height",
+        "mime",
+        "split",
+        "transformation",
+        "parentSampleId",
+        "maskPathOrId",
+        "maskSha256",
+        "retentionClass",
+        "privacyFlags"
+      ],
+      "properties": {
+        "sampleId": { "type": "string", "minLength": 1 },
+        "sourceFamilyId": { "type": "string", "minLength": 1 },
+        "origin": {
+          "enum": ["CAMERA_NATIVE", "AI_GENERATED", "AI_EDITED", "TRADITIONAL_DIGITAL_ART", "CGI", "SCAN", "COMPOSITE", "SCREENSHOT", "UNKNOWN"]
+        },
+        "truthSynthetic": { "type": ["boolean", "null"] },
+        "truthLocalManipulation": { "type": ["boolean", "null"] },
+        "truthPhysicalCameraAcquisition": { "type": ["boolean", "null"] },
+        "truthScreenRecapture": { "type": ["boolean", "null"] },
+        "truthDigitalScreenshot": { "type": ["boolean", "null"] },
+        "truthBasis": {
+          "enum": ["OWNER_ASSERTED", "SOURCE_ASSERTED", "CONSTRUCTION_ASSERTED", "NEEDS_OWNER_CONFIRMATION", "UNRESOLVED"]
+        },
+        "generatorFamily": { "type": ["string", "null"] },
+        "generatorVersion": { "type": ["string", "null"] },
+        "cameraDeviceFamily": { "type": ["string", "null"] },
+        "sourceDatasetId": { "type": "string", "minLength": 1 },
+        "sourceUrlOrAcquisitionId": { "type": "string", "minLength": 1 },
+        "licenceClassification": { "type": "string", "minLength": 1 },
+        "rightsClass": { "enum": ["CLASS_A_COMMERCIAL_TRAINING", "CLASS_B_EVALUATION_ONLY", "CLASS_C_LYTHAUS_OWNED", "MIXED_OR_UNCLEAR"] },
+        "evaluationGate": { "enum": ["ALLOW", "DO_NOT_USE", "REVIEW_REQUIRED", "UNKNOWN"] },
+        "trainingGate": { "enum": ["ALLOW", "DO_NOT_TRAIN", "REVIEW_REQUIRED", "UNKNOWN"] },
+        "distillationGate": { "enum": ["ALLOW", "DO_NOT_DISTILL", "REVIEW_REQUIRED", "UNKNOWN"] },
+        "contentSha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+        "perceptualHash": { "type": "string", "minLength": 1 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "mime": { "enum": ["image/jpeg", "image/png", "image/webp", "image/tiff", "image/avif", "application/octet-stream"] },
+        "split": { "enum": ["CALIBRATION", "EVALUATION", "HOLDOUT", "RUNTIME_SMOKE"] },
+        "transformation": {
+          "enum": ["ORIGINAL", "JPEG95", "JPEG75", "resize75", "resize50", "crop10", "mild_blur", "mild_sharpen", "metadata_stripped", "screenshot_style_resampling"]
+        },
+        "parentSampleId": { "type": ["string", "null"] },
+        "maskPathOrId": { "type": ["string", "null"] },
+        "maskSha256": { "type": ["string", "null"], "pattern": "^([a-fA-F0-9]{64})?$" },
+        "retentionClass": { "enum": ["MEDIA_EXTERNAL_CACHE", "DERIVED_MASK_EXTERNAL_CACHE", "MANIFEST_ONLY", "DELETE_AFTER_RUN"] },
+        "privacyFlags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["NONE", "PERSONAL_MEDIA", "BIOMETRIC_CONTENT", "GPS_PRESENT", "SERIAL_PRESENT", "PII_PRESENT", "OWNER_RESTRICTED"] }
+        }
+      }
+    }
+  }
+}

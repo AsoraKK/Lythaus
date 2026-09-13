@@ -8,6 +8,7 @@
     "./wp004a": "./src/wp004a.ts",
     "./wp004b": "./src/wp004b.ts",
     "./wp005a": "./src/wp005a.ts",
-    "./wp005b": "./src/wp005b.ts"
+    "./wp005b": "./src/wp005b.ts",
+    "./wp006a": "./src/wp006a.ts"
   }
 }
