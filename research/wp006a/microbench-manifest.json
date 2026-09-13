@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "lythaus-forensic-microbench-v0",
+  "status": "FOUNDATION_ONLY_INSUFFICIENT_TRUTH",
+  "splitPolicy": {
+    "sourceFamilyBoundary": true,
+    "cameraDeviceBoundary": true,
+    "generatorFamilyHoldout": true,
+    "descendantsStayWithParent": true
+  },
+  "samples": []
+}

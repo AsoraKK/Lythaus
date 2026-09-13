@@ -61,6 +61,7 @@
     "test:authenticity-wp004b-live": "node --experimental-strip-types --test packages/authenticity/tests/wp004b-live-calibration.test.mjs",
     "test:authenticity-wp005a": "node --experimental-strip-types --test packages/authenticity/tests/wp005a.test.mjs",
     "test:authenticity-wp005b": "node --experimental-strip-types --test packages/authenticity/tests/wp005b.test.mjs",
+    "test:authenticity-wp006a": "node --experimental-strip-types --test packages/authenticity/tests/wp006a.test.mjs",
     "test:authenticity-wp004b-phase-c": "node --experimental-strip-types --test packages/authenticity/tests/wp004b-phase-c.test.mjs",
     "test:authenticity-wp004b-phase-e": "node --experimental-strip-types --test packages/authenticity/tests/wp004b-phase-e.test.mjs",
     "test:authenticity-wp004b-phase-g": "node --experimental-strip-types --test packages/authenticity/tests/wp004b-phase-g.test.mjs",

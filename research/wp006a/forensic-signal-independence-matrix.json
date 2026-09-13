@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "lythaus-wp006a-forensic-signal-independence-v1",
+  "researchDate": "2026-09-13",
+  "interpretation": "Desk-level independence hypotheses from method design and published descriptions. No shared-image feature-correlation experiment was run because the host had no approved calibration media and no specialist runtime was executed.",
+  "labels": ["HIGHLY_OVERLAPPING", "PARTIALLY_OVERLAPPING", "LIKELY_INDEPENDENT", "UNKNOWN"],
+  "referenceSignals": [
+    "CURRENT_EF1_METADATA_COMPRESSION",
+    "CURRENT_EF2_CFA_NOISE_PROXIES",
+    "CURRENT_EF4_SPECTRAL_TRANSFORMATION",
+    "MOONDREAM_OBSERVER",
+    "OTHER_SHORTLISTED_SPECIALISTS"
+  ],
+  "matrix": [
+    {
+      "candidateId": "EF2-LYTHAUS-CLASSICAL-ENROLLMENT",
+      "family": "EF2",
+      "signal": "enrolled-device residual/CFA/noise consistency",
+      "correlation": {
+        "CURRENT_EF1_METADATA_COMPRESSION": "PARTIALLY_OVERLAPPING",
+        "CURRENT_EF2_CFA_NOISE_PROXIES": "PARTIALLY_OVERLAPPING",
+        "CURRENT_EF4_SPECTRAL_TRANSFORMATION": "PARTIALLY_OVERLAPPING",
+        "MOONDREAM_OBSERVER": "LIKELY_INDEPENDENT",
+        "OTHER_SHORTLISTED_SPECIALISTS": "UNKNOWN"
+      },
+      "basis": "Uses pixel acquisition traces and device reference enrollment rather than file metadata or semantic description; shared residual/frequency components with current instrumentation are expected."
+    },
+    {
+      "candidateId": "EF2-SDAIE",
+      "family": "EF2_ADJACENT",
+      "signal": "EXIF-supervised photographic high-frequency residual representation",
+      "correlation": {
+        "CURRENT_EF1_METADATA_COMPRESSION": "HIGHLY_OVERLAPPING",
+        "CURRENT_EF2_CFA_NOISE_PROXIES": "PARTIALLY_OVERLAPPING",
+        "CURRENT_EF4_SPECTRAL_TRANSFORMATION": "PARTIALLY_OVERLAPPING",
+        "MOONDREAM_OBSERVER": "LIKELY_INDEPENDENT",
+        "OTHER_SHORTLISTED_SPECIALISTS": "UNKNOWN"
+      },
+      "basis": "Training supervision explicitly uses EXIF tags, which creates metadata/source-selection shortcut risk even though inference uses residual pixels."
+    },
+    {
+      "candidateId": "EF3-SPAI",
+      "family": "EF3",
+      "signal": "self-supervised real-image spectral reconstruction similarity",
+      "correlation": {
+        "CURRENT_EF1_METADATA_COMPRESSION": "PARTIALLY_OVERLAPPING",
+        "CURRENT_EF2_CFA_NOISE_PROXIES": "PARTIALLY_OVERLAPPING",
+        "CURRENT_EF4_SPECTRAL_TRANSFORMATION": "HIGHLY_OVERLAPPING",
+        "MOONDREAM_OBSERVER": "LIKELY_INDEPENDENT",
+        "OTHER_SHORTLISTED_SPECIALISTS": "PARTIALLY_OVERLAPPING"
+      },
+      "basis": "Its central signal is frequency-domain reconstruction, so it overlaps current EF4 by design; it remains distinct from semantic VLM observation and is a plausible EF3 specialist only if transformations are calibrated."
+    },
+    {
+      "candidateId": "EF3-PATCHCRAFT",
+      "family": "EF3",
+      "signal": "rich/poor texture patch contrast",
+      "correlation": {
+        "CURRENT_EF1_METADATA_COMPRESSION": "PARTIALLY_OVERLAPPING",
+        "CURRENT_EF2_CFA_NOISE_PROXIES": "PARTIALLY_OVERLAPPING",
+        "CURRENT_EF4_SPECTRAL_TRANSFORMATION": "PARTIALLY_OVERLAPPING",
+        "MOONDREAM_OBSERVER": "LIKELY_INDEPENDENT",
+        "OTHER_SHORTLISTED_SPECIALISTS": "PARTIALLY_OVERLAPPING"
+      },
+      "basis": "Texture and local patch statistics are not equivalent to global spectral reconstruction, but JPEG/resizing and camera texture can affect both."
+    },
+    {
+      "candidateId": "EF3-UNIVFD",
+      "family": "EF3",
+      "signal": "CLIP ViT-L/14 semantic embedding classifier",
+      "correlation": {
+        "CURRENT_EF1_METADATA_COMPRESSION": "UNKNOWN",
+        "CURRENT_EF2_CFA_NOISE_PROXIES": "UNKNOWN",
+        "CURRENT_EF4_SPECTRAL_TRANSFORMATION": "UNKNOWN",
+        "MOONDREAM_OBSERVER": "PARTIALLY_OVERLAPPING",
+        "OTHER_SHORTLISTED_SPECIALISTS": "HIGHLY_OVERLAPPING"
+      },
+      "basis": "The principal evidence is a visual foundation representation, so it is less independent of a VLM observer than patch/spectral methods."
+    },
+    {
+      "candidateId": "EF3-DUALSIGHT",
+      "family": "EF3",
+      "signal": "forensic/artifact branch plus CLIP semantic branch",
+      "correlation": {
+        "CURRENT_EF1_METADATA_COMPRESSION": "UNKNOWN",
+        "CURRENT_EF2_CFA_NOISE_PROXIES": "UNKNOWN",
+        "CURRENT_EF4_SPECTRAL_TRANSFORMATION": "PARTIALLY_OVERLAPPING",
+        "MOONDREAM_OBSERVER": "PARTIALLY_OVERLAPPING",
+        "OTHER_SHORTLISTED_SPECIALISTS": "PARTIALLY_OVERLAPPING"
+      },
+      "basis": "The artifact branch may add independent traces, but the CLIP branch and OpenSDI lineage create overlap and the contribution is not separable on Lythaus data."
+    },
+    {
+      "candidateId": "EF5-FUSED",
+      "family": "EF5",
+      "signal": "SparseViT forensic map plus frozen CLIP-ConvNeXt semantic tokens and local mask",
+      "correlation": {
+        "CURRENT_EF1_METADATA_COMPRESSION": "UNKNOWN",
+        "CURRENT_EF2_CFA_NOISE_PROXIES": "UNKNOWN",
+        "CURRENT_EF4_SPECTRAL_TRANSFORMATION": "PARTIALLY_OVERLAPPING",
+        "MOONDREAM_OBSERVER": "PARTIALLY_OVERLAPPING",
+        "OTHER_SHORTLISTED_SPECIALISTS": "PARTIALLY_OVERLAPPING"
+      },
+      "basis": "Its forensic branch targets local traces and its output includes a mask, which is new EF5 information; its semantic branch and spectral/texture components introduce correlated cues."
+    },
+    {
+      "candidateId": "EF5-RITA",
+      "family": "EF5",
+      "signal": "process-aware sequential mask prediction",
+      "correlation": {
+        "CURRENT_EF1_METADATA_COMPRESSION": "UNKNOWN",
+        "CURRENT_EF2_CFA_NOISE_PROXIES": "UNKNOWN",
+        "CURRENT_EF4_SPECTRAL_TRANSFORMATION": "UNKNOWN",
+        "MOONDREAM_OBSERVER": "LIKELY_INDEPENDENT",
+        "OTHER_SHORTLISTED_SPECIALISTS": "PARTIALLY_OVERLAPPING"
+      },
+      "basis": "The process-aware localization objective is orthogonal to visual description, but the underlying pixel features and unknown training data may overlap other IML models."
+    }
+  ],
+  "ensembleGuidance": {
+    "doNotCallIndependent": [
+      "UnivFD plus any other CLIP-heavy detector without a shared-sample correlation test",
+      "DualSight plus OpenSDI MaskCLIP as two independent detectors when both rely on the OpenSDI/CLIP ecosystem",
+      "Current EF4 spectral stability plus SPAI without transformation and residual-correlation analysis"
+    ],
+    "mostPromisingComplement": "provenance-confirmed EF2 enrollment plus a spectral/texture EF3 measurement plus a local-mask EF5 measurement, each retained as separate evidence families",
+    "admissionStatus": "All rows remain UNVALIDATED for Lythaus directional use."
+  }
+}

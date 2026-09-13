@@ -1,0 +1,196 @@
+{
+  "schemaVersion": "lythaus-wp006a-data-readiness-v1",
+  "researchDate": "2026-09-13",
+  "repository": {
+    "remote": "Lythaus canonical repository",
+    "branch": "main",
+    "startingSha": "ee57d7b97fd7be65a761841d275178160af83439",
+    "interveningAuthenticityCommitsAfterExpectedSha": 0,
+    "wp005bMerge": "PR #811"
+  },
+  "scope": "Zero-inference reconciliation. No media was copied, downloaded, generated, or uploaded.",
+  "localEnvironment": {
+    "cpu": "AMD Ryzen 7 7730U with Radeon Graphics",
+    "cores": 8,
+    "threads": 16,
+    "ramGbApprox": 15.34,
+    "freeRamGbApprox": 4.03,
+    "freeDiskGbApprox": 52.58,
+    "gpuAssumption": "CPU_ONLY",
+    "thermalTelemetry": "UNAVAILABLE",
+    "lythausAuthenticityCacheEnvironment": "UNSET",
+    "registeredCsafeLocation": "NOT_FOUND",
+    "csafeLocalStatus": "NOT_FOUND",
+    "newDiskUsedGb": 0,
+    "largestCheckpointDownloadedGb": 0,
+    "localRuntimeSmokes": 0,
+    "runtimeStopReason": "RUNTIME_NOT_EXECUTED_SAFETY_LIMIT: free disk is below the 80 GB floor and free RAM is approximately at the 4 GB floor"
+  },
+  "readinessDefinitions": {
+    "READY_FOR_CALIBRATION": "Rights, provenance, source-family split, and truth basis are adequate for threshold fitting without using evaluation holdout data.",
+    "READY_FOR_EVALUATION_ONLY": "A bounded evaluation use is documented, but calibration, training, or commercial redistribution is not permitted or not scientifically independent.",
+    "PROVENANCE_CONFIRMATION_REQUIRED": "A human or source custodian must confirm capture lineage, release, or truth before the record can be calibration data.",
+    "RIGHTS_REVIEW_REQUIRED": "One or more data, model, checkpoint, or commercial-use terms are not explicit enough for adoption.",
+    "NOT_AVAILABLE": "No registered local material or approved manifest was found.",
+    "REJECT": "The source is excluded because its use would violate a hard scientific, rights, privacy, or resource gate."
+  },
+  "sources": [
+    {
+      "sourceId": "unsplash-dataset-lite-materialized-slice",
+      "source": "Unsplash Dataset Lite records used by WP003",
+      "readiness": "READY_FOR_EVALUATION_ONLY",
+      "rightsClass": "CLASS_B_EVALUATION_ONLY",
+      "truthType": "source metadata and acquisition records; not camera-origin truth",
+      "availableNow": true,
+      "materializedCounts": {
+        "sourceOriginals": 80,
+        "deterministicDescendants": 720,
+        "records": 800,
+        "sourceFamilies": 80
+      },
+      "calibrationEligible": false,
+      "holdoutEligible": false,
+      "trainingEligible": false,
+      "majorLimitations": [
+        "The WP003 camera smoke selection used metadata, so its camera-native result is circular for EF2 validation.",
+        "The slice is suitable for bounded external evaluation only under the repository terms snapshot.",
+        "Descendants must remain with their parent source family and cannot create independent samples."
+      ],
+      "sourceUrl": "https://github.com/unsplash/datasets",
+      "licenceSourceUrl": "https://unsplash.com/license"
+    },
+    {
+      "sourceId": "csafe-multi-camera-smartphone-image-database",
+      "source": "CSAFE Multi-camera Smartphone Image Database",
+      "readiness": "NOT_AVAILABLE",
+      "rightsClass": "CC_BY_4_0_REQUIRES_DATA_USE_REVIEW",
+      "truthType": "source-device study metadata; useful for camera attribution research, not automatically camera-origin truth",
+      "availableNow": false,
+      "localStatus": "NOT_FOUND",
+      "reportedCounts": {
+        "imagesApprox": 50000,
+        "smartphonesApprox": 60,
+        "downloadSizeGbApprox": 123.62
+      },
+      "calibrationEligible": false,
+      "holdoutEligible": false,
+      "trainingEligible": false,
+      "majorLimitations": [
+        "No registered Lythaus cache path, completion record, or content manifest was found.",
+        "The current host cannot safely accept a 123.62 GB download because free disk is below the 80 GB safety floor.",
+        "CC BY 4.0 does not by itself resolve privacy, dataset lineage, or commercial model-use questions."
+      ],
+      "sourceUrl": "https://iastate.figshare.com/articles/dataset/CSAFE_Multi-camera_Smartphone_Image_Database/26932084"
+    },
+    {
+      "sourceId": "lythaus-owned-camera-v0",
+      "source": "Lythaus Originals camera pool",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "rightsClass": "CLASS_C_LYTHAUS_OWNED",
+      "truthType": "owner-confirmed physical capture with signed contributor release",
+      "availableNow": false,
+      "materializedCounts": {
+        "sourceFamilies": 0,
+        "samples": 0
+      },
+      "calibrationEligible": false,
+      "holdoutEligible": false,
+      "trainingEligible": false,
+      "majorLimitations": [
+        "No approved media manifest was present in the repository or registered research cache.",
+        "Personal originals cannot become calibration truth without capture records and owner-approved releases.",
+        "GPS, serial numbers, account identifiers, and other private metadata must be removed from research artifacts."
+      ],
+      "sourceUrl": "repo://docs/runbooks/lythaus-owned-camera-dataset.md"
+    },
+    {
+      "sourceId": "lythaus-owned-synthetic-v0",
+      "source": "Lythaus-controlled synthetic slice",
+      "readiness": "PROVENANCE_CONFIRMATION_REQUIRED",
+      "rightsClass": "CLASS_C_LYTHAUS_OWNED_PENDING_GENERATION_TERMS",
+      "truthType": "generator/model/version/seed provenance if rights are confirmed",
+      "availableNow": false,
+      "materializedCounts": {
+        "sourceFamilies": 0,
+        "samples": 0
+      },
+      "calibrationEligible": false,
+      "holdoutEligible": false,
+      "trainingEligible": false,
+      "majorLimitations": [
+        "No samples were generated in WP006A.",
+        "Output retention and downstream use rights must be confirmed for the selected generator and its model terms.",
+        "A generation run would require a separate bounded authorization after the terms assessment."
+      ],
+      "sourceUrl": "repo://ml/datasets/dataset-registry.json"
+    },
+    {
+      "sourceId": "opensdi-open-world-dataset",
+      "source": "OpenSDID / OpenSDI",
+      "readiness": "READY_FOR_EVALUATION_ONLY",
+      "rightsClass": "CC_BY_SA_4_0_ACADEMIC_USE_STATED",
+      "truthType": "constructed generator and mask labels; source-image lineage remains an evaluation concern",
+      "availableNow": false,
+      "materializedCounts": {
+        "reportedTrainingImages": 200000,
+        "reportedTestImages": 100000,
+        "generatorFamiliesReported": 5
+      },
+      "calibrationEligible": false,
+      "holdoutEligible": false,
+      "trainingEligible": false,
+      "majorLimitations": [
+        "The dataset card states academic use and CC BY-SA 4.0; that is not a commercial training clearance for Lythaus.",
+        "The source real images and derived model/checkpoint rights must be audited separately.",
+        "Downloading it would exceed the WP006A scope and current host safety budget."
+      ],
+      "sourceUrl": "https://github.com/iamwangyabin/OpenSDI",
+      "datasetSourceUrl": "https://huggingface.co/datasets/nebula/OpenSDI_test"
+    },
+    {
+      "sourceId": "open-images-v7",
+      "source": "Open Images V7",
+      "readiness": "RIGHTS_REVIEW_REQUIRED",
+      "rightsClass": "PER_IMAGE_REVIEW",
+      "truthType": "natural-image source only; not physical-camera truth without provenance",
+      "availableNow": false,
+      "calibrationEligible": false,
+      "holdoutEligible": false,
+      "trainingEligible": false,
+      "majorLimitations": [
+        "The registry requires per-image rights review and does not establish camera acquisition truth.",
+        "No approved local material was found for WP006A."
+      ],
+      "sourceUrl": "repo://ml/datasets/dataset-registry.json"
+    },
+    {
+      "sourceId": "coco-and-related-public-benchmarks",
+      "source": "COCO, GenImage, DiT-FAKE, T2I-CoreBench, GPT-ImgEval, RAISE, MIT-Adobe-FiveK, HDR+",
+      "readiness": "RIGHTS_REVIEW_REQUIRED",
+      "rightsClass": "MIXED_OR_UNCLEAR",
+      "truthType": "varies by source; no unified Lythaus truth contract",
+      "availableNow": false,
+      "calibrationEligible": false,
+      "holdoutEligible": false,
+      "trainingEligible": false,
+      "majorLimitations": [
+        "The current registry marks these sources as unclear, permission-required, or per-file review.",
+        "No material was downloaded or promoted to the microbenchmark."
+      ],
+      "sourceUrl": "repo://ml/datasets/dataset-registry.json"
+    }
+  ],
+  "microbenchFoundation": {
+    "name": "LYTHAUS_FORENSIC_MICROBENCH_V0",
+    "status": "FOUNDATION_ONLY_INSUFFICIENT_TRUTH",
+    "targetSourceFamilies": "24-48 if rights-clean truth becomes available",
+    "materializedSourceFamilies": 0,
+    "calibrationEligibleSourceFamilies": 0,
+    "evaluationOnlySourceFamilies": 80,
+    "partialEditSourceFamilies": 0,
+    "unseenGeneratorHoldout": "UNSEEN_GENERATOR_HOLDOUT_NOT_READY",
+    "benchmarkReadiness": "INSUFFICIENT_TRUTH",
+    "reason": "Only an externally sourced, metadata-selected camera slice is available; no rights-confirmed synthetic, hard-negative, or partial-edit family set is present."
+  },
+  "conclusion": "No specialist calibration or local model runtime is scientifically or operationally authorized by the reconciled state. The next experiment must establish a rights-clean, provenance-first benchmark before threshold fitting."
+}

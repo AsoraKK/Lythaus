@@ -91,3 +91,5 @@ export async function evaluateAuthenticity(input: {
     policyVersion: 'evaluation-only-v1',
   };
 }
+
+export * from './wp006a.ts';
