@@ -487,6 +487,7 @@ async function buildControlRecords(ownerPool, controls, mediaRoot, sharp) {
       sampleId: record.sampleId,
       sourceFamilyId: record.sourceFamilyId,
       logicalReference: record.logicalFileReference,
+      logicalFileReference: record.logicalFileReference,
       hardNegativeType: record.hardNegativeType ?? 'UNKNOWN',
       sceneId: null,
       sceneIdentifierStatus: 'OWNER_POOL_NOT_SUPPLIED',
