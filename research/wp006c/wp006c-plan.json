@@ -1,0 +1,218 @@
+{
+  "schemaVersion": "lythaus-wp006c-ef2-plan-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+  "specialistVersion": "0",
+  "baseCommit": "04f3d3e6d83540dbf52a21f6760fb2398ab1c9f9",
+  "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+  "researchQuestions": [
+    "Can a deterministic pixel-domain measurement produce stable camera-acquisition consistency on owner-confirmed captures?",
+    "Does the frozen measurement separate camera captures from physicalCameraAcquisition=FALSE controls without evaluation tuning?",
+    "Does the frozen measurement transfer to the sealed unseen LGE LM-G710 device?",
+    "Are apparent results explained by metadata, resolution, file size, encoding, device identity, or other nuisance shortcuts?"
+  ],
+  "partitions": {
+    "calibration": "CALIBRATION camera families only; owner-confirmed physical camera acquisition and clean lineage axes.",
+    "evaluation": "EVALUATION families only after calibration freeze; seen camera and physicalCameraAcquisition=FALSE controls reported separately.",
+    "deviceHoldout": "DEVICE_HOLDOUT LGE LM-G710; pixels sealed until Stage A passes and unblind freeze is written.",
+    "reservedEvidence": "WP006B reserved camera, synthetic, and hard-negative families remain untouched.",
+    "sourceFamilyBoundary": true
+  },
+  "featureFamilies": [
+    {
+      "group": "RESIDUAL_ENERGY",
+      "name": "residualAbsMean",
+      "primaryScore": true
+    },
+    {
+      "group": "RESIDUAL_ENERGY",
+      "name": "residualRms",
+      "primaryScore": true
+    },
+    {
+      "group": "RESIDUAL_ENERGY",
+      "name": "residualP90",
+      "primaryScore": true
+    },
+    {
+      "group": "RESIDUAL_ENERGY",
+      "name": "residualP90ToMedianRatio",
+      "primaryScore": true
+    },
+    {
+      "group": "INTENSITY_CONDITIONED_RESIDUAL",
+      "name": "residualIntensitySlope",
+      "primaryScore": true
+    },
+    {
+      "group": "INTENSITY_CONDITIONED_RESIDUAL",
+      "name": "residualIntensityR2",
+      "primaryScore": true
+    },
+    {
+      "group": "CROSS_CHANNEL_RESIDUAL",
+      "name": "residualCrossChannelCorrelationRG",
+      "primaryScore": true
+    },
+    {
+      "group": "CROSS_CHANNEL_RESIDUAL",
+      "name": "residualCrossChannelCorrelationRB",
+      "primaryScore": true
+    },
+    {
+      "group": "CROSS_CHANNEL_RESIDUAL",
+      "name": "residualCrossChannelCorrelationGB",
+      "primaryScore": true
+    },
+    {
+      "group": "CROSS_CHANNEL_RESIDUAL",
+      "name": "residualChannelEnergySpread",
+      "primaryScore": true
+    },
+    {
+      "group": "RESIDUAL_AUTOCORRELATION",
+      "name": "residualAutocorrelationHorizontal1",
+      "primaryScore": true
+    },
+    {
+      "group": "RESIDUAL_AUTOCORRELATION",
+      "name": "residualAutocorrelationVertical1",
+      "primaryScore": true
+    },
+    {
+      "group": "RESIDUAL_AUTOCORRELATION",
+      "name": "residualAutocorrelationDiagonal1",
+      "primaryScore": true
+    },
+    {
+      "group": "RESIDUAL_AUTOCORRELATION",
+      "name": "residualAutocorrelationDiagonal2",
+      "primaryScore": true
+    },
+    {
+      "group": "PARITY_PERIODICITY",
+      "name": "parityPeriodicityEnergy",
+      "primaryScore": true
+    },
+    {
+      "group": "PARITY_PERIODICITY",
+      "name": "parityPeriodicityContrast",
+      "primaryScore": true
+    },
+    {
+      "group": "EDGE_CONDITIONED_RESIDUAL",
+      "name": "flatResidualAbsMean",
+      "primaryScore": true
+    },
+    {
+      "group": "EDGE_CONDITIONED_RESIDUAL",
+      "name": "edgeResidualAbsMean",
+      "primaryScore": true
+    },
+    {
+      "group": "EDGE_CONDITIONED_RESIDUAL",
+      "name": "edgeToFlatResidualRatio",
+      "primaryScore": true
+    },
+    {
+      "group": "MULTISCALE_RESIDUAL",
+      "name": "residualScaleEnergyRatio3To5",
+      "primaryScore": true
+    },
+    {
+      "group": "MULTISCALE_RESIDUAL",
+      "name": "residualScaleP90Ratio3To5",
+      "primaryScore": true
+    },
+    {
+      "group": "RESIDUAL_ENERGY",
+      "name": "residualSignBalance",
+      "primaryScore": true
+    },
+    {
+      "group": "PATCH_CONSISTENCY",
+      "name": "patchDispersionResidualEnergy",
+      "primaryScore": true
+    },
+    {
+      "group": "PATCH_CONSISTENCY",
+      "name": "patchDispersionCrossChannel",
+      "primaryScore": true
+    },
+    {
+      "group": "PATCH_CONSISTENCY",
+      "name": "patchDispersionAutocorrelation",
+      "primaryScore": true
+    },
+    {
+      "group": "PATCH_CONSISTENCY",
+      "name": "patchDispersionParity",
+      "primaryScore": true
+    }
+  ],
+  "scoringProcedure": {
+    "extractor": "Blind native decoded pixels only; no metadata, truth, filename, dimensions, or category inputs.",
+    "patchSelection": {
+      "identifier": "NATIVE_GRID_VARIANCE_RANKED_NON_SEMANTIC_V1",
+      "patchSize": 256,
+      "maximumPatches": 8,
+      "candidateGrid": "Three evenly spaced x anchors by three evenly spaced y anchors on the native decoded grid, deduplicated.",
+      "ranking": "Descending sampled local luminance variance; ties by y then x; no semantic or truth input.",
+      "semanticSelection": false
+    },
+    "calibration": "Per-device median centers, equal device-center weighting, robust MAD scales, group mean squared robust-z distance, median across groups.",
+    "leaveOneFamilyOut": true,
+    "threshold": "90th percentile of calibration-camera LOFO raw distance; lower distance is more camera-consistent.",
+    "normalizedMeasurement": "1/(1+rawDistance); not a probability.",
+    "noSupervisedClassifier": true,
+    "prnuStatus": "NOT_ADMITTED_AS_PRIMARY_EF2_SIGNAL"
+  },
+  "stageAGate": {
+    "calibrationLofoAcceptanceMinimum": 0.8,
+    "perDeviceLofoAcceptanceMinimum": 0.6,
+    "seenCameraEvaluationMinimum": "2/3 when at least 3 eligible families; otherwise UNDERPOWERED.",
+    "overallNonCameraFalseAcceptanceMaximum": 0.25,
+    "majorCategoryFalseAcceptanceMaximum": 0.35,
+    "requiredProperties": [
+      "no_source_family_leakage",
+      "no_calibration_evaluation_leakage",
+      "no_truth_or_metadata_input",
+      "no_severe_determinism_failure",
+      "shortcut_risk_not_high"
+    ]
+  },
+  "holdoutGate": {
+    "device": "LGE LM-G710",
+    "exactFamilyCount": 33,
+    "oneShot": true,
+    "noRefit": true,
+    "promisingAcceptanceMinimum": 0.7,
+    "mixedAcceptanceMinimum": 0.4
+  },
+  "transformations": [
+    "metadataStripped",
+    "JPEG95",
+    "JPEG75",
+    "resize75",
+    "crop10"
+  ],
+  "successClassifications": [
+    "PROMOTE_TO_CALIBRATION_CANDIDATE",
+    "KEEP_MEASUREMENT_ONLY",
+    "REJECT_CURRENT_EF2_MEASUREMENT",
+    "INVALID_RUN"
+  ],
+  "constraints": {
+    "noExternalInference": true,
+    "noModelWeights": true,
+    "noTraining": true,
+    "noProductionIntegration": true,
+    "noPersistentMedia": true,
+    "automaticRetries": 0,
+    "incrementalCostUsd": 0
+  },
+  "planStatus": "FROZEN_BEFORE_EVALUATION",
+  "featureRegistryHash": "1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9",
+  "configurationHash": "acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e",
+  "preparedAt": "2026-09-14T04:39:00.256Z"
+}

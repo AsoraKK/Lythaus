@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "lythaus-wp006c-ef2-run-manifest-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+  "baseCommit": "04f3d3e6d83540dbf52a21f6760fb2398ab1c9f9",
+  "implementationCommit": null,
+  "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+  "specialistVersion": "0",
+  "featureRegistryHash": "1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9",
+  "configurationHash": "acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e",
+  "planStatus": "FROZEN_BEFORE_EVALUATION",
+  "specialistInferenceRun": false,
+  "externalInferenceCalls": 0,
+  "incrementalCostUsd": 0,
+  "mediaRootLabel": "external-owner-seed/wp004a-observer-v0/originals",
+  "mediaAccess": {
+    "calibrationPixels": false,
+    "evaluationPixels": false,
+    "transformationPixels": false,
+    "lgePixels": false
+  },
+  "deviceHoldoutStatus": "SEALED",
+  "temporaryMediaPersisted": false,
+  "rawResidualsPersisted": false,
+  "rawMetadataPersisted": false,
+  "status": "PLANNED"
+}
