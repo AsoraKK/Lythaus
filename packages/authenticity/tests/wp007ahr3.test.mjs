@@ -42,6 +42,25 @@ function schemaResponse() {
   });
 }
 
+function flux2MultipartSchemaResponse() {
+  return response(200, {
+    success: true,
+    result: {
+      input: {
+        type: 'object',
+        properties: {
+          multipart: {
+            type: 'object',
+            properties: { body: { type: 'object' }, contentType: { type: 'string' } },
+          },
+        },
+        required: ['multipart'],
+      },
+      output: { type: 'object', properties: { image: { type: 'string' } } },
+    },
+  });
+}
+
 function modelForSearch(url) {
   const parsed = new URL(url);
   const value = parsed.searchParams.get('model') ?? parsed.searchParams.get('search');
@@ -119,6 +138,20 @@ test('schema status separates partial model availability from authentication fai
   assert.equal(forbidden.status, 'AUTH_BLOCKED');
   assert.equal(forbidden.authStatus, 'AUTH_FAILED');
   assert.ok(forbidden.models.every((model) => model.status === 'SCHEMA_FORBIDDEN'));
+});
+
+test('Flux.2 multipart schema is accepted as an available callable route', async () => {
+  const result = await runModelSchemaPreflight({
+    token,
+    accountId,
+    fetchImpl: async (url) => new URL(url).searchParams.get('model') === WP007AH_MODEL_IDS[1]
+      ? flux2MultipartSchemaResponse()
+      : schemaResponse(),
+  });
+  const flux2 = result.models.find((model) => model.modelId === WP007AH_MODEL_IDS[1]);
+  assert.equal(result.status, 'PASS');
+  assert.equal(flux2?.status, 'SCHEMA_AVAILABLE');
+  assert.equal(flux2?.multipartPropertyDeclared, true);
 });
 
 test('catalog failures are diagnostic only', async () => {
