@@ -113,7 +113,12 @@ export async function assertFrozenArtifacts(rootDir = REPOSITORY_ROOT) {
 }
 
 export function modelCatalogUrl(accountId, modelId) {
-  return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/models/search?search=${encodeURIComponent(modelId)}&hide_experimental=true&include_deprecated=false&per_page=20`;
+  const searchTerm = String(modelId).split('/').at(-1) || String(modelId);
+  return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/models/search?search=${encodeURIComponent(searchTerm)}&hide_experimental=true&include_deprecated=false&per_page=20`;
+}
+
+export function modelSchemaUrl(accountId, modelId) {
+  return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/models/schema?model=${encodeURIComponent(modelId)}`;
 }
 
 function modelEntries(payload) {
@@ -123,14 +128,18 @@ function modelEntries(payload) {
   return [];
 }
 
-function modelEntryId(entry) {
+export function modelCallableName(entry) {
   if (!entry || typeof entry !== 'object') return null;
-  return entry.id ?? entry.name ?? entry.modelId ?? entry.model_id ?? null;
+  for (const key of ['name', 'model_id', 'modelId']) {
+    const value = entry[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
 }
 
 export async function runModelCatalogPreflight({ token, accountId, fetchImpl = globalThis.fetch }) {
   if (!token || !accountId) return { status: 'REQUIRED_SECRET_MISSING', models: [], credentialsPrinted: false };
-  if (typeof fetchImpl !== 'function') return { status: 'AUTH_UNAVAILABLE', models: [], credentialsPrinted: false };
+  if (typeof fetchImpl !== 'function') return { status: 'CATALOG_UNAVAILABLE', models: [], credentialsPrinted: false };
   const models = [];
   for (const modelId of WP007AH_MODEL_IDS) {
     try {
@@ -139,18 +148,170 @@ export async function runModelCatalogPreflight({ token, accountId, fetchImpl = g
         headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
       });
       if (!response.ok) {
-        models.push({ modelId, status: response.status === 401 || response.status === 403 ? 'AUTH_FAILED' : 'MODEL_ROUTE_UNAVAILABLE', httpStatus: response.status });
+        models.push({ modelId, status: 'CATALOG_UNAVAILABLE', httpStatus: response.status, providerErrorCode: null, providerErrorMessage: null });
         continue;
       }
       const payload = await response.json();
-      const found = modelEntries(payload).some((entry) => modelEntryId(entry) === modelId);
-      models.push({ modelId, status: found ? 'AVAILABLE' : 'MODEL_NOT_FOUND', httpStatus: response.status });
+      const entries = modelEntries(payload);
+      const match = entries.find((entry) => modelCallableName(entry) === modelId);
+      models.push({
+        modelId,
+        status: match ? 'CATALOG_MATCH' : 'CATALOG_MISMATCH',
+        httpStatus: response.status,
+        catalogInternalId: typeof match?.id === 'string' ? match.id : null,
+        callableName: modelCallableName(match),
+      });
     } catch {
-      models.push({ modelId, status: 'AUTH_REQUEST_FAILED' });
+      models.push({ modelId, status: 'CATALOG_UNAVAILABLE', httpStatus: null, providerErrorCode: null, providerErrorMessage: null });
     }
   }
-  const status = models.every((model) => model.status === 'AVAILABLE') ? 'PASS' : (models.some((model) => model.status === 'AUTH_FAILED' || model.status === 'AUTH_REQUEST_FAILED') ? 'AUTH_FAILED' : 'MODEL_ROUTE_UNAVAILABLE');
+  const status = models.length === WP007AH_MODEL_IDS.length && models.every((model) => model.status === 'CATALOG_MATCH')
+    ? 'CATALOG_MATCH'
+    : models.some((model) => model.status === 'CATALOG_UNAVAILABLE') ? 'CATALOG_UNAVAILABLE' : 'CATALOG_MISMATCH';
   return { status, models, credentialsPrinted: false };
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function safeProviderErrorMessage(payload) {
+  if (!isRecord(payload) || !Array.isArray(payload.errors)) return null;
+  for (const item of payload.errors) {
+    if (!isRecord(item) || typeof item.message !== 'string') continue;
+    const message = item.message.replace(/[\u0000-\u001f\u007f]/gu, ' ').replace(/\s+/gu, ' ').trim();
+    if (!message) continue;
+    return message.replace(/Bearer\s+[A-Za-z0-9._~-]+/giu, 'Bearer [REDACTED]').slice(0, 200);
+  }
+  return null;
+}
+
+function safeProviderErrorCode(payload) {
+  if (!isRecord(payload) || !Array.isArray(payload.errors)) return null;
+  for (const item of payload.errors) {
+    if (!isRecord(item)) continue;
+    if (typeof item.code === 'number' && Number.isSafeInteger(item.code)) return item.code;
+    if (typeof item.code === 'string' && /^[A-Za-z0-9_.:-]{1,80}$/u.test(item.code)) return item.code;
+  }
+  return null;
+}
+
+function schemaObject(value) {
+  return isRecord(value) && value.type === 'object';
+}
+
+function schemaIsConsistentWithRoute(modelId, input, output) {
+  if (!schemaObject(input) || !schemaObject(output)) return false;
+  const properties = isRecord(input.properties) ? input.properties : null;
+  const hasPromptProperty = Boolean(properties && Object.prototype.hasOwnProperty.call(properties, 'prompt'));
+  const genericObjectSchema = !properties || input.additionalProperties === true;
+  if (modelId === '@cf/black-forest-labs/flux-1-schnell') return hasPromptProperty || genericObjectSchema;
+  if (modelId === '@cf/black-forest-labs/flux-2-klein-4b') return hasPromptProperty || genericObjectSchema;
+  return false;
+}
+
+function schemaFailure({ modelId, status, httpStatus = null, payload = null, reason = null }) {
+  return {
+    modelId,
+    status,
+    httpStatus,
+    providerErrorCode: safeProviderErrorCode(payload),
+    providerErrorMessage: safeProviderErrorMessage(payload),
+    schemaReason: reason,
+  };
+}
+
+export async function runModelSchemaPreflight({ token, accountId, fetchImpl = globalThis.fetch }) {
+  if (!token || !accountId) return { status: 'REQUIRED_SECRET_MISSING', models: [], credentialsPrinted: false };
+  if (typeof fetchImpl !== 'function') return { status: 'SCHEMA_API_ERROR', models: [], credentialsPrinted: false };
+  const models = [];
+  for (const modelId of WP007AH_MODEL_IDS) {
+    try {
+      const response = await fetchImpl(modelSchemaUrl(accountId, modelId), {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      });
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+      if (response.status === 401) {
+        models.push(schemaFailure({ modelId, status: 'SCHEMA_AUTH_FAILED', httpStatus: response.status, payload }));
+        continue;
+      }
+      if (response.status === 403) {
+        models.push(schemaFailure({ modelId, status: 'SCHEMA_FORBIDDEN', httpStatus: response.status, payload }));
+        continue;
+      }
+      if (response.status === 404) {
+        models.push(schemaFailure({ modelId, status: 'SCHEMA_NOT_FOUND', httpStatus: response.status, payload }));
+        continue;
+      }
+      if (!response.ok) {
+        models.push(schemaFailure({ modelId, status: 'SCHEMA_API_ERROR', httpStatus: response.status, payload }));
+        continue;
+      }
+      if (!isRecord(payload) || payload.success !== true || !isRecord(payload.result)) {
+        models.push(schemaFailure({ modelId, status: 'SCHEMA_API_ERROR', httpStatus: response.status, payload, reason: 'success_false_or_result_missing' }));
+        continue;
+      }
+      const input = payload.result.input;
+      const output = payload.result.output;
+      if (!schemaIsConsistentWithRoute(modelId, input, output)) {
+        models.push(schemaFailure({ modelId, status: 'SCHEMA_MALFORMED', httpStatus: response.status, payload, reason: 'input_output_object_schema_required' }));
+        continue;
+      }
+      models.push({
+        modelId,
+        status: 'SCHEMA_AVAILABLE',
+        httpStatus: response.status,
+        inputType: input.type,
+        outputType: output.type,
+        promptPropertyDeclared: Boolean(isRecord(input.properties) && Object.prototype.hasOwnProperty.call(input.properties, 'prompt')),
+        providerErrorCode: null,
+        providerErrorMessage: null,
+      });
+    } catch {
+      models.push(schemaFailure({ modelId, status: 'SCHEMA_API_ERROR' }));
+    }
+  }
+  const available = models.filter((model) => model.status === 'SCHEMA_AVAILABLE').length;
+  const authFailures = models.filter((model) => model.status === 'SCHEMA_AUTH_FAILED' || model.status === 'SCHEMA_FORBIDDEN').length;
+  const authStatus = available > 0 || models.some((model) => ['SCHEMA_NOT_FOUND', 'SCHEMA_API_ERROR', 'SCHEMA_MALFORMED'].includes(model.status))
+    ? 'PASS'
+    : authFailures === models.length ? 'AUTH_FAILED' : 'SCHEMA_API_ERROR';
+  let status = 'SCHEMA_API_ERROR';
+  if (available === models.length && models.length === WP007AH_MODEL_IDS.length) status = 'PASS';
+  else if (available > 0) status = 'MODEL_ROUTE_PARTIAL';
+  else if (models.length === WP007AH_MODEL_IDS.length && models.every((model) => model.status === 'SCHEMA_NOT_FOUND')) status = 'MODEL_ROUTE_UNAVAILABLE';
+  else if (models.length > 0 && models.every((model) => model.status === 'SCHEMA_AUTH_FAILED' || model.status === 'SCHEMA_FORBIDDEN')) status = 'AUTH_BLOCKED';
+  else if (models.length > 0 && models.every((model) => model.status === 'SCHEMA_MALFORMED')) status = 'MODEL_SCHEMA_MALFORMED';
+  return { status, authStatus, models, credentialsPrinted: false };
+}
+
+export async function runModelRoutePreflight({ token, accountId, fetchImpl = globalThis.fetch }) {
+  if (!token || !accountId) return {
+    status: 'REQUIRED_SECRET_MISSING',
+    authStatus: 'REQUIRED_SECRET_MISSING',
+    modelRouteStatus: 'NOT_REACHED',
+    modelSchemas: [],
+    modelCatalog: [],
+    catalogStatus: 'NOT_REACHED',
+    credentialsPrinted: false,
+  };
+  const schemas = await runModelSchemaPreflight({ token, accountId, fetchImpl });
+  const catalog = await runModelCatalogPreflight({ token, accountId, fetchImpl });
+  return {
+    status: schemas.status,
+    authStatus: schemas.authStatus,
+    modelRouteStatus: schemas.status,
+    modelSchemas: schemas.models,
+    modelCatalog: catalog.models,
+    catalogStatus: catalog.status,
+    credentialsPrinted: false,
+  };
 }
 
 export function evaluateFreeAllocation() {
@@ -180,6 +341,7 @@ export async function runPreflight({
     mode,
     passed: false,
     authStatus: 'NOT_REACHED',
+    modelRouteStatus: 'NOT_REACHED',
     costStatus: 'NOT_REACHED',
     rightsStatus: 'NOT_REACHED',
     freeAllocationVerified: false,
@@ -211,12 +373,20 @@ export async function runPreflight({
     summary.status = 'AUTH_BLOCKED';
     return summary;
   }
-  const auth = await runModelCatalogPreflight({ token, accountId, fetchImpl });
-  summary.authStatus = auth.status;
-  summary.modelCatalog = auth.models;
-  if (auth.status !== 'PASS') {
+  const auth = await runModelRoutePreflight({ token, accountId, fetchImpl });
+  summary.authStatus = auth.authStatus;
+  summary.modelRouteStatus = auth.modelRouteStatus;
+  summary.modelSchema = auth.modelSchemas;
+  summary.modelCatalog = auth.modelCatalog;
+  summary.catalogStatus = auth.catalogStatus;
+  if (auth.authStatus !== 'PASS') {
     summary.costStatus = 'NOT_REACHED_BECAUSE_AUTH_BLOCKED';
     summary.status = 'AUTH_BLOCKED';
+    return summary;
+  }
+  if (auth.modelRouteStatus !== 'PASS') {
+    summary.costStatus = 'NOT_REACHED_BECAUSE_MODEL_ROUTE_BLOCKED';
+    summary.status = auth.modelRouteStatus;
     return summary;
   }
 
@@ -248,6 +418,7 @@ async function writeWorkflowOutputs(summary) {
   const lines = [
     `passed=${summary.passed === true}`,
     `auth_status=${summary.authStatus}`,
+    `model_route_status=${summary.modelRouteStatus ?? ''}`,
     `cost_status=${summary.costStatus}`,
     `free_allocation_verified=${summary.freeAllocationVerified === true}`,
     `rights_status=${summary.rightsStatus}`,
@@ -264,6 +435,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
     console.log(JSON.stringify({
       status: summary.status ?? (summary.passed ? 'PASS' : 'BLOCKED'),
       authStatus: summary.authStatus,
+      modelRouteStatus: summary.modelRouteStatus ?? null,
       costStatus: summary.costStatus,
       freeAllocationVerified: summary.freeAllocationVerified,
       rightsStatus: summary.rightsStatus,

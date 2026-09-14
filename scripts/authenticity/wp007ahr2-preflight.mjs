@@ -5,7 +5,7 @@ import {
   assertFrozenArtifacts,
   assertTrustedMain,
   assertExecutionConfirmation,
-  runModelCatalogPreflight,
+  runModelRoutePreflight,
   WP007AHR_REPOSITORY,
   WP007AHR_TRUSTED_REF,
   WP007AHR_FREEZE_SHA256,
@@ -69,6 +69,7 @@ export async function runWp007ahr2Preflight({
     mode,
     passed: false,
     authStatus: 'NOT_REACHED',
+    modelRouteStatus: 'NOT_REACHED',
     costStatus: 'NOT_REACHED',
     rightsStatus: 'NOT_REACHED',
     executionAuthorizationVerified: false,
@@ -104,12 +105,20 @@ export async function runWp007ahr2Preflight({
     summary.status = 'AUTH_BLOCKED';
     return summary;
   }
-  const auth = await runModelCatalogPreflight({ token, accountId, fetchImpl });
-  summary.authStatus = auth.status;
-  summary.modelCatalog = auth.models;
-  if (auth.status !== 'PASS') {
+  const auth = await runModelRoutePreflight({ token, accountId, fetchImpl });
+  summary.authStatus = auth.authStatus;
+  summary.modelRouteStatus = auth.modelRouteStatus;
+  summary.modelSchema = auth.modelSchemas;
+  summary.modelCatalog = auth.modelCatalog;
+  summary.catalogStatus = auth.catalogStatus;
+  if (auth.authStatus !== 'PASS') {
     summary.costStatus = 'NOT_REACHED_BECAUSE_AUTH_BLOCKED';
     summary.status = 'AUTH_BLOCKED';
+    return summary;
+  }
+  if (auth.modelRouteStatus !== 'PASS') {
+    summary.costStatus = 'NOT_REACHED_BECAUSE_MODEL_ROUTE_BLOCKED';
+    summary.status = auth.modelRouteStatus;
     return summary;
   }
 
@@ -144,6 +153,7 @@ async function writeWorkflowOutputs(summary) {
   const lines = [
     `passed=${summary.passed === true}`,
     `auth_status=${summary.authStatus}`,
+    `model_route_status=${summary.modelRouteStatus}`,
     `cost_status=${summary.costStatus}`,
     `projected_max_cost_usd=${summary.projectedMaxCostUsd ?? ''}`,
     `rights_status=${summary.rightsStatus}`,
@@ -166,6 +176,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
     console.log(JSON.stringify({
       status: summary.status ?? (summary.passed ? 'PASS' : 'BLOCKED'),
       authStatus: summary.authStatus,
+      modelRouteStatus: summary.modelRouteStatus,
       costStatus: summary.costStatus,
       projectedMaxCostUsd: summary.projectedMaxCostUsd ?? null,
       rightsStatus: summary.rightsStatus,

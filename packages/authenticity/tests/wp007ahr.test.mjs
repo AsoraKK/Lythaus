@@ -95,7 +95,7 @@ test('missing secrets fail before any Cloudflare request', async () => {
   assert.equal(calls, 0);
 });
 
-test('authenticated model catalog check is read-only, then cost remains fail-closed', async () => {
+test('authenticated schema check is authoritative and catalog diagnostics remain read-only', async () => {
   const calls = [];
   const result = await runPreflight({
     ref: WP007AHR_TRUSTED_REF,
@@ -104,8 +104,13 @@ test('authenticated model catalog check is read-only, then cost remains fail-clo
     accountId: 'account-for-test',
     fetchImpl: async (url, init) => {
       calls.push({ url, init });
-      const requested = new URL(url).searchParams.get('search');
-      return { ok: true, status: 200, json: async () => ({ success: true, result: [{ id: requested }] }) };
+      const parsed = new URL(url);
+      const requested = parsed.searchParams.get('model') ?? parsed.searchParams.get('search');
+      const modelId = WP007AH_MODEL_IDS.find((model) => model.endsWith(String(requested))) ?? requested;
+      if (parsed.pathname.endsWith('/models/schema')) {
+        return { ok: true, status: 200, json: async () => ({ success: true, result: { input: { type: 'object', additionalProperties: true }, output: { type: 'object', additionalProperties: true } } }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ success: true, result: [{ id: `internal-${modelId}`, name: modelId }] }) };
     },
     rootDir: repositoryRoot,
   });
@@ -113,10 +118,13 @@ test('authenticated model catalog check is read-only, then cost remains fail-clo
   assert.equal(result.costStatus, 'FREE_ALLOCATION_UNVERIFIED');
   assert.equal(result.freeAllocationVerified, false);
   assert.equal(result.passed, false);
-  assert.equal(calls.length, 2);
+  assert.equal(result.modelRouteStatus, 'PASS');
+  assert.equal(result.catalogStatus, 'CATALOG_MATCH');
+  assert.equal(calls.length, 4);
   assert.ok(calls.every(({ init }) => init.method === 'GET'));
   assert.ok(calls.every(({ url }) => url.startsWith('https://api.cloudflare.com/client/v4/accounts/')));
   assert.equal(modelCatalogUrl('account-for-test', WP007AH_MODEL_IDS[0]).includes('/ai/models/search?'), true);
+  assert.equal(new URL(modelCatalogUrl('account-for-test', WP007AH_MODEL_IDS[0])).searchParams.get('search'), 'flux-1-schnell');
   assert.equal(evaluateFreeAllocation().status, 'FREE_ALLOCATION_UNVERIFIED');
 });
 

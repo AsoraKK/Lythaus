@@ -41,6 +41,7 @@ jobs:
     outputs:
       passed: ${{ steps.preflight.outputs.passed }}
       auth_status: ${{ steps.preflight.outputs.auth_status }}
+      model_route_status: ${{ steps.preflight.outputs.model_route_status }}
       cost_status: ${{ steps.preflight.outputs.cost_status }}
       projected_max_cost_usd: ${{ steps.preflight.outputs.projected_max_cost_usd }}
       rights_status: ${{ steps.preflight.outputs.rights_status }}
@@ -94,7 +95,7 @@ jobs:
         shell: bash
         run: |
           if test -f "$PREFLIGHT_FILE"; then
-            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.PREFLIGHT_FILE,"utf8")); const lines=["### WP007A-HR2 preflight","","AUTH_STATUS = "+(s.authStatus??"UNKNOWN"),"COST_STATUS = "+(s.costStatus??"UNKNOWN"),"PROJECTED_MAX_COST_USD = "+(s.projectedMaxCostUsd??"UNKNOWN"),"RIGHTS_STATUS = "+(s.rightsStatus??"UNKNOWN"),"EXECUTION_AUTHORIZATION_VERIFIED = "+Boolean(s.executionAuthorizationVerified),"EXECUTION_STATUS = "+(s.passed===true?"AUTHORIZED":"BLOCKED"),"GENERATION_CALLS = 0","IMAGES_GENERATED = 0"]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n")+"\n");'
+            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.PREFLIGHT_FILE,"utf8")); const schemas=Array.isArray(s.modelSchema)?s.modelSchema:[]; const lines=["### WP007A-HR2 preflight","","AUTH_STATUS = "+(s.authStatus??"UNKNOWN"),"MODEL_ROUTE_STATUS = "+(s.modelRouteStatus??"UNKNOWN"),"CATALOG_STATUS = "+(s.catalogStatus??"UNKNOWN"),"FLUX1_SCHEMA_STATUS = "+(schemas.find((m)=>m.modelId==="@cf/black-forest-labs/flux-1-schnell")?.status??"UNKNOWN"),"FLUX2_SCHEMA_STATUS = "+(schemas.find((m)=>m.modelId==="@cf/black-forest-labs/flux-2-klein-4b")?.status??"UNKNOWN"),"COST_STATUS = "+(s.costStatus??"UNKNOWN"),"PROJECTED_MAX_COST_USD = "+(s.projectedMaxCostUsd??"UNKNOWN"),"RIGHTS_STATUS = "+(s.rightsStatus??"UNKNOWN"),"EXECUTION_AUTHORIZATION_VERIFIED = "+Boolean(s.executionAuthorizationVerified),"EXECUTION_STATUS = "+(s.passed===true?"AUTHORIZED":"BLOCKED"),"GENERATION_CALLS = 0","IMAGES_GENERATED = 0"]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n")+"\n");'
           else
             printf '%s\n' '### WP007A-HR2 preflight' '' 'EXECUTION_STATUS = PREFLIGHT_SCRIPT_FAILED' 'GENERATION_CALLS = 0' 'IMAGES_GENERATED = 0' >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -102,7 +103,7 @@ jobs:
   execute:
     name: Execute frozen holdout generation
     needs: preflight
-    if: ${{ inputs.mode == 'execute' && needs.preflight.result == 'success' && needs.preflight.outputs.passed == 'true' && needs.preflight.outputs.auth_status == 'PASS' && needs.preflight.outputs.rights_status == 'PASS' && needs.preflight.outputs.cost_status == 'BOUNDED_COST_AUTHORIZED' && needs.preflight.outputs.execution_authorization_verified == 'true' }}
+    if: ${{ inputs.mode == 'execute' && needs.preflight.result == 'success' && needs.preflight.outputs.passed == 'true' && needs.preflight.outputs.auth_status == 'PASS' && needs.preflight.outputs.model_route_status == 'PASS' && needs.preflight.outputs.rights_status == 'PASS' && needs.preflight.outputs.cost_status == 'BOUNDED_COST_AUTHORIZED' && needs.preflight.outputs.execution_authorization_verified == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

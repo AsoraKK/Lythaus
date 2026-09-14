@@ -70,8 +70,13 @@ test('HR2 preflight still requires trusted main, auth, rights, and exact authori
     accountId: 'account-for-test',
     fetchImpl: async (url, init) => {
       assert.equal(init.method, 'GET');
-      const requested = new URL(url).searchParams.get('search');
-      return { ok: true, status: 200, json: async () => ({ success: true, result: [{ id: requested }] }) };
+      const parsed = new URL(url);
+      const requested = parsed.searchParams.get('model') ?? parsed.searchParams.get('search');
+      const modelId = ['@cf/black-forest-labs/flux-1-schnell', '@cf/black-forest-labs/flux-2-klein-4b'].find((model) => model.endsWith(String(requested))) ?? requested;
+      if (parsed.pathname.endsWith('/models/schema')) {
+        return { ok: true, status: 200, json: async () => ({ success: true, result: { input: { type: 'object', additionalProperties: true }, output: { type: 'object', additionalProperties: true } } }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ success: true, result: [{ id: `internal-${modelId}`, name: modelId }] }) };
     },
   });
   assert.equal(authorized.status, 'PASS');
