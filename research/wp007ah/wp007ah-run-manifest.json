@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "lythaus-wp007ah-run-manifest-v1",
+  "baseSha": "6543ec6496a4d4b006fb40b6f5de50cfd9e98009",
+  "baseWp007aBenchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "runStatus": "AUTH_BLOCKED",
+  "startedAt": "2026-09-14",
+  "rightsRevalidation": "PASS_FOR_BOUNDED_HOLDOUT_EVALUATION",
+  "authPreflight": {
+    "status": "AUTH_BLOCKED",
+    "authorizedCliSession": false,
+    "credentialsPrinted": false,
+    "generationCalls": 0
+  },
+  "costPreflight": {
+    "paidCostCapUsd": 0,
+    "incrementalPaidCostUsd": 0,
+    "estimatedProviderListPriceUsd": 0.080704,
+    "allocationConfirmed": false,
+    "status": "NOT_REACHED_BECAUSE_AUTH_BLOCKED"
+  },
+  "models": [
+    {
+      "modelId": "@cf/black-forest-labs/flux-1-schnell",
+      "requested": 40,
+      "valid": 0,
+      "failed": 0,
+      "role": "SEALED_GENERATOR_HOLDOUT"
+    },
+    {
+      "modelId": "@cf/black-forest-labs/flux-2-klein-4b",
+      "requested": 40,
+      "valid": 0,
+      "failed": 0,
+      "role": "FUTURE_RESERVE"
+    }
+  ],
+  "smokeOutputs": 0,
+  "detectorInferenceCalls": 0,
+  "modelTrainingRuns": 0,
+  "transformationsRun": 0,
+  "mediaCommittedToGit": false,
+  "productionChanges": false,
+  "holdoutStatuses": {
+    "flux1": "SEALED_FOR_WP007B_NOT_MATERIALIZED",
+    "flux2": "SEALED_FUTURE_RESERVE_NOT_MATERIALIZED"
+  }
+}

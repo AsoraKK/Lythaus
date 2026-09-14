@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "lythaus-wp007ah-cloudflare-rights-revalidation-v1",
+  "rightsAuditId": "WP007AH_CLOUDFLARE_BFL_ROUTE_2026-09-14",
+  "reviewedAt": "2026-09-14",
+  "baseWp007aRightsArtifact": "research/wp007a/cloudflare-model-rights.json",
+  "rightsRevalidationStatus": "PASS_FOR_BOUNDED_HOLDOUT_EVALUATION",
+  "provider": "BLACK_FOREST_LABS",
+  "accessRoute": "CLOUDFLARE_WORKERS_AI",
+  "termsEffectiveDate": "NOT_STATED_ON_PUBLIC_PAGE",
+  "termsRetrievedAt": "2026-09-14",
+  "officialSources": [
+    "https://developers.cloudflare.com/workers-ai/platform/data-usage/",
+    "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+    "https://developers.cloudflare.com/workers-ai/models/flux-2-klein-4b/",
+    "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+    "https://bfl.ai/legal/terms-of-service"
+  ],
+  "routeFindings": [
+    "Cloudflare documents generated output as Customer Content and states that model-provider terms apply to third-party models.",
+    "The current BFL public terms prohibit using Output to train, distill, or fine-tune another AI model.",
+    "The WP007A route audit and current official documentation support bounded private evaluation/holdout use; this artifact does not upgrade training rights or authorize public redistribution.",
+    "The exact account entitlement and free-allocation balance are separate operational gates and were not available in the local CLI session."
+  ],
+  "models": [
+    {
+      "modelId": "@cf/black-forest-labs/flux-1-schnell",
+      "modelFamily": "FLUX_1_SCHNELL",
+      "modelStatus": "CURRENTLY_DOCUMENTED_CLOUDFLARE_ROUTE",
+      "provider": "BLACK_FOREST_LABS",
+      "accessRoute": "CLOUDFLARE_WORKERS_AI",
+      "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY",
+      "trainingEligibility": "EVALUATION_ONLY",
+      "generationAuthorization": "WP007AH_SCOPE_AUTHORIZED_ACCOUNT_AUTH_REQUIRED",
+      "rightsStatus": "EVALUATION_ALLOWED_TRAINING_BLOCKED",
+      "benchmarkRole": "SEALED_GENERATOR_HOLDOUT",
+      "rightsDocumentVersion": "BFL_PUBLIC_TERMS_CLOUDFLARE_DOCS_REVALIDATED_2026-09-14",
+      "seedSupport": "DOCUMENTED_BY_CURRENT_MODEL_PAGE",
+      "notes": "FLUX.1 Schnell model documentation shows a seed input example and current Cloudflare pricing."
+    },
+    {
+      "modelId": "@cf/black-forest-labs/flux-2-klein-4b",
+      "modelFamily": "FLUX_2_KLEIN_4B",
+      "modelStatus": "CURRENTLY_DOCUMENTED_CLOUDFLARE_PARTNER_ROUTE",
+      "provider": "BLACK_FOREST_LABS",
+      "accessRoute": "CLOUDFLARE_WORKERS_AI",
+      "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY",
+      "trainingEligibility": "EVALUATION_ONLY",
+      "generationAuthorization": "WP007AH_SCOPE_AUTHORIZED_ACCOUNT_AUTH_REQUIRED",
+      "rightsStatus": "EVALUATION_ALLOWED_TRAINING_BLOCKED",
+      "benchmarkRole": "FUTURE_RESERVE",
+      "rightsDocumentVersion": "BFL_PUBLIC_TERMS_CLOUDFLARE_DOCS_REVALIDATED_2026-09-14",
+      "seedSupport": "NOT_DOCUMENTED_BY_CURRENT_MODEL_PAGE",
+      "notes": "FLUX.2 Klein is documented as a Cloudflare partner model; no seed input is exposed on the current model page, so WP007A-H records NOT_SUPPORTED unless a later route smoke documents it."
+    }
+  ],
+  "trainingEligibility": "EVALUATION_ONLY",
+  "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY",
+  "publicRedistribution": "NOT_AUTHORIZED",
+  "commercialProductEvaluation": "AUTHORIZED_AS_PRIVATE_BOUNDED_HOLDOUT",
+  "cloudflareGenerationStatus": "AUTH_BLOCKED",
+  "generationCalls": 0
+}

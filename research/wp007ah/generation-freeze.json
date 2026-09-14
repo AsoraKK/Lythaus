@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "lythaus-wp007ah-generation-freeze-v1",
+  "baseSha": "6543ec6496a4d4b006fb40b6f5de50cfd9e98009",
+  "baseWp007aBenchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "promptBankVersion": "LYTHAUS_EF3_PROMPT_BANK_V1",
+  "promptIds": [
+    "PROMPT_001",
+    "PROMPT_002",
+    "PROMPT_003",
+    "PROMPT_004",
+    "PROMPT_005",
+    "PROMPT_011",
+    "PROMPT_012",
+    "PROMPT_013",
+    "PROMPT_014",
+    "PROMPT_015",
+    "PROMPT_021",
+    "PROMPT_022",
+    "PROMPT_023",
+    "PROMPT_024",
+    "PROMPT_025",
+    "PROMPT_031",
+    "PROMPT_032",
+    "PROMPT_033",
+    "PROMPT_034",
+    "PROMPT_035",
+    "PROMPT_041",
+    "PROMPT_042",
+    "PROMPT_043",
+    "PROMPT_044",
+    "PROMPT_045",
+    "PROMPT_051",
+    "PROMPT_052",
+    "PROMPT_053",
+    "PROMPT_054",
+    "PROMPT_055",
+    "PROMPT_061",
+    "PROMPT_062",
+    "PROMPT_063",
+    "PROMPT_064",
+    "PROMPT_065",
+    "PROMPT_071",
+    "PROMPT_072",
+    "PROMPT_073",
+    "PROMPT_074",
+    "PROMPT_075"
+  ],
+  "models": [
+    {
+      "modelId": "@cf/black-forest-labs/flux-1-schnell",
+      "modelFamily": "FLUX_1_SCHNELL",
+      "benchmarkRole": "SEALED_GENERATOR_HOLDOUT",
+      "purpose": "WP007B_FIRST_UNSEEN_GENERATOR_HOLDOUT",
+      "trainingEligibility": "EVALUATION_ONLY",
+      "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY",
+      "rightsAuditId": "WP007AH_CLOUDFLARE_BFL_ROUTE_2026-09-14",
+      "seedSupport": "DOCUMENTED_BY_CURRENT_MODEL_PAGE",
+      "requestParameters": {
+        "steps": 4
+      }
+    },
+    {
+      "modelId": "@cf/black-forest-labs/flux-2-klein-4b",
+      "modelFamily": "FLUX_2_KLEIN_4B",
+      "benchmarkRole": "FUTURE_RESERVE",
+      "purpose": "POST_WP007B_INDEPENDENT_GENERATOR_REPLICATION",
+      "trainingEligibility": "EVALUATION_ONLY",
+      "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY",
+      "rightsAuditId": "WP007AH_CLOUDFLARE_BFL_ROUTE_2026-09-14",
+      "seedSupport": "NOT_DOCUMENTED_BY_CURRENT_MODEL_PAGE",
+      "requestParameters": {}
+    }
+  ],
+  "generationRoute": "CLOUDFLARE_WORKERS_AI_BFL_PARTNER_ROUTE",
+  "generationConfiguration": {
+    "outputSize": {
+      "width": 1024,
+      "height": 1024,
+      "policy": "REQUEST_WHERE_ROUTE_SUPPORTS_OTHERWISE_PROVIDER_DEFAULT"
+    },
+    "flux1": {
+      "steps": 4,
+      "seed": "DERIVED_PROMPT_SEED"
+    },
+    "flux2": {
+      "seed": "NOT_SUPPORTED_UNLESS_CURRENT_ROUTE_DOCUMENTS_IT"
+    },
+    "outputFormat": "PROVIDER_RETURNED_IMAGE",
+    "noParameterSearch": true,
+    "noPromptVariation": true,
+    "noReplicateSweep": true
+  },
+  "seedDerivation": "derivePromptSeed(promptBankVersion, generatorModelId, promptId, 1); FLUX.2 records NOT_SUPPORTED unless route documentation confirms seed input.",
+  "retryPolicy": {
+    "maxIdenticalTransportRetries": 1,
+    "retryOnlyWhenNoValidProviderOutputWasReceived": true,
+    "neverRetryForContentQuality": true,
+    "neverReplaceFailedPrompt": true
+  },
+  "maxIncrementalPaidCostUsd": 0,
+  "outputCache": {
+    "insideRepository": false,
+    "mediaCommittedToGit": false,
+    "logicalCacheIdOnly": true
+  },
+  "trainingEligibility": "EVALUATION_ONLY",
+  "rightsRevalidation": "PASS_FOR_BOUNDED_HOLDOUT_EVALUATION",
+  "noDetectorInference": true,
+  "noTraining": true,
+  "noTransformations": true,
+  "frozenBeforeGeneration": true,
+  "freezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514"
+}
