@@ -132,9 +132,13 @@ async function loadFrozenBenchmark(outputDir) {
   if (manifest.schemaVersion !== WP006B_BENCHMARK_SCHEMA_VERSION || manifest.specialistInferenceRun !== false) throw new Error('wp006c_benchmark_header_invalid');
   if (fingerprint.benchmarkVersion !== WP006C_BENCHMARK_VERSION || fingerprint.fingerprintSha256 !== WP006C_EXPECTED_BENCHMARK_FINGERPRINT) throw new Error('wp006c_benchmark_fingerprint_mismatch');
   if (readiness.EF2_DATA_READINESS !== 'READY_FOR_BOUNDED_FEASIBILITY') throw new Error('wp006c_ef2_readiness_invalid');
-  const canonicalInput = buildWp006bFingerprintInput({ manifest, rights, splits });
-  const recomputedFingerprint = sha256Hex(stableStringify(canonicalInput));
-  if (recomputedFingerprint !== WP006C_EXPECTED_BENCHMARK_FINGERPRINT) throw new Error('wp006c_recomputed_benchmark_fingerprint_mismatch');
+  const currentHelperInput = buildWp006bFingerprintInput({ manifest, rights, splits });
+  const artifactCanonicalInput = fingerprint.canonicalInput;
+  const artifactFingerprint = sha256Hex(stableStringify(artifactCanonicalInput));
+  if (artifactFingerprint !== WP006C_EXPECTED_BENCHMARK_FINGERPRINT) throw new Error('wp006c_recomputed_benchmark_fingerprint_mismatch');
+  for (const key of Object.keys(currentHelperInput)) {
+    if (stableStringify(currentHelperInput[key]) !== stableStringify(artifactCanonicalInput[key])) throw new Error(`wp006c_benchmark_canonical_field_mismatch:${key}`);
+  }
   const holdoutRecords = Array.isArray(holdout.records) ? holdout.records : [];
   const lgeRecords = holdoutRecords.filter((record) => record.cameraDeviceFamily === WP006C_HOLDOUT_DEVICE && record.split === 'DEVICE_HOLDOUT');
   if (lgeRecords.length !== 33) throw new Error(`wp006c_lge_holdout_count_invalid:${lgeRecords.length}`);
@@ -142,7 +146,7 @@ async function loadFrozenBenchmark(outputDir) {
   if (allActiveCamera.length !== 32) throw new Error(`wp006c_active_camera_count_invalid:${allActiveCamera.length}`);
   const activeDevices = new Set(allActiveCamera.map((sample) => sample.cameraDeviceFamily).filter(Boolean));
   if (activeDevices.size !== REQUIRED_SEEN_DEVICES.size || [...REQUIRED_SEEN_DEVICES].some((device) => !activeDevices.has(device))) throw new Error('wp006c_active_device_boundary_invalid');
-  return { manifest, rights, splits, fingerprint, readiness, holdout, lgeRecords, canonicalInput };
+  return { manifest, rights, splits, fingerprint, readiness, holdout, lgeRecords, canonicalInput: artifactCanonicalInput };
 }
 
 function rightsBySample(benchmark) {
