@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "lythaus-wp007a-mixed-origin-schema-v1",
+  "materializedInWp007a": false,
+  "wholeImageDevelopmentExcluded": true,
+  "truthAxes": [
+    "physicalCameraAcquisition",
+    "syntheticDepictedContent",
+    "localManipulation",
+    "digitalCapture",
+    "screenRecapture"
+  ],
+  "contentRegions": [
+    {
+      "regionId": "region_01",
+      "bboxNormalized": null,
+      "maskReference": null,
+      "regionKind": "UNKNOWN",
+      "syntheticDepictedContent": "UNKNOWN",
+      "truthSource": "UNKNOWN",
+      "generatorFamily": "UNKNOWN"
+    }
+  ]
+}

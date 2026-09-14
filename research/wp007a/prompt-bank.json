@@ -1,0 +1,408 @@
+{
+  "version": "LYTHAUS_EF3_PROMPT_BANK_V1",
+  "schemaVersion": "lythaus-wp007a-prompt-bank-v1",
+  "semanticsForSelectionOnly": true,
+  "detectorInput": false,
+  "prompts": [
+    {
+      "promptId": "PROMPT_001",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A quiet kitchen table with a ceramic cup beside a folded linen towel in morning window light."
+    },
+    {
+      "promptId": "PROMPT_002",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A pair of walking shoes beside a front door with a small umbrella and a woven mat."
+    },
+    {
+      "promptId": "PROMPT_003",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A grocery basket with apples, a paper list, and reusable cloth bags on a wooden counter."
+    },
+    {
+      "promptId": "PROMPT_004",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A bicycle leaning against a painted garden wall on an ordinary weekday afternoon."
+    },
+    {
+      "promptId": "PROMPT_005",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A notebook, pen, and reading glasses arranged beside a lamp on a work desk."
+    },
+    {
+      "promptId": "PROMPT_006",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A family picnic blanket with a thermos and fruit in a leafy public park."
+    },
+    {
+      "promptId": "PROMPT_007",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A modest bedroom with an unmade bed, a chair, and soft light through curtains."
+    },
+    {
+      "promptId": "PROMPT_008",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A freshly washed car parked beside a suburban curb after a light rain."
+    },
+    {
+      "promptId": "PROMPT_009",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A small houseplant on a windowsill with neighboring rooftops visible beyond the glass."
+    },
+    {
+      "promptId": "PROMPT_010",
+      "regime": "ORDINARY_PHONE_PHOTO",
+      "text": "A hand holding a warm mug near a bright window on a cool morning."
+    },
+    {
+      "promptId": "PROMPT_011",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "A candid portrait of an adult reading a paperback in a quiet library."
+    },
+    {
+      "promptId": "PROMPT_012",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "Two friends talking on a park bench beneath a broad tree."
+    },
+    {
+      "promptId": "PROMPT_013",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "A smiling baker standing behind a counter with loaves of bread."
+    },
+    {
+      "promptId": "PROMPT_014",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "An elderly gardener holding a basket of herbs beside a greenhouse."
+    },
+    {
+      "promptId": "PROMPT_015",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "A child wearing a raincoat looking at puddles on a neighborhood street."
+    },
+    {
+      "promptId": "PROMPT_016",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "A musician tuning an acoustic instrument backstage before a small show."
+    },
+    {
+      "promptId": "PROMPT_017",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "A commuter waiting at a station with a canvas bag and a folded newspaper."
+    },
+    {
+      "promptId": "PROMPT_018",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "A portrait of a person in a wool sweater beside a sunlit bookshelf."
+    },
+    {
+      "promptId": "PROMPT_019",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "A group of hikers resting near a trail map at the edge of a forest."
+    },
+    {
+      "promptId": "PROMPT_020",
+      "regime": "PEOPLE_AND_PORTRAITS",
+      "text": "A chef arranging vegetables on a plain steel work surface."
+    },
+    {
+      "promptId": "PROMPT_021",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A sunlit apartment living room with a sofa, books, and a low wooden table."
+    },
+    {
+      "promptId": "PROMPT_022",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A ceramic vase filled with dried grasses on a sideboard against a plaster wall."
+    },
+    {
+      "promptId": "PROMPT_023",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A quiet workshop with hand tools, timber offcuts, and a measuring tape."
+    },
+    {
+      "promptId": "PROMPT_024",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A small bookstore aisle with wooden shelves and handwritten section cards."
+    },
+    {
+      "promptId": "PROMPT_025",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A blue suitcase beside a hotel room chair and a folded map."
+    },
+    {
+      "promptId": "PROMPT_026",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A collection of ordinary kitchen utensils drying beside a sink."
+    },
+    {
+      "promptId": "PROMPT_027",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A desk fan, alarm clock, and house keys on a bedside table."
+    },
+    {
+      "promptId": "PROMPT_028",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A museum display case containing simple clay bowls under even gallery lighting."
+    },
+    {
+      "promptId": "PROMPT_029",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A covered balcony with potted plants, a chair, and a folded blanket."
+    },
+    {
+      "promptId": "PROMPT_030",
+      "regime": "INTERIORS_AND_OBJECTS",
+      "text": "A train carriage interior with empty seats and overhead luggage racks."
+    },
+    {
+      "promptId": "PROMPT_031",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A narrow residential street with parked bicycles and trees casting afternoon shadows."
+    },
+    {
+      "promptId": "PROMPT_032",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A coastal footpath curving around low rocks under a pale overcast sky."
+    },
+    {
+      "promptId": "PROMPT_033",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A mountain road viewed from a safe overlook with layered hills in the distance."
+    },
+    {
+      "promptId": "PROMPT_034",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A city square with a fountain, benches, and people crossing between buildings."
+    },
+    {
+      "promptId": "PROMPT_035",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A quiet river bridge in autumn with reflections moving below the railings."
+    },
+    {
+      "promptId": "PROMPT_036",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A rural field beside a gravel lane at the edge of a small village."
+    },
+    {
+      "promptId": "PROMPT_037",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A public garden path bordered by lavender and low stone walls."
+    },
+    {
+      "promptId": "PROMPT_038",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A rain-darkened sidewalk beside shop windows after closing time."
+    },
+    {
+      "promptId": "PROMPT_039",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A wooden pier extending over a calm lake at first light."
+    },
+    {
+      "promptId": "PROMPT_040",
+      "regime": "OUTDOOR_STREET_AND_LANDSCAPE",
+      "text": "A red bus passing a row of brick buildings on a cloudy morning."
+    },
+    {
+      "promptId": "PROMPT_041",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A tabby cat sleeping on a folded blanket near a radiator."
+    },
+    {
+      "promptId": "PROMPT_042",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A golden retriever carrying a worn tennis ball across a grassy yard."
+    },
+    {
+      "promptId": "PROMPT_043",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A bowl of vegetable soup with bread on a simple dining table."
+    },
+    {
+      "promptId": "PROMPT_044",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A plate of pancakes with berries and a small ceramic jug of syrup."
+    },
+    {
+      "promptId": "PROMPT_045",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A vintage bicycle with a front basket parked beside a café."
+    },
+    {
+      "promptId": "PROMPT_046",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A small fishing boat tied to a wooden dock in still water."
+    },
+    {
+      "promptId": "PROMPT_047",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A horse standing behind a fence in a green pasture."
+    },
+    {
+      "promptId": "PROMPT_048",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A market stall displaying oranges, pears, and a scale."
+    },
+    {
+      "promptId": "PROMPT_049",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A compact delivery van stopped outside a neighborhood bakery."
+    },
+    {
+      "promptId": "PROMPT_050",
+      "regime": "ANIMALS_FOOD_VEHICLES",
+      "text": "A pair of ducks walking beside a pond with reeds and grass."
+    },
+    {
+      "promptId": "PROMPT_051",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "Close detail of woven wool fabric with irregular threads and small lint fibers."
+    },
+    {
+      "promptId": "PROMPT_052",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A drawer filled with assorted screws, washers, and small hand tools."
+    },
+    {
+      "promptId": "PROMPT_053",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A dense hedge with overlapping leaves, tiny branches, and scattered blossoms."
+    },
+    {
+      "promptId": "PROMPT_054",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A weathered brick wall covered with moss, cracks, and faded paint."
+    },
+    {
+      "promptId": "PROMPT_055",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A detailed wooden tabletop showing grain, scratches, knots, and a metal hinge."
+    },
+    {
+      "promptId": "PROMPT_056",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A basket of tangled charging cables and braided cords on a desk."
+    },
+    {
+      "promptId": "PROMPT_057",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A rocky shoreline with pebbles, seaweed, wet surfaces, and foam."
+    },
+    {
+      "promptId": "PROMPT_058",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A close view of a knitted scarf beside a metal zipper and stitched seam."
+    },
+    {
+      "promptId": "PROMPT_059",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A cluttered stationery drawer containing paper clips, labels, and rubber bands."
+    },
+    {
+      "promptId": "PROMPT_060",
+      "regime": "HIGH_FREQUENCY_DIFFICULT_DETAIL",
+      "text": "A leafy houseplant with overlapping veins, stems, and speckled ceramic soil."
+    },
+    {
+      "promptId": "PROMPT_061",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A dim hallway lit by one warm ceiling bulb with a coat hanging near the entrance."
+    },
+    {
+      "promptId": "PROMPT_062",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A late evening bus stop with soft streetlights and damp pavement."
+    },
+    {
+      "promptId": "PROMPT_063",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A candle on a dinner table in a dark room with gentle shadows."
+    },
+    {
+      "promptId": "PROMPT_064",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A moving train seen through a window at dusk with mild motion blur."
+    },
+    {
+      "promptId": "PROMPT_065",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A quiet campsite after sunset with a lantern, chairs, and a dark tree line."
+    },
+    {
+      "promptId": "PROMPT_066",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A night market aisle under uneven fluorescent lights with distant movement."
+    },
+    {
+      "promptId": "PROMPT_067",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A bedroom lit only by a bedside lamp with curtains slightly open."
+    },
+    {
+      "promptId": "PROMPT_068",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A rainy street photographed through a window with reflections and soft focus."
+    },
+    {
+      "promptId": "PROMPT_069",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A porch light illuminating a doormat, potted plant, and wet steps."
+    },
+    {
+      "promptId": "PROMPT_070",
+      "regime": "LOW_LIGHT_BLUR_IMPERFECT_CAPTURE_STYLE",
+      "text": "A dawn kitchen with low contrast, gentle blur, and a kettle on the stove."
+    },
+    {
+      "promptId": "PROMPT_071",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A flat geometric poster of overlapping circles, squares, and a limited warm palette."
+    },
+    {
+      "promptId": "PROMPT_072",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A hand-drawn map of an imaginary island with rivers, hills, and labeled paths."
+    },
+    {
+      "promptId": "PROMPT_073",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A paper collage of leaves, ticket stubs, and colored shapes on a plain background."
+    },
+    {
+      "promptId": "PROMPT_074",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A minimalist editorial illustration of a person carrying an oversized plant."
+    },
+    {
+      "promptId": "PROMPT_075",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A decorative pattern of stars, arches, and lines arranged in a repeating grid."
+    },
+    {
+      "promptId": "PROMPT_076",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A whimsical ink drawing of a small boat traveling through clouds."
+    },
+    {
+      "promptId": "PROMPT_077",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A still-life illustration of stationery objects using clean block colors."
+    },
+    {
+      "promptId": "PROMPT_078",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A retro-inspired travel poster for a fictional mountain town."
+    },
+    {
+      "promptId": "PROMPT_079",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A cut-paper style scene of houses, trees, and a crescent moon."
+    },
+    {
+      "promptId": "PROMPT_080",
+      "regime": "NON_PHOTOGRAPHIC_DIGITAL_ART",
+      "text": "A simple technical-looking line drawing of a folded chair and desk lamp."
+    }
+  ]
+}

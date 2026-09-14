@@ -94,3 +94,4 @@ export async function evaluateAuthenticity(input: {
 
 export * from './wp006a.ts';
 export * from './wp006b.ts';
+export * from './wp007a.ts';

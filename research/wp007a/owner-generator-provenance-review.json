@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "lythaus-wp007a-owner-generator-provenance-review-v1",
+  "ownerActionRequired": true,
+  "reason": "Generator/provider/model route is not in the existing local provenance record for these owner images.",
+  "groups": [
+    {
+      "groupId": "OWNER_SYNTHETIC_GENERATOR_UNKNOWN",
+      "sampleCount": 31,
+      "sampleIds": [
+        "SYN_001",
+        "SYN_002",
+        "SYN_003",
+        "SYN_004",
+        "SYN_005",
+        "SYN_006",
+        "SYNTHETIC_160ef96a3f22bf2e",
+        "SYNTHETIC_1694ffbeb08ec2e7",
+        "SYNTHETIC_1792d74543769df6",
+        "SYNTHETIC_19f11c9d9fc6d62d",
+        "SYNTHETIC_372f1157c4818b50",
+        "SYNTHETIC_37b0763e0586d892",
+        "SYNTHETIC_45f90d76c8270446",
+        "SYNTHETIC_48086b0ae92b64bd",
+        "SYNTHETIC_48a4728b903a3123",
+        "SYNTHETIC_4a74a58cdef03715",
+        "SYNTHETIC_618b4432f43d5e35",
+        "SYNTHETIC_7d307d7fc08c0bfc",
+        "SYNTHETIC_8c1a405cc099c985",
+        "SYNTHETIC_8d5dda145e61367b",
+        "SYNTHETIC_9f242bb4f40aefbb",
+        "SYNTHETIC_9f75ed27675612d6",
+        "SYNTHETIC_a0139d7afa4bed10",
+        "SYNTHETIC_a7832460c6038f13",
+        "SYNTHETIC_a88c89b862ce1f7c",
+        "SYNTHETIC_be4f7af409ff34d4",
+        "SYNTHETIC_c330be74a59c28f0",
+        "SYNTHETIC_d1c5482b651e0c22",
+        "SYNTHETIC_dd553141a5931e9b",
+        "SYNTHETIC_ebcd0dcd78bba715",
+        "SYNTHETIC_ee47f7d89a68bffd"
+      ],
+      "questions": [
+        "Identify provider/product/generator family if known, otherwise answer UNKNOWN.",
+        "Identify whether any post-generation editing occurred, otherwise answer UNKNOWN."
+      ]
+    }
+  ]
+}
