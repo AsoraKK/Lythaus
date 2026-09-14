@@ -149,8 +149,11 @@ export function assertWp006dPlan(value: unknown): void {
   const historical = record.wp006cHistorical;
   if (!historical || typeof historical !== 'object' || Array.isArray(historical) || (historical as Record<string, unknown>).benchmarkFingerprint !== WP006D_EXPECTED_WP006C_BENCHMARK_FINGERPRINT) throw new Error('wp006d_plan_wp006c_fingerprint_invalid');
   if (record.planStatus !== 'FROZEN_BEFORE_EF2_SCORES') throw new Error('wp006d_plan_not_frozen');
-  if (record.lgeHoldoutStatus !== 'SEALED' || record.csafeFutureHoldoutStatus !== 'SEALED') throw new Error('wp006d_holdout_not_sealed');
-  if (record.selectionUsesEf2Scores !== false || record.thresholdRetuned !== false) throw new Error('wp006d_plan_selection_or_threshold_invalid');
+  const boundaries = record.frozenBoundaries;
+  if (!boundaries || typeof boundaries !== 'object' || Array.isArray(boundaries)) throw new Error('wp006d_holdout_boundary_invalid');
+  const frozenBoundaries = boundaries as Record<string, unknown>;
+  if (frozenBoundaries.lgeHoldoutStatus !== 'SEALED' || frozenBoundaries.csafeFutureHoldoutStatus !== 'SEALED') throw new Error('wp006d_holdout_not_sealed');
+  if (record.selectionUsesEf2Scores !== false || frozenBoundaries.wp006cThresholdRetuned !== false) throw new Error('wp006d_plan_selection_or_threshold_invalid');
   if (typeof record.planHash !== 'undefined') throw new Error('wp006d_plan_hash_self_reference');
 }
 
