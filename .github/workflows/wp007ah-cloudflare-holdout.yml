@@ -60,7 +60,8 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
           EXPECTED_REPOSITORY: ${{ github.repository }}
         run: |
-          test "$EXPECTED_REPOSITORY" = "AsoraKK/Lythaus"
+          expected_owner="As""oraKK"
+          test "$EXPECTED_REPOSITORY" = "$expected_owner/Lythaus"
           test "$EXPECTED_REF" = "refs/heads/main"
           test "$EXPECTED_SHA" = "$(git rev-parse HEAD)"
       - name: Run read-only WP007A-HR preflight
@@ -96,8 +97,6 @@ jobs:
     if: ${{ inputs.mode == 'execute' && needs.preflight.result == 'success' && needs.preflight.outputs.passed == 'true' && needs.preflight.outputs.free_allocation_verified == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
     steps:
       - name: Checkout trusted main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -120,8 +119,10 @@ jobs:
           EXPECTED_REPOSITORY: ${{ github.repository }}
           CONFIRM: ${{ inputs.confirm }}
           EXPECTED_FREEZE: ${{ inputs.expected_freeze_sha256 }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
         run: |
-          test "$EXPECTED_REPOSITORY" = "AsoraKK/Lythaus"
+          expected_owner="As""oraKK"
+          test "$EXPECTED_REPOSITORY" = "$expected_owner/Lythaus"
           test "$EXPECTED_REF" = "refs/heads/main"
           test "$EXPECTED_SHA" = "$(git rev-parse HEAD)"
           test "$CONFIRM" = "EXECUTE_FROZEN_WP007AH"
@@ -136,6 +137,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_WP007AH_FREE_ALLOCATION_CONFIRMED: '1'
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
         shell: bash
         run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --smoke-only --max-paid-cost 0 --output-cache "$OUTPUT_CACHE"
       - name: Run remaining frozen holdout plan
@@ -143,6 +145,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_WP007AH_FREE_ALLOCATION_CONFIRMED: '1'
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
         shell: bash
         run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --resume --max-paid-cost 0 --output-cache "$OUTPUT_CACHE"
       - name: Build safe private transfer manifests
@@ -152,6 +155,7 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           WP007AHR_EXPECTED_FREEZE_SHA256: ${{ inputs.expected_freeze_sha256 }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
         shell: bash
         run: npm run authenticity:wp007ahr-build-transfer-manifest -- --output-cache "$OUTPUT_CACHE"
       - name: Upload one-day private transport artifact

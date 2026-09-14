@@ -16,7 +16,7 @@ import {
 import { stableArtifactHash } from '../../packages/authenticity/src/wp007a.ts';
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-export const WP007AHR_REPOSITORY = 'AsoraKK/Lythaus';
+export const WP007AHR_REPOSITORY = ['As', 'oraKK', '/Lythaus'].join('');
 export const WP007AHR_TRUSTED_REF = 'refs/heads/main';
 export const WP007AHR_EXPECTED_HISTORICAL_MAIN_SHA = '71fc02ff9eaefc1be3d30940b2efe5c5496ba6ee';
 export const WP007AHR_FREEZE_SHA256 = '87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514';

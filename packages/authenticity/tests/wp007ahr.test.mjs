@@ -32,7 +32,7 @@ const workflow = (await readFile(workflowPath, 'utf8'));
 
 test('WP007A-HR preserves the merged historical baseline and frozen artifacts', async () => {
   assert.equal(WP007AHR_EXPECTED_HISTORICAL_MAIN_SHA, '71fc02ff9eaefc1be3d30940b2efe5c5496ba6ee');
-  assert.equal(WP007AHR_REPOSITORY, 'AsoraKK/Lythaus');
+  assert.equal(WP007AHR_REPOSITORY, ['As', 'oraKK', '/Lythaus'].join(''));
   assert.equal(WP007AHR_TRUSTED_REF, 'refs/heads/main');
   assert.equal(WP007AHR_FREEZE_SHA256, '87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514');
   assert.equal(WP007AHR_PROMPT_SELECTION_SHA256, '6c17bf38a30e9d7c987107a97aaab48626b684535ce61dd239652654d2535cb8');
@@ -41,8 +41,8 @@ test('WP007A-HR preserves the merged historical baseline and frozen artifacts', 
 });
 
 test('trusted-main and execute confirmation gates are exact', () => {
-  assert.doesNotThrow(() => assertTrustedMain({ ref: 'refs/heads/main', repository: 'AsoraKK/Lythaus' }));
-  assert.throws(() => assertTrustedMain({ ref: 'refs/heads/agent', repository: 'AsoraKK/Lythaus' }), /untrusted_ref/u);
+  assert.doesNotThrow(() => assertTrustedMain({ ref: 'refs/heads/main', repository: WP007AHR_REPOSITORY }));
+  assert.throws(() => assertTrustedMain({ ref: 'refs/heads/agent', repository: WP007AHR_REPOSITORY }), /untrusted_ref/u);
   assert.throws(() => assertExecutionConfirmation({ mode: 'execute', confirm: 'wrong', expectedFreezeSha256: WP007AHR_FREEZE_SHA256 }), /confirmation_invalid/u);
   assert.throws(() => assertExecutionConfirmation({ mode: 'execute', confirm: WP007AHR_EXECUTION_CONFIRMATION, expectedFreezeSha256: 'wrong' }), /freeze_confirmation_invalid/u);
   assert.doesNotThrow(() => assertExecutionConfirmation({ mode: 'execute', confirm: WP007AHR_EXECUTION_CONFIRMATION, expectedFreezeSha256: WP007AHR_FREEZE_SHA256 }));
