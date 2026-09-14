@@ -1,0 +1,623 @@
+{
+  "schemaVersion": "lythaus-wp006b-benchmark-splits-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "splitBoundary": "SOURCE_FAMILY",
+  "policy": {
+    "sourceFamilyBoundary": true,
+    "cameraDeviceBoundary": true,
+    "generatorFamilyHoldout": true,
+    "descendantsStayWithParent": true,
+    "scoringRequiresOwnerConfirmation": true,
+    "scoringRequiresRightsClosure": true
+  },
+  "assignments": [
+    {
+      "sampleId": "CAM_001",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_091257",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091257",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_091317",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091317",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104722",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104722",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104800",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104800",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104834",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104834",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120226",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120226",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120228",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120228",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120234",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120234",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120236",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120236",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120237",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120237",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144008",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144008",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144011",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144011",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144014",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144014",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144019",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144019",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144046",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144046",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144054",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144054",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20251009_162038",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251009_162038",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20251219_113126",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251219_113126",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173231",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173231",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173415",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173415",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173420",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173420",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20251231_130552",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251231_130552",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260105_202251",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260105_202251",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260203_123405",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260203_123405",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260214_161934",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260214_161934",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260222_154932",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260222_154932",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260227_163207",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260227_163207",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260228_122831",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260228_122831",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260313_060829",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260313_060829",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260313_060845",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260313_060845",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "CAMERA_20260317_073114",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260317_073114",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "HN_001",
+      "sourceFamilyId": "WP006B-FAMILY-HN_001",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "HN_002",
+      "sourceFamilyId": "WP006B-FAMILY-HN_002",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "HN_003",
+      "sourceFamilyId": "WP006B-FAMILY-HN_003",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "HN_004",
+      "sourceFamilyId": "WP006B-FAMILY-HN_004",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20240114_133033_d328fd0c",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20240114_133033_d328fd0c",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20240317_121621_c3d84b87",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20240317_121621_c3d84b87",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250723_053242_d59a24be",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250723_053242_d59a24be",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250730_051354_9a509d6a",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250730_051354_9a509d6a",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250806_072710_53bd658a",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250806_072710_53bd658a",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250813_073259_1a23e925",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250813_073259_1a23e925",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250820_053933_991aced7",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250820_053933_991aced7",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250827_053407_8a0ef9d2",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250827_053407_8a0ef9d2",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250903_052521_ba910e65",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250903_052521_ba910e65",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250910_082336_0e4d3d6f",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250910_082336_0e4d3d6f",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250917_053209_99e99abc",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250917_053209_99e99abc",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251003_053527_05cbbb0e",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251003_053527_05cbbb0e",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251009_070834_484ef5bf",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251009_070834_484ef5bf",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251015_085741_f82d8e06",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251015_085741_f82d8e06",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251022_072731_56657bfe",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251022_072731_56657bfe",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251030_053718_e727b8c8",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251030_053718_e727b8c8",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYN_001",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_001",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYN_002",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_002",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYN_003",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_003",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYN_004",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_004",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYN_005",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_005",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYN_006",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_006",
+      "split": "EVALUATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_160ef96a3f22bf2e",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_160ef96a3f22bf2e",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_1694ffbeb08ec2e7",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_1694ffbeb08ec2e7",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_1792d74543769df6",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_1792d74543769df6",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_19f11c9d9fc6d62d",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_19f11c9d9fc6d62d",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_372f1157c4818b50",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_372f1157c4818b50",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_37b0763e0586d892",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_37b0763e0586d892",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_45f90d76c8270446",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_45f90d76c8270446",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_48086b0ae92b64bd",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_48086b0ae92b64bd",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_48a4728b903a3123",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_48a4728b903a3123",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_618b4432f43d5e35",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_618b4432f43d5e35",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_7d307d7fc08c0bfc",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_7d307d7fc08c0bfc",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_8c1a405cc099c985",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_8c1a405cc099c985",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_8d5dda145e61367b",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_8d5dda145e61367b",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "SYNTHETIC_9f242bb4f40aefbb",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_9f242bb4f40aefbb",
+      "split": "HOLDOUT",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_EVALUATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "EDIT_CAM_001_COPY_MOVE",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "EDIT_CAMERA_20210527_091257_LOCAL_BLUR",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091257",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "EDIT_CAMERA_20210527_091317_LOCAL_RESIZE",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091317",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "EDIT_CAMERA_20210527_104722_SPLICE",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104722",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "EDIT_CAMERA_20210527_104800_REGION_REPLACEMENT",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104800",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "EDIT_CAMERA_20210527_104834_OBJECT_PASTE",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104834",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "EDIT_CAMERA_20210527_120226_LOCAL_RESAMPLING",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120226",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    },
+    {
+      "sampleId": "EDIT_CAMERA_20210527_120228_COMPOSITE_INSERTION",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120228",
+      "split": "CALIBRATION",
+      "eligible": true,
+      "eligibilityReason": "ACTIVE_CALIBRATION_SOURCE_RIGHTS_CONFIRMED"
+    }
+  ],
+  "deviceHoldout": {
+    "status": "PREDECLARED",
+    "families": [
+      "WP006B-FAMILY-CAMERA_20190727_210215",
+      "WP006B-FAMILY-CAMERA_20190727_210238",
+      "WP006B-FAMILY-CAMERA_20190727_210348",
+      "WP006B-FAMILY-CAMERA_20190727_210410",
+      "WP006B-FAMILY-CAMERA_20190727_211026",
+      "WP006B-FAMILY-CAMERA_20190727_211827",
+      "WP006B-FAMILY-CAMERA_20190727_211836",
+      "WP006B-FAMILY-CAMERA_20190727_212036",
+      "WP006B-FAMILY-CAMERA_20190727_212040",
+      "WP006B-FAMILY-CAMERA_20190727_212128",
+      "WP006B-FAMILY-CAMERA_20190727_212232",
+      "WP006B-FAMILY-CAMERA_20190727_212237",
+      "WP006B-FAMILY-CAMERA_20190727_212413",
+      "WP006B-FAMILY-CAMERA_20190727_212554",
+      "WP006B-FAMILY-CAMERA_20190727_212557",
+      "WP006B-FAMILY-CAMERA_20190727_212723",
+      "WP006B-FAMILY-CAMERA_20190727_213455",
+      "WP006B-FAMILY-CAMERA_20190727_213458",
+      "WP006B-FAMILY-CAMERA_20190727_213503",
+      "WP006B-FAMILY-CAMERA_20190727_213508",
+      "WP006B-FAMILY-CAMERA_20190728_104229",
+      "WP006B-FAMILY-CAMERA_20190801_142721",
+      "WP006B-FAMILY-CAMERA_20190901_103851",
+      "WP006B-FAMILY-CAMERA_20190901_104834",
+      "WP006B-FAMILY-CAMERA_20190901_105352",
+      "WP006B-FAMILY-CAMERA_20190901_105841",
+      "WP006B-FAMILY-CAMERA_20190901_105929",
+      "WP006B-FAMILY-CAMERA_20190901_110048",
+      "WP006B-FAMILY-CAMERA_20191013_110023",
+      "WP006B-FAMILY-CAMERA_20191013_110026",
+      "WP006B-FAMILY-CAMERA_20191013_110028",
+      "WP006B-FAMILY-CAMERA_20191129_163202",
+      "WP006B-FAMILY-CAMERA_e97040410dfef6b7"
+    ],
+    "reason": "Complete known device family reserved: LGE LM-G710."
+  },
+  "generatorHoldout": {
+    "status": "NOT_READY",
+    "families": [],
+    "reason": "Generator family provenance is unknown for the supplied synthetic pool; no unseen-generator holdout is asserted."
+  },
+  "transformationStress": {
+    "status": "DEFERRED",
+    "descendantsRemainWithParentFamily": true
+  }
+}

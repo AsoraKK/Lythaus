@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lythaus.co/schemas/lythaus-forensic-microbench-v0/benchmark-manifest.json",
+  "title": "Lythaus Forensic Microbenchmark v0 Manifest",
+  "description": "Rights- and provenance-first research foundation. This schema deliberately contains independent origin axes and no final authenticity verdict.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "benchmarkName",
+    "benchmarkStatus",
+    "researchDate",
+    "repositoryStartingSha",
+    "sourceRootLabel",
+    "originalFilesModified",
+    "mediaCommittedToGit",
+    "specialistInferenceRun",
+    "samples",
+    "transformations",
+    "counts"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "lythaus-forensic-microbench-v0" },
+    "benchmarkName": { "const": "LYTHAUS_FORENSIC_MICROBENCH_V0" },
+    "benchmarkStatus": { "enum": ["FOUNDATION_ONLY_OWNER_CONFIRMATION_REQUIRED", "FOUNDATION_ONLY_INSUFFICIENT_DATA", "READY_FOR_LIMITED_SPECIALIST_CALIBRATION"] },
+    "researchDate": { "type": "string", "format": "date" },
+    "repositoryStartingSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sourceRootLabel": { "type": "string", "minLength": 1 },
+    "originalFilesModified": { "const": false },
+    "mediaCommittedToGit": { "const": false },
+    "specialistInferenceRun": { "const": false },
+    "samples": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sample" }
+    },
+    "transformations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "materializedDescendantCount", "registeredKinds"],
+      "properties": {
+        "status": { "const": "DEFERRED_UNTIL_SOURCE_FAMILY_LOCKED" },
+        "materializedDescendantCount": { "const": 0 },
+        "registeredKinds": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+  },
+  "$defs": {
+    "truthAxes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["physicalCameraAcquisition", "syntheticDepictedContent", "localManipulation", "digitalCapture", "screenRecapture"],
+      "properties": {
+        "physicalCameraAcquisition": { "enum": ["TRUE", "FALSE", "UNKNOWN"] },
+        "syntheticDepictedContent": { "enum": ["TRUE", "FALSE", "UNKNOWN"] },
+        "localManipulation": { "enum": ["TRUE", "FALSE", "UNKNOWN"] },
+        "digitalCapture": { "enum": ["TRUE", "FALSE", "UNKNOWN"] },
+        "screenRecapture": { "enum": ["TRUE", "FALSE", "UNKNOWN"] }
+      }
+    },
+    "safeMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exifPresent", "xmpPresent", "c2paPresent", "encoderPresent", "metadataAbsent", "safeKeys", "orientationTag", "privacySensitiveMetadataFlags", "cameraMakePresent", "cameraModelPresent", "captureTimestampPresent"],
+      "properties": {
+        "exifPresent": { "type": "boolean" },
+        "xmpPresent": { "type": "boolean" },
+        "c2paPresent": { "type": "boolean" },
+        "encoderPresent": { "type": "boolean" },
+        "metadataAbsent": { "type": "boolean" },
+        "safeKeys": { "type": "array", "items": { "type": "string" } },
+        "orientationTag": { "type": ["integer", "null"] },
+        "privacySensitiveMetadataFlags": { "type": "array", "items": { "type": "string" } },
+        "cameraMakePresent": { "type": "boolean" },
+        "cameraModelPresent": { "type": "boolean" },
+        "captureTimestampPresent": { "type": "boolean" }
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sampleId", "groupId", "sourceFamilyId", "ownerProvidedName", "candidateCategory", "origin", "transformation", "logicalFileReference", "sourceUrlOrAcquisitionId",
+        "contentSha256", "perceptualHash", "perceptualHashAlgorithm", "byteSize", "width", "height", "mime",
+        "safeMetadata", "truthAxes", "truthConfidence", "truthSynthetic", "truthLocalManipulation", "truthBasis", "hardNegativeType", "generatorFamily",
+        "generatorModel", "generatorVersion", "cameraDeviceFamily", "sourceDatasetId", "sourceUrl", "licenceClassification", "rightsClass",
+        "evaluationGate", "trainingGate", "distillationGate", "consentStatus", "sourceLineage", "parentSampleId", "mask", "maskPathOrId", "maskSha256", "rightsRecordId", "split", "calibrationEligible", "evaluationEligible",
+        "trainingEligible", "readiness", "ownerConfirmationReference", "poolRole", "retentionClass", "privacyReview",
+        "privacyFlags", "duplicateOfSampleId", "nearestPerceptualDistance"
+      ],
+      "properties": {
+        "sampleId": { "type": "string", "minLength": 1 },
+        "groupId": { "type": "string", "minLength": 1 },
+        "sourceFamilyId": { "type": "string", "minLength": 1 },
+        "ownerProvidedName": { "type": "string", "minLength": 1 },
+        "candidateCategory": { "enum": ["CAMERA_ORIGINAL_CANDIDATE", "SYNTHETIC_CANDIDATE", "HARD_NEGATIVE_CANDIDATE", "MIXED_ORIGIN_CANDIDATE", "PARTIAL_EDIT_CANDIDATE"] },
+        "origin": { "enum": ["CAMERA_NATIVE", "AI_GENERATED", "AI_EDITED", "TRADITIONAL_DIGITAL_ART", "CGI", "SCAN", "COMPOSITE", "SCREENSHOT", "UNKNOWN"] },
+        "transformation": { "enum": ["ORIGINAL", "JPEG95", "JPEG75", "resize75", "resize50", "crop10", "mild_blur", "mild_sharpen", "metadata_stripped", "screenshot_style_resampling"] },
+        "logicalFileReference": { "type": "string", "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+" },
+        "sourceUrlOrAcquisitionId": { "type": "string", "minLength": 1 },
+        "contentSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "perceptualHash": { "type": ["string", "null"], "pattern": "^[01]{64}$" },
+        "perceptualHashAlgorithm": { "type": ["string", "null"] },
+        "byteSize": { "type": "integer", "minimum": 1 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "mime": { "enum": ["image/jpeg", "image/png", "image/webp", "image/avif"] },
+        "safeMetadata": { "$ref": "#/$defs/safeMetadata" },
+        "truthAxes": { "$ref": "#/$defs/truthAxes" },
+        "truthConfidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["physicalCameraAcquisition", "syntheticDepictedContent", "localManipulation", "digitalCapture", "screenRecapture"],
+          "properties": {
+            "physicalCameraAcquisition": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] },
+            "syntheticDepictedContent": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] },
+            "localManipulation": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] },
+            "digitalCapture": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] },
+            "screenRecapture": { "enum": ["OWNER_CONFIRMED", "METADATA_CORROBORATED", "DERIVED_DETERMINISTICALLY", "UNKNOWN"] }
+          }
+        },
+        "truthSynthetic": { "enum": ["TRUE", "FALSE", "UNKNOWN"] },
+        "truthLocalManipulation": { "enum": ["TRUE", "FALSE", "UNKNOWN"] },
+        "truthBasis": { "enum": ["OWNER_CONFIRMATION_REQUIRED", "OWNER_CONFIRMED", "SOURCE_DOCUMENTED"] },
+        "hardNegativeType": { "type": ["string", "null"], "enum": ["SCREENSHOT", "UI_CAPTURE", "DIGITAL_ART", "CGI_OR_3D_RENDER", "CHART", "DIAGRAM", "MEME", "COMPOSITE", "SCAN", "HEAVILY_EDITED_PHOTO", "TEXT_GRAPHIC", "VECTOR_GRAPHIC", "OTHER_DIGITAL_NON_AI", "UNKNOWN", null] },
+        "generatorFamily": { "type": ["string", "null"] },
+        "generatorModel": { "type": ["string", "null"] },
+        "generatorVersion": { "type": ["string", "null"] },
+        "cameraDeviceFamily": { "type": ["string", "null"] },
+        "sourceDatasetId": { "type": "string", "minLength": 1 },
+        "sourceUrl": { "type": ["string", "null"] },
+        "licenceClassification": { "type": "string", "minLength": 1 },
+        "rightsClass": { "enum": ["CLASS_A_COMMERCIAL_TRAINING", "CLASS_B_EVALUATION_ONLY", "CLASS_C_LYTHAUS_OWNED", "MIXED_OR_UNCLEAR"] },
+        "evaluationGate": { "enum": ["ALLOW", "DO_NOT_USE", "REVIEW_REQUIRED", "UNKNOWN"] },
+        "trainingGate": { "enum": ["ALLOW", "DO_NOT_TRAIN", "REVIEW_REQUIRED", "UNKNOWN"] },
+        "distillationGate": { "enum": ["ALLOW", "DO_NOT_DISTILL", "REVIEW_REQUIRED", "UNKNOWN"] },
+        "consentStatus": { "enum": ["OWNER_CONFIRMATION_REQUIRED", "OWNER_AUTHORIZED", "RELEASE_REQUIRED", "SOURCE_TERMS_RECORDED", "NOT_APPLICABLE"] },
+        "sourceLineage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["relation", "parentSampleId", "familyEvidence"],
+          "properties": {
+            "relation": { "enum": ["SOURCE_ORIGINAL", "DESCENDANT", "PARENT_EDIT", "EDITED_CHILD", "UNKNOWN"] },
+            "parentSampleId": { "type": ["string", "null"] },
+            "familyEvidence": { "enum": ["NO_RELATED_MEDIA_OBSERVED", "LIKELY_RELATED", "OWNER_CONFIRMATION_REQUIRED"] }
+          }
+        },
+        "parentSampleId": { "type": ["string", "null"] },
+        "mask": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["maskReference", "maskSha256", "operation", "parameters", "region"],
+          "properties": {
+            "maskReference": { "type": "string" },
+            "maskSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "operation": { "type": "string" },
+            "parameters": { "type": "object" },
+            "region": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["x", "y", "width", "height"],
+              "properties": {
+                "x": { "type": "number", "minimum": 0 },
+                "y": { "type": "number", "minimum": 0 },
+                "width": { "type": "number", "exclusiveMinimum": 0 },
+                "height": { "type": "number", "exclusiveMinimum": 0 }
+              }
+            }
+          }
+        },
+        "maskPathOrId": { "type": ["string", "null"] },
+        "maskSha256": { "type": ["string", "null"], "pattern": "^([a-f0-9]{64})?$" },
+        "rightsRecordId": { "type": "string", "minLength": 1 },
+        "split": { "enum": ["CALIBRATION", "EVALUATION", "HOLDOUT", "DEVICE_HOLDOUT", "GENERATOR_HOLDOUT", "TRANSFORMATION_STRESS"] },
+        "calibrationEligible": { "type": "boolean" },
+        "evaluationEligible": { "type": "boolean" },
+        "trainingEligible": { "type": "boolean" },
+        "readiness": { "enum": ["READY_FOR_CALIBRATION", "READY_FOR_EVALUATION_ONLY", "PROVENANCE_CONFIRMATION_REQUIRED", "RIGHTS_REVIEW_REQUIRED", "NOT_AVAILABLE", "REJECT"] },
+        "ownerConfirmationReference": { "type": "string", "minLength": 1 },
+        "poolRole": { "enum": ["ACTIVE_MICROBENCH", "OWNER_RESERVED_FUTURE_HOLDOUT", "FUTURE_EXPANSION_POOL", "AMBIGUOUS_OR_EXCLUDED", "VIDEO_FUTURE_POOL"] },
+        "retentionClass": { "enum": ["MEDIA_EXTERNAL_CACHE", "DERIVED_MASK_EXTERNAL_CACHE", "MANIFEST_ONLY", "DELETE_AFTER_RUN"] },
+        "privacyFlags": { "type": "array", "uniqueItems": true, "items": { "enum": ["NONE", "PERSONAL_MEDIA", "BIOMETRIC_CONTENT", "GPS_PRESENT", "SERIAL_PRESENT", "PII_PRESENT", "OWNER_RESTRICTED"] } },
+        "privacyReview": { "enum": ["PENDING_OWNER_REVIEW", "SENSITIVE_METADATA_FLAGGED", "CLEARED", "REJECTED"] },
+        "duplicateOfSampleId": { "type": ["string", "null"] },
+        "nearestPerceptualDistance": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    }
+  }
+}

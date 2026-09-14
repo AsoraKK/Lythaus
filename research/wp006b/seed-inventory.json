@@ -1,0 +1,645 @@
+{
+  "schemaVersion": "lythaus-wp006b-owner-seed-inventory-v1",
+  "researchDate": "2026-09-13",
+  "sourceRootLabel": "external-owner-seed:wp004a-observer-v0/originals",
+  "originalFilesModified": false,
+  "rawMetadataPersisted": false,
+  "rawMediaPersisted": false,
+  "inventoryMethod": "Windows WIC bounded decode plus SHA-256 and 64-bit grayscale DCT pHash; metadata values are not retained",
+  "perceptualHashThresholdBits": 16,
+  "entries": [
+    {
+      "ownerProvidedName": "CAM_001",
+      "relativePath": "camera/CAM_001.jpg",
+      "candidateFolderCategory": "camera",
+      "contentSha256": "b84f31aece7276073b34020df4f4a6c7bc15fe5dc6e4b3f60886222b1ec35ba3",
+      "byteSize": 7347609,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 4000,
+      "height": 3000,
+      "perceptualHash": "1111010100011001001001000110110111100110011110011001001001100010",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 24,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": false,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": 6,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": 6,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    },
+    {
+      "ownerProvidedName": "CAM_002",
+      "relativePath": "camera/CAM_002.jpg",
+      "candidateFolderCategory": "camera",
+      "contentSha256": "29a5a554492be528e82a93e9541d4cf72e04e26215f7c9c0276f2a3c0c87a79a",
+      "byteSize": 19847944,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 8160,
+      "height": 6120,
+      "perceptualHash": "1111000101000110010010100110001001101110100110010100100110111101",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 24,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": false,
+        "encoderPresent": false,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP"
+        ],
+        "orientationTag": 6,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": 6,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 22
+    },
+    {
+      "ownerProvidedName": "CAM_003",
+      "relativePath": "camera/CAM_003.jpg",
+      "candidateFolderCategory": "camera",
+      "contentSha256": "e800238a586bd6547d63aeba5e68ac28b8dfbcf6294179b1bc9b7bdfc4865f95",
+      "byteSize": 3505119,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 4000,
+      "height": 3000,
+      "perceptualHash": "1111110111101110011011110001100000001100101100110000001000010110",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 24,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": false,
+        "c2paPresent": false,
+        "encoderPresent": false,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF"
+        ],
+        "orientationTag": 6,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": 6,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 26
+    },
+    {
+      "ownerProvidedName": "CAM_004",
+      "relativePath": "camera/CAM_004.jpg",
+      "candidateFolderCategory": "camera",
+      "contentSha256": "5ff7bbd7df118deb9dd22a3e13a13ad8c3bc1217bc086c1539a2bf3475385983",
+      "byteSize": 7354712,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 4000,
+      "height": 3000,
+      "perceptualHash": "1001110111110000111000101100111011111000000000110001011000111001",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 24,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": false,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": 6,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": 6,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 26
+    },
+    {
+      "ownerProvidedName": "CAM_005",
+      "relativePath": "camera/CAM_005.jpg",
+      "candidateFolderCategory": "camera",
+      "contentSha256": "a918331fbcd6b4f5b60c562d528bf5319f40fca58b6975688a31f50fbf0388da",
+      "byteSize": 5806196,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 4000,
+      "height": 3000,
+      "perceptualHash": "1110111100010000001001001101111101100111110101100010000100101100",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 24,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": false,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": 6,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": 6,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 26
+    },
+    {
+      "ownerProvidedName": "CAM_006",
+      "relativePath": "camera/CAM_006.jpg",
+      "candidateFolderCategory": "camera",
+      "contentSha256": "1d29748cbf2d925958cd2816d5e6f7370def58717b2168df8cccf26bca660a6b",
+      "byteSize": 5699696,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 4000,
+      "height": 3000,
+      "perceptualHash": "1101111011111110101100011001001010100100010010100100100101010001",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 24,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": false,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": 6,
+        "privacySensitiveMetadataFlags": []
+      },
+      "orientationTag": 6,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    },
+    {
+      "ownerProvidedName": "CAM_007",
+      "relativePath": "camera/CAM_007.jpg",
+      "candidateFolderCategory": "camera",
+      "contentSha256": "b5d737ec9fab0b6559e36b881337f74276b86c99afda81729758e987eb913158",
+      "byteSize": 2960290,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 4000,
+      "height": 3000,
+      "perceptualHash": "1100000101011001001111100100111011001001011011000011111000100110",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 24,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": false,
+        "encoderPresent": false,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP"
+        ],
+        "orientationTag": 1,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": 1,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 20
+    },
+    {
+      "ownerProvidedName": "CAM_008",
+      "relativePath": "camera/CAM_008.jpg",
+      "candidateFolderCategory": "camera",
+      "contentSha256": "c2c3ef0191fb54d550a7cf8930413e8247fe00e1951314ab94b60a4546c6c486",
+      "byteSize": 6328040,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 4000,
+      "height": 3000,
+      "perceptualHash": "1110111100101101010110000001100011011100010011111001100010000110",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 24,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": false,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": 6,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": 6,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    },
+    {
+      "ownerProvidedName": "HN_001",
+      "relativePath": "hard-negative/HN_001.jpg",
+      "candidateFolderCategory": "hard-negative",
+      "contentSha256": "5d79ae4c59841da51a0edc5c08e9c9da55bc9d975283d566c5ffb30b974c0747",
+      "byteSize": 1246909,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 1080,
+      "height": 2340,
+      "perceptualHash": "1111000101001111011010000100001100110110000111101011000111001100",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 69,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": false,
+        "c2paPresent": false,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 22
+    },
+    {
+      "ownerProvidedName": "HN_002",
+      "relativePath": "hard-negative/HN_002.jpg",
+      "candidateFolderCategory": "hard-negative",
+      "contentSha256": "aeeb8bd3f40939785c9f8caf00d71a1fd0dd616449f0c0ab687e907f17d38e96",
+      "byteSize": 279009,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 1080,
+      "height": 2340,
+      "perceptualHash": "1000101101111010110101001001010110011100001011010110101001100010",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 69,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": false,
+        "c2paPresent": false,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": []
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    },
+    {
+      "ownerProvidedName": "HN_003",
+      "relativePath": "hard-negative/HN_003.png",
+      "candidateFolderCategory": "hard-negative",
+      "contentSha256": "cadeb3cabe61fb4019c3ab1f327faa5b0bd8316125db388dd9d490b8ba7e861e",
+      "byteSize": 771070,
+      "extensionMime": "image/png",
+      "signatureMime": "image/png",
+      "mimeSignatureStatus": "MATCH",
+      "width": 4000,
+      "height": 3201,
+      "perceptualHash": "1011101001001101100101100001011011001001011110000011110100110010",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 25,
+      "safeMetadata": {
+        "exifPresent": false,
+        "xmpPresent": true,
+        "c2paPresent": false,
+        "encoderPresent": false,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "XMP"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 20
+    },
+    {
+      "ownerProvidedName": "HN_004",
+      "relativePath": "hard-negative/HN_004.webp",
+      "candidateFolderCategory": "hard-negative",
+      "contentSha256": "ef0dc8fca9aac4ebfbf2e8bada607a0b7a31c55392ea8e6aba25172bf8865166",
+      "byteSize": 64604,
+      "extensionMime": "image/webp",
+      "signatureMime": "image/webp",
+      "mimeSignatureStatus": "MATCH",
+      "width": 1100,
+      "height": 986,
+      "perceptualHash": "1011111010101101110000001001000111000100011010100001111100101101",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 28,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": false,
+        "c2paPresent": false,
+        "encoderPresent": false,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": []
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    },
+    {
+      "ownerProvidedName": "SYN_001",
+      "relativePath": "synthetic/SYN_001.png",
+      "candidateFolderCategory": "synthetic",
+      "contentSha256": "6bf83641d4e5ed8f01497965fe3eb9e3345b2f2ed86ddc848b2ef27a81f8fb4e",
+      "byteSize": 1522532,
+      "extensionMime": "image/png",
+      "signatureMime": "image/png",
+      "mimeSignatureStatus": "MATCH",
+      "width": 1089,
+      "height": 1444,
+      "perceptualHash": "1010001110010111001000010101101110001101110011001100111010001100",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 42,
+      "safeMetadata": {
+        "exifPresent": false,
+        "xmpPresent": true,
+        "c2paPresent": true,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "XMP",
+          "C2PA_INTERFACE",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    },
+    {
+      "ownerProvidedName": "SYN_002",
+      "relativePath": "synthetic/SYN_002.png",
+      "candidateFolderCategory": "synthetic",
+      "contentSha256": "96a87d57fe43a299ed45c370f6f883a23f94be832a5755898c460d98990d18c5",
+      "byteSize": 2496973,
+      "extensionMime": "image/png",
+      "signatureMime": "image/png",
+      "mimeSignatureStatus": "MATCH",
+      "width": 1536,
+      "height": 1024,
+      "perceptualHash": "1001010101100100010110111100100101101110100101100111000100011100",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 21,
+      "safeMetadata": {
+        "exifPresent": false,
+        "xmpPresent": true,
+        "c2paPresent": true,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "XMP",
+          "C2PA_INTERFACE",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": []
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 22
+    },
+    {
+      "ownerProvidedName": "SYN_003",
+      "relativePath": "synthetic/SYN_003.png",
+      "candidateFolderCategory": "synthetic",
+      "contentSha256": "ed8e5c84aca177b034f1d5755ecbdad0e3b620974c672b22fbb8d193d9035bec",
+      "byteSize": 2078400,
+      "extensionMime": "image/png",
+      "signatureMime": "image/png",
+      "mimeSignatureStatus": "MATCH",
+      "width": 1024,
+      "height": 1536,
+      "perceptualHash": "1011010011101001100010010011010010011001111000111010011010000111",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 48,
+      "safeMetadata": {
+        "exifPresent": false,
+        "xmpPresent": true,
+        "c2paPresent": true,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "XMP",
+          "C2PA_INTERFACE",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": [
+          "LOCATION"
+        ]
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 26
+    },
+    {
+      "ownerProvidedName": "SYN_004",
+      "relativePath": "synthetic/SYN_004.png",
+      "candidateFolderCategory": "synthetic",
+      "contentSha256": "0d91b4a0bac861bdb7253d4e4f443ead9ee1cca0cd0b09401d2fa922a7b63b5a",
+      "byteSize": 2701123,
+      "extensionMime": "image/png",
+      "signatureMime": "image/png",
+      "mimeSignatureStatus": "MATCH",
+      "width": 1536,
+      "height": 1024,
+      "perceptualHash": "1010001010101101010110010101100100101101101001010110110111000010",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 21,
+      "safeMetadata": {
+        "exifPresent": false,
+        "xmpPresent": true,
+        "c2paPresent": true,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "XMP",
+          "C2PA_INTERFACE",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": []
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    },
+    {
+      "ownerProvidedName": "SYN_005",
+      "relativePath": "synthetic/SYN_005.jpg",
+      "candidateFolderCategory": "synthetic",
+      "contentSha256": "c65b7905ab1e52b2d607528084f6d0c22ce3662d1007843d05129cfbb008a40e",
+      "byteSize": 401547,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 768,
+      "height": 1152,
+      "perceptualHash": "1000001100011000100111011001001110011101000111101001011100110011",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 48,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": true,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP",
+          "C2PA_INTERFACE",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": []
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    },
+    {
+      "ownerProvidedName": "SYN_006",
+      "relativePath": "synthetic/SYN_006.jpg",
+      "candidateFolderCategory": "synthetic",
+      "contentSha256": "b4625db0195346e011946e4c75cc4be541e5f6db46d4a1294af2a6aa7e6273d1",
+      "byteSize": 413457,
+      "extensionMime": "image/jpeg",
+      "signatureMime": "image/jpeg",
+      "mimeSignatureStatus": "MATCH",
+      "width": 768,
+      "height": 1152,
+      "perceptualHash": "1001110010010000111110110110001001101000101111011001000110100101",
+      "perceptualHashAlgorithm": "WIC_32PX_GRAYSCALE_DCT_64BIT_MEDIAN_V1",
+      "decoderScaledWidth": 32,
+      "decoderScaledHeight": 48,
+      "safeMetadata": {
+        "exifPresent": true,
+        "xmpPresent": true,
+        "c2paPresent": true,
+        "encoderPresent": true,
+        "metadataAbsent": false,
+        "safeKeys": [
+          "EXIF",
+          "XMP",
+          "C2PA_INTERFACE",
+          "ENCODER_MARKER"
+        ],
+        "orientationTag": null,
+        "privacySensitiveMetadataFlags": []
+      },
+      "orientationTag": null,
+      "exactDuplicateOf": null,
+      "exactDuplicateGroupSize": 1,
+      "nearestPerceptualDistance": 24
+    }
+  ],
+  "duplicateAnalysis": {
+    "exactDuplicateFileCount": 0,
+    "exactDuplicateGroups": [],
+    "nearDuplicateCandidates": [],
+    "nearDuplicateCandidateCount": 0,
+    "nearDuplicateDecision": "NONE_AT_THRESHOLD; NO_AUTOMATIC_FAMILY_MERGES"
+  }
+}
