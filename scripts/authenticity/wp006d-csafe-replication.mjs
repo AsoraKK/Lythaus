@@ -556,7 +556,7 @@ function nuisanceMatchingReport(cameraRecords, selectedControls, allControls) {
     selectionUsesEf2Scores: false,
     selectionUsesPixels: false,
     matchingVariables: ['width', 'height', 'aspectRatio', 'mime', 'fileSizeBucket'],
-    method: 'Camera membership was fixed by CSAFE device/lens/scene policy; controls were selected by deterministic source-family order and evenly spaced file-size ranks within the eligible future-expansion pool. No EF2 score, feature vector, visual judgment, or truth-derived score entered selection.',
+    method: 'Camera membership was fixed by CSAFE device/lens/scene policy; controls were selected by deterministic sample-ID order and evenly spaced ranks within the eligible future-expansion pool. No EF2 score, feature vector, visual judgment, or truth-derived score entered selection.',
     beforeMatching: before,
     afterMatching: after,
     cameraFamilies: cameraRecords.length,
@@ -638,7 +638,7 @@ function buildRightsMarkdown(archive, archivePathLabel = 'local CSAFE archive') 
     `The locally audited source is the CSAFE Multicamera Smartphone Image Database, dataset record 26932084. The local archive was identified by its bounded Desktop/Lythaus search and is referenced in Git only by the label \`${archivePathLabel}\`.\n\n` +
     `- README member SHA-256: \`${archive.readme?.sha256 ?? 'NOT_FOUND'}\`\n` +
     `- Archive directory fingerprint: \`${archive.directoryFingerprintSha256}\`\n` +
-    `- Dataset README-reported image count: 49,970 entries were present in the audited nested archives; the README describes an approximately 50,000-image study.\n` +
+    `- Audited nested-archive image count: 49,970 entries; the README describes an approximately 50,000-image study.\n` +
     `- Dataset README-reported design: Apple iPhone and Samsung Galaxy smartphones, six model families, ten device instances per model, blank/natural scenes and multiple lenses.\n\n` +
     `## License and attribution\n\n` +
     `The local README license page states Creative Commons Attribution (CC BY) 4.0 International: https://creativecommons.org/licenses/by/4.0/. Attribution is required for any permitted reuse. Credit the dataset as **CSAFE Multicamera Smartphone Image Database**, Megan McGuire and the listed dataset contributors/institutions in the source README, with the CC BY 4.0 link. This private research package does not publish or mirror image bytes.\n\n` +
