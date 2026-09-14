@@ -206,7 +206,10 @@ function schemaIsConsistentWithRoute(modelId, input, output) {
   const hasPromptProperty = Boolean(properties && Object.prototype.hasOwnProperty.call(properties, 'prompt'));
   const genericObjectSchema = !properties || input.additionalProperties === true;
   if (modelId === '@cf/black-forest-labs/flux-1-schnell') return hasPromptProperty || genericObjectSchema;
-  if (modelId === '@cf/black-forest-labs/flux-2-klein-4b') return hasPromptProperty || genericObjectSchema;
+  if (modelId === '@cf/black-forest-labs/flux-2-klein-4b') {
+    const multipart = properties?.multipart;
+    return (isRecord(multipart) && multipart.type === 'object') || genericObjectSchema;
+  }
   return false;
 }
 
@@ -270,6 +273,7 @@ export async function runModelSchemaPreflight({ token, accountId, fetchImpl = gl
         inputType: input.type,
         outputType: output.type,
         promptPropertyDeclared: Boolean(isRecord(input.properties) && Object.prototype.hasOwnProperty.call(input.properties, 'prompt')),
+        multipartPropertyDeclared: Boolean(isRecord(input.properties?.multipart) && input.properties.multipart.type === 'object'),
         providerErrorCode: null,
         providerErrorMessage: null,
       });
