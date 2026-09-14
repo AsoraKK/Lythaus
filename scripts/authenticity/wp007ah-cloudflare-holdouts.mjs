@@ -86,10 +86,10 @@ function assertExternalCache(cachePath) {
   return absoluteCache;
 }
 
-function relativeCacheId(cachePath, filePath) {
+export function relativeCacheId(cachePath, filePath) {
   const relative = path.relative(cachePath, filePath).replaceAll('\\', '/');
   if (!relative || relative.startsWith('../') || path.isAbsolute(relative)) throw new Error('wp007ah_cache_id_invalid');
-  return `wp007ah-cloudflare/${relative}`;
+  return relative;
 }
 
 function hashBytes(bytes) {
