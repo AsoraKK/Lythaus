@@ -1,0 +1,66 @@
+{
+  "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+  "implementationCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+  "schemaVersion": "lythaus-wp006c-ef2-shortcut-audit-v1",
+  "primaryScoreUnaffected": true,
+  "variables": {
+    "dimensions": {
+      "auc": 0.01282051282051282,
+      "basis": "univariate image pixel dimensions from manifest; not used in primary score",
+      "risk": "HIGH"
+    },
+    "fileSize": {
+      "auc": 0,
+      "basis": "univariate byte size from manifest; not used in primary score",
+      "risk": "HIGH"
+    },
+    "metadataPresence": {
+      "auc": 0.5,
+      "basis": "any safe metadata marker from manifest; not used in primary score",
+      "risk": "LOW"
+    },
+    "encoderPresence": {
+      "auc": 0.6282051282051282,
+      "basis": "safe encoder-marker presence from manifest; not used in primary score",
+      "risk": "LOW"
+    },
+    "deviceIdentityPresence": {
+      "auc": 0,
+      "basis": "known camera-device label presence from manifest; not used in primary score",
+      "risk": "HIGH"
+    }
+  },
+  "shortcutRisk": "HIGH",
+  "deviceIdentityCurationNote": "Camera evaluation rows carry known device labels while non-camera controls do not; this is a benchmark curation nuisance and is not evidence of general EF2.",
+  "method": "Descriptive univariate AUC only after primary evaluation; no nuisance variable entered the primary score.",
+  "deviceConfounding": {
+    "level": "MODERATE",
+    "medianNormalizedCenterSeparation": 0.788051469867441,
+    "highSeparatedGroupCount": 0,
+    "groupMedianNormalizedSeparation": {
+      "RESIDUAL_ENERGY": 0.5162153758079271,
+      "INTENSITY_CONDITIONED_RESIDUAL": 0.7298627810999816,
+      "CROSS_CHANNEL_RESIDUAL": 1.0246154333869995,
+      "RESIDUAL_AUTOCORRELATION": 0.914503474035356,
+      "PARITY_PERIODICITY": 0.4914019684817358,
+      "EDGE_CONDITIONED_RESIDUAL": 1.2326592268793262,
+      "MULTISCALE_RESIDUAL": 0.906901793280386,
+      "PATCH_CONSISTENCY": 0.2881858121120986
+    },
+    "pooledModelScoreByDevice": {
+      "samsung Galaxy A56 5G": {
+        "count": 13,
+        "median": 1.348714282229209,
+        "iqr": 2.476768784877719,
+        "p95": 5.308756013899777
+      },
+      "samsung SM-A526B": {
+        "count": 16,
+        "median": 0.6707853985173208,
+        "iqr": 0.39663648897782455,
+        "p95": 2.2012194351581496
+      }
+    },
+    "interpretation": "No high pooled feature-center separation was observed between the two enrolled devices under the declared diagnostic rule."
+  }
+}
