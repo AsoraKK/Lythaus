@@ -1,0 +1,2474 @@
+{
+  "schemaVersion": "lythaus-wp006d-benchmark-fingerprint-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-wp006d-csafe-v1",
+  "fingerprintSha256": "cb1119f9569736f81b0132969a3ea748a03d85ce03a99387f239f074eba235d4",
+  "planHash": "5519f86aef72dec0d86a9d8bf347e668531c957ea65d171716e655eb6797e996",
+  "canonicalInput": {
+    "benchmarkVersion": "lythaus-forensic-microbench-wp006d-csafe-v1",
+    "wp006cBenchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+    "archiveDirectoryFingerprintSha256": "4e8c0d40f2c7b548d63417be28a8705ba79cda5b6682764ba0d02d38dd6c6131",
+    "archiveReadmeSha256": "94719c31a38525b3edbb00b546ebfbafff22d44f16e3f417a9a27e3ab75bbca0",
+    "replicationDevices": [
+      "iPhone11_1",
+      "iPhone12_1",
+      "iPhone14_1",
+      "note10_1",
+      "s20_1",
+      "s21_1"
+    ],
+    "futureHoldoutDevices": [
+      "iPhone11_2",
+      "iPhone12_2",
+      "iPhone14_2",
+      "note10_2"
+    ],
+    "csafeReplication": [
+      {
+        "sampleId": "CSAFE_iPhone11_1_01",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-01",
+        "contentSha256": "31c3d43f1dd3fd5bc031461aa999ddbff31e1a35c6b58af39610457654ad3592",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_02",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-02",
+        "contentSha256": "97f0cf85ce586f63bd3a2d4eae649575336d06a30244be3ed974694e7f9477ff",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_03",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-03",
+        "contentSha256": "b0ae96cb89fe7503f79c0697a9c7576253e442635b766cf5acbf68e6a1d167b4",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_04",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-04",
+        "contentSha256": "6bcae560150693978be323c207ff217770be272b23d1a0479395ed8284ad7a46",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_05",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-05",
+        "contentSha256": "7c1e80493e2f189c959a292c03f8cdbbe422abd8826c2a11b6f8db02469666d2",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_06",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-06",
+        "contentSha256": "82d21dd29d755c977f67c6185ab947c8d126b741fb4d93dacd864ec5b4997f0e",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_07",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-07",
+        "contentSha256": "c407e0ae630233f8ffe0e3b48b60ab5094fd2274fa05e537aca7c307c7745b1c",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_08",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-08",
+        "contentSha256": "8ce70b14cab417229feda31ad0b405a92898397cac3acd8075ece1c05830457d",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_09",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-09",
+        "contentSha256": "89a1e9dc06724099f5dfc3c8dc0e7a509ddbc66921c3b7bef690acc22c4f1c01",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_10",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-10",
+        "contentSha256": "d70be8dac725cde71e47ee6695ad827ffc87d5661978b90fedc06cba54ab620b",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_11",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-11",
+        "contentSha256": "e78c71e876613eefc344fac7018e70a947a4878c609607f6a1ec9d53c2904fcc",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone11_1_12",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone11_1-12",
+        "contentSha256": "b61791c2e72e7d8575b98ed4df28aad30417e4a220f187fce8e11c863bb99a12",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_13",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-13",
+        "contentSha256": "5514ce6f941a34861b8d97a1bf51df61cad2dea6749856c832181bb88d6b1c57",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_14",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-14",
+        "contentSha256": "58339944f54273e2614579fcebdac6b52bb7305cdd60e25d0195d4e9a8ec020a",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_15",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-15",
+        "contentSha256": "953638c0b393dd12455a71dc5b4ddd9da4b07fce9239f43f51c0af10d4e2b9aa",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_16",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-16",
+        "contentSha256": "8a0b6504c9f6460e1c88584506157fa4964bdfef374cfafabc1ce2be5da1f5d7",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_17",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-17",
+        "contentSha256": "7c5901d7bbb6586c7a6d7e1ebb365d0d11a2e25c31eb343be08fc306eb0e06be",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_18",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-18",
+        "contentSha256": "32bf1bad398f94edd25e54c7b7aa95c7f2e0d7c8cb49cb0583b6384c195739e6",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_19",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-19",
+        "contentSha256": "4d4f034280c61572f48e608e0fef8e5da511092582b681e1429a9d272edd4160",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_20",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-20",
+        "contentSha256": "f1381a68afab27c9e153c0fdf499009f2d783f91ea749b3b076e9b929d8a27b8",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_21",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-21",
+        "contentSha256": "1b808dabdda61a44a0ae55c93c7ca20e190e8c0cdb17e1307f43165484e5b61c",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_22",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-22",
+        "contentSha256": "74f9162fe5185b5a1decf55778df8414f431346e460c3331d1527a6493deed00",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_23",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-23",
+        "contentSha256": "b6201057941df9daf78a5ec9da0a5f9308d5f2a2868a2e1598b59e4626281b36",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone12_1_24",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone12_1-24",
+        "contentSha256": "68521567cdabc6df53e40bdea8a36d989eb8f4cd572786f1807ce934d4c86630",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_25",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-25",
+        "contentSha256": "2e3c49f04ce999daa7b90992fa57374659a10d2b9cf7749b29f625fbc5ef2b85",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_26",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-26",
+        "contentSha256": "0a9830f0dc0a205b084e45fce6e095ab2dd486800c9a952889a316c5b700e8cf",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_27",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-27",
+        "contentSha256": "6f85bf1ff41eadfee38fe424005ab38d383e7476741b8ec3dd1892ad65ae95ea",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_28",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-28",
+        "contentSha256": "cd03d3cc2e0b97a256aa759c548dc7ec3c6c465166fbdff3548fdd318127ba06",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_29",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-29",
+        "contentSha256": "d505e4fbcb24c94607f50d3720d12301b0c3434eedfc1e25286e8294e86f7474",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_30",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-30",
+        "contentSha256": "2aeec3b811cdff5529bb10ac114db367295dfa9b5ddaad149b56fa27e8536a6f",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_31",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-31",
+        "contentSha256": "320dc4263918d29a062b1a69e9057b81c3485c94d830fb7025465b9257c62b86",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_32",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-32",
+        "contentSha256": "aee4c59f46bcbeb9460be74582d3358fb27536d4380cd60f0905764d3ec1c32e",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_33",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-33",
+        "contentSha256": "26c9dbc6520fe09f408bb15625cba3744aca31bbf78b147430bc7ca5a3ac8eaf",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_34",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-34",
+        "contentSha256": "065531b0bb3d660e741d7551e3754c6bc467afb2c0615d947ced538c7e6406fd",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_35",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-35",
+        "contentSha256": "3d57454c0b9188b9caf9ae023d63304aa0b26fb31c70302d6be1520a360f8447",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_iPhone14_1_36",
+        "sourceFamilyId": "CSAFE-FAMILY-iPhone14_1-36",
+        "contentSha256": "acf947d0f65d4bbbe39b5864dbab4f90a757ed92ca7e20ce1139a21d5dab16e1",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_37",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-37",
+        "contentSha256": "f2d613f8308091e5701199aba85baae8708c73e91725dd6c75d990cbcc0bf182",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_38",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-38",
+        "contentSha256": "7949de6ba38f47c83797592f70bea4edbaced07e05355a4c2a86ddebef4f87fa",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_39",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-39",
+        "contentSha256": "4f10a68528d5636c01f2ce3e9ad545c20e1622b0827614f8dc9c0178b9b0d977",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_40",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-40",
+        "contentSha256": "ffce2948700ef84c161b02a3c8ec266353857e9472c9ce05a23921c2e7fc7c78",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_41",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-41",
+        "contentSha256": "379b7e7497a51ae09d5d3ad35024650d0ccd47f6e5de82a92eb8441efb6c2273",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_42",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-42",
+        "contentSha256": "2f651034ec05ec700ca5451700f053f22fb9c1e8a21e88a94b71fb984ec24aa8",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_43",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-43",
+        "contentSha256": "aba06998f16bc4e92a4f628dabee4b826de29530ad318bb3cee42c200fbd66fd",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_44",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-44",
+        "contentSha256": "f1dcf5d41d3642a63e55964da0411aa19e078c70a612c944a8f333e0f7585684",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_45",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-45",
+        "contentSha256": "1251d36d594c137b40bddecf8d445ce581e4478c998d423b590201501db79d78",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "wide1.5",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_46",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-46",
+        "contentSha256": "8df8350c62240d765fbbe148a8b3cfe2c85ff5b57bf0776c693d9f298d88fa8c",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "wide1.5",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_47",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-47",
+        "contentSha256": "e12d4416e1fd1acb61c963442916c1f1bfc1ba5c6eb5c52a4dffda4c2c18478b",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "wide2.4",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_note10_1_48",
+        "sourceFamilyId": "CSAFE-FAMILY-note10_1-48",
+        "contentSha256": "2f9b8cd3bb6310eb5e79245914200c4b4e88a2dd9ac9c1a6fdd6a34b22ddce22",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "wide2.4",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_49",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-49",
+        "contentSha256": "2503a2aeade3645093bc6faa42d855c4055ef59c44a9c60bd98178fd579b1408",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_50",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-50",
+        "contentSha256": "a19d17b38503d1fd8b91293a9a97fdc3f49f9135ee65c2e0ee07af5b7c42175c",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_51",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-51",
+        "contentSha256": "2766901871ac217775b915dcbdfd6840d1549f24458fc7098f57c76e8f9a5aec",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_52",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-52",
+        "contentSha256": "df40c8098172c1e834af44466b430a67e9add7651c286cf11eb786f54f842da3",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_53",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-53",
+        "contentSha256": "e2763cb790872775a66bc498066c86d561a9cb215e8369977715e2f7402a7e9d",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_54",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-54",
+        "contentSha256": "64f4b73cdb0ca54a1fcd843bea7964af9944a36d072eb3bbd12d4195f37966fd",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_55",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-55",
+        "contentSha256": "d428f7a4b0dbba37a8a6026329cff94743fe4ff1ddd1a69c793033874a48016d",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_56",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-56",
+        "contentSha256": "5cb4997981367b891d1d65f012ff4b7c7e3133ea71a11ae994a8389cbb4eebfa",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_57",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-57",
+        "contentSha256": "715a86c915e3a6e7e5473f6e2c9f2a59709bb6676994f02bd39c7b89095a56ed",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_58",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-58",
+        "contentSha256": "cf9184b0456257279fb14cee4a7a798768a0dac208673270c75a92f4d706cff9",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_59",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-59",
+        "contentSha256": "40a051d17cb6510ca90d9d920ffe4c27871b838a5ddaae4b6e0c948bf200a359",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s20_1_60",
+        "sourceFamilyId": "CSAFE-FAMILY-s20_1-60",
+        "contentSha256": "a489dd720c16eecd23372ba9fb2798f0a9361be7cb3434c57436fa1ed7369c7a",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_61",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-61",
+        "contentSha256": "f3bf428b5da91ba9c1d235aad758cd9dc7ac493e9360703cbc290f462e2e7154",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_62",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-62",
+        "contentSha256": "96009ea81aaeafcdbfbe02f385794777da51067415a0b25d91b2efbd5eef077e",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_63",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-63",
+        "contentSha256": "bda005a3ec598f180094676776bc5f47423717162a51645e9767591c0e5daf97",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "front",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_64",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-64",
+        "contentSha256": "ad865f717fd18ac6614d4039385732e15521d072186cbdca94feacdd1a42b67b",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_65",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-65",
+        "contentSha256": "3310bdd41ef3baecae3849557cc816b62325a6aca713b2ff58a8be9ee8d949ba",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_66",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-66",
+        "contentSha256": "4cc97c7d33cd9c475bf74f5b9817e1ce135398de09c6f7df4d846430a0da5f30",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_67",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-67",
+        "contentSha256": "36925a8fad2fb594f5b766276fd6863267aba4bb5be354c66ed4981fa53a4fce",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_68",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-68",
+        "contentSha256": "e24d89269d508ea75fe39ca49acf16bb789e354b2e276864c01533213d61a836",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_69",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-69",
+        "contentSha256": "6b550c43ebdf022932863b05eca00a7b651f8370dbe77d5c2cae99ead52ff6af",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_70",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-70",
+        "contentSha256": "eb528706b921ce71f651b3afa0b9bd546e6c696424fdd2ef6b7b935950df314c",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_71",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-71",
+        "contentSha256": "c4114cd6e3a2d3e05f1429501df3b9988e79b96252a6dc63ac531654c693e05c",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      },
+      {
+        "sampleId": "CSAFE_s21_1_72",
+        "sourceFamilyId": "CSAFE-FAMILY-s21_1-72",
+        "contentSha256": "7ef86e09de136b79942492524a59155a7b3a3b07a7a3563014e1bbd378993749",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "wide",
+        "truthAxes": {
+          "physicalCameraAcquisition": "TRUE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "FALSE",
+          "digitalCapture": "FALSE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "CSAFE_REPLICATION_CAMERA"
+      }
+    ],
+    "nonCameraControls": [
+      {
+        "sampleId": "SCREENSHOT_20260318_143648_8cdfb550",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260318_143648_8cdfb550",
+        "contentSha256": "8cdfb550f6ef990b68546dc6c512079dfcdc44b4b88bed045252bad0b4e885a5",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260323_170038_c85eb5f1",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260323_170038_c85eb5f1",
+        "contentSha256": "c85eb5f188283e8f4df5d22817e0eae2595e96d30fc1a3bf7398d908bf67c3b3",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260326_103004_94629c4a",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260326_103004_94629c4a",
+        "contentSha256": "94629c4a4ed66d10ea3f18220379a5a7d8959d6a6ded79a5dad3408712c99430",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260401_053517_d2b03537",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260401_053517_d2b03537",
+        "contentSha256": "d2b0353798622233b0fd3504697fa665e1e004098c976aaeafa723b7cc59f665",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260419_140936_74f3caf9",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260419_140936_74f3caf9",
+        "contentSha256": "74f3caf90a72694836164d9d10703bdd6c410715ff4d47d075a462301640c3da",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260425_175613_ac127ced",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260425_175613_ac127ced",
+        "contentSha256": "ac127ced0046694b0fc117b64b127a1c9c188a29ab33659bf69fcd2301eb454d",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260506_053847_d456a49d",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260506_053847_d456a49d",
+        "contentSha256": "d456a49da79eb0b3725564418c645c17e87384e3a22a90868e30ba190071a67a",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260515_194019_2c47a767",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260515_194019_2c47a767",
+        "contentSha256": "2c47a7674e5119256b45a469e334afda2edb0d278cc76877562f55dc7e084e94",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260530_201232_b3f76ca9",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260530_201232_b3f76ca9",
+        "contentSha256": "b3f76ca9f025d70ed8dc1f5272aa1c10d5c80a87cd6dfc782bdf9b209b13d89a",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260602_204340_536f8baf",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260602_204340_536f8baf",
+        "contentSha256": "536f8bafaf43e828478cbba631fbc5adb3bf2c651fe5a842b62f5c3b666dc191",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260609_135145_1ac764f7",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260609_135145_1ac764f7",
+        "contentSha256": "1ac764f75c6e69c0e26d907295e55d9ce6469b3bae41f4ed0e9510af98885e56",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260618_204754_a92b626a",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260618_204754_a92b626a",
+        "contentSha256": "a92b626a2d599d71ea00df3c90b7da04248748b403fdfb69a3a7600f930cdf84",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260618_204945_336fd5ca",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260618_204945_336fd5ca",
+        "contentSha256": "336fd5ca3188d9bd4f64f4a9258b7a94f342862613f64dad927399894b8c7933",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260701_091436_f7fe9969",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260701_091436_f7fe9969",
+        "contentSha256": "f7fe9969fdbc2d6eac570011e178427132a658ed00f849aa427cb25d7cad7dc4",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260701_163459_6a79ab75",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260701_163459_6a79ab75",
+        "contentSha256": "6a79ab752103aaf5aa074c500f9493ddcbd811d387b73e89e3cf3baa6af4412e",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260712_171422_9b08138a",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260712_171422_9b08138a",
+        "contentSha256": "9b08138aba27c6b227253d39b3057a26024ea46963ebb66bc146d85848b19493",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260717_150855_784b3af2",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260717_150855_784b3af2",
+        "contentSha256": "784b3af2d89ee09ed87d94415f2434f0db061613f3eee8405365b36fba2551e1",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260717_162118_7202f07c",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260717_162118_7202f07c",
+        "contentSha256": "7202f07c1f880ff53d49b51f404fac76a44ce4b79c4397227ba5da539f5cec63",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260722_072819_91880735",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260722_072819_91880735",
+        "contentSha256": "918807352025fbba5328223e8432af9e518ba3fcc3ccbe3184851917c66d729b",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260724_084908_47693856",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260724_084908_47693856",
+        "contentSha256": "476938568967e85b200ce8481233d94dfc483dbf1c4776c0e103593602606485",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260729_060104_77799674",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260729_060104_77799674",
+        "contentSha256": "7779967411e87df861f29f4bc1ff98a0664d7f94f5473ef7d8f5865c0abf50d7",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260805_222435_d394ad73",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260805_222435_d394ad73",
+        "contentSha256": "d394ad7389926d2dc3eacc8bf4ca8f9ef1aaee4d3911821f0d5556132a7a19a4",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260816_183926_0e1c747c",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260816_183926_0e1c747c",
+        "contentSha256": "0e1c747c3dd7370066190afecd4d4d1a9747624d62eea6c485aabe0887912a43",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260821_214436_477fe08b",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260821_214436_477fe08b",
+        "contentSha256": "477fe08b74cd377275e9d414ad0a03dd578b42dfab8b9de67b2e1f2a163dfbff",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260822_181309_0b2f1d2d",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260822_181309_0b2f1d2d",
+        "contentSha256": "0b2f1d2d0b6f8690cc8354c66e385e12eb6718785fb8e5076fba11f1ef9c3671",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260823_161458_c353e374",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260823_161458_c353e374",
+        "contentSha256": "c353e37473a83a35e0162b69952987c15cf72c958a9069340ca555a01112aed8",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260826_073905_e2a94c8d",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260826_073905_e2a94c8d",
+        "contentSha256": "e2a94c8d1f3f7de0edf9a046c106222933e302d61a1cb64fb75a1370cc524ade",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260826_215642_f934128c",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260826_215642_f934128c",
+        "contentSha256": "f934128ce44f9100acdd7a52747d608845d465bf80ebf6cae0ea7aad52a7bf61",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260827_222517_6900b5f6",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260827_222517_6900b5f6",
+        "contentSha256": "6900b5f6caf5dd72cffd3392e5f2fd225adb576aa308348c425acb8724be1920",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260831_191941_30321166",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260831_191941_30321166",
+        "contentSha256": "30321166b87f38abe22b7fcf95cea676b84717d0ed810717dc641201b53d99b1",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260902_202749_922725c4",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260902_202749_922725c4",
+        "contentSha256": "922725c4842ae28bb2b750e089214816759b0553fc12d8a9ee50b17cbfb48ff5",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      },
+      {
+        "sampleId": "SCREENSHOT_20260907_212624_f03264eb",
+        "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20260907_212624_f03264eb",
+        "contentSha256": "f03264eb5fdc9c602343faa2b86a1b07466d26f628e231e444a0e99e03502737",
+        "hardNegativeType": "SCREENSHOT",
+        "truthAxes": {
+          "physicalCameraAcquisition": "FALSE",
+          "syntheticDepictedContent": "FALSE",
+          "localManipulation": "UNKNOWN",
+          "digitalCapture": "TRUE",
+          "screenRecapture": "FALSE"
+        },
+        "researchRole": "NEW_INDEPENDENT_NON_CAMERA_CONTROL"
+      }
+    ],
+    "selectedReplicationMembers": [
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/front/IMG_0729.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 2556331
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/front/IMG_0763.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 2503949
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/front/IMG_0805.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1627589
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/telephoto/IMG_0471.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 853940
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/telephoto/IMG_0496.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 3300726
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/telephoto/IMG_0546.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 3943667
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/ultra/IMG_0613 2.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 1913933
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/ultra/IMG_0641.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 1164240
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/ultra/IMG_0669.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 4205525
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/wide/IMG_0888.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 2782888
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/wide/IMG_0914.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 3747418
+      },
+      {
+        "outerMember": "iPhone11.zip",
+        "member": "iPhone11/iPhone11_1/natural/wide/IMG_0944.JPG",
+        "deviceFamilyId": "iPhone11_1",
+        "model": "iPhone11",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 7692531
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/front/IMG_0291.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1670326
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/front/IMG_0368.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 2541327
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/front/IMG_0393.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 3066659
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/telephoto/IMG_0036.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 3748982
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/telephoto/IMG_0061.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 2645926
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/telephoto/IMG_0086.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 2276063
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/ultra/IMG_0240.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 3027793
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/ultra/IMG_0318.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 6042347
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/ultra/IMG_0343.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 3660430
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/wide/IMG_0139.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 4659566
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/wide/IMG_0165.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 4781473
+      },
+      {
+        "outerMember": "iPhone12.zip",
+        "member": "iPhone12/iPhone12_1/natural/wide/IMG_0190.JPG",
+        "deviceFamilyId": "iPhone12_1",
+        "model": "iPhone12",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 4223410
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/front/IMG_0569.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 2379225
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/front/IMG_0594.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 3519469
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/front/IMG_0620.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 2104375
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/telephoto/IMG_0142.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 2153667
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/telephoto/IMG_0167.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 1896462
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/telephoto/IMG_0198.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 5847378
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/ultra/IMG_0352.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 4151040
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/ultra/IMG_0379.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 1017248
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/ultra/IMG_0410.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 6896515
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/wide/IMG_0465.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 3001572
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/wide/IMG_0490.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 2602801
+      },
+      {
+        "outerMember": "iPhone14.zip",
+        "member": "iPhone14/iPhone14_1/natural/wide/IMG_0516.JPG",
+        "deviceFamilyId": "iPhone14_1",
+        "model": "iPhone14",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 2601120
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/front/20221122_122817.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1252630
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/front/20221122_123356.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1368491
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/front/20221122_123828.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1682729
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/telephoto/20221122_110913.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 6938323
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/telephoto/20221122_111654.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 8472513
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/telephoto/20221122_112144.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 7927155
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/ultra/20221122_115449.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 7734438
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/ultra/20221122_120058.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 5013747
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/wide1.5/20221122_113356.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "wide1.5",
+        "declaredSizeBytes": 7682096
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/wide1.5/20221123_090129.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "wide1.5",
+        "declaredSizeBytes": 6105667
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/wide2.4/20221122_114021.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "wide2.4",
+        "declaredSizeBytes": 10325735
+      },
+      {
+        "outerMember": "note10.zip",
+        "member": "note10/note10_1/natural/wide2.4/20221124_102251.jpg",
+        "deviceFamilyId": "note10_1",
+        "model": "note10",
+        "sceneType": "natural",
+        "lens": "wide2.4",
+        "declaredSizeBytes": 6759557
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/front/20210926_081410.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1620532
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/front/20210926_081952.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1175967
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/front/20210926_083654.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1676495
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/telephoto/20210926_074929.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 3631233
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/telephoto/20210926_075124.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 2956593
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/telephoto/20210926_075537.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 3411458
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/ultra/20210926_090153.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 2715469
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/ultra/20210926_090449.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 5494892
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/ultra/20210926_090819.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 2661472
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/wide/20210926_090003.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 3259287
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/wide/20210926_092212.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 2652954
+      },
+      {
+        "outerMember": "s20.zip",
+        "member": "s20/s20_1/natural/wide/20210926_092501.jpg",
+        "deviceFamilyId": "s20_1",
+        "model": "s20",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 2913493
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/front/20221002_144741.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1694156
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/front/20221002_145050.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 1585562
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/front/20221002_151834.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "front",
+        "declaredSizeBytes": 2984367
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/telephoto/20221002_142800.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 2423431
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/telephoto/20221002_143025.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 4127212
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/telephoto/20221002_143304.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "telephoto",
+        "declaredSizeBytes": 4291000
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/ultra/20221002_143624.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 6086227
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/ultra/20221002_143925.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 4006002
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/ultra/20221002_144229.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "ultra",
+        "declaredSizeBytes": 3599745
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/wide/20221002_150041.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 3099847
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/wide/20221002_151250.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 2614120
+      },
+      {
+        "outerMember": "s21.zip",
+        "member": "s21/s21_1/natural/wide/20221002_152405.jpg",
+        "deviceFamilyId": "s21_1",
+        "model": "s21",
+        "sceneType": "natural",
+        "lens": "wide",
+        "declaredSizeBytes": 5387746
+      }
+    ],
+    "selectedControlSampleIds": [
+      "SCREENSHOT_20260318_143648_8cdfb550",
+      "SCREENSHOT_20260323_170038_c85eb5f1",
+      "SCREENSHOT_20260326_103004_94629c4a",
+      "SCREENSHOT_20260401_053517_d2b03537",
+      "SCREENSHOT_20260419_140936_74f3caf9",
+      "SCREENSHOT_20260425_175613_ac127ced",
+      "SCREENSHOT_20260506_053847_d456a49d",
+      "SCREENSHOT_20260515_194019_2c47a767",
+      "SCREENSHOT_20260530_201232_b3f76ca9",
+      "SCREENSHOT_20260602_204340_536f8baf",
+      "SCREENSHOT_20260609_135145_1ac764f7",
+      "SCREENSHOT_20260618_204754_a92b626a",
+      "SCREENSHOT_20260618_204945_336fd5ca",
+      "SCREENSHOT_20260701_091436_f7fe9969",
+      "SCREENSHOT_20260701_163459_6a79ab75",
+      "SCREENSHOT_20260712_171422_9b08138a",
+      "SCREENSHOT_20260717_150855_784b3af2",
+      "SCREENSHOT_20260717_162118_7202f07c",
+      "SCREENSHOT_20260722_072819_91880735",
+      "SCREENSHOT_20260724_084908_47693856",
+      "SCREENSHOT_20260729_060104_77799674",
+      "SCREENSHOT_20260805_222435_d394ad73",
+      "SCREENSHOT_20260816_183926_0e1c747c",
+      "SCREENSHOT_20260821_214436_477fe08b",
+      "SCREENSHOT_20260822_181309_0b2f1d2d",
+      "SCREENSHOT_20260823_161458_c353e374",
+      "SCREENSHOT_20260826_073905_e2a94c8d",
+      "SCREENSHOT_20260826_215642_f934128c",
+      "SCREENSHOT_20260827_222517_6900b5f6",
+      "SCREENSHOT_20260831_191941_30321166",
+      "SCREENSHOT_20260902_202749_922725c4",
+      "SCREENSHOT_20260907_212624_f03264eb"
+    ],
+    "nuisanceMatching": {
+      "schemaVersion": "lythaus-wp006d-nuisance-matching-v1",
+      "selectionUsesEf2Scores": false,
+      "selectionUsesPixels": false,
+      "matchingVariables": [
+        "width",
+        "height",
+        "aspectRatio",
+        "mime",
+        "fileSizeBucket"
+      ],
+      "method": "Camera membership was fixed by CSAFE device/lens/scene policy; controls were selected by deterministic sample-ID order and evenly spaced ranks within the eligible future-expansion pool. No EF2 score, feature vector, visual judgment, or truth-derived score entered selection.",
+      "beforeMatching": {
+        "dimension": {
+          "leftDistinct": 5,
+          "rightDistinct": 3,
+          "intersection": 0,
+          "union": 8,
+          "jaccard": 0
+        },
+        "aspectRatio": {
+          "leftDistinct": 1,
+          "rightDistinct": 3,
+          "intersection": 0,
+          "union": 4,
+          "jaccard": 0
+        },
+        "format": {
+          "leftDistinct": 1,
+          "rightDistinct": 1,
+          "intersection": 1,
+          "union": 1,
+          "jaccard": 1
+        },
+        "fileSizeBucket": {
+          "leftDistinct": 5,
+          "rightDistinct": 6,
+          "intersection": 2,
+          "union": 9,
+          "jaccard": 0.2222222222222222
+        }
+      },
+      "afterMatching": {
+        "dimension": {
+          "leftDistinct": 5,
+          "rightDistinct": 2,
+          "intersection": 0,
+          "union": 7,
+          "jaccard": 0
+        },
+        "aspectRatio": {
+          "leftDistinct": 1,
+          "rightDistinct": 2,
+          "intersection": 0,
+          "union": 3,
+          "jaccard": 0
+        },
+        "format": {
+          "leftDistinct": 1,
+          "rightDistinct": 1,
+          "intersection": 1,
+          "union": 1,
+          "jaccard": 1
+        },
+        "fileSizeBucket": {
+          "leftDistinct": 5,
+          "rightDistinct": 5,
+          "intersection": 1,
+          "union": 9,
+          "jaccard": 0.1111111111111111
+        }
+      },
+      "cameraFamilies": 72,
+      "eligibleControlPoolFamilies": 133,
+      "selectedControlFamilies": 32,
+      "limitation": "The owner future-expansion non-camera pool is screenshot-heavy and currently has the same portrait dimensions in nearly all eligible records; metadata matching cannot create missing subtype or dimension diversity."
+    },
+    "canonicalPixelCrop": {
+      "size": 1024,
+      "rule": "CENTERED_NATIVE_DECODED_PIXEL_CROP_NO_RESIZE_V1"
+    },
+    "lgeHoldoutStatus": "SEALED",
+    "csafeFutureHoldoutStatus": "SEALED",
+    "mediaCommittedToGit": false,
+    "modelOrCloudCalls": 0
+  },
+  "lgeHoldoutStatus": "SEALED",
+  "csafeFutureHoldoutStatus": "SEALED",
+  "mediaCommittedToGit": false
+}

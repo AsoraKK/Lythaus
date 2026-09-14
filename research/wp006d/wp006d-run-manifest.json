@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "lythaus-wp006d-run-manifest-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-wp006d-csafe-v1",
+  "benchmarkFingerprint": "cb1119f9569736f81b0132969a3ea748a03d85ce03a99387f239f074eba235d4",
+  "planHash": "5519f86aef72dec0d86a9d8bf347e668531c957ea65d171716e655eb6797e996",
+  "baseSha": "2b70158f70fd78c9a100e55b85816f40703997dc",
+  "implementationCommit": "d712c77d304f23608ae9ee6a174022c09af0b197",
+  "status": "COMPLETE",
+  "v0Frozen": true,
+  "v0ModelRefit": false,
+  "thresholdRetuned": false,
+  "modelInferenceCalls": 0,
+  "cloudCalls": 0,
+  "incrementalCostUsd": 0,
+  "fullArchiveExtraction": false,
+  "selectiveExtraction": {
+    "imageCount": 72,
+    "declaredBytes": 264140252,
+    "maximumImages": 120,
+    "maximumBytes": 2147483648
+  },
+  "mediaAccess": {
+    "selectedInventoryPixels": true,
+    "replicationScoringPixels": true,
+    "nonCameraControlScoringPixels": true,
+    "csafeFutureHoldoutPixels": false,
+    "lgePixels": false
+  },
+  "holdouts": {
+    "lge": "SEALED",
+    "csafeFutureDevices": "SEALED"
+  },
+  "sourceMediaModified": false,
+  "mediaCommittedToGit": false,
+  "rawResidualsPersisted": false,
+  "rawMetadataPersisted": false,
+  "productionChanges": false,
+  "benchmarkExpansion": "READY_FOR_V1_DESIGN",
+  "v0ExternalReplication": "FAILED",
+  "nextStep": "WP006E — EF2 Device-Invariant Measurement v1 Design & Sealed-Device Evaluation"
+}

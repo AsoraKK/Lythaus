@@ -1,0 +1,177 @@
+{
+  "schemaVersion": "lythaus-wp006d-ef2-plan-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-wp006d-csafe-v1",
+  "benchmarkFingerprint": "cb1119f9569736f81b0132969a3ea748a03d85ce03a99387f239f074eba235d4",
+  "baseSha": "2b70158f70fd78c9a100e55b85816f40703997dc",
+  "implementationCommit": "d712c77d304f23608ae9ee6a174022c09af0b197",
+  "researchDate": "2026-09-14",
+  "wp006cHistorical": {
+    "benchmarkVersion": "lythaus-forensic-microbench-v0",
+    "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+    "decision": "REJECT_CURRENT_EF2_MEASUREMENT",
+    "stageA": "FAIL",
+    "measurementId": "lythaus-ef2-pixel-acquisition-v0",
+    "measurementVersion": "0"
+  },
+  "wp006cFrozenModel": {
+    "featureRegistrySchemaVersion": "lythaus-wp006c-ef2-feature-registry-v1",
+    "featureRegistryHash": "1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9",
+    "configurationHash": "acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e",
+    "calibrationFreezeSchemaVersion": "lythaus-wp006c-ef2-calibration-freeze-v1",
+    "calibrationFreezeHash": "98608425de708af75317e088d92cec1a96cb9625da824cb9cb0f40992a23ed55",
+    "thresholdSource": "CALIBRATION_CAMERA_ONLY",
+    "thresholdValue": 3.515089017620759,
+    "sourceCodeCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+    "frozenWithoutCsafeRefit": true
+  },
+  "researchQuestions": [
+    "Does the frozen WP006C v0 measurement reproduce camera-consistency on independently sourced multi-device CSAFE images?",
+    "Does it separate the new non-camera controls without relying on obvious file/container nuisance differences?",
+    "Does the canonical decoded-pixel challenge preserve any separation?",
+    "Can a stronger, leak-resistant benchmark foundation be handed to a later EF2 v1 design without consuming sealed devices?"
+  ],
+  "csafe": {
+    "archiveLabel": "CSAFE_ARCHIVE_26932084_ZIP",
+    "archiveDirectoryFingerprintSha256": "4e8c0d40f2c7b548d63417be28a8705ba79cda5b6682764ba0d02d38dd6c6131",
+    "readmeSha256": "94719c31a38525b3edbb00b546ebfbafff22d44f16e3f417a9a27e3ab75bbca0",
+    "replicationDevices": [
+      "iPhone11_1",
+      "iPhone12_1",
+      "iPhone14_1",
+      "note10_1",
+      "s20_1",
+      "s21_1"
+    ],
+    "futureHoldoutDevices": [
+      "iPhone11_2",
+      "iPhone12_2",
+      "iPhone14_2",
+      "note10_2"
+    ],
+    "replicationFamilies": 72,
+    "selectedImages": 72,
+    "selectedDeclaredBytes": 264140252,
+    "futureHoldoutDeviceCount": 4,
+    "fullExtractionPerformed": false
+  },
+  "nonCameraControls": {
+    "selectedFamilies": 32,
+    "sourcePoolRole": "FUTURE_EXPANSION_POOL",
+    "subtypeCounts": {
+      "SCREENSHOT": 32
+    },
+    "truth": "physicalCameraAcquisition=FALSE; not a FAKE_IMAGE label"
+  },
+  "sceneHandling": {
+    "sceneIdentifiersAvailable": false,
+    "sceneLeakageStatus": "DOCUMENTED_NOT_DISJOINT",
+    "matchedSceneDiagnostic": "NOT_RUN",
+    "primarySelection": "natural entries across lenses; no scene ID or score-based selection"
+  },
+  "canonicalPixelChallenge": {
+    "cropSize": 1024,
+    "coverage": 1,
+    "rule": "CENTERED_NATIVE_DECODED_PIXEL_CROP_NO_RESIZE_V1",
+    "input": "decoded pixels only; container metadata, filename, format, dimensions as classifier variables and file size are not passed to the frozen feature extractor"
+  },
+  "nuisanceMatching": {
+    "schemaVersion": "lythaus-wp006d-nuisance-matching-v1",
+    "selectionUsesEf2Scores": false,
+    "selectionUsesPixels": false,
+    "matchingVariables": [
+      "width",
+      "height",
+      "aspectRatio",
+      "mime",
+      "fileSizeBucket"
+    ],
+    "method": "Camera membership was fixed by CSAFE device/lens/scene policy; controls were selected by deterministic sample-ID order and evenly spaced ranks within the eligible future-expansion pool. No EF2 score, feature vector, visual judgment, or truth-derived score entered selection.",
+    "beforeMatching": {
+      "dimension": {
+        "leftDistinct": 5,
+        "rightDistinct": 3,
+        "intersection": 0,
+        "union": 8,
+        "jaccard": 0
+      },
+      "aspectRatio": {
+        "leftDistinct": 1,
+        "rightDistinct": 3,
+        "intersection": 0,
+        "union": 4,
+        "jaccard": 0
+      },
+      "format": {
+        "leftDistinct": 1,
+        "rightDistinct": 1,
+        "intersection": 1,
+        "union": 1,
+        "jaccard": 1
+      },
+      "fileSizeBucket": {
+        "leftDistinct": 5,
+        "rightDistinct": 6,
+        "intersection": 2,
+        "union": 9,
+        "jaccard": 0.2222222222222222
+      }
+    },
+    "afterMatching": {
+      "dimension": {
+        "leftDistinct": 5,
+        "rightDistinct": 2,
+        "intersection": 0,
+        "union": 7,
+        "jaccard": 0
+      },
+      "aspectRatio": {
+        "leftDistinct": 1,
+        "rightDistinct": 2,
+        "intersection": 0,
+        "union": 3,
+        "jaccard": 0
+      },
+      "format": {
+        "leftDistinct": 1,
+        "rightDistinct": 1,
+        "intersection": 1,
+        "union": 1,
+        "jaccard": 1
+      },
+      "fileSizeBucket": {
+        "leftDistinct": 5,
+        "rightDistinct": 5,
+        "intersection": 1,
+        "union": 9,
+        "jaccard": 0.1111111111111111
+      }
+    },
+    "cameraFamilies": 72,
+    "eligibleControlPoolFamilies": 133,
+    "selectedControlFamilies": 32,
+    "limitation": "The owner future-expansion non-camera pool is screenshot-heavy and currently has the same portrait dimensions in nearly all eligible records; metadata matching cannot create missing subtype or dimension diversity."
+  },
+  "sourceFamilyPolicy": {
+    "exactDuplicateLeakage": "PASS",
+    "exactDuplicateGroups": [],
+    "nearDuplicatePairCount": 1,
+    "nearDuplicateRule": "64-bit deterministic average-hash Hamming distance <=2 is recorded as a probable near-duplicate diagnostic; it does not silently merge source families."
+  },
+  "frozenBoundaries": {
+    "lgeHoldoutDevice": "LGE LM-G710",
+    "lgeHoldoutStatus": "SEALED",
+    "lgeHoldoutFamilyCount": 33,
+    "csafeFutureHoldoutStatus": "SEALED",
+    "csafeFutureHoldoutDeviceCount": 4,
+    "reservedOwnerHoldoutsUsed": false,
+    "wp006cThresholdRetuned": false,
+    "v0FeatureRegistryChanged": false,
+    "v0ModelRefit": false
+  },
+  "selectionUsesEf2Scores": false,
+  "noCloudCalls": true,
+  "noModelInference": true,
+  "noTraining": true,
+  "noProductionChanges": true,
+  "planStatus": "FROZEN_BEFORE_EF2_SCORES"
+}

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "lythaus-wp006d-shortcut-audit-v1",
+  "primaryScoreUnaffected": true,
+  "rowsUsed": 104,
+  "variables": {
+    "dimensions": {
+      "auc": 0,
+      "risk": "HIGH",
+      "basis": "Univariate decoded dimensions from the frozen manifest; not in primary score."
+    },
+    "fileSize": {
+      "auc": 0,
+      "risk": "HIGH",
+      "basis": "Univariate file size from the frozen manifest; not in primary score."
+    },
+    "format": {
+      "auc": 0.5,
+      "risk": "LOW",
+      "basis": "Format marker from manifest; not in primary score."
+    },
+    "metadataPresence": {
+      "auc": 0.5,
+      "risk": "LOW",
+      "basis": "Safe metadata-presence marker only; metadata values are not in primary score."
+    }
+  },
+  "deviceIdentity": {
+    "risk": "HIGH",
+    "basis": "All CSAFE camera rows carry a provenance device label while owner controls intentionally do not; this is curation metadata and not a primary score input."
+  },
+  "shortcutRisk": "HIGH",
+  "method": "Descriptive univariate AUC after frozen-plan selection; no nuisance variable entered the frozen v0 feature extractor or score.",
+  "limitation": "The owner control pool is screenshot-heavy and the CSAFE camera dimensions/metadata differ structurally; canonical decoded-pixel results are the relevant nuisance-neutralized diagnostic."
+}

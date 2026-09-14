@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "lythaus-wp006d-canonical-pixel-challenge-v1",
+  "benchmarkFingerprint": "cb1119f9569736f81b0132969a3ea748a03d85ce03a99387f239f074eba235d4",
+  "cropSize": 1024,
+  "cropRule": "CENTERED_NATIVE_DECODED_PIXEL_CROP_NO_RESIZE_V1",
+  "dimensionsOnlySelectionCoverage": 1,
+  "metadataAndContainerInputsRemoved": true,
+  "resizeApplied": false,
+  "camera": {
+    "sampleCount": 72,
+    "sourceFamilyCount": 72,
+    "validCount": 72,
+    "invalidCount": 0,
+    "rawScore": {
+      "count": 72,
+      "median": 5.644400235476931,
+      "iqr": 9.802517501293703,
+      "p95": 132.8880775093294
+    },
+    "normalizedMedian": 0.15101274042754573,
+    "acceptanceAtFrozenThreshold": {
+      "valid": 72,
+      "accepted": 28,
+      "rejected": 44,
+      "invalid": 0,
+      "rate": 0.3888888888888889
+    },
+    "runtimeMs": {
+      "count": 72,
+      "median": 311.28965000000244,
+      "iqr": 192.56072500000118,
+      "p95": 846.4419300000035
+    }
+  },
+  "nonCamera": {
+    "sampleCount": 32,
+    "sourceFamilyCount": 32,
+    "validCount": 32,
+    "invalidCount": 0,
+    "rawScore": {
+      "count": 32,
+      "median": 160.39622217706494,
+      "iqr": 265.7263899250586,
+      "p95": 648.6671776688728
+    },
+    "normalizedMedian": 0.006208251275224057,
+    "acceptanceAtFrozenThreshold": {
+      "valid": 32,
+      "accepted": 0,
+      "rejected": 32,
+      "invalid": 0,
+      "rate": 0
+    },
+    "runtimeMs": {
+      "count": 32,
+      "median": 151.3110499999966,
+      "iqr": 4.678374999997686,
+      "p95": 164.21063499999946
+    }
+  },
+  "cameraVsNonCamera": {
+    "rocAuc": 0.9388020833333334,
+    "bootstrap95": {
+      "lower": 0.8845486111111112,
+      "upper": 0.9783094618055556,
+      "replicates": 1000
+    },
+    "cliffsDelta": 0.8776041666666666
+  },
+  "pixelSignalSurvival": "WEAK",
+  "primaryAlgorithmChanged": false,
+  "thresholdRetuned": false
+}
