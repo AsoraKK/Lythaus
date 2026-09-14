@@ -25,11 +25,19 @@ import {
   WP007AH_TRAINING_ELIGIBILITY,
   WP007AH_WP007A_BENCHMARK_FINGERPRINT,
 } from '../../packages/authenticity/src/wp007ah.ts';
+import {
+  assertWp007ahr2BoundedCost,
+  assertWp007ahr2ExecutionAuthorization,
+  estimateWp007ahr2MaximumCostUsd,
+  WP007AHR2_EXECUTION_AUTHORIZATION_SHA256,
+  WP007AHR2_MAX_INCREMENTAL_PAID_COST_USD,
+} from '../../packages/authenticity/src/wp007ahr2.ts';
 import { stableArtifactHash } from '../../packages/authenticity/src/wp007a.ts';
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const PROMPT_BANK_PATH = path.join(REPOSITORY_ROOT, 'research', 'wp007a', 'prompt-bank.json');
 const RIGHTS_PATH = path.join(REPOSITORY_ROOT, 'research', 'wp007ah', 'cloudflare-rights-revalidation.json');
+const EXECUTION_AUTHORIZATION_PATH = path.join(REPOSITORY_ROOT, 'research', 'wp007ahr2', 'execution-authorization.json');
 const DEFAULT_CACHE = path.join(os.homedir(), 'OneDrive', 'Desktop', 'Lythaus_AI_Datasets', '90_RESEARCH_ONLY', 'wp007ah-cloudflare-cache');
 const DEFAULT_MANIFEST_NAME = 'cloudflare-generation-manifest.json';
 const CLOUDFLARE_API_ROOT = 'https://api.cloudflare.com/client/v4/accounts';
@@ -48,6 +56,7 @@ function parseArgs(argv) {
     resume: false,
     verifyOnly: false,
     smokeOnly: false,
+    executionAuthorizationSha256: '',
   };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -59,6 +68,7 @@ function parseArgs(argv) {
     else if (argument === '--resume') options.resume = true;
     else if (argument === '--verify-only') options.verifyOnly = true;
     else if (argument === '--smoke-only') options.smokeOnly = true;
+    else if (argument === '--execution-authorization-sha256') options.executionAuthorizationSha256 = argv[++index];
     else throw new Error(`unknown_argument:${argument}`);
   }
   return options;
@@ -89,6 +99,10 @@ function modelPrice(modelId) {
   const price = PRICE[modelId];
   if (!price) throw new Error(`wp007ah_model_price_missing:${modelId}`);
   return (FOUR_TILES_1024 * (price.inputTile + price.outputTile)) + (price.steps * price.step);
+}
+
+function roundCurrency(value) {
+  return Math.round((value + Number.EPSILON) * 1000000) / 1000000;
 }
 
 export function estimateWp007ahListPrice(modelIds = WP007AH_MODEL_SPECS.map((model) => model.modelId), promptCount = 40) {
@@ -286,6 +300,9 @@ async function loadLocalManifest(manifestPath) {
       modelTrainingRun: false,
       transformationsRun: false,
       mediaCommittedToGit: false,
+      attemptedCostUsd: 0,
+      projectedMaxIncrementalPaidCostUsd: null,
+      costCapUsd: null,
     };
   }
 }
@@ -299,6 +316,11 @@ async function executeGeneration(plan, options) {
   const outputCache = assertExternalCache(options.outputCache);
   const manifestPath = path.join(outputCache, DEFAULT_MANIFEST_NAME);
   const manifest = await loadLocalManifest(manifestPath);
+  const attemptCostCapUsd = Number.isFinite(options.attemptCostCapUsd) ? options.attemptCostCapUsd : null;
+  if (attemptCostCapUsd !== null) {
+    manifest.costCapUsd = attemptCostCapUsd;
+    manifest.projectedMaxIncrementalPaidCostUsd = estimateWp007ahr2MaximumCostUsd(plan.promptIds.length, plan.models.map((model) => model.modelId));
+  }
   const promptBank = await readJson(PROMPT_BANK_PATH);
   const promptMap = new Map(promptBank.prompts.map((prompt) => [prompt.promptId, prompt]));
   const selectedModels = options.model ? plan.models.filter((model) => model.modelId === options.model) : plan.models;
@@ -320,6 +342,12 @@ async function executeGeneration(plan, options) {
     let lastError;
     while (attempts <= WP007AH_RETRY_POLICY.maxIdenticalTransportRetries) {
       attempts += 1;
+      if (attemptCostCapUsd !== null) {
+        const projectedAttemptCostUsd = Number(manifest.attemptedCostUsd ?? 0) + modelPrice(model.modelId);
+        if (projectedAttemptCostUsd > attemptCostCapUsd) throw new Error('wp007ahr2_projected_attempt_cost_exceeds_cap');
+        manifest.attemptedCostUsd = roundCurrency(projectedAttemptCostUsd);
+        await persistManifest(manifestPath, manifest);
+      }
       try {
         bytes = await requestCloudflare(model.modelId, request.body);
         break;
@@ -360,7 +388,13 @@ async function executeGeneration(plan, options) {
 
 export async function runWp007ah(options = {}) {
   const merged = { ...parseArgs([]), ...options };
-  if (merged.maxPaidCost !== WP007AH_MAX_PAID_COST_USD) throw new Error('wp007ah_paid_cost_cap_must_be_zero');
+  const boundedExecution = Boolean(merged.executionAuthorizationSha256);
+  if (boundedExecution) {
+    if (merged.maxPaidCost !== WP007AHR2_MAX_INCREMENTAL_PAID_COST_USD) throw new Error('wp007ahr2_paid_cost_cap_must_be_one');
+    if (merged.model) throw new Error('wp007ahr2_model_override_forbidden');
+  } else if (merged.maxPaidCost !== WP007AH_MAX_PAID_COST_USD) {
+    throw new Error('wp007ah_paid_cost_cap_must_be_zero');
+  }
   const plan = await buildWp007ahPlan();
   if (merged.model && !plan.models.some((model) => model.modelId === merged.model)) throw new Error(`wp007ah_model_not_authorized:${merged.model}`);
   const auth = authStatus();
@@ -374,6 +408,14 @@ export async function runWp007ah(options = {}) {
   if (merged.dryRun) return { status: 'DRY_RUN', auth, plan, generatedCount: 0 };
   if (auth.status !== 'AVAILABLE') throw new Error('WP007AH_STATUS=AUTH_BLOCKED');
   if (rightsRows(await readJson(RIGHTS_PATH)).length !== 2) throw new Error('WP007AH_STATUS=RIGHTS_BLOCKED');
+  if (boundedExecution) {
+    if (merged.executionAuthorizationSha256 !== WP007AHR2_EXECUTION_AUTHORIZATION_SHA256) throw new Error('WP007ahr2_execution_authorization_hash_invalid');
+    const authorization = await readJson(EXECUTION_AUTHORIZATION_PATH);
+    assertWp007ahr2ExecutionAuthorization(authorization);
+    const projectedMaxCostUsd = estimateWp007ahr2MaximumCostUsd(plan.promptIds.length, plan.models.map((model) => model.modelId));
+    assertWp007ahr2BoundedCost({ estimatedMaxCostUsd: projectedMaxCostUsd, requestedCapUsd: merged.maxPaidCost });
+    return executeGeneration(plan, { ...merged, attemptCostCapUsd: merged.maxPaidCost });
+  }
   const freeAllocationConfirmed = process.env.CLOUDFLARE_WP007AH_FREE_ALLOCATION_CONFIRMED === '1';
   assertWp007ahNoPaidGeneration({ estimatedCostUsd: merged.smokeOnly ? estimateWp007ahListPrice(plan.models.map((model) => model.modelId), 2) : plan.estimatedListPriceUsd, freeAllocationConfirmed });
   return executeGeneration(plan, merged);

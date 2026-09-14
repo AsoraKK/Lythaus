@@ -20,6 +20,11 @@ on:
         required: true
         default: 87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514
         type: string
+      execution_authorization_sha256:
+        description: 'Exact WP007A-HR2 bounded-cost authorization hash'
+        required: true
+        default: eaa403c2a5519bcc130a33062ef1f4bbb67ba724eb9b003f57c3e609400d91ab
+        type: string
 
 permissions:
   contents: read
@@ -30,15 +35,16 @@ concurrency:
 
 jobs:
   preflight:
-    name: Frozen-plan and zero-cost preflight
+    name: Frozen-plan and bounded-cost preflight
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
       passed: ${{ steps.preflight.outputs.passed }}
       auth_status: ${{ steps.preflight.outputs.auth_status }}
       cost_status: ${{ steps.preflight.outputs.cost_status }}
-      free_allocation_verified: ${{ steps.preflight.outputs.free_allocation_verified }}
+      projected_max_cost_usd: ${{ steps.preflight.outputs.projected_max_cost_usd }}
       rights_status: ${{ steps.preflight.outputs.rights_status }}
+      execution_authorization_verified: ${{ steps.preflight.outputs.execution_authorization_verified }}
     steps:
       - name: Checkout trusted main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -72,12 +78,14 @@ jobs:
           WP007AHR_MODE: ${{ inputs.mode }}
           WP007AHR_CONFIRM: ${{ inputs.confirm }}
           WP007AHR_EXPECTED_FREEZE_SHA256: ${{ inputs.expected_freeze_sha256 }}
+          WP007AHR2_EXECUTION_AUTHORIZATION_SHA256: ${{ inputs.execution_authorization_sha256 }}
         shell: bash
         run: |
-          node --experimental-strip-types scripts/authenticity/wp007ahr-preflight.mjs \
+          node --experimental-strip-types scripts/authenticity/wp007ahr2-preflight.mjs \
             --mode "$WP007AHR_MODE" \
             --confirm "$WP007AHR_CONFIRM" \
             --expected-freeze-sha256 "$WP007AHR_EXPECTED_FREEZE_SHA256" \
+            --execution-authorization-sha256 "$WP007AHR2_EXECUTION_AUTHORIZATION_SHA256" \
             --output "$RUNNER_TEMP/wp007ahr-preflight.json"
       - name: Publish safe preflight summary
         if: always()
@@ -86,15 +94,15 @@ jobs:
         shell: bash
         run: |
           if test -f "$PREFLIGHT_FILE"; then
-            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.PREFLIGHT_FILE,"utf8")); const lines=["### WP007A-HR preflight","","AUTH_STATUS = "+(s.authStatus??"UNKNOWN"),"COST_STATUS = "+(s.costStatus??"UNKNOWN"),"FREE_ALLOCATION_VERIFIED = "+Boolean(s.freeAllocationVerified),"RIGHTS_STATUS = "+(s.rightsStatus??"UNKNOWN"),"EXECUTION_STATUS = "+(s.passed===true?"AUTHORIZED":"BLOCKED"),"GENERATION_CALLS = 0","IMAGES_GENERATED = 0"]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n")+"\n");'
+            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.PREFLIGHT_FILE,"utf8")); const lines=["### WP007A-HR2 preflight","","AUTH_STATUS = "+(s.authStatus??"UNKNOWN"),"COST_STATUS = "+(s.costStatus??"UNKNOWN"),"PROJECTED_MAX_COST_USD = "+(s.projectedMaxCostUsd??"UNKNOWN"),"RIGHTS_STATUS = "+(s.rightsStatus??"UNKNOWN"),"EXECUTION_AUTHORIZATION_VERIFIED = "+Boolean(s.executionAuthorizationVerified),"EXECUTION_STATUS = "+(s.passed===true?"AUTHORIZED":"BLOCKED"),"GENERATION_CALLS = 0","IMAGES_GENERATED = 0"]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n")+"\n");'
           else
-            printf '%s\n' '### WP007A-HR preflight' '' 'EXECUTION_STATUS = PREFLIGHT_SCRIPT_FAILED' 'GENERATION_CALLS = 0' 'IMAGES_GENERATED = 0' >> "$GITHUB_STEP_SUMMARY"
+            printf '%s\n' '### WP007A-HR2 preflight' '' 'EXECUTION_STATUS = PREFLIGHT_SCRIPT_FAILED' 'GENERATION_CALLS = 0' 'IMAGES_GENERATED = 0' >> "$GITHUB_STEP_SUMMARY"
           fi
 
   execute:
     name: Execute frozen holdout generation
     needs: preflight
-    if: ${{ inputs.mode == 'execute' && needs.preflight.result == 'success' && needs.preflight.outputs.passed == 'true' && needs.preflight.outputs.free_allocation_verified == 'true' }}
+    if: ${{ inputs.mode == 'execute' && needs.preflight.result == 'success' && needs.preflight.outputs.passed == 'true' && needs.preflight.outputs.auth_status == 'PASS' && needs.preflight.outputs.rights_status == 'PASS' && needs.preflight.outputs.cost_status == 'BOUNDED_COST_AUTHORIZED' && needs.preflight.outputs.execution_authorization_verified == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -119,6 +127,7 @@ jobs:
           EXPECTED_REPOSITORY: ${{ github.repository }}
           CONFIRM: ${{ inputs.confirm }}
           EXPECTED_FREEZE: ${{ inputs.expected_freeze_sha256 }}
+          EXPECTED_AUTHORIZATION: ${{ inputs.execution_authorization_sha256 }}
           OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
         run: |
           expected_owner="As""oraKK"
@@ -127,6 +136,7 @@ jobs:
           test "$EXPECTED_SHA" = "$(git rev-parse HEAD)"
           test "$CONFIRM" = "EXECUTE_FROZEN_WP007AH"
           test "$EXPECTED_FREEZE" = "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514"
+          test "$EXPECTED_AUTHORIZATION" = "eaa403c2a5519bcc130a33062ef1f4bbb67ba724eb9b003f57c3e609400d91ab"
           test "$OUTPUT_CACHE" != "$GITHUB_WORKSPACE"
           case "$OUTPUT_CACHE" in
             "$GITHUB_WORKSPACE"/*) exit 1 ;;
@@ -136,18 +146,18 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_WP007AH_FREE_ALLOCATION_CONFIRMED: '1'
+          EXECUTION_AUTHORIZATION_SHA256: ${{ inputs.execution_authorization_sha256 }}
           OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
         shell: bash
-        run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --smoke-only --max-paid-cost 0 --output-cache "$OUTPUT_CACHE"
+        run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --smoke-only --max-paid-cost 1.00 --execution-authorization-sha256 "$EXECUTION_AUTHORIZATION_SHA256" --output-cache "$OUTPUT_CACHE"
       - name: Run remaining frozen holdout plan
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_WP007AH_FREE_ALLOCATION_CONFIRMED: '1'
+          EXECUTION_AUTHORIZATION_SHA256: ${{ inputs.execution_authorization_sha256 }}
           OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
         shell: bash
-        run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --resume --max-paid-cost 0 --output-cache "$OUTPUT_CACHE"
+        run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --resume --max-paid-cost 1.00 --execution-authorization-sha256 "$EXECUTION_AUTHORIZATION_SHA256" --output-cache "$OUTPUT_CACHE"
       - name: Build safe private transfer manifests
         env:
           GITHUB_WORKFLOW_PATH: .github/workflows/wp007ah-cloudflare-holdout.yml
@@ -171,4 +181,4 @@ jobs:
           OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
         shell: bash
         run: |
-          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; let s={}; if(fs.existsSync(p)) s=JSON.parse(fs.readFileSync(p,"utf8")); const rows=["### WP007A-HR execution","","AUTH_STATUS = PASS","COST_STATUS = ZERO_INCREMENTAL_PAID_COST_VERIFIED","FLUX1_REQUESTED = "+(s.requested?.FLUX_1_SCHNELL??40),"FLUX1_VALID = "+(s.records??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX1_FAILED = "+(s.failures??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX2_REQUESTED = "+(s.requested?.FLUX_2_KLEIN_4B??40),"FLUX2_VALID = "+(s.records??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b").length,"FLUX2_FAILED = "+(s.failures??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b").length,"INCREMENTAL_PAID_COST_USD = "+(s.incrementalPaidCostUsd??0),"ARTIFACT_NAME = wp007ah-holdout-${{ github.run_id }}","EXECUTION_STATUS = "+(s.generationStatus??"UNKNOWN")]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,rows.join("\n")+"\n");'
+          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; let s={}; if(fs.existsSync(p)) s=JSON.parse(fs.readFileSync(p,"utf8")); const rows=["### WP007A-HR2 execution","","AUTH_STATUS = PASS","COST_STATUS = BOUNDED_COST_AUTHORIZED","PROJECTED_MAX_COST_USD = 0.17","FLUX1_REQUESTED = "+(s.requested?.FLUX_1_SCHNELL??40),"FLUX1_VALID = "+(s.records??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX1_FAILED = "+(s.failures??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX2_REQUESTED = "+(s.requested?.FLUX_2_KLEIN_4B??40),"FLUX2_VALID = "+(s.records??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b").length,"FLUX2_FAILED = "+(s.failures??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b").length,"ATTEMPTED_COST_USD = "+(s.attemptedCostUsd??0),"ARTIFACT_NAME = wp007ah-holdout-${{ github.run_id }}","EXECUTION_STATUS = "+(s.status??"UNKNOWN")]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,rows.join("\n")+"\n");'

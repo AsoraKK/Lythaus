@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "lythaus-wp007ahr2-execution-authorization-v1",
+  "ownerAuthorization": "AUTHORIZED_BOUNDED_PAID_WP007AHR2",
+  "authorizedAt": "2026-09-14",
+  "historicalGenerationFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+  "maxIncrementalPaidCostUsd": 1,
+  "projectMonthlyIncrementalCeilingUsd": 10,
+  "authorizedModels": [
+    "@cf/black-forest-labs/flux-1-schnell",
+    "@cf/black-forest-labs/flux-2-klein-4b"
+  ],
+  "authorizedPromptCount": 40,
+  "authorizedCallsMaximum": 80,
+  "maxTransportRetries": 1,
+  "maxAttemptsMaximum": 160,
+  "purpose": "EF3_SEALED_GENERATOR_HOLDOUT_MATERIALISATION",
+  "changesScientificFreeze": false,
+  "trainingEligibility": "EVALUATION_ONLY",
+  "rightsStatus": "PASS_FOR_BOUNDED_HOLDOUT_EVALUATION",
+  "costEstimate": {
+    "pricingSourceDate": "2026-09-14",
+    "officialSources": [
+      "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+      "https://developers.cloudflare.com/workers-ai/models/flux-2-klein-4b/"
+    ],
+    "outputTilesPer1024Image": 4,
+    "baseRunListPriceUsd": 0.080704,
+    "retryMultiplier": 2,
+    "estimatedMaxIncrementalPaidCostUsd": 0.17,
+    "rounding": "CEILING_TO_CENT"
+  },
+  "noDetectorInference": true,
+  "noTraining": true,
+  "noTransformations": true,
+  "noProductionChanges": true,
+  "authorizationSha256": "eaa403c2a5519bcc130a33062ef1f4bbb67ba724eb9b003f57c3e609400d91ab"
+}
