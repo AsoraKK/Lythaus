@@ -1,0 +1,170 @@
+name: WP007A-HR trusted Cloudflare holdout runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run only the read-only preflight, or execute the frozen plan after all gates pass'
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - preflight
+          - execute
+      confirm:
+        description: 'Required only for execute: EXECUTE_FROZEN_WP007AH'
+        required: false
+        type: string
+      expected_freeze_sha256:
+        description: 'Exact WP007A-H generation-freeze hash'
+        required: true
+        default: 87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wp007ahr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Frozen-plan and zero-cost preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      passed: ${{ steps.preflight.outputs.passed }}
+      auth_status: ${{ steps.preflight.outputs.auth_status }}
+      cost_status: ${{ steps.preflight.outputs.cost_status }}
+      free_allocation_verified: ${{ steps.preflight.outputs.free_allocation_verified }}
+      rights_status: ${{ steps.preflight.outputs.rights_status }}
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: refs/heads/main
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit
+      - name: Enforce trusted main checkout
+        shell: bash
+        env:
+          EXPECTED_REF: ${{ github.ref }}
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+        run: |
+          test "$EXPECTED_REPOSITORY" = "AsoraKK/Lythaus"
+          test "$EXPECTED_REF" = "refs/heads/main"
+          test "$EXPECTED_SHA" = "$(git rev-parse HEAD)"
+      - name: Run read-only WP007A-HR preflight
+        id: preflight
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WP007AHR_MODE: ${{ inputs.mode }}
+          WP007AHR_CONFIRM: ${{ inputs.confirm }}
+          WP007AHR_EXPECTED_FREEZE_SHA256: ${{ inputs.expected_freeze_sha256 }}
+        shell: bash
+        run: |
+          node --experimental-strip-types scripts/authenticity/wp007ahr-preflight.mjs \
+            --mode "$WP007AHR_MODE" \
+            --confirm "$WP007AHR_CONFIRM" \
+            --expected-freeze-sha256 "$WP007AHR_EXPECTED_FREEZE_SHA256" \
+            --output "$RUNNER_TEMP/wp007ahr-preflight.json"
+      - name: Publish safe preflight summary
+        if: always()
+        env:
+          PREFLIGHT_FILE: ${{ runner.temp }}/wp007ahr-preflight.json
+        shell: bash
+        run: |
+          if test -f "$PREFLIGHT_FILE"; then
+            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.PREFLIGHT_FILE,"utf8")); const lines=["### WP007A-HR preflight","","AUTH_STATUS = "+(s.authStatus??"UNKNOWN"),"COST_STATUS = "+(s.costStatus??"UNKNOWN"),"FREE_ALLOCATION_VERIFIED = "+Boolean(s.freeAllocationVerified),"RIGHTS_STATUS = "+(s.rightsStatus??"UNKNOWN"),"EXECUTION_STATUS = "+(s.passed===true?"AUTHORIZED":"BLOCKED"),"GENERATION_CALLS = 0","IMAGES_GENERATED = 0"]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n")+"\n");'
+          else
+            printf '%s\n' '### WP007A-HR preflight' '' 'EXECUTION_STATUS = PREFLIGHT_SCRIPT_FAILED' 'GENERATION_CALLS = 0' 'IMAGES_GENERATED = 0' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  execute:
+    name: Execute frozen holdout generation
+    needs: preflight
+    if: ${{ inputs.mode == 'execute' && needs.preflight.result == 'success' && needs.preflight.outputs.passed == 'true' && needs.preflight.outputs.free_allocation_verified == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: refs/heads/main
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit
+      - name: Enforce execute confirmation and cache boundary
+        shell: bash
+        env:
+          EXPECTED_REF: ${{ github.ref }}
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+          CONFIRM: ${{ inputs.confirm }}
+          EXPECTED_FREEZE: ${{ inputs.expected_freeze_sha256 }}
+        run: |
+          test "$EXPECTED_REPOSITORY" = "AsoraKK/Lythaus"
+          test "$EXPECTED_REF" = "refs/heads/main"
+          test "$EXPECTED_SHA" = "$(git rev-parse HEAD)"
+          test "$CONFIRM" = "EXECUTE_FROZEN_WP007AH"
+          test "$EXPECTED_FREEZE" = "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514"
+          test "$OUTPUT_CACHE" != "$GITHUB_WORKSPACE"
+          case "$OUTPUT_CACHE" in
+            "$GITHUB_WORKSPACE"/*) exit 1 ;;
+          esac
+          mkdir -p "$OUTPUT_CACHE"
+      - name: Run frozen smoke pairs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WP007AH_FREE_ALLOCATION_CONFIRMED: '1'
+        shell: bash
+        run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --smoke-only --max-paid-cost 0 --output-cache "$OUTPUT_CACHE"
+      - name: Run remaining frozen holdout plan
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WP007AH_FREE_ALLOCATION_CONFIRMED: '1'
+        shell: bash
+        run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --resume --max-paid-cost 0 --output-cache "$OUTPUT_CACHE"
+      - name: Build safe private transfer manifests
+        env:
+          GITHUB_WORKFLOW_PATH: .github/workflows/wp007ah-cloudflare-holdout.yml
+          GITHUB_WORKFLOW_COMMIT: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WP007AHR_EXPECTED_FREEZE_SHA256: ${{ inputs.expected_freeze_sha256 }}
+        shell: bash
+        run: npm run authenticity:wp007ahr-build-transfer-manifest -- --output-cache "$OUTPUT_CACHE"
+      - name: Upload one-day private transport artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp007ah-holdout-${{ github.run_id }}
+          path: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 1
+      - name: Publish safe execution summary
+        if: always()
+        env:
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ah-holdout-${{ github.run_id }}
+        shell: bash
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; let s={}; if(fs.existsSync(p)) s=JSON.parse(fs.readFileSync(p,"utf8")); const rows=["### WP007A-HR execution","","AUTH_STATUS = PASS","COST_STATUS = ZERO_INCREMENTAL_PAID_COST_VERIFIED","FLUX1_REQUESTED = "+(s.requested?.FLUX_1_SCHNELL??40),"FLUX1_VALID = "+(s.records??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX1_FAILED = "+(s.failures??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX2_REQUESTED = "+(s.requested?.FLUX_2_KLEIN_4B??40),"FLUX2_VALID = "+(s.records??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b").length,"FLUX2_FAILED = "+(s.failures??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b").length,"INCREMENTAL_PAID_COST_USD = "+(s.incrementalPaidCostUsd??0),"ARTIFACT_NAME = wp007ah-holdout-${{ github.run_id }}","EXECUTION_STATUS = "+(s.generationStatus??"UNKNOWN")]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,rows.join("\n")+"\n");'

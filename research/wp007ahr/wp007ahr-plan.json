@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "lythaus-wp007ahr-plan-v1",
+  "workPackage": "WP007A-HR",
+  "purpose": "Execute the already-frozen WP007A-H Cloudflare holdout plan only through a trusted manual GitHub Actions workflow.",
+  "baseRepository": "AsoraKK/Lythaus",
+  "historicalMainSha": "71fc02ff9eaefc1be3d30940b2efe5c5496ba6ee",
+  "historicalWp007aFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "frozenGenerationPlan": {
+    "generationFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+    "promptSelectionSha256": "6c17bf38a30e9d7c987107a97aaab48626b684535ce61dd239652654d2535cb8",
+    "promptCount": 40,
+    "modelIds": [
+      "@cf/black-forest-labs/flux-1-schnell",
+      "@cf/black-forest-labs/flux-2-klein-4b"
+    ],
+    "maxIncrementalPaidCostUsd": 0,
+    "trainingEligibility": "EVALUATION_ONLY",
+    "roles": {
+      "@cf/black-forest-labs/flux-1-schnell": "SEALED_GENERATOR_HOLDOUT",
+      "@cf/black-forest-labs/flux-2-klein-4b": "FUTURE_RESERVE"
+    }
+  },
+  "workflow": {
+    "path": ".github/workflows/wp007ah-cloudflare-holdout.yml",
+    "trigger": "workflow_dispatch",
+    "trustedRef": "refs/heads/main",
+    "permissions": {
+      "contents": "read"
+    },
+    "requiredSecrets": [
+      "CLOUDFLARE_API_TOKEN",
+      "CLOUDFLARE_ACCOUNT_ID"
+    ],
+    "artifactRetentionDays": 1,
+    "mediaRoot": "RUNNER_TEMP_ONLY",
+    "repositoryWrites": false
+  },
+  "preflight": {
+    "modeDefault": "preflight",
+    "executeConfirmation": "EXECUTE_FROZEN_WP007AH",
+    "fullRunMustPassCostGate": true,
+    "requiredFreeAllocationSafetyMargin": "AT_MOST_80_PERCENT_OF_VERIFIED_REMAINING_FREE_ALLOCATION",
+    "currentLocalState": "NOT_DISPATCHED",
+    "currentCostState": "FREE_ALLOCATION_UNVERIFIED"
+  },
+  "prohibited": [
+    "detector inference",
+    "model training",
+    "transformations",
+    "repository writes from workflow",
+    "production changes"
+  ],
+  "frozenBeforeGeneration": true
+}
