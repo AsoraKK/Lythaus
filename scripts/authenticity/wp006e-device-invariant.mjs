@@ -117,7 +117,7 @@ function parseArgs(argv) {
     else if (argument === '--cache-dir') options.cacheDir = argv[++index];
     else throw new Error(`unknown_argument:${argument}`);
   }
-  if (!['prepare', 'run'].includes(options.phase)) throw new Error('wp006e_phase_invalid');
+  if (!['prepare', 'run', 'report'].includes(options.phase)) throw new Error('wp006e_phase_invalid');
   return options;
 }
 
@@ -1637,9 +1637,326 @@ function cameraPartitionsCount(_runManifest, _role) {
   return 48;
 }
 
+function reportScalar(value) {
+  if (value === null || value === undefined) return 'NOT_RECORDED';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'NOT_FINITE';
+  return String(value);
+}
+
+function reportItems(values) {
+  return Array.isArray(values) && values.length > 0 ? values.join(', ') : 'NONE';
+}
+
+function reportModelFamily(device) {
+  return String(device).replace(/_[0-9]+$/u, '');
+}
+
+function reportField(name, value) {
+  return '- ' + name + ' = ' + reportScalar(value);
+}
+
+function reportPerDevice(perDevice) {
+  return Object.entries(perDevice ?? {}).map(([device, summary]) => [
+    '|', device,
+    '|', reportScalar(summary.familyCount ?? summary.count),
+    '|', reportScalar(summary.validResultCount ?? summary.validCount),
+    '|', reportScalar(summary.median),
+    '|', reportScalar(summary.iqr),
+    '|', reportScalar(summary.acceptanceRate),
+    '|',
+  ].join(' ')).join('\n') || '| NONE | 0 | 0 | NOT_RECORDED | NOT_RECORDED | NOT_RECORDED |';
+}
+
+function reportRisk(audit, variable) {
+  return audit?.variables?.[variable]?.risk ?? 'UNKNOWN';
+}
+
+async function renderExistingReport(options) {
+  const outputDir = path.resolve(options.outputDir);
+  const [
+    plan,
+    cameraPartitions,
+    controlPartitions,
+    development,
+    selection,
+    finalRegistry,
+    transformation,
+    shortcutAudit,
+    validation,
+    holdout,
+    runManifest,
+  ] = await Promise.all([
+    readJson(path.join(outputDir, 'wp006e-plan.json')),
+    readJson(path.join(outputDir, 'wp006e-camera-partitions.json')),
+    readJson(path.join(outputDir, 'wp006e-control-partitions.json')),
+    readJson(path.join(outputDir, 'v1-development-results.json')),
+    readJson(path.join(outputDir, 'v1-feature-selection-results.json')),
+    readJson(path.join(outputDir, 'v1-feature-registry.json')),
+    readJson(path.join(outputDir, 'v1-transformation-stress.json')),
+    readJson(path.join(outputDir, 'v1-shortcut-audit.json')),
+    readJson(path.join(outputDir, 'v1-internal-validation-results.json')),
+    readJson(path.join(outputDir, 'v1-device-instance-holdout-results.json')),
+    readJson(path.join(outputDir, 'wp006e-run-manifest.json')),
+  ]);
+  const stageA = runManifest.stageA ?? development.stageA;
+  const stageB = runManifest.stageB ?? validation.stageB;
+  const stageC = runManifest.stageC ?? holdout.stageC;
+  await writeJson(outputDir, 'v1-final-control-results.json', {
+    schemaVersion: 'lythaus-wp006e-v1-final-control-results-v1',
+    benchmarkFingerprint: plan.benchmarkFingerprint,
+    implementationCommit: runManifest.executionCommit,
+    calibrationFreezeHash: runManifest.calibrationFreezeHash,
+    finalFeatureRegistryHash: runManifest.finalFeatureRegistryHash,
+    selectionPolicyHash: runManifest.selectionPolicyHash,
+    configurationHash: holdout.holdoutFreeze?.artifact?.configurationHash ?? null,
+    threshold: holdout.holdoutFreeze?.artifact?.threshold ?? null,
+    stageCStatus: stageC?.status ?? 'NOT_RUN',
+    finalSealedControlFalseAcceptance: stageC?.finalSealedControlFalseAcceptance ?? null,
+    controls: holdout.controls,
+    controlRows: holdout.controlRows,
+    contaminationExclusions: holdout.contamination?.excludedCount ?? 0,
+    role: 'FINAL_SEALED_NON_CAMERA_CONTROLS',
+    pixelsOpened: true,
+    noRetuning: true,
+  });
+  const decision = stageC?.status === 'PASS'
+    ? 'PROMOTE_TO_CALIBRATION_CANDIDATE'
+    : stageA?.passed && stageB?.passed
+      ? 'KEEP_MEASUREMENT_ONLY'
+      : 'REJECT_V1_MEASUREMENT';
+  const classification = decision === 'PROMOTE_TO_CALIBRATION_CANDIDATE'
+    ? 'WP006E_EF2_V1_CALIBRATION_CANDIDATE'
+    : decision === 'KEEP_MEASUREMENT_ONLY'
+      ? 'WP006E_EF2_V1_MEASUREMENT_ONLY'
+      : 'WP006E_EF2_V1_NOT_DEMONSTRATED';
+  const next = decision === 'PROMOTE_TO_CALIBRATION_CANDIDATE'
+    ? 'WP006F — EF2 External-Domain Validation, Recapture & Transformation Study'
+    : 'EF3 Generative Forensics Calibration on a rights-clean, generator-diverse benchmark; do not automatically start EF2 v2.';
+  await writeMarkdown(outputDir, 'wp006e-final-report.md', renderWp006eReport({
+    plan,
+    cameraPartitions,
+    controlPartitions,
+    development,
+    selection,
+    finalRegistry,
+    transformation,
+    shortcutAudit,
+    validation,
+    holdout,
+    runManifest,
+    stageA,
+    stageB,
+    stageC,
+    decision,
+    classification,
+    next,
+  }));
+  console.log(JSON.stringify({
+    phase: 'report',
+    reportUpdated: true,
+    stageA: stageA?.passed ? 'PASS' : 'FAIL',
+    stageB: stageB?.passed ? 'PASS' : stageB ? 'FAIL' : 'NOT_RUN',
+    stageC: stageC?.status ?? 'NOT_RUN',
+    decision,
+    classification,
+  }));
+}
+
+function renderWp006eReport({ plan, cameraPartitions, controlPartitions, development, selection, finalRegistry, transformation, shortcutAudit, validation, holdout, runManifest, stageA, stageB, stageC, decision, classification, next }) {
+  const developmentDevices = cameraPartitions.development?.deviceIds ?? [];
+  const developmentModels = [...new Set(developmentDevices.map(reportModelFamily))];
+  const selectedNames = selection.selection?.selectedFeatureNames ?? finalRegistry.selectedFeatureNames ?? [];
+  const selectedGroups = selection.selection?.selectedFeatureGroups ?? finalRegistry.selectedFeatureGroups ?? [];
+  const shortcut = shortcutAudit.audit ?? shortcutAudit;
+  const validationPerDevice = stageB?.perDevice ?? validation?.perDevice ?? {};
+  const holdoutPerDevice = stageC?.perDevice ?? holdout?.perDevice ?? {};
+  const internalCount = runManifest.cameraDeviceAccess?.internalValidationPixels ? (cameraPartitions.internalValidation?.members?.length ?? 0) : 0;
+  const sameModelCount = runManifest.cameraDeviceAccess?.sameModelHoldoutPixels ? (cameraPartitions.sameModelInstanceHoldout?.members?.length ?? 0) : 0;
+  const openedCsafe = (development.cameraFamilyCount ?? 0) + internalCount + sameModelCount;
+  const lines = [];
+  const add = (line = '') => lines.push(line);
+  add('# WP006E — EF2 Device-Invariant Measurement v1');
+  add('');
+  add('## Executive decision');
+  add('');
+  add('WP006E evaluates a new deterministic, pixel-domain EF2 measurement. WP006C v0 and WP006D remain immutable historical results. This package makes no production decision and assigns no directional Evidence Packet role.');
+  add('');
+  add(reportField('WP006E_BASE_SHA', plan.baseSha));
+  add(reportField('WP006E_BENCHMARK_FINGERPRINT', plan.benchmarkFingerprint));
+  add(reportField('WP006E_IMPLEMENTATION_COMMIT', runManifest.implementationCommit));
+  add(reportField('WP006E_EXECUTION_COMMIT', runManifest.executionCommit));
+  add(reportField('WP006E_FINAL_ARTIFACT_COMMIT', runManifest.finalArtifactCommit ?? 'PENDING_FINAL_COMMIT'));
+  add(reportField('WP006E_PLAN_SHA256', plan.planHash));
+  add(reportField('V1_CANDIDATE_FEATURES', selection.qualities?.length ?? 39));
+  add(reportField('V1_SELECTED_FEATURES', selectedNames.length));
+  add(reportField('V1_SELECTED_FEATURE_GROUPS', reportItems(selectedGroups)));
+  add(reportField('V1_FREEZE_SHA256', runManifest.calibrationFreezeHash));
+  add(reportField('WP006E_STAGE_A', stageA?.passed ? 'PASS' : 'FAIL'));
+  add(reportField('WP006E_STAGE_A_FAILURES', reportItems(stageA?.failures)));
+  add(reportField('WP006E_STAGE_B', stageB ? (stageB.passed ? 'PASS' : 'FAIL') : 'NOT_RUN'));
+  add(reportField('WP006E_STAGE_C', stageC?.status ?? 'NOT_RUN'));
+  add(reportField('WP006E_EF2_DECISION', decision));
+  add(reportField('FINAL_CLASSIFICATION', classification));
+  add('');
+  add('## Frozen v1 design');
+  add('');
+  add('Primary representation: decoded pixels, deterministic centered native 1024x1024 crop, and a fixed 4x4 grid of sixteen non-overlapping 256x256 patches. The primary extractor receives no EXIF, filename, dimensions, file size, MIME, encoder, camera label, truth axis, category or split. Candidate selection was frozen by the predeclared camera/control effect, device-heterogeneity and nuisance-penalized quality function; nested leave-one-device-out refits selection, weights and camera-only threshold per fold.');
+  add('');
+  add('The score is a bounded linear measurement where higher values mean greater consistency with the enrolled cross-device camera feature relation. A normalized score is not a probability of camera origin. It cannot assign REAL, AI, SUPPORTS, CONTRADICTS or policy authority. PRNU and sensor identity were not admitted.');
+  add('');
+  add('## Final selected features');
+  add('');
+  add('| feature | group | computation | direction | quality | device heterogeneity | nuisance penalty | weight |');
+  add('| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |');
+  for (const feature of finalRegistry.features ?? []) {
+    add('| ' + feature.featureName + ' | ' + feature.featureGroup + ' | ' + feature.definition + ' | ' + reportScalar(feature.direction) + ' | ' + reportScalar(feature.qualityScore) + ' | ' + reportScalar(feature.deviceHeterogeneityRatio) + ' | ' + reportScalar(feature.nuisancePenalty) + ' | ' + reportScalar(feature.weight) + ' |');
+  }
+  add('');
+  add('The selected set contains ' + selectedNames.length + ' features from ' + selectedGroups.length + ' groups. Individual feature weights and diagnostics are measurements of this experiment, not proof of a physical sensor mechanism.');
+  add('');
+  add('## Development');
+  add('');
+  add(reportField('DEVELOPMENT_CAMERA_DEVICES', reportItems(developmentDevices)));
+  add(reportField('DEVELOPMENT_CAMERA_MODEL_FAMILIES', reportItems(developmentModels)));
+  add(reportField('DEVELOPMENT_CAMERA_FAMILIES', development.cameraFamilyCount));
+  add(reportField('DEVELOPMENT_NON_CAMERA_FAMILIES', development.controlFamilyCount));
+  add(reportField('CALIBRATION_DEVICE_FAMILIES', development.cameraDeviceCount));
+  add('- CALIBRATION_DEVICE_WEIGHTING = equal device weighting through per-device medians');
+  add(reportField('NESTED_LODO_CAMERA_ACCEPTANCE', development.nestedLeaveOneDeviceOut?.cameraAcceptance));
+  add(reportField('MEDIAN_DEVICE_ACCEPTANCE', development.nestedLeaveOneDeviceOut?.medianDeviceAcceptance));
+  add(reportField('WORST_DEVICE_ACCEPTANCE', development.nestedLeaveOneDeviceOut?.worstDeviceAcceptance));
+  add(reportField('DEVELOPMENT_CONTROL_FALSE_ACCEPTANCE', development.finalDevelopmentModel?.controls?.acceptanceRate));
+  add(reportField('V0_DEVELOPMENT_CAMERA_ACCEPTANCE', development.v0HistoricalBaseline?.cameraAcceptance));
+  add(reportField('V0_DEVELOPMENT_CONTROL_FALSE_ACCEPTANCE', development.v0HistoricalBaseline?.controlFalseAcceptance));
+  add('');
+  add('| development device | families | valid | median | IQR | acceptance |');
+  add('| --- | ---: | ---: | ---: | ---: | ---: |');
+  add(reportPerDevice(development.finalDevelopmentModel?.perDevice));
+  add('');
+  add('## Sealed-role protocol and access');
+  add('');
+  add(reportField('INTERNAL_VALIDATION_DEVICES', reportItems(cameraPartitions.internalValidation?.deviceIds)) + '; families = ' + (cameraPartitions.internalValidation?.members?.length ?? 0) + '; status = ' + (runManifest.cameraDeviceAccess?.internalValidationPixels ? 'OPENED_AFTER_V1_FREEZE' : 'SEALED'));
+  add(reportField('INTERNAL_VALIDATION_MODEL_FAMILIES', reportItems([...new Set((cameraPartitions.internalValidation?.deviceIds ?? []).map(reportModelFamily))])));
+  add(reportField('SAME_MODEL_INSTANCE_HOLDOUT_DEVICES', reportItems(cameraPartitions.sameModelInstanceHoldout?.deviceIds)) + '; families = ' + (cameraPartitions.sameModelInstanceHoldout?.members?.length ?? 0) + '; status = ' + (runManifest.cameraDeviceAccess?.sameModelHoldoutPixels ? 'OPENED_AFTER_STAGE_B' : 'SEALED'));
+  add(reportField('FUTURE_MODEL_RESERVE_DEVICES', reportItems(cameraPartitions.futureModelReserve?.deviceIds)) + '; families = ' + (cameraPartitions.futureModelReserve?.members?.length ?? 0) + '; status = ' + (runManifest.cameraDeviceAccess?.futureModelReservePixels ? 'OPENED' : 'SEALED'));
+  add('- LGE_HOLDOUT_STATUS = SEALED; families = 33');
+  add(reportField('DEVELOPMENT_CONTROLS', controlPartitions.development?.records?.length ?? 0) + '; status = OPENED_FOR_DEVELOPMENT');
+  add(reportField('SEALED_INTERNAL_VALIDATION_CONTROLS', controlPartitions.validation?.records?.length ?? 0) + '; status = ' + (runManifest.controlAccess?.validationPixels ? 'OPENED_AFTER_V1_FREEZE' : 'SEALED'));
+  add(reportField('FINAL_SEALED_NON_CAMERA_CONTROLS', controlPartitions.final?.records?.length ?? 0) + '; status = ' + (runManifest.controlAccess?.finalPixels ? 'OPENED_AFTER_STAGE_B' : 'SEALED'));
+  add('');
+  add('The CSAFE archive was not fully extracted. ' + development.cameraFamilyCount + ' development CSAFE image families, ' + internalCount + ' internal-validation families, and ' + sameModelCount + ' same-model holdout families were opened; total CSAFE pixel families opened = ' + openedCsafe + ', below the 300-image cap. The four future-model-reserve devices and LGE remained pixel-sealed. Internal validation is new-device validation; all six broad CSAFE model families are represented in development, so it is not unseen-model validation.');
+  add('');
+  add('## Stage A — development gate');
+  add('');
+  add(reportField('NESTED_LODO_CAMERA_ACCEPTANCE', stageA?.nestedLodoCameraAcceptance));
+  add(reportField('MEDIAN_DEVICE_ACCEPTANCE', stageA?.medianDeviceAcceptance));
+  add(reportField('WORST_DEVICE_ACCEPTANCE', stageA?.worstDeviceAcceptance));
+  add(reportField('DEVELOPMENT_CONTROL_FALSE_ACCEPTANCE', stageA?.developmentControlFalseAcceptance));
+  add(reportField('V0_DEVELOPMENT_CAMERA_ACCEPTANCE', stageA?.v0CameraAcceptance));
+  add(reportField('DEVICE_INVARIANCE_RISK', stageA?.deviceInvarianceRisk));
+  add(reportField('SHORTCUT_RISK', stageA?.shortcutRisk));
+  add(reportField('WP006E_STAGE_A', stageA?.passed ? 'PASS' : 'FAIL'));
+  add('');
+  add('Stage A passed. This is a development-gate result, not production validation.');
+  add('');
+  add('## Stage B — sealed internal validation');
+  add('');
+  add(reportField('VALIDATION_CAMERA_ACCEPTANCE', stageB?.validationCameraAcceptance));
+  add(reportField('VALIDATION_CONTROL_FALSE_ACCEPTANCE', stageB?.validationControlFalseAcceptance));
+  add(reportField('VALIDATION_MEDIAN_DEVICE_ACCEPTANCE', stageB?.validationMedianDeviceAcceptance));
+  add(reportField('VALIDATION_WORST_DEVICE_ACCEPTANCE', stageB?.validationWorstDeviceAcceptance));
+  add(reportField('V0_VALIDATION_CAMERA_ACCEPTANCE', stageB?.v0ValidationCameraAcceptance));
+  add(reportField('WP006E_STAGE_B', stageB ? (stageB.passed ? 'PASS' : 'FAIL') : 'NOT_RUN'));
+  add('');
+  add('| validation device | families | valid | median | IQR | acceptance |');
+  add('| --- | ---: | ---: | ---: | ---: | ---: |');
+  add(reportPerDevice(validationPerDevice));
+  add('');
+  add('Stage B ran once after the v1 freeze. No validation result was used to alter features, weights, threshold, preprocessing or crop rule.');
+  add('');
+  add('## Stage C — sealed same-model-instance transfer');
+  add('');
+  add(reportField('SAME_MODEL_HOLDOUT_CAMERA_ACCEPTANCE', stageC?.sameModelHoldoutCameraAcceptance));
+  add(reportField('FINAL_SEALED_CONTROL_FALSE_ACCEPTANCE', stageC?.finalSealedControlFalseAcceptance));
+  add(reportField('V0_HOLDOUT_CAMERA_ACCEPTANCE', stageC?.v0HoldoutCameraAcceptance));
+  add(reportField('SCENE_CONTAMINATED_DIAGNOSTIC_EXCLUSIONS', stageC?.contaminationExclusions ?? holdout?.contamination?.excludedCount ?? 0));
+  add(reportField('STAGE_C_FAILURES', reportItems(stageC?.failures)));
+  add(reportField('WP006E_STAGE_C', stageC?.status ?? 'NOT_RUN'));
+  add('');
+  add('| same-model holdout device | families scored | valid | median | IQR | acceptance |');
+  add('| --- | ---: | ---: | ---: | ---: | ---: |');
+  add(reportPerDevice(holdoutPerDevice));
+  add('');
+  add('Stage C was consumed once under the immutable holdout-unblind freeze. It was MIXED, not PASS: the predeclared near-duplicate contamination diagnostic excluded one family, and iPhone14_2 was the weakest device at 0.583333 acceptance. No post-unblind retuning or retry occurred. This is same-model device-instance transfer evidence, not unseen-model validation.');
+  add('');
+  add('## Transformation stress');
+  add('');
+  add(reportField('METADATA_STRIP_INVARIANCE', transformation?.metadataStripInvariance));
+  add(reportField('JPEG95_RETENTION', transformation?.transformations?.JPEG95?.acceptanceRetention));
+  add(reportField('JPEG75_RETENTION', transformation?.transformations?.JPEG75?.acceptanceRetention));
+  add(reportField('RESIZE75_RETENTION', transformation?.transformations?.RESIZE75?.acceptanceRetention));
+  add(reportField('CROP10_RETENTION', transformation?.transformations?.CROP10?.acceptanceRetention));
+  add(reportField('TRANSFORMATION_ROBUSTNESS', transformation?.transformationRobustness));
+  add('');
+  add('The bounded stress used eight development families and did not tune v1. Metadata stripping was invariant; JPEG, resize and crop retention were recorded as promising for this small sample.');
+  add('');
+  add('## Shortcut and invariance audit');
+  add('');
+  add(reportField('DIMENSION_SHORTCUT_RISK', reportRisk(shortcut, 'width')));
+  add(reportField('FILESIZE_SHORTCUT_RISK', reportRisk(shortcut, 'fileSize')));
+  add(reportField('FORMAT_SHORTCUT_RISK', reportRisk(shortcut, 'format')));
+  add(reportField('METADATA_PRESENCE_SHORTCUT_RISK', reportRisk(shortcut, 'metadataPresence')));
+  add(reportField('SCENE_SHORTCUT_RISK', reportRisk(shortcut, 'sceneType')));
+  add(reportField('LENS_SHORTCUT_RISK', reportRisk(shortcut, 'lens')));
+  add(reportField('DEVICE_IDENTITY_SHORTCUT_RISK', reportRisk(shortcut, 'deviceIdentity')));
+  add(reportField('SHORTCUT_RISK', shortcut.shortcutRisk));
+  add(reportField('DEVICE_INVARIANCE_RISK', shortcutAudit.deviceInvariance?.risk));
+  add('- SCENE_LEAKAGE_STATUS = DOCUMENTED_NOT_DISJOINT_CSAFE_SCENE_IDS_UNAVAILABLE');
+  add('');
+  add('Primary score inputs remained metadata-independent. Scene/lens associations remain a limitation of this CSAFE-only development design; they were audited and not passed to the extractor. Source/dataset-domain invariance remains unresolved.');
+  add('');
+  add('## Protocol, resources and cost');
+  add('');
+  add(reportField('CSAFE_ARCHIVE_DIRECTORY_FINGERPRINT_SHA256', runManifest.archiveDirectoryFingerprint));
+  add(reportField('FULL_ARCHIVE_EXTRACTION', runManifest.extraction?.fullArchive ? 'TRUE' : 'FALSE'));
+  add(reportField('DEVELOPMENT_CSAFE_PIXEL_IMAGES_DECODED', development.cameraFamilyCount));
+  add(reportField('INTERNAL_VALIDATION_CSAFE_PIXEL_IMAGES_DECODED', internalCount));
+  add(reportField('SAME_MODEL_HOLDOUT_CSAFE_PIXEL_IMAGES_DECODED', sameModelCount));
+  add(reportField('TOTAL_CSAFE_PIXEL_IMAGES_OPENED', openedCsafe));
+  add(reportField('MAX_CSAFE_PIXEL_IMAGES', runManifest.extraction?.maximumCsafePixelImages));
+  add(reportField('MODEL_INFERENCE_CALLS', runManifest.modelInferenceCalls));
+  add(reportField('CLOUD_CALLS', runManifest.cloudCalls));
+  add(reportField('INCREMENTAL_COST_USD', runManifest.incrementalCostUsd));
+  add(reportField('PRODUCTION_CHANGES', runManifest.productionChanges ? 'TRUE' : 'FALSE'));
+  add('- LGE_HOLDOUT_STATUS = SEALED');
+  add('- FUTURE_MODEL_RESERVE_STATUS = SEALED');
+  add('');
+  add('No source media, patches, thumbnails, residual surfaces, or model weights were committed. The local CSAFE cache remained outside Git. The WP006D frozen v0 registry, configuration and threshold were not modified.');
+  add('');
+  add('## Scientific conclusion');
+  add('');
+  add(reportField('WP006E_EF2_DECISION', decision));
+  add(reportField('FINAL_CLASSIFICATION', classification));
+  add('- MAXIMUM_RESEARCH_STATUS = CALIBRATION_CANDIDATE');
+  add('');
+  add(decision === 'KEEP_MEASUREMENT_ONLY'
+    ? 'The new v1 measurement passed the development and fresh internal validation gates but did not pass the complete promotion requirement because Stage C was MIXED. Keep it as measurement-only; do not admit it as directional evidence.'
+    : 'The experiment did not satisfy the conditions for production or directional evidence.');
+  add('');
+  add('The following remain UNRESOLVED: END_TO_END_AUTHENTICITY_ACCURACY; HUMAN_FALSE_POSITIVE_RATE; COMMERCIAL_DETECTOR_ACCURACY; BROAD_CAMERA_GENERALIZATION; BROAD_NON_CAMERA_GENERALIZATION; UNSEEN_GENERATOR_GENERALIZATION; CAMERA_NATIVE_PROBABILITY; NATIVE_BYTE_ORIGINALITY; SENSOR_IDENTITY; EF2_DIRECTIONAL_VALIDATION.');
+  add('');
+  add('This owner-controlled CSAFE experiment has six broad model families, fourteen development device instances, four internal validation devices, four same-model-instance holdouts, and one external LGE holdout. It is not population-representative, uses a screenshot-heavy non-camera/control design, lacks stable CSAFE scene IDs, and does not test screen recapture or external-domain transfer.');
+  add('');
+  add('## Next research package');
+  add('');
+  add(next);
+  return lines.join('\n') + '\n';
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.phase === 'prepare') await prepare(options);
+  else if (options.phase === 'report') await renderExistingReport(options);
   else await runExperiment(options);
 }
 

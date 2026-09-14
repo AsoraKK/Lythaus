@@ -1,38 +1,233 @@
 {
   "schemaVersion": "lythaus-wp006e-run-manifest-v1",
-  "status": "PREPARED_BEFORE_V1_FEATURE_VALUES",
+  "status": "STAGE_B_COMPLETE_STAGE_C_FAILED_OR_MIXED",
   "baseSha": "bc3e17729dda099e4f9e6086d99ef5fc6153a4a9",
   "implementationCommit": "9fe9e7bff3b14485b29abaad31c5f2437b871c17",
-  "executionCommit": null,
+  "executionCommit": "9b219a0a5a08de1cf20e60a3907c3e8c0f51d89b",
   "finalArtifactCommit": null,
   "planHash": "238459761db48c4aae93de982c03e80793aae6167c80610230197a10f3288fea",
   "benchmarkFingerprint": "87daea141221478c72ffafad6c06e5bae256b23e3cbe2c7e8de33e8bc1e35718",
   "candidateFeatureRegistryHash": "7c7889f3c275816e475b01c3fa2510166f007c1448b1aca458d2cb8f047f20f8",
+  "finalFeatureRegistryHash": "c47a22d7af16009b7967954338fcf33f34d4ab58f81e39696c574f15fbecc119",
+  "calibrationFreezeHash": "8d6478c7050f2c4ce50120c703986b33ac9bb1e2c6e764622b47db2779d23897",
   "selectionPolicyHash": "f15b396d17b0d5ea8944e4d82445708c858c1743ce02443ebda2eabe0dc25099",
   "archiveDirectoryFingerprint": "4e8c0d40f2c7b548d63417be28a8705ba79cda5b6682764ba0d02d38dd6c6131",
   "cameraDeviceAccess": {
-    "developmentDecodedImages": 0,
-    "internalValidationPixels": false,
-    "sameModelHoldoutPixels": false,
+    "developmentDecodedImages": 168,
+    "internalValidationPixels": true,
+    "sameModelHoldoutPixels": true,
     "futureModelReservePixels": false,
     "lgePixels": false
   },
   "controlAccess": {
-    "developmentDecodedImages": 0,
-    "validationPixels": false,
-    "finalPixels": false
+    "developmentDecodedImages": 67,
+    "validationPixels": true,
+    "finalPixels": true
   },
   "extraction": {
     "fullArchive": false,
-    "historicalImageCount": 72,
-    "newImageCount": 96,
-    "declaredBytes": 601845606,
-    "cacheOutsideGit": true
+    "selectedCsafePixelImagesDecoded": 168,
+    "maximumCsafePixelImages": 300,
+    "persistentCacheOutsideGit": true
   },
   "modelInferenceCalls": 0,
   "cloudCalls": 0,
   "incrementalCostUsd": 0,
   "productionChanges": false,
-  "v1FeatureValuesGenerated": false,
-  "holdoutUnblindFreeze": false
+  "v1FeatureValuesGenerated": true,
+  "stageA": {
+    "passed": true,
+    "failures": [],
+    "failureClassification": [],
+    "nestedLodoCameraAcceptance": 0.8988095238095238,
+    "medianDeviceAcceptance": 0.9166666666666666,
+    "worstDeviceAcceptance": 0.75,
+    "developmentControlFalseAcceptance": 0.1044776119402985,
+    "v1CameraAcceptance": 0.8988095238095238,
+    "v0CameraAcceptance": 0.30357142857142855,
+    "deviceInvarianceRisk": "LOW",
+    "shortcutRisk": "MODERATE"
+  },
+  "stageB": {
+    "passed": true,
+    "failures": [],
+    "validationCameraAcceptance": 0.875,
+    "validationControlFalseAcceptance": 0.03125,
+    "validationMedianDeviceAcceptance": 0.8333333333333334,
+    "validationWorstDeviceAcceptance": 0.8333333333333334,
+    "v0ValidationCameraAcceptance": 0.25,
+    "v0ValidationControlFalseAcceptance": 0,
+    "perDevice": {
+      "iPhone11_5": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.7082545575728287,
+        "iqr": 0.03863916277584156,
+        "p95": 0.7309207480188681,
+        "acceptanceRate": 1
+      },
+      "iPhone12_5": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.6684239795682927,
+        "iqr": 0.052905367365004174,
+        "p95": 0.7154867614214496,
+        "acceptanceRate": 0.8333333333333334
+      },
+      "iPhone14_5": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.692186200263075,
+        "iqr": 0.10308022974087905,
+        "p95": 0.7486893592695251,
+        "acceptanceRate": 0.8333333333333334
+      },
+      "note10_5": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.6920107886591201,
+        "iqr": 0.056822761338356065,
+        "p95": 0.752111130976201,
+        "acceptanceRate": 0.8333333333333334
+      }
+    },
+    "shortcutRisk": "MODERATE",
+    "shortcutAudit": {
+      "primaryScoreUnaffected": true,
+      "variables": {
+        "width": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "height": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "aspectRatio": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "fileSize": {
+          "association": 0.6764650726676044,
+          "risk": "MODERATE"
+        },
+        "metadataPresence": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "format": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "sceneType": {
+          "association": 0.7955572841757301,
+          "risk": "MODERATE"
+        },
+        "lens": {
+          "association": 0.6757136822407261,
+          "risk": "MODERATE"
+        },
+        "deviceIdentity": {
+          "association": 0.7013725963556984,
+          "risk": "MODERATE"
+        }
+      },
+      "shortcutRisk": "MODERATE",
+      "method": "Descriptive Spearman association only; nuisance values were not passed to the feature extractor or v1 score."
+    },
+    "deviceInvarianceRisk": "LOW",
+    "deviceAudit": {
+      "risk": "LOW",
+      "deviceScores": {
+        "iPhone11_5": {
+          "count": 12,
+          "median": 0.7082545575728287,
+          "iqr": 0.03863916277584156,
+          "p95": 0.7309207480188681
+        },
+        "iPhone12_5": {
+          "count": 12,
+          "median": 0.6684239795682927,
+          "iqr": 0.052905367365004174,
+          "p95": 0.7154867614214496
+        },
+        "iPhone14_5": {
+          "count": 12,
+          "median": 0.692186200263075,
+          "iqr": 0.10308022974087905,
+          "p95": 0.7486893592695251
+        },
+        "note10_5": {
+          "count": 12,
+          "median": 0.6920107886591201,
+          "iqr": 0.056822761338356065,
+          "p95": 0.752111130976201
+        }
+      },
+      "medianScoreSpread": 0.008121884456854356,
+      "method": "Descriptive score distributions by development device; no device classifier was fitted."
+    },
+    "contaminationExclusions": 0
+  },
+  "stageC": {
+    "passed": false,
+    "status": "MIXED",
+    "failures": [
+      "SCENE_CONTAMINATED_DIAGNOSTIC_EXCLUSIONS"
+    ],
+    "sameModelHoldoutCameraAcceptance": 0.7872340425531915,
+    "finalSealedControlFalseAcceptance": 0.043478260869565216,
+    "perDevice": {
+      "iPhone11_2": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.7188284625482733,
+        "iqr": 0.039172395583075836,
+        "p95": 0.7380627834269807,
+        "acceptanceRate": 0.9166666666666666
+      },
+      "iPhone12_2": {
+        "familyCount": 11,
+        "validResultCount": 11,
+        "count": 11,
+        "median": 0.656586077111655,
+        "iqr": 0.0921871421396876,
+        "p95": 0.723141497802306,
+        "acceptanceRate": 0.7272727272727273
+      },
+      "iPhone14_2": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.6322889170067985,
+        "iqr": 0.12084445474658734,
+        "p95": 0.7280488219036366,
+        "acceptanceRate": 0.5833333333333334
+      },
+      "note10_2": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.6780795661676317,
+        "iqr": 0.05607665746087842,
+        "p95": 0.7255925484913353,
+        "acceptanceRate": 0.9166666666666666
+      }
+    },
+    "medianDeviceAcceptance": 0.821969696969697,
+    "worstDeviceAcceptance": 0.5833333333333334,
+    "v0HoldoutCameraAcceptance": 0.14893617021276595,
+    "v0FinalControlFalseAcceptance": 0,
+    "contaminationExclusions": 1
+  },
+  "holdoutUnblindFreeze": true,
+  "unseenDataConsumed": true,
+  "deviceHoldoutStatus": "CONSUMED_FOR_STAGE_C",
+  "lgeHoldoutStatus": "SEALED",
+  "futureModelReserveStatus": "SEALED"
 }

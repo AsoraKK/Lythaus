@@ -139,3 +139,108 @@ test('WP006E artifacts, when materialized, remain frozen and bound to WP006D', (
   assert.equal(plan.noCloudCalls, true);
   assert.equal(plan.noProductionChanges, true);
 });
+
+test('WP006E materialized run preserves historical baseline and sealed roles', () => {
+  const manifestPath = path.join(researchDir, 'wp006e-run-manifest.json');
+  if (!fs.existsSync(manifestPath)) return;
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const plan = JSON.parse(fs.readFileSync(path.join(researchDir, 'wp006e-plan.json'), 'utf8'));
+  assert.equal(manifest.baseSha, WP006E_EXPECTED_BASE_SHA);
+  assert.equal(manifest.benchmarkFingerprint, plan.benchmarkFingerprint);
+  assert.equal(manifest.archiveDirectoryFingerprint, WP006E_EXPECTED_CSAFE_ARCHIVE_FINGERPRINT);
+  assert.equal(manifest.modelInferenceCalls, 0);
+  assert.equal(manifest.cloudCalls, 0);
+  assert.equal(manifest.productionChanges, false);
+  assert.equal(manifest.cameraDeviceAccess.futureModelReservePixels, false);
+  assert.equal(manifest.cameraDeviceAccess.lgePixels, false);
+  assert.equal(manifest.futureModelReserveStatus, 'SEALED');
+  assert.equal(manifest.lgeHoldoutStatus, 'SEALED');
+  assert.equal(manifest.holdoutUnblindFreeze, true);
+  assert.equal(manifest.unseenDataConsumed, true);
+  assert.equal(manifest.deviceHoldoutStatus, 'CONSUMED_FOR_STAGE_C');
+  assert.equal(manifest.stageA.passed, true);
+  assert.equal(manifest.stageB.passed, true);
+  assert.equal(manifest.stageC.status, 'MIXED');
+});
+
+test('WP006E final registry and freeze stay measurement-only and bounded', () => {
+  const registryPath = path.join(researchDir, 'v1-feature-registry.json');
+  const freezePath = path.join(researchDir, 'v1-calibration-freeze.json');
+  if (!fs.existsSync(registryPath) || !fs.existsSync(freezePath)) return;
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const freeze = JSON.parse(fs.readFileSync(freezePath, 'utf8'));
+  assert.equal(registry.semanticStatus, 'MEASUREMENT_ONLY');
+  assert.equal(registry.prnuStatus, 'NOT_ADMITTED_AS_PRIMARY_EF2_SIGNAL');
+  assert.equal(registry.features.length <= WP006E_MAX_SELECTED_FEATURES, true);
+  assert.equal(registry.selectedFeatureGroups.length >= WP006E_MIN_SELECTED_GROUPS, true);
+  assert.equal(freeze.immutableBeforeValidation, true);
+  assert.equal(freeze.evaluationPixelsProcessedBeforeFreeze, false);
+  assert.equal(freeze.validationPixelsProcessedBeforeFreeze, false);
+  assert.equal(freeze.holdoutPixelsProcessedBeforeFreeze, false);
+  assert.equal(freeze.thresholdSource, 'DEVELOPMENT_CAMERA_ONLY');
+  assert.doesNotThrow(() => assertNoWp006eVerdictFields(registry));
+  assert.doesNotThrow(() => assertNoWp006eVerdictFields(freeze));
+});
+
+test('WP006E result artifacts retain provenance and no verdict fields', () => {
+  const resultFiles = [
+    'v1-development-results.json',
+    'v1-internal-validation-results.json',
+    'v1-device-instance-holdout-results.json',
+    'v1-final-control-results.json',
+  ];
+  for (const filename of resultFiles) {
+    const filePath = path.join(researchDir, filename);
+    if (!fs.existsSync(filePath)) continue;
+    const result = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const plan = JSON.parse(fs.readFileSync(path.join(researchDir, 'wp006e-plan.json'), 'utf8'));
+    assert.equal(result.benchmarkFingerprint ?? result.holdoutFreeze?.artifact?.benchmarkFingerprint, plan.benchmarkFingerprint);
+    assert.doesNotThrow(() => assertNoWp006eVerdictFields(result));
+  }
+});
+
+test('WP006E artifacts do not contain forbidden private/media payloads', () => {
+  if (!fs.existsSync(researchDir)) return;
+  const forbiddenNames = new Set(['gps', 'latitude', 'longitude', 'serialNumber', 'absolutePath', 'rawResidual', 'thumbnail', 'pixels']);
+  const files = fs.readdirSync(researchDir).filter((filename) => filename.endsWith('.json') || filename.endsWith('.md'));
+  for (const filename of files) {
+    const content = fs.readFileSync(path.join(researchDir, filename), 'utf8');
+    assert.equal(/[A-Za-z]:[\\/]/u.test(content), false, filename);
+    if (!filename.endsWith('.json')) continue;
+    const value = JSON.parse(content);
+    const visit = (current) => {
+      if (Array.isArray(current)) return current.forEach(visit);
+      if (!current || typeof current !== 'object') return;
+      for (const [key, child] of Object.entries(current)) {
+        assert.equal(forbiddenNames.has(key), false, filename + ':' + key);
+        visit(child);
+      }
+    };
+    visit(value);
+  }
+});
+
+test('WP006E partition roles are disjoint and preserve sealed LGE/reserve membership', () => {
+  const cameraPath = path.join(researchDir, 'wp006e-camera-partitions.json');
+  const controlPath = path.join(researchDir, 'wp006e-control-partitions.json');
+  if (!fs.existsSync(cameraPath) || !fs.existsSync(controlPath)) return;
+  const camera = JSON.parse(fs.readFileSync(cameraPath, 'utf8'));
+  const controls = JSON.parse(fs.readFileSync(controlPath, 'utf8'));
+  const roles = [
+    camera.development.deviceIds,
+    camera.internalValidation.deviceIds,
+    camera.sameModelInstanceHoldout.deviceIds,
+    camera.futureModelReserve.deviceIds,
+    [camera.lge.deviceId],
+  ];
+  for (let left = 0; left < roles.length; left += 1) {
+    for (let right = left + 1; right < roles.length; right += 1) {
+      assert.equal(roles[left].some((device) => roles[right].includes(device)), false);
+    }
+  }
+  assert.equal(camera.lge.status, 'SEALED');
+  assert.equal(camera.futureModelReserve.status, 'SEALED');
+  assert.equal(controls.lgeFamilies, 33);
+  assert.equal(camera.roleDisjointness, true);
+  assert.equal(controls.roleDisjointness, true);
+});

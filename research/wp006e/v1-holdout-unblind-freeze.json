@@ -1,0 +1,868 @@
+{
+  "schemaVersion": "lythaus-wp006e-v1-holdout-unblind-freeze-v1",
+  "benchmarkFingerprint": "87daea141221478c72ffafad6c06e5bae256b23e3cbe2c7e8de33e8bc1e35718",
+  "baseCommit": "bc3e17729dda099e4f9e6086d99ef5fc6153a4a9",
+  "implementationCommit": "9fe9e7bff3b14485b29abaad31c5f2437b871c17",
+  "candidateFeatureRegistryHash": "7c7889f3c275816e475b01c3fa2510166f007c1448b1aca458d2cb8f047f20f8",
+  "finalFeatureRegistryHash": "c47a22d7af16009b7967954338fcf33f34d4ab58f81e39696c574f15fbecc119",
+  "selectionPolicyHash": "f15b396d17b0d5ea8944e4d82445708c858c1743ce02443ebda2eabe0dc25099",
+  "configurationHash": "5a952b2522812181a17566adb1bc463006c86ca8cce980443dcd7837208bb2f0",
+  "model": {
+    "selectedFeatureNames": [
+      "residualTailRatio",
+      "edgeFlatResidualRatio",
+      "residualIntensityBinContrast",
+      "crossChannelResidualCorrelationRG",
+      "normalizedResidualAutocorrX1",
+      "residualGradientCorrelation",
+      "parityPeriodicityRatio",
+      "residualScaleP90Ratio3To5",
+      "residualSignBalance",
+      "patchEdgeFlatRatioDispersion"
+    ],
+    "selectedFeatureGroups": [
+      "RESIDUAL_MAGNITUDE",
+      "TEXTURE_NORMALIZED_RESIDUAL",
+      "LUMINANCE_CONDITIONED_RESIDUAL",
+      "CROSS_CHANNEL_RESIDUAL",
+      "RESIDUAL_AUTOCORRELATION",
+      "DIRECTIONAL_RESIDUAL",
+      "PARITY_PERIODICITY",
+      "MULTISCALE_RESIDUAL",
+      "RESIDUAL_DISTRIBUTION",
+      "PATCH_STATIONARITY"
+    ],
+    "centers": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      3.058926598896189,
+      null,
+      null,
+      0.03578064823813123,
+      null,
+      null,
+      1.0912950491058877,
+      null,
+      null,
+      null,
+      2.8042457695446763,
+      0.9906489239309285,
+      null,
+      null,
+      null,
+      null,
+      -0.030771531786170463,
+      null,
+      null,
+      null,
+      null,
+      0.5641265686376541,
+      null,
+      0.000026200991928414257,
+      null,
+      null,
+      0.627219784601266,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      0.11444941766304385
+    ],
+    "scales": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      0.5882031261218867,
+      null,
+      null,
+      0.02698862433862434,
+      null,
+      null,
+      0.7282029663068749,
+      null,
+      null,
+      null,
+      1.2104936001020927,
+      0.009764493763537167,
+      null,
+      null,
+      null,
+      null,
+      0.10867246531839678,
+      null,
+      null,
+      null,
+      null,
+      0.09798662705538229,
+      null,
+      0.00002365270469090972,
+      null,
+      null,
+      0.10395866496197244,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      0.08386602609958504
+    ],
+    "controlCenters": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      65.35002170020381,
+      null,
+      null,
+      0.29210758377425045,
+      null,
+      null,
+      8.913822289815485,
+      null,
+      null,
+      null,
+      11.34823466421471,
+      0.9998894504929429,
+      null,
+      null,
+      null,
+      null,
+      0.13932619728532825,
+      null,
+      null,
+      null,
+      null,
+      0.7030468766083167,
+      null,
+      0.000030339057184134854,
+      null,
+      null,
+      0.5054596723137006,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      0.29965474192923597
+    ],
+    "directions": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      -1,
+      null,
+      null,
+      -1,
+      null,
+      null,
+      -1,
+      null,
+      null,
+      null,
+      -1,
+      -1,
+      null,
+      null,
+      null,
+      null,
+      -1,
+      null,
+      null,
+      null,
+      null,
+      -1,
+      null,
+      -1,
+      null,
+      null,
+      1,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      -1
+    ],
+    "weights": [
+      0.1554463609536208,
+      0.1414853791814426,
+      0.20004502680305586,
+      0.04997694579359943,
+      0.08540003622350628,
+      0.057429895044581826,
+      0.00490375842363682,
+      0.04332493424238925,
+      0.15448022848643383,
+      0.1075074348477333
+    ],
+    "deviceFamilies": [
+      "iPhone11_1",
+      "iPhone11_3",
+      "iPhone12_1",
+      "iPhone12_3",
+      "iPhone14_1",
+      "iPhone14_3",
+      "note10_1",
+      "note10_3",
+      "s20_1",
+      "s20_3",
+      "s20_4",
+      "s21_1",
+      "s21_3",
+      "s21_4"
+    ],
+    "method": {
+      "cameraCenter": "Equal arithmetic mean of per-device medians; device image counts do not weight the pooled center.",
+      "scale": "1.4826 times MAD around the equal-device camera center with a fixed 1e-6 floor.",
+      "featureQuality": "min(4,effect) * directionConsistency / (1 + deviceHeterogeneityRatio) * (1 - nuisancePenalty) * finiteRate.",
+      "redundancy": "Greedy deterministic selection; absolute Spearman rho >= 0.90 is redundant and the higher-quality feature is retained.",
+      "score": "Weighted linear sum of bounded feature components: clamp(0.5 + direction * (value - midpoint) / (2 * (abs(controlCenter-cameraCenter) + scale)), 0, 1).",
+      "threshold": "10th percentile of training-camera scores only; higher score is more camera-consistent."
+    }
+  },
+  "threshold": 0.6110989284319108,
+  "thresholdMethod": "10TH_PERCENTILE_DEVELOPMENT_CAMERA_SCORES",
+  "stageA": {
+    "passed": true,
+    "failures": [],
+    "failureClassification": [],
+    "nestedLodoCameraAcceptance": 0.8988095238095238,
+    "medianDeviceAcceptance": 0.9166666666666666,
+    "worstDeviceAcceptance": 0.75,
+    "developmentControlFalseAcceptance": 0.1044776119402985,
+    "v1CameraAcceptance": 0.8988095238095238,
+    "v0CameraAcceptance": 0.30357142857142855,
+    "deviceInvarianceRisk": "LOW",
+    "shortcutRisk": "MODERATE"
+  },
+  "stageB": {
+    "passed": true,
+    "failures": [],
+    "validationCameraAcceptance": 0.875,
+    "validationControlFalseAcceptance": 0.03125,
+    "validationMedianDeviceAcceptance": 0.8333333333333334,
+    "validationWorstDeviceAcceptance": 0.8333333333333334,
+    "v0ValidationCameraAcceptance": 0.25,
+    "v0ValidationControlFalseAcceptance": 0,
+    "perDevice": {
+      "iPhone11_5": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.7082545575728287,
+        "iqr": 0.03863916277584156,
+        "p95": 0.7309207480188681,
+        "acceptanceRate": 1
+      },
+      "iPhone12_5": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.6684239795682927,
+        "iqr": 0.052905367365004174,
+        "p95": 0.7154867614214496,
+        "acceptanceRate": 0.8333333333333334
+      },
+      "iPhone14_5": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.692186200263075,
+        "iqr": 0.10308022974087905,
+        "p95": 0.7486893592695251,
+        "acceptanceRate": 0.8333333333333334
+      },
+      "note10_5": {
+        "familyCount": 12,
+        "validResultCount": 12,
+        "count": 12,
+        "median": 0.6920107886591201,
+        "iqr": 0.056822761338356065,
+        "p95": 0.752111130976201,
+        "acceptanceRate": 0.8333333333333334
+      }
+    },
+    "shortcutRisk": "MODERATE",
+    "shortcutAudit": {
+      "primaryScoreUnaffected": true,
+      "variables": {
+        "width": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "height": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "aspectRatio": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "fileSize": {
+          "association": 0.6764650726676044,
+          "risk": "MODERATE"
+        },
+        "metadataPresence": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "format": {
+          "association": 0,
+          "risk": "LOW"
+        },
+        "sceneType": {
+          "association": 0.7955572841757301,
+          "risk": "MODERATE"
+        },
+        "lens": {
+          "association": 0.6757136822407261,
+          "risk": "MODERATE"
+        },
+        "deviceIdentity": {
+          "association": 0.7013725963556984,
+          "risk": "MODERATE"
+        }
+      },
+      "shortcutRisk": "MODERATE",
+      "method": "Descriptive Spearman association only; nuisance values were not passed to the feature extractor or v1 score."
+    },
+    "deviceInvarianceRisk": "LOW",
+    "deviceAudit": {
+      "risk": "LOW",
+      "deviceScores": {
+        "iPhone11_5": {
+          "count": 12,
+          "median": 0.7082545575728287,
+          "iqr": 0.03863916277584156,
+          "p95": 0.7309207480188681
+        },
+        "iPhone12_5": {
+          "count": 12,
+          "median": 0.6684239795682927,
+          "iqr": 0.052905367365004174,
+          "p95": 0.7154867614214496
+        },
+        "iPhone14_5": {
+          "count": 12,
+          "median": 0.692186200263075,
+          "iqr": 0.10308022974087905,
+          "p95": 0.7486893592695251
+        },
+        "note10_5": {
+          "count": 12,
+          "median": 0.6920107886591201,
+          "iqr": 0.056822761338356065,
+          "p95": 0.752111130976201
+        }
+      },
+      "medianScoreSpread": 0.008121884456854356,
+      "method": "Descriptive score distributions by development device; no device classifier was fitted."
+    },
+    "contaminationExclusions": 0
+  },
+  "shortcutAudit": {
+    "primaryScoreUnaffected": true,
+    "variables": {
+      "width": {
+        "association": 0,
+        "risk": "LOW"
+      },
+      "height": {
+        "association": 0,
+        "risk": "LOW"
+      },
+      "aspectRatio": {
+        "association": 0,
+        "risk": "LOW"
+      },
+      "fileSize": {
+        "association": 0.6764650726676044,
+        "risk": "MODERATE"
+      },
+      "metadataPresence": {
+        "association": 0,
+        "risk": "LOW"
+      },
+      "format": {
+        "association": 0,
+        "risk": "LOW"
+      },
+      "sceneType": {
+        "association": 0.7955572841757301,
+        "risk": "MODERATE"
+      },
+      "lens": {
+        "association": 0.6757136822407261,
+        "risk": "MODERATE"
+      },
+      "deviceIdentity": {
+        "association": 0.7013725963556984,
+        "risk": "MODERATE"
+      }
+    },
+    "shortcutRisk": "MODERATE",
+    "method": "Descriptive Spearman association only; nuisance values were not passed to the feature extractor or v1 score."
+  },
+  "deviceInvarianceAudit": {
+    "risk": "LOW",
+    "deviceScores": {
+      "iPhone11_5": {
+        "count": 12,
+        "median": 0.7082545575728287,
+        "iqr": 0.03863916277584156,
+        "p95": 0.7309207480188681
+      },
+      "iPhone12_5": {
+        "count": 12,
+        "median": 0.6684239795682927,
+        "iqr": 0.052905367365004174,
+        "p95": 0.7154867614214496
+      },
+      "iPhone14_5": {
+        "count": 12,
+        "median": 0.692186200263075,
+        "iqr": 0.10308022974087905,
+        "p95": 0.7486893592695251
+      },
+      "note10_5": {
+        "count": 12,
+        "median": 0.6920107886591201,
+        "iqr": 0.056822761338356065,
+        "p95": 0.752111130976201
+      }
+    },
+    "medianScoreSpread": 0.008121884456854356,
+    "method": "Descriptive score distributions by development device; no device classifier was fitted."
+  },
+  "transformationStatus": "PASS_OR_NONCATASTROPHIC_AFTER_STAGE_A",
+  "sameModelHoldoutCameraMembers": [
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_01",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-01",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/front/IMG_2806.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_02",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-02",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/front/IMG_2834.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_03",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-03",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/front/IMG_2864.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_04",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-04",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/telephoto/IMG_2519.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_05",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-05",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/telephoto/IMG_2563.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_06",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-06",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/telephoto/IMG_2618.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_07",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-07",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/ultra/IMG_3022.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_08",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-08",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/ultra/IMG_3050.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_09",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-09",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/ultra/IMG_3076.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_10",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-10",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/wide/IMG_2407.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_11",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-11",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/wide/IMG_2432.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone11_2_12",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone11_2-12",
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/wide/IMG_2457.JPG",
+      "deviceFamilyId": "iPhone11_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_01",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-01",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/front/IMG_0561.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_02",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-02",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/front/IMG_0593.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_03",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-03",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/front/IMG_0622.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_04",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-04",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/telephoto/IMG_0131.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_05",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-05",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/telephoto/IMG_0156.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_06",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-06",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/telephoto/IMG_0184.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_07",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-07",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/ultra/IMG_0344.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_08",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-08",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/ultra/IMG_0372.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_09",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-09",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/ultra/IMG_0403.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_10",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-10",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/wide/IMG_0777.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_11",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-11",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/wide/IMG_0806.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone12_2_12",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone12_2-12",
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/wide/IMG_0833.JPG",
+      "deviceFamilyId": "iPhone12_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_01",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-01",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/front/IMG_0660.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_02",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-02",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/front/IMG_0695.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_03",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-03",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/front/IMG_0727.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_04",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-04",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/telephoto/IMG_0130.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_05",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-05",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/telephoto/IMG_0156.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_06",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-06",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/telephoto/IMG_0181.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_07",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-07",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/ultra/IMG_0446.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_08",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-08",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/ultra/IMG_0476.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_09",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-09",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/ultra/IMG_0506.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_10",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-10",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/wide/IMG_0881.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_11",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-11",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/wide/IMG_0913.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_iPhone14_2_12",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-iPhone14_2-12",
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/wide/IMG_0940.JPG",
+      "deviceFamilyId": "iPhone14_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_01",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-01",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/front/20230324_120913.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_02",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-02",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/front/20230324_121634.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_03",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-03",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/front/20230324_122203.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_04",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-04",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/telephoto/20230324_104447.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_05",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-05",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/telephoto/20230324_105703.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_06",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-06",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/telephoto/20230324_110533.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_07",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-07",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/ultra/20230324_114150.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_08",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-08",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/ultra/20230324_115039.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_09",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-09",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/wide1.5/20221125_073405.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_10",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-10",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/wide1.5/20221125_073736.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_11",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-11",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/wide2.4/20230324_111600.jpg",
+      "deviceFamilyId": "note10_2"
+    },
+    {
+      "sampleId": "CSAFE_WP006E_SEALED_note10_2_12",
+      "sourceFamilyId": "CSAFE-WP006E-SEALED-FAMILY-note10_2-12",
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/wide2.4/20230324_112524.jpg",
+      "deviceFamilyId": "note10_2"
+    }
+  ],
+  "finalSealedControlMembers": [
+    {
+      "sampleId": "SCREENSHOT_20251105_073307_2d8d2888",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251105_073307_2d8d2888",
+      "contentSha256": "2d8d28882b6291f7ae13bd6b290202767b3a3cb947765a527a73f878b09499bb"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251112_054001_d35064dd",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251112_054001_d35064dd",
+      "contentSha256": "d35064ddc17ccd137cd342207a188d012cedcd5378843438911114de27a65a53"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251119_103629_1a134296",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251119_103629_1a134296",
+      "contentSha256": "1a134296d2a65308c7faf86ccbd4bb478b3c6762cefca7a3f389759816384f19"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251125_064939_3ef1089c",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251125_064939_3ef1089c",
+      "contentSha256": "3ef1089c6f9b80ae70f70d18d58c7dcee6627d2087109f4cf2b7322ad90090e3"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251125_064955_aee78c51",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251125_064955_aee78c51",
+      "contentSha256": "aee78c5168ea4ba6ad1e4166ea5f33873b107fd0a1db1d2eab9bc53dc0a2d343"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251125_074656_7b8b5b3e",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251125_074656_7b8b5b3e",
+      "contentSha256": "7b8b5b3eb24ec93ab147a1023ed84d2bbfe64653a3d5c6028827418f57586899"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251125_075126_2c265433",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251125_075126_2c265433",
+      "contentSha256": "2c2654330acba7c3fad6ae84ac5e1d1a120065c2505ea1fa229f037262aabc2e"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251125_075310_34b606f1",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251125_075310_34b606f1",
+      "contentSha256": "34b606f1e268d22d606a52a108adefc29ead421a757f42ebde74837848983367"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251125_075626_ff8a009b",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251125_075626_ff8a009b",
+      "contentSha256": "ff8a009bec34720c9ad93bb67d1563625c38ec47958a9c94439a46293c3ad164"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251126_053525_41c7f3ae",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251126_053525_41c7f3ae",
+      "contentSha256": "41c7f3ae739da0719dc7197ed4b2506878328e1f9a295373a0d19cbb307cf6f1"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251126_053657_9a93e9eb",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251126_053657_9a93e9eb",
+      "contentSha256": "9a93e9eb7c5dcb6a35643431064a24a6815cb8aaedf166e3518a3c1808baaaa0"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251130_235810_3538cd73",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251130_235810_3538cd73",
+      "contentSha256": "3538cd732b20789de35c2b2859f8af24abb219731e4d59881fc8c9fcd3b4d84e"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251202_115216_907a8a9d",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251202_115216_907a8a9d",
+      "contentSha256": "907a8a9d344ca1339c35243d89cc716f668d667710fb02f2c7347d454d992a32"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251202_115510_4ba6885c",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251202_115510_4ba6885c",
+      "contentSha256": "4ba6885c3e8d01f099ea0ff49a344b90f114fbd8e40559e2daf54902dc1be740"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251202_120310_4375236e",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251202_120310_4375236e",
+      "contentSha256": "4375236ec9d700f2f2540406c633c43aed6818dfe15d5ba0b210725803b44a2a"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251202_120527_3c62ac6d",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251202_120527_3c62ac6d",
+      "contentSha256": "3c62ac6deb137dc5168eea34dbbf7cc424a9b4939a1ac7851460c2b450f8f25e"
+    },
+    {
+      "sampleId": "SYNTHETIC_9f75ed27675612d6",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_9f75ed27675612d6",
+      "contentSha256": "9f75ed27675612d61f2dc6433d1a0858e6d6bdc80c0691f7260b189de84df7d6"
+    },
+    {
+      "sampleId": "SYNTHETIC_a7832460c6038f13",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_a7832460c6038f13",
+      "contentSha256": "a7832460c6038f13ba2b2005be7bb79a82548727c7ca918246ee1fe52c021f6a"
+    },
+    {
+      "sampleId": "SYNTHETIC_a88c89b862ce1f7c",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_a88c89b862ce1f7c",
+      "contentSha256": "a88c89b862ce1f7cb207f3e7072a8e4db9a1c84e4f2965d22935bc4386b85bf6"
+    },
+    {
+      "sampleId": "SYNTHETIC_be4f7af409ff34d4",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_be4f7af409ff34d4",
+      "contentSha256": "be4f7af409ff34d4855f3ff8569cd08147bdcf88cf940b2cec552b89a44a5511"
+    },
+    {
+      "sampleId": "SYNTHETIC_c330be74a59c28f0",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_c330be74a59c28f0",
+      "contentSha256": "c330be74a59c28f05724f524477313a33b52392299c4f3dfbe8bb951f6e75f08"
+    },
+    {
+      "sampleId": "SYNTHETIC_d1c5482b651e0c22",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_d1c5482b651e0c22",
+      "contentSha256": "d1c5482b651e0c227cba765e82c1c36eafb29dde004e040a471afb4634128295"
+    },
+    {
+      "sampleId": "SYNTHETIC_dd553141a5931e9b",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_dd553141a5931e9b",
+      "contentSha256": "dd553141a5931e9b77ac948fe9da2a402d6e8ee7faf947ed4e93286423d09456"
+    },
+    {
+      "sampleId": "SYNTHETIC_ebcd0dcd78bba715",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_ebcd0dcd78bba715",
+      "contentSha256": "ebcd0dcd78bba715bfd34df128ac6696770e0730604243431b596f06d574deac"
+    }
+  ],
+  "lgeHoldoutStatus": "SEALED",
+  "futureModelReserveStatus": "SEALED",
+  "algorithmMutableAfterFreeze": false,
+  "decision": "FINAL_HOLDOUT_UNBLIND_AUTHORIZED",
+  "freezeHash": "3b177c15a81860fb6997fbf5d8a7c724f5db9bd0bf6ec55eb7eadec6444605e6"
+}
