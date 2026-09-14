@@ -290,6 +290,15 @@ async function resolveOwnerBytes(mediaRoot, record) {
     const bytes = await readFile(candidate);
     if (sha256Hex(bytes) === record.contentSha256) matches.push({ bytes, source: 'OWNER_CONTROLLED' });
   }
+  if (matches.length === 0) {
+    for (const entry of directoryEntries) {
+      if (!entry.isFile() || !['.jpg', '.jpeg', '.png', '.webp', '.avif'].includes(path.extname(entry.name).toLowerCase())) continue;
+      const candidate = path.join(folderPath, entry.name);
+      if (unique.includes(candidate)) continue;
+      const bytes = await readFile(candidate);
+      if (sha256Hex(bytes) === record.contentSha256) matches.push({ bytes, source: 'OWNER_CONTROLLED' });
+    }
+  }
   if (matches.length !== 1) throw new Error(`wp006d_owner_media_resolution_${matches.length === 0 ? 'hash_mismatch' : 'ambiguous'}:${record.sampleId}`);
   return matches[0];
 }
