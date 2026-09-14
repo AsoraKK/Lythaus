@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "lythaus-wp007ahr2-plan-v1",
+  "workPackage": "WP007A-HR2",
+  "purpose": "Operationally authorize one bounded paid execution of the already-frozen WP007A-H modern generator holdout.",
+  "baseSha": "6dfd3daa0e853861ea2ac8fb96aabc91dd9d3c87",
+  "historicalWp007aFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "historicalGenerationFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+  "executionAuthorizationArtifact": "research/wp007ahr2/execution-authorization.json",
+  "executionAuthorizationSha256": "eaa403c2a5519bcc130a33062ef1f4bbb67ba724eb9b003f57c3e609400d91ab",
+  "ownerAuthorization": "AUTHORIZED_BOUNDED_PAID_WP007AHR2",
+  "maxIncrementalPaidCostUsd": 1,
+  "scientificFreezeChanged": false,
+  "frozenModels": [
+    "@cf/black-forest-labs/flux-1-schnell",
+    "@cf/black-forest-labs/flux-2-klein-4b"
+  ],
+  "frozenPromptCount": 40,
+  "roles": {
+    "@cf/black-forest-labs/flux-1-schnell": "SEALED_GENERATOR_HOLDOUT",
+    "@cf/black-forest-labs/flux-2-klein-4b": "FUTURE_RESERVE"
+  },
+  "workflowChanges": {
+    "trigger": "workflow_dispatch",
+    "trustedRef": "refs/heads/main",
+    "permissions": {
+      "contents": "read"
+    },
+    "requiredSecrets": [
+      "CLOUDFLARE_API_TOKEN",
+      "CLOUDFLARE_ACCOUNT_ID"
+    ],
+    "artifactRetentionDays": 1,
+    "repositoryWrites": false,
+    "freeAllocationBalanceRequired": false,
+    "boundedProjectedCostRequired": true,
+    "executionConfirmation": "EXECUTE_FROZEN_WP007AH"
+  },
+  "currentStage": "COST_AMENDMENT_PR_READY",
+  "generationPerformed": false,
+  "detectorInferenceRun": false,
+  "modelTrainingRun": false,
+  "transformationsRun": false,
+  "productionChanged": false
+}
