@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "lythaus-wp007ah-plan-v1",
+  "baseSha": "6543ec6496a4d4b006fb40b6f5de50cfd9e98009",
+  "baseWp007aBenchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "purpose": "Materialize two matched-prompt modern Cloudflare synthetic families as private, rights-controlled EF3 holdouts.",
+  "authorizedModels": [
+    "@cf/black-forest-labs/flux-1-schnell",
+    "@cf/black-forest-labs/flux-2-klein-4b"
+  ],
+  "requestedSourceFamiliesPerModel": 40,
+  "promptBankVersion": "LYTHAUS_EF3_PROMPT_BANK_V1",
+  "promptSubsetArtifact": "research/wp007ah/prompt-subset-freeze.json",
+  "generationFreezeArtifact": "research/wp007ah/generation-freeze.json",
+  "promptSelectionSha256": "6c17bf38a30e9d7c987107a97aaab48626b684535ce61dd239652654d2535cb8",
+  "generationFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+  "roleArtifact": "research/wp007ah/holdout-role-manifest.json",
+  "rightsArtifact": "research/wp007ah/cloudflare-rights-revalidation.json",
+  "scope": [
+    "rights revalidation",
+    "bounded dry-run/cost preflight",
+    "matched prompt selection",
+    "smoke then bounded generation when authorized",
+    "local decode/integrity validation and SHA-256 hashing",
+    "provenance and sealed-role manifests",
+    "tests, report, commit, and PR"
+  ],
+  "prohibited": [
+    "detector inference",
+    "SPAI",
+    "PatchCraft",
+    "EF2",
+    "classifier training",
+    "transformations",
+    "Cloudflare models other than the two authorized routes",
+    "public redistribution",
+    "production changes"
+  ],
+  "truthAxesForValidWholeImageOutputs": {
+    "physicalCameraAcquisition": "FALSE",
+    "syntheticDepictedContent": "TRUE",
+    "localManipulation": "FALSE",
+    "digitalCapture": "TRUE",
+    "screenRecapture": "FALSE"
+  },
+  "rightsPolicy": {
+    "trainingEligibility": "EVALUATION_ONLY",
+    "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY",
+    "publicRedistribution": "NOT_AUTHORIZED",
+    "paidIncrementalCostCapUsd": 0
+  },
+  "preflight": {
+    "rightsRevalidation": "PASS_FOR_BOUNDED_HOLDOUT_EVALUATION",
+    "authStatus": "AUTH_BLOCKED",
+    "generationStatus": "NOT_ATTEMPTED",
+    "generationCalls": 0,
+    "estimatedProviderListPriceUsd": 0.080704,
+    "incrementalPaidCostUsd": 0,
+    "costAllocationEvidence": "NOT_REACHED_BECAUSE_AUTH_BLOCKED"
+  },
+  "stopConditions": [
+    "rights eligibility is no longer clear",
+    "authorized Cloudflare authentication is unavailable",
+    "zero incremental paid cost cannot be established",
+    "output cache would be inside Git",
+    "any detector/model access is requested"
+  ],
+  "mediaPolicy": {
+    "cacheOutsideGit": true,
+    "mediaCommittedToGit": false,
+    "noSourceMediaUpload": true,
+    "noMediaRenameMoveOrOverwrite": true
+  },
+  "frozenBeforeGeneration": true,
+  "noDetectorInference": true,
+  "noTraining": true,
+  "noTransformations": true,
+  "noProductionChanges": true,
+  "status": "AUTH_BLOCKED",
+  "holdoutFingerprintArtifact": "research/wp007ah/wp007ah-fingerprint.json",
+  "holdoutFingerprint": "1efd1254953a3551ed4664eea5fe0dbec3cb21e674f468df04c079202077e495"
+}

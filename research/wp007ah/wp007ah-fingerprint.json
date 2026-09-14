@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "lythaus-wp007ah-fingerprint-v1",
+  "baseWp007aBenchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "generationFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+  "fingerprintSha256": "1efd1254953a3551ed4664eea5fe0dbec3cb21e674f468df04c079202077e495",
+  "canonicalInput": {
+    "schemaVersion": "lythaus-wp007ah-cloudflare-holdout-v1",
+    "baseWp007aFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+    "promptBankVersion": "LYTHAUS_EF3_PROMPT_BANK_V1",
+    "promptIds": [
+      "PROMPT_001",
+      "PROMPT_002",
+      "PROMPT_003",
+      "PROMPT_004",
+      "PROMPT_005",
+      "PROMPT_011",
+      "PROMPT_012",
+      "PROMPT_013",
+      "PROMPT_014",
+      "PROMPT_015",
+      "PROMPT_021",
+      "PROMPT_022",
+      "PROMPT_023",
+      "PROMPT_024",
+      "PROMPT_025",
+      "PROMPT_031",
+      "PROMPT_032",
+      "PROMPT_033",
+      "PROMPT_034",
+      "PROMPT_035",
+      "PROMPT_041",
+      "PROMPT_042",
+      "PROMPT_043",
+      "PROMPT_044",
+      "PROMPT_045",
+      "PROMPT_051",
+      "PROMPT_052",
+      "PROMPT_053",
+      "PROMPT_054",
+      "PROMPT_055",
+      "PROMPT_061",
+      "PROMPT_062",
+      "PROMPT_063",
+      "PROMPT_064",
+      "PROMPT_065",
+      "PROMPT_071",
+      "PROMPT_072",
+      "PROMPT_073",
+      "PROMPT_074",
+      "PROMPT_075"
+    ],
+    "models": [
+      {
+        "modelId": "@cf/black-forest-labs/flux-1-schnell",
+        "modelFamily": "FLUX_1_SCHNELL",
+        "benchmarkRole": "SEALED_GENERATOR_HOLDOUT",
+        "purpose": "WP007B_FIRST_UNSEEN_GENERATOR_HOLDOUT",
+        "seedSupport": "DOCUMENTED_BY_CURRENT_MODEL_PAGE",
+        "requestParameters": {
+          "steps": 4
+        },
+        "rightsAuditId": "WP007AH_CLOUDFLARE_BFL_ROUTE_2026-09-14",
+        "trainingEligibility": "EVALUATION_ONLY",
+        "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY"
+      },
+      {
+        "modelId": "@cf/black-forest-labs/flux-2-klein-4b",
+        "modelFamily": "FLUX_2_KLEIN_4B",
+        "benchmarkRole": "FUTURE_RESERVE",
+        "purpose": "POST_WP007B_INDEPENDENT_GENERATOR_REPLICATION",
+        "seedSupport": "NOT_DOCUMENTED_BY_CURRENT_MODEL_PAGE",
+        "requestParameters": {},
+        "rightsAuditId": "WP007AH_CLOUDFLARE_BFL_ROUTE_2026-09-14",
+        "trainingEligibility": "EVALUATION_ONLY",
+        "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY"
+      }
+    ],
+    "records": [],
+    "failures": [],
+    "roles": {
+      "@cf/black-forest-labs/flux-1-schnell": "SEALED_GENERATOR_HOLDOUT",
+      "@cf/black-forest-labs/flux-2-klein-4b": "FUTURE_RESERVE"
+    },
+    "rights": {
+      "@cf/black-forest-labs/flux-1-schnell": {
+        "trainingEligibility": "EVALUATION_ONLY",
+        "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY"
+      },
+      "@cf/black-forest-labs/flux-2-klein-4b": {
+        "trainingEligibility": "EVALUATION_ONLY",
+        "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY"
+      }
+    },
+    "generationStatus": "AUTH_BLOCKED"
+  },
+  "sourceMediaCommitted": false,
+  "detectorInferenceRun": false,
+  "modelTrainingRun": false,
+  "transformationsRun": false
+}

@@ -12,6 +12,7 @@
     "./wp006a": "./src/wp006a.ts",
     "./wp006b": "./src/wp006b.ts",
     "./wp006e": "./src/wp006e.ts",
-    "./wp007a": "./src/wp007a.ts"
+    "./wp007a": "./src/wp007a.ts",
+    "./wp007ah": "./src/wp007ah.ts"
   }
 }
