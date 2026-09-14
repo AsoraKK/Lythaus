@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "lythaus-wp006d-nuisance-matching-v1",
+  "selectionUsesEf2Scores": false,
+  "selectionUsesPixels": false,
+  "matchingVariables": [
+    "width",
+    "height",
+    "aspectRatio",
+    "mime",
+    "fileSizeBucket"
+  ],
+  "method": "Camera membership was fixed by CSAFE device/lens/scene policy; controls were selected by deterministic sample-ID order and evenly spaced ranks within the eligible future-expansion pool. No EF2 score, feature vector, visual judgment, or truth-derived score entered selection.",
+  "beforeMatching": {
+    "dimension": {
+      "leftDistinct": 5,
+      "rightDistinct": 3,
+      "intersection": 0,
+      "union": 8,
+      "jaccard": 0
+    },
+    "aspectRatio": {
+      "leftDistinct": 1,
+      "rightDistinct": 3,
+      "intersection": 0,
+      "union": 4,
+      "jaccard": 0
+    },
+    "format": {
+      "leftDistinct": 1,
+      "rightDistinct": 1,
+      "intersection": 1,
+      "union": 1,
+      "jaccard": 1
+    },
+    "fileSizeBucket": {
+      "leftDistinct": 5,
+      "rightDistinct": 6,
+      "intersection": 2,
+      "union": 9,
+      "jaccard": 0.2222222222222222
+    }
+  },
+  "afterMatching": {
+    "dimension": {
+      "leftDistinct": 5,
+      "rightDistinct": 2,
+      "intersection": 0,
+      "union": 7,
+      "jaccard": 0
+    },
+    "aspectRatio": {
+      "leftDistinct": 1,
+      "rightDistinct": 2,
+      "intersection": 0,
+      "union": 3,
+      "jaccard": 0
+    },
+    "format": {
+      "leftDistinct": 1,
+      "rightDistinct": 1,
+      "intersection": 1,
+      "union": 1,
+      "jaccard": 1
+    },
+    "fileSizeBucket": {
+      "leftDistinct": 5,
+      "rightDistinct": 5,
+      "intersection": 1,
+      "union": 9,
+      "jaccard": 0.1111111111111111
+    }
+  },
+  "cameraFamilies": 72,
+  "eligibleControlPoolFamilies": 133,
+  "selectedControlFamilies": 32,
+  "limitation": "The owner future-expansion non-camera pool is screenshot-heavy and currently has the same portrait dimensions in nearly all eligible records; metadata matching cannot create missing subtype or dimension diversity."
+}

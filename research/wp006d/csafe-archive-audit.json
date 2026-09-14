@@ -1,0 +1,1294 @@
+{
+  "archiveFormat": "ZIP_WITH_STORED_NESTED_ZIPS",
+  "archiveLabel": "CSAFE_ARCHIVE_26932084_ZIP",
+  "deviceCount": 60,
+  "devices": [
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_1",
+      "directoryPattern": "iPhone11/iPhone11_1/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_10",
+      "directoryPattern": "iPhone11/iPhone11_10/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 199,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_2",
+      "directoryPattern": "iPhone11/iPhone11_2/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_3",
+      "directoryPattern": "iPhone11/iPhone11_3/<scene>/<lens>/<image>.jpg",
+      "imageCount": 790,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 190,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 390
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_4",
+      "directoryPattern": "iPhone11/iPhone11_4/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_5",
+      "directoryPattern": "iPhone11/iPhone11_5/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_6",
+      "directoryPattern": "iPhone11/iPhone11_6/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 199,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_7",
+      "directoryPattern": "iPhone11/iPhone11_7/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_8",
+      "directoryPattern": "iPhone11/iPhone11_8/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone11.zip",
+      "deviceFamilyId": "iPhone11_9",
+      "directoryPattern": "iPhone11/iPhone11_9/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone11",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_1",
+      "directoryPattern": "iPhone12/iPhone12_1/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_10",
+      "directoryPattern": "iPhone12/iPhone12_10/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_2",
+      "directoryPattern": "iPhone12/iPhone12_2/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_3",
+      "directoryPattern": "iPhone12/iPhone12_3/<scene>/<lens>/<image>.jpg",
+      "imageCount": 797,
+      "lensCounts": {
+        "front": 197,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 397
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_4",
+      "directoryPattern": "iPhone12/iPhone12_4/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_5",
+      "directoryPattern": "iPhone12/iPhone12_5/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_6",
+      "directoryPattern": "iPhone12/iPhone12_6/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 199,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_7",
+      "directoryPattern": "iPhone12/iPhone12_7/<scene>/<lens>/<image>.jpg",
+      "imageCount": 794,
+      "lensCounts": {
+        "front": 197,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 197
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 394
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_8",
+      "directoryPattern": "iPhone12/iPhone12_8/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 199
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone12.zip",
+      "deviceFamilyId": "iPhone12_9",
+      "directoryPattern": "iPhone12/iPhone12_9/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone12",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_1",
+      "directoryPattern": "iPhone14/iPhone14_1/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_10",
+      "directoryPattern": "iPhone14/iPhone14_10/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_2",
+      "directoryPattern": "iPhone14/iPhone14_2/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_3",
+      "directoryPattern": "iPhone14/iPhone14_3/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_4",
+      "directoryPattern": "iPhone14/iPhone14_4/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_5",
+      "directoryPattern": "iPhone14/iPhone14_5/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_6",
+      "directoryPattern": "iPhone14/iPhone14_6/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_7",
+      "directoryPattern": "iPhone14/iPhone14_7/<scene>/<lens>/<image>.jpg",
+      "imageCount": 798,
+      "lensCounts": {
+        "front": 199,
+        "telephoto": 200,
+        "ultra": 199,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 398
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_8",
+      "directoryPattern": "iPhone14/iPhone14_8/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 199,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "iPhone14.zip",
+      "deviceFamilyId": "iPhone14_9",
+      "directoryPattern": "iPhone14/iPhone14_9/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 199,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Apple",
+      "model": "iPhone14",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_1",
+      "directoryPattern": "note10/note10_1/<scene>/<lens>/<image>.jpg",
+      "imageCount": 1000,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide1.5": 200,
+        "wide2.4": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 500
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_10",
+      "directoryPattern": "note10/note10_10/<scene>/<lens>/<image>.jpg",
+      "imageCount": 1004,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide1.5": 200,
+        "wide2.4": 204
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 504
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_2",
+      "directoryPattern": "note10/note10_2/<scene>/<lens>/<image>.jpg",
+      "imageCount": 999,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 199,
+        "wide1.5": 200,
+        "wide2.4": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 499
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_3",
+      "directoryPattern": "note10/note10_3/<scene>/<lens>/<image>.jpg",
+      "imageCount": 1005,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide1.5": 200,
+        "wide2.4": 205
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 505
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_4",
+      "directoryPattern": "note10/note10_4/<scene>/<lens>/<image>.jpg",
+      "imageCount": 999,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 199,
+        "wide1.5": 200,
+        "wide2.4": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 499
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_5",
+      "directoryPattern": "note10/note10_5/<scene>/<lens>/<image>.jpg",
+      "imageCount": 1005,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 199,
+        "ultra": 200,
+        "wide1.5": 200,
+        "wide2.4": 206
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 505
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_6",
+      "directoryPattern": "note10/note10_6/<scene>/<lens>/<image>.jpg",
+      "imageCount": 1002,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide1.5": 200,
+        "wide2.4": 202
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 502
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_7",
+      "directoryPattern": "note10/note10_7/<scene>/<lens>/<image>.jpg",
+      "imageCount": 1000,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide1.5": 200,
+        "wide2.4": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 500
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_8",
+      "directoryPattern": "note10/note10_8/<scene>/<lens>/<image>.jpg",
+      "imageCount": 1002,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide1.5": 200,
+        "wide2.4": 202
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 502
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "note10.zip",
+      "deviceFamilyId": "note10_9",
+      "directoryPattern": "note10/note10_9/<scene>/<lens>/<image>.jpg",
+      "imageCount": 1001,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide1.5": 200,
+        "wide2.4": 201
+      },
+      "manufacturer": "Samsung",
+      "model": "note10",
+      "sceneCounts": {
+        "blank": 500,
+        "natural": 501
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_1",
+      "directoryPattern": "s20/s20_1/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_10",
+      "directoryPattern": "s20/s20_10/<scene>/<lens>/<image>.jpg",
+      "imageCount": 798,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 199,
+        "ultra": 200,
+        "wide": 199
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 398
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_2",
+      "directoryPattern": "s20/s20_2/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_3",
+      "directoryPattern": "s20/s20_3/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_4",
+      "directoryPattern": "s20/s20_4/<scene>/<lens>/<image>.jpg",
+      "imageCount": 798,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 198
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 398
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_5",
+      "directoryPattern": "s20/s20_5/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_6",
+      "directoryPattern": "s20/s20_6/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 199,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_7",
+      "directoryPattern": "s20/s20_7/<scene>/<lens>/<image>.jpg",
+      "imageCount": 791,
+      "lensCounts": {
+        "front": 196,
+        "telephoto": 197,
+        "ultra": 200,
+        "wide": 198
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 391
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_8",
+      "directoryPattern": "s20/s20_8/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s20.zip",
+      "deviceFamilyId": "s20_9",
+      "directoryPattern": "s20/s20_9/<scene>/<lens>/<image>.jpg",
+      "imageCount": 798,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 198
+      },
+      "manufacturer": "Samsung",
+      "model": "s20",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 398
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_1",
+      "directoryPattern": "s21/s21_1/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_10",
+      "directoryPattern": "s21/s21_10/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_2",
+      "directoryPattern": "s21/s21_2/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 199,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_3",
+      "directoryPattern": "s21/s21_3/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_4",
+      "directoryPattern": "s21/s21_4/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_5",
+      "directoryPattern": "s21/s21_5/<scene>/<lens>/<image>.jpg",
+      "imageCount": 798,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 198,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 398
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_6",
+      "directoryPattern": "s21/s21_6/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_7",
+      "directoryPattern": "s21/s21_7/<scene>/<lens>/<image>.jpg",
+      "imageCount": 799,
+      "lensCounts": {
+        "front": 199,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 399
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_8",
+      "directoryPattern": "s21/s21_8/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    },
+    {
+      "archiveMember": "s21.zip",
+      "deviceFamilyId": "s21_9",
+      "directoryPattern": "s21/s21_9/<scene>/<lens>/<image>.jpg",
+      "imageCount": 800,
+      "lensCounts": {
+        "front": 200,
+        "telephoto": 200,
+        "ultra": 200,
+        "wide": 200
+      },
+      "manufacturer": "Samsung",
+      "model": "s21",
+      "sceneCounts": {
+        "blank": 400,
+        "natural": 400
+      },
+      "sceneIdentifiersAvailable": false
+    }
+  ],
+  "directoryFingerprintSha256": "4e8c0d40f2c7b548d63417be28a8705ba79cda5b6682764ba0d02d38dd6c6131",
+  "extensionCounts": {
+    ".jpg": 49970
+  },
+  "modelCounts": {
+    "iPhone11": 7988,
+    "iPhone12": 7989,
+    "iPhone14": 7996,
+    "note10": 10017,
+    "s20": 7984,
+    "s21": 7996
+  },
+  "nestedArchiveCount": 6,
+  "nestedArchives": [
+    {
+      "compressionRatio": 1.004295513289076,
+      "declaredCompressedBytes": 20550415296,
+      "declaredUncompressedBytes": 20638689878,
+      "encryptedEntries": 0,
+      "entryCount": 7988,
+      "extensionCounts": {
+        ".jpg": 7988
+      },
+      "imageCount": 7988,
+      "member": "iPhone11.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3988
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0040343976452994,
+      "declaredCompressedBytes": 26713485996,
+      "declaredUncompressedBytes": 26821258821,
+      "encryptedEntries": 0,
+      "entryCount": 7989,
+      "extensionCounts": {
+        ".jpg": 7989
+      },
+      "imageCount": 7989,
+      "member": "iPhone12.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3989
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0051768649736599,
+      "declaredCompressedBytes": 20426618144,
+      "declaredUncompressedBytes": 20532363988,
+      "encryptedEntries": 0,
+      "entryCount": 7996,
+      "extensionCounts": {
+        ".jpg": 7996
+      },
+      "imageCount": 7996,
+      "member": "iPhone14.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3996
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0094090790574912,
+      "declaredCompressedBytes": 28828133587,
+      "declaredUncompressedBytes": 29099379775,
+      "encryptedEntries": 0,
+      "entryCount": 10017,
+      "extensionCounts": {
+        ".jpg": 10017
+      },
+      "imageCount": 10017,
+      "member": "note10.zip",
+      "sceneCounts": {
+        "blank": 5000,
+        "natural": 5017
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0096619321963567,
+      "declaredCompressedBytes": 18618011216,
+      "declaredUncompressedBytes": 18797897178,
+      "encryptedEntries": 0,
+      "entryCount": 7984,
+      "extensionCounts": {
+        ".jpg": 7984
+      },
+      "imageCount": 7984,
+      "member": "s20.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3984
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0108790820820743,
+      "declaredCompressedBytes": 17587061533,
+      "declaredUncompressedBytes": 17778392619,
+      "encryptedEntries": 0,
+      "entryCount": 7996,
+      "extensionCounts": {
+        ".jpg": 7996
+      },
+      "imageCount": 7996,
+      "member": "s21.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3996
+      },
+      "unsafeEntries": 0
+    }
+  ],
+  "outerArchiveSizeBytes": 132734865445,
+  "outerDirectoryFingerprintSha256": "b9f9df9330cad9a9e02f455964e7b17797f36d0094fd0575348f80e55cdf81b8",
+  "outerEntryCount": 7,
+  "pathSafety": {
+    "encryptedEntryCount": 0,
+    "fullExtractionPerformed": false,
+    "maxCompressionRatio": 1000,
+    "unsafeEntryCount": 0
+  },
+  "readme": {
+    "member": "CSAFE_MCSIDB_readme.pdf",
+    "sha256": "94719c31a38525b3edbb00b546ebfbafff22d44f16e3f417a9a27e3ab75bbca0"
+  },
+  "sceneCounts": {
+    "blank": 25000,
+    "natural": 24970
+  },
+  "schemaVersion": "lythaus-wp006d-csafe-archive-audit-v1",
+  "totalImageFiles": 49970,
+  "totalNestedEntries": 49970
+}
