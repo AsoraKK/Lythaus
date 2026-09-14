@@ -263,7 +263,7 @@ async function loadFrozenState(outputDir) {
   assertCalibrationOnlyFreeze(state.wp006cFreeze);
   const v0Registry = jsonClone(state.wp006cRegistry);
   delete v0Registry.registryHash;
-  if (stableArtifactHash(v0Registry) !== V0_FEATURE_REGISTRY_HASH || state.wp006cFreeze.featureRegistryHash !== V0_FEATURE_REGISTRY_HASH || stableArtifactHash(EF2_CONFIG) !== V0_CONFIGURATION_HASH || state.wp006cFreeze.calibrationFreezeHash !== V0_CALIBRATION_FREEZE_HASH) throw new Error('WP006E_START_GATE=WP006C_FROZEN_MODEL_CHANGED');
+  if (stableArtifactHash(v0Registry) !== V0_FEATURE_REGISTRY_HASH || state.wp006cFreeze.featureRegistryHash !== V0_FEATURE_REGISTRY_HASH || stableArtifactHash(EF2_CONFIG) !== V0_CONFIGURATION_HASH || stableArtifactHash(state.wp006cFreeze) !== V0_CALIBRATION_FREEZE_HASH || state.wp006dResults.frozenMeasurement?.calibrationFreezeHash !== V0_CALIBRATION_FREEZE_HASH) throw new Error('WP006E_START_GATE=WP006C_FROZEN_MODEL_CHANGED');
   if (state.wp006cFreeze.specialistId !== V0_FEATURE_REGISTRY_ID || state.wp006cFreeze.specialistVersion !== V0_FEATURE_VERSION || state.wp006cFreeze.thresholdSource !== 'CALIBRATION_CAMERA_ONLY' || state.wp006cFreeze.thresholdValue !== V0_THRESHOLD) throw new Error('WP006E_START_GATE=WP006C_THRESHOLD_CHANGED');
   if (state.wp006bManifest.specialistInferenceRun !== false || state.wp006bManifest.transformations?.materializedDescendantCount !== 0) throw new Error('WP006E_START_GATE=WP006B_MEDIA_STATE_INVALID');
   const expectedExisting = [...WP006D_FUTURE_HOLDOUT_DEVICES].sort();
