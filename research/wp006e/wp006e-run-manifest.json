@@ -4,7 +4,7 @@
   "baseSha": "bc3e17729dda099e4f9e6086d99ef5fc6153a4a9",
   "implementationCommit": "9fe9e7bff3b14485b29abaad31c5f2437b871c17",
   "executionCommit": "9b219a0a5a08de1cf20e60a3907c3e8c0f51d89b",
-  "finalArtifactCommit": null,
+  "finalArtifactCommit": "6b0968ea1180937134a380d19a5df09c6b453d1e",
   "planHash": "238459761db48c4aae93de982c03e80793aae6167c80610230197a10f3288fea",
   "benchmarkFingerprint": "87daea141221478c72ffafad6c06e5bae256b23e3cbe2c7e8de33e8bc1e35718",
   "candidateFeatureRegistryHash": "7c7889f3c275816e475b01c3fa2510166f007c1448b1aca458d2cb8f047f20f8",
