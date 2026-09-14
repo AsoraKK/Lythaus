@@ -17,6 +17,7 @@ import {
   WP007AH_GENERATION_CONFIGURATION,
   WP007AH_GENERATION_ROUTE,
   WP007AH_MAX_PAID_COST_USD,
+  WP007AH_MODEL_IDS,
   WP007AH_MODEL_SPECS,
   WP007AH_PLAN_SCHEMA_VERSION,
   WP007AH_PROMPT_BANK_VERSION,
@@ -193,16 +194,41 @@ function responseImage(payload) {
   return null;
 }
 
+export function modelRunUrl(accountId, modelId) {
+  if (!WP007AH_MODEL_IDS.includes(modelId)) throw new Error(`wp007ah_model_not_authorized:${modelId}`);
+  if (typeof accountId !== 'string' || !accountId.trim()) throw new Error('wp007ah_account_id_missing');
+  const encodedModelPath = modelId.split('/').map((segment) => encodeURIComponent(segment).replace(/^%40cf$/iu, '@cf')).join('/');
+  return `${CLOUDFLARE_API_ROOT}/${encodeURIComponent(accountId.trim())}/ai/run/${encodedModelPath}`;
+}
+
+export function buildModelRunRequest({ accountId, token, modelId, body }) {
+  const endpoint = modelRunUrl(accountId, modelId);
+  const headers = { authorization: `Bearer ${token}` };
+  if (modelId === '@cf/black-forest-labs/flux-2-klein-4b') {
+    if (typeof FormData !== 'function') throw new Error('wp007ah_formdata_unavailable');
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(body ?? {})) {
+      if (value === null || value === undefined) continue;
+      formData.append(key, String(value));
+    }
+    return { url: endpoint, init: { method: 'POST', headers, body: formData } };
+  }
+  return {
+    url: endpoint,
+    init: {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  };
+}
+
 async function requestCloudflare(modelId, body) {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const token = process.env.CLOUDFLARE_API_TOKEN;
-  const endpoint = `${CLOUDFLARE_API_ROOT}/${encodeURIComponent(accountId)}/ai/run/${encodeURIComponent(modelId)}`;
+  const request = buildModelRunRequest({ accountId, token, modelId, body });
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const response = await fetch(request.url, request.init);
     if (!response.ok) throw new Error(`cloudflare_http_${response.status}`);
     const contentType = response.headers.get('content-type') ?? '';
     if (contentType.startsWith('image/')) return new Uint8Array(await response.arrayBuffer());
@@ -239,7 +265,7 @@ async function verifyCachedRecord(cachePath, record) {
   return true;
 }
 
-function requestBody(model, prompt) {
+export function requestBody(model, prompt) {
   const seed = model.seedSupport === 'DOCUMENTED_BY_CURRENT_MODEL_PAGE'
     ? deriveWp007ahPromptSeed(model.modelId, prompt.promptId)
     : null;
