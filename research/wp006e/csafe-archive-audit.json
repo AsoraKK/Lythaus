@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "lythaus-wp006d-csafe-archive-audit-v1",
+  "archiveFormat": "ZIP_WITH_STORED_NESTED_ZIPS",
+  "archiveLabel": "CSAFE_ARCHIVE_26932084_ZIP",
+  "archiveDirectoryFingerprintSha256": "4e8c0d40f2c7b548d63417be28a8705ba79cda5b6682764ba0d02d38dd6c6131",
+  "outerDirectoryFingerprintSha256": "b9f9df9330cad9a9e02f455964e7b17797f36d0094fd0575348f80e55cdf81b8",
+  "outerEntryCount": 7,
+  "nestedArchiveCount": 6,
+  "totalNestedEntries": 49970,
+  "totalImageFiles": 49970,
+  "deviceCount": 60,
+  "extensionCounts": {
+    ".jpg": 49970
+  },
+  "modelCounts": {
+    "iPhone11": 7988,
+    "iPhone12": 7989,
+    "iPhone14": 7996,
+    "note10": 10017,
+    "s20": 7984,
+    "s21": 7996
+  },
+  "sceneCounts": {
+    "blank": 25000,
+    "natural": 24970
+  },
+  "nestedArchives": [
+    {
+      "compressionRatio": 1.004295513289076,
+      "declaredCompressedBytes": 20550415296,
+      "declaredUncompressedBytes": 20638689878,
+      "encryptedEntries": 0,
+      "entryCount": 7988,
+      "extensionCounts": {
+        ".jpg": 7988
+      },
+      "imageCount": 7988,
+      "member": "iPhone11.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3988
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0040343976452994,
+      "declaredCompressedBytes": 26713485996,
+      "declaredUncompressedBytes": 26821258821,
+      "encryptedEntries": 0,
+      "entryCount": 7989,
+      "extensionCounts": {
+        ".jpg": 7989
+      },
+      "imageCount": 7989,
+      "member": "iPhone12.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3989
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0051768649736599,
+      "declaredCompressedBytes": 20426618144,
+      "declaredUncompressedBytes": 20532363988,
+      "encryptedEntries": 0,
+      "entryCount": 7996,
+      "extensionCounts": {
+        ".jpg": 7996
+      },
+      "imageCount": 7996,
+      "member": "iPhone14.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3996
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0094090790574912,
+      "declaredCompressedBytes": 28828133587,
+      "declaredUncompressedBytes": 29099379775,
+      "encryptedEntries": 0,
+      "entryCount": 10017,
+      "extensionCounts": {
+        ".jpg": 10017
+      },
+      "imageCount": 10017,
+      "member": "note10.zip",
+      "sceneCounts": {
+        "blank": 5000,
+        "natural": 5017
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0096619321963567,
+      "declaredCompressedBytes": 18618011216,
+      "declaredUncompressedBytes": 18797897178,
+      "encryptedEntries": 0,
+      "entryCount": 7984,
+      "extensionCounts": {
+        ".jpg": 7984
+      },
+      "imageCount": 7984,
+      "member": "s20.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3984
+      },
+      "unsafeEntries": 0
+    },
+    {
+      "compressionRatio": 1.0108790820820743,
+      "declaredCompressedBytes": 17587061533,
+      "declaredUncompressedBytes": 17778392619,
+      "encryptedEntries": 0,
+      "entryCount": 7996,
+      "extensionCounts": {
+        ".jpg": 7996
+      },
+      "imageCount": 7996,
+      "member": "s21.zip",
+      "sceneCounts": {
+        "blank": 4000,
+        "natural": 3996
+      },
+      "unsafeEntries": 0
+    }
+  ],
+  "pathSafety": {
+    "encryptedEntryCount": 0,
+    "fullExtractionPerformed": false,
+    "maxCompressionRatio": 1000,
+    "unsafeEntryCount": 0
+  },
+  "readme": {
+    "member": "CSAFE_MCSIDB_readme.pdf",
+    "sha256": "94719c31a38525b3edbb00b546ebfbafff22d44f16e3f417a9a27e3ab75bbca0"
+  },
+  "fullExtractionPerformed": false
+}

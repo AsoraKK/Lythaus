@@ -1,0 +1,262 @@
+{
+  "schemaVersion": "lythaus-wp006e-v1-transformation-stress-v1",
+  "benchmarkFingerprint": "87daea141221478c72ffafad6c06e5bae256b23e3cbe2c7e8de33e8bc1e35718",
+  "finalFeatureRegistryHash": "c47a22d7af16009b7967954338fcf33f34d4ab58f81e39696c574f15fbecc119",
+  "selectionPolicyHash": "f15b396d17b0d5ea8944e4d82445708c858c1743ce02443ebda2eabe0dc25099",
+  "configurationHash": "5a952b2522812181a17566adb1bc463006c86ca8cce980443dcd7837208bb2f0",
+  "selectedFamilyIds": [
+    "CSAFE-WP006E-FAMILY-iPhone11_1-01",
+    "CSAFE-WP006E-FAMILY-iPhone11_3-01",
+    "CSAFE-WP006E-FAMILY-iPhone12_1-01",
+    "CSAFE-WP006E-FAMILY-iPhone12_3-01",
+    "CSAFE-WP006E-FAMILY-iPhone14_1-01",
+    "CSAFE-WP006E-FAMILY-iPhone14_3-01",
+    "CSAFE-WP006E-FAMILY-note10_1-01",
+    "CSAFE-WP006E-FAMILY-note10_3-01"
+  ],
+  "transformations": {
+    "METADATA_STRIPPED": {
+      "familyCount": 8,
+      "values": [
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_01",
+          "score": 0.7030997581926517,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_3_01",
+          "score": 0.724191722323488,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_1_01",
+          "score": 0.741419467356657,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_3_01",
+          "score": 0.7783413177157441,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_1_01",
+          "score": 0.70000002683064,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_3_01",
+          "score": 0.6733208767124829,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_1_01",
+          "score": 0.7965155277232675,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_3_01",
+          "score": 0.661858405707705,
+          "applicability": "applicable"
+        }
+      ],
+      "scoreDeltaMedian": 0,
+      "acceptanceRetention": 1,
+      "runtimeMs": null
+    },
+    "JPEG95": {
+      "familyCount": 8,
+      "values": [
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_01",
+          "score": 0.6985006999881204,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_3_01",
+          "score": 0.7295545078321728,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_1_01",
+          "score": 0.7334080522225,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_3_01",
+          "score": 0.7755539833811936,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_1_01",
+          "score": 0.6976564826546703,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_3_01",
+          "score": 0.6676674281088422,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_1_01",
+          "score": 0.6983892026642464,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_3_01",
+          "score": 0.6766257364872813,
+          "applicability": "applicable"
+        }
+      ],
+      "scoreDeltaMedian": -0.015200788931886366,
+      "acceptanceRetention": 1,
+      "runtimeMs": null
+    },
+    "JPEG75": {
+      "familyCount": 8,
+      "values": [
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_01",
+          "score": 0.6870546352628486,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_3_01",
+          "score": 0.6944331774153508,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_1_01",
+          "score": 0.7287553182499711,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_3_01",
+          "score": 0.7073981948269091,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_1_01",
+          "score": 0.6925078461652433,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_3_01",
+          "score": 0.6387530699188404,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_1_01",
+          "score": 0.624039484379434,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_3_01",
+          "score": 0.6581204231549291,
+          "applicability": "applicable"
+        }
+      ],
+      "scoreDeltaMedian": -0.02386449954402381,
+      "acceptanceRetention": 1,
+      "runtimeMs": null
+    },
+    "RESIZE75": {
+      "familyCount": 8,
+      "values": [
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_01",
+          "score": 0.7142376645204848,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_3_01",
+          "score": 0.7390326169825056,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_1_01",
+          "score": 0.7555418842286408,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_3_01",
+          "score": 0.7927184479764068,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_1_01",
+          "score": 0.7217985095062209,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_3_01",
+          "score": 0.686908819621493,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_1_01",
+          "score": 0.7141745333142846,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_3_01",
+          "score": 0.6849547992508895,
+          "applicability": "applicable"
+        }
+      ],
+      "scoreDeltaMedian": 0.004372346755282974,
+      "acceptanceRetention": 1,
+      "runtimeMs": null
+    },
+    "CROP10": {
+      "familyCount": 8,
+      "values": [
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_1_01",
+          "score": 0.6918545060672867,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone11_3_01",
+          "score": 0.7188212469597155,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_1_01",
+          "score": 0.7547322673809543,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone12_3_01",
+          "score": 0.7934079643396635,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_1_01",
+          "score": 0.7125067782901647,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_iPhone14_3_01",
+          "score": 0.6737827245663415,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_1_01",
+          "score": 0.6914748751547326,
+          "applicability": "applicable"
+        },
+        {
+          "sampleId": "CSAFE_WP006E_note10_3_01",
+          "score": 0.6687355861848657,
+          "applicability": "applicable"
+        }
+      ],
+      "scoreDeltaMedian": -0.011465098079344038,
+      "acceptanceRetention": 1,
+      "runtimeMs": null
+    }
+  },
+  "metadataStripInvariance": "PASS",
+  "transformationRobustness": "PROMISING",
+  "temporaryDerivativesCommitted": false
+}

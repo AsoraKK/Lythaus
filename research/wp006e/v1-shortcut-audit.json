@@ -1,0 +1,143 @@
+{
+  "schemaVersion": "lythaus-wp006e-v1-shortcut-audit-v1",
+  "benchmarkFingerprint": "87daea141221478c72ffafad6c06e5bae256b23e3cbe2c7e8de33e8bc1e35718",
+  "primaryScoreUnaffected": true,
+  "primaryCondition": "CANONICAL_1024_CENTERED_NATIVE_DECODED_PIXELS",
+  "audit": {
+    "primaryScoreUnaffected": true,
+    "variables": {
+      "width": {
+        "association": 0.5077551648019037,
+        "risk": "LOW"
+      },
+      "height": {
+        "association": 0.23711483688636448,
+        "risk": "LOW"
+      },
+      "aspectRatio": {
+        "association": 0.5438001044219496,
+        "risk": "LOW"
+      },
+      "fileSize": {
+        "association": 0.5151821132347638,
+        "risk": "LOW"
+      },
+      "metadataPresence": {
+        "association": 0,
+        "risk": "LOW"
+      },
+      "format": {
+        "association": 0.214539718887913,
+        "risk": "LOW"
+      },
+      "sceneType": {
+        "association": 0.7012420575407251,
+        "risk": "MODERATE"
+      },
+      "lens": {
+        "association": 0.5106190549197949,
+        "risk": "LOW"
+      },
+      "deviceIdentity": {
+        "association": 0.5308256995343327,
+        "risk": "LOW"
+      }
+    },
+    "shortcutRisk": "MODERATE",
+    "method": "Descriptive Spearman association only; nuisance values were not passed to the feature extractor or v1 score."
+  },
+  "deviceInvariance": {
+    "risk": "LOW",
+    "deviceScores": {
+      "iPhone11_1": {
+        "count": 12,
+        "median": 0.7038772936602999,
+        "iqr": 0.07554061735085216,
+        "p95": 0.7485290464747989
+      },
+      "iPhone11_3": {
+        "count": 12,
+        "median": 0.6739952582056448,
+        "iqr": 0.062379843419728354,
+        "p95": 0.7336035334299501
+      },
+      "iPhone12_1": {
+        "count": 12,
+        "median": 0.6935239552465404,
+        "iqr": 0.04322898451117785,
+        "p95": 0.7361833482676747
+      },
+      "iPhone12_3": {
+        "count": 12,
+        "median": 0.7265191889474529,
+        "iqr": 0.08410401506995768,
+        "p95": 0.7681982558371669
+      },
+      "iPhone14_1": {
+        "count": 12,
+        "median": 0.6919610430343075,
+        "iqr": 0.0778028918329029,
+        "p95": 0.764097557894271
+      },
+      "iPhone14_3": {
+        "count": 12,
+        "median": 0.7079966437441885,
+        "iqr": 0.03630181141960176,
+        "p95": 0.7686632420048451
+      },
+      "note10_1": {
+        "count": 12,
+        "median": 0.7099392548361682,
+        "iqr": 0.03277468885038948,
+        "p95": 0.77506505127556
+      },
+      "note10_3": {
+        "count": 12,
+        "median": 0.7051111934702441,
+        "iqr": 0.13435880735599093,
+        "p95": 0.8036649928463383
+      },
+      "s20_1": {
+        "count": 12,
+        "median": 0.6657937558212157,
+        "iqr": 0.03204559203206758,
+        "p95": 0.7412536241188721
+      },
+      "s20_3": {
+        "count": 12,
+        "median": 0.6669877170089036,
+        "iqr": 0.04113379436708953,
+        "p95": 0.720985827830513
+      },
+      "s20_4": {
+        "count": 12,
+        "median": 0.6769215907111921,
+        "iqr": 0.06418835041368154,
+        "p95": 0.7167010507460247
+      },
+      "s21_1": {
+        "count": 12,
+        "median": 0.6893672647458784,
+        "iqr": 0.05362396398686753,
+        "p95": 0.76588656463777
+      },
+      "s21_3": {
+        "count": 12,
+        "median": 0.7118632818748094,
+        "iqr": 0.038484767489690985,
+        "p95": 0.7783198981599744
+      },
+      "s21_4": {
+        "count": 12,
+        "median": 0.6825423941558906,
+        "iqr": 0.0356703922471413,
+        "p95": 0.7454736489917814
+      }
+    },
+    "medianScoreSpread": 0.015537526516498201,
+    "method": "Descriptive score distributions by development device; no device classifier was fitted."
+  },
+  "sourceDatasetDomain": "Only CSAFE camera material is used for primary development; dataset-domain invariance remains unresolved.",
+  "deviceIdentityIsScoreInput": false,
+  "truthIsScoreInput": false
+}

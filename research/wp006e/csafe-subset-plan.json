@@ -1,0 +1,2234 @@
+{
+  "schemaVersion": "lythaus-wp006e-csafe-subset-plan-v1",
+  "archiveDirectoryFingerprintSha256": "4e8c0d40f2c7b548d63417be28a8705ba79cda5b6682764ba0d02d38dd6c6131",
+  "developmentDevices": [
+    "iPhone11_1",
+    "iPhone12_1",
+    "iPhone14_1",
+    "note10_1",
+    "s20_1",
+    "s21_1",
+    "iPhone11_3",
+    "iPhone12_3",
+    "iPhone14_3",
+    "note10_3",
+    "s20_3",
+    "s21_3",
+    "s20_4",
+    "s21_4"
+  ],
+  "developmentMembers": [
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/front/IMG_0728.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/front/IMG_0762.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/front/IMG_0803.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/telephoto/IMG_0470.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/telephoto/IMG_0495.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/telephoto/IMG_0544.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/ultra/IMG_0612.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/ultra/IMG_0640.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/ultra/IMG_0668.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/wide/IMG_0883.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/wide/IMG_0913.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_1/natural/wide/IMG_0943.JPG",
+      "deviceFamilyId": "iPhone11_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/front/IMG_0733.jpg",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/front/IMG_0759.jpg",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/front/IMG_0803.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/telephoto/IMG_0840.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/telephoto/IMG_0869.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/telephoto/IMG_0896.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/ultra/IMG_0635.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/ultra/IMG_0687.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/ultra/IMG_0942.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/wide/IMG_0508.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/wide/IMG_0539.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_3/natural/wide/IMG_0566.JPG",
+      "deviceFamilyId": "iPhone11_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/front/IMG_0290.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/front/IMG_0315.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/front/IMG_0392.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/telephoto/IMG_0035.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/telephoto/IMG_0060.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/telephoto/IMG_0085.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/ultra/IMG_0239.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/ultra/IMG_0264.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/ultra/IMG_0342.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/wide/IMG_0138.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/wide/IMG_0164.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_1/natural/wide/IMG_0189.JPG",
+      "deviceFamilyId": "iPhone12_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/front/IMG_1281.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/front/IMG_1309.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/front/IMG_1337.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/telephoto/IMG_1148.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/telephoto/IMG_1179.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/telephoto/IMG_1211.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/ultra/IMG_0916.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/ultra/IMG_0944.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/ultra/IMG_0974.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/wide/IMG_1032.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/wide/IMG_1057.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_3/natural/wide/IMG_1087.JPG",
+      "deviceFamilyId": "iPhone12_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/front/IMG_0568.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/front/IMG_0593.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/front/IMG_0619.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/telephoto/IMG_0141.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/telephoto/IMG_0166.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/telephoto/IMG_0197.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/ultra/IMG_0351.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/ultra/IMG_0378.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/ultra/IMG_0409.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/wide/IMG_0464.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/wide/IMG_0489.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_1/natural/wide/IMG_0515.JPG",
+      "deviceFamilyId": "iPhone14_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/front/IMG_1681.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/front/IMG_1706.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/front/IMG_1736.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/telephoto/IMG_1436 2.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/telephoto/IMG_1468 2.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/telephoto/IMG_1493 2.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/ultra/IMG_1577.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/ultra/IMG_1603.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/ultra/IMG_1629.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/wide/IMG_1788.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/wide/IMG_1815.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_3/natural/wide/IMG_1840.JPG",
+      "deviceFamilyId": "iPhone14_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/front/20221122_121428.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/front/20221122_123324.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/front/20221122_123817.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/telephoto/20221122_110911.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/telephoto/20221122_111640.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/telephoto/20221122_112132.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/ultra/20221122_115426.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/ultra/20221122_120107.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/wide1.5/20221122_113332.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/wide1.5/20221123_090136.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/wide2.4/20221122_114009.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_1/natural/wide2.4/20221124_102252.jpg",
+      "deviceFamilyId": "note10_1",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/front/20230613_111123.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/front/20230613_112605.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/front/20230613_114137.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/telephoto/20230612_122204.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/telephoto/20230612_123134.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/telephoto/20230612_124411.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/ultra/20230612_114441.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/ultra/20230612_120143.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/wide1.5/20230224_081831.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/wide1.5/20230226_090513.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/wide2.4/20230225_085832.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_3/natural/wide2.4/20230612_103414.jpg",
+      "deviceFamilyId": "note10_3",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/front/20210926_081342.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/front/20210926_081951.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/front/20210926_083653.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/telephoto/20210926_074927.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/telephoto/20210926_075123.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/telephoto/20210926_075536.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/ultra/20210926_090152.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/ultra/20210926_090448.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/ultra/20210926_090810.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/wide/20210926_085959.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/wide/20210926_092204.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_1/natural/wide/20210926_092456.jpg",
+      "deviceFamilyId": "s20_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/front/20230619_155456(0).jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/front/20230619_162059.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/front/20230619_162228.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/telephoto/20230619_155755.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/telephoto/20230619_161844.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/telephoto/20230619_162709.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/ultra/20230619_160719.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/ultra/20230619_161511.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/ultra/20230619_162349.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/wide/20230619_160243.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/wide/20230619_161749.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_3/natural/wide/20230619_162532.jpg",
+      "deviceFamilyId": "s20_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/front/20230619_161003.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/front/20230619_163433(0).jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/front/20230620_153244.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/telephoto/20230619_160843.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/telephoto/20230619_162555.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/telephoto/20230620_143308.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/ultra/20230619_163846.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/ultra/20230619_164314.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/ultra/20230620_144719.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/wide/20230619_164525.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/wide/20230619_165106.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s20.zip::s20/s20_4/natural/wide/20230620_151228.jpg",
+      "deviceFamilyId": "s20_4",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/front/20221002_144740.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/front/20221002_145049.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/front/20221002_151833.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/telephoto/20221002_142757.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/telephoto/20221002_143022.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/telephoto/20221002_143301.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/ultra/20221002_143620.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/ultra/20221002_143908.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/ultra/20221002_144218.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/wide/20221002_150032.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/wide/20221002_151231.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_1/natural/wide/20221002_152354.jpg",
+      "deviceFamilyId": "s21_1",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/front/20221226_082828.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/front/20221226_083107.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/front/20221226_083430.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/telephoto/20221226_081053.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/telephoto/20221226_081215.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/telephoto/20221226_081315.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/ultra/20221226_081650.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/ultra/20221226_081934.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/ultra/20221226_082348.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/wide/20221226_083817.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/wide/20221226_084002.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_3/natural/wide/20221226_084157.jpg",
+      "deviceFamilyId": "s21_3",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/front/20230217_123011.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/front/20230217_123310.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/front/20230217_123609.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/telephoto/20230217_121253.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/telephoto/20230217_121433.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/telephoto/20230217_121509.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/ultra/20230217_121842.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/ultra/20230217_122101.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/ultra/20230217_122519.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/wide/20230217_123927.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/wide/20230217_124101.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    },
+    {
+      "archiveMemberId": "s21.zip::s21/s21_4/natural/wide/20230217_124257.jpg",
+      "deviceFamilyId": "s21_4",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "DEVELOPMENT_CAMERA"
+    }
+  ],
+  "internalValidationDevices": [
+    "iPhone11_5",
+    "iPhone12_5",
+    "iPhone14_5",
+    "note10_5"
+  ],
+  "internalValidationMembers": [
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/front/IMG_1650.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/front/IMG_1681.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/front/IMG_1706.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/telephoto/IMG_1396.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/telephoto/IMG_1421.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/telephoto/IMG_1447.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/ultra/IMG_1520.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/ultra/IMG_1553.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/ultra/IMG_1581.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/wide/IMG_1276.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/wide/IMG_1307.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_5/natural/wide/IMG_1334.JPG",
+      "deviceFamilyId": "iPhone11_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/front/IMG_0771.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/front/IMG_0806.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/front/IMG_0846.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/telephoto/IMG_0542.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/telephoto/IMG_0571.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/telephoto/IMG_0602.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/ultra/IMG_0668.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/ultra/IMG_0705.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/ultra/IMG_0735.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/wide/IMG_0435.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/wide/IMG_0466.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_5/natural/wide/IMG_0493.JPG",
+      "deviceFamilyId": "iPhone12_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/front/IMG_1489.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/front/IMG_1517.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/front/IMG_1547.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/telephoto/IMG_1268.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/telephoto/IMG_1293.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/telephoto/IMG_1324.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/ultra/IMG_1383.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/ultra/IMG_1411.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/ultra/IMG_1436.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/wide/IMG_1614.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/wide/IMG_1641.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_5/natural/wide/IMG_1671.JPG",
+      "deviceFamilyId": "iPhone14_5",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/front/20230614_124431.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/front/20230614_125112.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/front/20230614_131103.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/telephoto/20230614_122104.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/telephoto/20230614_122323.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/telephoto/20230614_122831.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/ultra/20230614_110320.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/ultra/20230614_111259.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/wide1.5/20221107_012937.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/wide1.5/20221107_013517.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/wide2.4/20230614_104035.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_5/natural/wide2.4/20230614_104509.jpg",
+      "deviceFamilyId": "note10_5",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "SEALED_INTERNAL_VALIDATION_CAMERA"
+    }
+  ],
+  "sameModelInstanceHoldoutDevices": [
+    "iPhone11_2",
+    "iPhone12_2",
+    "iPhone14_2",
+    "note10_2"
+  ],
+  "sameModelInstanceHoldoutMembers": [
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/front/IMG_2806.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/front/IMG_2834.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/front/IMG_2864.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/telephoto/IMG_2519.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/telephoto/IMG_2563.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/telephoto/IMG_2618.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/ultra/IMG_3022.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/ultra/IMG_3050.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/ultra/IMG_3076.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/wide/IMG_2407.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/wide/IMG_2432.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_2/natural/wide/IMG_2457.JPG",
+      "deviceFamilyId": "iPhone11_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/front/IMG_0561.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/front/IMG_0593.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/front/IMG_0622.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/telephoto/IMG_0131.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/telephoto/IMG_0156.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/telephoto/IMG_0184.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/ultra/IMG_0344.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/ultra/IMG_0372.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/ultra/IMG_0403.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/wide/IMG_0777.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/wide/IMG_0806.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_2/natural/wide/IMG_0833.JPG",
+      "deviceFamilyId": "iPhone12_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/front/IMG_0660.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/front/IMG_0695.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/front/IMG_0727.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/telephoto/IMG_0130.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/telephoto/IMG_0156.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/telephoto/IMG_0181.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/ultra/IMG_0446.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/ultra/IMG_0476.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/ultra/IMG_0506.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/wide/IMG_0881.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/wide/IMG_0913.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_2/natural/wide/IMG_0940.JPG",
+      "deviceFamilyId": "iPhone14_2",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/front/20230324_120913.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/front/20230324_121634.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/front/20230324_122203.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/telephoto/20230324_104447.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/telephoto/20230324_105703.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/telephoto/20230324_110533.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/ultra/20230324_114150.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/ultra/20230324_115039.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/wide1.5/20221125_073405.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/wide1.5/20221125_073736.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/wide2.4/20230324_111600.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_2/natural/wide2.4/20230324_112524.jpg",
+      "deviceFamilyId": "note10_2",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "SEALED_DEVICE_INSTANCE_HOLDOUT_CAMERA"
+    }
+  ],
+  "futureModelReserveDevices": [
+    "iPhone11_6",
+    "iPhone12_6",
+    "iPhone14_6",
+    "note10_6"
+  ],
+  "futureModelReserveMembers": [
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/front/IMG_1840.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/front/IMG_1868.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/front/IMG_1896.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/telephoto/IMG_1701.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/telephoto/IMG_1727.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/telephoto/IMG_1755.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/ultra/IMG_1589.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/ultra/IMG_1618.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/ultra/IMG_1645.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/wide/IMG_1465.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/wide/IMG_1492.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone11.zip::iPhone11/iPhone11_6/natural/wide/IMG_1518.JPG",
+      "deviceFamilyId": "iPhone11_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/front/IMG_0596.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/front/IMG_0726.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/front/IMG_0751.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/telephoto/IMG_0494.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/telephoto/IMG_0676.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/telephoto/IMG_0701.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/ultra/IMG_0442.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/ultra/IMG_0624.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/ultra/IMG_0649.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/wide/IMG_0545.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/wide/IMG_0778.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone12.zip::iPhone12/iPhone12_6/natural/wide/IMG_0803.JPG",
+      "deviceFamilyId": "iPhone12_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/front/IMG_1417.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/front/IMG_1447.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/front/IMG_1474.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/telephoto/IMG_1156.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/telephoto/IMG_1184.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/telephoto/IMG_1209.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/ultra/IMG_1276.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/ultra/IMG_1302.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/ultra/IMG_1327.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/wide/IMG_1513.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/wide/IMG_1538.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "iPhone14.zip::iPhone14/iPhone14_6/natural/wide/IMG_1568.JPG",
+      "deviceFamilyId": "iPhone14_6",
+      "sceneType": "natural",
+      "lens": "wide",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/front/20230614_115825.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/front/20230614_121612.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/front/20230614_122303.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "front",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/telephoto/20230614_112627.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/telephoto/20230614_113528.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/telephoto/20230614_114538.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "telephoto",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/ultra/20230614_101819.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/ultra/20230614_102709.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "ultra",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/wide1.5/20230223_123007.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/wide1.5/20230223_123252.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "wide1.5",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/wide2.4/20230614_094636.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    },
+    {
+      "archiveMemberId": "note10.zip::note10/note10_6/natural/wide2.4/20230614_095714.jpg",
+      "deviceFamilyId": "note10_6",
+      "sceneType": "natural",
+      "lens": "wide2.4",
+      "role": "FUTURE_MODEL_RESERVE_CAMERA"
+    }
+  ],
+  "selectionUsesV0Scores": false,
+  "selectionUsesV1Features": false,
+  "fullExtractionPerformed": false,
+  "sealedMembersDecodedBeforeV1Freeze": false
+}
