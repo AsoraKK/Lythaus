@@ -953,7 +953,7 @@ function buildFinalFeatureRegistry(selection, qualities, model, candidateRegistr
     preprocessing: CANDIDATE_REGISTRY.preprocessing,
     patchSelection: CANDIDATE_REGISTRY.patchSelection,
     features,
-    candidateFeatureRegistryHash,
+    candidateFeatureRegistryHash: candidateRegistryHash,
     selectionPolicyHash,
     configurationHash,
     benchmarkFingerprint,
