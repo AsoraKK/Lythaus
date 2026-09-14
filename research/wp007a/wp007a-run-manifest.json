@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "lythaus-wp007a-run-manifest-v1",
+  "baseSha": "6c11fbf994bcf6e05e5e20238064237f9f90e574",
+  "executionCommit": "722b31377ff6ea56643a8bbbea4e2b7ba7efb0e3",
+  "generatedAt": "2026-09-14T12:00:56.628Z",
+  "diffusionDb": {
+    "archiveShards": [
+      "part-000001",
+      "part-000002"
+    ],
+    "downloadedBytes": 1213993166,
+    "selectedFamilies": 500,
+    "fullDatasetDownloaded": false,
+    "fullDatasetExtracted": false
+  },
+  "ownerPool": {
+    "syntheticFamilies": 31,
+    "reservedOwnerMediaConsumed": false
+  },
+  "programmaticHardNegatives": 48,
+  "cameraNegativeFamilies": 96,
+  "cloudflare": {
+    "dryRun": true,
+    "smokePromptCountPerModel": 2,
+    "generationCalls": 0,
+    "incrementalCostUsd": 0,
+    "modelInferenceCalls": 0
+  },
+  "modelInferenceCalls": 0,
+  "modelTrainingRuns": 0,
+  "cloudImageCalls": 0,
+  "productionChanges": false,
+  "mediaCommittedToGit": false,
+  "ef2Holdouts": {
+    "lge": "SEALED",
+    "futureModelReserve": "SEALED"
+  },
+  "artifactFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5"
+}

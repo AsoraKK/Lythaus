@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "lythaus-wp007a-ef3-transformation-plan-v1",
+  "materializedInWp007a": false,
+  "descendantsRetainSourceFamily": true,
+  "recipes": [
+    {
+      "id": "JPEG95",
+      "operation": "reencode",
+      "parameters": {
+        "quality": 95
+      }
+    },
+    {
+      "id": "JPEG75",
+      "operation": "reencode",
+      "parameters": {
+        "quality": 75
+      }
+    },
+    {
+      "id": "resize75",
+      "operation": "resize",
+      "parameters": {
+        "scale": 0.75,
+        "interpolation": "deterministic"
+      }
+    },
+    {
+      "id": "resize50",
+      "operation": "resize",
+      "parameters": {
+        "scale": 0.5,
+        "interpolation": "deterministic"
+      }
+    },
+    {
+      "id": "crop10",
+      "operation": "center_crop",
+      "parameters": {
+        "retainedArea": 0.9
+      }
+    },
+    {
+      "id": "metadata_stripped",
+      "operation": "remove_container_metadata",
+      "parameters": {
+        "decodedPixelsPreserved": true
+      }
+    },
+    {
+      "id": "screenshot_style_resampling",
+      "operation": "bounded_screen_resample",
+      "parameters": {
+        "materializeLater": true
+      }
+    }
+  ]
+}

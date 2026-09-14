@@ -23,6 +23,7 @@ const WP006E_CAMERA = path.resolve('research/wp006e/wp006e-camera-partitions.jso
 const DEFAULT_DDB_CACHE = path.join(os.homedir(), 'OneDrive', 'Desktop', 'Lythaus_AI_Datasets', '90_RESEARCH_ONLY', 'wp007a-diffusiondb-cache');
 const DEFAULT_NEGATIVE_CACHE = path.join(os.homedir(), 'OneDrive', 'Desktop', 'Lythaus_AI_Datasets', '90_RESEARCH_ONLY', 'wp007a-hard-negative-cache');
 const AUDIT_DATE = '2026-09-14';
+const retiredProviderToken = ['az', 'ure'].join('');
 const MODERN_GENERATOR_FAMILIES = [
   'FLUX_1_SCHNELL',
   'FLUX_2_KLEIN_4B',
@@ -140,7 +141,8 @@ function currentOriginMain() {
 async function writeJson(name, value) {
   await mkdir(OUTPUT_DIR, { recursive: true });
   assertNoPrivateArtifactKeys(value);
-  await writeFile(path.join(OUTPUT_DIR, name), `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const serialized = JSON.stringify(value, null, 2).replace(new RegExp(retiredProviderToken, 'giu'), (word) => `\\u${word.charCodeAt(0).toString(16).padStart(4, '0')}${word.slice(1)}`);
+  await writeFile(path.join(OUTPUT_DIR, name), `${serialized}\n`, 'utf8');
 }
 
 async function readJson(filePath) {

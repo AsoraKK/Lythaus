@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "lythaus-wp007a-diffusiondb-rights-audit-v1",
+  "auditDate": "2026-09-14",
+  "officialDatasetRecord": "https://huggingface.co/datasets/poloclub/diffusiondb",
+  "officialRepository": "https://github.com/poloclub/diffusiondb",
+  "officialDatasheet": "https://github.com/poloclub/diffusiondb/blob/main/datasheet.md",
+  "license": "CC0-1.0",
+  "rightsStatus": "VERIFIED_CC0_WITH_DATASET_CONSTRAINTS",
+  "rightsGate": "PASS",
+  "datasetDescription": "Stable Diffusion Discord prompt/image pairs with prompt and generation-parameter provenance.",
+  "sourceStructure": "2M subset uses modular part-000001.zip style shards containing PNG members and per-part JSON metadata.",
+  "sourceFamilyRule": "One original image member is one source family unless an exact/near duplicate rule identifies a relation.",
+  "constraints": [
+    "Honor dataset removal workflow.",
+    "Do not treat prompts or source provenance as detector inputs.",
+    "Exclude unsafe/corrupt records under a deterministic policy.",
+    "Do not persist user names, GPS, or private metadata."
+  ],
+  "downloadBudgetBytes": 1610612736,
+  "downloadedBytes": 1213993166,
+  "newDownloadBytes": 0,
+  "selectedSourceFamilies": 500,
+  "sourceDocumentationAudit": "PASS; current official record states CC0 1.0 and identifies the dataset structure and fields.",
+  "fullDatasetDownloaded": false,
+  "fullDatasetExtracted": false
+}

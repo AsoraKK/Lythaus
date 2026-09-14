@@ -1,0 +1,1432 @@
+{
+  "schemaVersion": "lythaus-wp007a-owner-synthetic-provenance-v1",
+  "sourceFamilyCount": 31,
+  "records": [
+    {
+      "sampleId": "SYN_001",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_001",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "6bf83641d4e5ed8f01497965fe3eb9e3345b2f2ed86ddc848b2ef27a81f8fb4e",
+        "width": 1089,
+        "height": 1444,
+        "format": "PNG",
+        "byteSize": 1522532
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYN_002",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_002",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "96a87d57fe43a299ed45c370f6f883a23f94be832a5755898c460d98990d18c5",
+        "width": 1536,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 2496973
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYN_003",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_003",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "ed8e5c84aca177b034f1d5755ecbdad0e3b620974c672b22fbb8d193d9035bec",
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG",
+        "byteSize": 2078400
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYN_004",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_004",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "0d91b4a0bac861bdb7253d4e4f443ead9ee1cca0cd0b09401d2fa922a7b63b5a",
+        "width": 1536,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 2701123
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYN_005",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_005",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "c65b7905ab1e52b2d607528084f6d0c22ce3662d1007843d05129cfbb008a40e",
+        "width": 768,
+        "height": 1152,
+        "format": "JPEG",
+        "byteSize": 401547
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYN_006",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_006",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "b4625db0195346e011946e4c75cc4be541e5f6db46d4a1294af2a6aa7e6273d1",
+        "width": 768,
+        "height": 1152,
+        "format": "JPEG",
+        "byteSize": 413457
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_160ef96a3f22bf2e",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_160ef96a3f22bf2e",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "160ef96a3f22bf2e33426a63d8e6a7d6c86fa66067afec5167722fee355519d3",
+        "width": 1536,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 314773
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_1694ffbeb08ec2e7",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_1694ffbeb08ec2e7",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "1694ffbeb08ec2e7b5b852eed1844eac4eae1ba9b6154065902ea16431e72ab7",
+        "width": 1535,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 1610129
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_1792d74543769df6",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_1792d74543769df6",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "1792d74543769df63886dc66fb05366ebf93808690e2b481f927eebee99920ec",
+        "width": 1254,
+        "height": 1254,
+        "format": "PNG",
+        "byteSize": 2177228
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_19f11c9d9fc6d62d",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_19f11c9d9fc6d62d",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "19f11c9d9fc6d62d732d01ccd39a3075a8b8448a3d606416aa7a0057547e0023",
+        "width": 1024,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 1358687
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_372f1157c4818b50",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_372f1157c4818b50",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "372f1157c4818b50b1dc5e67873011443d761dd8fb1d49c29f8590b185fca965",
+        "width": 1024,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 1549642
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_37b0763e0586d892",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_37b0763e0586d892",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "37b0763e0586d8920c23b149e884ff5b0cd535eea40203d99927b1e3f93fed67",
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG",
+        "byteSize": 1297167
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_45f90d76c8270446",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_45f90d76c8270446",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "45f90d76c8270446cac9149553279725b2983dbe00502c87f16e4a98420be9b8",
+        "width": 512,
+        "height": 768,
+        "format": "PNG",
+        "byteSize": 822327
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_48086b0ae92b64bd",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_48086b0ae92b64bd",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "48086b0ae92b64bd016bd412a37a9160fb0a0eb441cd8b0847a5ffa2f6a3591f",
+        "width": 1536,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 1951279
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_48a4728b903a3123",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_48a4728b903a3123",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "48a4728b903a3123841bad1e7eafad3a83368ff52b26fd03c3c7be2d3fd3b4eb",
+        "width": 1024,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 114391
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_4a74a58cdef03715",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_4a74a58cdef03715",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "4a74a58cdef037159626c8d6b9a586ee59c6d629a86637f569ab59bc3dd722ee",
+        "width": 1024,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 2157955
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_618b4432f43d5e35",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_618b4432f43d5e35",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "618b4432f43d5e35ee99050f92e9b6d3812054306c1b08ac3837aeee5c949b2f",
+        "width": 1536,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 2302593
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_7d307d7fc08c0bfc",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_7d307d7fc08c0bfc",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "7d307d7fc08c0bfc6a2e3635c23c9e961da130f056e5c8994cac7830a656cfba",
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG",
+        "byteSize": 2983017
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_8c1a405cc099c985",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_8c1a405cc099c985",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "8c1a405cc099c985b8e1a64f5f0e04a2a9f13bf1e6368ff18a5e54b5727b83fc",
+        "width": 1536,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 328408
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_8d5dda145e61367b",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_8d5dda145e61367b",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "8d5dda145e61367b0d336d9b6745c574cfd95ae73e46b52f0817ceda00cf40a8",
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG",
+        "byteSize": 2886621
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_9f242bb4f40aefbb",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_9f242bb4f40aefbb",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "9f242bb4f40aefbb08f19ffd0db7a73013e1a9757349190493e99f2a7ea7a2ce",
+        "width": 512,
+        "height": 768,
+        "format": "PNG",
+        "byteSize": 886088
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_9f75ed27675612d6",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_9f75ed27675612d6",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "9f75ed27675612d61f2dc6433d1a0858e6d6bdc80c0691f7260b189de84df7d6",
+        "width": 1024,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 1496535
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_a0139d7afa4bed10",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_a0139d7afa4bed10",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "a0139d7afa4bed10f70200cccfbc957f376e3e343377baccecc3d14c6f553648",
+        "width": 1536,
+        "height": 1536,
+        "format": "JPEG",
+        "byteSize": 86191
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_a7832460c6038f13",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_a7832460c6038f13",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "a7832460c6038f13ba2b2005be7bb79a82548727c7ca918246ee1fe52c021f6a",
+        "width": 1402,
+        "height": 1122,
+        "format": "PNG",
+        "byteSize": 2397506
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_a88c89b862ce1f7c",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_a88c89b862ce1f7c",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "a88c89b862ce1f7cb207f3e7072a8e4db9a1c84e4f2965d22935bc4386b85bf6",
+        "width": 940,
+        "height": 1672,
+        "format": "PNG",
+        "byteSize": 1852721
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_be4f7af409ff34d4",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_be4f7af409ff34d4",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "be4f7af409ff34d4855f3ff8569cd08147bdcf88cf940b2cec552b89a44a5511",
+        "width": 1448,
+        "height": 1086,
+        "format": "PNG",
+        "byteSize": 2641184
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_c330be74a59c28f0",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_c330be74a59c28f0",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "c330be74a59c28f05724f524477313a33b52392299c4f3dfbe8bb951f6e75f08",
+        "width": 1535,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 1593886
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_d1c5482b651e0c22",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_d1c5482b651e0c22",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "d1c5482b651e0c227cba765e82c1c36eafb29dde004e040a471afb4634128295",
+        "width": 1024,
+        "height": 1536,
+        "format": "PNG",
+        "byteSize": 2750495
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_dd553141a5931e9b",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_dd553141a5931e9b",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "dd553141a5931e9b77ac948fe9da2a402d6e8ee7faf947ed4e93286423d09456",
+        "width": 1024,
+        "height": 1024,
+        "format": "PNG",
+        "byteSize": 1381189
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_ebcd0dcd78bba715",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_ebcd0dcd78bba715",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "ebcd0dcd78bba715bfd34df128ac6696770e0730604243431b596f06d574deac",
+        "width": 1254,
+        "height": 1254,
+        "format": "PNG",
+        "byteSize": 794130
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    },
+    {
+      "sampleId": "SYNTHETIC_ee47f7d89a68bffd",
+      "sourceFamilyId": "WP006B-FAMILY-SYNTHETIC_ee47f7d89a68bffd",
+      "parentSourceFamilyId": null,
+      "artifactTruth": {
+        "physicalCameraAcquisition": "FALSE",
+        "syntheticDepictedContent": "TRUE",
+        "localManipulation": "UNKNOWN",
+        "digitalCapture": "UNKNOWN",
+        "screenRecapture": "UNKNOWN"
+      },
+      "provenance": {
+        "provider": "OWNER_SUPPLIED_UNKNOWN",
+        "product": "OWNER_CONTROLLED_SYNTHETIC_POOL",
+        "generatorFamily": "UNKNOWN",
+        "generatorModel": "UNKNOWN",
+        "generatorVersion": "UNKNOWN",
+        "generationRoute": "OWNER_SUPPLIED_FILE",
+        "promptId": null,
+        "seed": "UNKNOWN",
+        "generatedAt": null,
+        "truthSource": "OWNER_CATEGORY_AND_WP006B_PROVENANCE"
+      },
+      "rights": {
+        "sourceLicense": "OWNER_CONTROLLED_PRIVATE_RESEARCH",
+        "providerTermsClass": "UPSTREAM_GENERATOR_UNKNOWN",
+        "trainingEligibility": "REVIEW_REQUIRED",
+        "evaluationEligibility": true,
+        "commercialConstraint": "PRIVATE_LYTHAUS_RESEARCH_ONLY;_UPSTREAM_TERMS_UNRESOLVED",
+        "rightsAuditId": "WP007A-RIGHTS-OWNER-SYNTHETIC-UNKNOWN"
+      },
+      "file": {
+        "sha256": "ee47f7d89a68bffd426947b6e075f0b050c71804a411ee45faded279dc80464a",
+        "width": 1086,
+        "height": 1448,
+        "format": "PNG",
+        "byteSize": 2515171
+      },
+      "benchmark": {
+        "role": "UNKNOWN_GENERATOR_DIAGNOSTIC",
+        "hardNegativeSubtype": null,
+        "promptTaxonomy": null,
+        "exclusionReason": null,
+        "duplicateGroupId": null
+      }
+    }
+  ]
+}
