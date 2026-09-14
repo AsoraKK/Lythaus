@@ -3,7 +3,7 @@
   "benchmarkVersion": "lythaus-forensic-microbench-v0",
   "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
   "baseCommit": "04f3d3e6d83540dbf52a21f6760fb2398ab1c9f9",
-  "implementationCommit": null,
+  "implementationCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
   "specialistId": "lythaus-ef2-pixel-acquisition-v0",
   "specialistVersion": "0",
   "featureRegistryHash": "1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9",
@@ -14,14 +14,19 @@
   "incrementalCostUsd": 0,
   "mediaRootLabel": "external-owner-seed/wp004a-observer-v0/originals",
   "mediaAccess": {
-    "calibrationPixels": false,
-    "evaluationPixels": false,
-    "transformationPixels": false,
+    "calibrationPixels": true,
+    "evaluationPixels": true,
+    "transformationPixels": true,
     "lgePixels": false
   },
   "deviceHoldoutStatus": "SEALED",
+  "unseenDeviceHoldoutConsumed": false,
+  "sourceMediaModified": false,
   "temporaryMediaPersisted": false,
   "rawResidualsPersisted": false,
   "rawMetadataPersisted": false,
-  "status": "PLANNED"
+  "thresholdRetunedAfterEvaluation": false,
+  "decision": "REJECT_CURRENT_EF2_MEASUREMENT",
+  "classification": "WP006C_EF2_NOT_DEMONSTRATED",
+  "status": "COMPLETE"
 }

@@ -1,0 +1,1688 @@
+{
+  "schemaVersion": "lythaus-wp006c-ef2-result-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+  "implementationCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+  "featureRegistryHash": "1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9",
+  "configurationHash": "acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e",
+  "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+  "specialistStatus": "MEASUREMENT_ONLY",
+  "threshold": {
+    "method": "90th percentile calibration-camera LOFO",
+    "value": 3.515089017620759,
+    "frozenBy": "ef2-calibration-freeze.json"
+  },
+  "rows": [
+    {
+      "sampleId": "CAMERA_20260313_060829",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260313_060829",
+      "inputHash": "e748c6326f1378211197a4ade7f4902f9501f5102678ab5f7d2315a4225056d7",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 3.355727164850399,
+        "normalizedMeasurement": 0.22958279115132452,
+        "applicability": "applicable",
+        "runtimeMs": 753.7715000000007,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "e748c6326f1378211197a4ade7f4902f9501f5102678ab5f7d2315a4225056d7",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 3.355727164850399,
+      "normalizedMeasurement": 0.22958279115132452,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2.3803898676271715,
+        "INTENSITY_CONDITIONED_RESIDUAL": 0.8140729088037741,
+        "CROSS_CHANNEL_RESIDUAL": 5.783731879191921,
+        "RESIDUAL_AUTOCORRELATION": 4.930765845763132,
+        "PARITY_PERIODICITY": 0.2626637324120504,
+        "EDGE_CONDITIONED_RESIDUAL": 4.331064462073627,
+        "MULTISCALE_RESIDUAL": 1.391425914708181,
+        "PATCH_CONSISTENCY": 8.824291054541579
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 753.7715000000007,
+      "decodedWidth": 8160,
+      "decodedHeight": 6120,
+      "acceptedAtFrozenThreshold": true,
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "evaluationSlice": "SEEN_DEVICE_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "CAMERA_20260313_060845",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260313_060845",
+      "inputHash": "65bdde15cf1b4c127f2991143547f2e3e140476b76d1e74debd50a135d114ac3",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 5.943280144497259,
+        "normalizedMeasurement": 0.1440241469721667,
+        "applicability": "applicable",
+        "runtimeMs": 831.2673000000004,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "65bdde15cf1b4c127f2991143547f2e3e140476b76d1e74debd50a135d114ac3",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 5.943280144497259,
+      "normalizedMeasurement": 0.1440241469721667,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 6.345793494743652,
+        "INTENSITY_CONDITIONED_RESIDUAL": 0.28968034809121235,
+        "CROSS_CHANNEL_RESIDUAL": 360.5575326601764,
+        "RESIDUAL_AUTOCORRELATION": 1.0195906130852692,
+        "PARITY_PERIODICITY": 1.1943712484820177,
+        "EDGE_CONDITIONED_RESIDUAL": 5.5407667942508665,
+        "MULTISCALE_RESIDUAL": 8.244380200713778,
+        "PATCH_CONSISTENCY": 72.92868770004385
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 831.2673000000004,
+      "decodedWidth": 8160,
+      "decodedHeight": 6120,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "evaluationSlice": "SEEN_DEVICE_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "CAMERA_20260317_073114",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260317_073114",
+      "inputHash": "79370a8ae483ea4a659ea3d0ef9bcbdaf9b7e8a011ecf366284338fc811700dc",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 5.186317091496648,
+        "normalizedMeasurement": 0.16164706483839017,
+        "applicability": "applicable",
+        "runtimeMs": 402.71750000000065,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "79370a8ae483ea4a659ea3d0ef9bcbdaf9b7e8a011ecf366284338fc811700dc",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 5.186317091496648,
+      "normalizedMeasurement": 0.16164706483839017,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 5.4235348077276955,
+        "INTENSITY_CONDITIONED_RESIDUAL": 1.2676401356537204,
+        "CROSS_CHANNEL_RESIDUAL": 32.41358919217616,
+        "RESIDUAL_AUTOCORRELATION": 3.5866322501663452,
+        "PARITY_PERIODICITY": 8.081568020140763,
+        "EDGE_CONDITIONED_RESIDUAL": 4.949099375265601,
+        "MULTISCALE_RESIDUAL": 8.649054510931984,
+        "PATCH_CONSISTENCY": 4.139778907554098
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 402.71750000000065,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "evaluationSlice": "SEEN_DEVICE_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "HN_001",
+      "sourceFamilyId": "WP006B-FAMILY-HN_001",
+      "inputHash": "5d79ae4c59841da51a0edc5c08e9c9da55bc9d975283d566c5ffb30b974c0747",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 36.145948380548234,
+        "normalizedMeasurement": 0.026920836419501885,
+        "applicability": "applicable",
+        "runtimeMs": 220.4393999999993,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "5d79ae4c59841da51a0edc5c08e9c9da55bc9d975283d566c5ffb30b974c0747",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 36.145948380548234,
+      "normalizedMeasurement": 0.026920836419501885,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 48.115195307606946,
+        "INTENSITY_CONDITIONED_RESIDUAL": 62.79372895913438,
+        "CROSS_CHANNEL_RESIDUAL": 0.10433264800978359,
+        "RESIDUAL_AUTOCORRELATION": 4.837413057511402,
+        "PARITY_PERIODICITY": 58.406607955694476,
+        "EDGE_CONDITIONED_RESIDUAL": 24.176701453489528,
+        "MULTISCALE_RESIDUAL": 8.730579604874801,
+        "PATCH_CONSISTENCY": 13150.88737462797
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 220.4393999999993,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "HN_002",
+      "sourceFamilyId": "WP006B-FAMILY-HN_002",
+      "inputHash": "aeeb8bd3f40939785c9f8caf00d71a1fd0dd616449f0c0ab687e907f17d38e96",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 704.8652304268347,
+        "normalizedMeasurement": 0.0014167010314352824,
+        "applicability": "applicable",
+        "runtimeMs": 158.3019000000004,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "aeeb8bd3f40939785c9f8caf00d71a1fd0dd616449f0c0ab687e907f17d38e96",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 704.8652304268347,
+      "normalizedMeasurement": 0.0014167010314352824,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 10617.557524875932,
+        "INTENSITY_CONDITIONED_RESIDUAL": 1238.5128611352968,
+        "CROSS_CHANNEL_RESIDUAL": 3.2675051131034327,
+        "RESIDUAL_AUTOCORRELATION": 1.2939825678746486,
+        "PARITY_PERIODICITY": 171.21759971837255,
+        "EDGE_CONDITIONED_RESIDUAL": 1283.7377394277275,
+        "MULTISCALE_RESIDUAL": 1.1478007066573963,
+        "PATCH_CONSISTENCY": 14885.653294856318
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 158.3019000000004,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "HN_003",
+      "sourceFamilyId": "WP006B-FAMILY-HN_003",
+      "inputHash": "cadeb3cabe61fb4019c3ab1f327faa5b0bd8316125db388dd9d490b8ba7e861e",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 818.8936393290144,
+        "normalizedMeasurement": 0.0012196703962947942,
+        "applicability": "applicable",
+        "runtimeMs": 366.7065999999995,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "cadeb3cabe61fb4019c3ab1f327faa5b0bd8316125db388dd9d490b8ba7e861e",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 818.8936393290144,
+      "normalizedMeasurement": 0.0012196703962947942,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2502.5101898336998,
+        "INTENSITY_CONDITIONED_RESIDUAL": 36.81361696527679,
+        "CROSS_CHANNEL_RESIDUAL": 14.40995933481345,
+        "RESIDUAL_AUTOCORRELATION": 2.08975767727813,
+        "PARITY_PERIODICITY": 15706.360909026436,
+        "EDGE_CONDITIONED_RESIDUAL": 1600.9736616927519,
+        "MULTISCALE_RESIDUAL": 4.254105113205396,
+        "PATCH_CONSISTENCY": 29127.97079379046
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 366.7065999999995,
+      "decodedWidth": 4000,
+      "decodedHeight": 3201,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "HN_004",
+      "sourceFamilyId": "WP006B-FAMILY-HN_004",
+      "inputHash": "ef0dc8fca9aac4ebfbf2e8bada607a0b7a31c55392ea8e6aba25172bf8865166",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 52.72072011352351,
+        "normalizedMeasurement": 0.018614791422877124,
+        "applicability": "applicable",
+        "runtimeMs": 133.20329999999922,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "ef0dc8fca9aac4ebfbf2e8bada607a0b7a31c55392ea8e6aba25172bf8865166",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 52.72072011352351,
+      "normalizedMeasurement": 0.018614791422877124,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 829.4909338720438,
+        "INTENSITY_CONDITIONED_RESIDUAL": 11.272849633643979,
+        "CROSS_CHANNEL_RESIDUAL": 0.4897384657197925,
+        "RESIDUAL_AUTOCORRELATION": 4.223375920481388,
+        "PARITY_PERIODICITY": 485.42148132987455,
+        "EDGE_CONDITIONED_RESIDUAL": 94.16859059340305,
+        "MULTISCALE_RESIDUAL": 5.849844963680579,
+        "PATCH_CONSISTENCY": 59735.64729983634
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 133.20329999999922,
+      "decodedWidth": 1100,
+      "decodedHeight": 986,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20240114_133033_d328fd0c",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20240114_133033_d328fd0c",
+      "inputHash": "d328fd0c98ad2593a33cdbb557c8c7e316526548b3bf631c71cfb064e7043328",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 655.966574374095,
+        "normalizedMeasurement": 0.0015221474562122428,
+        "applicability": "applicable",
+        "runtimeMs": 160.17489999999998,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "d328fd0c98ad2593a33cdbb557c8c7e316526548b3bf631c71cfb064e7043328",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 655.966574374095,
+      "normalizedMeasurement": 0.0015221474562122428,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 9985.294140268208,
+        "INTENSITY_CONDITIONED_RESIDUAL": 1094.6286505955768,
+        "CROSS_CHANNEL_RESIDUAL": 3.268528056629947,
+        "RESIDUAL_AUTOCORRELATION": 3.427284394919831,
+        "PARITY_PERIODICITY": 569.594461147858,
+        "EDGE_CONDITIONED_RESIDUAL": 742.338687600332,
+        "MULTISCALE_RESIDUAL": 3.9464366873924837,
+        "PATCH_CONSISTENCY": 43717.98420146681
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 160.17489999999998,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20240317_121621_c3d84b87",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20240317_121621_c3d84b87",
+      "inputHash": "c3d84b877df2c490967fdd853681be2657f315d7c90e8434448a52a027315e75",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 24.988185016284852,
+        "normalizedMeasurement": 0.03847902419400873,
+        "applicability": "applicable",
+        "runtimeMs": 158.64320000000043,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "c3d84b877df2c490967fdd853681be2657f315d7c90e8434448a52a027315e75",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 24.988185016284852,
+      "normalizedMeasurement": 0.03847902419400873,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 28.83835487561645,
+        "INTENSITY_CONDITIONED_RESIDUAL": 29.67942886530247,
+        "CROSS_CHANNEL_RESIDUAL": 1.816736793364102,
+        "RESIDUAL_AUTOCORRELATION": 2.4847652954686343,
+        "PARITY_PERIODICITY": 38.42745787027848,
+        "EDGE_CONDITIONED_RESIDUAL": 21.13801515695326,
+        "MULTISCALE_RESIDUAL": 6.660464100233538,
+        "PATCH_CONSISTENCY": 74.02421179670246
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 158.64320000000043,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250723_053242_d59a24be",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250723_053242_d59a24be",
+      "inputHash": "d59a24be36cbfe5f0e934d0e28d0fad85a8df1f445fc348864f97c487f8f7615",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 88.47983016991496,
+        "normalizedMeasurement": 0.011175702927699805,
+        "applicability": "applicable",
+        "runtimeMs": 151.89720000000125,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "d59a24be36cbfe5f0e934d0e28d0fad85a8df1f445fc348864f97c487f8f7615",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 88.47983016991496,
+      "normalizedMeasurement": 0.011175702927699805,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2896.736036183914,
+        "INTENSITY_CONDITIONED_RESIDUAL": 20.480773005731503,
+        "CROSS_CHANNEL_RESIDUAL": 3.2674419026283132,
+        "RESIDUAL_AUTOCORRELATION": 3.0640487204901143,
+        "PARITY_PERIODICITY": 156.47888733409843,
+        "EDGE_CONDITIONED_RESIDUAL": 474.94865206698904,
+        "MULTISCALE_RESIDUAL": 2.056496587497833,
+        "PATCH_CONSISTENCY": 30122.313051324163
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 151.89720000000125,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250730_051354_9a509d6a",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250730_051354_9a509d6a",
+      "inputHash": "9a509d6a6fcbd3d52c7cd6d278c96943734eb0006bdc98779a7bc04c32982aa6",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 41.71071013605147,
+        "normalizedMeasurement": 0.023413331148430496,
+        "applicability": "applicable",
+        "runtimeMs": 156.36759999999958,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "9a509d6a6fcbd3d52c7cd6d278c96943734eb0006bdc98779a7bc04c32982aa6",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 41.71071013605147,
+      "normalizedMeasurement": 0.023413331148430496,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2873.565017745157,
+        "INTENSITY_CONDITIONED_RESIDUAL": 77.22605917685422,
+        "CROSS_CHANNEL_RESIDUAL": 2.507981138788816,
+        "RESIDUAL_AUTOCORRELATION": 2.8932159783282363,
+        "PARITY_PERIODICITY": 6.19536109524872,
+        "EDGE_CONDITIONED_RESIDUAL": 481.52240654646175,
+        "MULTISCALE_RESIDUAL": 2.130117425230983,
+        "PATCH_CONSISTENCY": 10163.761267790644
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 156.36759999999958,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250806_072710_53bd658a",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250806_072710_53bd658a",
+      "inputHash": "53bd658afb3e9062619dfb6223e1ff0c41e8005db8b45f0bd4f5a39c3741f1b1",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 181.31156245563142,
+        "normalizedMeasurement": 0.005485115625858162,
+        "applicability": "applicable",
+        "runtimeMs": 150.64409999999953,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "53bd658afb3e9062619dfb6223e1ff0c41e8005db8b45f0bd4f5a39c3741f1b1",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 181.31156245563142,
+      "normalizedMeasurement": 0.005485115625858162,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2846.964253506161,
+        "INTENSITY_CONDITIONED_RESIDUAL": 48.931473839310186,
+        "CROSS_CHANNEL_RESIDUAL": 2.564354776419084,
+        "RESIDUAL_AUTOCORRELATION": 3.37217600720645,
+        "PARITY_PERIODICITY": 313.69165107195266,
+        "EDGE_CONDITIONED_RESIDUAL": 457.05783340151925,
+        "MULTISCALE_RESIDUAL": 1.9645627423529302,
+        "PATCH_CONSISTENCY": 18281.670457108667
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 150.64409999999953,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250813_073259_1a23e925",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250813_073259_1a23e925",
+      "inputHash": "1a23e925d103e4d822b3751ac02fad473d739e2eadc2d8a6c5fee727276a20c5",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 209.58765615160596,
+        "normalizedMeasurement": 0.004748616411211118,
+        "applicability": "applicable",
+        "runtimeMs": 149.53660000000127,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "1a23e925d103e4d822b3751ac02fad473d739e2eadc2d8a6c5fee727276a20c5",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 209.58765615160596,
+      "normalizedMeasurement": 0.004748616411211118,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2862.2983317894323,
+        "INTENSITY_CONDITIONED_RESIDUAL": 84.22852370501418,
+        "CROSS_CHANNEL_RESIDUAL": 2.516900330471371,
+        "RESIDUAL_AUTOCORRELATION": 3.562126844998918,
+        "PARITY_PERIODICITY": 334.9467885981977,
+        "EDGE_CONDITIONED_RESIDUAL": 483.47573511927766,
+        "MULTISCALE_RESIDUAL": 1.343901687424662,
+        "PATCH_CONSISTENCY": 20214.207500516204
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 149.53660000000127,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250820_053933_991aced7",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250820_053933_991aced7",
+      "inputHash": "991aced765cc1be48d295f564f7e06ac80703525b610ca74a2963e61d7802965",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 152.84758910371664,
+        "normalizedMeasurement": 0.006499939360933685,
+        "applicability": "applicable",
+        "runtimeMs": 159.36579999999958,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "991aced765cc1be48d295f564f7e06ac80703525b610ca74a2963e61d7802965",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 152.84758910371664,
+      "normalizedMeasurement": 0.006499939360933685,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2855.5533226870484,
+        "INTENSITY_CONDITIONED_RESIDUAL": 99.03390554645824,
+        "CROSS_CHANNEL_RESIDUAL": 3.268528056629947,
+        "RESIDUAL_AUTOCORRELATION": 3.069490381641639,
+        "PARITY_PERIODICITY": 206.66127266097507,
+        "EDGE_CONDITIONED_RESIDUAL": 460.33057918353285,
+        "MULTISCALE_RESIDUAL": 2.0057341263638295,
+        "PATCH_CONSISTENCY": 27379.617854907017
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 159.36579999999958,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250827_053407_8a0ef9d2",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250827_053407_8a0ef9d2",
+      "inputHash": "8a0ef9d2df89140e5878065f465c499fc94119916eacc879a94d64839b8fd350",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 118.70046037746111,
+        "normalizedMeasurement": 0.008354186749546487,
+        "applicability": "applicable",
+        "runtimeMs": 158.47789999999986,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "8a0ef9d2df89140e5878065f465c499fc94119916eacc879a94d64839b8fd350",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 118.70046037746111,
+      "normalizedMeasurement": 0.008354186749546487,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2801.06221032223,
+        "INTENSITY_CONDITIONED_RESIDUAL": 42.41023476673746,
+        "CROSS_CHANNEL_RESIDUAL": 2.5178014165434868,
+        "RESIDUAL_AUTOCORRELATION": 2.890899216137459,
+        "PARITY_PERIODICITY": 194.99068598818477,
+        "EDGE_CONDITIONED_RESIDUAL": 464.59732946048206,
+        "MULTISCALE_RESIDUAL": 1.8069781230617805,
+        "PATCH_CONSISTENCY": 16764.267301346135
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 158.47789999999986,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250903_052521_ba910e65",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250903_052521_ba910e65",
+      "inputHash": "ba910e6539f496f9b6ad9d6a2e6cbcdeff60ddd2dfe11f5353e9d59de998565d",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 242.03203357278892,
+        "normalizedMeasurement": 0.004114683917585279,
+        "applicability": "applicable",
+        "runtimeMs": 157.7658999999985,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "ba910e6539f496f9b6ad9d6a2e6cbcdeff60ddd2dfe11f5353e9d59de998565d",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 242.03203357278892,
+      "normalizedMeasurement": 0.004114683917585279,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2906.2532982013745,
+        "INTENSITY_CONDITIONED_RESIDUAL": 47.894829505468365,
+        "CROSS_CHANNEL_RESIDUAL": 2.565136640852766,
+        "RESIDUAL_AUTOCORRELATION": 3.1983620860471795,
+        "PARITY_PERIODICITY": 436.1692376401095,
+        "EDGE_CONDITIONED_RESIDUAL": 443.0415056698352,
+        "MULTISCALE_RESIDUAL": 2.820635133602357,
+        "PATCH_CONSISTENCY": 40384.15900993556
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 157.7658999999985,
+      "decodedWidth": 1080,
+      "decodedHeight": 2400,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250910_082336_0e4d3d6f",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250910_082336_0e4d3d6f",
+      "inputHash": "0e4d3d6ffb9d652b89bce27b879812872c7ac7262da12b5be779834834354b61",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 79.21559711386881,
+        "normalizedMeasurement": 0.012466403492334108,
+        "applicability": "applicable",
+        "runtimeMs": 172.45449999999983,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "0e4d3d6ffb9d652b89bce27b879812872c7ac7262da12b5be779834834354b61",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 79.21559711386881,
+      "normalizedMeasurement": 0.012466403492334108,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2163.398034622707,
+        "INTENSITY_CONDITIONED_RESIDUAL": 58.76044590984402,
+        "CROSS_CHANNEL_RESIDUAL": 2.4487147203655995,
+        "RESIDUAL_AUTOCORRELATION": 4.110807626482909,
+        "PARITY_PERIODICITY": 99.6707483178936,
+        "EDGE_CONDITIONED_RESIDUAL": 395.5819635704031,
+        "MULTISCALE_RESIDUAL": 1.369924738827027,
+        "PATCH_CONSISTENCY": 19304.049581294395
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 172.45449999999983,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20250917_053209_99e99abc",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20250917_053209_99e99abc",
+      "inputHash": "99e99abcd64b71ea245aee4e9b5f7f8db8493299279728e3bb8860a78f76c859",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 148.42034244092622,
+        "normalizedMeasurement": 0.0066925291674749905,
+        "applicability": "applicable",
+        "runtimeMs": 203.1196,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "99e99abcd64b71ea245aee4e9b5f7f8db8493299279728e3bb8860a78f76c859",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 148.42034244092622,
+      "normalizedMeasurement": 0.0066925291674749905,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2286.9058788475068,
+        "INTENSITY_CONDITIONED_RESIDUAL": 79.72083790275389,
+        "CROSS_CHANNEL_RESIDUAL": 3.268528056629947,
+        "RESIDUAL_AUTOCORRELATION": 3.31010178050935,
+        "PARITY_PERIODICITY": 217.11984697909855,
+        "EDGE_CONDITIONED_RESIDUAL": 374.2281075702014,
+        "MULTISCALE_RESIDUAL": 1.6957445218081704,
+        "PATCH_CONSISTENCY": 31986.421527377464
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 203.1196,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251003_053527_05cbbb0e",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251003_053527_05cbbb0e",
+      "inputHash": "05cbbb0eb5b1ddc5f2dc8018ac6544062a5d22f462627c3aa315ef7a04b0f39f",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 135.4212178925517,
+        "normalizedMeasurement": 0.007330238033702511,
+        "applicability": "applicable",
+        "runtimeMs": 194.1862000000001,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "05cbbb0eb5b1ddc5f2dc8018ac6544062a5d22f462627c3aa315ef7a04b0f39f",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 135.4212178925517,
+      "normalizedMeasurement": 0.007330238033702511,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 2007.7822639704996,
+        "INTENSITY_CONDITIONED_RESIDUAL": 93.3155922932412,
+        "CROSS_CHANNEL_RESIDUAL": 3.268528056629947,
+        "RESIDUAL_AUTOCORRELATION": 3.08763634065504,
+        "PARITY_PERIODICITY": 177.52684349186222,
+        "EDGE_CONDITIONED_RESIDUAL": 364.1978811135718,
+        "MULTISCALE_RESIDUAL": 2.1528247269203247,
+        "PATCH_CONSISTENCY": 41901.65297256926
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 194.1862000000001,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251009_070834_484ef5bf",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251009_070834_484ef5bf",
+      "inputHash": "484ef5bf93cf22d497976c68eb27c4bf91568513e289ac684b3f6f40380e4b28",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 170.99335335329164,
+        "normalizedMeasurement": 0.005814178167373128,
+        "applicability": "applicable",
+        "runtimeMs": 167.64459999999963,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "484ef5bf93cf22d497976c68eb27c4bf91568513e289ac684b3f6f40380e4b28",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 170.99335335329164,
+      "normalizedMeasurement": 0.005814178167373128,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 9095.278948766401,
+        "INTENSITY_CONDITIONED_RESIDUAL": 874.8016836238119,
+        "CROSS_CHANNEL_RESIDUAL": 3.268528056629947,
+        "RESIDUAL_AUTOCORRELATION": 0.7637980490704341,
+        "PARITY_PERIODICITY": 19.195511608555606,
+        "EDGE_CONDITIONED_RESIDUAL": 322.7911950980277,
+        "MULTISCALE_RESIDUAL": 3.68219372128497,
+        "PATCH_CONSISTENCY": 11852.459008638063
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 167.64459999999963,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251015_085741_f82d8e06",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251015_085741_f82d8e06",
+      "inputHash": "f82d8e06b2e7d5eeadd9c562b946744c86138eb1cf0e469f6aa711b46beee555",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 262.2883441936672,
+        "normalizedMeasurement": 0.0037981172431409615,
+        "applicability": "applicable",
+        "runtimeMs": 188.0059000000001,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "f82d8e06b2e7d5eeadd9c562b946744c86138eb1cf0e469f6aa711b46beee555",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 262.2883441936672,
+      "normalizedMeasurement": 0.0037981172431409615,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 8949.678430476883,
+        "INTENSITY_CONDITIONED_RESIDUAL": 765.8133659340672,
+        "CROSS_CHANNEL_RESIDUAL": 2.4992614579275467,
+        "RESIDUAL_AUTOCORRELATION": 1.4596153426762677,
+        "PARITY_PERIODICITY": 251.98649313703947,
+        "EDGE_CONDITIONED_RESIDUAL": 272.590195250295,
+        "MULTISCALE_RESIDUAL": 2.8356557867285224,
+        "PATCH_CONSISTENCY": 32653.08882987595
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 188.0059000000001,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251022_072731_56657bfe",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251022_072731_56657bfe",
+      "inputHash": "56657bfec593521b9cb2765abffa964f1a817e9fd651d6f183e96acaaf60becd",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 230.87752176573377,
+        "normalizedMeasurement": 0.004312621561525492,
+        "applicability": "applicable",
+        "runtimeMs": 158.44620000000032,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "56657bfec593521b9cb2765abffa964f1a817e9fd651d6f183e96acaaf60becd",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 230.87752176573377,
+      "normalizedMeasurement": 0.004312621561525492,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 8949.253684254658,
+        "INTENSITY_CONDITIONED_RESIDUAL": 697.0420982274295,
+        "CROSS_CHANNEL_RESIDUAL": 3.268528056629947,
+        "RESIDUAL_AUTOCORRELATION": 1.3227284137754962,
+        "PARITY_PERIODICITY": 146.54515061525294,
+        "EDGE_CONDITIONED_RESIDUAL": 315.2098929162146,
+        "MULTISCALE_RESIDUAL": 2.531091256625816,
+        "PATCH_CONSISTENCY": 24071.265229642246
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 158.44620000000032,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SCREENSHOT_20251030_053718_e727b8c8",
+      "sourceFamilyId": "WP006B-FAMILY-SCREENSHOT_20251030_053718_e727b8c8",
+      "inputHash": "e727b8c8f5210e43176a40e1cf47709eded5d2b073aac803c7f106f51a357db0",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 310.3285860636475,
+        "normalizedMeasurement": 0.003212040412490621,
+        "applicability": "applicable",
+        "runtimeMs": 147.85710000000108,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "e727b8c8f5210e43176a40e1cf47709eded5d2b073aac803c7f106f51a357db0",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 310.3285860636475,
+      "normalizedMeasurement": 0.003212040412490621,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 9061.21715817038,
+        "INTENSITY_CONDITIONED_RESIDUAL": 745.8410340331757,
+        "CROSS_CHANNEL_RESIDUAL": 1.3005231998941138,
+        "RESIDUAL_AUTOCORRELATION": 0.8283803792572572,
+        "PARITY_PERIODICITY": 294.91686310997454,
+        "EDGE_CONDITIONED_RESIDUAL": 325.74030901732044,
+        "MULTISCALE_RESIDUAL": 3.9944969575346425,
+        "PATCH_CONSISTENCY": 9150.787346123721
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 147.85710000000108,
+      "decodedWidth": 1080,
+      "decodedHeight": 2340,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "HARD_NEGATIVE_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SYN_001",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_001",
+      "inputHash": "6bf83641d4e5ed8f01497965fe3eb9e3345b2f2ed86ddc848b2ef27a81f8fb4e",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 15.1269815815929,
+        "normalizedMeasurement": 0.06200788380271887,
+        "applicability": "applicable",
+        "runtimeMs": 141.52310000000034,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "6bf83641d4e5ed8f01497965fe3eb9e3345b2f2ed86ddc848b2ef27a81f8fb4e",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 15.1269815815929,
+      "normalizedMeasurement": 0.06200788380271887,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 4.783885547962494,
+        "INTENSITY_CONDITIONED_RESIDUAL": 9.203135793616767,
+        "CROSS_CHANNEL_RESIDUAL": 69.32791848090294,
+        "RESIDUAL_AUTOCORRELATION": 9.750787661349133,
+        "PARITY_PERIODICITY": 613.4701364893482,
+        "EDGE_CONDITIONED_RESIDUAL": 20.50317550183667,
+        "MULTISCALE_RESIDUAL": 7.532380571029347,
+        "PATCH_CONSISTENCY": 147.8560273782465
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 141.52310000000034,
+      "decodedWidth": 1089,
+      "decodedHeight": 1444,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "SYNTHETIC_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SYN_002",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_002",
+      "inputHash": "96a87d57fe43a299ed45c370f6f883a23f94be832a5755898c460d98990d18c5",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 28.048853777011704,
+        "normalizedMeasurement": 0.03442476621199308,
+        "applicability": "applicable",
+        "runtimeMs": 188.23300000000017,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "96a87d57fe43a299ed45c370f6f883a23f94be832a5755898c460d98990d18c5",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 28.048853777011704,
+      "normalizedMeasurement": 0.03442476621199308,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 50.10044269774077,
+        "INTENSITY_CONDITIONED_RESIDUAL": 274.892239197418,
+        "CROSS_CHANNEL_RESIDUAL": 1.709697142662443,
+        "RESIDUAL_AUTOCORRELATION": 0.6859673895408039,
+        "PARITY_PERIODICITY": 5751.6407467634845,
+        "EDGE_CONDITIONED_RESIDUAL": 5.997264856282643,
+        "MULTISCALE_RESIDUAL": 0.3535141976681029,
+        "PATCH_CONSISTENCY": 4126.701386245572
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 188.23300000000017,
+      "decodedWidth": 1536,
+      "decodedHeight": 1024,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "SYNTHETIC_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SYN_003",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_003",
+      "inputHash": "ed8e5c84aca177b034f1d5755ecbdad0e3b620974c672b22fbb8d193d9035bec",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 3.0679554629459647,
+        "normalizedMeasurement": 0.2458237335951097,
+        "applicability": "applicable",
+        "runtimeMs": 177.39600000000064,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "ed8e5c84aca177b034f1d5755ecbdad0e3b620974c672b22fbb8d193d9035bec",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 3.0679554629459647,
+      "normalizedMeasurement": 0.2458237335951097,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 7.411187829271194,
+        "INTENSITY_CONDITIONED_RESIDUAL": 2.447172633529798,
+        "CROSS_CHANNEL_RESIDUAL": 3.2901374860016976,
+        "RESIDUAL_AUTOCORRELATION": 0.39108034204630465,
+        "PARITY_PERIODICITY": 9793.365627068053,
+        "EDGE_CONDITIONED_RESIDUAL": 2.845773439890232,
+        "MULTISCALE_RESIDUAL": 0.111013840801042,
+        "PATCH_CONSISTENCY": 12099.314428534819
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 177.39600000000064,
+      "decodedWidth": 1024,
+      "decodedHeight": 1536,
+      "acceptedAtFrozenThreshold": true,
+      "deviceFamily": null,
+      "evaluationSlice": "SYNTHETIC_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SYN_004",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_004",
+      "inputHash": "0d91b4a0bac861bdb7253d4e4f443ead9ee1cca0cd0b09401d2fa922a7b63b5a",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 51.888290892660706,
+        "normalizedMeasurement": 0.018907776808850703,
+        "applicability": "applicable",
+        "runtimeMs": 142.00370000000112,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "0d91b4a0bac861bdb7253d4e4f443ead9ee1cca0cd0b09401d2fa922a7b63b5a",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 51.888290892660706,
+      "normalizedMeasurement": 0.018907776808850703,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 155.10403278987414,
+        "INTENSITY_CONDITIONED_RESIDUAL": 82.24617793424184,
+        "CROSS_CHANNEL_RESIDUAL": 0.2094771567370456,
+        "RESIDUAL_AUTOCORRELATION": 2.003243925014201,
+        "PARITY_PERIODICITY": 2748.259565135461,
+        "EDGE_CONDITIONED_RESIDUAL": 21.530403851079573,
+        "MULTISCALE_RESIDUAL": 0.19448314729938881,
+        "PATCH_CONSISTENCY": 6993.950565929064
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 142.00370000000112,
+      "decodedWidth": 1536,
+      "decodedHeight": 1024,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "SYNTHETIC_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SYN_005",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_005",
+      "inputHash": "c65b7905ab1e52b2d607528084f6d0c22ce3662d1007843d05129cfbb008a40e",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 10.223467895103326,
+        "normalizedMeasurement": 0.08909902085043508,
+        "applicability": "applicable",
+        "runtimeMs": 173.8806000000004,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "c65b7905ab1e52b2d607528084f6d0c22ce3662d1007843d05129cfbb008a40e",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 10.223467895103326,
+      "normalizedMeasurement": 0.08909902085043508,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 89.72936482972534,
+        "INTENSITY_CONDITIONED_RESIDUAL": 3.6903059726987846,
+        "CROSS_CHANNEL_RESIDUAL": 1.9127038300775923,
+        "RESIDUAL_AUTOCORRELATION": 4.556129645136536,
+        "PARITY_PERIODICITY": 95.34807200212474,
+        "EDGE_CONDITIONED_RESIDUAL": 15.890806145070117,
+        "MULTISCALE_RESIDUAL": 0.9666605121291967,
+        "PATCH_CONSISTENCY": 139.06288989470954
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 173.8806000000004,
+      "decodedWidth": 768,
+      "decodedHeight": 1152,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "SYNTHETIC_NON_CAMERA_EVALUATION"
+    },
+    {
+      "sampleId": "SYN_006",
+      "sourceFamilyId": "WP006B-FAMILY-SYN_006",
+      "inputHash": "b4625db0195346e011946e4c75cc4be541e5f6db46d4a1294af2a6aa7e6273d1",
+      "split": "EVALUATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": 22.16803975057698,
+        "normalizedMeasurement": 0.04316290936850175,
+        "applicability": "applicable",
+        "runtimeMs": 156.71290000000045,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "b4625db0195346e011946e4c75cc4be541e5f6db46d4a1294af2a6aa7e6273d1",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": 22.16803975057698,
+      "normalizedMeasurement": 0.04316290936850175,
+      "groupScores": {
+        "RESIDUAL_ENERGY": 272.5079210246199,
+        "INTENSITY_CONDITIONED_RESIDUAL": 357.6386067725918,
+        "CROSS_CHANNEL_RESIDUAL": 2.199137015917748,
+        "RESIDUAL_AUTOCORRELATION": 0.7517464479358852,
+        "PARITY_PERIODICITY": 14.086546200755661,
+        "EDGE_CONDITIONED_RESIDUAL": 30.249533300398298,
+        "MULTISCALE_RESIDUAL": 0.4979606499320204,
+        "PATCH_CONSISTENCY": 5813.296496349804
+      },
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 156.71290000000045,
+      "decodedWidth": 768,
+      "decodedHeight": 1152,
+      "acceptedAtFrozenThreshold": false,
+      "deviceFamily": null,
+      "evaluationSlice": "SYNTHETIC_NON_CAMERA_EVALUATION"
+    }
+  ],
+  "summary": {
+    "bySlice": {
+      "SEEN_DEVICE_CAMERA_EVALUATION": {
+        "sampleCount": 3,
+        "sourceFamilyCount": 3,
+        "rawScore": {
+          "count": 3,
+          "median": 5.186317091496648,
+          "iqr": 1.29377648982343,
+          "p95": 5.867583839197198
+        },
+        "normalizedMedian": 0.16164706483839017,
+        "acceptanceAtFrozenThreshold": {
+          "valid": 3,
+          "accepted": 1,
+          "rejected": 2,
+          "rate": 0.3333333333333333,
+          "invalid": 0
+        },
+        "runtimeMs": {
+          "count": 3,
+          "median": 753.7715000000007,
+          "iqr": 214.2748999999999,
+          "p95": 823.5177200000005
+        },
+        "invalidOrUnavailableCount": 0
+      },
+      "HARD_NEGATIVE_NON_CAMERA_EVALUATION": {
+        "sampleCount": 20,
+        "sourceFamilyCount": 20,
+        "rawScore": {
+          "count": 20,
+          "median": 161.92047122850414,
+          "iqr": 160.9323393221051,
+          "p95": 710.5666508719438
+        },
+        "normalizedMedian": 0.006157058764153406,
+        "acceptanceAtFrozenThreshold": {
+          "valid": 20,
+          "accepted": 0,
+          "rejected": 20,
+          "rate": 0,
+          "invalid": 0
+        },
+        "runtimeMs": {
+          "count": 20,
+          "median": 158.56055000000015,
+          "iqr": 21.092349999999897,
+          "p95": 227.7527599999994
+        },
+        "invalidOrUnavailableCount": 0
+      },
+      "SYNTHETIC_NON_CAMERA_EVALUATION": {
+        "sampleCount": 6,
+        "sourceFamilyCount": 6,
+        "rawScore": {
+          "count": 6,
+          "median": 18.64751066608494,
+          "iqr": 15.129303953677304,
+          "p95": 45.92843161374846
+        },
+        "normalizedMedian": 0.05258539658561031,
+        "acceptanceAtFrozenThreshold": {
+          "valid": 6,
+          "accepted": 1,
+          "rejected": 5,
+          "rate": 0.16666666666666666,
+          "invalid": 0
+        },
+        "runtimeMs": {
+          "count": 6,
+          "median": 165.29675000000043,
+          "iqr": 30.836149999999634,
+          "p95": 185.5237500000003
+        },
+        "invalidOrUnavailableCount": 0
+      }
+    },
+    "cameraVsNonCamera": {
+      "rocAuc": 0.9615384615384616,
+      "bootstrap95": {
+        "lower": 0.8846153846153846,
+        "upper": 1,
+        "replicates": 1000
+      },
+      "cliffsDelta": 0.9230769230769231
+    }
+  },
+  "stageA": {
+    "passed": false,
+    "failures": [
+      "NO_STABLE_CAMERA_MANIFOLD",
+      "INSUFFICIENT_SEEN_CAMERA_EVALUATION",
+      "SHORTCUT_RISK"
+    ],
+    "calibrationLofoAcceptance": 0.896551724137931,
+    "calibrationLofo": {
+      "valid": 29,
+      "accepted": 26,
+      "rejected": 3,
+      "rate": 0.896551724137931,
+      "invalid": 0
+    },
+    "perDeviceLofo": {
+      "samsung Galaxy A56 5G": {
+        "familyCount": 13,
+        "validCount": 13,
+        "rawScores": [
+          1.6260866979615862,
+          5.858439592869412,
+          3.860645521070053,
+          0.3886701735767861,
+          0.22912416110278594,
+          0.158099500114519,
+          0.2798163317930965,
+          3.3116709985923274,
+          7.106155338350995,
+          1.843632036444186,
+          3.428699891758436,
+          1.5788039222046035,
+          0.4111257778176852
+        ]
+      },
+      "samsung SM-A526B": {
+        "familyCount": 16,
+        "validCount": 16,
+        "rawScores": [
+          0.3303482119535254,
+          0.9342698483359317,
+          0.3931675852832903,
+          0.3723255658486477,
+          2.937711278501751,
+          0.6458194389309835,
+          0.9977472729623622,
+          0.6808553846030642,
+          0.9047222647737493,
+          1.1384256772764223,
+          2.2323070165802363,
+          0.6070831213716514,
+          0.6166236436800353,
+          0.7301641410384138,
+          2.5262223002923534,
+          0.4495777834002551
+        ]
+      }
+    },
+    "seenCameraEvaluationAcceptance": 0.3333333333333333,
+    "seenCameraGate": false,
+    "nonCameraFalseAcceptance": 0.038461538461538464,
+    "hardNegativeFalseAcceptance": 0,
+    "syntheticFalseAcceptance": 0.16666666666666666,
+    "categoryDecisions": {
+      "SEEN_DEVICE_CAMERA_EVALUATION": {
+        "valid": 3,
+        "accepted": 1,
+        "rejected": 2,
+        "rate": 0.3333333333333333,
+        "invalid": 0
+      },
+      "HARD_NEGATIVE_NON_CAMERA_EVALUATION": {
+        "valid": 20,
+        "accepted": 0,
+        "rejected": 20,
+        "rate": 0,
+        "invalid": 0
+      },
+      "SYNTHETIC_NON_CAMERA_EVALUATION": {
+        "valid": 6,
+        "accepted": 1,
+        "rejected": 5,
+        "rate": 0.16666666666666666,
+        "invalid": 0
+      }
+    },
+    "shortcutRisk": "HIGH",
+    "deviceConfounding": "MODERATE",
+    "sourceFamilyLeakage": "PASS",
+    "calibrationEvaluationLeakage": "PASS",
+    "truthLeakage": "PASS",
+    "metadataInputLeakage": "PASS"
+  },
+  "runtime": {
+    "medianMs": 159.36579999999958,
+    "p95Ms": 613.3498999999999,
+    "maxMs": 831.2673000000004,
+    "count": 29
+  },
+  "mediaAccess": {
+    "calibrationPixels": true,
+    "evaluationPixels": true,
+    "lgePixels": false
+  }
+}

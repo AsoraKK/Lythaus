@@ -227,7 +227,7 @@ async function candidateOwnerPaths(mediaRoot, record) {
 }
 
 async function resolveOwnerMedia(mediaRoot, record, verifyContent = true) {
-  const candidates = (await candidateOwnerPaths(mediaRoot, record)).filter(async () => true);
+  const candidates = await candidateOwnerPaths(mediaRoot, record);
   const existing = [];
   for (const candidate of candidates) {
     try {
@@ -818,6 +818,7 @@ function buildReport(result) {
     summaryLine('HARD_NEGATIVE_EVALUATION_FAMILIES', result.counts.hardNegativeEvaluationFamilies),
     summaryLine('SYNTHETIC_EVALUATION_FAMILIES', result.counts.syntheticEvaluationFamilies),
     summaryLine('CALIBRATION_LOFO_ACCEPTANCE', stageA.calibrationLofoAcceptance),
+    summaryLine('CALIBRATION_THRESHOLD_VALUE', result.calibration.threshold),
     summaryLine('SEEN_CAMERA_EVALUATION_ACCEPTANCE', stageA.seenCameraEvaluationAcceptance),
     summaryLine('NON_CAMERA_FALSE_ACCEPTANCE', stageA.nonCameraFalseAcceptance),
     summaryLine('HARD_NEGATIVE_FALSE_ACCEPTANCE', stageA.hardNegativeFalseAcceptance),
@@ -835,7 +836,7 @@ function buildReport(result) {
     '',
     '## Frozen measurement',
     '',
-    'The experiment used `LYTHAUS_EF2_PIXEL_ACQUISITION_CONSISTENCY_V0` as a deterministic one-class camera-consistency measurement. It operated on native decoded pixels, selected up to eight 256×256 patches by fixed sampled luminance variance, aggregated 27 interpretable residual/pipeline scalars, balanced the two enrolled Samsung devices equally, and used a calibration-camera-only 90th-percentile leave-one-family-out distance threshold.',
+    'The experiment used `LYTHAUS_EF2_PIXEL_ACQUISITION_CONSISTENCY_V0` as a deterministic one-class camera-consistency measurement. It operated on native decoded pixels, selected up to eight 256×256 patches by fixed sampled luminance variance, aggregated 26 interpretable residual/pipeline scalars, balanced the two enrolled Samsung devices equally, and used a calibration-camera-only 90th-percentile leave-one-family-out distance threshold.',
     '',
     'The normalized measurement is monotonic with camera-manifold consistency and is not a probability of camera origin. `PRNU_STATUS = NOT_ADMITTED_AS_PRIMARY_EF2_SIGNAL`; no sensor fingerprint, camera identification, synthetic verdict, directional evidence, or product enforcement was produced.',
     '',
@@ -844,12 +845,17 @@ function buildReport(result) {
     `The frozen benchmark contained ${result.counts.calibrationCameraFamilies} calibration camera families (${result.calibration.devices.join(', ')}) and ${result.counts.seenCameraEvaluationFamilies} seen-device camera evaluation families. The non-camera evaluation controls were kept as separate hard-negative (${result.counts.hardNegativeEvaluationFamilies}) and synthetic (${result.counts.syntheticEvaluationFamilies}) slices. Routing-fixture coverage is not production traffic coverage, and these results are not commercial detector accuracy.`,
     '',
     `Stage A ${stageA.passed ? 'passed' : 'failed'} because: ${stageA.failures.length === 0 ? 'all predeclared checks passed' : stageA.failures.join(', ')}. The screenshot-heavy hard-negative slice, unknown generator provenance, owner-controlled source pool, and small seen-camera evaluation remain material limitations.`,
+    `Per-device calibration LOFO acceptance at the frozen threshold: ${Object.entries(stageA.perDeviceLofo).map(([device, value]) => `${device}=${format(value.rawScores.filter((score) => score <= result.calibration.threshold).length / Math.max(1, value.validCount))} (${value.rawScores.filter((score) => score <= result.calibration.threshold).length}/${value.validCount})`).join('; ')}.`,
     '',
     '## Evaluation results',
     '',
     '| Slice | Families | Valid | Median raw distance | IQR | Acceptance | Runtime p50 / p95 / max ms |',
     '|---|---:|---:|---:|---:|---:|---:|',
-    ...Object.entries(evalBySlice).map(([slice, value]) => `| ${slice} | ${value.sourceFamilyCount} | ${value.acceptanceAtFrozenThreshold.valid} | ${format(value.rawScore.median)} | ${format(value.rawScore.iqr)} | ${format(value.acceptanceAtFrozenThreshold.rate)} | ${format(value.runtimeMs.median)} / ${format(value.runtimeMs.p95)} / ${format(value.runtimeMs.p95 === null ? null : value.runtimeMs.p95)} |`),
+    ...Object.entries(evalBySlice).map(([slice, value]) => {
+      const runtimes = result.evaluation.rows.filter((row) => row.evaluationSlice === slice).map((row) => row.runtimeMs).filter((runtime) => Number.isFinite(runtime));
+      const maximum = runtimes.length === 0 ? null : Math.max(...runtimes);
+      return `| ${slice} | ${value.sourceFamilyCount} | ${value.acceptanceAtFrozenThreshold.valid} | ${format(value.rawScore.median)} | ${format(value.rawScore.iqr)} | ${format(value.acceptanceAtFrozenThreshold.rate)} | ${format(value.runtimeMs.median)} / ${format(value.runtimeMs.p95)} / ${format(maximum)} |`;
+    }),
     '',
     `Descriptive camera-versus-non-camera ROC AUC = ${format(result.evaluation.summary.cameraVsNonCamera.rocAuc)}; bootstrap 95% interval = ${result.evaluation.summary.cameraVsNonCamera.bootstrap95 ? `${format(result.evaluation.summary.cameraVsNonCamera.bootstrap95.lower)}–${format(result.evaluation.summary.cameraVsNonCamera.bootstrap95.upper)}` : 'NOT_AVAILABLE'}; Cliff's delta = ${format(result.evaluation.summary.cameraVsNonCamera.cliffsDelta)}. These are low-powered research diagnostics, not a Lythaus accuracy claim.`,
     '',
@@ -864,6 +870,7 @@ function buildReport(result) {
     '## Transformation stress',
     '',
     `Metadata-strip decoded-pixel invariance = ${result.transformation.metadataStripInvariance}. The bounded stress used eight calibration families (four per active device) and did not retune the score or threshold.`,
+    'Feature-group drift was not computed in this executed run because calibration feature-group scores were not persisted in the calibration artifact; this supplementary omission does not affect the primary score, threshold, Stage-A gate, or sealed-holdout decision.',
     '',
     ...Object.entries(result.transformation.summary).map(([name, value]) => `- ${name}: valid=${value.validCount}, acceptance=${format(value.acceptanceAtFrozenThreshold)}, median score delta=${format(value.scoreDeltaFromMetadataStrippedBaseline?.median)}, group drift median=${format(value.groupScoreAbsoluteDeltaMedian)}.`),
     '',
@@ -879,6 +886,19 @@ function buildReport(result) {
     '- Physical camera acquisition and synthetic depicted content remain independent axes.',
     '- `nativeStatus` and byte-for-byte native-original availability remain unresolved.',
     '- This work does not establish end-to-end authenticity accuracy, human false-positive rate, broad camera generalization, unseen-generator generalization, camera-native probability, native-byte originality, sensor identity, or EF2 directional validation.',
+    '',
+    'END_TO_END_AUTHENTICITY_ACCURACY = UNRESOLVED',
+    'HUMAN_FALSE_POSITIVE_RATE = UNRESOLVED',
+    'HUMAN_FPR_TARGET = UNRESOLVED',
+    'COMMERCIAL_DETECTOR_ACCURACY = UNRESOLVED',
+    'BROAD_CAMERA_GENERALIZATION = UNRESOLVED',
+    'BROAD_NON_CAMERA_GENERALIZATION = UNRESOLVED',
+    'UNSEEN_GENERATOR_GENERALIZATION = UNRESOLVED',
+    'CAMERA_NATIVE_PROBABILITY = UNRESOLVED',
+    'NATIVE_BYTE_ORIGINALITY = UNRESOLVED',
+    'SENSOR_IDENTITY = UNRESOLVED',
+    'EF2_DIRECTIONAL_VALIDATION = UNRESOLVED',
+    'PARTIAL_EDIT_ORTHOGONALITY = NOT_RUN',
     '- The current benchmark has three known device families, two active enrollment devices, one unseen device, limited seen-device positives, screenshot-heavy hard negatives, unknown synthetic generator provenance, no screen-recapture slice, no external camera replication, and no population-representativeness claim.',
     '',
     '## Next research step',
@@ -1013,7 +1033,10 @@ async function runExperiment(outputDir, mediaRoot) {
   });
   await writeJson(outputDir, 'ef2-shortcut-audit.json', { benchmarkFingerprint: WP006C_EXPECTED_BENCHMARK_FINGERPRINT, implementationCommit: baseCommit, ...shortcutAuditResult, deviceConfounding: deviceConfoundingResult });
   const stressRecords = selectTransformationRecords(selected.calibration);
-  const originalRowsBySample = new Map(calibrationRows.map((row, index) => [row.sampleId, { ...row, rawScore: scoreEf2FeatureVector(calibrationVectors[index], model)?.rawScore ?? null }]));
+  const originalRowsBySample = new Map(calibrationRows.map((row, index) => {
+    const originalScore = scoreEf2FeatureVector(calibrationVectors[index], model);
+    return [row.sampleId, { ...row, rawScore: originalScore?.rawScore ?? null, groupScores: originalScore?.groupScores ?? {} }];
+  }));
   const transformationRows = await runTransformationStress({ sharp, mediaRoot, records: stressRecords, model, repoCommit: baseCommit, featureRegistryHash: registryHash, configurationHash: configHash, benchmarkFingerprint: WP006C_EXPECTED_BENCHMARK_FINGERPRINT, originalRowsBySample });
   const transformationSummary = summarizeTransformation(transformationRows, threshold);
   const invariance = metadataStripInvariance(transformationRows);

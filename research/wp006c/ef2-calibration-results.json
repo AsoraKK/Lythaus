@@ -1,0 +1,1741 @@
+{
+  "schemaVersion": "lythaus-wp006c-ef2-result-v1",
+  "benchmarkVersion": "lythaus-forensic-microbench-v0",
+  "benchmarkFingerprint": "1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb",
+  "implementationCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+  "featureRegistryHash": "1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9",
+  "configurationHash": "acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e",
+  "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+  "specialistStatus": "MEASUREMENT_ONLY",
+  "calibrationFamilyCount": 29,
+  "calibrationDeviceCounts": {
+    "samsung Galaxy A56 5G": 13,
+    "samsung SM-A526B": 16
+  },
+  "calibrationDeviceWeighting": "equal_device_center_weight",
+  "lofoThreshold": {
+    "method": "90th percentile",
+    "value": 3.515089017620759,
+    "source": "CALIBRATION_CAMERA_ONLY"
+  },
+  "excludedFeatures": [
+    {
+      "featureName": "residualChannelEnergySpread",
+      "reason": "robust_scale_at_or_below_floor",
+      "finiteCount": 29,
+      "calibrationCount": 29,
+      "variance": 9.781320983681293e-10
+    },
+    {
+      "featureName": "parityPeriodicityEnergy",
+      "reason": "calibration_variance_at_or_below_floor",
+      "finiteCount": 29,
+      "calibrationCount": 29,
+      "variance": 3.0125076453030554e-16
+    }
+  ],
+  "calibrationRows": [
+    {
+      "sampleId": "CAM_001",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+      "inputHash": "b84f31aece7276073b34020df4f4a6c7bc15fe5dc6e4b3f60886222b1ec35ba3",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 401.8834,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "b84f31aece7276073b34020df4f4a6c7bc15fe5dc6e4b3f60886222b1ec35ba3",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 401.8834,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20210527_091257",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091257",
+      "inputHash": "eaf8076f01748d97071dd437376cca58d28fe76d3670d8e470e57a0006f67c1b",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 199.9081,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "eaf8076f01748d97071dd437376cca58d28fe76d3670d8e470e57a0006f67c1b",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 199.9081,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_091317",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091317",
+      "inputHash": "38b704391dc8e25d798b05950121475d6bce78a1a9d91f2b630239fb8c62240e",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 200.68489999999997,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "38b704391dc8e25d798b05950121475d6bce78a1a9d91f2b630239fb8c62240e",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 200.68489999999997,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104722",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104722",
+      "inputHash": "72e37f9fe43119df80b83077a446b4e09a6cd330e1c60c16c5e0da40d79ec36e",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 201.49170000000004,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "72e37f9fe43119df80b83077a446b4e09a6cd330e1c60c16c5e0da40d79ec36e",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 201.49170000000004,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104800",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104800",
+      "inputHash": "f83602c755e4c5037c6e4979cb5f35e8d3554ec343d3dfa442cd8d10c7a05bc7",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 200.38469999999984,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "f83602c755e4c5037c6e4979cb5f35e8d3554ec343d3dfa442cd8d10c7a05bc7",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 200.38469999999984,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_104834",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104834",
+      "inputHash": "7575455b833ff1d866bdc94b850e71e794cd68654fb8aac0608bcce609a16c37",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 189.80330000000004,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "7575455b833ff1d866bdc94b850e71e794cd68654fb8aac0608bcce609a16c37",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 189.80330000000004,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120226",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120226",
+      "inputHash": "2dca35178c84b38ad90a5828da5c5167e5e358eeafbc1b67687ec0a4304ae201",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 198.1594,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "2dca35178c84b38ad90a5828da5c5167e5e358eeafbc1b67687ec0a4304ae201",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 198.1594,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120228",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120228",
+      "inputHash": "f143a7e402d3a7ba7e5e0c10b18efbb76b5fac4d52f5e3931ab5c1abc54bcf41",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 194.01869999999985,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "f143a7e402d3a7ba7e5e0c10b18efbb76b5fac4d52f5e3931ab5c1abc54bcf41",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 194.01869999999985,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120234",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120234",
+      "inputHash": "ec3e17496a5dde0bf4346f5113e6b6bae288a27e879f5559600ce299ed77ad3b",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 195.14280000000008,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "ec3e17496a5dde0bf4346f5113e6b6bae288a27e879f5559600ce299ed77ad3b",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 195.14280000000008,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120236",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120236",
+      "inputHash": "c2fb60cbd4ee3976434c67e36533f9c982bf23d0ef7ab4450d2d471b631ed54e",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 188.13609999999971,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "c2fb60cbd4ee3976434c67e36533f9c982bf23d0ef7ab4450d2d471b631ed54e",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 188.13609999999971,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_120237",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120237",
+      "inputHash": "1ddf659853741c3faba3b235c011ae8cd7055cb61c7cc67803e6a7384e722dd5",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 188.18640000000005,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "1ddf659853741c3faba3b235c011ae8cd7055cb61c7cc67803e6a7384e722dd5",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 188.18640000000005,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144008",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144008",
+      "inputHash": "87c9ab43ec7bf2801765356bf01a0ab35a5f515ec3f022f2005b3140ebfa5279",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 182.8179,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "87c9ab43ec7bf2801765356bf01a0ab35a5f515ec3f022f2005b3140ebfa5279",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 182.8179,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144011",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144011",
+      "inputHash": "7d695d4e36f6b8a6e9ab7e249d6d722ad56ea5e9379e87c0e94f8cf48d7be025",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 197.67210000000023,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "7d695d4e36f6b8a6e9ab7e249d6d722ad56ea5e9379e87c0e94f8cf48d7be025",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 197.67210000000023,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144014",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144014",
+      "inputHash": "fd61a8ee63b2786e1833a96afbf4441f60468bb4de369f48b79a219093f39af5",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 196.36169999999993,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "fd61a8ee63b2786e1833a96afbf4441f60468bb4de369f48b79a219093f39af5",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 196.36169999999993,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144019",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144019",
+      "inputHash": "ed252d4e82dec63905e112d549bc113d6ad98ddfd291cb6cf0d4c1b527458809",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 198.5256999999997,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "ed252d4e82dec63905e112d549bc113d6ad98ddfd291cb6cf0d4c1b527458809",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 198.5256999999997,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144046",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144046",
+      "inputHash": "406ca51f2960178ce673f09e3089dda32c4a2379c9733fbd5341bf36fb7eadf6",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 187.3379,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "406ca51f2960178ce673f09e3089dda32c4a2379c9733fbd5341bf36fb7eadf6",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 187.3379,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20210527_144054",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144054",
+      "inputHash": "a086da15d3f01d6c8fdcf534fa596295e2fa4ca6ee810de7c626950795d95e71",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 192.85860000000002,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "a086da15d3f01d6c8fdcf534fa596295e2fa4ca6ee810de7c626950795d95e71",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 192.85860000000002,
+      "decodedWidth": 4624,
+      "decodedHeight": 3468,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung SM-A526B"
+    },
+    {
+      "sampleId": "CAMERA_20251009_162038",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251009_162038",
+      "inputHash": "c089b2c615274fbafac31e2a87eada0ff1e6d995407c84ec7e1ec73f67de4111",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 296.7344000000003,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "c089b2c615274fbafac31e2a87eada0ff1e6d995407c84ec7e1ec73f67de4111",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 296.7344000000003,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20251219_113126",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251219_113126",
+      "inputHash": "84c05fec64f80c73e7931c77a333e52b6277dab86d73aeac520e00e3503a517c",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 294.51900000000023,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "84c05fec64f80c73e7931c77a333e52b6277dab86d73aeac520e00e3503a517c",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 294.51900000000023,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173231",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173231",
+      "inputHash": "ad579796e650484d50579c12053686b73ae63f7832807cbbb10e944611a1f6c8",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 293.03500000000076,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "ad579796e650484d50579c12053686b73ae63f7832807cbbb10e944611a1f6c8",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 293.03500000000076,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173415",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173415",
+      "inputHash": "a4ecbbf3221fa3015ae8d2cef8ba409d0542c6b56ec2fddf43ea55464bbb076d",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 286.8571000000002,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "a4ecbbf3221fa3015ae8d2cef8ba409d0542c6b56ec2fddf43ea55464bbb076d",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 286.8571000000002,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20251226_173420",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173420",
+      "inputHash": "d2eb0609c91f8dfa8a067c3420fae79c51481b330bf53feb782dc0219e457685",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 294.4357,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "d2eb0609c91f8dfa8a067c3420fae79c51481b330bf53feb782dc0219e457685",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 294.4357,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20251231_130552",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251231_130552",
+      "inputHash": "682e9598b329bc99ec247499cf007dc09c165995231a164b44e50192e0079362",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 292.09100000000035,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "682e9598b329bc99ec247499cf007dc09c165995231a164b44e50192e0079362",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 292.09100000000035,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20260105_202251",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260105_202251",
+      "inputHash": "c03a742af9a62df5c02cad8f6bc6f4ac2088de4e31e144d7be61561ac19371b9",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 284.84569999999985,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "c03a742af9a62df5c02cad8f6bc6f4ac2088de4e31e144d7be61561ac19371b9",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 284.84569999999985,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20260203_123405",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260203_123405",
+      "inputHash": "73b33de8ff1e893fd9ccd7bb971bfdd40061dc824e88365174d0d64b553760dd",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 278.8735000000006,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "73b33de8ff1e893fd9ccd7bb971bfdd40061dc824e88365174d0d64b553760dd",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 278.8735000000006,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20260214_161934",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260214_161934",
+      "inputHash": "e262f09e30658668d175f09f09f59341b5136dad3212b86a1d822c8385f154dc",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 293.66700000000037,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "e262f09e30658668d175f09f09f59341b5136dad3212b86a1d822c8385f154dc",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 293.66700000000037,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20260222_154932",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260222_154932",
+      "inputHash": "1d29748cbf2d925958cd2816d5e6f7370def58717b2168df8cccf26bca660a6b",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 276.4259000000002,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "1d29748cbf2d925958cd2816d5e6f7370def58717b2168df8cccf26bca660a6b",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 276.4259000000002,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20260227_163207",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260227_163207",
+      "inputHash": "49f46002982d6ac7092512098db43d6354c3ae5ed85ed186ed041a604f167ea5",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 284.29599999999937,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "49f46002982d6ac7092512098db43d6354c3ae5ed85ed186ed041a604f167ea5",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 284.29599999999937,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    },
+    {
+      "sampleId": "CAMERA_20260228_122831",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260228_122831",
+      "inputHash": "a918331fbcd6b4f5b60c562d528bf5319f40fca58b6975688a31f50fbf0388da",
+      "split": "CALIBRATION",
+      "measurement": {
+        "schemaVersion": "lythaus-wp006a-specialist-feasibility-v1",
+        "specialistId": "lythaus-ef2-pixel-acquisition-v0",
+        "version": "0",
+        "evidenceFamily": "EF2_PHYSICAL_ACQUISITION",
+        "measurementType": "PIXEL_ACQUISITION_CONSISTENCY",
+        "rawScore": null,
+        "normalizedMeasurement": null,
+        "applicability": "applicable",
+        "runtimeMs": 292.0584999999992,
+        "limitations": [
+          "Measurement only; normalizedMeasurement is not a probability of camera origin.",
+          "No PRNU claim; device-specific residual correlation is not part of this result.",
+          "Native-grid patch count=8."
+        ],
+        "calibrationStatus": "MEASUREMENT_ONLY",
+        "provenance": {
+          "inputHash": "a918331fbcd6b4f5b60c562d528bf5319f40fca58b6975688a31f50fbf0388da",
+          "repositoryCommit": "c1827bbb1b34e056907845bd6f16e53319f36e0b",
+          "checkpointHash": null,
+          "dependencyLockHash": null,
+          "preprocessing": "SHARP_RAW_DECODE_NO_ROTATE_UCHAR_RGB_OR_GRAY_V1;featureRegistry=1476739369d5968b7b1a3183bcd513364ad742fa71b69457ca4b937f2dc4d5f9;configuration=acf2319934f8b5a8554e2665b3c039001e30c9a4d0beac2dd9e8932abded635e;benchmark=1d3244ff464118904768acdeeb80561253dd7dccf65fff445148b26b9a6d77fb"
+        }
+      },
+      "rawScore": null,
+      "normalizedMeasurement": null,
+      "groupScores": {},
+      "patchCount": 8,
+      "applicability": "applicable",
+      "unavailableFeatures": [],
+      "runtimeMs": 292.0584999999992,
+      "decodedWidth": 4000,
+      "decodedHeight": 3000,
+      "acceptedAtFrozenThreshold": null,
+      "deviceFamily": "samsung Galaxy A56 5G"
+    }
+  ],
+  "lofoRows": [
+    {
+      "sampleId": "CAM_001",
+      "sourceFamilyId": "WP006B-FAMILY-CAM_001",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 1.6260866979615862,
+      "normalizedMeasurement": 0.38079473947917153,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_091257",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091257",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.3303482119535254,
+      "normalizedMeasurement": 0.7516828985184025,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_091317",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_091317",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.9342698483359317,
+      "normalizedMeasurement": 0.5169909466666754,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_104722",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104722",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.3931675852832903,
+      "normalizedMeasurement": 0.7177887359449706,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_104800",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104800",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.3723255658486477,
+      "normalizedMeasurement": 0.7286900607885992,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_104834",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_104834",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 2.937711278501751,
+      "normalizedMeasurement": 0.2539546272626893,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_120226",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120226",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.6458194389309835,
+      "normalizedMeasurement": 0.6076000661710099,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_120228",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120228",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.9977472729623622,
+      "normalizedMeasurement": 0.5005638168221092,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_120234",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120234",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.6808553846030642,
+      "normalizedMeasurement": 0.5949351795283394,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_120236",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120236",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.9047222647737493,
+      "normalizedMeasurement": 0.5250109259991163,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_120237",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_120237",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 1.1384256772764223,
+      "normalizedMeasurement": 0.4676337413202206,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_144008",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144008",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 2.2323070165802363,
+      "normalizedMeasurement": 0.3093765520634221,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_144011",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144011",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.6070831213716514,
+      "normalizedMeasurement": 0.6222453504125514,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_144014",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144014",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.6166236436800353,
+      "normalizedMeasurement": 0.6185731625968485,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_144019",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144019",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.7301641410384138,
+      "normalizedMeasurement": 0.57797984380824,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_144046",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144046",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 2.5262223002923534,
+      "normalizedMeasurement": 0.2835896080394851,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20210527_144054",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20210527_144054",
+      "deviceFamily": "samsung SM-A526B",
+      "rawScore": 0.4495777834002551,
+      "normalizedMeasurement": 0.6898560473618143,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20251009_162038",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251009_162038",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 5.858439592869412,
+      "normalizedMeasurement": 0.1458057604006137,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": false
+    },
+    {
+      "sampleId": "CAMERA_20251219_113126",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251219_113126",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 3.860645521070053,
+      "normalizedMeasurement": 0.20573399061198228,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": false
+    },
+    {
+      "sampleId": "CAMERA_20251226_173231",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173231",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 0.3886701735767861,
+      "normalizedMeasurement": 0.7201133998754422,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20251226_173415",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173415",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 0.22912416110278594,
+      "normalizedMeasurement": 0.8135874565371713,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20251226_173420",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251226_173420",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 0.158099500114519,
+      "normalizedMeasurement": 0.8634836643147801,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20251231_130552",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20251231_130552",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 0.2798163317930965,
+      "normalizedMeasurement": 0.7813621182650032,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20260105_202251",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260105_202251",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 3.3116709985923274,
+      "normalizedMeasurement": 0.2319286421265629,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20260203_123405",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260203_123405",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 7.106155338350995,
+      "normalizedMeasurement": 0.12336304428671685,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": false
+    },
+    {
+      "sampleId": "CAMERA_20260214_161934",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260214_161934",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 1.843632036444186,
+      "normalizedMeasurement": 0.35166293922136566,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20260222_154932",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260222_154932",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 3.428699891758436,
+      "normalizedMeasurement": 0.22579990165080827,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20260227_163207",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260227_163207",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 1.5788039222046035,
+      "normalizedMeasurement": 0.3877766709556988,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    },
+    {
+      "sampleId": "CAMERA_20260228_122831",
+      "sourceFamilyId": "WP006B-FAMILY-CAMERA_20260228_122831",
+      "deviceFamily": "samsung Galaxy A56 5G",
+      "rawScore": 0.4111257778176852,
+      "normalizedMeasurement": 0.7086540517646175,
+      "includedFeatureCount": 24,
+      "acceptedAtFrozenThreshold": true
+    }
+  ],
+  "model": {
+    "featureNames": [
+      "residualAbsMean",
+      "residualRms",
+      "residualP90",
+      "residualP90ToMedianRatio",
+      "residualIntensitySlope",
+      "residualIntensityR2",
+      "residualCrossChannelCorrelationRG",
+      "residualCrossChannelCorrelationRB",
+      "residualCrossChannelCorrelationGB",
+      "residualChannelEnergySpread",
+      "residualAutocorrelationHorizontal1",
+      "residualAutocorrelationVertical1",
+      "residualAutocorrelationDiagonal1",
+      "residualAutocorrelationDiagonal2",
+      "parityPeriodicityEnergy",
+      "parityPeriodicityContrast",
+      "flatResidualAbsMean",
+      "edgeResidualAbsMean",
+      "edgeToFlatResidualRatio",
+      "residualScaleEnergyRatio3To5",
+      "residualScaleP90Ratio3To5",
+      "residualSignBalance",
+      "patchDispersionResidualEnergy",
+      "patchDispersionCrossChannel",
+      "patchDispersionAutocorrelation",
+      "patchDispersionParity"
+    ],
+    "includedFeatureIndexes": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "excludedFeatures": [
+      {
+        "featureName": "residualChannelEnergySpread",
+        "reason": "robust_scale_at_or_below_floor",
+        "finiteCount": 29,
+        "calibrationCount": 29,
+        "variance": 9.781320983681293e-10
+      },
+      {
+        "featureName": "parityPeriodicityEnergy",
+        "reason": "calibration_variance_at_or_below_floor",
+        "finiteCount": 29,
+        "calibrationCount": 29,
+        "variance": 3.0125076453030554e-16
+      }
+    ],
+    "centers": [
+      0.004964281033058989,
+      0.006433696128824794,
+      0.009765625,
+      2.5833333333333335,
+      -0.0035828280489940407,
+      0.005839386202275625,
+      0.9717561149606435,
+      0.9683280186403601,
+      0.96563004941533,
+      null,
+      0.09863303797305543,
+      0.15333609343425478,
+      -0.19031918295856792,
+      -0.17382283095626685,
+      null,
+      0.013239396652048242,
+      0.004928256388868211,
+      0.0154415974998991,
+      2.3339455829911238,
+      0.5333627817877892,
+      0.7309941520467836,
+      0.005027242378432855,
+      0.1368741598296696,
+      0.01018643129444122,
+      0.4621896028132459,
+      0.0027000922513417793
+    ],
+    "scales": [
+      0.0011897518061966008,
+      0.0017078229844336714,
+      0.002895703125,
+      0.6177499999999998,
+      0.0037950963078781444,
+      0.0070848628010336135,
+      0.018792803538783237,
+      0.019291421064866057,
+      0.015604251265705273,
+      null,
+      0.11172785469595825,
+      0.1426307298458245,
+      0.10478648741120734,
+      0.11311121402668359,
+      null,
+      0.0029759431058336175,
+      0.0012282449832226813,
+      0.01087210391318485,
+      0.9341455400480202,
+      0.19397703717512418,
+      0.0993129186602871,
+      0.00358953373015873,
+      0.0554617292090829,
+      0.010408705804491152,
+      0.2588679413771491,
+      0.001430629189289153
+    ],
+    "deviceCenters": {
+      "samsung Galaxy A56 5G": [
+        0.005375808080434529,
+        0.006874498370686215,
+        0.009765625,
+        2.3333333333333335,
+        -0.0012523229235646962,
+        0.005019104203772492,
+        0.9813838132318671,
+        0.979116956146399,
+        0.9716120485890885,
+        0.00006603807503764974,
+        0.11817190867469107,
+        0.21500316747960124,
+        -0.13979651212483715,
+        -0.10183031199544779,
+        5.353437617931877e-9,
+        0.012508204501900096,
+        0.005355766181316548,
+        0.022142397101988166,
+        2.937144854294086,
+        0.44882198656149813,
+        0.6842105263157895,
+        0.0058657722348198545,
+        0.1476790195720184,
+        0.010412131386375806,
+        0.30686860926538817,
+        0.0025665153822178152
+      ],
+      "samsung SM-A526B": [
+        0.004552753985683448,
+        0.005992893886963372,
+        0.009765625,
+        2.8333333333333335,
+        -0.005913333174423385,
+        0.00665966820077876,
+        0.96212841668942,
+        0.9575390811343212,
+        0.9596480502415716,
+        0.00007802675253896618,
+        0.0790941672714198,
+        0.0916690193889083,
+        -0.24084185379229867,
+        -0.24581534991708592,
+        3.5281993821265643e-9,
+        0.013970588802196387,
+        0.004500746596419873,
+        0.008740797897810031,
+        1.7307463116881618,
+        0.6179035770140803,
+        0.7777777777777778,
+        0.004188712522045855,
+        0.12606930008732078,
+        0.009960731202506633,
+        0.6175105963611036,
+        0.0028336691204657437
+      ]
+    },
+    "deviceFamilies": [
+      "samsung Galaxy A56 5G",
+      "samsung SM-A526B"
+    ],
+    "groupIndexes": {
+      "RESIDUAL_ENERGY": [
+        0,
+        1,
+        2,
+        3,
+        21
+      ],
+      "INTENSITY_CONDITIONED_RESIDUAL": [
+        4,
+        5
+      ],
+      "CROSS_CHANNEL_RESIDUAL": [
+        6,
+        7,
+        8
+      ],
+      "RESIDUAL_AUTOCORRELATION": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "PARITY_PERIODICITY": [
+        15
+      ],
+      "EDGE_CONDITIONED_RESIDUAL": [
+        16,
+        17,
+        18
+      ],
+      "MULTISCALE_RESIDUAL": [
+        19,
+        20
+      ],
+      "PATCH_CONSISTENCY": [
+        22,
+        23,
+        24,
+        25
+      ]
+    },
+    "method": {
+      "robustCenter": "per-device median then equal arithmetic mean of device centers",
+      "scale": "1.4826 * median absolute deviation about pooled center with fixed floor",
+      "deviceWeighting": "equal_device_center_weight",
+      "groupAggregation": "mean squared robust z distance",
+      "overallAggregation": "median across feature groups"
+    }
+  },
+  "runtime": {
+    "medianMs": 200.68489999999997,
+    "p95Ms": 295.84824000000026,
+    "maxMs": 401.8834,
+    "count": 29
+  },
+  "mediaAccess": {
+    "calibrationPixels": true,
+    "evaluationPixels": false,
+    "lgePixels": false
+  }
+}

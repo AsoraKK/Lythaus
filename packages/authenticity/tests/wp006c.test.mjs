@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 import {
   EF2_CONFIG,
@@ -15,6 +17,12 @@ import {
   scoreEf2FeatureVector,
   stableArtifactHash,
 } from '../src/wp006c.ts';
+
+const researchDir = path.resolve('research/wp006c');
+
+function readResearchJson(name) {
+  return JSON.parse(fs.readFileSync(path.join(researchDir, name), 'utf8'));
+}
 
 function fixturePixels() {
   const width = 256;
@@ -126,4 +134,52 @@ test('holdout unblind freeze binds the complete LGE device and benchmark', () =>
     familyIds: [],
     decision: 'UNBLIND_AUTHORIZED',
   }), /families/);
+});
+
+test('frozen benchmark and complete LGE boundary are retained', () => {
+  const plan = readResearchJson('wp006c-plan.json');
+  const freeze = readResearchJson('ef2-calibration-freeze.json');
+  const run = readResearchJson('wp006c-run-manifest.json');
+  assert.equal(plan.benchmarkFingerprint, WP006C_EXPECTED_BENCHMARK_FINGERPRINT);
+  assert.equal(freeze.benchmarkFingerprint, WP006C_EXPECTED_BENCHMARK_FINGERPRINT);
+  assert.equal(freeze.evaluationPixelsProcessedBeforeFreeze, false);
+  assert.equal(freeze.holdoutPixelsAccessedBeforeFreeze, false);
+  assert.equal(run.mediaAccess.lgePixels, false);
+  assert.equal(run.deviceHoldoutStatus, 'SEALED');
+  assert.equal(run.unseenDeviceHoldoutConsumed, false);
+  assert.equal(run.externalInferenceCalls, 0);
+  assert.equal(run.incrementalCostUsd, 0);
+  assert.equal(fs.existsSync(path.join(researchDir, 'holdout-unblind-freeze.json')), false);
+  assert.equal(fs.existsSync(path.join(researchDir, 'ef2-device-holdout-results.json')), false);
+});
+
+test('calibration threshold is frozen before evaluation and no retuning is recorded', () => {
+  const freeze = readResearchJson('ef2-calibration-freeze.json');
+  const evaluation = readResearchJson('ef2-evaluation-results.json');
+  const run = readResearchJson('wp006c-run-manifest.json');
+  assert.equal(freeze.thresholdSource, 'CALIBRATION_CAMERA_ONLY');
+  assert.equal(evaluation.threshold.frozenBy, 'ef2-calibration-freeze.json');
+  assert.equal(evaluation.benchmarkFingerprint, WP006C_EXPECTED_BENCHMARK_FINGERPRINT);
+  assert.equal(run.thresholdRetunedAfterEvaluation, false);
+  assert.equal(evaluation.mediaAccess.lgePixels, false);
+});
+
+test('current run reports protocol leakage checks and conservative outcome', () => {
+  const evaluation = readResearchJson('ef2-evaluation-results.json');
+  const audit = readResearchJson('ef2-shortcut-audit.json');
+  assert.equal(evaluation.stageA.sourceFamilyLeakage, 'PASS');
+  assert.equal(evaluation.stageA.calibrationEvaluationLeakage, 'PASS');
+  assert.equal(evaluation.stageA.truthLeakage, 'PASS');
+  assert.equal(evaluation.stageA.metadataInputLeakage, 'PASS');
+  assert.equal(audit.primaryScoreUnaffected, true);
+  assert.equal(evaluation.stageA.passed, false);
+  assert.equal(evaluation.stageA.shortcutRisk, 'HIGH');
+});
+
+test('research artifacts do not persist private media or raw pixel payloads', () => {
+  const names = fs.readdirSync(researchDir).filter((name) => name.endsWith('.json') || name.endsWith('.md'));
+  const content = names.map((name) => fs.readFileSync(path.join(researchDir, name), 'utf8')).join('\n');
+  assert.doesNotMatch(content, /[A-Z]:\\\\Users\\/i);
+  assert.doesNotMatch(content, /(?:gps|cameraSerial|authorizationHeader|base64|imageData|rawPixels)\s*[:=]/i);
+  assert.doesNotMatch(content, /"pixels"\s*:/i);
 });
