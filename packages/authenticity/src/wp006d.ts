@@ -146,7 +146,8 @@ export function assertWp006dPlan(value: unknown): void {
   const record = value as Record<string, unknown>;
   if (record.schemaVersion !== WP006D_PLAN_SCHEMA_VERSION) throw new Error('wp006d_plan_schema_invalid');
   if (record.baseSha !== WP006D_EXPECTED_BASE_SHA) throw new Error('wp006d_plan_base_sha_invalid');
-  if (record.wp006cBenchmarkFingerprint !== WP006D_EXPECTED_WP006C_BENCHMARK_FINGERPRINT) throw new Error('wp006d_plan_wp006c_fingerprint_invalid');
+  const historical = record.wp006cHistorical;
+  if (!historical || typeof historical !== 'object' || Array.isArray(historical) || (historical as Record<string, unknown>).benchmarkFingerprint !== WP006D_EXPECTED_WP006C_BENCHMARK_FINGERPRINT) throw new Error('wp006d_plan_wp006c_fingerprint_invalid');
   if (record.planStatus !== 'FROZEN_BEFORE_EF2_SCORES') throw new Error('wp006d_plan_not_frozen');
   if (record.lgeHoldoutStatus !== 'SEALED' || record.csafeFutureHoldoutStatus !== 'SEALED') throw new Error('wp006d_holdout_not_sealed');
   if (record.selectionUsesEf2Scores !== false || record.thresholdRetuned !== false) throw new Error('wp006d_plan_selection_or_threshold_invalid');
