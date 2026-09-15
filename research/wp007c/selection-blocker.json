@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "lythaus-wp007c-selection-blocker-v1",
+  "baseSha": "e53e16685684aeee6198be54e1df17b805003183",
+  "benchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "holdoutFreezeSha256": "b1be6115a6ed3cb5d72c5ad3e90575ededbb4c969bd2bb248ec2806da32885c4",
+  "flux2ReserveFreezeSha256": "56ae0bd15b8bc21d77b28c9e6faea8149440aab8a9d101db523a43aedb98e054",
+  "spaiCheckpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+  "spaiUpstreamCommit": "8ff7b3b6779b4fcb43cf313471d9cb1c62d129a4",
+  "developmentSplitSha256": "3a30dab63ace8b26f2684d1f658420f0f0fa66ad181cd94d8633aad86d64e721",
+  "candidateSetFrozenBeforeScoring": true,
+  "scoreBlind": true,
+  "candidateDevelopmentArtifactSha256": "8515ae877e5450603ef6145e6244b2229721bb0cccb438c6fdabb2f2187180cc",
+  "candidateRuntimeArtifactSha256": "72d76d8bdedca587638597e154ecd5b6a7b74a8419e846d1d18f8219b5701118",
+  "developmentData": {
+    "syntheticFamilies": 64,
+    "cameraFamilies": 36,
+    "digitalFamilies": 28,
+    "totalFamilies": 128,
+    "ownerUnknownGeneratorUsed": false,
+    "sourceFamilyLeakage": "PASS",
+    "truthMetadataInputLeakage": "PASS"
+  },
+  "candidateOutcomes": [
+    {
+      "candidateId": "SPAI_NATIVE_CPU_OPT",
+      "rightsStatus": "PASS",
+      "runtimeClassification": "NOT_PRACTICAL",
+      "stageAPass": false,
+      "blockingGates": [
+        "RUNTIME_NOT_PRACTICAL"
+      ],
+      "highResolutionRuntimeSeconds": [
+        166.842609,
+        73.954116,
+        81.716771
+      ],
+      "scoreEquivalence": "PASS"
+    },
+    {
+      "candidateId": "SPAI_C512",
+      "rightsStatus": "PASS",
+      "runtimeClassification": "FAST",
+      "stageAPass": false,
+      "blockingGates": [
+        "NON_CAMERA_CONFOUNDING_HIGH",
+        "OVERALL_SHORTCUT_RISK_HIGH"
+      ],
+      "metrics": {
+        "developmentSyntheticRecall": 0.9375,
+        "developmentCameraFpr": 0.1111111111111111,
+        "developmentDigitalFpr": 0.0,
+        "developmentOverallNegativeFpr": 0.0625,
+        "rocAuc": 0.968017578125,
+        "prAuc": 0.9895437773725401,
+        "cameraDigitalAuc": 0.15178571428571427,
+        "digitalMinusCameraFpr": -0.1111111111111111,
+        "runtimeP50Seconds": 2.0616015,
+        "runtimeP95Seconds": 4.3035714,
+        "runtimeMaxSeconds": 5.444901
+      },
+      "nonCameraConfounding": "HIGH",
+      "overallShortcutRisk": "HIGH",
+      "threshold": 0.9999926149845123
+    },
+    {
+      "candidateId": "PATCHCRAFT_OFFICIAL",
+      "rightsStatus": "RIGHTS_BLOCKED",
+      "runtimeClassification": "NOT_RUN",
+      "stageAPass": false,
+      "blockingGates": [
+        "RESEARCH_RIGHTS_UNCONFIRMED"
+      ]
+    },
+    {
+      "candidateId": "LYTHAUS_SPECTRAL_LITE_V0",
+      "rightsStatus": "PASS",
+      "runtimeClassification": "FAST",
+      "stageAPass": false,
+      "blockingGates": [
+        "DEVELOPMENT_SYNTHETIC_RECALL_BELOW_0.60",
+        "OVERALL_SHORTCUT_RISK_HIGH"
+      ],
+      "metrics": {
+        "developmentSyntheticRecall": 0.0,
+        "developmentCameraFpr": 0.027777777777777776,
+        "developmentDigitalFpr": 0.10714285714285714,
+        "developmentOverallNegativeFpr": 0.0625,
+        "rocAuc": 0.42236328125,
+        "prAuc": 0.4265078135689091,
+        "cameraDigitalAuc": 0.7013888888888888,
+        "digitalMinusCameraFpr": 0.07936507936507936,
+        "runtimeP50Seconds": 0.016256,
+        "runtimeP95Seconds": 0.09235199999999999,
+        "runtimeMaxSeconds": 0.110452
+      },
+      "nonCameraConfounding": "MODERATE",
+      "overallShortcutRisk": "HIGH",
+      "threshold": 1.3495339936811126
+    }
+  ],
+  "selectedSpecialist": "NONE",
+  "selectedThreshold": "NOT_CREATED",
+  "transformationStress": "NOT_RUN_NO_STAGE_A_PASS",
+  "calibrationFreezeSha256": "NOT_CREATED_NO_STAGE_A_PASS",
+  "flux1Unblind": "NOT_PERFORMED",
+  "flux2FutureReserveStatus": "SEALED",
+  "decision": "REJECT_CURRENT_EF3_CANDIDATES",
+  "finalClassification": "NO_CANDIDATE_SURVIVES_STAGE_A",
+  "scientificBoundary": "STOP_BEFORE_TRANSFORMATION_CALIBRATION_OR_HOLDOUT_ACCESS",
+  "selectionBlockerSha256": "edee150cdf67d9363fccd854258710bfd3976feaedd20b48a60b312fef22049c"
+}
