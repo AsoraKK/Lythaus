@@ -25,6 +25,11 @@ export interface CloudflareSafeProviderDiagnostics {
   providerErrorMessageCode: string | null;
 }
 
+export interface CloudflareSafeProviderErrorDetails {
+  providerErrorCode: number | string | null;
+  providerErrorMessage: string | null;
+}
+
 export interface CloudflareRestInvocation {
   kind: CloudflareRestCallKind;
   model: string;
@@ -122,6 +127,27 @@ function safeProviderMessageCode(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$/.test(trimmed) ? trimmed : null;
+}
+
+function safeProviderMessage(value: unknown, redactions: readonly unknown[] = []): string | null {
+  if (typeof value !== 'string') return null;
+  let message = value.replace(/[\u0000-\u001f\u007f]/gu, ' ').replace(/\s+/gu, ' ').trim();
+  for (const redaction of redactions) {
+    if (typeof redaction === 'string' && redaction.length > 0) message = message.split(redaction).join('[REDACTED]');
+  }
+  message = message.replace(/Bearer\s+[A-Za-z0-9._~-]+/giu, 'Bearer [REDACTED]');
+  return message.slice(0, 200) || null;
+}
+
+export function cloudflareSafeProviderErrorDetailsFromBody(body: unknown, redactions: readonly unknown[] = []): CloudflareSafeProviderErrorDetails {
+  if (!isRecord(body) || !Array.isArray(body.errors)) return { providerErrorCode: null, providerErrorMessage: null };
+  for (const item of body.errors) {
+    if (!isRecord(item)) continue;
+    const providerErrorCode = safeProviderCode(item.code);
+    const providerErrorMessage = safeProviderMessage(item.message, redactions);
+    if (providerErrorCode !== null || providerErrorMessage !== null) return { providerErrorCode, providerErrorMessage };
+  }
+  return { providerErrorCode: null, providerErrorMessage: null };
 }
 
 export function cloudflareSafeProviderDiagnosticsFromBody(body: unknown): CloudflareSafeProviderDiagnostics {

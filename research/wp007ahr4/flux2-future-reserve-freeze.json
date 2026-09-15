@@ -1,0 +1,332 @@
+{
+  "schemaVersion": "lythaus-wp007ahr4-flux2-future-reserve-freeze-v1",
+  "materialisation": "FLUX2_FUTURE_RESERVE_ONLY",
+  "benchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "historicalGenerationFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+  "hr3ExecutionRun": 34938983014,
+  "workflowCommit": "97790c1d902f97149a65aa24be19296ebfafe529",
+  "artifact": {
+    "id": 10384584614,
+    "name": "wp007ah-holdout-34938983014",
+    "zipSha256": "150c1efab93948f8dde217e93322c5230e8f356bc16ca773a03a95f431645a96",
+    "zipBytes": 30129935,
+    "retentionDays": 1
+  },
+  "generator": {
+    "modelId": "@cf/black-forest-labs/flux-2-klein-4b",
+    "family": "FLUX_2_KLEIN_4B",
+    "route": "CLOUDFLARE_WORKERS_AI_BFL_PARTNER_ROUTE",
+    "promptBankVersion": "LYTHAUS_EF3_PROMPT_BANK_V1",
+    "generationParameters": {},
+    "historicalSeedPolicy": "NOT_SUPPORTED",
+    "rights": {
+      "rightsAuditId": "WP007AH_CLOUDFLARE_BFL_ROUTE_2026-09-14",
+      "trainingEligibility": "EVALUATION_ONLY",
+      "evaluationEligibility": "AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY",
+      "benchmarkRole": "FUTURE_RESERVE"
+    }
+  },
+  "localTransferVerification": {
+    "canonicalCachePrefix": "wp007ah-cloudflare/",
+    "providerOriginalImageCount": 40,
+    "localFileCount": 40,
+    "sha256ManifestFileCount": 40,
+    "localImageBytes": 30144806,
+    "zipSha256Verification": "PASS",
+    "generationManifestHashVerification": "PASS",
+    "sha256ManifestHashVerification": "PASS",
+    "imageDecoding": "NOT_PERFORMED",
+    "status": "PASS"
+  },
+  "roles": {
+    "FLUX2": "SEALED_FUTURE_RESERVE",
+    "SPAI": "FORBIDDEN",
+    "VLM": "FORBIDDEN",
+    "spectralAnalysis": "FORBIDDEN",
+    "transformations": "FORBIDDEN",
+    "humanForensicSelection": "FORBIDDEN"
+  },
+  "samples": [
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_001",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_001",
+      "promptId": "PROMPT_001",
+      "sha256": "0b45fdfe2120a0151c8ea558d431e73f44ca37f105f4146e54477cd1b3a5291d",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_001.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_002",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_002",
+      "promptId": "PROMPT_002",
+      "sha256": "63a92657b2ca6ceb8101c791e211bc84fa17dc929c1f69a3118d39a5afcc7ef3",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_002.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_003",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_003",
+      "promptId": "PROMPT_003",
+      "sha256": "f7e76244ea00b5e8a43625ea97c8864b7be36dcab50c0dd1ab11a149d34ad903",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_003.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_004",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_004",
+      "promptId": "PROMPT_004",
+      "sha256": "a9b89036b9f1c0d9bf2d30cf890c8eaa8ed5bef549bf373ea50d81fc5cfdf2d5",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_004.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_005",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_005",
+      "promptId": "PROMPT_005",
+      "sha256": "0969d25e4b772951c2e89f1d1679abae03d08ee19010d5b1766d98eddb7a92cc",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_005.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_011",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_011",
+      "promptId": "PROMPT_011",
+      "sha256": "f0e73dc3ccf24dd316ca34b683046d3dad471abfdb46a35bb1c281622d9b2014",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_011.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_012",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_012",
+      "promptId": "PROMPT_012",
+      "sha256": "ebdaf02a761a42cd716fe7f094c57c146abb8c1d60f41082b366c8aea8504a93",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_012.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_013",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_013",
+      "promptId": "PROMPT_013",
+      "sha256": "a65f484474c89837ff02b48c94a039b907f2c82bd52d26627f726006ec4a636c",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_013.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_014",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_014",
+      "promptId": "PROMPT_014",
+      "sha256": "cfeac71b6f0f83e143b1fd33254760883e7d62072728522dbbef7d1840551c0d",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_014.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_015",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_015",
+      "promptId": "PROMPT_015",
+      "sha256": "706fc65fa3ba7f000551ab0b02e08f247a4d373d7d6b150d5f5f84839c87c117",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_015.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_021",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_021",
+      "promptId": "PROMPT_021",
+      "sha256": "9c9a5ae942ec15f75e19796e01bc9a9753003ee0d1c528edb16ebb64b5e0b856",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_021.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_022",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_022",
+      "promptId": "PROMPT_022",
+      "sha256": "6cd85e52be8cc8316e11ab53b42c0024cd7f6cf6dbcd1a88c7384971e35e3e6a",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_022.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_023",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_023",
+      "promptId": "PROMPT_023",
+      "sha256": "67ad3279ade07655209c27d4e42b64c54787a511675afdeeedf94b33aa3551c5",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_023.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_024",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_024",
+      "promptId": "PROMPT_024",
+      "sha256": "9586b4c023b3b460aad6c91802abc5b7c7ecfae07cd234d2208458bc31be5d2a",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_024.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_025",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_025",
+      "promptId": "PROMPT_025",
+      "sha256": "8af9cfd68f9610d24802327cd78c25a48b30ac6b97402a1d68bd6691dc0bf68d",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_025.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_031",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_031",
+      "promptId": "PROMPT_031",
+      "sha256": "b86c43f4651d1c7c7bf657a952558c8ab89da1a16d968fabbfb7fb05f7412097",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_031.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_032",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_032",
+      "promptId": "PROMPT_032",
+      "sha256": "ec3a2d31a5e4edafc5c9ce1dd320dd04abdde34c9245a9a88232c7c13a0397c5",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_032.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_033",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_033",
+      "promptId": "PROMPT_033",
+      "sha256": "f34533565c3a32c372dc0fb59237e164b4a05b6a418f6e4a16f82cb824f3cd15",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_033.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_034",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_034",
+      "promptId": "PROMPT_034",
+      "sha256": "1add3c7e70da892e21347e40c2fee685fed0bae24e52d5a8dc77c5b41a6f8f2b",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_034.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_035",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_035",
+      "promptId": "PROMPT_035",
+      "sha256": "2d1e5a896e01d647e33f8cdfa3d947d718e6a51d41b94b6bfd40009acba39e1a",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_035.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_041",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_041",
+      "promptId": "PROMPT_041",
+      "sha256": "2d58b8f1dfe41bfabb508d721c3dabc91470ea51093bc9e537866b9fa8017655",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_041.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_042",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_042",
+      "promptId": "PROMPT_042",
+      "sha256": "506f9500ee04b45b770efb57812efde3c32892259010d8fb43f07a4159846bc8",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_042.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_043",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_043",
+      "promptId": "PROMPT_043",
+      "sha256": "6f321a9d0cd9af441ac18250a6a8f604992fc3c28285927ac0e6bf1482dac58e",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_043.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_044",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_044",
+      "promptId": "PROMPT_044",
+      "sha256": "34ab09fa5bc5263a703ae42d10171bb6811545756f937a3c99bb8c91a838d385",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_044.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_045",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_045",
+      "promptId": "PROMPT_045",
+      "sha256": "b5a7d069241702ca706bbfb7785ee757102e90c08e7f74e2d218719d72431337",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_045.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_051",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_051",
+      "promptId": "PROMPT_051",
+      "sha256": "564b4971d000667b448a1638efd5da88a1ce6a6f1575d503db7961053f3aff95",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_051.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_052",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_052",
+      "promptId": "PROMPT_052",
+      "sha256": "c275442a37047cbd53d9842a6d8846bbb604c006fcafdb591a8c296061d20d25",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_052.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_053",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_053",
+      "promptId": "PROMPT_053",
+      "sha256": "efe3ba1e933531bc4fc969ae8825834acff14e2182a860c4c704a7e28ebdd77c",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_053.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_054",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_054",
+      "promptId": "PROMPT_054",
+      "sha256": "c39f2ba3e71c11cc95a8881899f725305bb76b77dc22629f57dd106bd1710609",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_054.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_055",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_055",
+      "promptId": "PROMPT_055",
+      "sha256": "3e9c983a27002312e049e698f2aeb014d45b1a5bb7c86de8d81fe00f2024cd7a",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_055.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_061",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_061",
+      "promptId": "PROMPT_061",
+      "sha256": "076c3e9a6860b57ae1088a6c153bb496734e2284f8c131872a2e6f1433d3ef0a",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_061.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_062",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_062",
+      "promptId": "PROMPT_062",
+      "sha256": "e466d2ef88019bf0f115e0d57398d01be53564b3d9d00326302d9e93c455f5e0",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_062.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_063",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_063",
+      "promptId": "PROMPT_063",
+      "sha256": "d17203e8ad0a58b8733a81c0e1d4115c4d5c526e772712b212f0dc12f77b8ec0",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_063.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_064",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_064",
+      "promptId": "PROMPT_064",
+      "sha256": "05f1f219e243735ce0704a97392d031c70007451c4489e39e2b6ee9a925d78c9",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_064.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_065",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_065",
+      "promptId": "PROMPT_065",
+      "sha256": "6cb8bc7f63a6a5ffdade6bc856d6ef05fc8ca9ceba548e224e2ba1a8cae63f86",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_065.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_071",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_071",
+      "promptId": "PROMPT_071",
+      "sha256": "9c9b96a379d1d7d78fc7c5723ffb62b8adf5975f20cc81292fc7ab09f2fc1204",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_071.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_072",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_072",
+      "promptId": "PROMPT_072",
+      "sha256": "419569feac41827e9708e014e7b6d5acaa14760d151f5ce7ead8fe079257c29d",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_072.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_073",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_073",
+      "promptId": "PROMPT_073",
+      "sha256": "fa73d29b053137e07f21417d4eee13a78bbd618620c7f992907c21eea3462123",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_073.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_074",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_074",
+      "promptId": "PROMPT_074",
+      "sha256": "a87d35b195994566938be76e91469cbdebba53b3ce0e6e826cf70c780481e532",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_074.jpg"
+    },
+    {
+      "sampleId": "WP007AH_FLUX_2_KLEIN_4B_PROMPT_075",
+      "sourceFamilyId": "WP007AH-FLUX_2_KLEIN_4B-PROMPT_075",
+      "promptId": "PROMPT_075",
+      "sha256": "e77e00f634fad03e75b9412ee2d28dcd215270f4ff1016e1c43db7dcd65d2908",
+      "cacheId": "wp007ah-cloudflare/FLUX_2_KLEIN_4B/WP007AH_FLUX_2_KLEIN_4B_PROMPT_075.jpg"
+    }
+  ],
+  "freezeSha256": "56ae0bd15b8bc21d77b28c9e6faea8149440aab8a9d101db523a43aedb98e054"
+}
