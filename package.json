@@ -127,7 +127,7 @@
     "cross-fetch": "^4.1.0",
     "glob": "^13.0.6",
     "husky": "^8.0.3",
-    "jest": "^30.4.2",
+    "jest": "^30.5.1",
     "jsonpointer": "^5.0.1",
     "oasdiff": "file:tools/openapi/oasdiff",
     "openapi-client-axios": "^7.7.0",
