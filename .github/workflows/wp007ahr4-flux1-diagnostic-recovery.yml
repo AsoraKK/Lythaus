@@ -2,7 +2,7 @@ name: WP007A-HR4 bounded FLUX.1 diagnostic
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, synchronize]
 
 permissions:
   contents: read
@@ -27,7 +27,6 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = pull_request
-          test "$GITHUB_EVENT_ACTION" = opened
           test "$GITHUB_RUN_ATTEMPT" = 1
           test "$GITHUB_BASE_REF" = main
           test "$GITHUB_BASE_SHA" = "$EXPECTED_SHA"
