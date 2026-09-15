@@ -341,16 +341,31 @@ export async function verifyCachedRecord(cachePath, record) {
   return true;
 }
 
-export function requestBody(model, prompt) {
+export const WP007AHR4_FLUX1_SEED_POLICY = 'NOT_SENT_PROVIDER_ROUTE_UNSUPPORTED';
+
+export function requestBody(model, prompt, { flux1SeedPolicy = 'DERIVED_PROMPT_SEED' } = {}) {
   const seed = model.seedSupport === 'DOCUMENTED_BY_CURRENT_MODEL_PAGE'
     ? deriveWp007ahPromptSeed(model.modelId, prompt.promptId)
     : null;
   const body = { prompt: prompt.text };
   if (model.modelId === '@cf/black-forest-labs/flux-1-schnell') {
     body.steps = WP007AH_GENERATION_CONFIGURATION.flux1.steps;
-    body.seed = seed;
+    if (flux1SeedPolicy === 'DERIVED_PROMPT_SEED') body.seed = seed;
+    else if (flux1SeedPolicy !== WP007AHR4_FLUX1_SEED_POLICY) throw new Error(`wp007ahr4_flux1_seed_policy_invalid:${flux1SeedPolicy}`);
+  } else if (flux1SeedPolicy !== 'DERIVED_PROMPT_SEED') {
+    throw new Error(`wp007ahr4_flux1_seed_policy_model_invalid:${model.modelId}`);
   }
-  return { body, recordedSeed: seed === null ? 'NOT_SUPPORTED' : seed };
+  return {
+    body,
+    recordedSeed: flux1SeedPolicy === WP007AHR4_FLUX1_SEED_POLICY ? 'NOT_SENT_ROUTE_UNSUPPORTED' : seed === null ? 'NOT_SUPPORTED' : seed,
+    originalDerivedSeed: seed,
+    seedPolicy: flux1SeedPolicy,
+  };
+}
+
+export function requestBodyForWp007ahr4Flux1(model, prompt) {
+  if (model.modelId !== '@cf/black-forest-labs/flux-1-schnell') throw new Error(`wp007ahr4_flux1_model_invalid:${model.modelId}`);
+  return requestBody(model, prompt, { flux1SeedPolicy: WP007AHR4_FLUX1_SEED_POLICY });
 }
 
 function recordFor({ model, prompt, seed, file, rightsAuditId, cacheId }) {

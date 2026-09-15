@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "lythaus-wp007ahr4-flux1-generation-contract-amendment-v1",
+  "amendmentId": "WP007A-HR4_GENERATION_CONTRACT_AMENDMENT_V1",
+  "parentHistoricalFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+  "historicalFreezeUnchanged": true,
+  "historicalWp007aBenchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "trustedMainSha": "4519909dd6cd7ecde282390dcfc8835cdc94b950",
+  "diagnosticProvenance": {
+    "pullRequest": 832,
+    "runId": 34949837474,
+    "modelId": "@cf/black-forest-labs/flux-1-schnell",
+    "promptId": "PROMPT_001",
+    "diagnosticCallCount": 1,
+    "recordedSeed": 3131714809
+  },
+  "providerEvidence": {
+    "providerHttpStatus": 400,
+    "providerErrorCode": 5006,
+    "providerErrorMessage": "AiError: Bad input: Error: Additional or unevaluated properties '/seed' at '/' not allowed (cb7b54ef-8578-4c7d-9660-d3e21c032446)",
+    "failureCategory": "REQUEST_PARAMETER_UNSUPPORTED",
+    "requestContentTypeClassification": "APPLICATION_JSON",
+    "retryable": false
+  },
+  "liveSchemaCapabilities": {
+    "prompt": {
+      "present": true,
+      "type": "STRING"
+    },
+    "steps": {
+      "present": true,
+      "type": "INTEGER"
+    },
+    "seed": {
+      "present": false,
+      "type": null,
+      "minimum": null,
+      "maximum": null
+    }
+  },
+  "exactOldRequestContract": {
+    "modelId": "@cf/black-forest-labs/flux-1-schnell",
+    "method": "POST",
+    "contentType": "application/json",
+    "body": {
+      "prompt": "FROZEN_PROMPT_TEXT_UNCHANGED",
+      "steps": 4,
+      "seed": "DERIVED_PROMPT_SEED"
+    },
+    "recordedSeed": "DERIVED_PROMPT_SEED"
+  },
+  "exactAmendedRequestContract": {
+    "modelId": "@cf/black-forest-labs/flux-1-schnell",
+    "method": "POST",
+    "contentType": "application/json",
+    "body": {
+      "prompt": "FROZEN_PROMPT_TEXT_UNCHANGED",
+      "steps": 4
+    },
+    "seedField": "OMITTED",
+    "recordedSeed": "NOT_SENT_ROUTE_UNSUPPORTED"
+  },
+  "unchangedFields": {
+    "promptIds": "FROZEN_PROMPT_IDS_UNCHANGED",
+    "promptText": "FROZEN_PROMPT_TEXT_UNCHANGED",
+    "modelId": "@cf/black-forest-labs/flux-1-schnell",
+    "steps": 4,
+    "generationRoute": "CLOUDFLARE_WORKERS_AI_BFL_PARTNER_ROUTE",
+    "modelRole": "SEALED_GENERATOR_HOLDOUT",
+    "retryPolicy": "WP007AH_RETRY_POLICY_UNCHANGED",
+    "rights": "EVALUATION_ONLY; AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY",
+    "sourceFamilyMembership": "UNCHANGED",
+    "parameters": "ALL_OTHER_PARAMETERS_UNCHANGED"
+  },
+  "seedPolicies": {
+    "historicalSeedPolicy": "DERIVED_PROMPT_SEED",
+    "currentExecutableSeedPolicy": "NOT_SENT_PROVIDER_ROUTE_UNSUPPORTED",
+    "amendmentReason": "LIVE_PROVIDER_CONTRACT_INCOMPATIBILITY_BEFORE_MATERIALISATION"
+  },
+  "rootCause": "REST_ROUTE_SEED_UNSUPPORTED",
+  "rationale": "The live FLUX.1 schema omits seed and the one bounded provider response explicitly rejects /seed as an additional property before any FLUX.1 output was materialised.",
+  "noDetectorEvidenceUsed": true,
+  "noSuccessfulFlux1MaterialPreviouslyAvailable": true,
+  "noFlux2ChangedOrRegenerated": true,
+  "spaiStarted": false,
+  "amendmentSha256": "2294cfeb9220be2becf08e70abb848267dcb5db2f213411e54c8883bc753431a"
+}
