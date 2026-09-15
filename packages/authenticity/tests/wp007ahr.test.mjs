@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
@@ -23,6 +25,7 @@ import {
   WP007AHR_TRUSTED_REF,
 } from '../../../scripts/authenticity/wp007ahr-preflight.mjs';
 import { buildTransferManifest } from '../../../scripts/authenticity/wp007ahr-build-transfer-manifest.mjs';
+import { relativeCacheId } from '../../../scripts/authenticity/wp007ah-cloudflare-holdouts.mjs';
 import { findUnpinnedActions } from '../../../scripts/validate-workflow-action-pins.mjs';
 import { WP007AH_MODEL_IDS, WP007AH_MODEL_ROLES } from '../src/wp007ah.ts';
 
@@ -160,6 +163,68 @@ test('transfer manifest hashes only external-cache media and carries no secrets 
     assertNoPrivateArtifactKeys(metadata);
     assert.equal(metadata.mediaCommittedToGit, false);
     assert.equal(stableArtifactHash(result.transferManifest.records), stableArtifactHash([]));
+  } finally {
+    await rm(cache, { recursive: true, force: true });
+  }
+});
+
+test('generated cache IDs use one logical prefix and transfer hashes verify Flux.2 records', async () => {
+  const cache = await mkdtemp(path.join(os.tmpdir(), 'wp007ahr-transfer-record-'));
+  try {
+    const filePath = path.join(cache, 'wp007ah-cloudflare', 'FLUX_2_KLEIN_4B', 'sample.png');
+    const imageBytes = Buffer.from('wp007ahr-transfer-fixture', 'utf8');
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await writeFile(filePath, imageBytes);
+    assert.equal(relativeCacheId(cache, filePath), 'wp007ah-cloudflare/FLUX_2_KLEIN_4B/sample.png');
+    const record = {
+      sampleId: 'WP007AH_FLUX_2_KLEIN_4B_PROMPT_001',
+      sourceFamilyId: 'WP007AH-FLUX_2_KLEIN_4B-PROMPT_001',
+      provider: 'CLOUDFLARE_WORKERS_AI',
+      generatorModelId: WP007AH_MODEL_IDS[1],
+      generatorFamily: 'FLUX_2_KLEIN_4B',
+      generatorVersion: null,
+      generationRoute: 'CLOUDFLARE_WORKERS_AI_BFL_PARTNER_ROUTE',
+      promptBankVersion: 'LYTHAUS_EF3_PROMPT_BANK_V1',
+      promptId: 'PROMPT_001',
+      seed: 'NOT_SUPPORTED',
+      generationParameters: {},
+      generatedAt: '2026-09-14T00:00:00.000Z',
+      file: {
+        sha256: createHash('sha256').update(imageBytes).digest('hex'),
+        width: 1024,
+        height: 1024,
+        format: 'PNG',
+        byteSize: imageBytes.byteLength,
+        cacheId: 'wp007ah-cloudflare/FLUX_2_KLEIN_4B/sample.png',
+      },
+      truthAxes: {
+        physicalCameraAcquisition: 'FALSE',
+        syntheticDepictedContent: 'TRUE',
+        localManipulation: 'FALSE',
+        digitalCapture: 'TRUE',
+        screenRecapture: 'FALSE',
+      },
+      rightsAuditId: 'WP007AH_CLOUDFLARE_BFL_ROUTE_2026-09-14',
+      trainingEligibility: 'EVALUATION_ONLY',
+      evaluationEligibility: 'AUTHORIZED_FOR_BOUNDED_HOLDOUT_ONLY',
+      benchmarkRole: WP007AH_MODEL_ROLES[WP007AH_MODEL_IDS[1]],
+      limitations: [],
+    };
+    await writeFile(path.join(cache, 'cloudflare-generation-manifest.json'), `${JSON.stringify({
+      schemaVersion: 'lythaus-wp007ah-cloudflare-generation-manifest-v1',
+      generationStatus: 'MATERIALIZED',
+      requested: { FLUX_1_SCHNELL: 40, FLUX_2_KLEIN_4B: 40, total: 80 },
+      records: [record],
+      failures: [],
+      detectorInferenceRun: false,
+      modelTrainingRun: false,
+      transformationsRun: false,
+      mediaCommittedToGit: false,
+    }, null, 2)}\n`, 'utf8');
+    const result = await buildTransferManifest({ cachePath: cache });
+    assert.equal(result.hashes.length, 1);
+    assert.equal(result.transferManifest.records[0].cacheId, record.file.cacheId);
+    assert.equal(result.transferManifest.records[0].sha256, record.file.sha256);
   } finally {
     await rm(cache, { recursive: true, force: true });
   }
