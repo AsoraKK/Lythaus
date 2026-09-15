@@ -23,13 +23,14 @@ jobs:
       - name: Enforce exact diagnostic boundary
         env:
           EXPECTED_SHA: 4519909dd6cd7ecde282390dcfc8835cdc94b950
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_EVENT_NAME" = pull_request
           test "$GITHUB_RUN_ATTEMPT" = 1
           test "$GITHUB_BASE_REF" = main
-          test "$GITHUB_BASE_SHA" = "$EXPECTED_SHA"
+          test "$BASE_SHA" = "$EXPECTED_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Set up Node.js
