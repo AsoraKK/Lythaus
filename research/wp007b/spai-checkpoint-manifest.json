@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "lythaus-wp007b-spai-checkpoint-manifest-v1",
+  "source": "https://drive.google.com/file/d/1vvXmZqs6TVJdj8iF1oJ4L_fcgdQrp_YI/view?usp=sharing",
+  "filename": "spai.pth",
+  "declaredSizeBytes": 934865338,
+  "actualSizeBytes": 934865338,
+  "maximumAutomaticCheckpointSizeBytes": 2147483648,
+  "sha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+  "sha256Verification": "PASS",
+  "upstreamCommit": "8ff7b3b6779b4fcb43cf313471d9cb1c62d129a4",
+  "bytesCommittedToGit": false
+}

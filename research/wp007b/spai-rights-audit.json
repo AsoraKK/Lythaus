@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "lythaus-wp007b-spai-rights-audit-v1",
+  "specialistId": "spai-spectral-ef3",
+  "upstream": {
+    "repository": "https://github.com/mever-team/spai",
+    "commit": "8ff7b3b6779b4fcb43cf313471d9cb1c62d129a4",
+    "licenseFile": "Apache-2.0",
+    "codeRights": "CONFIRMED_FOR_RESEARCH_USE",
+    "checkpointRights": "CONFIRMED_FOR_RESEARCH_EVALUATION",
+    "researchEvaluationRights": "CONFIRMED",
+    "commercialDeploymentRights": "CONDITIONAL_UPSTREAM_AND_DEPENDENCY_TERMS",
+    "commercialDeploymentUsed": false
+  },
+  "checkpoint": {
+    "source": "https://drive.google.com/file/d/1vvXmZqs6TVJdj8iF1oJ4L_fcgdQrp_YI/view?usp=sharing",
+    "filename": "spai.pth",
+    "declaredSizeBytes": 934865338,
+    "actualSizeBytes": 934865338,
+    "sha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55"
+  },
+  "trainingDataLineage": {
+    "status": "PARTIAL_UPSTREAM_DISCLOSURE",
+    "authorDisclosure": "README describes spectral self-supervised learning of real-image spectral distributions and identifies latent-diffusion training/validation data, COCO, and LSUN instructions.",
+    "completeCorpusEnumeratedByUpstream": false,
+    "researchUseConstraint": "NO_TRAINING_OR_FINE_TUNING_IN_WP007B"
+  },
+  "dependencyRights": {
+    "status": "RESEARCH_USE_CONFIRMED; REVIEW_REQUIRED_FOR_COMMERCIAL_DEPLOYMENT",
+    "basis": "Upstream requirements include third-party open-source packages and the README requires their original terms to be retained.",
+    "lockSha256": "ba8b2d04be17415c099e945cde8875d9f97a0cefe75687f242fc917a80044160"
+  },
+  "auditConclusion": "PASS_FOR_RESEARCH_EVALUATION",
+  "limitations": [
+    "This artifact is a technical rights audit, not legal advice.",
+    "No commercial deployment or production integration is authorized by WP007B."
+  ]
+}
