@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "lythaus-wp007c-patchcraft-rights-audit-v1",
+  "candidateId": "PATCHCRAFT_OFFICIAL",
+  "upstreamRepository": "https://github.com/cvlcgabriel/PatchCraft",
+  "upstreamCommit": "00a00d9271304a18aa2d96f724d71c4e898708fd",
+  "officialImplementationIdentified": true,
+  "identityBasis": "Author repository named PatchCraft; README identifies PatchCraft evaluation code and cites arXiv:2311.12397.",
+  "codeLicense": "UNREPORTED_NO_LICENSE_FILE_OBSERVED",
+  "checkpointSource": "README_EXTERNAL_BAIDU_OR_GOOGLE_DRIVE_BUNDLE",
+  "checkpointLicense": "UNRESOLVED",
+  "researchEvaluationRights": "UNCONFIRMED",
+  "commercialDeploymentRights": "UNCONFIRMED",
+  "dependencyRights": "NOT_AUDITED_FOR_THIS_CANDIDATE",
+  "trainingDataLineage": "EXTERNAL_CNNDETECTION_AND_BENCHMARK_DATA_TERMS_NOT_RESOLVED",
+  "status": "RIGHTS_BLOCKED",
+  "checkpointRetrieved": false,
+  "inferencePerformed": false,
+  "reason": "Public source availability and an external checkpoint link do not establish code, checkpoint, dependency, or research-evaluation rights.",
+  "noSubstituteDetectorIntroduced": true
+}
