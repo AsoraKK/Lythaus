@@ -35,11 +35,22 @@ import {
 } from '../../packages/authenticity/src/wp007ahr2.ts';
 import { stableArtifactHash } from '../../packages/authenticity/src/wp007a.ts';
 import { cloudflareSafeProviderErrorDetailsFromBody } from '../../packages/authenticity/src/cloudflare-rest.ts';
+import {
+  assertWp007ahr4ContractAmendmentArtifact,
+  assertWp007ahr4Flux1Selector,
+  isWp007ahr4Flux1Mode,
+  wp007ahr4MaterializationStatus,
+  WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256,
+  WP007AHR4_FLUX1_MODEL_ID,
+  WP007AHR4_FLUX1_SUBMITTED_SEED_STATE,
+} from '../../packages/authenticity/src/wp007ahr4.ts';
+import { assertFrozenArtifacts, assertTrustedMain } from './wp007ahr-preflight.mjs';
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const PROMPT_BANK_PATH = path.join(REPOSITORY_ROOT, 'research', 'wp007a', 'prompt-bank.json');
 const RIGHTS_PATH = path.join(REPOSITORY_ROOT, 'research', 'wp007ah', 'cloudflare-rights-revalidation.json');
 const EXECUTION_AUTHORIZATION_PATH = path.join(REPOSITORY_ROOT, 'research', 'wp007ahr2', 'execution-authorization.json');
+const CONTRACT_AMENDMENT_PATH = path.join(REPOSITORY_ROOT, 'research', 'wp007ahr4', 'flux1-generation-contract-amendment.json');
 const DEFAULT_CACHE = path.join(os.homedir(), 'OneDrive', 'Desktop', 'Lythaus_AI_Datasets', '90_RESEARCH_ONLY', 'wp007ah-cloudflare-cache');
 const DEFAULT_MANIFEST_NAME = 'cloudflare-generation-manifest.json';
 const CLOUDFLARE_API_ROOT = 'https://api.cloudflare.com/client/v4/accounts';
@@ -59,6 +70,7 @@ function parseArgs(argv) {
     verifyOnly: false,
     smokeOnly: false,
     executionAuthorizationSha256: '',
+    wp007ahr4Flux1ContractAmendmentSha256: '',
   };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -71,6 +83,10 @@ function parseArgs(argv) {
     else if (argument === '--verify-only') options.verifyOnly = true;
     else if (argument === '--smoke-only') options.smokeOnly = true;
     else if (argument === '--execution-authorization-sha256') options.executionAuthorizationSha256 = argv[++index];
+    else if (argument === '--wp007ahr4-flux1-contract-amendment-sha256') {
+      options.wp007ahr4Flux1ContractAmendmentSha256 = argv[++index];
+      if (typeof options.wp007ahr4Flux1ContractAmendmentSha256 !== 'string' || options.wp007ahr4Flux1ContractAmendmentSha256.trim() === '') throw new Error('wp007ahr4_flux1_contract_amendment_hash_required');
+    }
     else throw new Error(`unknown_argument:${argument}`);
   }
   return options;
@@ -368,10 +384,22 @@ export function requestBodyForWp007ahr4Flux1(model, prompt) {
   return requestBody(model, prompt, { flux1SeedPolicy: WP007AHR4_FLUX1_SEED_POLICY });
 }
 
-function recordFor({ model, prompt, seed, file, rightsAuditId, cacheId }) {
+export function wp007ahr4ExecutionModelIds(amendmentSha256 = '') {
+  return isWp007ahr4Flux1Mode(amendmentSha256) ? [WP007AHR4_FLUX1_MODEL_ID] : [...WP007AH_MODEL_IDS];
+}
+
+export function generationRecordMatchesRequest({ record, model, prompt, request, hr4Flux1Mode = false }) {
+  if (record?.generatorModelId !== model.modelId || record?.promptId !== prompt.promptId || record?.seed !== request.recordedSeed || stableArtifactHash(record.generationParameters) !== stableArtifactHash(model.requestParameters)) return false;
+  if (!hr4Flux1Mode) return true;
+  return record.contractAmendmentSha256 === WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256
+    && record.originalDerivedSeed === request.originalDerivedSeed
+    && record.submittedSeedState === WP007AHR4_FLUX1_SUBMITTED_SEED_STATE;
+}
+
+function recordFor({ model, prompt, seed, file, rightsAuditId, cacheId, originalDerivedSeed = null, submittedSeedState = null, contractAmendmentSha256 = null }) {
   const familyToken = model.modelFamily.replaceAll(/[^A-Za-z0-9_]+/gu, '_');
   const promptToken = prompt.promptId;
-  return {
+  const record = {
     sampleId: `WP007AH_${familyToken}_${promptToken}`,
     sourceFamilyId: `WP007AH-${familyToken}-${promptToken}`,
     provider: 'CLOUDFLARE_WORKERS_AI',
@@ -398,6 +426,10 @@ function recordFor({ model, prompt, seed, file, rightsAuditId, cacheId }) {
     benchmarkRole: model.benchmarkRole,
     limitations: ['Provider output is retained only as a private/local research holdout.', 'Generator metadata is provenance, not detector input.', 'Output dimensions and format are provider-returned unless documented request parameters apply.'],
   };
+  if (contractAmendmentSha256 !== null) {
+    Object.assign(record, { originalDerivedSeed, submittedSeedState, contractAmendmentSha256 });
+  }
+  return record;
 }
 
 async function loadLocalManifest(manifestPath) {
@@ -433,22 +465,33 @@ async function executeGeneration(plan, options) {
   const outputCache = assertExternalCache(options.outputCache);
   const manifestPath = path.join(outputCache, DEFAULT_MANIFEST_NAME);
   const manifest = await loadLocalManifest(manifestPath);
+  const hr4Flux1Mode = isWp007ahr4Flux1Mode(options.wp007ahr4Flux1ContractAmendmentSha256);
+  const selectedModels = options.model ? plan.models.filter((model) => model.modelId === options.model) : plan.models;
+  if (selectedModels.length !== (options.model ? 1 : 2)) throw new Error(`wp007ah_model_selection_invalid:${options.model}`);
+  if (hr4Flux1Mode) {
+    assertWp007ahr4Flux1Selector({ amendmentSha256: options.wp007ahr4Flux1ContractAmendmentSha256, modelId: options.model });
+    if (manifest.records.some((record) => record.generatorModelId !== WP007AHR4_FLUX1_MODEL_ID)) throw new Error('wp007ahr4_flux1_manifest_contains_non_flux1_record');
+    manifest.executionMode = 'HR4_FLUX1_AMENDED_CONTRACT';
+    manifest.contractAmendmentSha256 = WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256;
+    manifest.requested = { FLUX_1_SCHNELL: plan.promptIds.length, total: plan.promptIds.length };
+    manifest.requestContract = { prompt: 'UNCHANGED_FROZEN_PROMPT', steps: 4, seedField: 'OMITTED', submittedSeedState: WP007AHR4_FLUX1_SUBMITTED_SEED_STATE };
+    manifest.flux2ProviderCalls = 0;
+  }
+  const selectedModelIds = selectedModels.map((model) => model.modelId);
   const attemptCostCapUsd = Number.isFinite(options.attemptCostCapUsd) ? options.attemptCostCapUsd : null;
   if (attemptCostCapUsd !== null) {
     manifest.costCapUsd = attemptCostCapUsd;
-    manifest.projectedMaxIncrementalPaidCostUsd = estimateWp007ahr2MaximumCostUsd(plan.promptIds.length, plan.models.map((model) => model.modelId));
+    manifest.projectedMaxIncrementalPaidCostUsd = estimateWp007ahr2MaximumCostUsd(plan.promptIds.length, selectedModelIds);
   }
   const promptBank = await readJson(PROMPT_BANK_PATH);
   const promptMap = new Map(promptBank.prompts.map((prompt) => [prompt.promptId, prompt]));
-  const selectedModels = options.model ? plan.models.filter((model) => model.modelId === options.model) : plan.models;
-  if (selectedModels.length !== (options.model ? 1 : 2)) throw new Error(`wp007ah_model_selection_invalid:${options.model}`);
   const selectedPairs = selectedModels.flatMap((model) => plan.promptIds.map((promptId) => ({ model, prompt: promptMap.get(promptId) })));
   const smokePairs = selectedPairs.filter((pair) => plan.promptIds.slice(0, 2).includes(pair.prompt.promptId));
   const pairs = options.smokeOnly ? smokePairs : selectedPairs;
   for (const pair of pairs) {
     const { model, prompt } = pair;
-    const request = requestBody(model, prompt);
-    const existing = manifest.records.find((record) => record.generatorModelId === model.modelId && record.promptId === prompt.promptId && record.seed === request.recordedSeed && stableArtifactHash(record.generationParameters) === stableArtifactHash(model.requestParameters));
+    const request = hr4Flux1Mode ? requestBodyForWp007ahr4Flux1(model, prompt) : requestBody(model, prompt);
+    const existing = manifest.records.find((record) => generationRecordMatchesRequest({ record, model, prompt, request, hr4Flux1Mode }));
     if (existing) {
       await verifyCachedRecord(outputCache, existing);
       continue;
@@ -488,6 +531,11 @@ async function executeGeneration(plan, options) {
         providerOutputReceived: false,
         retryAttempts: attempts,
         replacementPrompt: false,
+        ...(hr4Flux1Mode ? {
+          originalDerivedSeed: request.originalDerivedSeed,
+          submittedSeedState: WP007AHR4_FLUX1_SUBMITTED_SEED_STATE,
+          contractAmendmentSha256: WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256,
+        } : {}),
       });
       continue;
     }
@@ -499,7 +547,19 @@ async function executeGeneration(plan, options) {
       const cacheFile = path.join(outputCache, 'wp007ah-cloudflare', model.modelFamily, `${sampleId}.${extension}`);
       await mkdir(path.dirname(cacheFile), { recursive: true });
       await writeFile(cacheFile, bytes);
-      const record = recordFor({ model, prompt, seed: request.recordedSeed, rightsAuditId: model.rightsAuditId, cacheId: relativeCacheId(outputCache, cacheFile), file: { sha256, width: metadata.width, height: metadata.height, format: metadata.format, byteSize: bytes.byteLength } });
+      const record = recordFor({
+        model,
+        prompt,
+        seed: request.recordedSeed,
+        rightsAuditId: model.rightsAuditId,
+        cacheId: relativeCacheId(outputCache, cacheFile),
+        file: { sha256, width: metadata.width, height: metadata.height, format: metadata.format, byteSize: bytes.byteLength },
+        ...(hr4Flux1Mode ? {
+          originalDerivedSeed: request.originalDerivedSeed,
+          submittedSeedState: WP007AHR4_FLUX1_SUBMITTED_SEED_STATE,
+          contractAmendmentSha256: WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256,
+        } : {}),
+      });
       assertWp007ahGeneratedRecord(record);
       manifest.records.push(record);
     } catch (error) {
@@ -511,17 +571,29 @@ async function executeGeneration(plan, options) {
   }
   manifest.valid = manifest.records.length;
   manifest.failed = manifest.failures.length;
-  manifest.status = options.smokeOnly ? 'SMOKE_COMPLETE' : (manifest.valid === plan.requestedTotal ? 'MATERIALIZED' : 'PARTIAL');
+  const selectedValid = manifest.records.filter((record) => selectedModelIds.includes(record.generatorModelId)).length;
+  manifest.status = hr4Flux1Mode
+    ? wp007ahr4MaterializationStatus({ smokeOnly: options.smokeOnly, valid: selectedValid, requested: plan.promptIds.length })
+    : options.smokeOnly ? 'SMOKE_COMPLETE' : (manifest.valid === plan.requestedTotal ? 'MATERIALIZED' : 'PARTIAL');
+  if (hr4Flux1Mode) manifest.generationStatus = manifest.status;
   await persistManifest(manifestPath, manifest);
-  return { status: manifest.status, manifestPathId: 'wp007ah-cloudflare/cloudflare-generation-manifest.json', manifest };
+  return { status: manifest.status, manifestPathId: 'wp007ah-cloudflare/cloudflare-generation-manifest.json', executionModelIds: selectedModelIds, manifest };
 }
 
 export async function runWp007ah(options = {}) {
   const merged = { ...parseArgs([]), ...options };
+  const amendmentArgumentProvided = merged.wp007ahr4Flux1ContractAmendmentSha256 !== '' && merged.wp007ahr4Flux1ContractAmendmentSha256 !== undefined && merged.wp007ahr4Flux1ContractAmendmentSha256 !== null;
+  if (amendmentArgumentProvided && merged.wp007ahr4Flux1ContractAmendmentSha256 !== WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256) throw new Error('wp007ahr4_flux1_contract_amendment_hash_invalid');
+  const hr4Flux1Mode = isWp007ahr4Flux1Mode(merged.wp007ahr4Flux1ContractAmendmentSha256);
+  if (hr4Flux1Mode) {
+    if (!merged.model) throw new Error('wp007ahr4_flux1_model_required');
+    assertWp007ahr4Flux1Selector({ amendmentSha256: merged.wp007ahr4Flux1ContractAmendmentSha256, modelId: merged.model });
+    if (!merged.executionAuthorizationSha256) throw new Error('wp007ahr4_bounded_authorization_required');
+  }
   const boundedExecution = Boolean(merged.executionAuthorizationSha256);
   if (boundedExecution) {
     if (merged.maxPaidCost !== WP007AHR2_MAX_INCREMENTAL_PAID_COST_USD) throw new Error('wp007ahr2_paid_cost_cap_must_be_one');
-    if (merged.model) throw new Error('wp007ahr2_model_override_forbidden');
+    if (merged.model && !hr4Flux1Mode) throw new Error('wp007ahr2_model_override_forbidden');
   } else if (merged.maxPaidCost !== WP007AH_MAX_PAID_COST_USD) {
     throw new Error('wp007ah_paid_cost_cap_must_be_zero');
   }
@@ -538,11 +610,17 @@ export async function runWp007ah(options = {}) {
   if (merged.dryRun) return { status: 'DRY_RUN', auth, plan, generatedCount: 0 };
   if (auth.status !== 'AVAILABLE') throw new Error('WP007AH_STATUS=AUTH_BLOCKED');
   if (rightsRows(await readJson(RIGHTS_PATH)).length !== 2) throw new Error('WP007AH_STATUS=RIGHTS_BLOCKED');
+  if (hr4Flux1Mode) {
+    assertTrustedMain({ ref: process.env.GITHUB_REF, repository: process.env.GITHUB_REPOSITORY });
+    await assertFrozenArtifacts(REPOSITORY_ROOT);
+    const amendment = await readJson(CONTRACT_AMENDMENT_PATH);
+    assertWp007ahr4ContractAmendmentArtifact(amendment);
+  }
   if (boundedExecution) {
     if (merged.executionAuthorizationSha256 !== WP007AHR2_EXECUTION_AUTHORIZATION_SHA256) throw new Error('WP007ahr2_execution_authorization_hash_invalid');
     const authorization = await readJson(EXECUTION_AUTHORIZATION_PATH);
     assertWp007ahr2ExecutionAuthorization(authorization);
-    const projectedMaxCostUsd = estimateWp007ahr2MaximumCostUsd(plan.promptIds.length, plan.models.map((model) => model.modelId));
+    const projectedMaxCostUsd = estimateWp007ahr2MaximumCostUsd(plan.promptIds.length, wp007ahr4ExecutionModelIds(merged.wp007ahr4Flux1ContractAmendmentSha256));
     assertWp007ahr2BoundedCost({ estimatedMaxCostUsd: projectedMaxCostUsd, requestedCapUsd: merged.maxPaidCost });
     return executeGeneration(plan, { ...merged, attemptCostCapUsd: merged.maxPaidCost });
   }
