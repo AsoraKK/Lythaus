@@ -258,8 +258,14 @@ async function decodeImage(bytes) {
   return { width: metadata.width, height: metadata.height, format: String(metadata.format ?? 'UNKNOWN').toUpperCase() };
 }
 
-async function verifyCachedRecord(cachePath, record) {
-  const cacheFile = path.resolve(cachePath, record.file.cacheId.replace(/^wp007ah-cloudflare\//u, ''));
+export async function verifyCachedRecord(cachePath, record) {
+  const cacheId = record?.file?.cacheId;
+  if (typeof cacheId !== 'string' || !cacheId.startsWith('wp007ah-cloudflare/')) throw new Error(`wp007ah_cache_id_invalid:${record?.sampleId ?? 'UNKNOWN'}`);
+  const normalizedCacheId = cacheId.replaceAll('\\', '/');
+  if (normalizedCacheId.split('/').some((part) => !part || part === '..') || path.isAbsolute(normalizedCacheId)) throw new Error(`wp007ah_cache_id_invalid:${record?.sampleId ?? 'UNKNOWN'}`);
+  const cacheFile = path.resolve(cachePath, normalizedCacheId);
+  const relative = path.relative(path.resolve(cachePath), cacheFile);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) throw new Error(`wp007ah_cache_id_invalid:${record?.sampleId ?? 'UNKNOWN'}`);
   const bytes = new Uint8Array(await readFile(cacheFile));
   if (hashBytes(bytes) !== record.file.sha256) throw new Error(`wp007ah_cached_hash_mismatch:${record.sampleId}`);
   return true;
