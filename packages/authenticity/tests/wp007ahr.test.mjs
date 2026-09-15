@@ -25,7 +25,7 @@ import {
   WP007AHR_TRUSTED_REF,
 } from '../../../scripts/authenticity/wp007ahr-preflight.mjs';
 import { buildTransferManifest } from '../../../scripts/authenticity/wp007ahr-build-transfer-manifest.mjs';
-import { relativeCacheId } from '../../../scripts/authenticity/wp007ah-cloudflare-holdouts.mjs';
+import { relativeCacheId, verifyCachedRecord } from '../../../scripts/authenticity/wp007ah-cloudflare-holdouts.mjs';
 import { findUnpinnedActions } from '../../../scripts/validate-workflow-action-pins.mjs';
 import { WP007AH_MODEL_IDS, WP007AH_MODEL_ROLES } from '../src/wp007ah.ts';
 
@@ -176,6 +176,13 @@ test('generated cache IDs use one logical prefix and transfer hashes verify Flux
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, imageBytes);
     assert.equal(relativeCacheId(cache, filePath), 'wp007ah-cloudflare/FLUX_2_KLEIN_4B/sample.png');
+    await assert.doesNotReject(() => verifyCachedRecord(cache, {
+      sampleId: 'WP007AH_FLUX_2_KLEIN_4B_PROMPT_001',
+      file: {
+        cacheId: 'wp007ah-cloudflare/FLUX_2_KLEIN_4B/sample.png',
+        sha256: createHash('sha256').update(imageBytes).digest('hex'),
+      },
+    }));
     const record = {
       sampleId: 'WP007AH_FLUX_2_KLEIN_4B_PROMPT_001',
       sourceFamilyId: 'WP007AH-FLUX_2_KLEIN_4B-PROMPT_001',
