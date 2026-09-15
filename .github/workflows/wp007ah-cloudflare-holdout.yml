@@ -4,15 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Run only the read-only preflight, or execute the frozen plan after all gates pass'
+        description: 'Run the read-only preflight, historical plan, or HR4 FLUX.1-only amended plan'
         required: true
         default: preflight
         type: choice
         options:
           - preflight
           - execute
+          - hr4_flux1_execute
       confirm:
-        description: 'Required only for execute: EXECUTE_FROZEN_WP007AH'
+        description: 'Required for execute: EXECUTE_FROZEN_WP007AH; HR4: EXECUTE_HR4_FLUX1_AMENDED'
         required: false
         type: string
       expected_freeze_sha256:
@@ -24,6 +25,11 @@ on:
         description: 'Exact WP007A-HR2 bounded-cost authorization hash'
         required: true
         default: eaa403c2a5519bcc130a33062ef1f4bbb67ba724eb9b003f57c3e609400d91ab
+        type: string
+      flux1_contract_amendment_sha256:
+        description: 'Exact HR4 FLUX.1 request-contract amendment hash'
+        required: true
+        default: 2294cfeb9220be2becf08e70abb848267dcb5db2f213411e54c8883bc753431a
         type: string
 
 permissions:
@@ -46,6 +52,7 @@ jobs:
       projected_max_cost_usd: ${{ steps.preflight.outputs.projected_max_cost_usd }}
       rights_status: ${{ steps.preflight.outputs.rights_status }}
       execution_authorization_verified: ${{ steps.preflight.outputs.execution_authorization_verified }}
+      contract_amendment_verified: ${{ steps.preflight.outputs.contract_amendment_verified }}
     steps:
       - name: Checkout trusted main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -80,6 +87,7 @@ jobs:
           WP007AHR_CONFIRM: ${{ inputs.confirm }}
           WP007AHR_EXPECTED_FREEZE_SHA256: ${{ inputs.expected_freeze_sha256 }}
           WP007AHR2_EXECUTION_AUTHORIZATION_SHA256: ${{ inputs.execution_authorization_sha256 }}
+          WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256: ${{ inputs.flux1_contract_amendment_sha256 }}
         shell: bash
         run: |
           node --experimental-strip-types scripts/authenticity/wp007ahr2-preflight.mjs \
@@ -87,6 +95,7 @@ jobs:
             --confirm "$WP007AHR_CONFIRM" \
             --expected-freeze-sha256 "$WP007AHR_EXPECTED_FREEZE_SHA256" \
             --execution-authorization-sha256 "$WP007AHR2_EXECUTION_AUTHORIZATION_SHA256" \
+            --flux1-contract-amendment-sha256 "$WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256" \
             --output "$RUNNER_TEMP/wp007ahr-preflight.json"
       - name: Publish safe preflight summary
         if: always()
@@ -95,7 +104,7 @@ jobs:
         shell: bash
         run: |
           if test -f "$PREFLIGHT_FILE"; then
-            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.PREFLIGHT_FILE,"utf8")); const schemas=Array.isArray(s.modelSchema)?s.modelSchema:[]; const lines=["### WP007A-HR2 preflight","","AUTH_STATUS = "+(s.authStatus??"UNKNOWN"),"MODEL_ROUTE_STATUS = "+(s.modelRouteStatus??"UNKNOWN"),"CATALOG_STATUS = "+(s.catalogStatus??"UNKNOWN"),"FLUX1_SCHEMA_STATUS = "+(schemas.find((m)=>m.modelId==="@cf/black-forest-labs/flux-1-schnell")?.status??"UNKNOWN"),"FLUX2_SCHEMA_STATUS = "+(schemas.find((m)=>m.modelId==="@cf/black-forest-labs/flux-2-klein-4b")?.status??"UNKNOWN"),"COST_STATUS = "+(s.costStatus??"UNKNOWN"),"PROJECTED_MAX_COST_USD = "+(s.projectedMaxCostUsd??"UNKNOWN"),"RIGHTS_STATUS = "+(s.rightsStatus??"UNKNOWN"),"EXECUTION_AUTHORIZATION_VERIFIED = "+Boolean(s.executionAuthorizationVerified),"EXECUTION_STATUS = "+(s.passed===true?"AUTHORIZED":"BLOCKED"),"GENERATION_CALLS = 0","IMAGES_GENERATED = 0"]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n")+"\n");'
+            node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.PREFLIGHT_FILE,"utf8")); const schemas=Array.isArray(s.modelSchema)?s.modelSchema:[]; const hr4=s.mode==="hr4_flux1_execute"; const lines=["### "+(hr4?"WP007A-HR4":"WP007A-HR2")+" preflight","","AUTH_STATUS = "+(s.authStatus??"UNKNOWN"),"MODEL_ROUTE_STATUS = "+(s.modelRouteStatus??"UNKNOWN"),"CATALOG_STATUS = "+(s.catalogStatus??"UNKNOWN"),"FLUX1_SCHEMA_STATUS = "+(schemas.find((m)=>m.modelId==="@cf/black-forest-labs/flux-1-schnell")?.status??"UNKNOWN"),"FLUX2_SCHEMA_STATUS = "+(hr4?"SEALED_NO_CALL":(schemas.find((m)=>m.modelId==="@cf/black-forest-labs/flux-2-klein-4b")?.status??"UNKNOWN")),"COST_STATUS = "+(s.costStatus??"UNKNOWN"),"PROJECTED_MAX_COST_USD = "+(s.projectedMaxCostUsd??"UNKNOWN"),"RIGHTS_STATUS = "+(s.rightsStatus??"UNKNOWN"),"EXECUTION_AUTHORIZATION_VERIFIED = "+Boolean(s.executionAuthorizationVerified),"CONTRACT_AMENDMENT_VERIFIED = "+Boolean(s.contractAmendmentVerified),"EXECUTION_STATUS = "+(s.passed===true?"AUTHORIZED":"BLOCKED"),"GENERATION_CALLS = 0","IMAGES_GENERATED = 0"]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n")+"\n");'
           else
             printf '%s\n' '### WP007A-HR2 preflight' '' 'EXECUTION_STATUS = PREFLIGHT_SCRIPT_FAILED' 'GENERATION_CALLS = 0' 'IMAGES_GENERATED = 0' >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -183,3 +192,103 @@ jobs:
         shell: bash
         run: |
           node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; let s={}; if(fs.existsSync(p)) s=JSON.parse(fs.readFileSync(p,"utf8")); const rows=["### WP007A-HR2 execution","","AUTH_STATUS = PASS","COST_STATUS = BOUNDED_COST_AUTHORIZED","PROJECTED_MAX_COST_USD = 0.17","FLUX1_REQUESTED = "+(s.requested?.FLUX_1_SCHNELL??40),"FLUX1_VALID = "+(s.records??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX1_FAILED = "+(s.failures??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX2_REQUESTED = "+(s.requested?.FLUX_2_KLEIN_4B??40),"FLUX2_VALID = "+(s.records??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b").length,"FLUX2_FAILED = "+(s.failures??[]).filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b").length,"ATTEMPTED_COST_USD = "+(s.attemptedCostUsd??0),"ARTIFACT_NAME = wp007ah-holdout-${{ github.run_id }}","EXECUTION_STATUS = "+(s.status??"UNKNOWN")]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,rows.join("\n")+"\n");'
+
+  hr4_flux1_execute:
+    name: Execute HR4 FLUX.1-only amended materialisation
+    needs: preflight
+    if: ${{ inputs.mode == 'hr4_flux1_execute' && needs.preflight.result == 'success' && needs.preflight.outputs.passed == 'true' && needs.preflight.outputs.auth_status == 'PASS' && needs.preflight.outputs.model_route_status == 'PASS' && needs.preflight.outputs.rights_status == 'PASS' && needs.preflight.outputs.cost_status == 'BOUNDED_COST_AUTHORIZED' && needs.preflight.outputs.execution_authorization_verified == 'true' && needs.preflight.outputs.contract_amendment_verified == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: refs/heads/main
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit
+      - name: Enforce HR4 selector and cache boundary
+        shell: bash
+        env:
+          EXPECTED_REF: ${{ github.ref }}
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+          CONFIRM: ${{ inputs.confirm }}
+          EXPECTED_FREEZE: ${{ inputs.expected_freeze_sha256 }}
+          EXPECTED_AUTHORIZATION: ${{ inputs.execution_authorization_sha256 }}
+          EXPECTED_AMENDMENT: ${{ inputs.flux1_contract_amendment_sha256 }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ahr4-flux1-${{ github.run_id }}
+        run: |
+          expected_owner="As""oraKK"
+          test "$EXPECTED_REPOSITORY" = "$expected_owner/Lythaus"
+          test "$EXPECTED_REF" = "refs/heads/main"
+          test "$EXPECTED_SHA" = "$(git rev-parse HEAD)"
+          test "$CONFIRM" = "EXECUTE_HR4_FLUX1_AMENDED"
+          test "$EXPECTED_FREEZE" = "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514"
+          test "$EXPECTED_AUTHORIZATION" = "eaa403c2a5519bcc130a33062ef1f4bbb67ba724eb9b003f57c3e609400d91ab"
+          test "$EXPECTED_AMENDMENT" = "2294cfeb9220be2becf08e70abb848267dcb5db2f213411e54c8883bc753431a"
+          test "$OUTPUT_CACHE" != "$GITHUB_WORKSPACE"
+          case "$OUTPUT_CACHE" in
+            "$GITHUB_WORKSPACE"/*) exit 1 ;;
+          esac
+          mkdir -p "$OUTPUT_CACHE"
+      - name: Run amended FLUX.1 smoke pair
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXECUTION_AUTHORIZATION_SHA256: ${{ inputs.execution_authorization_sha256 }}
+          FLUX1_CONTRACT_AMENDMENT_SHA256: ${{ inputs.flux1_contract_amendment_sha256 }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ahr4-flux1-${{ github.run_id }}
+        shell: bash
+        run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --smoke-only --model '@cf/black-forest-labs/flux-1-schnell' --max-paid-cost 1.00 --execution-authorization-sha256 "$EXECUTION_AUTHORIZATION_SHA256" --wp007ahr4-flux1-contract-amendment-sha256 "$FLUX1_CONTRACT_AMENDMENT_SHA256" --output-cache "$OUTPUT_CACHE"
+      - name: Require successful amended smoke before bulk execution
+        env:
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ahr4-flux1-${{ github.run_id }}
+        shell: bash
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json","utf8")); const records=Array.isArray(s.records)?s.records:[]; const failures=Array.isArray(s.failures)?s.failures:[]; if(s.status!=="HR4_FLUX1_SMOKE_COMPLETE"||records.length<2||failures.length>0||records.some((r)=>r.generatorModelId!=="@cf/black-forest-labs/flux-1-schnell")){console.error("HR4 amended smoke did not complete cleanly");process.exit(1)}'
+      - name: Run remaining frozen FLUX.1 prompts
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXECUTION_AUTHORIZATION_SHA256: ${{ inputs.execution_authorization_sha256 }}
+          FLUX1_CONTRACT_AMENDMENT_SHA256: ${{ inputs.flux1_contract_amendment_sha256 }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ahr4-flux1-${{ github.run_id }}
+        shell: bash
+        run: npm run authenticity:wp007ah-cloudflare-holdouts -- --execute --resume --model '@cf/black-forest-labs/flux-1-schnell' --max-paid-cost 1.00 --execution-authorization-sha256 "$EXECUTION_AUTHORIZATION_SHA256" --wp007ahr4-flux1-contract-amendment-sha256 "$FLUX1_CONTRACT_AMENDMENT_SHA256" --output-cache "$OUTPUT_CACHE"
+      - name: Require FLUX.1 holdout threshold
+        env:
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ahr4-flux1-${{ github.run_id }}
+        shell: bash
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json","utf8")); const records=Array.isArray(s.records)?s.records:[]; const valid=records.filter((r)=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell"); if(s.status!=="HR4_FLUX1_MATERIALIZED"||valid.length<36||records.some((r)=>r.generatorModelId==="@cf/black-forest-labs/flux-2-klein-4b")||s.flux2ProviderCalls!==0){console.error("HR4 FLUX.1 materialisation threshold or FLUX.2 exclusion failed");process.exit(1)}'
+      - name: Build safe private FLUX.1 transfer manifests
+        env:
+          GITHUB_WORKFLOW_PATH: .github/workflows/wp007ah-cloudflare-holdout.yml
+          GITHUB_WORKFLOW_COMMIT: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WP007AHR_EXPECTED_FREEZE_SHA256: ${{ inputs.expected_freeze_sha256 }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ahr4-flux1-${{ github.run_id }}
+        shell: bash
+        run: npm run authenticity:wp007ahr-build-transfer-manifest -- --output-cache "$OUTPUT_CACHE"
+      - name: Upload one-day private FLUX.1 transport artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp007ahr4-flux1-${{ github.run_id }}
+          path: ${{ runner.temp }}/wp007ahr4-flux1-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 1
+      - name: Publish safe HR4 execution summary
+        if: always()
+        env:
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007ahr4-flux1-${{ github.run_id }}
+        shell: bash
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; let s={}; if(fs.existsSync(p)) s=JSON.parse(fs.readFileSync(p,"utf8")); const records=Array.isArray(s.records)?s.records:[]; const failures=Array.isArray(s.failures)?s.failures:[]; const rows=["### WP007A-HR4 FLUX.1 execution","","AUTH_STATUS = PASS","COST_STATUS = BOUNDED_COST_AUTHORIZED","PROJECTED_MAX_COST_USD = "+(s.projectedMaxIncrementalPaidCostUsd??"UNKNOWN"),"FLUX1_REQUESTED = "+(s.requested?.FLUX_1_SCHNELL??40),"FLUX1_VALID = "+records.filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX1_FAILED = "+failures.filter(r=>r.generatorModelId==="@cf/black-forest-labs/flux-1-schnell").length,"FLUX2_PROVIDER_CALLS = "+(s.flux2ProviderCalls??0),"FLUX2_REGENERATION = FALSE","ATTEMPTED_COST_USD = "+(s.attemptedCostUsd??0),"ARTIFACT_NAME = wp007ahr4-flux1-${{ github.run_id }}","EXECUTION_STATUS = "+(s.status??"UNKNOWN")]; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,rows.join("\n")+"\n");'

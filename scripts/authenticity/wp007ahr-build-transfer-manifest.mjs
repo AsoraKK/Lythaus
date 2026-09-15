@@ -3,6 +3,11 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertWp007ahManifest } from '../../packages/authenticity/src/wp007ah.ts';
+import {
+  WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256,
+  WP007AHR4_FLUX1_MODEL_ID,
+  WP007AHR4_FLUX1_SUBMITTED_SEED_STATE,
+} from '../../packages/authenticity/src/wp007ahr4.ts';
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const IMAGE_EXTENSIONS = new Set(['.avif', '.gif', '.jpeg', '.jpg', '.png', '.webp']);
@@ -44,6 +49,11 @@ export async function buildTransferManifest({ cachePath, environment = process.e
   const manifest = await readJson(manifestPath);
   assertWp007ahManifest(manifest);
   if (manifest.detectorInferenceRun !== false || manifest.modelTrainingRun !== false || manifest.transformationsRun !== false || manifest.mediaCommittedToGit !== false) throw new Error('wp007ahr_forbidden_postprocessing_state');
+  if (manifest.executionMode === 'HR4_FLUX1_AMENDED_CONTRACT') {
+    if (manifest.contractAmendmentSha256 !== WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256) throw new Error('wp007ahr4_transfer_amendment_hash_invalid');
+    if (manifest.requestContract?.seedField !== 'OMITTED' || manifest.requestContract?.submittedSeedState !== WP007AHR4_FLUX1_SUBMITTED_SEED_STATE) throw new Error('wp007ahr4_transfer_request_contract_invalid');
+    if (manifest.flux2ProviderCalls !== 0 || manifest.records.some((record) => record.generatorModelId !== WP007AHR4_FLUX1_MODEL_ID || record.contractAmendmentSha256 !== WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256 || record.submittedSeedState !== WP007AHR4_FLUX1_SUBMITTED_SEED_STATE)) throw new Error('wp007ahr4_transfer_contains_flux2_or_unamended_record');
+  }
 
   const files = await imageFiles(cache);
   const hashes = [];
@@ -77,10 +87,19 @@ export async function buildTransferManifest({ cachePath, environment = process.e
     benchmarkRole: record.benchmarkRole,
     trainingEligibility: record.trainingEligibility,
     evaluationEligibility: record.evaluationEligibility,
+    ...(record.contractAmendmentSha256 ? {
+      originalDerivedSeed: record.originalDerivedSeed,
+      submittedSeedState: record.submittedSeedState,
+      contractAmendmentSha256: record.contractAmendmentSha256,
+    } : {}),
   }));
   const transferManifest = {
     schemaVersion: 'lythaus-wp007ahr-transfer-manifest-v1',
     generationStatus: manifest.generationStatus ?? 'UNKNOWN',
+    executionMode: manifest.executionMode ?? null,
+    contractAmendmentSha256: manifest.contractAmendmentSha256 ?? null,
+    requestContract: manifest.requestContract ?? null,
+    flux2ProviderCalls: manifest.flux2ProviderCalls ?? null,
     records: safeRecords,
     failures: manifest.failures,
     imageFiles: hashes,
@@ -98,6 +117,8 @@ export async function buildTransferManifest({ cachePath, environment = process.e
     githubRef: environment.GITHUB_REF ?? null,
     githubSha: environment.GITHUB_SHA ?? null,
     generationFreezeSha256: environment.WP007AHR_EXPECTED_FREEZE_SHA256 ?? null,
+    executionMode: manifest.executionMode ?? null,
+    contractAmendmentSha256: manifest.contractAmendmentSha256 ?? null,
     requested: manifest.requested ?? null,
     valid: manifest.valid ?? safeRecords.length,
     failed: manifest.failed ?? manifest.failures.length,

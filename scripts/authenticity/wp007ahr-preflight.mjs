@@ -14,6 +14,11 @@ import {
   wp007ahPromptSelectionHash,
 } from '../../packages/authenticity/src/wp007ah.ts';
 import { stableArtifactHash } from '../../packages/authenticity/src/wp007a.ts';
+import {
+  WP007AHR4_EXECUTION_CONFIRMATION,
+  WP007AHR4_EXECUTION_MODE,
+  WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256,
+} from '../../packages/authenticity/src/wp007ahr4.ts';
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const WP007AHR_REPOSITORY = ['As', 'oraKK', '/Lythaus'].join('');
@@ -56,8 +61,14 @@ export function assertTrustedMain({ ref, repository }) {
   if (repository !== WP007AHR_REPOSITORY) throw new Error('wp007ahr_untrusted_repository');
 }
 
-export function assertExecutionConfirmation({ mode, confirm, expectedFreezeSha256 }) {
-  if (mode !== 'preflight' && mode !== 'execute') throw new Error('wp007ahr_mode_invalid');
+export function assertExecutionConfirmation({ mode, confirm, expectedFreezeSha256, flux1ContractAmendmentSha256 = '' }) {
+  if (mode !== 'preflight' && mode !== 'execute' && mode !== WP007AHR4_EXECUTION_MODE) throw new Error('wp007ahr_mode_invalid');
+  if (mode === WP007AHR4_EXECUTION_MODE) {
+    if (confirm !== WP007AHR4_EXECUTION_CONFIRMATION) throw new Error('wp007ahr4_execute_confirmation_invalid');
+    if (expectedFreezeSha256 !== WP007AHR_FREEZE_SHA256) throw new Error('wp007ahr4_execute_freeze_confirmation_invalid');
+    if (flux1ContractAmendmentSha256 !== WP007AHR4_FLUX1_CONTRACT_AMENDMENT_SHA256) throw new Error('wp007ahr4_contract_amendment_hash_invalid');
+    return;
+  }
   if (mode !== 'execute') return;
   if (confirm !== WP007AHR_EXECUTION_CONFIRMATION) throw new Error('wp007ahr_execute_confirmation_invalid');
   if (expectedFreezeSha256 !== WP007AHR_FREEZE_SHA256) throw new Error('wp007ahr_execute_freeze_confirmation_invalid');
@@ -137,11 +148,12 @@ export function modelCallableName(entry) {
   return null;
 }
 
-export async function runModelCatalogPreflight({ token, accountId, fetchImpl = globalThis.fetch }) {
+export async function runModelCatalogPreflight({ token, accountId, fetchImpl = globalThis.fetch, modelIds = WP007AH_MODEL_IDS }) {
   if (!token || !accountId) return { status: 'REQUIRED_SECRET_MISSING', models: [], credentialsPrinted: false };
   if (typeof fetchImpl !== 'function') return { status: 'CATALOG_UNAVAILABLE', models: [], credentialsPrinted: false };
+  const requestedModelIds = [...modelIds];
   const models = [];
-  for (const modelId of WP007AH_MODEL_IDS) {
+  for (const modelId of requestedModelIds) {
     try {
       const response = await fetchImpl(modelCatalogUrl(accountId, modelId), {
         method: 'GET',
@@ -165,7 +177,7 @@ export async function runModelCatalogPreflight({ token, accountId, fetchImpl = g
       models.push({ modelId, status: 'CATALOG_UNAVAILABLE', httpStatus: null, providerErrorCode: null, providerErrorMessage: null });
     }
   }
-  const status = models.length === WP007AH_MODEL_IDS.length && models.every((model) => model.status === 'CATALOG_MATCH')
+  const status = models.length === requestedModelIds.length && models.every((model) => model.status === 'CATALOG_MATCH')
     ? 'CATALOG_MATCH'
     : models.some((model) => model.status === 'CATALOG_UNAVAILABLE') ? 'CATALOG_UNAVAILABLE' : 'CATALOG_MISMATCH';
   return { status, models, credentialsPrinted: false };
@@ -257,11 +269,12 @@ function schemaFailure({ modelId, status, httpStatus = null, payload = null, rea
   };
 }
 
-export async function runModelSchemaPreflight({ token, accountId, fetchImpl = globalThis.fetch }) {
+export async function runModelSchemaPreflight({ token, accountId, fetchImpl = globalThis.fetch, modelIds = WP007AH_MODEL_IDS }) {
   if (!token || !accountId) return { status: 'REQUIRED_SECRET_MISSING', models: [], credentialsPrinted: false };
   if (typeof fetchImpl !== 'function') return { status: 'SCHEMA_API_ERROR', models: [], credentialsPrinted: false };
+  const requestedModelIds = [...modelIds];
   const models = [];
-  for (const modelId of WP007AH_MODEL_IDS) {
+  for (const modelId of requestedModelIds) {
     try {
       const response = await fetchImpl(modelSchemaUrl(accountId, modelId), {
         method: 'GET',
@@ -321,15 +334,15 @@ export async function runModelSchemaPreflight({ token, accountId, fetchImpl = gl
     ? 'PASS'
     : authFailures === models.length ? 'AUTH_FAILED' : 'SCHEMA_API_ERROR';
   let status = 'SCHEMA_API_ERROR';
-  if (available === models.length && models.length === WP007AH_MODEL_IDS.length) status = 'PASS';
+  if (available === models.length && models.length === requestedModelIds.length) status = 'PASS';
   else if (available > 0) status = 'MODEL_ROUTE_PARTIAL';
-  else if (models.length === WP007AH_MODEL_IDS.length && models.every((model) => model.status === 'SCHEMA_NOT_FOUND')) status = 'MODEL_ROUTE_UNAVAILABLE';
+  else if (models.length === requestedModelIds.length && models.every((model) => model.status === 'SCHEMA_NOT_FOUND')) status = 'MODEL_ROUTE_UNAVAILABLE';
   else if (models.length > 0 && models.every((model) => model.status === 'SCHEMA_AUTH_FAILED' || model.status === 'SCHEMA_FORBIDDEN')) status = 'AUTH_BLOCKED';
   else if (models.length > 0 && models.every((model) => model.status === 'SCHEMA_MALFORMED')) status = 'MODEL_SCHEMA_MALFORMED';
   return { status, authStatus, models, credentialsPrinted: false };
 }
 
-export async function runModelRoutePreflight({ token, accountId, fetchImpl = globalThis.fetch }) {
+export async function runModelRoutePreflight({ token, accountId, fetchImpl = globalThis.fetch, modelIds = WP007AH_MODEL_IDS }) {
   if (!token || !accountId) return {
     status: 'REQUIRED_SECRET_MISSING',
     authStatus: 'REQUIRED_SECRET_MISSING',
@@ -339,8 +352,8 @@ export async function runModelRoutePreflight({ token, accountId, fetchImpl = glo
     catalogStatus: 'NOT_REACHED',
     credentialsPrinted: false,
   };
-  const schemas = await runModelSchemaPreflight({ token, accountId, fetchImpl });
-  const catalog = await runModelCatalogPreflight({ token, accountId, fetchImpl });
+  const schemas = await runModelSchemaPreflight({ token, accountId, fetchImpl, modelIds });
+  const catalog = await runModelCatalogPreflight({ token, accountId, fetchImpl, modelIds });
   return {
     status: schemas.status,
     authStatus: schemas.authStatus,
