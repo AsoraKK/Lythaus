@@ -34,6 +34,7 @@ import {
   WP007AHR2_MAX_INCREMENTAL_PAID_COST_USD,
 } from '../../packages/authenticity/src/wp007ahr2.ts';
 import { stableArtifactHash } from '../../packages/authenticity/src/wp007a.ts';
+import { cloudflareSafeProviderErrorDetailsFromBody } from '../../packages/authenticity/src/cloudflare-rest.ts';
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const PROMPT_BANK_PATH = path.join(REPOSITORY_ROOT, 'research', 'wp007a', 'prompt-bank.json');
@@ -94,6 +95,59 @@ export function relativeCacheId(cachePath, filePath) {
 
 function hashBytes(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+export const WP007AHR4_FAILURE_CATEGORIES = Object.freeze([
+  'REQUEST_SCHEMA_INVALID',
+  'REQUEST_PARAMETER_UNSUPPORTED',
+  'REQUEST_PARAMETER_RANGE_INVALID',
+  'AUTH_FAILURE',
+  'MODEL_NOT_FOUND',
+  'RATE_LIMIT',
+  'DAILY_QUOTA',
+  'PROVIDER_INTERNAL_ERROR',
+  'TRANSPORT_ERROR',
+  'UNKNOWN_PROVIDER_400',
+  'UNKNOWN_PROVIDER_ERROR',
+]);
+
+function classificationText({ providerErrorCode = null, providerErrorMessage = null } = {}) {
+  return `${providerErrorCode ?? ''} ${providerErrorMessage ?? ''}`.toLowerCase();
+}
+
+export function classifyCloudflareGenerationFailure({ httpStatus = null, providerErrorCode = null, providerErrorMessage = null, transport = false } = {}) {
+  if (transport) return 'TRANSPORT_ERROR';
+  const text = classificationText({ providerErrorCode, providerErrorMessage });
+  if (httpStatus === 401 || httpStatus === 403 || /unauthori[sz]ed|forbidden|authentication|permission/iu.test(text)) return 'AUTH_FAILURE';
+  if (httpStatus === 404 || /model\s+(?:not|does not)\s+found|unknown\s+model/iu.test(text)) return 'MODEL_NOT_FOUND';
+  if (httpStatus === 429 && /daily|quota|exhausted/iu.test(text)) return 'DAILY_QUOTA';
+  if (httpStatus === 429 || /rate\s*limit|too many requests/iu.test(text)) return 'RATE_LIMIT';
+  if (httpStatus !== null && httpStatus >= 500) return 'PROVIDER_INTERNAL_ERROR';
+  if (httpStatus === 400) {
+    if (/unknown\s+(?:field|property)|unrecognized\s+(?:field|property)|unsupported|additional\s+propert|unexpected\s+(?:field|property)|not\s+(?:allowed|permitted)|does\s+not\s+accept/iu.test(text)) return 'REQUEST_PARAMETER_UNSUPPORTED';
+    if (/range|minimum|maximum|between|at\s+least|at\s+most|greater\s+than|less\s+than|out\s+of\s+bounds/iu.test(text)) return 'REQUEST_PARAMETER_RANGE_INVALID';
+    if (/schema|validation|invalid|malformed|required|missing|request\s+body|json/iu.test(text)) return 'REQUEST_SCHEMA_INVALID';
+    return 'UNKNOWN_PROVIDER_400';
+  }
+  if (/daily|quota|exhausted/iu.test(text)) return 'DAILY_QUOTA';
+  return 'UNKNOWN_PROVIDER_ERROR';
+}
+
+export function requestContentTypeClassification(modelId) {
+  return modelId === '@cf/black-forest-labs/flux-2-klein-4b' ? 'MULTIPART_FORM_DATA' : 'APPLICATION_JSON';
+}
+
+function providerFailureError({ modelId, httpStatus, providerErrorCode, providerErrorMessage }) {
+  const error = new Error(`cloudflare_http_${httpStatus}`);
+  Object.assign(error, {
+    retryable: false,
+    providerHttpStatus: httpStatus,
+    providerErrorCode,
+    providerErrorMessage,
+    failureCategory: classifyCloudflareGenerationFailure({ httpStatus, providerErrorCode, providerErrorMessage }),
+    requestContentTypeClassification: requestContentTypeClassification(modelId),
+  });
+  return error;
 }
 
 function modelPrice(modelId) {
@@ -223,13 +277,22 @@ export function buildModelRunRequest({ accountId, token, modelId, body }) {
   };
 }
 
-async function requestCloudflare(modelId, body) {
+export async function requestCloudflare(modelId, body) {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const token = process.env.CLOUDFLARE_API_TOKEN;
   const request = buildModelRunRequest({ accountId, token, modelId, body });
   try {
     const response = await fetch(request.url, request.init);
-    if (!response.ok) throw new Error(`cloudflare_http_${response.status}`);
+    if (!response.ok) {
+      let responseBody = null;
+      try {
+        responseBody = await response.json();
+      } catch {
+        responseBody = null;
+      }
+      const diagnostics = cloudflareSafeProviderErrorDetailsFromBody(responseBody, [body?.prompt]);
+      throw providerFailureError({ modelId, httpStatus: response.status, ...diagnostics });
+    }
     const contentType = response.headers.get('content-type') ?? '';
     if (contentType.startsWith('image/')) return new Uint8Array(await response.arrayBuffer());
     const payload = await response.json();
@@ -237,10 +300,17 @@ async function requestCloudflare(modelId, body) {
     if (!encoded) throw new Error('cloudflare_image_missing');
     return new Uint8Array(Buffer.from(encoded, 'base64'));
   } catch (error) {
-    if (String(error?.message ?? '').startsWith('cloudflare_http_')) throw error;
+    if (error && typeof error === 'object' && error.failureCategory) throw error;
     const retryable = error instanceof TypeError || /fetch|network|socket|timeout/iu.test(String(error?.message ?? error));
     const wrapped = new Error(retryable ? 'cloudflare_transport_failure' : String(error?.message ?? error));
-    wrapped.retryable = retryable;
+    Object.assign(wrapped, {
+      retryable,
+      providerHttpStatus: null,
+      providerErrorCode: null,
+      providerErrorMessage: null,
+      failureCategory: classifyCloudflareGenerationFailure({ transport: retryable }),
+      requestContentTypeClassification: requestContentTypeClassification(modelId),
+    });
     throw wrapped;
   }
 }
@@ -390,7 +460,20 @@ async function executeGeneration(plan, options) {
     }
     manifest.generationCalls += attempts;
     if (!bytes) {
-      manifest.failures.push({ generatorModelId: model.modelId, promptId: prompt.promptId, failureType: String(lastError?.message ?? 'provider_failure'), providerOutputReceived: false, retryAttempts: attempts, replacementPrompt: false });
+      const failureCategory = lastError?.failureCategory ?? (lastError?.retryable ? 'TRANSPORT_ERROR' : 'UNKNOWN_PROVIDER_ERROR');
+      manifest.failures.push({
+        generatorModelId: model.modelId,
+        promptId: prompt.promptId,
+        failureType: failureCategory,
+        providerHttpStatus: Number.isInteger(lastError?.providerHttpStatus) ? lastError.providerHttpStatus : null,
+        providerErrorCode: lastError?.providerErrorCode ?? null,
+        providerErrorMessage: lastError?.providerErrorMessage ?? null,
+        failureCategory,
+        requestContentTypeClassification: lastError?.requestContentTypeClassification ?? requestContentTypeClassification(model.modelId),
+        providerOutputReceived: false,
+        retryAttempts: attempts,
+        replacementPrompt: false,
+      });
       continue;
     }
     try {

@@ -175,6 +175,38 @@ function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+const SAFE_SCHEMA_FIELDS = Object.freeze(['prompt', 'steps', 'seed', 'width', 'height']);
+
+function safeSchemaTypes(value) {
+  const raw = value?.type;
+  const values = typeof raw === 'string' ? [raw] : Array.isArray(raw) ? raw : [];
+  return values.filter((type) => typeof type === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{0,31}$/u.test(type)).map((type) => type.toUpperCase()).slice(0, 8);
+}
+
+function safeSchemaNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function schemaFieldCapability(input, field) {
+  const properties = isRecord(input?.properties) ? input.properties : {};
+  const property = isRecord(properties[field]) ? properties[field] : null;
+  const types = safeSchemaTypes(property);
+  return {
+    present: Boolean(property),
+    type: types.length === 1 ? types[0] : types.length > 1 ? types.join('|') : null,
+    types,
+    required: Array.isArray(input?.required) && input.required.includes(field),
+    minimum: safeSchemaNumber(property?.minimum),
+    maximum: safeSchemaNumber(property?.maximum),
+    exclusiveMinimum: safeSchemaNumber(property?.exclusiveMinimum),
+    exclusiveMaximum: safeSchemaNumber(property?.exclusiveMaximum),
+  };
+}
+
+function schemaCapabilities(input) {
+  return Object.fromEntries(SAFE_SCHEMA_FIELDS.map((field) => [field, schemaFieldCapability(input, field)]));
+}
+
 function safeProviderErrorMessage(payload) {
   if (!isRecord(payload) || !Array.isArray(payload.errors)) return null;
   for (const item of payload.errors) {
@@ -221,6 +253,7 @@ function schemaFailure({ modelId, status, httpStatus = null, payload = null, rea
     providerErrorCode: safeProviderErrorCode(payload),
     providerErrorMessage: safeProviderErrorMessage(payload),
     schemaReason: reason,
+    schemaCapabilities: null,
   };
 }
 
@@ -274,6 +307,7 @@ export async function runModelSchemaPreflight({ token, accountId, fetchImpl = gl
         outputType: output.type,
         promptPropertyDeclared: Boolean(isRecord(input.properties) && Object.prototype.hasOwnProperty.call(input.properties, 'prompt')),
         multipartPropertyDeclared: Boolean(isRecord(input.properties?.multipart) && input.properties.multipart.type === 'object'),
+        schemaCapabilities: schemaCapabilities(input),
         providerErrorCode: null,
         providerErrorMessage: null,
       });
