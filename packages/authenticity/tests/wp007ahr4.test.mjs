@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import test from 'node:test';
 import {
   classifyCloudflareGenerationFailure,
+  requestBody,
+  requestBodyForWp007ahr4Flux1,
   requestCloudflare,
 } from '../../../scripts/authenticity/wp007ah-cloudflare-holdouts.mjs';
 import { runModelSchemaPreflight } from '../../../scripts/authenticity/wp007ahr-preflight.mjs';
-import { WP007AH_MODEL_IDS } from '../src/wp007ah.ts';
+import { stableArtifactHash } from '../src/wp007a.ts';
+import { WP007AH_MODEL_IDS, WP007AH_MODEL_SPECS } from '../src/wp007ah.ts';
 
 const token = 'cloudflare-secret-fixture';
 const accountId = 'account-fixture';
@@ -97,4 +102,28 @@ test('FLUX.1 non-2xx diagnostics redact authorization and prompt data', async ()
     else process.env.CLOUDFLARE_ACCOUNT_ID = previousAccount;
     globalThis.fetch = previousFetch;
   }
+});
+
+test('HR4 amended FLUX.1 request omits seed without changing historical requestBody', () => {
+  const model = WP007AH_MODEL_SPECS.find((candidate) => candidate.modelId === WP007AH_MODEL_IDS[0]);
+  const prompt = { promptId: 'PROMPT_001', text: 'frozen prompt text fixture' };
+  const historical = requestBody(model, prompt);
+  const amended = requestBodyForWp007ahr4Flux1(model, prompt);
+  assert.equal(typeof historical.body.seed, 'number');
+  assert.equal(Object.hasOwn(amended.body, 'seed'), false);
+  assert.equal(amended.recordedSeed, 'NOT_SENT_ROUTE_UNSUPPORTED');
+  assert.equal(amended.originalDerivedSeed, historical.recordedSeed);
+  assert.deepEqual(amended.body, { prompt: prompt.text, steps: 4 });
+});
+
+test('HR4 contract amendment artifact is self-hashed and evidence-bound', async () => {
+  const artifact = JSON.parse(await readFile(path.resolve('research/wp007ahr4/flux1-generation-contract-amendment.json'), 'utf8'));
+  const { amendmentSha256, ...withoutHash } = artifact;
+  assert.equal(stableArtifactHash(withoutHash), amendmentSha256);
+  assert.equal(artifact.parentHistoricalFreezeSha256, '87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514');
+  assert.equal(artifact.providerEvidence.providerHttpStatus, 400);
+  assert.equal(artifact.providerEvidence.providerErrorCode, 5006);
+  assert.equal(artifact.rootCause, 'REST_ROUTE_SEED_UNSUPPORTED');
+  assert.equal(artifact.exactAmendedRequestContract.seedField, 'OMITTED');
+  assert.equal(artifact.noDetectorEvidenceUsed, true);
 });
