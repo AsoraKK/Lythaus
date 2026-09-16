@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "lythaus-wp007d-route-blocker-report-v1",
+  "status": "WP007D_PROXY_ROUTE_NOT_MATERIALISABLE",
+  "decision": "GENERATOR_DIVERSITY_BLOCKED",
+  "baseSha": "20a5bf4b9d2942823338d8944e95201bf904c7b1",
+  "wp007cPr835MergedSha": "33066d594ccb5345594eed537e3d80064df226a7",
+  "implementationPrs": [
+    {
+      "number": 840,
+      "headSha": "273d0e1f10aa485cbd4038d02832791484b1450b",
+      "mergeSha": "e2e4d6a2e6dd616177a62118725da9b271a288ab",
+      "purpose": "Expose sanitized proxy smoke failure records"
+    },
+    {
+      "number": 841,
+      "headSha": "e264a0a9081dcba04630058d628c47765836a537",
+      "mergeSha": "20a5bf4b9d2942823338d8944e95201bf904c7b1",
+      "purpose": "Use the documented img2img image uint8-array field"
+    }
+  ],
+  "immutableProvenance": {
+    "wp007aBenchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+    "historicalGenerationFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+    "wp007ahr4HoldoutFreezeSha256": "b1be6115a6ed3cb5d72c5ad3e90575ededbb4c969bd2bb248ec2806da32885c4",
+    "flux2ReserveFreezeSha256": "56ae0bd15b8bc21d77b28c9e6faea8149440aab8a9d101db523a43aedb98e054",
+    "flux1PixelAccess": false,
+    "flux2PixelAccess": false,
+    "flux1ProviderCalls": 0,
+    "flux2ProviderCalls": 0
+  },
+  "plan": {
+    "lastTrustedPreflightRunId": "35079382395",
+    "lastTrustedPreflightHeadSha": "20a5bf4b9d2942823338d8944e95201bf904c7b1",
+    "planSha256": "7a7d32629fe0942790db5a708cad6580005d25ae53e1e0dd909d70a7be0af0ad",
+    "pairBaseFamilies": 60,
+    "plannedProxyRequested": 360,
+    "plannedStrengths": [0.3, 0.5],
+    "plannedGeneratorIds": [
+      "G2_SDXL_BASE_IMG2IMG",
+      "G3_SDXL_LIGHTNING_IMG2IMG",
+      "G4_DREAMSHAPER_8_LCM_IMG2IMG"
+    ],
+    "requestContract": {
+      "firstAttemptField": "image_b64",
+      "amendedAttemptField": "image",
+      "amendedEncoding": "UINT8_ARRAY",
+      "evidenceDriven": true,
+      "officialApiSchema": "https://developers.cloudflare.com/api/resources/ai/methods/run/"
+    }
+  },
+  "routeEvidence": [
+    {
+      "generatorId": "G1_SD15_IMG2IMG",
+      "modelId": "@cf/runwayml/stable-diffusion-v1-5-img2img",
+      "classification": "ROUTE_UNAVAILABLE",
+      "trustedRunId": "35074947493",
+      "providerHttpStatus": 404,
+      "providerErrorCode": 6002,
+      "providerErrorMessage": "Model schema not found",
+      "generationCalls": 0
+    },
+    {
+      "generatorId": "G2_SDXL_BASE_IMG2IMG",
+      "modelId": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+      "classification": "ROUTE_NOT_MATERIALISABLE",
+      "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/stable-diffusion-xl-base-1.0/",
+      "rightsClassification": "TRAINING_PROXY_ELIGIBLE",
+      "providerHttpStatus": 400,
+      "providerErrorCode": 3030,
+      "rawFailureCategory": "UNKNOWN_PROVIDER_400",
+      "normalizedFailureCategory": "REQUEST_PARAMETER_UNSUPPORTED",
+      "providerErrorMessage": "AiError: Model input is not valid: input tensor `image` is not present in the model",
+      "rootCause": "MODEL_ROUTE_DOES_NOT_ACCEPT_IMG2IMG_IMAGE_INPUT",
+      "observedWithRequestFields": ["image_b64", "image"]
+    },
+    {
+      "generatorId": "G3_SDXL_LIGHTNING_IMG2IMG",
+      "modelId": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "classification": "ROUTE_NOT_MATERIALISABLE",
+      "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/stable-diffusion-xl-lightning/",
+      "rightsClassification": "TRAINING_PROXY_ELIGIBLE",
+      "providerHttpStatus": 400,
+      "providerErrorCode": 3030,
+      "rawFailureCategory": "UNKNOWN_PROVIDER_400",
+      "normalizedFailureCategory": "REQUEST_PARAMETER_UNSUPPORTED",
+      "providerErrorMessage": "AiError: Model input is not valid: input tensor `image` is not present in the model",
+      "rootCause": "MODEL_ROUTE_DOES_NOT_ACCEPT_IMG2IMG_IMAGE_INPUT",
+      "observedWithRequestFields": ["image_b64", "image"]
+    },
+    {
+      "generatorId": "G4_DREAMSHAPER_8_LCM_IMG2IMG",
+      "modelId": "@cf/lykon/dreamshaper-8-lcm",
+      "classification": "ROUTE_NOT_MATERIALISABLE",
+      "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/dreamshaper-8-lcm/",
+      "rightsClassification": "TRAINING_PROXY_ELIGIBLE",
+      "providerHttpStatus": 400,
+      "providerErrorCode": 3010,
+      "rawFailureCategory": "REQUEST_SCHEMA_INVALID",
+      "normalizedFailureCategory": "REQUEST_SCHEMA_INVALID",
+      "providerErrorMessage": "AiError: Invalid or incomplete input for the model: unexpected shape for input 'image' for model 'dreamshaper-8-lcm'. Expected [1], got [1,N] where N is the canonical image byte length",
+      "rootCause": "IMG2IMG_IMAGE_TENSOR_SHAPE_INCOMPATIBLE",
+      "observedWithRequestFields": ["image_b64", "image"]
+    }
+  ],
+  "smokeRuns": [
+    {
+      "runId": "35077581757",
+      "headSha": "e2e4d6a2e6dd616177a62118725da9b271a288ab",
+      "planSha256": "61923778000fce565cac78b77b268982d1f4ceb3f05c177cfcccf907e20edd15",
+      "requestImageField": "image_b64",
+      "requested": 12,
+      "valid": 0,
+      "failed": 12,
+      "providerAttempts": 12,
+      "retryCount": 0,
+      "flux1ProviderCalls": 0,
+      "flux2ProviderCalls": 0,
+      "failureSummary": {
+        "G2_SDXL_BASE_IMG2IMG": { "http": 400, "code": 3030, "category": "UNKNOWN_PROVIDER_400", "count": 4 },
+        "G3_SDXL_LIGHTNING_IMG2IMG": { "http": 400, "code": 3030, "category": "UNKNOWN_PROVIDER_400", "count": 4 },
+        "G4_DREAMSHAPER_8_LCM_IMG2IMG": { "http": 400, "code": 3010, "category": "REQUEST_SCHEMA_INVALID", "count": 4 }
+      }
+    },
+    {
+      "runId": "35079382395",
+      "headSha": "20a5bf4b9d2942823338d8944e95201bf904c7b1",
+      "planSha256": "7a7d32629fe0942790db5a708cad6580005d25ae53e1e0dd909d70a7be0af0ad",
+      "requestImageField": "image",
+      "requestImageEncoding": "UINT8_ARRAY",
+      "requested": 12,
+      "valid": 0,
+      "failed": 12,
+      "providerAttempts": 12,
+      "retryCount": 0,
+      "flux1ProviderCalls": 0,
+      "flux2ProviderCalls": 0,
+      "failureSummary": {
+        "G2_SDXL_BASE_IMG2IMG": { "http": 400, "code": 3030, "category": "UNKNOWN_PROVIDER_400", "count": 4 },
+        "G3_SDXL_LIGHTNING_IMG2IMG": { "http": 400, "code": 3030, "category": "UNKNOWN_PROVIDER_400", "count": 4 },
+        "G4_DREAMSHAPER_8_LCM_IMG2IMG": { "http": 400, "code": 3010, "category": "REQUEST_SCHEMA_INVALID", "count": 4 }
+      }
+    }
+  ],
+  "accounting": {
+    "proxyRequestedPlanned": 360,
+    "smokeRequestsPerRun": 12,
+    "smokeRuns": 2,
+    "providerAttemptsAcrossSmokeRuns": 24,
+    "proxyValid": 0,
+    "proxyFailedPerSmokeRun": 12,
+    "bulkMatrixStarted": false,
+    "bulkMatrixCompleted": false,
+    "proxyLocalHashVerification": "NOT_APPLICABLE_NO_VALID_OUTPUTS",
+    "proxyCorpusFreeze": "NOT_CREATED",
+    "externalPaidCostUsd": 0,
+    "flux2Regeneration": false
+  },
+  "unrunStages": {
+    "backboneRightsAndRuntime": "NOT_RUN",
+    "featureExtraction": "NOT_RUN",
+    "candidateTraining": "NOT_RUN",
+    "leaveOneGeneratorOut": "NOT_RUN",
+    "diffusionDbTransfer": "NOT_RUN",
+    "phaseB": "NOT_TRIGGERED_NO_MEANINGFUL_PROXY_SIGNAL",
+    "calibrationFreeze": "NOT_CREATED",
+    "flux1Unblind": false,
+    "wp007b": "NOT_STARTED"
+  },
+  "scientificInterpretation": {
+    "effectiveTrainingProxyGeneratorCount": 0,
+    "rightsCleanProxyGeneratorCountBeforeRouteCheck": 3,
+    "generatorDiversityRequirementMet": false,
+    "pairedProxyApproachEvaluated": false,
+    "pairedProxyApproachVerdict": "UNRESOLVED",
+    "reasonForTermination": "All predeclared callable candidates were either unavailable or rejected the required img2img image input before any proxy output was materialised.",
+    "noScoresVisible": true,
+    "noDetectorInference": true,
+    "noHoldoutPixelAccess": true
+  }
+}
