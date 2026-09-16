@@ -171,7 +171,7 @@ jobs:
           const preflight = fs.existsSync(preflightPath) ? JSON.parse(fs.readFileSync(preflightPath, 'utf8')) : {};
           const records = Array.isArray(s.records) ? s.records : [];
           const failures = Array.isArray(s.failures) ? s.failures : [];
-          const models = ['G1_SD15_IMG2IMG', 'G2_SDXL_BASE_IMG2IMG', 'G3_SDXL_LIGHTNING_IMG2IMG'];
+          const models = ['G2_SDXL_BASE_IMG2IMG', 'G3_SDXL_LIGHTNING_IMG2IMG', 'G4_DREAMSHAPER_8_LCM_IMG2IMG'];
           const lines = [
             '### WP007D paired proxy',
             '',

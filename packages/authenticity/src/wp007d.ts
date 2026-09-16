@@ -64,17 +64,29 @@ export const WP007D_PROGRAMMATIC_SELECTION = Object.freeze(
     .flatMap((type) => Array.from({ length: 4 }, (_, index) => `PNGN_${type}_${String(index + 1).padStart(2, '0')}`)),
 );
 
+export const WP007D_PROXY_FALLBACK = Object.freeze({
+  generatorId: 'G4_DREAMSHAPER_8_LCM_IMG2IMG',
+  modelId: '@cf/lykon/dreamshaper-8-lcm',
+  modelFamily: 'DREAMSHAPER_8_LCM_IMG2IMG',
+  routeDocs: 'https://developers.cloudflare.com/workers-ai/models/dreamshaper-8-lcm/',
+  currentSchemaModel: '@cf/lykon/dreamshaper-8-lcm',
+  fixedParameters: Object.freeze({ width: 512, height: 512, num_steps: 20, guidance: 7.5 }),
+  strengthSemantics: 'Cloudflare img2img strength, documented as 0..1; lower values stay closer to input',
+  priceBasis: '$0.00 per step on current official model page',
+  activationRule: 'ONLY_IF_PREDECLARED_PRIMARY_ROUTE_IS_BLOCKED_BEFORE_SCORES',
+});
+
+export const WP007D_BLOCKED_PRIMARY_ROUTE = Object.freeze({
+  generatorId: 'G1_SD15_IMG2IMG',
+  modelId: '@cf/runwayml/stable-diffusion-v1-5-img2img',
+  trustedWorkflowRunId: '35074947493',
+  httpStatus: 404,
+  providerErrorCode: 6002,
+  providerErrorMessage: 'Model schema not found',
+  generationCalls: 0,
+});
+
 export const WP007D_PROXY_GENERATORS = Object.freeze([
-  {
-    generatorId: 'G1_SD15_IMG2IMG',
-    modelId: '@cf/runwayml/stable-diffusion-v1-5-img2img',
-    modelFamily: 'STABLE_DIFFUSION_V1_5_IMG2IMG',
-    routeDocs: 'https://developers.cloudflare.com/workers-ai/models/stable-diffusion-v1-5-img2img/',
-    currentSchemaModel: '@cf/runwayml/stable-diffusion-v1-5-img2img',
-    fixedParameters: Object.freeze({ width: 512, height: 512, num_steps: 20, guidance: 7.5 }),
-    strengthSemantics: 'Cloudflare img2img strength, documented as 0..1; lower values stay closer to input',
-    priceBasis: '$0.00 per step on current official model page',
-  },
   {
     generatorId: 'G2_SDXL_BASE_IMG2IMG',
     modelId: '@cf/stabilityai/stable-diffusion-xl-base-1.0',
@@ -95,14 +107,8 @@ export const WP007D_PROXY_GENERATORS = Object.freeze([
     strengthSemantics: 'Cloudflare img2img strength, documented as 0..1; lower values stay closer to input',
     priceBasis: '$0.00 per step on current official model page',
   },
+  WP007D_PROXY_FALLBACK,
 ] as const);
-
-export const WP007D_PROXY_FALLBACK = Object.freeze({
-  generatorId: 'G4_DREAMSHAPER_8_LCM_IMG2IMG',
-  modelId: '@cf/lykon/dreamshaper-8-lcm',
-  routeDocs: 'https://developers.cloudflare.com/workers-ai/models/dreamshaper-8-lcm/',
-  activationRule: 'ONLY_IF_PREDECLARED_PRIMARY_ROUTE_IS_BLOCKED_BEFORE_SCORES',
-});
 
 export const WP007D_CANDIDATE_IDS = Object.freeze([
   'C1_CLIP_STD_LR_V0',

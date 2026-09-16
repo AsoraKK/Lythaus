@@ -48,24 +48,6 @@
   ],
   "proxyGenerators": [
     {
-      "generatorId": "G1_SD15_IMG2IMG",
-      "modelId": "@cf/runwayml/stable-diffusion-v1-5-img2img",
-      "provider": "Cloudflare Workers AI",
-      "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/stable-diffusion-v1-5-img2img/",
-      "providerTerms": "https://www.cloudflare.com/terms/",
-      "currentOfficialUpstreamReference": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5",
-      "upstreamCommit": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14",
-      "upstreamLicense": "CreativeML OpenRAIL-M",
-      "upstreamLicenseUrl": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/blob/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/LICENSE-MODEL",
-      "trainingProxyUse": "PRIVATE_RESEARCH_CLASSIFIER_DEVELOPMENT_ONLY",
-      "derivativeGenerationFromEligibleSources": "PERMITTED_WITH_SOURCE_SCOPE_AND_ATTRIBUTION",
-      "outputTrainingRights": "RESEARCH_USE_RECORDED; NO_PUBLIC_MODEL_OR_MEDIA_RE-DISTRIBUTION",
-      "checkpointRetrieved": false,
-      "routeIdentityCaveat": "Cloudflare labels the hosted route RunwayML; the current public upstream reference is a stable-diffusion-v1-5 mirror. The live preflight must keep this route available and schema-compatible; any material rights ambiguity fails this generator closed.",
-      "classification": "TRAINING_PROXY_ELIGIBLE",
-      "preflightRequired": true
-    },
-    {
       "generatorId": "G2_SDXL_BASE_IMG2IMG",
       "modelId": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
       "provider": "Cloudflare Workers AI",
@@ -99,6 +81,39 @@
       "checkpointRetrieved": false,
       "classification": "TRAINING_PROXY_ELIGIBLE",
       "preflightRequired": true
+    },
+    {
+      "generatorId": "G4_DREAMSHAPER_8_LCM_IMG2IMG",
+      "modelId": "@cf/lykon/dreamshaper-8-lcm",
+      "provider": "Cloudflare Workers AI",
+      "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/dreamshaper-8-lcm/",
+      "providerTerms": "https://www.cloudflare.com/terms/",
+      "upstreamModelReference": "https://huggingface.co/Lykon/dreamshaper-8",
+      "upstreamCommit": "a7e52b98680b1ba8ff7bce97c7f9f2e2e5337917",
+      "upstreamLicense": "CreativeML OpenRAIL-M",
+      "upstreamLicenseUrl": "https://huggingface.co/Lykon/dreamshaper-8/blob/a7e52b98680b1ba8ff7bce97c7f9f2e2e5337917/LICENSE-MODEL",
+      "fixedParameters": { "width": 512, "height": 512, "num_steps": 20, "guidance": 7.5 },
+      "strengthSemantics": "Cloudflare img2img strength, documented as 0..1; lower values stay closer to input",
+      "trainingProxyUse": "PRIVATE_RESEARCH_CLASSIFIER_DEVELOPMENT_ONLY",
+      "derivativeGenerationFromEligibleSources": "PERMITTED_WITH_SOURCE_SCOPE_AND_ATTRIBUTION",
+      "outputTrainingRights": "RESEARCH_USE_RECORDED; NO_PUBLIC_MODEL_OR_MEDIA_RE-DISTRIBUTION",
+      "checkpointRetrieved": false,
+      "classification": "TRAINING_PROXY_ELIGIBLE",
+      "preflightRequired": true,
+      "activationRule": "PREDECLARED_FALLBACK_ACTIVATED_ONLY_AFTER_G1_ROUTE_BLOCKED_BEFORE_SCORES"
+    }
+  ],
+  "blockedPrimaryGenerators": [
+    {
+      "generatorId": "G1_SD15_IMG2IMG",
+      "modelId": "@cf/runwayml/stable-diffusion-v1-5-img2img",
+      "classification": "ROUTE_UNAVAILABLE",
+      "trustedWorkflowRunId": "35074947493",
+      "providerHttpStatus": 404,
+      "providerErrorCode": 6002,
+      "providerErrorMessage": "Model schema not found",
+      "generationCalls": 0,
+      "evidence": "Trusted-main preflight failed closed before smoke or generation; no scores were visible."
     }
   ],
   "predeclaredFallback": {
@@ -109,8 +124,17 @@
     "upstreamCommit": "a7e52b98680b1ba8ff7bce97c7f9f2e2e5337917",
     "upstreamLicense": "CreativeML OpenRAIL-M",
     "upstreamLicenseUrl": "https://huggingface.co/Lykon/dreamshaper-8/blob/a7e52b98680b1ba8ff7bce97c7f9f2e2e5337917/LICENSE-MODEL",
-    "classification": "PREDECLARED_FALLBACK_NOT_SELECTED",
-    "activationRule": "Only before scores if a primary route is rights- or route-blocked and live audit passes."
+    "classification": "TRAINING_PROXY_ELIGIBLE",
+    "activationRule": "Only before scores if a primary route is rights- or route-blocked and live audit passes.",
+    "activatedForExecution": true,
+    "activationEvidence": {
+      "blockedGeneratorId": "G1_SD15_IMG2IMG",
+      "trustedWorkflowRunId": "35074947493",
+      "providerHttpStatus": 404,
+      "providerErrorCode": 6002,
+      "providerErrorMessage": "Model schema not found",
+      "generationCalls": 0
+    }
   },
   "cloudflareDataHandling": {
     "dataUsageDocumentation": "https://developers.cloudflare.com/workers-ai/platform/data-usage/",
@@ -128,6 +152,6 @@
     "minimumRequiredBeforeFlux1Unblind": 3,
     "liveSchemaAndAvailabilityMustPass": true,
     "rightsAmbiguityFailsClosed": true,
-    "finalClassificationBeforePreflight": "PROVISIONAL_PENDING_LIVE_ROUTE_AND_SCHEMA_CHECK"
+    "finalClassificationBeforePreflight": "PROVISIONAL_FALLBACK_ACTIVATED_PENDING_LIVE_ROUTE_AND_SCHEMA_CHECK"
   }
 }
