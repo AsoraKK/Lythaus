@@ -108,7 +108,36 @@ jobs:
           OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
         shell: bash
         run: |
-          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; const s=JSON.parse(fs.readFileSync(p,"utf8")); const records=Array.isArray(s.records)?s.records:[]; const failures=Array.isArray(s.failures)?s.failures:[]; if(s.status!=="WP007D_PROXY_SMOKE_COMPLETE"||records.length!==12||failures.length!==0||s.flux1ProviderCalls!==0||s.flux2ProviderCalls!==0||records.some((r)=>String(r.generatorModelId).toLowerCase().includes("flux"))){console.error("WP007D paired-proxy smoke failed closed");process.exit(1)}'
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const p = process.env.OUTPUT_CACHE + '/cloudflare-generation-manifest.json';
+          const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+          const records = Array.isArray(s.records) ? s.records : [];
+          const failures = Array.isArray(s.failures) ? s.failures : [];
+          if (failures.length > 0) {
+            console.error(JSON.stringify({
+              status: s.status ?? null,
+              records: records.length,
+              failures: failures.map((failure) => ({
+                sampleId: failure.sampleId,
+                sourceFamilyId: failure.sourceFamilyId,
+                generatorModelId: failure.generatorModelId,
+                strength: failure.strength,
+                providerHttpStatus: failure.providerHttpStatus ?? null,
+                providerErrorCode: failure.providerErrorCode ?? null,
+                providerErrorMessage: failure.providerErrorMessage ?? null,
+                failureCategory: failure.failureCategory ?? null,
+                retryable: Boolean(failure.retryable),
+              })),
+              flux1ProviderCalls: s.flux1ProviderCalls ?? 0,
+              flux2ProviderCalls: s.flux2ProviderCalls ?? 0,
+            }));
+          }
+          if (s.status !== 'WP007D_PROXY_SMOKE_COMPLETE' || records.length !== 12 || failures.length !== 0 || s.flux1ProviderCalls !== 0 || s.flux2ProviderCalls !== 0 || records.some((record) => String(record.generatorModelId).toLowerCase().includes('flux'))) {
+            console.error('WP007D paired-proxy smoke failed closed');
+            process.exit(1);
+          }
+          NODE
 
       - name: Run remaining frozen paired-proxy matrix
         if: ${{ inputs.mode == 'execute' }}
@@ -212,5 +241,6 @@ jobs:
             }
           }
           for (const m of models) lines.push(m + '_VALID = ' + records.filter((r) => r.generatorModelId && r.sampleId?.includes(m)).length);
+          for (const failure of failures) lines.push('FAILURE = ' + JSON.stringify({ sampleId: failure.sampleId, sourceFamilyId: failure.sourceFamilyId, generatorModelId: failure.generatorModelId, strength: failure.strength, providerHttpStatus: failure.providerHttpStatus ?? null, providerErrorCode: failure.providerErrorCode ?? null, providerErrorMessage: failure.providerErrorMessage ?? null, failureCategory: failure.failureCategory ?? null, retryable: Boolean(failure.retryable) }));
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
           NODE
