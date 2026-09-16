@@ -701,6 +701,17 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
   try {
     const result = await main(parseArgs(process.argv.slice(2)));
     const schemaFields = ['prompt', 'num_steps', 'seed', 'width', 'height', 'strength', 'guidance', 'image_b64'];
+    const failureRecords = Array.isArray(result.failures) ? result.failures.map((failure) => ({
+      sampleId: failure.sampleId,
+      sourceFamilyId: failure.sourceFamilyId,
+      generatorModelId: failure.generatorModelId,
+      strength: failure.strength,
+      providerHttpStatus: failure.providerHttpStatus ?? null,
+      providerErrorCode: failure.providerErrorCode ?? null,
+      providerErrorMessage: failure.providerErrorMessage ?? null,
+      failureCategory: failure.failureCategory ?? null,
+      retryable: Boolean(failure.retryable),
+    })) : [];
     const preflightModels = Array.isArray(result.models) ? result.models.map((model) => ({
       generatorId: model.generatorId,
       modelId: model.modelId,
@@ -735,6 +746,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
       sourceFamilyCount: result.sourceFamilyCount ?? null,
       baseSha: result.baseSha ?? null,
       preflightModels,
+      failureRecords,
       credentialsPrinted: false,
     }));
     if (result.passed === false) process.exitCode = 1;
