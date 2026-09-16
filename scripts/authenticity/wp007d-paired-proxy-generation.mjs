@@ -693,6 +693,21 @@ async function main(options) {
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
   try {
     const result = await main(parseArgs(process.argv.slice(2)));
+    const schemaFields = ['prompt', 'num_steps', 'seed', 'width', 'height', 'strength', 'guidance', 'image_b64'];
+    const preflightModels = Array.isArray(result.models) ? result.models.map((model) => ({
+      generatorId: model.generatorId,
+      modelId: model.modelId,
+      schemaStatus: model.schemaStatus,
+      schemaHttpStatus: model.schemaHttpStatus,
+      catalogStatus: model.catalogStatus,
+      routeStatus: model.routeStatus,
+      providerErrorCode: model.providerErrorCode ?? null,
+      providerErrorMessage: model.providerErrorMessage ?? null,
+      schema: Object.fromEntries(schemaFields.map((field) => {
+        const value = model.schema?.[field];
+        return [field, value ? { present: Boolean(value.present), type: value.type ?? null, required: Boolean(value.required), minimum: value.minimum ?? null, maximum: value.maximum ?? null } : null];
+      })),
+    })) : [];
     console.log(JSON.stringify({
       status: result.status,
       passed: result.passed,
@@ -704,6 +719,15 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
       providerAttempts: result.providerAttempts ?? 0,
       flux1ProviderCalls: result.flux1ProviderCalls ?? 0,
       flux2ProviderCalls: result.flux2ProviderCalls ?? 0,
+      authStatus: result.authStatus ?? null,
+      rightsStatus: result.rightsStatus ?? null,
+      routeStatus: result.routeStatus ?? null,
+      planHashVerified: result.planHashVerified ?? null,
+      projectedPaidCostUsd: result.projectedPaidCostUsd ?? null,
+      costStatus: result.costStatus ?? null,
+      sourceFamilyCount: result.sourceFamilyCount ?? null,
+      baseSha: result.baseSha ?? null,
+      preflightModels,
       credentialsPrinted: false,
     }));
     if (result.passed === false) process.exitCode = 1;

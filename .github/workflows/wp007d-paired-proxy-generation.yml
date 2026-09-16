@@ -162,4 +162,55 @@ jobs:
           RUN_MODE: ${{ inputs.mode }}
         shell: bash
         run: |
-          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{}; const records=Array.isArray(s.records)?s.records:[]; const failures=Array.isArray(s.failures)?s.failures:[]; const models=["G1_SD15_IMG2IMG","G2_SDXL_BASE_IMG2IMG","G3_SDXL_LIGHTNING_IMG2IMG"]; const lines=["### WP007D paired proxy","","MODE = "+process.env.RUN_MODE,"STATUS = "+(s.status??"PREFLIGHT_OR_RUN_UNAVAILABLE"),"PROXY_REQUESTED = "+(s.uniqueRequested??360),"PROXY_VALID = "+records.length,"PROXY_FAILED = "+failures.length,"PROVIDER_ATTEMPTS = "+(s.providerAttempts??0),"RETRY_COUNT = "+(s.retryCount??0),"ATTEMPTED_COST_USD = "+(s.attemptedCostUsd??0),"FLUX1_PROVIDER_CALLS = "+(s.flux1ProviderCalls??0),"FLUX2_PROVIDER_CALLS = "+(s.flux2ProviderCalls??0),"MEDIA_COMMITTED_TO_GIT = "+Boolean(s.mediaCommittedToGit),"CREDENTIALS_PRINTED = false"]; for(const m of models){lines.push(m+"_VALID = "+records.filter((r)=>r.generatorModelId&&r.sampleId?.includes(m)).length)} fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");'
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const cache = process.env.OUTPUT_CACHE;
+          const manifestPath = cache + '/cloudflare-generation-manifest.json';
+          const preflightPath = cache + '/preflight.json';
+          const s = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
+          const preflight = fs.existsSync(preflightPath) ? JSON.parse(fs.readFileSync(preflightPath, 'utf8')) : {};
+          const records = Array.isArray(s.records) ? s.records : [];
+          const failures = Array.isArray(s.failures) ? s.failures : [];
+          const models = ['G1_SD15_IMG2IMG', 'G2_SDXL_BASE_IMG2IMG', 'G3_SDXL_LIGHTNING_IMG2IMG'];
+          const lines = [
+            '### WP007D paired proxy',
+            '',
+            'MODE = ' + process.env.RUN_MODE,
+            'STATUS = ' + (s.status ?? (preflight.status ?? 'PREFLIGHT_OR_RUN_UNAVAILABLE')),
+            'PROXY_REQUESTED = ' + (s.uniqueRequested ?? preflight.requested ?? 360),
+            'PROXY_VALID = ' + records.length,
+            'PROXY_FAILED = ' + failures.length,
+            'PROVIDER_ATTEMPTS = ' + (s.providerAttempts ?? 0),
+            'RETRY_COUNT = ' + (s.retryCount ?? 0),
+            'ATTEMPTED_COST_USD = ' + (s.attemptedCostUsd ?? 0),
+            'FLUX1_PROVIDER_CALLS = ' + (s.flux1ProviderCalls ?? preflight.flux1ProviderCalls ?? 0),
+            'FLUX2_PROVIDER_CALLS = ' + (s.flux2ProviderCalls ?? preflight.flux2ProviderCalls ?? 0),
+            'MEDIA_COMMITTED_TO_GIT = ' + Boolean(s.mediaCommittedToGit),
+            'CREDENTIALS_PRINTED = false',
+          ];
+          if (preflight.status) {
+            lines.push('PREFLIGHT_STATUS = ' + preflight.status);
+            lines.push('PREFLIGHT_AUTH_STATUS = ' + (preflight.authStatus ?? 'UNKNOWN'));
+            lines.push('PREFLIGHT_RIGHTS_STATUS = ' + (preflight.rightsStatus ?? 'UNKNOWN'));
+            lines.push('PREFLIGHT_ROUTE_STATUS = ' + (preflight.routeStatus ?? 'UNKNOWN'));
+            lines.push('PREFLIGHT_PLAN_HASH_VERIFIED = ' + Boolean(preflight.planHashVerified));
+            lines.push('PREFLIGHT_PROJECTED_PAID_COST_USD = ' + (preflight.projectedPaidCostUsd ?? 'UNKNOWN'));
+            lines.push('PREFLIGHT_COST_STATUS = ' + (preflight.costStatus ?? 'UNKNOWN'));
+            for (const model of Array.isArray(preflight.models) ? preflight.models : []) {
+              const prefix = model.generatorId ?? 'UNKNOWN_MODEL';
+              lines.push(prefix + '_SCHEMA_STATUS = ' + (model.schemaStatus ?? 'UNKNOWN'));
+              lines.push(prefix + '_SCHEMA_HTTP_STATUS = ' + (model.schemaHttpStatus ?? 'UNKNOWN'));
+              lines.push(prefix + '_CATALOG_STATUS = ' + (model.catalogStatus ?? 'UNKNOWN'));
+              lines.push(prefix + '_ROUTE_STATUS = ' + (model.routeStatus ?? 'UNKNOWN'));
+              lines.push(prefix + '_PROVIDER_ERROR_CODE = ' + (model.providerErrorCode ?? 'NONE'));
+              lines.push(prefix + '_PROVIDER_ERROR_MESSAGE = ' + (model.providerErrorMessage ?? 'NONE'));
+              const schema = model.schema ?? {};
+              for (const field of ['prompt', 'num_steps', 'seed', 'width', 'height', 'strength', 'guidance', 'image_b64']) {
+                const value = schema[field] ?? {};
+                lines.push(prefix + '_SCHEMA_' + field.toUpperCase() + ' = ' + Boolean(value.present) + ' TYPE=' + (value.type ?? 'NONE') + ' REQUIRED=' + Boolean(value.required) + ' MIN=' + (value.minimum ?? 'NONE') + ' MAX=' + (value.maximum ?? 'NONE'));
+              }
+            }
+          }
+          for (const m of models) lines.push(m + '_VALID = ' + records.filter((r) => r.generatorModelId && r.sampleId?.includes(m)).length);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          NODE
