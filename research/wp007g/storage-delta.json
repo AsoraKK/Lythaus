@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "wp007g.storage-delta.v1",
+  "status": "CLEANUP_COMPLETE",
+  "rootAlias": "WP007G_TEMP_MODERN_CORPUS",
+  "inventoryBeforeBytes": 1210670050,
+  "inventoryBeforeFiles": 210,
+  "inventoryAfterBytes": 124081478,
+  "inventoryAfterFiles": 84,
+  "preserve": [
+    {"logicalAsset": "DiTFake selected modern media", "bytes": 87560831, "reason": "The three score-blind DEV families are the only eligible multi-family modern DEV material."},
+    {"logicalAsset": "GPT-ImgEval GenEval selected media", "bytes": 36348253, "reason": "The bounded GPT-4o family is the only eligible initial confirmation-family material."},
+    {"logicalAsset": "Initial raw detector score manifests", "bytes": 172394, "reason": "Hashes and descriptive raw score evidence are retained outside Git for reproducibility."}
+  ],
+  "deleteApproved": [
+    {"logicalAsset": "GPT-ImgEval-GenEval.zip", "bytes": 1046369783, "proof": "SHA-256 58b922df8f3bd84942caf6380d3bf7f0655a6ee8c4870694c4f78bfe7aa7f6; 20 selected members extracted and verified."},
+    {"logicalAsset": "T2I Krea post-score diagnostic media and manifests", "bytes": 7791406, "proof": "Selected after initial SAFE scores; excluded from all fitting and selection. Manifest SHA-256 ab470fd8db8cc11bee5dba788bf2e7d3a7d0e1f7fbc22aed565ceaebbce8dc46."},
+    {"logicalAsset": "Temporary SPAI C512 input media and CSVs", "bytes": 32309861, "proof": "Regenerable deterministic crops; raw SPAI score manifest and hashes are retained."},
+    {"logicalAsset": "Superseded SAFE raw-score v2 manifest", "bytes": 117556, "proof": "Contains the post-score Krea diagnostic extension; the initial score manifest and hash are retained."}
+  ],
+  "plannedDeleteBytes": 1086588572,
+  "plannedPreservedBytes": 124081478,
+  "actualDeletedBytes": 1086588572,
+  "actualPreservedBytes": 124081478,
+  "deletionVerification": "PASS",
+  "holdoutPreservation": {
+    "flux1": "CONSUMED_MODERN_GENERATOR_DIAGNOSTIC; not accessed by WP007G after prior consumption",
+    "flux2": "SEALED_FUTURE_RESERVE; untouched; provider calls 0"
+  },
+  "noRepositoryMedia": true
+}

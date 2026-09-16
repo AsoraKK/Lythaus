@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "wp007g.modern-confirmation.v1",
+  "status": "NOT_RUN_MODERN_DATA_ACCESS_BLOCKED",
+  "requiredRole": "MODERN_SYNTH_CONFIRM",
+  "availableFamilies": ["GPT-4o"],
+  "availableCount": 20,
+  "requiredMinimumDisjointFamilies": 4,
+  "reason": "A single confirmation family cannot support the predeclared family-held-out confirmation gate. No selected calibrator or threshold existed.",
+  "thresholdChanged": false,
+  "flux1Access": false,
+  "flux2PixelAccess": false
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "wp007g.calibrator-fold-results.v1",
+  "status": "NOT_RUN_MODERN_FAMILY_DIVERSITY_GATE",
+  "candidates": ["G1_SIGNED_LINEAR_V0", "G2_TWO_TAIL_GROUPED_V0"],
+  "foldingRule": "LOO modern generator family; calibration thresholds would use NEGATIVE_CALIBRATION_G only.",
+  "requiredRoles": {
+    "modernDevMinimumFamilies": 8,
+    "modernConfirmMinimumFamilies": 4,
+    "modernReserveMinimumFamilies": 2,
+    "availableInitialFamilies": 4
+  },
+  "folds": [],
+  "coefficients": null,
+  "thresholds": null,
+  "reason": "Only three development families and one confirmation family were rights/access-valid. No NEGATIVE_CALIBRATION_G, DEV_G, CONFIRM_G, or RESERVE_G freeze could satisfy the predeclared family-diversity design.",
+  "flux1InitialTrainingUse": false,
+  "flux2PixelAccess": false
+}

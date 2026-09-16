@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "wp007g.raw-modern-scores.v1",
+  "status": "DESCRIPTIVE_ONLY_MODERN_DATA_ACCESS_BLOCKED",
+  "purpose": "Record frozen upstream detector scores without fitting a WP007G calibrator.",
+  "modernDataFreezeSha256": "54fb8839a27ad1ab29d439658513680b65c5ee43b6f021cf5fac17900ab60925",
+  "forbiddenGeneratorDenylistSha256": "4d0f44de4c14d06f7b6f6aaf250502c701bd7b085c346d183d6944782ea65e32",
+  "initialTrainingUse": false,
+  "recordCounts": {
+    "modernSynthDev": 60,
+    "modernSynthConfirm": 20,
+    "modernSynthReserve": 0,
+    "modernTotal": 80,
+    "negativeReferenceOnly": 148
+  },
+  "rawRunArtifacts": {
+    "SAFE": {
+      "file": "safe-raw-scores.json",
+      "sha256": "4fbb8b444f6a9bebe0ceba95e212cd2ad1834ef9dfbb4596854cdb763c9e2af9",
+      "scoreDirection": "higher_is_more_synthetic",
+      "recordCount": 80,
+      "runtimeMs": {"p50": 27.659, "p95": 29.977},
+      "groups": {
+        "FLUX.1-schnell": {"min": 0.6858477592, "median": 0.9481334984, "max": 0.9740543962, "n": 20},
+        "GPT-4o": {"min": 0.6123991609, "median": 0.9366499484, "max": 0.9733425975, "n": 20},
+        "PixArt-Sigma-XL-2-1024-MS": {"min": 0.5582132936, "median": 0.9407341182, "max": 0.9832952619, "n": 20},
+        "stable-diffusion-3-medium-diffusers": {"min": 0.3156358898, "median": 0.9534386396, "max": 0.9889639616, "n": 20}
+      }
+    },
+    "RINE": {
+      "file": "rine-raw-modern.json",
+      "sha256": "5feacc4957b87853a4ffca7f83458ca07a7477bf1c3e1c34dba588afdf17fb30",
+      "scoreDirection": "higher_is_more_synthetic_upstream",
+      "recordCount": 80,
+      "runtimeMs": {"p50": 600.80, "p95": 609.03},
+      "groups": {
+        "FLUX.1-schnell": {"min": 0.0488772839, "median": 0.4402907789, "max": 0.93059659, "n": 20},
+        "GPT-4o": {"min": 0.1880804002, "median": 0.7008002400, "max": 0.9713537693, "n": 20},
+        "PixArt-Sigma-XL-2-1024-MS": {"min": 0.4330376983, "median": 0.8997327983, "max": 0.9946505427, "n": 20},
+        "stable-diffusion-3-medium-diffusers": {"min": 0.2527230978, "median": 0.6960401237, "max": 0.9820677638, "n": 20}
+      }
+    },
+    "UNIVERSAL_FAKE_DETECT": {
+      "file": "ufd-raw-modern.json",
+      "sha256": "5e6036d7183c2fedad4d972c55957fec45f4f851df90132f60fb208186195b17",
+      "scoreDirection": "higher_is_more_synthetic_upstream; low-tail_hypothesis_unresolved",
+      "recordCount": 80,
+      "runtimeMs": {"p50": 582.47, "p95": 586.97},
+      "groups": {
+        "FLUX.1-schnell": {"min": 0.000016504251107, "median": 0.0008054869, "max": 0.3969879448, "n": 20},
+        "GPT-4o": {"min": 0.0000023452041659, "median": 0.0003586197, "max": 0.1748231351, "n": 20},
+        "PixArt-Sigma-XL-2-1024-MS": {"min": 0.000010892030332, "median": 0.0012032505, "max": 0.1155273765, "n": 20},
+        "stable-diffusion-3-medium-diffusers": {"min": 0.0000010904947203, "median": 0.0039650796, "max": 0.6950746775, "n": 20}
+      }
+    },
+    "SPAI_C512": {
+      "file": "spai-raw-modern.json",
+      "sha256": "d1f79dc89592271ccf5597be5258eed9fcebfd9e009c92698d73042bb264f790",
+      "scoreDirection": "higher_is_more_synthetic_upstream",
+      "recordCount": 80,
+      "runtimeMs": {"p50": 2072.03, "p95": 3446.95},
+      "groups": {
+        "FLUX.1-schnell": {"min": 0.0000146797, "median": 0.9370580912, "max": 1.0, "n": 20},
+        "GPT-4o": {"min": 5.47e-35, "median": 8.69e-10, "max": 1.0, "n": 20},
+        "PixArt-Sigma-XL-2-1024-MS": {"min": 4.93e-13, "median": 0.9999997616, "max": 1.0, "n": 20},
+        "stable-diffusion-3-medium-diffusers": {"min": 0.00000279, "median": 0.9999999404, "max": 1.0, "n": 20}
+      }
+    }
+  },
+  "negativeReference": {
+    "status": "NOT_WP007G_CALIBRATION_G",
+    "source": "WP007F qualification inputs",
+    "count": 148,
+    "use": "runtime/reference only; not used to fit, threshold, or select WP007G"
+  },
+  "postScoreDiagnosticsExcluded": [
+    {
+      "family": "FLUX.1-Krea-dev",
+      "count": 20,
+      "manifestSha256": "ab470fd8db8cc11bee5dba788bf2e7d3a7d0e1f7fbc22aed565ceaebbce8dc46",
+      "reason": "Materialised after initial SAFE scores were visible; excluded from all initial calibration and selection."
+    }
+  ],
+  "flux1PosthocAccessInThisPackage": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

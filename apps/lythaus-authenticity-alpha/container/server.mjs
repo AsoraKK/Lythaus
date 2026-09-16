@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 
 const port = Number(process.env.PORT ?? 8080);
 const maxBytes = 10 * 1024 * 1024;
-const compilerVersion = 'lythaus-synthetic-evidence-compiler-v1';
+const compilerVersion = 'lythaus-synthetic-evidence-compiler-v2';
 const registryVersion = process.env.DETECTOR_REGISTRY_VERSION ?? '2026-09-16.wp007f.qualification-1';
 const mode = process.env.LYTHAUS_AUTHENTICITY_ALPHA_MODE ?? 'SHADOW';
 
@@ -28,20 +28,24 @@ function readBody(req) {
 
 function missingEvidence(requestId, reason) {
   return {
-    schemaVersion: 'lythaus-authenticity-alpha-service-v1',
+    schemaVersion: 'lythaus-authenticity-alpha-service-v2',
     requestId,
     mode,
     analysisStatus: 'PARTIAL',
     syntheticEvidenceScore: null,
     syntheticEvidenceBand: 'LOW',
-    resolution: 'INSUFFICIENT',
+    syntheticEvidenceResolution: 'INSUFFICIENT',
+    calibrationVersion: null,
     label: 'Under review',
     compilerVersion,
-    detectors: [
+    detectorEvidence: [
       { detectorId: 'SPAI_C512', status: 'UNAVAILABLE', rawScore: null, calibratedStrength: null, warnings: [reason] },
       { detectorId: 'UNIVERSAL_FAKE_DETECT', status: 'UNAVAILABLE', rawScore: null, calibratedStrength: null, warnings: [reason] },
       { detectorId: 'RINE', status: 'UNAVAILABLE', rawScore: null, calibratedStrength: null, warnings: [reason] },
     ],
+    groupEvidence: [],
+    missingDetectors: ['SPAI_C512', 'UNIVERSAL_FAKE_DETECT', 'RINE'],
+    warnings: [reason],
     observations: [],
     advisory: null,
     enforcementAuthority: 'NONE',
@@ -51,7 +55,7 @@ function missingEvidence(requestId, reason) {
 const server = createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/health') return json(res, 200, { status: 'ok', mode, compilerVersion, registryVersion, modelArtifactsMounted: false, enforcementAuthority: 'NONE' });
-    if (req.method === 'GET' && req.url === '/version') return json(res, 200, { serviceVersion: 'lythaus-authenticity-alpha-service-v1', compilerVersion, registryVersion, mode });
+    if (req.method === 'GET' && req.url === '/version') return json(res, 200, { serviceVersion: 'lythaus-authenticity-alpha-service-v2', compilerVersion, registryVersion, mode });
     if (req.method !== 'POST' || req.url !== '/score') return json(res, 404, { error: 'not_found' });
     const requestId = req.headers['x-request-id'];
     if (typeof requestId !== 'string' || !requestId) return json(res, 400, { error: 'request_id_required' });

@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "lythaus-wp007g-detector-registry-v2",
+  "registryVersion": "2026-09-16.wp007g.modern-calibration-blocked-1",
+  "defaultMode": "SHADOW",
+  "productAuthority": "Detectors provide synthetic-origin evidence only; EF1, EF2, Safety, Observer, Adjudicator, and deterministic policy remain separate.",
+  "entries": [
+    {
+      "detectorId": "SPAI_C512",
+      "displayName": "SPAI C512",
+      "enabled": true,
+      "shadowMode": true,
+      "evidenceFamily": "EF3_SPECTRAL_SYNTHETIC",
+      "correlationGroup": "SPAI_SPECTRAL",
+      "adapterVersion": "wp007f-spai-c512-adapter-v1",
+      "checkpointHash": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "checkpointLicense": "Apache-2.0 research evaluation; deployment rights require separate review",
+      "inputPolicy": "Exact WP007F C512 implementation; decoded pixels only; no metadata or provenance features",
+      "runtimeBudgetMs": 5000,
+      "calibrationProfile": "wp007f-spai_c512-calibration-v1; WP007G modern recalibration not earned",
+      "weightCapBytes": 1073741824,
+      "replacementFor": null,
+      "status": "QUALIFIED_SUPPORT_ONLY"
+    },
+    {
+      "detectorId": "RINE",
+      "displayName": "RINE",
+      "enabled": true,
+      "shadowMode": true,
+      "evidenceFamily": "EF3_LEARNED_SYNTHETIC",
+      "correlationGroup": "CLIP_GENERATIVE",
+      "adapterVersion": "wp007f-rine-adapter-v1",
+      "checkpointHash": "13986ffc86e1bd9d57fd640f891358c4f14c0f8aea8e590e52c598541f69fdc1",
+      "checkpointLicense": "Apache-2.0 repository material; OpenAI CLIP deployment/model-card review required",
+      "inputPolicy": "Exact published RINE CLIP ViT-L/14 preprocessing; pixels only",
+      "runtimeBudgetMs": 5000,
+      "calibrationProfile": "wp007f-rine-calibration-v1; WP007G modern recalibration not earned",
+      "weightCapBytes": 44040192,
+      "replacementFor": null,
+      "status": "QUALIFIED_SUPPORT_ONLY"
+    },
+    {
+      "detectorId": "SAFE",
+      "displayName": "SAFE",
+      "enabled": true,
+      "shadowMode": true,
+      "evidenceFamily": "EF3_LEARNED_SYNTHETIC",
+      "correlationGroup": "SAFE_TRANSFORMATION_RESNET",
+      "adapterVersion": "wp007g-safe-official-adapter-v1",
+      "checkpointHash": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+      "checkpointLicense": "Apache-2.0 repository; checkpoint downstream deployment review required",
+      "inputPolicy": "Official SAFE evaluation preprocessing; decoded pixels only",
+      "runtimeBudgetMs": 5000,
+      "calibrationProfile": null,
+      "weightCapBytes": 1073741824,
+      "replacementFor": null,
+      "status": "RESEARCH_ONLY_NOT_CALIBRATED"
+    },
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "displayName": "UniversalFakeDetect",
+      "enabled": true,
+      "shadowMode": true,
+      "evidenceFamily": "EF3_LEARNED_SYNTHETIC",
+      "correlationGroup": "CLIP_GENERATIVE",
+      "adapterVersion": "wp007f-ufd-adapter-v1",
+      "checkpointHash": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847",
+      "checkpointLicense": "MIT repository material; checkpoint provenance and OpenAI CLIP deployment/model-card review required",
+      "inputPolicy": "Exact published OpenAI CLIP ViT-L/14 preprocessing; pixels only",
+      "runtimeBudgetMs": 5000,
+      "calibrationProfile": "wp007f-universal_fake_detect-calibration-v1; WP007G modern recalibration not earned",
+      "weightCapBytes": 4096,
+      "replacementFor": null,
+      "status": "SHADOW_ONLY"
+    }
+  ],
+  "correlationGroups": {
+    "SPAI_SPECTRAL": { "members": ["SPAI_C512"], "maxContributionPoints": 35 },
+    "CLIP_GENERATIVE": { "members": ["RINE", "UNIVERSAL_FAKE_DETECT"], "maxContributionPoints": 35, "independence": "CORRELATED_NOT_TWO_INDEPENDENT_FAMILIES" },
+    "SAFE_TRANSFORMATION_RESNET": { "members": ["SAFE"], "maxContributionPoints": 35 }
+  },
+  "modernCalibration": { "status": "NOT_FROZEN_INSUFFICIENT_GENERATOR_DIVERSITY", "calibrator": null },
+  "replacementRule": "Register, rights-audit, qualify on frozen modern family roles, shadow, freeze calibration, then promote; retain historical versions for appeals."
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "lythaus-wp007g-negative-data-freeze-v1",
+  "scoreBlind": true,
+  "status": "NOT_CREATED_MODERN_CALIBRATION_BLOCKED",
+  "reason": "The existing WP007F camera/digital development controls were already consumed for prior qualification and are not silently relabeled as fresh WP007G calibration roles. No disjoint fresh negative pools meeting the predeclared WP007G targets were materialised before the modern-family gate failed.",
+  "roles": {
+    "NEGATIVE_CALIBRATION_G": { "camera": 0, "digital": 0, "total": 0, "familyIds": [] },
+    "NEGATIVE_DEV_G": { "camera": 0, "digital": 0, "total": 0, "familyIds": [] },
+    "NEGATIVE_CONFIRM_G": { "camera": 0, "digital": 0, "total": 0, "familyIds": [] },
+    "NEGATIVE_RESERVE_G": { "camera": 0, "digital": 0, "total": 0, "familyIds": [] }
+  },
+  "excludedReferencePools": {
+    "WP007F_CAMERA_DEV": 100,
+    "WP007F_DIGITAL_DEV": 48,
+    "reason": "historical qualification controls only; not used to fit a WP007G calibrator"
+  },
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}
