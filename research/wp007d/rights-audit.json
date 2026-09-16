@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "lythaus-wp007d-rights-audit-v1",
+  "auditDate": "2026-09-16",
+  "purpose": "Private, bounded research construction of paired generative proxies; no production use or public media redistribution.",
+  "projectBaseline": {
+    "wp007cMergeSha": "33066d594ccb5345594eed537e3d80064df226a7",
+    "historicalWp007aBenchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+    "holdoutPixelAccess": false,
+    "flux1PixelAccess": false,
+    "flux2PixelAccess": false,
+    "productionChange": false
+  },
+  "sourceImagePools": [
+    {
+      "poolId": "CSAFE_DEVELOPMENT_CAMERA_WP006E_V3",
+      "count": 36,
+      "sourceRecord": "research/wp007a/ef3-negative-foundation.json",
+      "selection": "WP007D_CAMERA_SAMPLE_IDS",
+      "sourceRights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "trainingEligibility": "TRAINING_ALLOWED_WITH_CONSTRAINTS",
+      "externalDerivativeGeneration": "ALLOWED_FOR_PRIVATE_RESEARCH_WITH_ATTRIBUTION_AND_NO_PUBLIC_RE-DISTRIBUTION",
+      "evaluationEligibility": true,
+      "benchmarkRole": "DEVELOPMENT",
+      "sourceFamilyPolicy": "ONE_FILE_PER_INDEPENDENT_SOURCE_FAMILY",
+      "officialDataset": "CSAFE Multi-camera Smartphone Image Database",
+      "officialDatasetRecord": "https://iastate.figshare.com/articles/dataset/CSAFE_Multi-camera_Smartphone_Image_Database/26932084",
+      "officialLicense": "https://creativecommons.org/licenses/by/4.0/",
+      "officialPortal": "https://data.csafe.iastate.edu/Multi-Camid/",
+      "portalCaveat": "The official portal also publishes a fair-use notice. This package remains private research with attribution and does not redistribute source media; any use beyond that scope requires separate permission.",
+      "cloudProcessing": "Permitted under the recorded CC BY development scope; only selected non-sensitive development files are sent to the hosted proxy route."
+    },
+    {
+      "poolId": "LYTHAUS_PROGRAMMATIC_DIGITAL_NON_AI_WP007A_V1",
+      "count": 24,
+      "sourceRecord": "research/wp007a/ef3-negative-foundation.json",
+      "selection": "Four families from each of six deterministic fixture subtypes",
+      "sourceRights": "LYTHAUS_CONTROLLED",
+      "trainingEligibility": "TRAINING_ALLOWED_EXPLICIT",
+      "externalDerivativeGeneration": "ALLOWED_FOR_THIS_PRIVATE_RESEARCH_PACKAGE",
+      "evaluationEligibility": true,
+      "benchmarkRole": "DEVELOPMENT",
+      "sourceFamilyPolicy": "ONE_DETERMINISTIC_RENDER_PER_INDEPENDENT_FIXTURE_FAMILY",
+      "renderer": "scripts/authenticity/wp007a-build-hard-negatives.mjs",
+      "rendererConfiguration": { "width": 1024, "height": 1024, "format": "SVG", "selectedPerSubtype": 4 },
+      "publicRedistribution": false,
+      "cloudProcessing": "Permitted for this private research package; no personal or sensitive content."
+    }
+  ],
+  "proxyGenerators": [
+    {
+      "generatorId": "G1_SD15_IMG2IMG",
+      "modelId": "@cf/runwayml/stable-diffusion-v1-5-img2img",
+      "provider": "Cloudflare Workers AI",
+      "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/stable-diffusion-v1-5-img2img/",
+      "providerTerms": "https://www.cloudflare.com/terms/",
+      "currentOfficialUpstreamReference": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5",
+      "upstreamCommit": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14",
+      "upstreamLicense": "CreativeML OpenRAIL-M",
+      "upstreamLicenseUrl": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/blob/451f4fe16113bff5a5d2269ed5ad43b0592e9a14/LICENSE-MODEL",
+      "trainingProxyUse": "PRIVATE_RESEARCH_CLASSIFIER_DEVELOPMENT_ONLY",
+      "derivativeGenerationFromEligibleSources": "PERMITTED_WITH_SOURCE_SCOPE_AND_ATTRIBUTION",
+      "outputTrainingRights": "RESEARCH_USE_RECORDED; NO_PUBLIC_MODEL_OR_MEDIA_RE-DISTRIBUTION",
+      "checkpointRetrieved": false,
+      "routeIdentityCaveat": "Cloudflare labels the hosted route RunwayML; the current public upstream reference is a stable-diffusion-v1-5 mirror. The live preflight must keep this route available and schema-compatible; any material rights ambiguity fails this generator closed.",
+      "classification": "TRAINING_PROXY_ELIGIBLE",
+      "preflightRequired": true
+    },
+    {
+      "generatorId": "G2_SDXL_BASE_IMG2IMG",
+      "modelId": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+      "provider": "Cloudflare Workers AI",
+      "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/stable-diffusion-xl-base-1.0/",
+      "providerTerms": "https://www.cloudflare.com/terms/",
+      "upstreamRepository": "https://github.com/Stability-AI/generative-models",
+      "upstreamModelReference": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0",
+      "upstreamCommit": "462165984030d82259a11f4367a4eed129e94a7b",
+      "upstreamLicense": "CreativeML Open RAIL++-M",
+      "upstreamLicenseUrl": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/462165984030d82259a11f4367a4eed129e94a7b/LICENSE.md",
+      "trainingProxyUse": "PRIVATE_RESEARCH_CLASSIFIER_DEVELOPMENT_ONLY",
+      "derivativeGenerationFromEligibleSources": "PERMITTED_WITH_SOURCE_SCOPE_AND_ATTRIBUTION",
+      "outputTrainingRights": "RESEARCH_USE_RECORDED; NO_PUBLIC_MODEL_OR_MEDIA_RE-DISTRIBUTION",
+      "checkpointRetrieved": false,
+      "classification": "TRAINING_PROXY_ELIGIBLE",
+      "preflightRequired": true
+    },
+    {
+      "generatorId": "G3_SDXL_LIGHTNING_IMG2IMG",
+      "modelId": "@cf/bytedance/stable-diffusion-xl-lightning",
+      "provider": "Cloudflare Workers AI",
+      "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/stable-diffusion-xl-lightning/",
+      "providerTerms": "https://www.cloudflare.com/terms/",
+      "upstreamModelReference": "https://huggingface.co/ByteDance/SDXL-Lightning",
+      "upstreamCommit": "c9a24f48e1c025556787b0c58dd67a091ece2e44",
+      "upstreamLicense": "CreativeML Open RAIL++-M",
+      "upstreamLicenseUrl": "https://huggingface.co/ByteDance/SDXL-Lightning/blob/c9a24f48e1c025556787b0c58dd67a091ece2e44/LICENSE.md",
+      "trainingProxyUse": "PRIVATE_RESEARCH_CLASSIFIER_DEVELOPMENT_ONLY",
+      "derivativeGenerationFromEligibleSources": "PERMITTED_WITH_SOURCE_SCOPE_AND_ATTRIBUTION",
+      "outputTrainingRights": "RESEARCH_USE_RECORDED; NO_PUBLIC_MODEL_OR_MEDIA_RE-DISTRIBUTION",
+      "checkpointRetrieved": false,
+      "classification": "TRAINING_PROXY_ELIGIBLE",
+      "preflightRequired": true
+    }
+  ],
+  "predeclaredFallback": {
+    "generatorId": "G4_DREAMSHAPER_8_LCM_IMG2IMG",
+    "modelId": "@cf/lykon/dreamshaper-8-lcm",
+    "routeDocumentation": "https://developers.cloudflare.com/workers-ai/models/dreamshaper-8-lcm/",
+    "upstreamModelReference": "https://huggingface.co/Lykon/dreamshaper-8",
+    "upstreamCommit": "a7e52b98680b1ba8ff7bce97c7f9f2e2e5337917",
+    "upstreamLicense": "CreativeML OpenRAIL-M",
+    "upstreamLicenseUrl": "https://huggingface.co/Lykon/dreamshaper-8/blob/a7e52b98680b1ba8ff7bce97c7f9f2e2e5337917/LICENSE-MODEL",
+    "classification": "PREDECLARED_FALLBACK_NOT_SELECTED",
+    "activationRule": "Only before scores if a primary route is rights- or route-blocked and live audit passes."
+  },
+  "cloudflareDataHandling": {
+    "dataUsageDocumentation": "https://developers.cloudflare.com/workers-ai/platform/data-usage/",
+    "sourceContentScope": "Selected non-sensitive rights-clean development images only",
+    "credentialsInLogs": false,
+    "promptContainsPrivateContent": false,
+    "artifactRetentionDays": 1,
+    "generatedMediaCommittedToGit": false,
+    "productionUse": false,
+    "newPaidService": false
+  },
+  "decision": {
+    "primaryGeneratorsAudited": 3,
+    "minimumRequiredForMeaningfulDevelopment": 2,
+    "minimumRequiredBeforeFlux1Unblind": 3,
+    "liveSchemaAndAvailabilityMustPass": true,
+    "rightsAmbiguityFailsClosed": true,
+    "finalClassificationBeforePreflight": "PROVISIONAL_PENDING_LIVE_ROUTE_AND_SCHEMA_CHECK"
+  }
+}

@@ -1,0 +1,165 @@
+name: WP007D paired proxy generation
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run read-only preflight or the frozen paired-proxy materialisation'
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - preflight
+          - execute
+      confirm:
+        description: 'Required for execute: EXECUTE_WP007D_PAIRED_PROXY'
+        required: false
+        type: string
+      max_paid_cost_usd:
+        description: 'Hard package ceiling in USD'
+        required: true
+        default: '1.00'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wp007d-paired-proxy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  paired-proxy:
+    name: WP007D trusted paired-proxy run
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: refs/heads/main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit
+
+      - name: Enforce trusted-main and external cache boundary
+        shell: bash
+        env:
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+          EXPECTED_REF: ${{ github.ref }}
+          EXPECTED_SHA: ${{ github.sha }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
+        run: |
+          expected_owner="As""oraKK"
+          test "$EXPECTED_REPOSITORY" = "$expected_owner/Lythaus"
+          test "$EXPECTED_REF" = "refs/heads/main"
+          test "$EXPECTED_SHA" = "$(git rev-parse HEAD)"
+          test "$OUTPUT_CACHE" != "$GITHUB_WORKSPACE"
+          case "$OUTPUT_CACHE" in
+            "$GITHUB_WORKSPACE"/*) exit 1 ;;
+          esac
+          mkdir -p "$OUTPUT_CACHE"
+
+      - name: Run WP007D preflight
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
+          MAX_PAID_COST_USD: ${{ inputs.max_paid_cost_usd }}
+        shell: bash
+        run: |
+          node --experimental-strip-types scripts/authenticity/wp007d-paired-proxy-generation.mjs \
+            --mode preflight \
+            --output-cache "$OUTPUT_CACHE" \
+            --max-paid-cost "$MAX_PAID_COST_USD"
+
+      - name: Require explicit execute confirmation
+        if: ${{ inputs.mode == 'execute' }}
+        shell: bash
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: test "$CONFIRM" = "EXECUTE_WP007D_PAIRED_PROXY"
+
+      - name: Run deterministic paired-proxy smoke
+        if: ${{ inputs.mode == 'execute' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
+        shell: bash
+        run: |
+          node --experimental-strip-types scripts/authenticity/wp007d-paired-proxy-generation.mjs \
+            --mode execute \
+            --smoke-only \
+            --output-cache "$OUTPUT_CACHE" \
+            --max-paid-cost "${{ inputs.max_paid_cost_usd }}"
+
+      - name: Require clean smoke completion
+        if: ${{ inputs.mode == 'execute' }}
+        env:
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
+        shell: bash
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; const s=JSON.parse(fs.readFileSync(p,"utf8")); const records=Array.isArray(s.records)?s.records:[]; const failures=Array.isArray(s.failures)?s.failures:[]; if(s.status!=="WP007D_PROXY_SMOKE_COMPLETE"||records.length!==12||failures.length!==0||s.flux1ProviderCalls!==0||s.flux2ProviderCalls!==0||records.some((r)=>String(r.generatorModelId).toLowerCase().includes("flux"))){console.error("WP007D paired-proxy smoke failed closed");process.exit(1)}'
+
+      - name: Run remaining frozen paired-proxy matrix
+        if: ${{ inputs.mode == 'execute' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
+        shell: bash
+        run: |
+          node --experimental-strip-types scripts/authenticity/wp007d-paired-proxy-generation.mjs \
+            --mode execute \
+            --output-cache "$OUTPUT_CACHE" \
+            --max-paid-cost "${{ inputs.max_paid_cost_usd }}"
+
+      - name: Require provider isolation and matrix accounting
+        if: ${{ inputs.mode == 'execute' }}
+        env:
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
+        shell: bash
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; const s=JSON.parse(fs.readFileSync(p,"utf8")); const records=Array.isArray(s.records)?s.records:[]; const failures=Array.isArray(s.failures)?s.failures:[]; if(s.status!=="WP007D_PROXY_MATERIALIZED"||s.uniqueRequested!==360||s.flux1ProviderCalls!==0||s.flux2ProviderCalls!==0||records.some((r)=>String(r.generatorModelId).toLowerCase().includes("flux"))||failures.some((r)=>String(r.generatorModelId).toLowerCase().includes("flux"))){console.error("WP007D matrix accounting or FLUX exclusion failed");process.exit(1)}'
+
+      - name: Stage private transfer artifact without source media
+        if: ${{ inputs.mode == 'execute' }}
+        env:
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
+          ARTIFACT_DIR: ${{ runner.temp }}/wp007d-paired-proxy-artifact-${{ github.run_id }}
+        shell: bash
+        run: |
+          mkdir -p "$ARTIFACT_DIR/outputs"
+          cp -R "$OUTPUT_CACHE/outputs/." "$ARTIFACT_DIR/outputs/"
+          for name in paired-proxy-plan.json paired-proxy-plan.sha256 preflight.json cloudflare-generation-manifest.json transfer-manifest.json sha256-manifest.json; do
+            test -f "$OUTPUT_CACHE/$name"
+            cp "$OUTPUT_CACHE/$name" "$ARTIFACT_DIR/$name"
+          done
+          test ! -e "$ARTIFACT_DIR/sources"
+
+      - name: Upload one-day private paired-proxy artifact
+        if: ${{ inputs.mode == 'execute' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: wp007d-paired-proxy-${{ github.run_id }}
+          path: ${{ runner.temp }}/wp007d-paired-proxy-artifact-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Publish safe WP007D summary
+        if: always()
+        env:
+          OUTPUT_CACHE: ${{ runner.temp }}/wp007d-paired-proxy-${{ github.run_id }}
+          RUN_MODE: ${{ inputs.mode }}
+        shell: bash
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const p=process.env.OUTPUT_CACHE+"/cloudflare-generation-manifest.json"; const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{}; const records=Array.isArray(s.records)?s.records:[]; const failures=Array.isArray(s.failures)?s.failures:[]; const models=["G1_SD15_IMG2IMG","G2_SDXL_BASE_IMG2IMG","G3_SDXL_LIGHTNING_IMG2IMG"]; const lines=["### WP007D paired proxy","","MODE = "+process.env.RUN_MODE,"STATUS = "+(s.status??"PREFLIGHT_OR_RUN_UNAVAILABLE"),"PROXY_REQUESTED = "+(s.uniqueRequested??360),"PROXY_VALID = "+records.length,"PROXY_FAILED = "+failures.length,"PROVIDER_ATTEMPTS = "+(s.providerAttempts??0),"RETRY_COUNT = "+(s.retryCount??0),"ATTEMPTED_COST_USD = "+(s.attemptedCostUsd??0),"FLUX1_PROVIDER_CALLS = "+(s.flux1ProviderCalls??0),"FLUX2_PROVIDER_CALLS = "+(s.flux2ProviderCalls??0),"MEDIA_COMMITTED_TO_GIT = "+Boolean(s.mediaCommittedToGit),"CREDENTIALS_PRINTED = false"]; for(const m of models){lines.push(m+"_VALID = "+records.filter((r)=>r.generatorModelId&&r.sampleId?.includes(m)).length)} fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");'

@@ -72,6 +72,7 @@
     "test:authenticity-wp007ahr2": "node --experimental-strip-types --test packages/authenticity/tests/wp007ahr2.test.mjs",
     "test:authenticity-wp007ahr3": "node --experimental-strip-types --test packages/authenticity/tests/wp007ahr3.test.mjs",
     "test:authenticity-wp007ahr4": "node --experimental-strip-types --test packages/authenticity/tests/wp007ahr4.test.mjs",
+    "test:authenticity-wp007d": "node --experimental-strip-types --test packages/authenticity/tests/wp007d.test.mjs",
     "test:authenticity-wp004b-phase-c": "node --experimental-strip-types --test packages/authenticity/tests/wp004b-phase-c.test.mjs",
     "test:authenticity-wp004b-phase-e": "node --experimental-strip-types --test packages/authenticity/tests/wp004b-phase-e.test.mjs",
     "test:authenticity-wp004b-phase-g": "node --experimental-strip-types --test packages/authenticity/tests/wp004b-phase-g.test.mjs",
