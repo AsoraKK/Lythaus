@@ -1,0 +1,406 @@
+{
+  "canonicalizerSha256": "231ae791e9a0e7d31d51c3c7911e31440ec0d8670c73f84a36603d82e1dedc5c",
+  "decoderRegistrySha256": "2d24f2256a58ccb9b07e93d78047cd4ddb71aa1fa28e89b9cf6478b5fb0be4be",
+  "eligibleLineages": [
+    "SD1X",
+    "SD3",
+    "SDXL"
+  ],
+  "eligibleVariants": [
+    "SD1X_FULL_A1",
+    "SD1X_TAESD_A2",
+    "SDXL_FULL_B1",
+    "SDXL_TAESD_B2",
+    "SD3_TAESD3_C1"
+  ],
+  "lineageGrouping": {
+    "SANA": [
+      "SANA_TAESANA_D1"
+    ],
+    "SD1X": [
+      "SD1X_FULL_A1",
+      "SD1X_TAESD_A2"
+    ],
+    "SD3": [
+      "SD3_TAESD3_C1"
+    ],
+    "SDXL": [
+      "SDXL_FULL_B1",
+      "SDXL_TAESD_B2"
+    ]
+  },
+  "schemaVersion": "lythaus-wp007e-decoder-runtime-fidelity-v1",
+  "smoke": {
+    "count": 4,
+    "pixelsFromFlux1": false,
+    "pixelsFromFlux2": false,
+    "sourceFamilies": [
+      "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+      "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+      "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+      "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08"
+    ]
+  },
+  "variants": [
+    {
+      "fidelity": {
+        "catastrophicSsimBelow05Fraction": 0.0,
+        "gate": "PASS",
+        "medianPsnrDb": 34.608532,
+        "medianSsim": 0.951753,
+        "perImage": [
+          {
+            "meanAbsolutePixelError": 0.0666726753115654,
+            "psnrDb": 20.018935647809858,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+            "ssim": 0.6023945629963673
+          },
+          {
+            "meanAbsolutePixelError": 0.008594856597483158,
+            "psnrDb": 38.10514631516114,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+            "ssim": 0.9088978625702574
+          },
+          {
+            "meanAbsolutePixelError": 0.0057506137527525425,
+            "psnrDb": 34.79591521097532,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+            "ssim": 0.994911702517251
+          },
+          {
+            "meanAbsolutePixelError": 0.0052529326640069485,
+            "psnrDb": 34.421149132514444,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08",
+            "ssim": 0.9946078407222586
+          }
+        ]
+      },
+      "latentSemantics": {
+        "decoderInput": "posterior_mode_latent",
+        "decoderOutputRange": "[-1,1] mapped to [0,1] and clamped",
+        "encoderNormalization": "AutoencoderKL_contract",
+        "inputRange": "[-1,1] after x*2-1",
+        "latentDistribution": "DiagonalGaussianDistribution",
+        "latentScaling": "none_for_pure_roundtrip",
+        "posteriorMode": "deterministic_mode"
+      },
+      "lineage": "SD1X",
+      "runtimeP50Seconds": 11.534321,
+      "runtimeP95Seconds": 11.549101,
+      "runtimeSeconds": [
+        11.51954,
+        11.549101,
+        11.425478,
+        17.165745
+      ],
+      "runtimeTier": "MODERATE",
+      "smokeSourceFamilyIds": [
+        "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+        "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08"
+      ],
+      "variantId": "SD1X_FULL_A1"
+    },
+    {
+      "fidelity": {
+        "catastrophicSsimBelow05Fraction": 0.0,
+        "gate": "PASS",
+        "medianPsnrDb": 28.273887,
+        "medianSsim": 0.937988,
+        "perImage": [
+          {
+            "meanAbsolutePixelError": 0.07618578523397446,
+            "psnrDb": 19.00829202709666,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+            "ssim": 0.5378819905140516
+          },
+          {
+            "meanAbsolutePixelError": 0.022283026948571205,
+            "psnrDb": 31.190693266111573,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+            "ssim": 0.8935933202425029
+          },
+          {
+            "meanAbsolutePixelError": 0.016993822529911995,
+            "psnrDb": 28.47792774766285,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+            "ssim": 0.9834785308410221
+          },
+          {
+            "meanAbsolutePixelError": 0.019069166854023933,
+            "psnrDb": 28.069846011739948,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08",
+            "ssim": 0.9823819952822853
+          }
+        ]
+      },
+      "latentSemantics": {
+        "decoderInput": "raw_encoder_latent",
+        "decoderOutputRange": "model_output_clamped_to_[0,1]",
+        "encoderNormalization": "none",
+        "inputRange": "[0,1]",
+        "latentDistribution": "deterministic_encoder_output",
+        "latentScaling": "none_for_pure_roundtrip",
+        "posteriorMode": "NOT_APPLICABLE"
+      },
+      "lineage": "SD1X",
+      "runtimeP50Seconds": 1.031763,
+      "runtimeP95Seconds": 1.032595,
+      "runtimeSeconds": [
+        1.04207,
+        1.03093,
+        1.032595,
+        0.999369
+      ],
+      "runtimeTier": "FAST",
+      "smokeSourceFamilyIds": [
+        "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+        "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08"
+      ],
+      "variantId": "SD1X_TAESD_A2"
+    },
+    {
+      "fidelity": {
+        "catastrophicSsimBelow05Fraction": 0.0,
+        "gate": "PASS",
+        "medianPsnrDb": 37.003481,
+        "medianSsim": 0.955957,
+        "perImage": [
+          {
+            "meanAbsolutePixelError": 0.06649123877286911,
+            "psnrDb": 19.852089922117877,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+            "ssim": 0.6265591949513364
+          },
+          {
+            "meanAbsolutePixelError": 0.008003927767276764,
+            "psnrDb": 38.694051077638235,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+            "ssim": 0.9146456615146573
+          },
+          {
+            "meanAbsolutePixelError": 0.005018041934818029,
+            "psnrDb": 37.379338382329934,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+            "ssim": 0.9974639132145393
+          },
+          {
+            "meanAbsolutePixelError": 0.004853002727031708,
+            "psnrDb": 36.62762415696176,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08",
+            "ssim": 0.9972689650850036
+          }
+        ]
+      },
+      "latentSemantics": {
+        "decoderInput": "posterior_mode_latent",
+        "decoderOutputRange": "[-1,1] mapped to [0,1] and clamped",
+        "encoderNormalization": "AutoencoderKL_contract",
+        "inputRange": "[-1,1] after x*2-1",
+        "latentDistribution": "DiagonalGaussianDistribution",
+        "latentScaling": "none_for_pure_roundtrip",
+        "posteriorMode": "deterministic_mode"
+      },
+      "lineage": "SDXL",
+      "runtimeP50Seconds": 13.065735,
+      "runtimeP95Seconds": 14.741995,
+      "runtimeSeconds": [
+        11.285941,
+        11.389474,
+        15.516504,
+        14.741995
+      ],
+      "runtimeTier": "MODERATE",
+      "smokeSourceFamilyIds": [
+        "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+        "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08"
+      ],
+      "variantId": "SDXL_FULL_B1"
+    },
+    {
+      "fidelity": {
+        "catastrophicSsimBelow05Fraction": 0.0,
+        "gate": "PASS",
+        "medianPsnrDb": 29.112233,
+        "medianSsim": 0.941272,
+        "perImage": [
+          {
+            "meanAbsolutePixelError": 0.07668863981962204,
+            "psnrDb": 18.85161291774764,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+            "ssim": 0.5513649629390676
+          },
+          {
+            "meanAbsolutePixelError": 0.009827661328017712,
+            "psnrDb": 36.94623768126864,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+            "ssim": 0.8975112867448652
+          },
+          {
+            "meanAbsolutePixelError": 0.011558462865650654,
+            "psnrDb": 29.152996749415717,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+            "ssim": 0.9856505416246528
+          },
+          {
+            "meanAbsolutePixelError": 0.012733768671751022,
+            "psnrDb": 29.071468952122608,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08",
+            "ssim": 0.9850332868873425
+          }
+        ]
+      },
+      "latentSemantics": {
+        "decoderInput": "raw_encoder_latent",
+        "decoderOutputRange": "model_output_clamped_to_[0,1]",
+        "encoderNormalization": "none",
+        "inputRange": "[0,1]",
+        "latentDistribution": "deterministic_encoder_output",
+        "latentScaling": "none_for_pure_roundtrip",
+        "posteriorMode": "NOT_APPLICABLE"
+      },
+      "lineage": "SDXL",
+      "runtimeP50Seconds": 1.020306,
+      "runtimeP95Seconds": 1.02604,
+      "runtimeSeconds": [
+        0.995957,
+        1.014573,
+        1.028164,
+        1.02604
+      ],
+      "runtimeTier": "FAST",
+      "smokeSourceFamilyIds": [
+        "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+        "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08"
+      ],
+      "variantId": "SDXL_TAESD_B2"
+    },
+    {
+      "fidelity": {
+        "catastrophicSsimBelow05Fraction": 0.0,
+        "gate": "PASS",
+        "medianPsnrDb": 35.193688,
+        "medianSsim": 0.966267,
+        "perImage": [
+          {
+            "meanAbsolutePixelError": 0.05188281461596489,
+            "psnrDb": 22.10974284887744,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+            "ssim": 0.7895592432890866
+          },
+          {
+            "meanAbsolutePixelError": 0.00971247348934412,
+            "psnrDb": 37.8144055549449,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+            "ssim": 0.9391989679720031
+          },
+          {
+            "meanAbsolutePixelError": 0.00973124336451292,
+            "psnrDb": 35.34345031681872,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+            "ssim": 0.993850610097669
+          },
+          {
+            "meanAbsolutePixelError": 0.010366820730268955,
+            "psnrDb": 35.04392594424013,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08",
+            "ssim": 0.9933343853214663
+          }
+        ]
+      },
+      "latentSemantics": {
+        "decoderInput": "raw_encoder_latent",
+        "decoderOutputRange": "model_output_clamped_to_[0,1]",
+        "encoderNormalization": "none",
+        "inputRange": "[0,1]",
+        "latentDistribution": "deterministic_encoder_output",
+        "latentScaling": "none_for_pure_roundtrip",
+        "posteriorMode": "NOT_APPLICABLE"
+      },
+      "lineage": "SD3",
+      "runtimeP50Seconds": 1.020731,
+      "runtimeP95Seconds": 1.022367,
+      "runtimeSeconds": [
+        1.023624,
+        1.022367,
+        1.019096,
+        1.01556
+      ],
+      "runtimeTier": "FAST",
+      "smokeSourceFamilyIds": [
+        "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+        "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08"
+      ],
+      "variantId": "SD3_TAESD3_C1"
+    },
+    {
+      "fidelity": {
+        "catastrophicSsimBelow05Fraction": 0.25,
+        "gate": "FAIL",
+        "medianPsnrDb": 27.736133,
+        "medianSsim": 0.933257,
+        "perImage": [
+          {
+            "meanAbsolutePixelError": 0.09454908967018127,
+            "psnrDb": 17.20071214705057,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+            "ssim": 0.3939137643482387
+          },
+          {
+            "meanAbsolutePixelError": 0.01004225853830576,
+            "psnrDb": 36.36796267596913,
+            "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+            "ssim": 0.8880774252339934
+          },
+          {
+            "meanAbsolutePixelError": 0.010353188030421734,
+            "psnrDb": 27.795245258360723,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+            "ssim": 0.9784358955712382
+          },
+          {
+            "meanAbsolutePixelError": 0.009920766577124596,
+            "psnrDb": 27.677019852204733,
+            "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08",
+            "ssim": 0.9786578092960868
+          }
+        ]
+      },
+      "latentSemantics": {
+        "decoderInput": "raw_encoder_latent",
+        "decoderOutputRange": "model_output_clamped_to_[0,1]",
+        "encoderNormalization": "none",
+        "inputRange": "[0,1]",
+        "latentDistribution": "deterministic_encoder_output",
+        "latentScaling": "none_for_pure_roundtrip",
+        "posteriorMode": "NOT_APPLICABLE"
+      },
+      "lineage": "SANA",
+      "runtimeP50Seconds": 0.610927,
+      "runtimeP95Seconds": 0.6145,
+      "runtimeSeconds": [
+        0.607353,
+        0.621154,
+        0.6145,
+        0.601377
+      ],
+      "runtimeTier": "FAST",
+      "smokeSourceFamilyIds": [
+        "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+        "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-06",
+        "LYTHAUS-PROGRAMMATIC-HN-VECTOR_GRAPHIC-08"
+      ],
+      "variantId": "SANA_TAESANA_D1"
+    }
+  ]
+}

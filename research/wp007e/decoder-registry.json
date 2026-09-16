@@ -1,0 +1,162 @@
+{
+  "candidates": [
+    {
+      "configSha256": "92d3dfb746fca211a2c9e019e285f8597412211728dce3c5bcf4eda0f2d62e7e",
+      "kind": "DIFFUSERS_AUTOENCODER_KL",
+      "license": "MIT",
+      "lineage": "SD1X",
+      "localRelativeWeight": "SD1X_FULL_A1/diffusion_pytorch_model.safetensors",
+      "repo": "stabilityai/sd-vae-ft-mse",
+      "revision": "31f26fdeee1355a5c34592e401dd41e45d25a493",
+      "sourceUrl": "https://huggingface.co/stabilityai/sd-vae-ft-mse",
+      "variantId": "SD1X_FULL_A1",
+      "weightBytes": 334643276,
+      "weightName": "diffusion_pytorch_model.safetensors",
+      "weightSha256": "a1d993488569e928462932c8c38a0760b874d166399b14414135bd9c42df5815"
+    },
+    {
+      "decoderName": "taesd_decoder.pth",
+      "encoderName": "taesd_encoder.pth",
+      "kind": "TAESD_PTH",
+      "license": "MIT",
+      "lineage": "SD1X",
+      "repo": "madebyollin/taesd",
+      "revision": "e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "sourceUrl": "https://github.com/madebyollin/taesd/tree/e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "variantId": "SD1X_TAESD_A2",
+      "weights": [
+        {
+          "bytes": 4912826,
+          "filename": "taesd_encoder.pth",
+          "kind": "encoder",
+          "relativePath": "SD1X_TAESD_A2/taesd_encoder.pth",
+          "sha256": "15bc6128f0ac51c673d3427216082ebfa62402ffc89763af74edfe259b32d49d"
+        },
+        {
+          "bytes": 4913399,
+          "filename": "taesd_decoder.pth",
+          "kind": "decoder",
+          "relativePath": "SD1X_TAESD_A2/taesd_decoder.pth",
+          "sha256": "02873377c3f4659cd9f9adb2f718dcb434ba4c7bba3af3ee7bb95cbdabe2d3cf"
+        }
+      ]
+    },
+    {
+      "configSha256": "1ab8e39aeac945453e4c4bd1dd4d0953c566cb9eb9291f87cd316e75c61073cf",
+      "kind": "DIFFUSERS_AUTOENCODER_KL",
+      "license": "MIT",
+      "lineage": "SDXL",
+      "localRelativeWeight": "SDXL_FULL_B1/diffusion_pytorch_model.safetensors",
+      "repo": "stabilityai/sdxl-vae",
+      "revision": "6f5909a7e596173e25d4e97b07fd19cdf9611c76",
+      "sourceUrl": "https://huggingface.co/stabilityai/sdxl-vae",
+      "variantId": "SDXL_FULL_B1",
+      "weightBytes": 334643268,
+      "weightName": "diffusion_pytorch_model.safetensors",
+      "weightSha256": "1598f3d24932bcfe6634e8b618ea1e30ab1d57f5aad13a6d2de446d2199f2341"
+    },
+    {
+      "decoderName": "taesdxl_decoder.pth",
+      "encoderName": "taesdxl_encoder.pth",
+      "kind": "TAESD_PTH",
+      "license": "MIT",
+      "lineage": "SDXL",
+      "repo": "madebyollin/taesd",
+      "revision": "e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "sourceUrl": "https://github.com/madebyollin/taesd/tree/e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "variantId": "SDXL_TAESD_B2",
+      "weights": [
+        {
+          "bytes": 4912964,
+          "filename": "taesdxl_encoder.pth",
+          "kind": "encoder",
+          "relativePath": "SDXL_TAESD_B2/taesdxl_encoder.pth",
+          "sha256": "a5648de089aba6b641e505c0f132b2dc7ff70ab6070c31be5e624e807e711c5e"
+        },
+        {
+          "bytes": 4913541,
+          "filename": "taesdxl_decoder.pth",
+          "kind": "decoder",
+          "relativePath": "SDXL_TAESD_B2/taesdxl_decoder.pth",
+          "sha256": "a3956b8a7a763f251c7357aad6375dacdb6d971121c73e97a3069fc33a94fe1e"
+        }
+      ]
+    },
+    {
+      "decoderName": "taesd3_decoder.pth",
+      "encoderName": "taesd3_encoder.pth",
+      "kind": "TAESD_PTH",
+      "license": "MIT",
+      "lineage": "SD3",
+      "repo": "madebyollin/taesd",
+      "revision": "e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "sourceUrl": "https://github.com/madebyollin/taesd/tree/e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "variantId": "SD3_TAESD3_C1",
+      "weights": [
+        {
+          "bytes": 4940607,
+          "filename": "taesd3_encoder.pth",
+          "kind": "encoder",
+          "relativePath": "SD3_TAESD3_C1/taesd3_encoder.pth",
+          "sha256": "b8fefa64b92a867df673c7f22fb2cbc6ae144070e22e7a0b3af0f21de2f43f92"
+        },
+        {
+          "bytes": 4940671,
+          "filename": "taesd3_decoder.pth",
+          "kind": "decoder",
+          "relativePath": "SD3_TAESD3_C1/taesd3_decoder.pth",
+          "sha256": "178fbb90c8c3bab4fe5e30dcba3b85d8bd2c9a203f71239c3a3223720c310b58"
+        }
+      ]
+    },
+    {
+      "decoderName": "taesana_decoder.pth",
+      "encoderName": "taesana_encoder.pth",
+      "kind": "TAESD_PTH_F32",
+      "license": "MIT",
+      "lineage": "SANA",
+      "repo": "madebyollin/taesd",
+      "revision": "e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "sourceUrl": "https://github.com/madebyollin/taesd/tree/e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "variantId": "SANA_TAESANA_D1",
+      "weights": [
+        {
+          "bytes": 2537004,
+          "filename": "taesana_encoder.pth",
+          "kind": "encoder",
+          "relativePath": "SANA_TAESANA_D1/taesana_encoder.pth",
+          "sha256": "858f4e4cc293f88efaf58107f4154b960b9ced0cb5d9c050dad11f926b618c1f"
+        },
+        {
+          "bytes": 16640741,
+          "filename": "taesana_decoder.pth",
+          "kind": "decoder",
+          "relativePath": "SANA_TAESANA_D1/taesana_decoder.pth",
+          "sha256": "3eb733ab918dd5840fa6e6309642edb49359bd1c7624d9e5884f92438aa07c36"
+        }
+      ]
+    }
+  ],
+  "downloadPolicy": {
+    "fluxSpecificIdentifiersRejected": [
+      "taef1",
+      "taef2",
+      "flux",
+      "HiDream",
+      "Z-Image"
+    ],
+    "maxCombinedBytes": 2147483648,
+    "outsideGit": true,
+    "safetensorsPreferred": true
+  },
+  "registrySha256": "2d24f2256a58ccb9b07e93d78047cd4ddb71aa1fa28e89b9cf6478b5fb0be4be",
+  "schemaVersion": "lythaus-wp007e-decoder-weight-registry-v1",
+  "taesdCode": {
+    "filename": "taesd.py",
+    "license": "MIT",
+    "sha256": "6ba2db17ca73c2eac735060dd890719c2bcf09734eb85cc0c6d8b86052ee4220",
+    "sourceUrl": "https://raw.githubusercontent.com/madebyollin/taesd/e87efbcfc5298d84986b5d9280f40d358b6a228d/taesd.py"
+  },
+  "taesdCommit": "e87efbcfc5298d84986b5d9280f40d358b6a228d",
+  "taesdRepository": "madebyollin/taesd"
+}

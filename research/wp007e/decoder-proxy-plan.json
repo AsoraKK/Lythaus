@@ -1,0 +1,52 @@
+{
+  "canonicalizerSha256": "231ae791e9a0e7d31d51c3c7911e31440ec0d8670c73f84a36603d82e1dedc5c",
+  "cloudflareGenerationCalls": 0,
+  "costUsd": 0,
+  "dataRoleFreezeSha256": "52ec72579a1e82d97cd598ba62af69e6de46f68060f962ab6b646470b2ae91ba",
+  "decoderProxyPlanSha256": "9a5c342f5c4f462ed8753e6655a4cd8b440bab4f6027fdf9dc17001020396c17",
+  "decoderRegistrySha256": "2d24f2256a58ccb9b07e93d78047cd4ddb71aa1fa28e89b9cf6478b5fb0be4be",
+  "eligibleLineages": [
+    "SD1X",
+    "SD3",
+    "SDXL"
+  ],
+  "eligibleVariants": [
+    "SD1X_FULL_A1",
+    "SD1X_TAESD_A2",
+    "SDXL_FULL_B1",
+    "SDXL_TAESD_B2",
+    "SD3_TAESD3_C1"
+  ],
+  "fluxSpecificProxyUsed": false,
+  "lineageGrouping": {
+    "SANA": [
+      "SANA_TAESANA_D1"
+    ],
+    "SD1X": [
+      "SD1X_FULL_A1",
+      "SD1X_TAESD_A2"
+    ],
+    "SD3": [
+      "SD3_TAESD3_C1"
+    ],
+    "SDXL": [
+      "SDXL_FULL_B1",
+      "SDXL_TAESD_B2"
+    ]
+  },
+  "membershipFrozenBeforeProxyConstruction": true,
+  "pairBaseFamilyCount": 60,
+  "roundtrip": {
+    "diffusionDenoising": false,
+    "dtype": "float32_cpu",
+    "input": "canonical_real_512x512_rgb",
+    "latentScaling": "no_pipeline_scaling_for_pure_roundtrip",
+    "operation": "encoder_then_matching_decoder",
+    "output": "clamp_rgb_[0,1]_save_png",
+    "posterior": "mode_or_deterministic_encoder_output",
+    "randomLatentNoise": false,
+    "textEncoder": false
+  },
+  "schemaVersion": "lythaus-wp007e-decoder-proxy-plan-v1",
+  "wp007eBaseSha": "9b7c375bd030475e25c0058c58909a3a56dcdcc6"
+}

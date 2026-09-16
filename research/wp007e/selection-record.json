@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "lythaus-wp007e-selection-record-v1",
+  "wp007eBaseSha": "9b7c375bd030475e25c0058c58909a3a56dcdcc6",
+  "candidateStageAResultsSha256": "0cee3e87293dac0f5d954f4e80ad8cf1f587fcca884b99e7dfb717a7f5fdc6c5",
+  "nuisanceAuditSha256": "9b354c7edc536dbb276a17ac9f1425c9b5d4e177cce40166d72723df971ef401",
+  "candidateSetFrozenBeforeScoring": [
+    "C1_CLIP_STD_LR_V0",
+    "C2_CLIP_PAIRDELTA_ROBUST_LR_V0",
+    "C3_DINO2_STD_LR_V0",
+    "C4_DINO2_PAIRDELTA_ROBUST_LR_V0"
+  ],
+  "stageA": {
+    "eligibleDecoderLineages": ["SD1X", "SD3", "SDXL"],
+    "allCandidatesPassed": false,
+    "candidatePasses": {
+      "C1_CLIP_STD_LR_V0": false,
+      "C2_CLIP_PAIRDELTA_ROBUST_LR_V0": false,
+      "C3_DINO2_STD_LR_V0": false,
+      "C4_DINO2_PAIRDELTA_ROBUST_LR_V0": false
+    },
+    "failureSummary": {
+      "C1_CLIP_STD_LR_V0": ["MIN_HELDOUT_LINEAGE_RECALL", "MEDIAN_HELDOUT_LINEAGE_RECALL", "DEV_CAMERA_FPR", "NON_CAMERA_CONFOUNDING", "SOURCE_SHORTCUT_RISK", "OVERALL_SHORTCUT_RISK"],
+      "C2_CLIP_PAIRDELTA_ROBUST_LR_V0": ["MIN_HELDOUT_LINEAGE_RECALL", "MEDIAN_HELDOUT_LINEAGE_RECALL", "DDB_DEV_RECALL", "DEV_CAMERA_FPR", "NON_CAMERA_CONFOUNDING", "SOURCE_SHORTCUT_RISK", "OVERALL_SHORTCUT_RISK"],
+      "C3_DINO2_STD_LR_V0": ["MIN_HELDOUT_LINEAGE_RECALL", "MEDIAN_HELDOUT_LINEAGE_RECALL", "DDB_DEV_RECALL", "DEV_CAMERA_FPR", "DEV_OVERALL_NEGATIVE_FPR", "NON_CAMERA_CONFOUNDING", "SOURCE_SHORTCUT_RISK", "OVERALL_SHORTCUT_RISK"],
+      "C4_DINO2_PAIRDELTA_ROBUST_LR_V0": ["MIN_HELDOUT_LINEAGE_RECALL", "MEDIAN_HELDOUT_LINEAGE_RECALL", "DDB_DEV_RECALL", "DEV_CAMERA_FPR", "DEV_OVERALL_NEGATIVE_FPR", "NON_CAMERA_CONFOUNDING", "SOURCE_SHORTCUT_RISK", "OVERALL_SHORTCUT_RISK"]
+    }
+  },
+  "phaseB": {
+    "triggered": false,
+    "trigger": {
+      "requiresPairDeltaMinHeldoutLineageRecallAtLeast": 0.55,
+      "requiresPairDeltaDdbDevRecallAtLeast": 0.5,
+      "requiresPrimaryFailureToBeNuisance": true
+    },
+    "pairDeltaEvidence": {
+      "C2_CLIP_PAIRDELTA_ROBUST_LR_V0": {
+        "minHeldoutLineageRecall": 0.027777777777777776,
+        "ddbDevRecall": 0.3125,
+        "overallShortcutRisk": "HIGH"
+      },
+      "C4_DINO2_PAIRDELTA_ROBUST_LR_V0": {
+        "minHeldoutLineageRecall": 0.0,
+        "ddbDevRecall": 0.15625,
+        "overallShortcutRisk": "HIGH"
+      }
+    },
+    "reasonNotTriggered": "No PAIRDELTA candidate met both minimum meaningful-signal thresholds; recovery is not authorized."
+  },
+  "phaseC": {
+    "triggered": false,
+    "reasonNotTriggered": "Phase B was not eligible, so the predeclared Phase C prerequisite was not satisfied."
+  },
+  "selectedSpecialist": null,
+  "calibrationFreezeCreated": false,
+  "flux1UnblindPerformed": false,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "decision": "REJECT_LOCAL_DECODER_PROXY_EF3",
+  "terminalReason": "All four frozen primary candidates failed Stage A and neither predeclared recovery phase was eligible under its evidence thresholds. No candidate earned Stage B, calibration freeze, or FLUX.1 access."
+}

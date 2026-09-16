@@ -1,0 +1,6106 @@
+{
+  "candidateAudits": {
+    "C1_CLIP_STD_LR_V0": {
+      "allAuditedSamples": 140,
+      "negativeSubtypeAudit": {
+        "classification": "HIGH",
+        "groups": {
+          "CHART": {
+            "count": 10,
+            "iqr": 0.00809535352841928,
+            "max": -0.7308441634784768,
+            "median": -0.7470618597587353,
+            "min": -0.7586191208554547
+          },
+          "DIAGRAM": {
+            "count": 10,
+            "iqr": 0.01347139266808317,
+            "max": -0.7123742589053963,
+            "median": -0.7461289000268208,
+            "min": -0.7594601830346247
+          },
+          "OTHER_DIGITAL_NON_AI": {
+            "count": 10,
+            "iqr": 0.0281288713164789,
+            "max": -0.8021245790418505,
+            "median": -0.8621098514534167,
+            "min": -0.8819593721587458
+          },
+          "TEXT_GRAPHIC": {
+            "count": 10,
+            "iqr": 0.01918270655156684,
+            "max": -0.7679305331019142,
+            "median": -0.81477337825103,
+            "min": -0.8279609721076365
+          },
+          "UI_CAPTURE": {
+            "count": 10,
+            "iqr": 0.044436022005878595,
+            "max": -0.7511034726057951,
+            "median": -0.7885827895172448,
+            "min": -0.8391542367923179
+          },
+          "VECTOR_GRAPHIC": {
+            "count": 10,
+            "iqr": 0.04862762642306018,
+            "max": -0.615578714484518,
+            "median": -0.6775383236800698,
+            "min": -0.7293167471521549
+          },
+          "iPhone11_1": {
+            "count": 10,
+            "iqr": 0.1329102195074915,
+            "max": -0.6041172428858702,
+            "median": -0.6895087979603846,
+            "min": -0.7829713866733076
+          },
+          "iPhone11_3": {
+            "count": 10,
+            "iqr": 0.03399787887501304,
+            "max": -0.6584675484569094,
+            "median": -0.676705286519907,
+            "min": -0.7647805631630986
+          },
+          "iPhone12_1": {
+            "count": 5,
+            "iqr": 0.007059335765868369,
+            "max": -0.7412628893149952,
+            "median": -0.7563559574367537,
+            "min": -0.765588353325733
+          },
+          "iPhone12_3": {
+            "count": 5,
+            "iqr": 0.012298320998041401,
+            "max": -0.6527634022338141,
+            "median": -0.6539623038896086,
+            "min": -0.6777588537409889
+          },
+          "iPhone14_1": {
+            "count": 5,
+            "iqr": 0.009373961745836712,
+            "max": -0.5992413791461036,
+            "median": -0.6007890104626425,
+            "min": -0.6192369034004929
+          },
+          "iPhone14_3": {
+            "count": 5,
+            "iqr": 0.0021590388339330913,
+            "max": -0.7037290366084878,
+            "median": -0.7273902189367171,
+            "min": -0.7309253776192787
+          },
+          "note10_1": {
+            "count": 5,
+            "iqr": 0.0033002278803219154,
+            "max": -0.5310720697775966,
+            "median": -0.5492196532952501,
+            "min": -0.6067596982881687
+          },
+          "note10_3": {
+            "count": 5,
+            "iqr": 0.000765081777985066,
+            "max": -0.7934243838206172,
+            "median": -0.7980597830094185,
+            "min": -0.8345566248467484
+          },
+          "s20_1": {
+            "count": 5,
+            "iqr": 0.02952845607937693,
+            "max": -0.6645372405497816,
+            "median": -0.6692833199837556,
+            "min": -0.762856494490356
+          },
+          "s20_3": {
+            "count": 5,
+            "iqr": 0.020738556148109932,
+            "max": -0.6010193436202357,
+            "median": -0.6059414180684473,
+            "min": -0.6304839835179648
+          },
+          "s20_4": {
+            "count": 5,
+            "iqr": 0.0001340208702224066,
+            "max": -0.7550087562422167,
+            "median": -0.7762792986751167,
+            "min": -0.7941026637832058
+          },
+          "s21_1": {
+            "count": 5,
+            "iqr": 0.005340895281581437,
+            "max": -0.6249433090415337,
+            "median": -0.6481733500450229,
+            "min": -0.6562197904919399
+          },
+          "s21_3": {
+            "count": 5,
+            "iqr": 0.02399249300404549,
+            "max": -0.5332566915609698,
+            "median": -0.5385570648731439,
+            "min": -0.5636659949181477
+          },
+          "s21_4": {
+            "count": 5,
+            "iqr": 0.006822547888900576,
+            "max": -0.6131230635654051,
+            "median": -0.6205959130480218,
+            "min": -0.6454690837501154
+          }
+        },
+        "maximumSymmetricAuc": 1.0,
+        "pairs": [
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "DIAGRAM",
+            "rightCount": 10,
+            "symmetricAuc": 0.6
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "OTHER_DIGITAL_NON_AI",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.97
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 0.62
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.9
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.72
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.98
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.98
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "OTHER_DIGITAL_NON_AI",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.98
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.9500000000000001
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 0.5900000000000001
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.89
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.72
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.9
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.96
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.88
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.9199999999999999
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.9600000000000001
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.5599999999999999
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 0.98
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.6400000000000001
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.9000000000000001
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 0.96
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.99
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.9400000000000001
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.6599999999999999
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.98
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.7400000000000001
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 0.54
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.51
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.74
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.98
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.76
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.54
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.92
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.88
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.54
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.72
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.9
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.9800000000000001
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.56
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.7999999999999999
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.9
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.52
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.64
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.92
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.8200000000000001
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.86
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.98
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8400000000000001
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.88
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8400000000000001
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8800000000000001
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8800000000000001
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.76
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.96
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.88
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5599999999999999
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.9600000000000001
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.96
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.9199999999999999
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.72
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.88
+          },
+          {
+            "left": "s21_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          }
+        ]
+      },
+      "nonCameraConfounding": {
+        "cameraDigitalSymmetricAuc": 0.826875,
+        "classification": "HIGH"
+      },
+      "nuisanceAudit": {
+        "edgeDensity": {
+          "absoluteRho": 0.12379491362589169,
+          "risk": "LOW",
+          "spearmanRho": 0.12379491362589169
+        },
+        "entropy": {
+          "absoluteRho": 0.43879706614299274,
+          "risk": "MODERATE",
+          "spearmanRho": 0.43879706614299274
+        },
+        "highFrequencyEnergy": {
+          "absoluteRho": 0.14323327837089586,
+          "risk": "LOW",
+          "spearmanRho": -0.14323327837089586
+        },
+        "luminanceMean": {
+          "absoluteRho": 0.4407608434182845,
+          "risk": "MODERATE",
+          "spearmanRho": -0.4407608434182845
+        },
+        "luminanceStd": {
+          "absoluteRho": 0.10156096238207496,
+          "risk": "LOW",
+          "spearmanRho": 0.10156096238207496
+        },
+        "nativeAspectRatio": {
+          "absoluteRho": 0.5603885941200109,
+          "risk": "HIGH",
+          "spearmanRho": -0.5603885941200109
+        },
+        "nativePixelCount": {
+          "absoluteRho": 0.5215668056902559,
+          "risk": "HIGH",
+          "spearmanRho": 0.5215668056902559
+        }
+      },
+      "overallShortcutRisk": "HIGH",
+      "sourceDatasetShortcutRisk": "HIGH"
+    },
+    "C2_CLIP_PAIRDELTA_ROBUST_LR_V0": {
+      "allAuditedSamples": 140,
+      "negativeSubtypeAudit": {
+        "classification": "HIGH",
+        "groups": {
+          "CHART": {
+            "count": 10,
+            "iqr": 0.03552816494896094,
+            "max": -0.12234031257136341,
+            "median": -0.19705914645758435,
+            "min": -0.23142541462977045
+          },
+          "DIAGRAM": {
+            "count": 10,
+            "iqr": 0.04132647935112893,
+            "max": -0.11499144675335819,
+            "median": -0.20815734166902627,
+            "min": -0.22496801916695197
+          },
+          "OTHER_DIGITAL_NON_AI": {
+            "count": 10,
+            "iqr": 0.10116548791863045,
+            "max": -0.2676102251402241,
+            "median": -0.45579181300808735,
+            "min": -0.5402014953552471
+          },
+          "TEXT_GRAPHIC": {
+            "count": 10,
+            "iqr": 0.07768078540468631,
+            "max": -0.1969230985077008,
+            "median": -0.3379392328431665,
+            "min": -0.36243387357308954
+          },
+          "UI_CAPTURE": {
+            "count": 10,
+            "iqr": 0.07674669907087633,
+            "max": -0.2082074895702317,
+            "median": -0.3064733498160441,
+            "min": -0.3657836404248141
+          },
+          "VECTOR_GRAPHIC": {
+            "count": 10,
+            "iqr": 0.11765284210063748,
+            "max": 0.15183305368814728,
+            "median": 0.032050823244949796,
+            "min": -0.06851286013094283
+          },
+          "iPhone11_1": {
+            "count": 10,
+            "iqr": 0.23533592614548204,
+            "max": 0.22886368226443288,
+            "median": 0.021592168447993165,
+            "min": -0.09084619978477573
+          },
+          "iPhone11_3": {
+            "count": 10,
+            "iqr": 0.1612470814943774,
+            "max": 0.15914768221300396,
+            "median": 0.022325158592059816,
+            "min": -0.03251103420080295
+          },
+          "iPhone12_1": {
+            "count": 5,
+            "iqr": 0.04799105707669361,
+            "max": 0.02500910922102592,
+            "median": -0.02149343330211982,
+            "min": -0.03508409829902785
+          },
+          "iPhone12_3": {
+            "count": 5,
+            "iqr": 0.0498908145818784,
+            "max": 0.17968215431173268,
+            "median": 0.11846003607748311,
+            "min": 0.09057378438357565
+          },
+          "iPhone14_1": {
+            "count": 5,
+            "iqr": 0.0026190156638481454,
+            "max": 0.22875699272072042,
+            "median": 0.20824673216232878,
+            "min": 0.20822571119287442
+          },
+          "iPhone14_3": {
+            "count": 5,
+            "iqr": 0.07082344462598776,
+            "max": 0.09794808059599555,
+            "median": 0.01848956539188218,
+            "min": 0.00955070598202866
+          },
+          "note10_1": {
+            "count": 5,
+            "iqr": 0.00028026563623434475,
+            "max": 0.4303326212870576,
+            "median": 0.3428935201774209,
+            "min": 0.310131764503312
+          },
+          "note10_3": {
+            "count": 5,
+            "iqr": 0.018745058624969595,
+            "max": -0.007650860620217387,
+            "median": -0.03738347314978791,
+            "min": -0.04271910289098308
+          },
+          "s20_1": {
+            "count": 5,
+            "iqr": 0.004447681123585567,
+            "max": 0.13844438706531953,
+            "median": 0.11628597735862103,
+            "min": 0.04755873536178487
+          },
+          "s20_3": {
+            "count": 5,
+            "iqr": 0.007402916731277465,
+            "max": 0.2847859991485937,
+            "median": 0.2541362402488573,
+            "min": 0.24831680782983662
+          },
+          "s20_4": {
+            "count": 5,
+            "iqr": 0.02011479284637377,
+            "max": -0.07528423789849228,
+            "median": -0.1302656112260855,
+            "min": -0.13091440251497774
+          },
+          "s21_1": {
+            "count": 5,
+            "iqr": 0.06359352505084626,
+            "max": 0.22912840647597385,
+            "median": 0.14263444264040953,
+            "min": 0.12250425871344894
+          },
+          "s21_3": {
+            "count": 5,
+            "iqr": 0.004277417039499076,
+            "max": 0.3309620059943171,
+            "median": 0.3244918958772936,
+            "min": 0.31367754012747384
+          },
+          "s21_4": {
+            "count": 5,
+            "iqr": 0.012201762130738036,
+            "max": 0.18044538635772686,
+            "median": 0.16941500769979734,
+            "min": 0.1524346561211419
+          }
+        },
+        "maximumSymmetricAuc": 1.0,
+        "pairs": [
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "DIAGRAM",
+            "rightCount": 10,
+            "symmetricAuc": 0.56
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "OTHER_DIGITAL_NON_AI",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.92
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.96
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.9400000000000001
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "OTHER_DIGITAL_NON_AI",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.92
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.93
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.88
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.93
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.93
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.61
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 0.54
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.6
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.7
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.8800000000000001
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.7
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.78
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8800000000000001
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.59
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.62
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.9
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.52
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.9
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.72
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.74
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.8200000000000001
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5800000000000001
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.86
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.66
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8200000000000001
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.9
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.8400000000000001
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.96
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.6799999999999999
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.76
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.76
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.92
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.9600000000000001
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.6
+          },
+          {
+            "left": "s21_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          }
+        ]
+      },
+      "nonCameraConfounding": {
+        "cameraDigitalSymmetricAuc": 0.9435416666666667,
+        "classification": "HIGH"
+      },
+      "nuisanceAudit": {
+        "edgeDensity": {
+          "absoluteRho": 0.33830220182324044,
+          "risk": "MODERATE",
+          "spearmanRho": 0.33830220182324044
+        },
+        "entropy": {
+          "absoluteRho": 0.6422338950581917,
+          "risk": "HIGH",
+          "spearmanRho": 0.6422338950581917
+        },
+        "highFrequencyEnergy": {
+          "absoluteRho": 0.001841314549883879,
+          "risk": "LOW",
+          "spearmanRho": 0.001841314549883879
+        },
+        "luminanceMean": {
+          "absoluteRho": 0.6374884644486334,
+          "risk": "HIGH",
+          "spearmanRho": -0.6374884644486334
+        },
+        "luminanceStd": {
+          "absoluteRho": 0.1119046890102825,
+          "risk": "LOW",
+          "spearmanRho": 0.1119046890102825
+        },
+        "nativeAspectRatio": {
+          "absoluteRho": 0.760399819554814,
+          "risk": "HIGH",
+          "spearmanRho": -0.760399819554814
+        },
+        "nativePixelCount": {
+          "absoluteRho": 0.7192572551328975,
+          "risk": "HIGH",
+          "spearmanRho": 0.7192572551328975
+        }
+      },
+      "overallShortcutRisk": "HIGH",
+      "sourceDatasetShortcutRisk": "HIGH"
+    },
+    "C3_DINO2_STD_LR_V0": {
+      "allAuditedSamples": 140,
+      "negativeSubtypeAudit": {
+        "classification": "HIGH",
+        "groups": {
+          "CHART": {
+            "count": 10,
+            "iqr": 0.07428653854223655,
+            "max": -0.7411346811143462,
+            "median": -0.7950803363575497,
+            "min": -0.8432779284666053
+          },
+          "DIAGRAM": {
+            "count": 10,
+            "iqr": 0.0084467734302478,
+            "max": -0.8704970107385666,
+            "median": -0.8806713698337321,
+            "min": -0.8887909108693992
+          },
+          "OTHER_DIGITAL_NON_AI": {
+            "count": 10,
+            "iqr": 0.01679388129419701,
+            "max": -0.9419454860524616,
+            "median": -0.9585980271881216,
+            "min": -0.9810017702511852
+          },
+          "TEXT_GRAPHIC": {
+            "count": 10,
+            "iqr": 0.029416782271897923,
+            "max": -0.7948865565775484,
+            "median": -0.8248751714254767,
+            "min": -0.8392931831582646
+          },
+          "UI_CAPTURE": {
+            "count": 10,
+            "iqr": 0.013366991805348949,
+            "max": -0.8516826477603794,
+            "median": -0.877806383882962,
+            "min": -0.8862900757777517
+          },
+          "VECTOR_GRAPHIC": {
+            "count": 10,
+            "iqr": 0.029041514813758162,
+            "max": -0.7744042734932204,
+            "median": -0.7964998068555571,
+            "min": -0.8133649441102924
+          },
+          "iPhone11_1": {
+            "count": 10,
+            "iqr": 0.02335653858229092,
+            "max": -0.570326153287236,
+            "median": -0.6017800188478042,
+            "min": -0.6159594956068885
+          },
+          "iPhone11_3": {
+            "count": 10,
+            "iqr": 0.1084647958090148,
+            "max": -0.5804154065503286,
+            "median": -0.6401575717370029,
+            "min": -0.6990309902504845
+          },
+          "iPhone12_1": {
+            "count": 5,
+            "iqr": 0.0026378915934746616,
+            "max": -0.4089798132032024,
+            "median": -0.40989869779084487,
+            "min": -0.44250118421981793
+          },
+          "iPhone12_3": {
+            "count": 5,
+            "iqr": 0.0027825664683809315,
+            "max": -0.5118029307102283,
+            "median": -0.5145142762817234,
+            "min": -0.5192101901569133
+          },
+          "iPhone14_1": {
+            "count": 5,
+            "iqr": 0.006452926208706855,
+            "max": -0.5223283173357408,
+            "median": -0.5270412375434068,
+            "min": -0.5360539767021383
+          },
+          "iPhone14_3": {
+            "count": 5,
+            "iqr": 0.0036312131343194665,
+            "max": -0.5940319718694924,
+            "median": -0.5947818323140116,
+            "min": -0.6047651090346378
+          },
+          "note10_1": {
+            "count": 5,
+            "iqr": 0.018853192769337612,
+            "max": -0.39289175809225485,
+            "median": -0.40853600767429776,
+            "min": -0.41225497291294616
+          },
+          "note10_3": {
+            "count": 5,
+            "iqr": 0.007926299161395534,
+            "max": -0.6885491540777078,
+            "median": -0.6891773769454128,
+            "min": -0.7004590095903107
+          },
+          "s20_1": {
+            "count": 5,
+            "iqr": 0.003981573862088528,
+            "max": -0.740153066625365,
+            "median": -0.7410393516141648,
+            "min": -0.745879548323466
+          },
+          "s20_3": {
+            "count": 5,
+            "iqr": 0.007967288290151808,
+            "max": -0.6673130078410329,
+            "median": -0.6694191508207222,
+            "min": -0.6799177558124506
+          },
+          "s20_4": {
+            "count": 5,
+            "iqr": 0.002605221184992401,
+            "max": -0.6499772493655129,
+            "median": -0.6516181021561567,
+            "min": -0.6584324520992095
+          },
+          "s21_1": {
+            "count": 5,
+            "iqr": 0.0030267771675419053,
+            "max": -0.2111415176482978,
+            "median": -0.2152438939649568,
+            "min": -0.2326905008820475
+          },
+          "s21_3": {
+            "count": 5,
+            "iqr": 0.0007945978905501416,
+            "max": -0.5883106322269446,
+            "median": -0.595425210788047,
+            "min": -0.6024650055237171
+          },
+          "s21_4": {
+            "count": 5,
+            "iqr": 0.0077878092722164505,
+            "max": -0.5485396032098077,
+            "median": -0.5549799847158667,
+            "min": -0.5696639417165847
+          }
+        },
+        "maximumSymmetricAuc": 1.0,
+        "pairs": [
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "DIAGRAM",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "OTHER_DIGITAL_NON_AI",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.63
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.96
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "OTHER_DIGITAL_NON_AI",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 0.64
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.8
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.65
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.6000000000000001
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.62
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.72
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.52
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 0.6799999999999999
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.56
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          }
+        ]
+      },
+      "nonCameraConfounding": {
+        "cameraDigitalSymmetricAuc": 0.9995833333333334,
+        "classification": "HIGH"
+      },
+      "nuisanceAudit": {
+        "edgeDensity": {
+          "absoluteRho": 0.3573627128226093,
+          "risk": "MODERATE",
+          "spearmanRho": 0.3573627128226093
+        },
+        "entropy": {
+          "absoluteRho": 0.6984661543642654,
+          "risk": "HIGH",
+          "spearmanRho": 0.6984661543642654
+        },
+        "highFrequencyEnergy": {
+          "absoluteRho": 0.04102501301166458,
+          "risk": "LOW",
+          "spearmanRho": -0.04102501301166458
+        },
+        "luminanceMean": {
+          "absoluteRho": 0.5324023250423152,
+          "risk": "HIGH",
+          "spearmanRho": -0.5324023250423152
+        },
+        "luminanceStd": {
+          "absoluteRho": 0.08836997738813249,
+          "risk": "LOW",
+          "spearmanRho": 0.08836997738813249
+        },
+        "nativeAspectRatio": {
+          "absoluteRho": 0.8564766403440319,
+          "risk": "HIGH",
+          "spearmanRho": -0.8564766403440319
+        },
+        "nativePixelCount": {
+          "absoluteRho": 0.8181567871017911,
+          "risk": "HIGH",
+          "spearmanRho": 0.8181567871017911
+        }
+      },
+      "overallShortcutRisk": "HIGH",
+      "sourceDatasetShortcutRisk": "HIGH"
+    },
+    "C4_DINO2_PAIRDELTA_ROBUST_LR_V0": {
+      "allAuditedSamples": 140,
+      "negativeSubtypeAudit": {
+        "classification": "HIGH",
+        "groups": {
+          "CHART": {
+            "count": 10,
+            "iqr": 0.10903644982381722,
+            "max": -0.3515912125627958,
+            "median": -0.43350504378642696,
+            "min": -0.5045043999658425
+          },
+          "DIAGRAM": {
+            "count": 10,
+            "iqr": 0.009087304819093256,
+            "max": -0.5400050679964187,
+            "median": -0.5587339983647512,
+            "min": -0.5633689764412149
+          },
+          "OTHER_DIGITAL_NON_AI": {
+            "count": 10,
+            "iqr": 0.028739839266768263,
+            "max": -0.7012556119088225,
+            "median": -0.7260315680157776,
+            "min": -0.7604875062558523
+          },
+          "TEXT_GRAPHIC": {
+            "count": 10,
+            "iqr": 0.041024142180488554,
+            "max": -0.4770354521551755,
+            "median": -0.5251982471155067,
+            "min": -0.5515683373053357
+          },
+          "UI_CAPTURE": {
+            "count": 10,
+            "iqr": 0.019438013190749892,
+            "max": -0.5674848754951749,
+            "median": -0.6058829546080471,
+            "min": -0.6216833148802455
+          },
+          "VECTOR_GRAPHIC": {
+            "count": 10,
+            "iqr": 0.030591404823056334,
+            "max": -0.40132044061700767,
+            "median": -0.42866027008909746,
+            "min": -0.4487714001270755
+          },
+          "iPhone11_1": {
+            "count": 10,
+            "iqr": 0.08550681323795455,
+            "max": 0.15072491396389287,
+            "median": 0.07399655095915814,
+            "min": 0.0471420387890267
+          },
+          "iPhone11_3": {
+            "count": 10,
+            "iqr": 0.14194717237524984,
+            "max": 0.09776499187204857,
+            "median": 0.020737598648180033,
+            "min": -0.05246414557313976
+          },
+          "iPhone12_1": {
+            "count": 5,
+            "iqr": 0.004695614834136719,
+            "max": 0.3259612960425955,
+            "median": 0.32563484034602563,
+            "min": 0.28816952656652406
+          },
+          "iPhone12_3": {
+            "count": 5,
+            "iqr": 0.0015069391738365412,
+            "max": 0.2116157645779716,
+            "median": 0.20696068144853547,
+            "min": 0.19694525757204356
+          },
+          "iPhone14_1": {
+            "count": 5,
+            "iqr": 0.006894693827682402,
+            "max": 0.26001335726986996,
+            "median": 0.2542812104613317,
+            "min": 0.24410206834789014
+          },
+          "iPhone14_3": {
+            "count": 5,
+            "iqr": 0.002421671043963472,
+            "max": 0.05591075283212314,
+            "median": 0.05344896080075162,
+            "min": 0.041277332126821914
+          },
+          "note10_1": {
+            "count": 5,
+            "iqr": 0.024353184667055605,
+            "max": 0.3877436223423034,
+            "median": 0.36930227465395854,
+            "min": 0.36298113552485967
+          },
+          "note10_3": {
+            "count": 5,
+            "iqr": 0.00963693260483496,
+            "max": -0.06772993753499362,
+            "median": -0.06928660561678189,
+            "min": -0.08285397733831851
+          },
+          "s20_1": {
+            "count": 5,
+            "iqr": 0.0037546357228141203,
+            "max": -0.0984250780334785,
+            "median": -0.10190253121095944,
+            "min": -0.10602342687561202
+          },
+          "s20_3": {
+            "count": 5,
+            "iqr": 0.005767028629944937,
+            "max": 0.043626447935701675,
+            "median": 0.039376611557242466,
+            "min": 0.0327736347127162
+          },
+          "s20_4": {
+            "count": 5,
+            "iqr": 0.003000358210147658,
+            "max": 0.06274131615821543,
+            "median": 0.06080025301771401,
+            "min": 0.05167015810760646
+          },
+          "s21_1": {
+            "count": 5,
+            "iqr": 0.0017525197272635351,
+            "max": 0.4825543056109181,
+            "median": 0.4765840260317086,
+            "min": 0.44402556042195995
+          },
+          "s21_3": {
+            "count": 5,
+            "iqr": 0.006685649522232856,
+            "max": 0.16803385795511433,
+            "median": 0.15623059813386636,
+            "min": 0.152468539241244
+          },
+          "s21_4": {
+            "count": 5,
+            "iqr": 0.010892998568034024,
+            "max": 0.2257694552180869,
+            "median": 0.21912621754304404,
+            "min": 0.20630857186979934
+          }
+        },
+        "maximumSymmetricAuc": 1.0,
+        "pairs": [
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "DIAGRAM",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "OTHER_DIGITAL_NON_AI",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.88
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "CHART",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "OTHER_DIGITAL_NON_AI",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 0.94
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "DIAGRAM",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "TEXT_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "OTHER_DIGITAL_NON_AI",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "UI_CAPTURE",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "TEXT_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "VECTOR_GRAPHIC",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "UI_CAPTURE",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_1",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "VECTOR_GRAPHIC",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone11_3",
+            "rightCount": 10,
+            "symmetricAuc": 0.71
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.72
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.58
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_1",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone12_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.5
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone11_3",
+            "leftCount": 10,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone12_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "iPhone14_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone12_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.8800000000000001
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "iPhone14_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "note10_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 0.96
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 0.8800000000000001
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "iPhone14_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "note10_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "note10_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s20_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s20_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_1",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s20_4",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_1",
+            "leftCount": 5,
+            "right": "s21_3",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_1",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          },
+          {
+            "left": "s21_3",
+            "leftCount": 5,
+            "right": "s21_4",
+            "rightCount": 5,
+            "symmetricAuc": 1.0
+          }
+        ]
+      },
+      "nonCameraConfounding": {
+        "cameraDigitalSymmetricAuc": 1.0,
+        "classification": "HIGH"
+      },
+      "nuisanceAudit": {
+        "edgeDensity": {
+          "absoluteRho": 0.31695862823973425,
+          "risk": "MODERATE",
+          "spearmanRho": 0.31695862823973425
+        },
+        "entropy": {
+          "absoluteRho": 0.6739692356139101,
+          "risk": "HIGH",
+          "spearmanRho": 0.6739692356139101
+        },
+        "highFrequencyEnergy": {
+          "absoluteRho": 0.06677717469745145,
+          "risk": "LOW",
+          "spearmanRho": -0.06677717469745145
+        },
+        "luminanceMean": {
+          "absoluteRho": 0.5388884758201722,
+          "risk": "HIGH",
+          "spearmanRho": -0.5388884758201722
+        },
+        "luminanceStd": {
+          "absoluteRho": 0.10335854024431312,
+          "risk": "LOW",
+          "spearmanRho": 0.10335854024431312
+        },
+        "nativeAspectRatio": {
+          "absoluteRho": 0.8571909661491561,
+          "risk": "HIGH",
+          "spearmanRho": -0.8571909661491561
+        },
+        "nativePixelCount": {
+          "absoluteRho": 0.7964459563498644,
+          "risk": "HIGH",
+          "spearmanRho": 0.7964459563498644
+        }
+      },
+      "overallShortcutRisk": "HIGH",
+      "sourceDatasetShortcutRisk": "HIGH"
+    }
+  },
+  "dataRole": "NEGATIVE_DEV_CONTROL_canonical_and_benign_only",
+  "detectorInputsExcludeAuditValues": true,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "nuisanceAuditSha256": "9b354c7edc536dbb276a17ac9f1425c9b5d4e177cce40166d72723df971ef401",
+  "schemaVersion": "lythaus-wp007e-nuisance-audit-v1"
+}

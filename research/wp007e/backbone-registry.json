@@ -1,0 +1,41 @@
+{
+  "backbones": {
+    "CLIP": {
+      "commit": "d05afc436d78f1c48dc0dbf8e5980a9d471f35f6",
+      "feature": "official image encoder output, L2 normalized",
+      "license": "MIT",
+      "licenseFileSha256": "d860b08e3ac59e475d0bcd14c4787494ddc0e385cddd81c47acbbbbd7ed6cb98",
+      "modelId": "ViT-B/32",
+      "repository": "openai/CLIP",
+      "researchUse": "CONFIRMED_FOR_RESEARCH_USE",
+      "weightBytes": 353976522,
+      "weightFilename": "ViT-B-32.pt",
+      "weightRelativePath": "weights/ViT-B-32.pt",
+      "weightSha256": "40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af",
+      "weightSource": "official_openai_clip_model_url_vit_b32"
+    },
+    "DINOv2": {
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+      "feature": "concat class_token and mean patch tokens, L2 normalized",
+      "license": "Apache-2.0",
+      "licenseFileSha256": "4b63d54afaae8f96b7b3baeb94d902bb50e4f17e3d0fc6cb450bef56cb769616",
+      "modelId": "dinov2_vits14",
+      "repository": "facebookresearch/dinov2",
+      "researchUse": "CONFIRMED_FOR_RESEARCH_USE",
+      "weightBytes": 88283115,
+      "weightFilename": "dinov2_vits14_pretrain.pth",
+      "weightRelativePath": "torch-home/hub/checkpoints/dinov2_vits14_pretrain.pth",
+      "weightSha256": "b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9",
+      "weightSource": "official_dinov2_vits14_pretrained_checkpoint"
+    }
+  },
+  "device": "cpu",
+  "fineTuning": false,
+  "maxPerBackboneBytes": 1073741824,
+  "registrySha256": "44c65295abf25f886ef03655315a76ba3621c66e4af32b60460dbb546b54096e",
+  "schemaVersion": "lythaus-wp007e-backbone-registry-v1",
+  "storage": "external_outside_git",
+  "textEncoder": false,
+  "totalWeightBytes": 442259637,
+  "zeroShotClassification": false
+}
