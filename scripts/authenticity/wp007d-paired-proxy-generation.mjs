@@ -26,6 +26,9 @@ import {
   WP007D_STRENGTHS,
   WP007D_WP007AHR4_HOLDOUT_FREEZE_SHA,
   WP007D_WP007C_MERGE_SHA,
+  WP007D_PROXY_CONTRACT_REPAIR,
+  WP007D_PROXY_IMAGE_INPUT_ENCODING,
+  WP007D_PROXY_IMAGE_INPUT_FIELD,
   assertWp007dGeneratedRecord,
   assertWp007dPlan,
   deriveProxySeed,
@@ -191,6 +194,7 @@ function safeSchemaSummary(input, output) {
     height: schemaField(input, 'height'),
     strength: schemaField(input, 'strength'),
     guidance: schemaField(input, 'guidance'),
+    image: schemaField(input, 'image'),
     image_b64: schemaField(input, 'image_b64'),
   };
 }
@@ -232,7 +236,7 @@ async function runRoutePreflight() {
     const searchTerm = generator.modelId.split('/').at(-1);
     const catalogResult = await cloudflareJson(`${CLOUDFLARE_API_ROOT}/${encodeURIComponent(accountId)}/ai/models/search?search=${encodeURIComponent(searchTerm)}&hide_experimental=false&include_deprecated=false&per_page=20`, token);
     const catalogMatch = catalogEntries(catalogResult.payload).find((entry) => callableName(entry) === generator.modelId);
-    const requiredFieldsPass = Boolean(schema?.prompt.present && schema?.num_steps.present && schema?.seed.present && schema?.width.present && schema?.height.present && schema?.strength.present && schema?.image_b64.present);
+    const requiredFieldsPass = Boolean(schema?.prompt.present && schema?.num_steps.present && schema?.seed.present && schema?.width.present && schema?.height.present && schema?.strength.present && schema?.image.present);
     models.push({
       generatorId: generator.generatorId,
       modelId: generator.modelId,
@@ -456,6 +460,14 @@ async function buildPlan({ cacheDir, baseSha }) {
     sourceFoundation: 'research/wp007a/ef3-negative-foundation.json',
     sourceEligibility: 'rights-clean development only; no owner private media; no sealed or FLUX pixels',
     prompt: WP007D_PROXY_PROMPT,
+    proxyRequestContract: {
+      imageField: WP007D_PROXY_IMAGE_INPUT_FIELD,
+      imageEncoding: WP007D_PROXY_IMAGE_INPUT_ENCODING,
+      priorImageField: WP007D_PROXY_CONTRACT_REPAIR.priorImageField,
+      evidenceRunId: WP007D_PROXY_CONTRACT_REPAIR.evidenceRunId,
+      providerEvidence: WP007D_PROXY_CONTRACT_REPAIR.providerEvidence,
+      rationale: WP007D_PROXY_CONTRACT_REPAIR.rationale,
+    },
     canonicalization: {
       outputDimensions: { ...WP007D_CANONICAL_SIZE },
       resampler: WP007D_CANONICAL_RESAMPLER,
@@ -577,7 +589,7 @@ async function execute(options) {
     const previousFailure = manifest.failures.find((failure) => failure.sampleId === sampleId);
     if (previousFailure && previousFailure.retryable !== true) continue;
     const canonicalBytes = new Uint8Array(await readFile(path.join(options.outputCache, source.canonicalFile)));
-    const body = proxyRequestBody({ modelId: generator.modelId, imageB64: Buffer.from(canonicalBytes).toString('base64'), strength, seed });
+    const body = proxyRequestBody({ modelId: generator.modelId, imageBytes: canonicalBytes, strength, seed });
     let bytes = null;
     let lastError = null;
     let attemptsForPair = 0;
@@ -700,7 +712,7 @@ async function main(options) {
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
   try {
     const result = await main(parseArgs(process.argv.slice(2)));
-    const schemaFields = ['prompt', 'num_steps', 'seed', 'width', 'height', 'strength', 'guidance', 'image_b64'];
+    const schemaFields = ['prompt', 'num_steps', 'seed', 'width', 'height', 'strength', 'guidance', 'image', 'image_b64'];
     const failureRecords = Array.isArray(result.failures) ? result.failures.map((failure) => ({
       sampleId: failure.sampleId,
       sourceFamilyId: failure.sourceFamilyId,
