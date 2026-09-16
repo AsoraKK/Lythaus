@@ -1,0 +1,201 @@
+{
+  "schemaVersion": "lythaus-wp007e-rights-audit-v1",
+  "auditDate": "2026-09-16",
+  "purpose": "Private local research construction and evaluation of decoder-roundtrip EF3 proxies; no production use, public media redistribution, or checkpoint redistribution.",
+  "projectBaseline": {
+    "wp007eBaseSha": "9b7c375bd030475e25c0058c58909a3a56dcdcc6",
+    "historicalWp007aBenchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+    "historicalGenerationFreezeSha256": "87982112412059bd1615bd2d36ee9cf8ad72828b4042cb93839d725b6b533514",
+    "wp007ahr4HoldoutFreezeSha256": "b1be6115a6ed3cb5d72c5ad3e90575ededbb4c969bd2bb248ec2806da32885c4",
+    "flux2ReserveFreezeSha256": "56ae0bd15b8bc21d77b28c9e6faea8149440aab8a9d101db523a43aedb98e054",
+    "flux1PixelAccess": false,
+    "flux2PixelAccess": false,
+    "cloudflareGenerationCalls": 0
+  },
+  "decoderCandidates": [
+    {
+      "candidateId": "SD1X_FULL_A1",
+      "lineage": "SD1X",
+      "repository": "https://huggingface.co/stabilityai/sd-vae-ft-mse",
+      "modelId": "stabilityai/sd-vae-ft-mse",
+      "revision": "31f26fdeee1355a5c34592e401dd41e45d25a493",
+      "license": "MIT",
+      "licenseSource": "https://huggingface.co/stabilityai/sd-vae-ft-mse",
+      "weightFile": "diffusion_pytorch_model.safetensors",
+      "weightSource": "https://huggingface.co/stabilityai/sd-vae-ft-mse/resolve/31f26fdeee1355a5c34592e401dd41e45d25a493/diffusion_pytorch_model.safetensors",
+      "trainingProxyEligibility": "PASS_PRIVATE_RESEARCH_FROM_RIGHTS_CLEAN_SOURCES",
+      "commercialDeployment": "NOT_ASSERTED",
+      "redistribution": "DO_NOT_REDISTRIBUTE_WEIGHTS_OR_MEDIA",
+      "downloadAuthentication": "NONE_EXPECTED",
+      "statusBeforeDownload": "RIGHTS_ELIGIBLE_PENDING_HASH_AND_RUNTIME"
+    },
+    {
+      "candidateId": "SD1X_TAESD_A2",
+      "lineage": "SD1X",
+      "repository": "https://github.com/madebyollin/taesd",
+      "modelId": "taesd",
+      "revision": "e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "license": "MIT",
+      "licenseSource": "https://raw.githubusercontent.com/madebyollin/taesd/e87efbcfc5298d84986b5d9280f40d358b6a228d/LICENSE",
+      "weightFiles": ["taesd_encoder.pth", "taesd_decoder.pth"],
+      "weightSource": "Official pinned GitHub repository blobs; load with weights_only=True",
+      "trainingProxyEligibility": "PASS_PRIVATE_RESEARCH_FROM_RIGHTS_CLEAN_SOURCES",
+      "commercialDeployment": "NOT_ASSERTED",
+      "redistribution": "DO_NOT_REDISTRIBUTE_WEIGHTS_OR_MEDIA",
+      "downloadAuthentication": "NONE_EXPECTED",
+      "statusBeforeDownload": "RIGHTS_ELIGIBLE_PENDING_HASH_AND_RUNTIME"
+    },
+    {
+      "candidateId": "SDXL_FULL_B1",
+      "lineage": "SDXL",
+      "repository": "https://huggingface.co/stabilityai/sdxl-vae",
+      "modelId": "stabilityai/sdxl-vae",
+      "revision": "6f5909a7e596173e25d4e97b07fd19cdf9611c76",
+      "license": "MIT",
+      "licenseSource": "https://huggingface.co/stabilityai/sdxl-vae",
+      "weightFile": "diffusion_pytorch_model.safetensors",
+      "weightSource": "https://huggingface.co/stabilityai/sdxl-vae/resolve/6f5909a7e596173e25d4e97b07fd19cdf9611c76/diffusion_pytorch_model.safetensors",
+      "trainingProxyEligibility": "PASS_PRIVATE_RESEARCH_FROM_RIGHTS_CLEAN_SOURCES",
+      "commercialDeployment": "NOT_ASSERTED",
+      "redistribution": "DO_NOT_REDISTRIBUTE_WEIGHTS_OR_MEDIA",
+      "downloadAuthentication": "NONE_EXPECTED",
+      "statusBeforeDownload": "RIGHTS_ELIGIBLE_PENDING_HASH_AND_RUNTIME"
+    },
+    {
+      "candidateId": "SDXL_TAESD_B2",
+      "lineage": "SDXL",
+      "repository": "https://github.com/madebyollin/taesd",
+      "modelId": "taesdxl",
+      "revision": "e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "license": "MIT",
+      "licenseSource": "https://raw.githubusercontent.com/madebyollin/taesd/e87efbcfc5298d84986b5d9280f40d358b6a228d/LICENSE",
+      "weightFiles": ["taesdxl_encoder.pth", "taesdxl_decoder.pth"],
+      "weightSource": "Official pinned GitHub repository blobs; load with weights_only=True",
+      "trainingProxyEligibility": "PASS_PRIVATE_RESEARCH_FROM_RIGHTS_CLEAN_SOURCES",
+      "commercialDeployment": "NOT_ASSERTED",
+      "redistribution": "DO_NOT_REDISTRIBUTE_WEIGHTS_OR_MEDIA",
+      "downloadAuthentication": "NONE_EXPECTED",
+      "statusBeforeDownload": "RIGHTS_ELIGIBLE_PENDING_HASH_AND_RUNTIME"
+    },
+    {
+      "candidateId": "SD3_TAESD3_C1",
+      "lineage": "SD3",
+      "repository": "https://huggingface.co/madebyollin/taesd3",
+      "modelId": "taesd3",
+      "revision": "d58dcaccd2b36fcb7a6b9e93c1cc507acab5a778",
+      "license": "MIT",
+      "licenseSource": "https://huggingface.co/madebyollin/taesd3",
+      "weightFiles": ["diffusion_pytorch_model.safetensors"],
+      "weightSource": "https://huggingface.co/madebyollin/taesd3/resolve/d58dcaccd2b36fcb7a6b9e93c1cc507acab5a778/diffusion_pytorch_model.safetensors",
+      "trainingProxyEligibility": "PASS_PRIVATE_RESEARCH_FROM_RIGHTS_CLEAN_SOURCES",
+      "commercialDeployment": "NOT_ASSERTED",
+      "redistribution": "DO_NOT_REDISTRIBUTE_WEIGHTS_OR_MEDIA",
+      "downloadAuthentication": "NONE_EXPECTED",
+      "statusBeforeDownload": "RIGHTS_ELIGIBLE_PENDING_HASH_AND_RUNTIME"
+    },
+    {
+      "candidateId": "SANA_TAESANA_D1",
+      "lineage": "SANA",
+      "repository": "https://github.com/madebyollin/taesd",
+      "modelId": "taesana",
+      "revision": "e87efbcfc5298d84986b5d9280f40d358b6a228d",
+      "license": "MIT",
+      "licenseSource": "https://raw.githubusercontent.com/madebyollin/taesd/e87efbcfc5298d84986b5d9280f40d358b6a228d/LICENSE",
+      "weightFiles": ["taesana_encoder.pth", "taesana_decoder.pth"],
+      "weightSource": "Official pinned GitHub repository blobs; no public HF model endpoint; load with weights_only=True",
+      "trainingProxyEligibility": "PASS_PRIVATE_RESEARCH_FROM_RIGHTS_CLEAN_SOURCES",
+      "commercialDeployment": "NOT_ASSERTED",
+      "redistribution": "DO_NOT_REDISTRIBUTE_WEIGHTS_OR_MEDIA",
+      "downloadAuthentication": "NONE_EXPECTED",
+      "statusBeforeDownload": "RIGHTS_ELIGIBLE_PENDING_HASH_AND_RUNTIME",
+      "accessCaveat": "HF model endpoint returned 401; official pinned GitHub blobs are the only predeclared access path."
+    }
+  ],
+  "representationCandidates": [
+    {
+      "candidateId": "OPENAI_CLIP_VIT_B32",
+      "repository": "https://github.com/openai/CLIP",
+      "revision": "d05afc436d78f1c48dc0dbf8e5980a9d471f35f6",
+      "license": "MIT",
+      "licenseSource": "https://raw.githubusercontent.com/openai/CLIP/d05afc436d78f1c48dc0dbf8e5980a9d471f35f6/LICENSE",
+      "model": "ViT-B/32",
+      "weightSource": "Official OpenAI CLIP model URL resolved by the pinned repository",
+      "trainingProxyEligibility": "PASS_PRIVATE_RESEARCH",
+      "commercialDeployment": "NOT_ASSERTED",
+      "redistribution": "DO_NOT_REDISTRIBUTE_WEIGHTS_OR_FEATURE_CACHE",
+      "downloadAuthentication": "NONE_EXPECTED",
+      "statusBeforeDownload": "RIGHTS_ELIGIBLE_PENDING_HASH_AND_RUNTIME"
+    },
+    {
+      "candidateId": "META_DINOV2_VITS14",
+      "repository": "https://github.com/facebookresearch/dinov2",
+      "revision": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+      "license": "Apache-2.0_FOR_STANDARD_DINOV2_CODE_AND_WEIGHTS_AS_DOCUMENTED",
+      "licenseSource": "https://github.com/facebookresearch/dinov2/blob/7764ea0f912e53c92e82eb78a2a1631e92725fc8/README.md#license",
+      "model": "dinov2_vits14",
+      "weightSource": "Official Meta public checkpoint URL resolved by the pinned repository",
+      "trainingProxyEligibility": "PASS_NONCOMMERCIAL_RESEARCH",
+      "commercialDeployment": "NOT_ASSERTED_AND_NOT_USED",
+      "redistribution": "DO_NOT_REDISTRIBUTE_WEIGHTS_OR_FEATURE_CACHE",
+      "downloadAuthentication": "NONE_EXPECTED",
+      "statusBeforeDownload": "RIGHTS_ELIGIBLE_PENDING_HASH_AND_RUNTIME",
+      "modelScopeGuard": "STANDARD_DINOV2_ONLY; NO_XRAY_DINO_OR_SPECIALIST_MODEL"
+    }
+  ],
+  "sourcePools": [
+    {
+      "poolId": "CSAFE_WP006E_DEVELOPMENT",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "rightsSource": "https://creativecommons.org/licenses/by/4.0/",
+      "datasetSource": "https://iastate.figshare.com/articles/dataset/CSAFE_Multi-camera_Smartphone_Image_Database/26932084",
+      "trainingEligibility": "PASS_WITH_ATTRIBUTION_PRIVATE_LOCAL_RESEARCH",
+      "externalProcessing": "NOT_USED; ALL_PROCESSING_LOCAL",
+      "sensitiveContentExcluded": true
+    },
+    {
+      "poolId": "LYTHAUS_PROGRAMMATIC_DIGITAL_NON_AI",
+      "rights": "LYTHAUS_CONTROLLED",
+      "rightsSource": "research/wp007a/ef3-negative-foundation.json",
+      "trainingEligibility": "PASS_EXPLICIT_PRIVATE_RESEARCH",
+      "externalProcessing": "NOT_RELEVANT_LOCAL_ONLY",
+      "sensitiveContentExcluded": true
+    },
+    {
+      "poolId": "DIFFUSIONDB_PRIOR_DEVELOPMENT",
+      "rights": "CARRIED_FORWARD_FROM_PRIOR_AUDIT",
+      "rightsSource": "research/wp007a/diffusiondb-rights-audit.json",
+      "trainingEligibility": "EVALUATION_TRANSFER_ONLY_NOT_HEAD_TRAINING",
+      "externalProcessing": "NOT_USED",
+      "sensitiveContentExcluded": true
+    }
+  ],
+  "fluxGuards": {
+    "fluxSpecificProxyForbidden": ["TAEF1", "TAEF2", "FLUX.1_VAE", "FLUX.2_VAE", "HIDREAM_OR_ZIMAGE_SHARED_FLUX_VAE"],
+    "flux1PixelAccess": false,
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "unblindBeforeCalibrationFreeze": false
+  },
+  "postDownloadVerification": {
+    "decoderRegistrySha256": "2d24f2256a58ccb9b07e93d78047cd4ddb71aa1fa28e89b9cf6478b5fb0be4be",
+    "decoderWeightVerification": "PASS",
+    "decoderEligibleLineages": ["SD1X", "SD3", "SDXL"],
+    "decoderEligibleVariants": ["SD1X_FULL_A1", "SD1X_TAESD_A2", "SDXL_FULL_B1", "SDXL_TAESD_B2", "SD3_TAESD3_C1"],
+    "decoderExcludedVariants": {
+      "SANA_TAESANA_D1": "LOW_FIDELITY_PROXY_VARIANT"
+    },
+    "backboneRegistrySha256": "44c65295abf25f886ef03655315a76ba3621c66e4af32b60460dbb546b54096e",
+    "backboneWeightVerification": "PASS",
+    "sourceEligibility": "PASS_RIGHTS_CLEAN_NON_SENSITIVE_LOCAL_DEVELOPMENT_POOLS",
+    "proxyTrainingEligibility": "PASS_FOR_LOCAL_PRIVATE_RESEARCH",
+    "allLargeWeightsStoredOutsideGit": true
+  },
+  "decision": {
+    "preDownloadRightsAudit": "PASS_FOR_PREDECLARED_LOCAL_RESEARCH_PATHS",
+    "postDownloadVerification": "PASS",
+    "unresolvedUntilDownload": [],
+    "failClosedOnAmbiguousRights": true,
+    "noNewRegistration": true,
+    "noPaidService": true
+  }
+}

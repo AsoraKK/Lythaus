@@ -1,0 +1,28 @@
+{
+  "cpuOnly": true,
+  "cudaAvailable": false,
+  "cudaStackInstalled": false,
+  "device": "cpu",
+  "externalCloudGeneration": false,
+  "featureWeightsTrainable": false,
+  "packages": {
+    "Pillow": "12.3.0",
+    "diffusers": "0.40.0",
+    "numpy": "2.5.2",
+    "python": "3.13.5",
+    "safetensors": "0.8.0",
+    "scikit-image": "0.26.0",
+    "scikit-learn": "1.9.1",
+    "torch": "2.14.0+cpu",
+    "torchvision": "0.29.0+cpu",
+    "transformers": "5.17.0"
+  },
+  "platform": "Windows-11-10.0.26200-SP0",
+  "pythonExecutableClass": "EXTERNAL_ISOLATED_VENV",
+  "randomSeed": 20260916,
+  "runtimeLockSha256": "7797234398d5131965711ae4accb50aedcd8680d70bbc79d1e26673b3199c6fd",
+  "schemaVersion": "lythaus-wp007e-runtime-lock-v1",
+  "torchInteropThreads": 8,
+  "torchThreads": 8,
+  "xformersRequired": false
+}
