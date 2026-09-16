@@ -234,7 +234,7 @@ jobs:
               lines.push(prefix + '_PROVIDER_ERROR_CODE = ' + (model.providerErrorCode ?? 'NONE'));
               lines.push(prefix + '_PROVIDER_ERROR_MESSAGE = ' + (model.providerErrorMessage ?? 'NONE'));
               const schema = model.schema ?? {};
-              for (const field of ['prompt', 'num_steps', 'seed', 'width', 'height', 'strength', 'guidance', 'image_b64']) {
+              for (const field of ['prompt', 'num_steps', 'seed', 'width', 'height', 'strength', 'guidance', 'image', 'image_b64']) {
                 const value = schema[field] ?? {};
                 lines.push(prefix + '_SCHEMA_' + field.toUpperCase() + ' = ' + Boolean(value.present) + ' TYPE=' + (value.type ?? 'NONE') + ' REQUIRED=' + Boolean(value.required) + ' MIN=' + (value.minimum ?? 'NONE') + ' MAX=' + (value.maximum ?? 'NONE'));
               }

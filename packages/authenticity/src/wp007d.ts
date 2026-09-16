@@ -14,6 +14,19 @@ export const WP007D_HISTORICAL_GENERATION_FREEZE_SHA = '87982112412059bd1615bd2d
 export const WP007D_BENCHMARK_FINGERPRINT = '210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5' as const;
 export const WP007D_COST_CAP_USD = 1 as const;
 export const WP007D_PROXY_PROMPT = 'Faithful reconstruction of the input image. Preserve the subject, layout, composition, geometry, colors, lighting, shapes, and overall visual content. Do not intentionally add or remove important elements.' as const;
+export const WP007D_PROXY_IMAGE_INPUT_FIELD = 'image' as const;
+export const WP007D_PROXY_IMAGE_INPUT_ENCODING = 'UINT8_ARRAY' as const;
+export const WP007D_PROXY_CONTRACT_REPAIR = Object.freeze({
+  evidenceRunId: '35077581757',
+  priorImageField: 'image_b64',
+  amendedImageField: WP007D_PROXY_IMAGE_INPUT_FIELD,
+  amendedImageEncoding: WP007D_PROXY_IMAGE_INPUT_ENCODING,
+  providerEvidence: Object.freeze([
+    Object.freeze({ providerErrorCode: 3030, providerErrorMessage: 'Model input is not valid: input tensor `image` is not present' }),
+    Object.freeze({ providerErrorCode: 3010, providerErrorMessage: "unexpected shape for input 'image'" }),
+  ]),
+  rationale: 'The live REST route rejected the documented image_b64 representation; the same official model schemas document image as an 8-bit integer array for img2img.',
+});
 export const WP007D_CANONICAL_RESAMPLER = 'sharp-lanczos3' as const;
 export const WP007D_CANONICAL_SIZE = Object.freeze({ width: 512, height: 512 });
 export const WP007D_STRENGTHS = Object.freeze([0.3, 0.5] as const);
@@ -148,16 +161,16 @@ export function classifyRuntimeTier(p50Seconds: number, p95Seconds: number): 'FA
   return 'NOT_PRACTICAL';
 }
 
-export function proxyRequestBody({ modelId, imageB64, strength, seed }: { modelId: string; imageB64: string; strength: number; seed: number }): Record<string, unknown> {
+export function proxyRequestBody({ modelId, imageBytes, strength, seed }: { modelId: string; imageBytes: Uint8Array | readonly number[]; strength: number; seed: number }): Record<string, unknown> {
   const model = WP007D_PROXY_GENERATORS.find((candidate) => candidate.modelId === modelId);
   if (!model) throw new Error(`wp007d_model_not_authorized:${modelId}`);
-  assertNonEmptyString(imageB64, 'imageB64');
+  if (!imageBytes || typeof imageBytes !== 'object' || typeof imageBytes.length !== 'number' || imageBytes.length === 0 || !Array.from(imageBytes).every((value) => Number.isInteger(value) && value >= 0 && value <= 255)) throw new Error('wp007d_image_bytes_invalid');
   if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('wp007d_seed_invalid');
   if (!WP007D_STRENGTHS.includes(strength as (typeof WP007D_STRENGTHS)[number])) throw new Error('wp007d_strength_invalid');
   return {
     prompt: WP007D_PROXY_PROMPT,
     ...model.fixedParameters,
-    image_b64: imageB64,
+    [WP007D_PROXY_IMAGE_INPUT_FIELD]: Array.from(imageBytes),
     strength,
     seed,
   };
@@ -187,6 +200,7 @@ export function assertWp007dPlan(value: unknown): void {
   if (value.baseSha !== undefined) assertCommitSha(value.baseSha, 'baseSha');
   if (value.holdoutPixelAccess !== false || value.flux2PixelAccess !== false) throw new Error('wp007d_holdout_access_invalid');
   if (value.prompt !== WP007D_PROXY_PROMPT) throw new Error('wp007d_prompt_invalid');
+  if (!isRecord(value.proxyRequestContract) || value.proxyRequestContract.imageField !== WP007D_PROXY_IMAGE_INPUT_FIELD || value.proxyRequestContract.imageEncoding !== WP007D_PROXY_IMAGE_INPUT_ENCODING || value.proxyRequestContract.priorImageField !== 'image_b64') throw new Error('wp007d_request_contract_invalid');
   if (!Array.isArray(value.sources) || value.sources.length !== WP007D_EXPECTED_SOURCE_FAMILY_COUNT) throw new Error('wp007d_source_count_invalid');
   const familyIds = new Set<string>();
   for (const source of value.sources) {

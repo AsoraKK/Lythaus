@@ -6,6 +6,8 @@ import {
   WP007D_PROXY_FALLBACK,
   WP007D_BLOCKED_PRIMARY_ROUTE,
   WP007D_PROXY_PROMPT,
+  WP007D_PROXY_IMAGE_INPUT_FIELD,
+  WP007D_PROXY_IMAGE_INPUT_ENCODING,
   WP007D_STRENGTHS,
   WP007D_WP007AHR4_HOLDOUT_FREEZE_SHA,
   WP007D_FLUX2_RESERVE_FREEZE_SHA,
@@ -38,6 +40,11 @@ function plan() {
     holdoutFreezeSha256: WP007D_WP007AHR4_HOLDOUT_FREEZE_SHA,
     flux2ReserveFreezeSha256: WP007D_FLUX2_RESERVE_FREEZE_SHA,
     prompt: WP007D_PROXY_PROMPT,
+    proxyRequestContract: {
+      imageField: WP007D_PROXY_IMAGE_INPUT_FIELD,
+      imageEncoding: WP007D_PROXY_IMAGE_INPUT_ENCODING,
+      priorImageField: 'image_b64',
+    },
     sources: Array.from({ length: 60 }, (_, index) => source(index)),
     generators: structuredClone(WP007D_PROXY_GENERATORS),
     strengths: [...WP007D_STRENGTHS],
@@ -70,17 +77,19 @@ test('predeclared fallback replaces only the unavailable primary before scoring'
   assert.equal(WP007D_BLOCKED_PRIMARY_ROUTE.generationCalls, 0);
 });
 
-test('img2img request is fixed, seeded, and excludes forbidden routes', () => {
-  const body = proxyRequestBody({ modelId: WP007D_PROXY_GENERATORS[0].modelId, imageB64: 'aGVsbG8=', strength: 0.3, seed: 7 });
+test('img2img request uses the documented uint8 image field and excludes base64', () => {
+  const body = proxyRequestBody({ modelId: WP007D_PROXY_GENERATORS[0].modelId, imageBytes: Uint8Array.from([137, 80, 78, 71]), strength: 0.3, seed: 7 });
   assert.equal(body.prompt, WP007D_PROXY_PROMPT);
   assert.equal(body.strength, 0.3);
   assert.equal(body.seed, 7);
-  assert.equal(body.image_b64, 'aGVsbG8=');
+  assert.deepEqual(body.image, [137, 80, 78, 71]);
+  assert.equal(Object.hasOwn(body, 'image_b64'), false);
   assert.equal(body.width, 512);
   assert.equal(body.height, 512);
   assert.equal(body.num_steps, 20);
   assert.equal(Object.hasOwn(body, 'flux1'), false);
-  assert.throws(() => proxyRequestBody({ modelId: '@cf/black-forest-labs/flux-1-schnell', imageB64: 'a', strength: 0.3, seed: 1 }), /model_not_authorized/);
+  assert.throws(() => proxyRequestBody({ modelId: '@cf/black-forest-labs/flux-1-schnell', imageBytes: Uint8Array.from([1]), strength: 0.3, seed: 1 }), /model_not_authorized/);
+  assert.throws(() => proxyRequestBody({ modelId: WP007D_PROXY_GENERATORS[0].modelId, imageBytes: [], strength: 0.3, seed: 1 }), /image_bytes_invalid/);
 });
 
 test('runtime tiers and family-balanced weights are deterministic', () => {
