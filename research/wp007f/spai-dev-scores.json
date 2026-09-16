@@ -1,0 +1,1752 @@
+{
+  "schemaVersion": "lythaus-wp007c-spai-score-run-v1",
+  "candidateId": "SPAI_C512",
+  "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+  "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+  "optimized": true,
+  "cpuThreads": 8,
+  "inputCount": 348,
+  "records": [
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_02",
+      "score": 1.6841538297285297e-07,
+      "runtimeSeconds": 1.956555
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_03",
+      "score": 0.20326979458332062,
+      "runtimeSeconds": 1.758019
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_06",
+      "score": 3.084587030244279e-10,
+      "runtimeSeconds": 1.80493
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_10",
+      "score": 0.4998263120651245,
+      "runtimeSeconds": 1.891563
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_11",
+      "score": 1.8296995563105156e-07,
+      "runtimeSeconds": 1.707644
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_01",
+      "score": 1.0,
+      "runtimeSeconds": 1.709993
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_03",
+      "score": 2.350445359178277e-11,
+      "runtimeSeconds": 1.74653
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_05",
+      "score": 0.020517168566584587,
+      "runtimeSeconds": 1.979042
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07",
+      "score": 0.5094006657600403,
+      "runtimeSeconds": 1.724827
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_08",
+      "score": 0.9912009239196777,
+      "runtimeSeconds": 1.699458
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_02",
+      "score": 1.5345788549634765e-17,
+      "runtimeSeconds": 1.7606
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_06",
+      "score": 3.7072134251303623e-10,
+      "runtimeSeconds": 2.025502
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09",
+      "score": 0.8446866273880005,
+      "runtimeSeconds": 1.745181
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_11",
+      "score": 1.3200385528773646e-29,
+      "runtimeSeconds": 1.745332
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_12",
+      "score": 4.820636556391634e-16,
+      "runtimeSeconds": 1.706453
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_5_01",
+      "score": 1.0,
+      "runtimeSeconds": 2.666468
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_5_04",
+      "score": 0.9999994039535522,
+      "runtimeSeconds": 2.819161
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_5_05",
+      "score": 0.9792948961257935,
+      "runtimeSeconds": 2.797867
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_5_07",
+      "score": 0.9142867922782898,
+      "runtimeSeconds": 2.355327
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_5_10",
+      "score": 1.7407517484760437e-12,
+      "runtimeSeconds": 1.805836
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_02",
+      "score": 1.9679056906555056e-18,
+      "runtimeSeconds": 1.702133
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_05",
+      "score": 0.902000367641449,
+      "runtimeSeconds": 1.714205
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_08",
+      "score": 0.328797847032547,
+      "runtimeSeconds": 1.659047
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_09",
+      "score": 5.516998271559714e-07,
+      "runtimeSeconds": 1.698785
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_12",
+      "score": 0.00036569806979969144,
+      "runtimeSeconds": 1.702563
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_2_06",
+      "score": 2.4917942058680365e-13,
+      "runtimeSeconds": 1.733422
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_2_07",
+      "score": 5.571427944253384e-30,
+      "runtimeSeconds": 1.64471
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_2_08",
+      "score": 0.017727702856063843,
+      "runtimeSeconds": 1.873251
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_2_09",
+      "score": 0.016292456537485123,
+      "runtimeSeconds": 2.825223
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_2_10",
+      "score": 2.3191724148746706e-13,
+      "runtimeSeconds": 2.740901
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_01",
+      "score": 1.0059434174536364e-08,
+      "runtimeSeconds": 2.75481
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_03",
+      "score": 2.5119815672131516e-19,
+      "runtimeSeconds": 2.937476
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_04",
+      "score": 0.05023502558469772,
+      "runtimeSeconds": 2.981171
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_10",
+      "score": 0.008089118637144566,
+      "runtimeSeconds": 2.856139
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_12",
+      "score": 0.8859813809394836,
+      "runtimeSeconds": 2.273249
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_5_01",
+      "score": 0.8629610538482666,
+      "runtimeSeconds": 4.480067
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_5_03",
+      "score": 5.421349675606424e-17,
+      "runtimeSeconds": 5.220032
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_5_09",
+      "score": 1.6460347978863865e-05,
+      "runtimeSeconds": 5.411963
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_5_10",
+      "score": 1.0,
+      "runtimeSeconds": 4.262235
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_5_12",
+      "score": 9.420377889216014e-13,
+      "runtimeSeconds": 1.957075
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01",
+      "score": 0.9257898926734924,
+      "runtimeSeconds": 1.961258
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_05",
+      "score": 0.9990837574005127,
+      "runtimeSeconds": 1.868895
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_07",
+      "score": 6.165875754375193e-16,
+      "runtimeSeconds": 1.854288
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_09",
+      "score": 0.9995375871658325,
+      "runtimeSeconds": 2.213643
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_10",
+      "score": 0.02521945722401142,
+      "runtimeSeconds": 3.034144
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_2_02",
+      "score": 0.9913299083709717,
+      "runtimeSeconds": 2.848229
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_2_03",
+      "score": 0.0033750433940440416,
+      "runtimeSeconds": 2.907522
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_2_06",
+      "score": 0.8490388989448547,
+      "runtimeSeconds": 2.916814
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_2_09",
+      "score": 3.4792865335475653e-06,
+      "runtimeSeconds": 3.125668
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_2_10",
+      "score": 1.002050564513678e-15,
+      "runtimeSeconds": 2.618082
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_06",
+      "score": 0.2584194540977478,
+      "runtimeSeconds": 1.778699
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_07",
+      "score": 7.216048061309266e-07,
+      "runtimeSeconds": 1.734214
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_08",
+      "score": 5.059516183791857e-07,
+      "runtimeSeconds": 1.773603
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_09",
+      "score": 3.7175736906647217e-06,
+      "runtimeSeconds": 1.738925
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_10",
+      "score": 0.0031941193155944347,
+      "runtimeSeconds": 1.977752
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_5_02",
+      "score": 0.35507526993751526,
+      "runtimeSeconds": 1.766678
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_5_03",
+      "score": 0.6908247470855713,
+      "runtimeSeconds": 1.766248
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_5_06",
+      "score": 0.9979947805404663,
+      "runtimeSeconds": 1.924864
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_5_07",
+      "score": 0.017796870321035385,
+      "runtimeSeconds": 1.720552
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_5_08",
+      "score": 0.6313573718070984,
+      "runtimeSeconds": 1.714187
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_1_01",
+      "score": 0.022142931818962097,
+      "runtimeSeconds": 1.781443
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_1_04",
+      "score": 1.0,
+      "runtimeSeconds": 1.765921
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_1_06",
+      "score": 0.6334043145179749,
+      "runtimeSeconds": 1.802957
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_1_09",
+      "score": 0.9681655168533325,
+      "runtimeSeconds": 1.779543
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_2_01",
+      "score": 0.40992894768714905,
+      "runtimeSeconds": 1.662949
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_2_03",
+      "score": 0.9870859980583191,
+      "runtimeSeconds": 1.7146
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_2_10",
+      "score": 1.7355776435579173e-05,
+      "runtimeSeconds": 2.0028
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_2_11",
+      "score": 9.864670026384709e-22,
+      "runtimeSeconds": 2.795455
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_3_05",
+      "score": 0.9939208030700684,
+      "runtimeSeconds": 3.014037
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_3_06",
+      "score": 4.180604946668609e-07,
+      "runtimeSeconds": 3.257833
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_3_07",
+      "score": 1.0,
+      "runtimeSeconds": 3.255566
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_3_09",
+      "score": 4.904561565904908e-12,
+      "runtimeSeconds": 3.287219
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_5_06",
+      "score": 0.6337178349494934,
+      "runtimeSeconds": 2.501409
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_5_08",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 1.714301
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_5_09",
+      "score": 0.6661235094070435,
+      "runtimeSeconds": 1.757592
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_5_11",
+      "score": 0.0014517190866172314,
+      "runtimeSeconds": 1.749509
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_1_08",
+      "score": 0.000825753842946142,
+      "runtimeSeconds": 1.73116
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_1_09",
+      "score": 0.9581283330917358,
+      "runtimeSeconds": 1.76755
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_1_10",
+      "score": 4.316416379879229e-06,
+      "runtimeSeconds": 1.727305
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_1_12",
+      "score": 0.025546079501509666,
+      "runtimeSeconds": 1.802657
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01",
+      "score": 0.011449940502643585,
+      "runtimeSeconds": 1.741969
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_03",
+      "score": 1.5504046553886e-20,
+      "runtimeSeconds": 1.755255
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_05",
+      "score": 1.852606180285768e-28,
+      "runtimeSeconds": 1.721777
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_09",
+      "score": 0.38286635279655457,
+      "runtimeSeconds": 1.784209
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_4_17",
+      "score": 0.00030982380849309266,
+      "runtimeSeconds": 1.742944
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_4_19",
+      "score": 1.7673243979388076e-09,
+      "runtimeSeconds": 1.775417
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_4_21",
+      "score": 0.0005957726389169693,
+      "runtimeSeconds": 1.749112
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_4_22",
+      "score": 0.0223743487149477,
+      "runtimeSeconds": 1.727698
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_1_06",
+      "score": 4.697825417565582e-08,
+      "runtimeSeconds": 1.695292
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_1_07",
+      "score": 0.0,
+      "runtimeSeconds": 1.697244
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_1_08",
+      "score": 2.683853972396122e-10,
+      "runtimeSeconds": 2.734572
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_1_10",
+      "score": 0.049366649240255356,
+      "runtimeSeconds": 3.044733
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_3_03",
+      "score": 0.9973547458648682,
+      "runtimeSeconds": 3.271676
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_3_04",
+      "score": 0.5557693243026733,
+      "runtimeSeconds": 3.211352
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_3_09",
+      "score": 0.9976212382316589,
+      "runtimeSeconds": 3.355107
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_3_12",
+      "score": 0.06810466945171356,
+      "runtimeSeconds": 2.986146
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_4_13",
+      "score": 1.0,
+      "runtimeSeconds": 1.843243
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_4_14",
+      "score": 4.8175561317975735e-09,
+      "runtimeSeconds": 2.105219
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_4_22",
+      "score": 1.9252956173776425e-10,
+      "runtimeSeconds": 2.084616
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s21_4_23",
+      "score": 8.211458291524418e-21,
+      "runtimeSeconds": 2.062831
+    },
+    {
+      "sampleId": "DDB_0151",
+      "score": 1.0,
+      "runtimeSeconds": 2.425412
+    },
+    {
+      "sampleId": "DDB_0152",
+      "score": 1.0,
+      "runtimeSeconds": 2.214936
+    },
+    {
+      "sampleId": "DDB_0153",
+      "score": 1.0,
+      "runtimeSeconds": 2.269615
+    },
+    {
+      "sampleId": "DDB_0155",
+      "score": 0.5033305883407593,
+      "runtimeSeconds": 2.610663
+    },
+    {
+      "sampleId": "DDB_0157",
+      "score": 1.0,
+      "runtimeSeconds": 2.299727
+    },
+    {
+      "sampleId": "DDB_0160",
+      "score": 0.15313661098480225,
+      "runtimeSeconds": 2.243005
+    },
+    {
+      "sampleId": "DDB_0161",
+      "score": 0.9997187256813049,
+      "runtimeSeconds": 2.14774
+    },
+    {
+      "sampleId": "DDB_0162",
+      "score": 1.0,
+      "runtimeSeconds": 2.28935
+    },
+    {
+      "sampleId": "DDB_0164",
+      "score": 1.0,
+      "runtimeSeconds": 2.230649
+    },
+    {
+      "sampleId": "DDB_0166",
+      "score": 1.0,
+      "runtimeSeconds": 2.869432
+    },
+    {
+      "sampleId": "DDB_0167",
+      "score": 1.0,
+      "runtimeSeconds": 4.155631
+    },
+    {
+      "sampleId": "DDB_0168",
+      "score": 1.0,
+      "runtimeSeconds": 4.432701
+    },
+    {
+      "sampleId": "DDB_0169",
+      "score": 0.9990103244781494,
+      "runtimeSeconds": 4.758755
+    },
+    {
+      "sampleId": "DDB_0170",
+      "score": 1.0,
+      "runtimeSeconds": 6.175016
+    },
+    {
+      "sampleId": "DDB_0172",
+      "score": 0.9999955892562866,
+      "runtimeSeconds": 10.010397
+    },
+    {
+      "sampleId": "DDB_0173",
+      "score": 1.0,
+      "runtimeSeconds": 9.22376
+    },
+    {
+      "sampleId": "DDB_0176",
+      "score": 1.0,
+      "runtimeSeconds": 2.548028
+    },
+    {
+      "sampleId": "DDB_0177",
+      "score": 0.01092551089823246,
+      "runtimeSeconds": 2.411921
+    },
+    {
+      "sampleId": "DDB_0178",
+      "score": 1.0,
+      "runtimeSeconds": 2.303232
+    },
+    {
+      "sampleId": "DDB_0183",
+      "score": 1.0,
+      "runtimeSeconds": 3.174768
+    },
+    {
+      "sampleId": "DDB_0184",
+      "score": 1.0,
+      "runtimeSeconds": 4.202662
+    },
+    {
+      "sampleId": "DDB_0185",
+      "score": 1.0,
+      "runtimeSeconds": 5.258054
+    },
+    {
+      "sampleId": "DDB_0186",
+      "score": 1.0,
+      "runtimeSeconds": 5.797792
+    },
+    {
+      "sampleId": "DDB_0187",
+      "score": 1.0,
+      "runtimeSeconds": 3.480244
+    },
+    {
+      "sampleId": "DDB_0190",
+      "score": 1.0,
+      "runtimeSeconds": 3.249716
+    },
+    {
+      "sampleId": "DDB_0191",
+      "score": 1.0,
+      "runtimeSeconds": 3.268043
+    },
+    {
+      "sampleId": "DDB_0193",
+      "score": 1.0,
+      "runtimeSeconds": 3.273844
+    },
+    {
+      "sampleId": "DDB_0195",
+      "score": 1.0,
+      "runtimeSeconds": 3.268771
+    },
+    {
+      "sampleId": "DDB_0196",
+      "score": 1.0,
+      "runtimeSeconds": 3.301885
+    },
+    {
+      "sampleId": "DDB_0197",
+      "score": 1.0,
+      "runtimeSeconds": 3.241908
+    },
+    {
+      "sampleId": "DDB_0200",
+      "score": 0.9791049361228943,
+      "runtimeSeconds": 3.312163
+    },
+    {
+      "sampleId": "DDB_0202",
+      "score": 1.0,
+      "runtimeSeconds": 3.241727
+    },
+    {
+      "sampleId": "DDB_0205",
+      "score": 1.0,
+      "runtimeSeconds": 3.87547
+    },
+    {
+      "sampleId": "DDB_0207",
+      "score": 1.0,
+      "runtimeSeconds": 4.215334
+    },
+    {
+      "sampleId": "DDB_0208",
+      "score": 1.0,
+      "runtimeSeconds": 4.610117
+    },
+    {
+      "sampleId": "DDB_0211",
+      "score": 1.0,
+      "runtimeSeconds": 4.550148
+    },
+    {
+      "sampleId": "DDB_0212",
+      "score": 1.0,
+      "runtimeSeconds": 3.883313
+    },
+    {
+      "sampleId": "DDB_0213",
+      "score": 1.0,
+      "runtimeSeconds": 3.240821
+    },
+    {
+      "sampleId": "DDB_0214",
+      "score": 1.0,
+      "runtimeSeconds": 3.251058
+    },
+    {
+      "sampleId": "DDB_0215",
+      "score": 1.0,
+      "runtimeSeconds": 3.318311
+    },
+    {
+      "sampleId": "DDB_0216",
+      "score": 0.9999593496322632,
+      "runtimeSeconds": 3.210701
+    },
+    {
+      "sampleId": "DDB_0221",
+      "score": 1.0,
+      "runtimeSeconds": 3.301019
+    },
+    {
+      "sampleId": "DDB_0222",
+      "score": 1.0,
+      "runtimeSeconds": 3.22629
+    },
+    {
+      "sampleId": "DDB_0223",
+      "score": 1.0,
+      "runtimeSeconds": 3.261516
+    },
+    {
+      "sampleId": "DDB_0224",
+      "score": 1.0,
+      "runtimeSeconds": 3.196203
+    },
+    {
+      "sampleId": "DDB_0225",
+      "score": 1.0,
+      "runtimeSeconds": 3.458366
+    },
+    {
+      "sampleId": "DDB_0229",
+      "score": 1.0,
+      "runtimeSeconds": 4.341841
+    },
+    {
+      "sampleId": "DDB_0230",
+      "score": 0.9999980926513672,
+      "runtimeSeconds": 4.671227
+    },
+    {
+      "sampleId": "DDB_0232",
+      "score": 1.0,
+      "runtimeSeconds": 4.960796
+    },
+    {
+      "sampleId": "DDB_0233",
+      "score": 0.9999324083328247,
+      "runtimeSeconds": 4.413059
+    },
+    {
+      "sampleId": "DDB_0238",
+      "score": 1.0,
+      "runtimeSeconds": 3.676227
+    },
+    {
+      "sampleId": "DDB_0239",
+      "score": 1.0,
+      "runtimeSeconds": 3.602061
+    },
+    {
+      "sampleId": "DDB_0241",
+      "score": 0.991534948348999,
+      "runtimeSeconds": 3.491721
+    },
+    {
+      "sampleId": "DDB_0243",
+      "score": 1.0,
+      "runtimeSeconds": 3.356588
+    },
+    {
+      "sampleId": "DDB_0244",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 3.319991
+    },
+    {
+      "sampleId": "DDB_0245",
+      "score": 1.0,
+      "runtimeSeconds": 3.32791
+    },
+    {
+      "sampleId": "DDB_0246",
+      "score": 1.0,
+      "runtimeSeconds": 3.271005
+    },
+    {
+      "sampleId": "DDB_0247",
+      "score": 1.0,
+      "runtimeSeconds": 3.266913
+    },
+    {
+      "sampleId": "DDB_0248",
+      "score": 1.0,
+      "runtimeSeconds": 3.626789
+    },
+    {
+      "sampleId": "DDB_0249",
+      "score": 0.998422384262085,
+      "runtimeSeconds": 4.961208
+    },
+    {
+      "sampleId": "DDB_0254",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 4.876479
+    },
+    {
+      "sampleId": "DDB_0255",
+      "score": 1.0,
+      "runtimeSeconds": 5.357322
+    },
+    {
+      "sampleId": "DDB_0256",
+      "score": 0.9999328851699829,
+      "runtimeSeconds": 3.741534
+    },
+    {
+      "sampleId": "DDB_0257",
+      "score": 1.0,
+      "runtimeSeconds": 3.236086
+    },
+    {
+      "sampleId": "DDB_0258",
+      "score": 1.0,
+      "runtimeSeconds": 3.259202
+    },
+    {
+      "sampleId": "DDB_0260",
+      "score": 1.0,
+      "runtimeSeconds": 3.254221
+    },
+    {
+      "sampleId": "DDB_0263",
+      "score": 1.0,
+      "runtimeSeconds": 3.453454
+    },
+    {
+      "sampleId": "DDB_0265",
+      "score": 0.9646130800247192,
+      "runtimeSeconds": 3.215488
+    },
+    {
+      "sampleId": "DDB_0269",
+      "score": 1.0,
+      "runtimeSeconds": 3.284481
+    },
+    {
+      "sampleId": "DDB_0270",
+      "score": 1.0,
+      "runtimeSeconds": 3.349936
+    },
+    {
+      "sampleId": "DDB_0271",
+      "score": 1.0,
+      "runtimeSeconds": 3.350892
+    },
+    {
+      "sampleId": "DDB_0273",
+      "score": 1.0,
+      "runtimeSeconds": 3.724731
+    },
+    {
+      "sampleId": "DDB_0277",
+      "score": 1.0,
+      "runtimeSeconds": 4.132407
+    },
+    {
+      "sampleId": "DDB_0278",
+      "score": 1.0,
+      "runtimeSeconds": 4.460521
+    },
+    {
+      "sampleId": "DDB_0279",
+      "score": 1.0,
+      "runtimeSeconds": 4.758856
+    },
+    {
+      "sampleId": "DDB_0280",
+      "score": 1.0,
+      "runtimeSeconds": 4.309399
+    },
+    {
+      "sampleId": "DDB_0281",
+      "score": 0.9999997615814209,
+      "runtimeSeconds": 3.264239
+    },
+    {
+      "sampleId": "DDB_0283",
+      "score": 1.0,
+      "runtimeSeconds": 3.204151
+    },
+    {
+      "sampleId": "DDB_0287",
+      "score": 1.0,
+      "runtimeSeconds": 3.224442
+    },
+    {
+      "sampleId": "DDB_0289",
+      "score": 0.9999538660049438,
+      "runtimeSeconds": 3.263265
+    },
+    {
+      "sampleId": "DDB_0290",
+      "score": 1.0,
+      "runtimeSeconds": 3.202622
+    },
+    {
+      "sampleId": "DDB_0291",
+      "score": 1.0,
+      "runtimeSeconds": 3.294358
+    },
+    {
+      "sampleId": "DDB_0292",
+      "score": 0.9999922513961792,
+      "runtimeSeconds": 3.248042
+    },
+    {
+      "sampleId": "DDB_0293",
+      "score": 1.0,
+      "runtimeSeconds": 3.211781
+    },
+    {
+      "sampleId": "DDB_0294",
+      "score": 1.0,
+      "runtimeSeconds": 3.262047
+    },
+    {
+      "sampleId": "DDB_0295",
+      "score": 5.506994860127179e-10,
+      "runtimeSeconds": 4.30197
+    },
+    {
+      "sampleId": "DDB_0296",
+      "score": 1.0,
+      "runtimeSeconds": 4.66338
+    },
+    {
+      "sampleId": "DDB_0297",
+      "score": 1.0,
+      "runtimeSeconds": 5.181972
+    },
+    {
+      "sampleId": "DDB_0298",
+      "score": 0.9999936819076538,
+      "runtimeSeconds": 5.145493
+    },
+    {
+      "sampleId": "DDB_0300",
+      "score": 1.0,
+      "runtimeSeconds": 3.521762
+    },
+    {
+      "sampleId": "DDB_0301",
+      "score": 0.9984822869300842,
+      "runtimeSeconds": 3.26352
+    },
+    {
+      "sampleId": "DDB_0302",
+      "score": 1.0,
+      "runtimeSeconds": 3.238545
+    },
+    {
+      "sampleId": "DDB_0304",
+      "score": 1.0,
+      "runtimeSeconds": 3.274096
+    },
+    {
+      "sampleId": "DDB_0305",
+      "score": 0.9999997615814209,
+      "runtimeSeconds": 3.273518
+    },
+    {
+      "sampleId": "DDB_0307",
+      "score": 0.9999629259109497,
+      "runtimeSeconds": 3.27615
+    },
+    {
+      "sampleId": "DDB_0309",
+      "score": 0.9999442100524902,
+      "runtimeSeconds": 3.305868
+    },
+    {
+      "sampleId": "DDB_0310",
+      "score": 1.0,
+      "runtimeSeconds": 3.227214
+    },
+    {
+      "sampleId": "DDB_0311",
+      "score": 0.9999909400939941,
+      "runtimeSeconds": 3.208141
+    },
+    {
+      "sampleId": "DDB_0312",
+      "score": 0.8645648956298828,
+      "runtimeSeconds": 3.202412
+    },
+    {
+      "sampleId": "DDB_0313",
+      "score": 1.0,
+      "runtimeSeconds": 3.252978
+    },
+    {
+      "sampleId": "DDB_0316",
+      "score": 1.0,
+      "runtimeSeconds": 3.802825
+    },
+    {
+      "sampleId": "DDB_0317",
+      "score": 1.0,
+      "runtimeSeconds": 5.145782
+    },
+    {
+      "sampleId": "DDB_0318",
+      "score": 1.0,
+      "runtimeSeconds": 6.404184
+    },
+    {
+      "sampleId": "DDB_0321",
+      "score": 0.7356081008911133,
+      "runtimeSeconds": 6.75559
+    },
+    {
+      "sampleId": "DDB_0323",
+      "score": 1.0,
+      "runtimeSeconds": 3.544592
+    },
+    {
+      "sampleId": "DDB_0324",
+      "score": 0.999996542930603,
+      "runtimeSeconds": 3.306031
+    },
+    {
+      "sampleId": "DDB_0325",
+      "score": 1.0,
+      "runtimeSeconds": 3.214657
+    },
+    {
+      "sampleId": "DDB_0326",
+      "score": 0.9998470544815063,
+      "runtimeSeconds": 3.229955
+    },
+    {
+      "sampleId": "DDB_0329",
+      "score": 0.9999938011169434,
+      "runtimeSeconds": 3.230828
+    },
+    {
+      "sampleId": "DDB_0331",
+      "score": 1.0,
+      "runtimeSeconds": 3.240611
+    },
+    {
+      "sampleId": "DDB_0333",
+      "score": 1.0,
+      "runtimeSeconds": 3.310729
+    },
+    {
+      "sampleId": "DDB_0334",
+      "score": 1.0,
+      "runtimeSeconds": 3.298095
+    },
+    {
+      "sampleId": "DDB_0335",
+      "score": 1.0,
+      "runtimeSeconds": 3.281133
+    },
+    {
+      "sampleId": "DDB_0336",
+      "score": 0.9999980926513672,
+      "runtimeSeconds": 3.356761
+    },
+    {
+      "sampleId": "DDB_0338",
+      "score": 1.0,
+      "runtimeSeconds": 3.673868
+    },
+    {
+      "sampleId": "DDB_0339",
+      "score": 0.9999996423721313,
+      "runtimeSeconds": 5.056088
+    },
+    {
+      "sampleId": "DDB_0340",
+      "score": 1.0,
+      "runtimeSeconds": 6.91837
+    },
+    {
+      "sampleId": "DDB_0342",
+      "score": 1.0,
+      "runtimeSeconds": 6.919691
+    },
+    {
+      "sampleId": "DDB_0343",
+      "score": 1.0,
+      "runtimeSeconds": 3.645105
+    },
+    {
+      "sampleId": "DDB_0345",
+      "score": 1.0,
+      "runtimeSeconds": 3.326997
+    },
+    {
+      "sampleId": "DDB_0346",
+      "score": 1.0,
+      "runtimeSeconds": 3.273177
+    },
+    {
+      "sampleId": "DDB_0347",
+      "score": 1.0,
+      "runtimeSeconds": 3.344651
+    },
+    {
+      "sampleId": "DDB_0348",
+      "score": 1.0,
+      "runtimeSeconds": 3.35682
+    },
+    {
+      "sampleId": "DDB_0349",
+      "score": 0.603886067867279,
+      "runtimeSeconds": 3.318007
+    },
+    {
+      "sampleId": "DDB_0350",
+      "score": 1.0,
+      "runtimeSeconds": 3.270314
+    },
+    {
+      "sampleId": "DDB_0352",
+      "score": 1.0,
+      "runtimeSeconds": 3.42953
+    },
+    {
+      "sampleId": "DDB_0355",
+      "score": 1.0,
+      "runtimeSeconds": 3.055029
+    },
+    {
+      "sampleId": "DDB_0356",
+      "score": 1.0,
+      "runtimeSeconds": 2.396164
+    },
+    {
+      "sampleId": "DDB_0358",
+      "score": 1.0,
+      "runtimeSeconds": 2.304455
+    },
+    {
+      "sampleId": "DDB_0362",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 2.44149
+    },
+    {
+      "sampleId": "DDB_0368",
+      "score": 1.0,
+      "runtimeSeconds": 4.570153
+    },
+    {
+      "sampleId": "DDB_0371",
+      "score": 1.0,
+      "runtimeSeconds": 7.713938
+    },
+    {
+      "sampleId": "DDB_0373",
+      "score": 1.0,
+      "runtimeSeconds": 8.902431
+    },
+    {
+      "sampleId": "DDB_0374",
+      "score": 1.0,
+      "runtimeSeconds": 3.314993
+    },
+    {
+      "sampleId": "DDB_0375",
+      "score": 1.0,
+      "runtimeSeconds": 2.16569
+    },
+    {
+      "sampleId": "DDB_0377",
+      "score": 0.9999995231628418,
+      "runtimeSeconds": 2.11145
+    },
+    {
+      "sampleId": "DDB_0378",
+      "score": 1.0,
+      "runtimeSeconds": 2.187874
+    },
+    {
+      "sampleId": "DDB_0380",
+      "score": 1.0,
+      "runtimeSeconds": 2.118366
+    },
+    {
+      "sampleId": "DDB_0382",
+      "score": 1.0,
+      "runtimeSeconds": 2.443098
+    },
+    {
+      "sampleId": "DDB_0383",
+      "score": 1.0,
+      "runtimeSeconds": 2.363552
+    },
+    {
+      "sampleId": "DDB_0384",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 2.389921
+    },
+    {
+      "sampleId": "DDB_0388",
+      "score": 1.0,
+      "runtimeSeconds": 2.364463
+    },
+    {
+      "sampleId": "DDB_0390",
+      "score": 1.0,
+      "runtimeSeconds": 7.308234
+    },
+    {
+      "sampleId": "DDB_0392",
+      "score": 1.0,
+      "runtimeSeconds": 7.761678
+    },
+    {
+      "sampleId": "DDB_0393",
+      "score": 1.0,
+      "runtimeSeconds": 17.131785
+    },
+    {
+      "sampleId": "DDB_0396",
+      "score": 1.0,
+      "runtimeSeconds": 4.780306
+    },
+    {
+      "sampleId": "DDB_0397",
+      "score": 1.0,
+      "runtimeSeconds": 2.362843
+    },
+    {
+      "sampleId": "DDB_0398",
+      "score": 1.0,
+      "runtimeSeconds": 2.323911
+    },
+    {
+      "sampleId": "DDB_0401",
+      "score": 1.0,
+      "runtimeSeconds": 2.321955
+    },
+    {
+      "sampleId": "DDB_0402",
+      "score": 1.0,
+      "runtimeSeconds": 3.324381
+    },
+    {
+      "sampleId": "DDB_0405",
+      "score": 1.0,
+      "runtimeSeconds": 3.213651
+    },
+    {
+      "sampleId": "DDB_0408",
+      "score": 1.0,
+      "runtimeSeconds": 3.280466
+    },
+    {
+      "sampleId": "DDB_0411",
+      "score": 1.0,
+      "runtimeSeconds": 3.282497
+    },
+    {
+      "sampleId": "DDB_0414",
+      "score": 0.9998770952224731,
+      "runtimeSeconds": 3.462749
+    },
+    {
+      "sampleId": "DDB_0415",
+      "score": 1.0,
+      "runtimeSeconds": 4.003842
+    },
+    {
+      "sampleId": "DDB_0418",
+      "score": 0.9992915391921997,
+      "runtimeSeconds": 4.753325
+    },
+    {
+      "sampleId": "DDB_0420",
+      "score": 1.0,
+      "runtimeSeconds": 5.148453
+    },
+    {
+      "sampleId": "DDB_0423",
+      "score": 0.9999141693115234,
+      "runtimeSeconds": 5.447168
+    },
+    {
+      "sampleId": "DDB_0424",
+      "score": 0.999957799911499,
+      "runtimeSeconds": 5.542821
+    },
+    {
+      "sampleId": "DDB_0425",
+      "score": 1.0,
+      "runtimeSeconds": 21.436492
+    },
+    {
+      "sampleId": "DDB_0426",
+      "score": 1.0,
+      "runtimeSeconds": 4.211724
+    },
+    {
+      "sampleId": "DDB_0427",
+      "score": 1.0,
+      "runtimeSeconds": 5.601495
+    },
+    {
+      "sampleId": "DDB_0430",
+      "score": 1.0,
+      "runtimeSeconds": 6.484247
+    },
+    {
+      "sampleId": "DDB_0431",
+      "score": 1.0,
+      "runtimeSeconds": 6.935636
+    },
+    {
+      "sampleId": "DDB_0432",
+      "score": 0.9927206039428711,
+      "runtimeSeconds": 3.871511
+    },
+    {
+      "sampleId": "DDB_0433",
+      "score": 0.9999985694885254,
+      "runtimeSeconds": 3.219638
+    },
+    {
+      "sampleId": "DDB_0437",
+      "score": 1.0,
+      "runtimeSeconds": 3.297855
+    },
+    {
+      "sampleId": "DDB_0442",
+      "score": 1.0,
+      "runtimeSeconds": 3.243815
+    },
+    {
+      "sampleId": "DDB_0446",
+      "score": 1.0,
+      "runtimeSeconds": 3.354151
+    },
+    {
+      "sampleId": "DDB_0447",
+      "score": 1.0,
+      "runtimeSeconds": 3.349635
+    },
+    {
+      "sampleId": "DDB_0448",
+      "score": 1.0,
+      "runtimeSeconds": 3.499761
+    },
+    {
+      "sampleId": "DDB_0450",
+      "score": 1.0,
+      "runtimeSeconds": 3.376541
+    },
+    {
+      "sampleId": "DDB_0452",
+      "score": 1.0,
+      "runtimeSeconds": 3.301662
+    },
+    {
+      "sampleId": "DDB_0453",
+      "score": 0.9859015941619873,
+      "runtimeSeconds": 3.318622
+    },
+    {
+      "sampleId": "DDB_0455",
+      "score": 1.0,
+      "runtimeSeconds": 3.272977
+    },
+    {
+      "sampleId": "DDB_0459",
+      "score": 1.0,
+      "runtimeSeconds": 4.584443
+    },
+    {
+      "sampleId": "DDB_0460",
+      "score": 1.0,
+      "runtimeSeconds": 5.999132
+    },
+    {
+      "sampleId": "DDB_0462",
+      "score": 1.0,
+      "runtimeSeconds": 6.33827
+    },
+    {
+      "sampleId": "DDB_0463",
+      "score": 1.0,
+      "runtimeSeconds": 4.963958
+    },
+    {
+      "sampleId": "DDB_0464",
+      "score": 1.0,
+      "runtimeSeconds": 3.745945
+    },
+    {
+      "sampleId": "DDB_0465",
+      "score": 1.0,
+      "runtimeSeconds": 3.694315
+    },
+    {
+      "sampleId": "DDB_0466",
+      "score": 1.0,
+      "runtimeSeconds": 3.478554
+    },
+    {
+      "sampleId": "DDB_0467",
+      "score": 1.0,
+      "runtimeSeconds": 3.517566
+    },
+    {
+      "sampleId": "DDB_0468",
+      "score": 1.0,
+      "runtimeSeconds": 3.478249
+    },
+    {
+      "sampleId": "DDB_0469",
+      "score": 1.0,
+      "runtimeSeconds": 3.413971
+    },
+    {
+      "sampleId": "DDB_0471",
+      "score": 1.0,
+      "runtimeSeconds": 3.621083
+    },
+    {
+      "sampleId": "DDB_0473",
+      "score": 1.0,
+      "runtimeSeconds": 3.352447
+    },
+    {
+      "sampleId": "DDB_0474",
+      "score": 1.0,
+      "runtimeSeconds": 3.547088
+    },
+    {
+      "sampleId": "DDB_0475",
+      "score": 1.0,
+      "runtimeSeconds": 3.494461
+    },
+    {
+      "sampleId": "DDB_0476",
+      "score": 1.0,
+      "runtimeSeconds": 5.183477
+    },
+    {
+      "sampleId": "DDB_0479",
+      "score": 0.9999988079071045,
+      "runtimeSeconds": 7.302657
+    },
+    {
+      "sampleId": "DDB_0480",
+      "score": 1.0,
+      "runtimeSeconds": 8.749204
+    },
+    {
+      "sampleId": "DDB_0482",
+      "score": 0.7590352892875671,
+      "runtimeSeconds": 4.342432
+    },
+    {
+      "sampleId": "DDB_0486",
+      "score": 1.0,
+      "runtimeSeconds": 3.326337
+    },
+    {
+      "sampleId": "DDB_0491",
+      "score": 1.0,
+      "runtimeSeconds": 3.38573
+    },
+    {
+      "sampleId": "DDB_0492",
+      "score": 1.0,
+      "runtimeSeconds": 3.497148
+    },
+    {
+      "sampleId": "DDB_0495",
+      "score": 1.0,
+      "runtimeSeconds": 3.484748
+    },
+    {
+      "sampleId": "DDB_0496",
+      "score": 1.0,
+      "runtimeSeconds": 3.747457
+    },
+    {
+      "sampleId": "DDB_0499",
+      "score": 1.0,
+      "runtimeSeconds": 7.012787
+    },
+    {
+      "sampleId": "DDB_0500",
+      "score": 1.0,
+      "runtimeSeconds": 32.465236
+    },
+    {
+      "sampleId": "PNGN_CHART_03",
+      "score": 0.03894241899251938,
+      "runtimeSeconds": 9.81158
+    },
+    {
+      "sampleId": "PNGN_CHART_06",
+      "score": 2.0797763511382072e-10,
+      "runtimeSeconds": 4.2906
+    },
+    {
+      "sampleId": "PNGN_CHART_09",
+      "score": 8.742440513742622e-07,
+      "runtimeSeconds": 4.291033
+    },
+    {
+      "sampleId": "PNGN_CHART_10",
+      "score": 9.174793702548811e-10,
+      "runtimeSeconds": 4.016973
+    },
+    {
+      "sampleId": "PNGN_CHART_13",
+      "score": 4.969005544808169e-07,
+      "runtimeSeconds": 5.276289
+    },
+    {
+      "sampleId": "PNGN_CHART_14",
+      "score": 3.984491556141556e-12,
+      "runtimeSeconds": 5.181459
+    },
+    {
+      "sampleId": "PNGN_CHART_15",
+      "score": 3.7367328332038596e-05,
+      "runtimeSeconds": 5.702082
+    },
+    {
+      "sampleId": "PNGN_CHART_16",
+      "score": 0.04570619389414787,
+      "runtimeSeconds": 4.489942
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_01",
+      "score": 5.855018368502009e-16,
+      "runtimeSeconds": 4.211268
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_03",
+      "score": 9.713610388223276e-17,
+      "runtimeSeconds": 4.029684
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_04",
+      "score": 3.2169006376583963e-16,
+      "runtimeSeconds": 4.13893
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_07",
+      "score": 3.276123116687608e-15,
+      "runtimeSeconds": 14.215427
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_09",
+      "score": 1.052803296405498e-15,
+      "runtimeSeconds": 24.912379
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_11",
+      "score": 2.0977857523205398e-16,
+      "runtimeSeconds": 14.335622
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_13",
+      "score": 4.4672149178859744e-15,
+      "runtimeSeconds": 4.138571
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_14",
+      "score": 3.612363380072484e-16,
+      "runtimeSeconds": 3.890981
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_01",
+      "score": 2.5828839067543186e-10,
+      "runtimeSeconds": 3.912949
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_02",
+      "score": 8.977013993678685e-16,
+      "runtimeSeconds": 3.994237
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_03",
+      "score": 5.532232449922958e-09,
+      "runtimeSeconds": 4.859972
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_09",
+      "score": 3.8071302554953945e-08,
+      "runtimeSeconds": 6.937615
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_10",
+      "score": 2.015428474161208e-16,
+      "runtimeSeconds": 7.22453
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_11",
+      "score": 2.8437943910830654e-07,
+      "runtimeSeconds": 5.727549
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_12",
+      "score": 5.812921216423461e-13,
+      "runtimeSeconds": 3.920956
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_15",
+      "score": 6.504119909322981e-09,
+      "runtimeSeconds": 3.999727
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_01",
+      "score": 4.0569071628050304e-23,
+      "runtimeSeconds": 4.004963
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_05",
+      "score": 7.898933481159492e-28,
+      "runtimeSeconds": 4.009193
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_09",
+      "score": 8.082944999320187e-22,
+      "runtimeSeconds": 3.982453
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_10",
+      "score": 1.4893815375152107e-23,
+      "runtimeSeconds": 4.075009
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_12",
+      "score": 1.2815309979941447e-28,
+      "runtimeSeconds": 4.047895
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_13",
+      "score": 8.459527173667283e-35,
+      "runtimeSeconds": 3.968796
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_15",
+      "score": 3.073910358854438e-17,
+      "runtimeSeconds": 3.99362
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_16",
+      "score": 2.611584989904915e-22,
+      "runtimeSeconds": 5.898562
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_07",
+      "score": 0.0,
+      "runtimeSeconds": 10.074497
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09",
+      "score": 1.9953922565660265e-32,
+      "runtimeSeconds": 7.856161
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_10",
+      "score": 3.1187619239101766e-37,
+      "runtimeSeconds": 3.997665
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12",
+      "score": 4.5783590768405055e-35,
+      "runtimeSeconds": 3.968938
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_13",
+      "score": 5.202978150149222e-37,
+      "runtimeSeconds": 4.017103
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_14",
+      "score": 2.026020441145482e-38,
+      "runtimeSeconds": 4.091097
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_15",
+      "score": 5.076438181709695e-32,
+      "runtimeSeconds": 3.961268
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_16",
+      "score": 1.540921690255633e-30,
+      "runtimeSeconds": 3.975768
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_01",
+      "score": 2.067302322980146e-14,
+      "runtimeSeconds": 4.058731
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06",
+      "score": 5.768320120603382e-14,
+      "runtimeSeconds": 4.201544
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_08",
+      "score": 2.4854746678814664e-18,
+      "runtimeSeconds": 5.685614
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_09",
+      "score": 1.1286506668498064e-12,
+      "runtimeSeconds": 6.291346
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_11",
+      "score": 2.1532990343690555e-17,
+      "runtimeSeconds": 6.622064
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_12",
+      "score": 1.2085487775467807e-12,
+      "runtimeSeconds": 4.366606
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_15",
+      "score": 3.4228436057714973e-13,
+      "runtimeSeconds": 4.091164
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_16",
+      "score": 3.513407879198051e-18,
+      "runtimeSeconds": 4.039416
+    }
+  ],
+  "inferenceMode": "torch.inference_mode"
+}

@@ -1,0 +1,532 @@
+{
+  "schemaVersion": "lythaus-wp007c-spai-score-run-v1",
+  "candidateId": "SPAI_C512",
+  "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+  "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+  "optimized": true,
+  "cpuThreads": 8,
+  "inputCount": 104,
+  "records": [
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_12",
+      "score": 7.864843086923961e-19,
+      "runtimeSeconds": 3.831444
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_05",
+      "score": 0.02532162517309189,
+      "runtimeSeconds": 3.717668
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_01",
+      "score": 4.0344359272223617e-16,
+      "runtimeSeconds": 3.672886
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_09",
+      "score": 1.4171298240040034e-21,
+      "runtimeSeconds": 3.706868
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_08",
+      "score": 0.9670901894569397,
+      "runtimeSeconds": 2.628954
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_04",
+      "score": 8.484768297876029e-20,
+      "runtimeSeconds": 2.488512
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_01",
+      "score": 2.3301893179450417e-06,
+      "runtimeSeconds": 2.490339
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_10",
+      "score": 2.2245846712353423e-26,
+      "runtimeSeconds": 2.616421
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_04",
+      "score": 2.4061876690889723e-16,
+      "runtimeSeconds": 2.497533
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_11",
+      "score": 1.0,
+      "runtimeSeconds": 2.527221
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_10",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.517959
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_1_06",
+      "score": 1.7032320442922355e-08,
+      "runtimeSeconds": 2.550421
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_05",
+      "score": 7.783756836907731e-32,
+      "runtimeSeconds": 2.509209
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_02",
+      "score": 0.026436330750584602,
+      "runtimeSeconds": 2.524807
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_11",
+      "score": 0.9690670967102051,
+      "runtimeSeconds": 2.53462
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone12_3_08",
+      "score": 0.00033978052670136094,
+      "runtimeSeconds": 2.542951
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_11",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 2.529381
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_06",
+      "score": 0.5506399869918823,
+      "runtimeSeconds": 2.527145
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_08",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.553137
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_03",
+      "score": 0.1960582137107849,
+      "runtimeSeconds": 2.701537
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_01",
+      "score": 7.836667464289349e-06,
+      "runtimeSeconds": 2.510374
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_02",
+      "score": 1.4076463085432867e-11,
+      "runtimeSeconds": 2.505591
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_05",
+      "score": 0.8500121235847473,
+      "runtimeSeconds": 2.512338
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_3_12",
+      "score": 0.3199889659881592,
+      "runtimeSeconds": 2.54192
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_1_03",
+      "score": 1.0,
+      "runtimeSeconds": 2.320793
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_1_07",
+      "score": 1.0,
+      "runtimeSeconds": 2.216099
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_1_10",
+      "score": 0.9999523162841797,
+      "runtimeSeconds": 3.759389
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_1_12",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 3.648229
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_3_11",
+      "score": 0.00011117149551864713,
+      "runtimeSeconds": 3.696135
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_3_08",
+      "score": 0.9710485935211182,
+      "runtimeSeconds": 3.697775
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_3_12",
+      "score": 0.9452373385429382,
+      "runtimeSeconds": 3.449892
+    },
+    {
+      "sampleId": "CSAFE_WP006E_note10_3_10",
+      "score": 6.657871476356547e-11,
+      "runtimeSeconds": 2.488538
+    },
+    {
+      "sampleId": "PNGN_CHART_07",
+      "score": 7.835950777135281e-10,
+      "runtimeSeconds": 2.4553
+    },
+    {
+      "sampleId": "PNGN_CHART_02",
+      "score": 5.118087065270061e-10,
+      "runtimeSeconds": 2.437902
+    },
+    {
+      "sampleId": "PNGN_CHART_04",
+      "score": 2.5391519442585775e-10,
+      "runtimeSeconds": 2.504575
+    },
+    {
+      "sampleId": "PNGN_CHART_01",
+      "score": 2.3459701736783245e-08,
+      "runtimeSeconds": 2.497069
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_05",
+      "score": 2.5250502101552275e-13,
+      "runtimeSeconds": 2.504415
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_08",
+      "score": 1.892721590419336e-15,
+      "runtimeSeconds": 2.513286
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_02",
+      "score": 2.933978472501042e-14,
+      "runtimeSeconds": 2.49828
+    },
+    {
+      "sampleId": "PNGN_DIAGRAM_06",
+      "score": 7.253156362228375e-17,
+      "runtimeSeconds": 2.490821
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_07",
+      "score": 1.7551964048845292e-10,
+      "runtimeSeconds": 2.521182
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_08",
+      "score": 5.579444024850222e-12,
+      "runtimeSeconds": 2.485544
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_05",
+      "score": 1.314248598838219e-09,
+      "runtimeSeconds": 2.560218
+    },
+    {
+      "sampleId": "PNGN_OTHER_DIGITAL_NON_AI_06",
+      "score": 2.41432224595088e-18,
+      "runtimeSeconds": 2.510056
+    },
+    {
+      "sampleId": "OWNER_HN_SCREENSHOT_20260420_111713_c9924660",
+      "score": 5.955109482563403e-35,
+      "runtimeSeconds": 2.53935
+    },
+    {
+      "sampleId": "OWNER_HN_SCREENSHOT_20260401_121028_48c43538",
+      "score": 1.9514804269066266e-12,
+      "runtimeSeconds": 2.583212
+    },
+    {
+      "sampleId": "OWNER_HN_SCREENSHOT_20260425_113715_ee411dbd",
+      "score": 1.7299215511121981e-31,
+      "runtimeSeconds": 3.41557
+    },
+    {
+      "sampleId": "OWNER_HN_SCREENSHOT_20260322_182927_0ac26600",
+      "score": 0.0001083678871509619,
+      "runtimeSeconds": 4.016418
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_02",
+      "score": 3.1802378346795057e-22,
+      "runtimeSeconds": 3.957274
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_06",
+      "score": 5.972279868472393e-22,
+      "runtimeSeconds": 3.709704
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_04",
+      "score": 8.821756006632755e-27,
+      "runtimeSeconds": 3.541637
+    },
+    {
+      "sampleId": "PNGN_TEXT_GRAPHIC_03",
+      "score": 1.52974403977435e-11,
+      "runtimeSeconds": 2.479911
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_08",
+      "score": 1.4849751299872252e-36,
+      "runtimeSeconds": 2.50159
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_01",
+      "score": 3.430781637507661e-30,
+      "runtimeSeconds": 2.47804
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_04",
+      "score": 3.089571363495949e-38,
+      "runtimeSeconds": 2.512272
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_03",
+      "score": 1.2923060644578498e-29,
+      "runtimeSeconds": 2.506699
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_05",
+      "score": 2.183425315549492e-12,
+      "runtimeSeconds": 2.511627
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_03",
+      "score": 1.9912764122428784e-19,
+      "runtimeSeconds": 2.532328
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_02",
+      "score": 1.0119106235897591e-16,
+      "runtimeSeconds": 2.544182
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_07",
+      "score": 1.3618045154538926e-16,
+      "runtimeSeconds": 2.485122
+    },
+    {
+      "sampleId": "OWNER_HN_SCREENSHOT_20260314_092218_16065f13",
+      "score": 1.8416005938091255e-35,
+      "runtimeSeconds": 2.51018
+    },
+    {
+      "sampleId": "OWNER_HN_SCREENSHOT_20260425_175613_ac127ced",
+      "score": 1.5235813407343812e-05,
+      "runtimeSeconds": 2.505376
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_02",
+      "score": 3.844288127450051e-37,
+      "runtimeSeconds": 2.505913
+    },
+    {
+      "sampleId": "OWNER_HN_SCREENSHOT_20260420_111708_e76d47a1",
+      "score": 2.0280174315869912e-36,
+      "runtimeSeconds": 2.515813
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "score": 1.0,
+      "runtimeSeconds": 2.530462
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "score": 0.7475174069404602,
+      "runtimeSeconds": 2.500426
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_003",
+      "score": 0.9304191470146179,
+      "runtimeSeconds": 2.870893
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "score": 1.0,
+      "runtimeSeconds": 4.132389
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_005",
+      "score": 0.999998927116394,
+      "runtimeSeconds": 4.684445
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_011",
+      "score": 1.0,
+      "runtimeSeconds": 4.900562
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "score": 0.003495505079627037,
+      "runtimeSeconds": 4.181711
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "score": 0.9999959468841553,
+      "runtimeSeconds": 2.51214
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_014",
+      "score": 0.9996438026428223,
+      "runtimeSeconds": 2.475454
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_015",
+      "score": 0.21719177067279816,
+      "runtimeSeconds": 2.499779
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_021",
+      "score": 0.9999853372573853,
+      "runtimeSeconds": 2.510632
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_022",
+      "score": 0.897425651550293,
+      "runtimeSeconds": 2.526157
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_023",
+      "score": 1.0,
+      "runtimeSeconds": 2.495244
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_024",
+      "score": 0.9614526629447937,
+      "runtimeSeconds": 2.531094
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_025",
+      "score": 1.0,
+      "runtimeSeconds": 2.511105
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_031",
+      "score": 6.092205921959248e-07,
+      "runtimeSeconds": 2.522415
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_032",
+      "score": 0.9997683167457581,
+      "runtimeSeconds": 2.498748
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_033",
+      "score": 1.0,
+      "runtimeSeconds": 2.530507
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_034",
+      "score": 1.0,
+      "runtimeSeconds": 2.495873
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_035",
+      "score": 1.0,
+      "runtimeSeconds": 2.522844
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_041",
+      "score": 0.9844627380371094,
+      "runtimeSeconds": 2.548251
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_042",
+      "score": 1.0,
+      "runtimeSeconds": 2.605499
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_043",
+      "score": 1.0,
+      "runtimeSeconds": 4.08265
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_044",
+      "score": 0.9999983310699463,
+      "runtimeSeconds": 4.642924
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_045",
+      "score": 0.0002380393707426265,
+      "runtimeSeconds": 4.799953
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_051",
+      "score": 0.9999920129776001,
+      "runtimeSeconds": 4.790987
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_052",
+      "score": 0.9999887943267822,
+      "runtimeSeconds": 2.497924
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_053",
+      "score": 1.6825484294713533e-07,
+      "runtimeSeconds": 2.487768
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_054",
+      "score": 1.0,
+      "runtimeSeconds": 2.47725
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_055",
+      "score": 0.10833685845136642,
+      "runtimeSeconds": 2.508142
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_061",
+      "score": 0.806643545627594,
+      "runtimeSeconds": 2.512382
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_062",
+      "score": 0.49097636342048645,
+      "runtimeSeconds": 2.455589
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_063",
+      "score": 0.05871269479393959,
+      "runtimeSeconds": 2.111396
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_064",
+      "score": 2.4464489979565413e-16,
+      "runtimeSeconds": 2.052476
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_065",
+      "score": 0.9998884201049805,
+      "runtimeSeconds": 2.059878
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_071",
+      "score": 0.9999887943267822,
+      "runtimeSeconds": 2.11072
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_072",
+      "score": 0.1970224380493164,
+      "runtimeSeconds": 2.073906
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_073",
+      "score": 1.1565519031364602e-07,
+      "runtimeSeconds": 2.04292
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_074",
+      "score": 4.480348928048038e-18,
+      "runtimeSeconds": 2.103759
+    },
+    {
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_075",
+      "score": 1.9688694972815428e-23,
+      "runtimeSeconds": 3.52446
+    }
+  ],
+  "inferenceMode": "torch.inference_mode"
+}

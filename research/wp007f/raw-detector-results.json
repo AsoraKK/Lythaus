@@ -1,0 +1,174 @@
+{
+  "schemaVersion": "lythaus-wp007f-raw-detector-results-v1",
+  "inputManifestSha256": "3ef81fab74b7c05046f312a5f59dde9bf218e510ffa699d86441fcde6f715c62",
+  "scoreBlind": true,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "detectors": [
+    {
+      "detectorId": "SPAI_C512",
+      "displayName": "SPAI C512",
+      "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "recordCount": 348,
+      "roleCounts": {
+        "CAMERA_DEV": 100,
+        "DDB_DETECTOR_DEV": 200,
+        "DIGITAL_DEV": 48
+      },
+      "syntheticRocAuc": 0.961791,
+      "syntheticPrAuc": 0.955162,
+      "syntheticScore": {
+        "count": 200,
+        "median": 1.0,
+        "iqr": [
+          1.0,
+          1.0
+        ],
+        "min": 0.0,
+        "max": 1.0
+      },
+      "cameraScore": {
+        "count": 100,
+        "median": 0.017762,
+        "iqr": [
+          0.0,
+          0.852519
+        ],
+        "min": 0.0,
+        "max": 1.0
+      },
+      "digitalScore": {
+        "count": 48,
+        "median": 0.0,
+        "iqr": [
+          0.0,
+          0.0
+        ],
+        "min": 0.0,
+        "max": 0.045706
+      },
+      "runtimeSeconds": {
+        "count": 348,
+        "median": 3.296107,
+        "iqr": [
+          2.383557,
+          4.133948
+        ],
+        "min": 1.64471,
+        "max": 32.465236
+      },
+      "loadSeconds": null
+    },
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "displayName": "UniversalFakeDetect",
+      "checkpointSha256": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847",
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "recordCount": 348,
+      "roleCounts": {
+        "CAMERA_DEV": 100,
+        "DDB_DETECTOR_DEV": 200,
+        "DIGITAL_DEV": 48
+      },
+      "syntheticRocAuc": 0.690642,
+      "syntheticPrAuc": 0.736477,
+      "syntheticScore": {
+        "count": 200,
+        "median": 0.005164,
+        "iqr": [
+          0.000513,
+          0.046269
+        ],
+        "min": 4e-06,
+        "max": 0.997779
+      },
+      "cameraScore": {
+        "count": 100,
+        "median": 0.000525,
+        "iqr": [
+          6.3e-05,
+          0.006677
+        ],
+        "min": 0.0,
+        "max": 0.99984
+      },
+      "digitalScore": {
+        "count": 48,
+        "median": 0.000556,
+        "iqr": [
+          1.8e-05,
+          0.005068
+        ],
+        "min": 3e-06,
+        "max": 0.030238
+      },
+      "runtimeSeconds": {
+        "count": 348,
+        "median": 1.339379,
+        "iqr": [
+          1.073371,
+          2.610669
+        ],
+        "min": 0.801367,
+        "max": 7.962543
+      },
+      "loadSeconds": 31.616907
+    },
+    {
+      "detectorId": "RINE",
+      "displayName": "RINE",
+      "checkpointSha256": "13986ffc86e1bd9d57fd640f891358c4f14c0f8aea8e590e52c598541f69fdc1",
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "recordCount": 348,
+      "roleCounts": {
+        "CAMERA_DEV": 100,
+        "DDB_DETECTOR_DEV": 200,
+        "DIGITAL_DEV": 48
+      },
+      "syntheticRocAuc": 0.880338,
+      "syntheticPrAuc": 0.923181,
+      "syntheticScore": {
+        "count": 200,
+        "median": 0.898747,
+        "iqr": [
+          0.649227,
+          0.98115
+        ],
+        "min": 0.058864,
+        "max": 0.999998
+      },
+      "cameraScore": {
+        "count": 100,
+        "median": 0.433558,
+        "iqr": [
+          0.33417,
+          0.456428
+        ],
+        "min": 0.022746,
+        "max": 0.974615
+      },
+      "digitalScore": {
+        "count": 48,
+        "median": 0.310768,
+        "iqr": [
+          0.282028,
+          0.333054
+        ],
+        "min": 0.198798,
+        "max": 0.393507
+      },
+      "runtimeSeconds": {
+        "count": 348,
+        "median": 0.940433,
+        "iqr": [
+          0.876771,
+          1.187865
+        ],
+        "min": 0.757125,
+        "max": 7.916699
+      },
+      "loadSeconds": 4.156692
+    }
+  ]
+}

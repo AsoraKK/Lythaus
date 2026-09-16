@@ -1,0 +1,65 @@
+{
+  "bytesBeforeIdentifiedRoots": 7827964149,
+  "bytesDeleted": 974188771,
+  "bytesPreserved": 6853775378,
+  "bytesUnresolved": 0,
+  "executed": true,
+  "rootsAfter": [
+    {
+      "bytes": 0,
+      "exists": false,
+      "rootKey": "WP007E_MEDIA"
+    },
+    {
+      "bytes": 0,
+      "exists": false,
+      "rootKey": "WP007E_DECODER_WEIGHTS"
+    },
+    {
+      "bytes": 458937790,
+      "exists": true,
+      "rootKey": "WP007E_BACKBONES"
+    },
+    {
+      "bytes": 1149754118,
+      "exists": true,
+      "rootKey": "WP007E_VENV"
+    },
+    {
+      "bytes": 266623,
+      "exists": true,
+      "rootKey": "WP007E_CONTROLLED_DIGITAL"
+    },
+    {
+      "bytes": 1502639688,
+      "exists": true,
+      "rootKey": "WP007A_DDB"
+    },
+    {
+      "bytes": 981277919,
+      "exists": true,
+      "rootKey": "WP006E_CSAFE"
+    },
+    {
+      "bytes": 25460220,
+      "exists": true,
+      "rootKey": "WP007A_HOLDOUT_FLUX1"
+    },
+    {
+      "bytes": 30230780,
+      "exists": true,
+      "rootKey": "WP007A_RESERVE_FLUX2"
+    },
+    {
+      "bytes": 2705208240,
+      "exists": true,
+      "rootKey": "WP007B_SPAI"
+    }
+  ],
+  "schemaVersion": "lythaus-wp007f-storage-cleanup-result-v1",
+  "sealedStatuses": {
+    "FLUX1": "SEALED",
+    "FLUX2": "SEALED_FUTURE_RESERVE",
+    "flux2ProviderCalls": 0
+  }
+}
