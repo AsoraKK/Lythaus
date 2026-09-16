@@ -3,6 +3,8 @@ import test from 'node:test';
 import {
   WP007D_BENCHMARK_FINGERPRINT,
   WP007D_PROXY_GENERATORS,
+  WP007D_PROXY_FALLBACK,
+  WP007D_BLOCKED_PRIMARY_ROUTE,
   WP007D_PROXY_PROMPT,
   WP007D_STRENGTHS,
   WP007D_WP007AHR4_HOLDOUT_FREEZE_SHA,
@@ -52,6 +54,20 @@ test('proxy seed derivation is deterministic and route-specific', () => {
   assert.notEqual(seed, deriveProxySeed('FAMILY_001', WP007D_PROXY_GENERATORS[1].modelId, 0.3));
   assert.notEqual(seed, deriveProxySeed('FAMILY_001', WP007D_PROXY_GENERATORS[0].modelId, 0.5));
   assert.ok(Number.isInteger(seed) && seed >= 0 && seed <= 0xffffffff);
+});
+
+test('predeclared fallback replaces only the unavailable primary before scoring', () => {
+  assert.deepEqual(WP007D_PROXY_GENERATORS.map((generator) => generator.generatorId), [
+    'G2_SDXL_BASE_IMG2IMG',
+    'G3_SDXL_LIGHTNING_IMG2IMG',
+    'G4_DREAMSHAPER_8_LCM_IMG2IMG',
+  ]);
+  assert.equal(WP007D_PROXY_FALLBACK.modelId, '@cf/lykon/dreamshaper-8-lcm');
+  assert.deepEqual(WP007D_PROXY_FALLBACK.fixedParameters, { width: 512, height: 512, num_steps: 20, guidance: 7.5 });
+  assert.equal(WP007D_BLOCKED_PRIMARY_ROUTE.generatorId, 'G1_SD15_IMG2IMG');
+  assert.equal(WP007D_BLOCKED_PRIMARY_ROUTE.httpStatus, 404);
+  assert.equal(WP007D_BLOCKED_PRIMARY_ROUTE.providerErrorCode, 6002);
+  assert.equal(WP007D_BLOCKED_PRIMARY_ROUTE.generationCalls, 0);
 });
 
 test('img2img request is fixed, seeded, and excludes forbidden routes', () => {
