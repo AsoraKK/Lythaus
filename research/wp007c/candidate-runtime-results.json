@@ -1,0 +1,289 @@
+{
+  "schemaVersion": "lythaus-wp007c-candidate-runtime-results-v1",
+  "baseSha": "e53e16685684aeee6198be54e1df17b805003183",
+  "benchmarkFingerprint": "210000b7b0d93960b23e090e396d60f97bb46d2816ee9ee7d345aae364ade3c5",
+  "developmentSplitSha256": "3a30dab63ace8b26f2684d1f658420f0f0fa66ad181cd94d8633aad86d64e721",
+  "holdoutFreezeSha256": "b1be6115a6ed3cb5d72c5ad3e90575ededbb4c969bd2bb248ec2806da32885c4",
+  "candidateSetFrozenBeforeScoring": true,
+  "holdoutPixelAccess": "NOT_PERFORMED",
+  "flux2PixelAccess": "NOT_PERFORMED",
+  "candidates": [
+    {
+      "candidateId": "SPAI_NATIVE_CPU_OPT",
+      "rightsStatus": "PASS",
+      "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "optimizationCycle": "ONE_BOUNDED_CYCLE",
+      "scoreEquivalence": {
+        "status": "PASS",
+        "tolerance": "EXACT_FLOAT_OUTPUT_MATCH_IN_4_SAMPLE_SMOKE",
+        "maxAbsoluteScoreDifference": 0.0,
+        "pairs": [
+          {
+            "sampleId": "CSAFE_iPhone11_1_0000",
+            "optimizedScore": 8.099962540975003e-12,
+            "originalScore": 8.099962540975003e-12,
+            "absoluteDifference": 0.0
+          },
+          {
+            "sampleId": "DDB_0001",
+            "optimizedScore": 1.0,
+            "originalScore": 1.0,
+            "absoluteDifference": 0.0
+          },
+          {
+            "sampleId": "DDB_0002",
+            "optimizedScore": 0.9999997615814209,
+            "originalScore": 0.9999997615814209,
+            "absoluteDifference": 0.0
+          },
+          {
+            "sampleId": "OWNER_SCREENSHOT_16065f13",
+            "optimizedScore": 4.169321155964165e-38,
+            "originalScore": 4.169321155964165e-38,
+            "absoluteDifference": 0.0
+          }
+        ]
+      },
+      "requiredHighResolutionProfile": {
+        "records": [
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_07",
+            "score": 0.009144364856183529,
+            "runtimeSeconds": 166.842609
+          },
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_02",
+            "score": 1.8508982975617982e-05,
+            "runtimeSeconds": 73.954116
+          },
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_03",
+            "score": 0.6647788882255554,
+            "runtimeSeconds": 81.716771
+          }
+        ],
+        "count": 3,
+        "p50Seconds": 81.716771,
+        "p95Seconds": 158.3300252,
+        "maxSeconds": 166.842609,
+        "minSeconds": 73.954116,
+        "allThreeOver60Seconds": true
+      },
+      "runtimeClassification": "NOT_PRACTICAL",
+      "status": "RUNTIME_REJECTED",
+      "reason": "ALL_THREE_PREDECLARED_HIGH_RESOLUTION_CAMERA_CASES_EXCEEDED_60_SECONDS"
+    },
+    {
+      "candidateId": "SPAI_C512",
+      "rightsStatus": "PASS",
+      "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "preprocessing": "DETERMINISTIC_NATIVE_PIXEL_512X512_CENTER_CROP_NO_RESIZE",
+      "runtimeSmoke": {
+        "records": [
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_02",
+            "score": 0.0004891908029094338,
+            "runtimeSeconds": 2.142265
+          },
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_03",
+            "score": 0.6535806059837341,
+            "runtimeSeconds": 2.066514
+          },
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_07",
+            "score": 0.7404197454452515,
+            "runtimeSeconds": 2.150981
+          },
+          {
+            "sampleId": "DDB_0109",
+            "score": 0.9999980926513672,
+            "runtimeSeconds": 2.098413
+          },
+          {
+            "sampleId": "DDB_0218",
+            "score": 1.0,
+            "runtimeSeconds": 2.194204
+          },
+          {
+            "sampleId": "PNGN_CHART_03",
+            "score": 0.03894241899251938,
+            "runtimeSeconds": 2.074308
+          },
+          {
+            "sampleId": "PNGN_CHART_05",
+            "score": 1.2342022273514885e-05,
+            "runtimeSeconds": 2.058179
+          }
+        ],
+        "count": 7,
+        "p50Seconds": 2.098413,
+        "p95Seconds": 2.1812371,
+        "maxSeconds": 2.194204,
+        "minSeconds": 2.058179
+      },
+      "runtimeClassification": "FAST",
+      "status": "RUNTIME_FEASIBLE"
+    },
+    {
+      "candidateId": "PATCHCRAFT_OFFICIAL",
+      "rightsStatus": "RIGHTS_BLOCKED",
+      "rightsAudit": {
+        "schemaVersion": "lythaus-wp007c-patchcraft-rights-audit-v1",
+        "candidateId": "PATCHCRAFT_OFFICIAL",
+        "upstreamRepository": "https://github.com/cvlcgabriel/PatchCraft",
+        "upstreamCommit": "00a00d9271304a18aa2d96f724d71c4e898708fd",
+        "officialImplementationIdentified": true,
+        "identityBasis": "Author repository named PatchCraft; README identifies PatchCraft evaluation code and cites arXiv:2311.12397.",
+        "codeLicense": "UNREPORTED_NO_LICENSE_FILE_OBSERVED",
+        "checkpointSource": "README_EXTERNAL_BAIDU_OR_GOOGLE_DRIVE_BUNDLE",
+        "checkpointLicense": "UNRESOLVED",
+        "researchEvaluationRights": "UNCONFIRMED",
+        "commercialDeploymentRights": "UNCONFIRMED",
+        "dependencyRights": "NOT_AUDITED_FOR_THIS_CANDIDATE",
+        "trainingDataLineage": "EXTERNAL_CNNDETECTION_AND_BENCHMARK_DATA_TERMS_NOT_RESOLVED",
+        "status": "RIGHTS_BLOCKED",
+        "checkpointRetrieved": false,
+        "inferencePerformed": false,
+        "reason": "Public source availability and an external checkpoint link do not establish code, checkpoint, dependency, or research-evaluation rights.",
+        "noSubstituteDetectorIntroduced": true
+      },
+      "checkpointRetrieved": false,
+      "inferencePerformed": false,
+      "runtimeClassification": "NOT_RUN",
+      "status": "RIGHTS_BLOCKED"
+    },
+    {
+      "candidateId": "LYTHAUS_SPECTRAL_LITE_V0",
+      "rightsStatus": "PASS",
+      "featureDefinition": [
+        "LOW_FREQUENCY_RADIAL_FFT_ENERGY_FRACTION",
+        "MID_FREQUENCY_RADIAL_FFT_ENERGY_FRACTION",
+        "HIGH_FREQUENCY_RADIAL_FFT_ENERGY_FRACTION",
+        "SPECTRAL_ENTROPY",
+        "RADIAL_LOG_SLOPE",
+        "AXIS_PERIODICITY",
+        "LOCAL_HIGH_FREQUENCY_RESIDUAL_STD"
+      ],
+      "runtimeSmoke": {
+        "records": [
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_02",
+            "score": 0.5529986224235093,
+            "runtimeSeconds": 0.029233,
+            "features": {
+              "low_frequency_energy_fraction": 0.8763312867282791,
+              "mid_frequency_energy_fraction": 0.09122986294002104,
+              "high_frequency_energy_fraction": 0.0324388503316999,
+              "spectral_entropy": 0.4497347189409655,
+              "radial_log_slope": -2.451165873245393,
+              "axis_periodicity_fraction": 0.7071124076441276,
+              "local_high_frequency_residual_std": 0.03450970714303928
+            },
+            "inputSha256": "4e832e47fc7227ba307928ac877506f9a18115e96272319a50bb46245bd0f154"
+          },
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_03",
+            "score": 0.3748346602764046,
+            "runtimeSeconds": 0.010681,
+            "features": {
+              "low_frequency_energy_fraction": 0.9360935407924019,
+              "mid_frequency_energy_fraction": 0.03643291394260224,
+              "high_frequency_energy_fraction": 0.02747354526499564,
+              "spectral_entropy": 0.3659218213525085,
+              "radial_log_slope": -1.6190001916771375,
+              "axis_periodicity_fraction": 0.9332389202857633,
+              "local_high_frequency_residual_std": 0.013003180164872766
+            },
+            "inputSha256": "b75b18581b8ff91c4d7cac0da413a09b1e52269cc0c551b7d72e4bcb72d7a47a"
+          },
+          {
+            "sampleId": "CSAFE_WP006E_iPhone11_1_07",
+            "score": 0.473369501380591,
+            "runtimeSeconds": 0.009804,
+            "features": {
+              "low_frequency_energy_fraction": 0.9395626059627634,
+              "mid_frequency_energy_fraction": 0.04838738111553179,
+              "high_frequency_energy_fraction": 0.012050012921704871,
+              "spectral_entropy": 0.44581640439239245,
+              "radial_log_slope": -2.75881072219066,
+              "axis_periodicity_fraction": 0.7577341416485568,
+              "local_high_frequency_residual_std": 0.007484540913902022
+            },
+            "inputSha256": "9fcbe17a7f68997934e1ebbe81c4c26765a3da3cf86346e5132fac0343a6215a"
+          },
+          {
+            "sampleId": "DDB_0109",
+            "score": 0.47851816443181117,
+            "runtimeSeconds": 0.011259,
+            "features": {
+              "low_frequency_energy_fraction": 0.9185099618031404,
+              "mid_frequency_energy_fraction": 0.05938393370092592,
+              "high_frequency_energy_fraction": 0.022106104495933702,
+              "spectral_entropy": 0.4302113479409849,
+              "radial_log_slope": -2.3801439153544517,
+              "axis_periodicity_fraction": 0.6719022087323375,
+              "local_high_frequency_residual_std": 0.036243443611963834
+            },
+            "inputSha256": "8bbab3af47d88bddba1fd1337dec3c5b313abec36920ddfbaaadc6fc4b8697a6"
+          },
+          {
+            "sampleId": "DDB_0218",
+            "score": 0.806939118964305,
+            "runtimeSeconds": 0.01252,
+            "features": {
+              "low_frequency_energy_fraction": 0.7623299203495167,
+              "mid_frequency_energy_fraction": 0.19981695079588155,
+              "high_frequency_energy_fraction": 0.037853128854601584,
+              "spectral_entropy": 0.5796519631776568,
+              "radial_log_slope": -3.385804718726059,
+              "axis_periodicity_fraction": 0.6369459809597732,
+              "local_high_frequency_residual_std": 0.05034659468799314
+            },
+            "inputSha256": "48fe9c054b1164fddd0597a4719f0302d021d4a4d141b48ff3091392d9aee736"
+          },
+          {
+            "sampleId": "PNGN_CHART_03",
+            "score": 0.5401220558922059,
+            "runtimeSeconds": 0.007937,
+            "features": {
+              "low_frequency_energy_fraction": 0.8828440434459487,
+              "mid_frequency_energy_fraction": 0.07903001891449768,
+              "high_frequency_energy_fraction": 0.0381259376395536,
+              "spectral_entropy": 0.43186510214571994,
+              "radial_log_slope": -2.3344638512400038,
+              "axis_periodicity_fraction": 0.8637929284023245,
+              "local_high_frequency_residual_std": 0.026507816993084785
+            },
+            "inputSha256": "3bad5c062800f31b59dd79cffafdce80a935b52124706d0408f06203e7ee9ff8"
+          },
+          {
+            "sampleId": "PNGN_CHART_05",
+            "score": 0.5574583545228118,
+            "runtimeSeconds": 0.00798,
+            "features": {
+              "low_frequency_energy_fraction": 0.8711315584147249,
+              "mid_frequency_energy_fraction": 0.0861255326166759,
+              "high_frequency_energy_fraction": 0.04274290896859948,
+              "spectral_entropy": 0.4282774690760672,
+              "radial_log_slope": -2.3096524674428425,
+              "axis_periodicity_fraction": 0.8664526095336637,
+              "local_high_frequency_residual_std": 0.025347404935181804
+            },
+            "inputSha256": "76a7c12fd035910126194237cfe7228defff79b53d90dffc299ba257d1b0d247"
+          }
+        ],
+        "count": 7,
+        "p50Seconds": 0.010681,
+        "p95Seconds": 0.024219099999999986,
+        "maxSeconds": 0.029233,
+        "minSeconds": 0.007937
+      },
+      "runtimeClassification": "FAST",
+      "status": "RUNTIME_FEASIBLE"
+    }
+  ],
+  "runtimeLockSha256": "ba8b2d04be17415c099e945cde8875d9f97a0cefe75687f242fc917a80044160",
+  "flux2ProviderCalls": 0,
+  "flux2Regeneration": false
+}
