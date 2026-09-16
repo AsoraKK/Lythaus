@@ -1,0 +1,771 @@
+{
+  "flux1InitialTrainingUse": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "forbiddenDenylistArtifact": "forbidden-generator-families.json",
+  "forbiddenDenylistSha256": "4d0f44de4c14d06f7b6f6aaf250502c701bd7b085c346d183d6944782ea65e32",
+  "gate": {
+    "decision": "MODERN_DATA_ACCESS_BLOCKED",
+    "eligibleInitialFamilyCount": 4,
+    "minimumConfirmationFamilies": 4,
+    "minimumDevelopmentFamilies": 8,
+    "minimumReserveFamilies": 2
+  },
+  "initialSelectionPerformedBeforeDetectorScores": true,
+  "postScoreDiagnosticExcluded": {
+    "count": 20,
+    "family": "FLUX.1-Krea-dev",
+    "manifestSha256": "ab470fd8db8cc11bee5dba788bf2e7d3a7d0e1f7fbc22aed565ceaebbce8dc46",
+    "reason": "selected after initial SAFE scores became visible; never used for fitting, thresholds, candidate selection, or claims",
+    "revision": "2350e0f664d849626df392cb93954b66019c18ee",
+    "source": "T2I-CoReBench-Images"
+  },
+  "records": [
+    {
+      "bytes": 1461010,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "77bd28975de823740b79e9a0a92f3ac9d50632c41c04c24644bb1016cfb9f90d",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_0401",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1531095,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "5ea4a8e21a429960e890e5918205c6c4dc71b5f71a630dd99cfb314e59a9b1a0",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_1000",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 933080,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "4741798a7741e9abe7fe6aecd47800a9a283a71ae82550caa6f68fa147e61065",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_1034",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1568597,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "6fe70cefa1e8eff4678c06334c9b13067a3cf1d6e3195b0cb70b0725ab649669",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_1081",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1029185,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "8f6b842aa904df6ac339ee6d9c1b6a25a656152c566a85b1a818716fc8ce6515",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_1206",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 687532,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "d1dc1e1d5afe5cbb21acc5c2cd01bc25484bff6680737686b9bb88defe8f8871",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_1685",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1250697,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "a973b6c93a77e7afedb265016a7e81d33866547d8c14653a0115ffc1fbb39733",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_1716",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1368263,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "81977b3b31bef6429903c79fba6e09ce3035b22af45c3b96ab95bb4a7ece95f0",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_1999",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1603550,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "69780bb0b39939b4c502ce595bce6c84e11aac9016175140dd9cbb4ca7a27a43",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_2129",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1454838,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "f78bb081f536595c38b09f00ee30b9339f3ef7981c3c3a001e83047e07e0b81c",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_2145",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1308173,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "6783eb341150efbc8cffc3404229454a1db644c9f58f71558c4a2302bb1d23a2",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_2968",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1362696,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "402a57d77e2bec7ad8e272a787b509d7ce2164f4fb5d703e89f10b07589a30b5",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_3048",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1165923,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "c6ebeb36e8b0868a35782b40f5234a5da044118d5800805c7bf6382cb9ae7e94",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_3131",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1494700,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "e1847e9773d7141874a6337dcb8f1ffafac33aab24fed1e723b7711ebfd98ae4",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_3592",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 984134,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "4e882c71a577687ab5eb1345bc9f3fce9ca8cc8dba92590ba4fd7b038cdc831e",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_3735",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1131240,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "017e6179adbe7acec39866f7e8cf761e687fd505d23200e5e22625ad0e0af577",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_3977",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1259852,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "410bc59c19c04186de1248a7351487587599c635c3f158ac1c53eaa0ae5909b1",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_4303",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1325916,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "80c6cccf5c78b8485ba9ca8a6fcb81c1f484170686371fc7e931d611f79f518b",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_4546",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1706063,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "bfe82e3eedc4b7a4dae046e2ff8eb9fdea674d07d1c5ef98e76b60a614490dc4",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_4738",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1457225,
+      "generatorFamily": "FLUX.1-schnell",
+      "mediaSha256": "3ef954b66be34e591d4930d8209e3a341de636b947ba5c4afe8e6d7550849492",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "FLUX.1-schnell__fake_4953",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1228216,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "b10c94ac14cf56c6d2bd95b0106d94601071f9085a0d456ee1f2220b8ec909d5",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_0072",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1607211,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "e989d0c6403fc9d396a86c8a751b2d1546dcec2bc58b2054b3f236973c813726",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_0091",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1537293,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "74fd4c12c0d8778beb924ec61995b8f81e9fd0468bb49025ba21e98282df4da8",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_0442",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1271959,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "9882686b7be795089e1a7dbc8d16b00d3e23b45ccc1cb15fdf2c0ea79d8204dc",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_0485",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1576210,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "1e3cf1e738452308f4d8b6312c86af0c2d7646f86597ae72fdd9cbba19f8d0e0",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_0555",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1404720,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "ae4f710e42061c7bb00e30eb7176351324a5e91d8be1b24e877f58c16b0a2261",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_0565",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1342879,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "512243ab367582940d1c83f8459d471386a670f8d0da03577fffdb9b6c95e131",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_0683",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1477773,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "012d20ceeef8de7e3d92536ec4142c0786d1817afc1b63ee4d79f0a6f9ac648b",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_0882",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1190533,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "f7ddd59dfecbcbb5363b6255f3eeb7167e40be8e1c6cf6d422b940a2cc9a9bdb",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_1122",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1403398,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "2be4c5220b5700a8b7d818fb12d1bbdfb3a2098a059cecca0d16bb00034aa8d3",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_1293",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1501833,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "735c6307b3c53ac601ce61b5527e2b7b5e97fc61002fa028cf0772bc6c1989c7",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_1933",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1900403,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "68f39d478c7e92f50d7d77f86a2eceedf5f42e0cf315d9d36d53c165351a586f",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_2119",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1515528,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "1f4cb4efd80a6d08291507406e48d6227daa416d1134a5b7f0ab75336e6bdcfe",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_2145",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 2085809,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "8a9f43ce5ec7ec00b861fc2bc67dda77c75db092e448da358ee95b934df9f971",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_2800",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1212014,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "c0d5a6b6dc0ef4f34542b99045ddb446a015b5574a629ef1cdd7eaf7e8df6924",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_2871",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 2146486,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "b396a034f45cd74ba9478f765c8093812262a46cc2741aee6fd04d7c4f0d7fbd",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_2985",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1084055,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "00641b07210ede69883f0e7608dac2977425c5daa98817332d19514693e9c252",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_3273",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1308442,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "56bba1e8b03f98e7b54942835dfeb993507ec686d0460b038e59665789d89cac",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_3293",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1493279,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "cffa1dc409934def58bd72f57f34de05af31f557b88884bdc38dfe6233d1e9dc",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_3423",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1263242,
+      "generatorFamily": "PixArt-Sigma-XL-2-1024-MS",
+      "mediaSha256": "d68088dde6fae7c0d5a082804086414237b377767f9277125758643079cb4f1f",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "PixArt-Sigma-XL-2-1024-MS__fake_4274",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 2088335,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "e15bdefb62f46f0d539978b6ba725aadfcb98dd8434d7d16fe11489e96462486",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_0031",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1380185,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "700919e4b90699b550cabbe1c20def466148c0c6155a4cca48a84eaa83af3b0f",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_0053",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1051429,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "7f67b2510ced3eee0f85c64daf08cff7a779946ac365c048507aa0e519b2d1e6",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_0314",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1196565,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "734b953642dc562508281b4b9eca494bf8542202bf3a42bb4ebbe142ccd92ea4",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_0954",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1850072,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "eba3d8054f415dffcafe784d0572ab22bf43ef58706acffe4bff230a92c31eb7",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_0999",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1176047,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "805c834eac84ec99b63a4bbfaf8cb7b4aee314b3f6dabea32e187657e3f17e9d",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_1018",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1039723,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "2b3846cd86a83b953bb5bf7f57b7fe33474b8b02219e5376ccd911033b239f0f",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_1175",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1962888,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "9e2cb2df8c4c18482e257b80f346d22dc7c4d29613365889909c8472ee0e4297",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_1408",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1393669,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "5c18abb840950b75f0244aeb1369ce4111f412ace4dc1ecbc20a2a81f9331910",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_1845",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 925960,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "275c4c18049366bdba6f4987b98ebc99afc1c4fc516e4e45d77dca111d80e712",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_2271",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1339635,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "97a4122c7d3211ffd0f4bd92643a7de609c479a02e4ebf5b6a617e80a30c8d9b",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_2660",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1205161,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "adb8bc729f4119dc2822101cf077c9299de9b53215c4bf523eab76792f2abb6a",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_2664",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1879975,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "5450d81fc77a0f15d4212980187fd1c66cff632a54591b836e9b7ba71d649462",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_2682",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1545951,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "759184caa5599a12444e47c99d5127e719c4ae78a76dd353230c5cce46972e09",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_2751",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1817999,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "06805cc3e763c8be016a969590c4697650687dd445ec96bee081869d53c830cf",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_2922",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 2272603,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "3769a6b192c2ceb0a823a642102cf5df2d275d5a0788e31cf9b77dac1db7bd86",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_3426",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 2684111,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "d4d22ee02e692229d691694226ef096a0e8e394a9df101da73446c183e6b63a2",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_3925",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1525367,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "c726eac6600ffb28eec49d1754249f293ae61c95ee98d999dc38d0da7ebc9bcd",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_3949",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1906575,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "364d8761ce7f66cabb73c928eb2214251f474562cded2eb69588482fc64dee68",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_4202",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1683529,
+      "generatorFamily": "stable-diffusion-3-medium-diffusers",
+      "mediaSha256": "341aa3f615a2ebc3ba48b92c3c0308b0f55d2c0be2a9d0fc95fe43da6cf76dc5",
+      "role": "MODERN_SYNTH_DEV",
+      "sampleId": "stable-diffusion-3-medium-diffusers__fake_4654",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+sampleId))",
+      "sourceDataset": "DiTFake"
+    },
+    {
+      "bytes": 1875865,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "23fe87e0158b57c9edf446de83e3243479de4184801915ed3e4688e0f7899ee0",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_blue_book",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1220736,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "783cefd07ed24c4414d2c01be459b0f0cee8a873e405d6906e8518c31c716a8b",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_blue_tv",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1594207,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "85d51f5d32513bdfd42f13404e32f82577541184ae6c47a4237e6caf452e6eaf",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_bowl_and_a_pizza",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1607651,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "bb8927fe8620ab749e82bd8ca4a33021553421e0c79aa7cfd97d8094558249fb",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_cow_left_of_a_stop_sign",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1476868,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "10bab6fb6a16764832256c769b9daa4b2cabe0ffe34158c713eeed597cdf94ba",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_hair_drier_and_a_cake",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 2011199,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "f652425139d85db4ca1f20cae66f875ba15f67c0eb4c111013ddbef178e70120",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_hot_dog_right_of_a_skateboard",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1983142,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "d85c0ca38b00c14673202618f9533b0f854b8e82d9bd8c048e174c0cc066396b",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_purple_hair_drier",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1432885,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "c8e8e195b8030833d7ffdb94a8ae265756c8429fca52924f48101a43b832727d",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_purple_suitcase",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1899075,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "5f1e09070df93b3e8c1d35eb547e9175333671f5dd7e70fe5f303996b0fb03d8",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_refrigerator",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1551042,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "ededb6a00980997665c9764ed556d3e7609859d2441f98e9722dfd9bdf87f085",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_skateboard_and_a_cake",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1604876,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "79baa2deb63786d7707b861209933ca508d45a10c872b1ac447d2f0c02f4a2e8",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_stop_sign_and_a_fork",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1521238,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "a90bb6d6c0a9034d355d4a1ad1e564c56bf82c42270a661f09338752d215332e",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_suitcase_left_of_a_banana",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1381474,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "3a5b6ea508a10f8852dc955e2a243e5a9d5ea5a480385353674453b55511925e",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_train_right_of_a_dining_table",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 2092252,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "d92aee0a71ade84b4af04e13de335b763c0060f64eaff15b0d0c128ae5b7baf1",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_yellow_bowl_and_a_white_baseball_glove",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1507166,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "617798e5444a09c5495e13caae57071d1cd89312b562d0d3170b6a61a19ecea6",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_zebra_and_a_bed",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 2587474,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "3aee881190436f6e179ef720f793b23f11bc0bfde865bc7cb6e00f5cb4162bec",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_a_zebra_below_a_broccoli",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 2748706,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "507c3358b4228a93e597aeaec0bd72c2b57c85c797188dcc3435aa3460110fe5",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_an_orange_motorcycle_and_a_pink_donut",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 1478591,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "57b9f1ff0ef9fd92d40f83f7e0d737f9fc0876e556584095d51a7b5ce91160b0",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_an_orange_orange",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 2342143,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "fb7474eb808514e0f32e70285f5036fc09a5e3bb1c61486b27843a6c8381beee",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_an_oven_and_a_bed",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    },
+    {
+      "bytes": 2431663,
+      "generatorFamily": "GPT-4o",
+      "mediaSha256": "4187721613e42edbe26c566525b37c43565593650d3fca7c3424dfe5f157cffc",
+      "role": "MODERN_SYNTH_CONFIRM",
+      "sampleId": "GPT-4o__a_photo_of_three_persons",
+      "selectionKey": "SHA256(UTF8(\"WP007G\"+generatorFamily+archiveMemberName))",
+      "sourceDataset": "GPT-ImgEval"
+    }
+  ],
+  "roles": {
+    "MODERN_SYNTH_CONFIRM": {
+      "count": 20,
+      "families": [
+        "GPT-4o"
+      ]
+    },
+    "MODERN_SYNTH_DEV": {
+      "count": 60,
+      "families": [
+        "FLUX.1-schnell",
+        "PixArt-Sigma-XL-2-1024-MS",
+        "stable-diffusion-3-medium-diffusers"
+      ]
+    },
+    "MODERN_SYNTH_RESERVE": {
+      "count": 0,
+      "families": []
+    }
+  },
+  "schemaVersion": "lythaus-wp007g-modern-generator-data-freeze-v1",
+  "scoreBlind": true,
+  "sourceDatasets": {
+    "DiTFake": "66105473704c6ebcc03cb971322bb95f04c7bdc4",
+    "GPT-ImgEval": "d70b2e4bac66d62d830b7083f9e12cad423f658a"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "lythaus-wp007g-modern-corpus-rights-audit-v1",
+  "auditedAt": "2026-09-16T00:00:00.000Z",
+  "selectionPolicy": "No modern media was used until dataset license, revision, and family metadata were inspected; FLUX.2 family names were metadata-denied before any image access.",
+  "sources": [
+    {
+      "source": "T2I-CoReBench-Images",
+      "url": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images",
+      "revision": "2350e0f664d849626df392cb93954b66019c18ee",
+      "datasetLicense": "Apache-2.0",
+      "catalog": { "generatorFamilies": 40, "documentedImages": 172800, "documentedApproximateBytes": "269GB" },
+      "accessEvidence": { "datasetServerRows": 3700, "indexedFamilies": ["FLUX.1-Krea-dev"], "fullSelectiveAccess": "BLOCKED_PARTIAL_INDEX_AND_LARGE_TAR_ARCHIVES" },
+      "commercialOutputRights": "NOT_ESTABLISHED_BY_DATASET_CARD",
+      "initialRole": "NOT_USED_FOR_INITIAL_CALIBRATOR_BEYOND_THE_EXPLICITLY_IDENTIFIED_PARTIAL-DATASET DIAGNOSTIC",
+      "status": "SELECTIVE_ACCESS_BLOCKED"
+    },
+    {
+      "source": "DiTFake",
+      "url": "https://huggingface.co/datasets/lioooox/DiTFake",
+      "revision": "66105473704c6ebcc03cb971322bb95f04c7bdc4",
+      "datasetLicense": "Apache-2.0",
+      "documentedComposition": "FLUX.1-schnell, PixArt-Sigma-XL-2-1024-MS, stable-diffusion-3-medium-diffusers plus COCO real controls",
+      "selectedFamilies": ["FLUX.1-schnell", "PixArt-Sigma-XL-2-1024-MS", "stable-diffusion-3-medium-diffusers"],
+      "selection": "20 per family, first by SHA256(UTF8(WP007G + generatorFamily + sampleId))",
+      "outputTrainingEligibility": "RESEARCH_ELIGIBLE_UNDER_DATASET_LICENSE; NO_NEW_MODEL_TRAINING_PERFORMED",
+      "status": "RESEARCH_ELIGIBLE"
+    },
+    {
+      "source": "GPT-ImgEval GenEval",
+      "url": "https://huggingface.co/datasets/Yejy53/GPT-ImgEval",
+      "revision": "d70b2e4bac66d62d830b7083f9e12cad423f658a",
+      "datasetLicense": "MIT",
+      "archive": { "filename": "GenEval.zip", "bytes": 1046369783, "sha256": "58b922df8f3bd84942caf6380d3bf7f0655a6ee8c4870694c4f78bfe7aa7fef6" },
+      "selectedFamily": "GPT-4o",
+      "selection": "20 of 554 archive members by SHA256(UTF8(WP007G + generatorFamily + archiveMemberName))",
+      "outputTrainingEligibility": "RESEARCH_ELIGIBLE_UNDER_DATASET_LICENSE; NO_NEW_MODEL_TRAINING_PERFORMED",
+      "status": "RESEARCH_ELIGIBLE"
+    }
+  ],
+  "excludedSources": [
+    { "source": "FLUX.2-labelled T2I-CoReBench families", "reason": "Forbidden denylist; metadata exclusion only; no pixels downloaded." },
+    { "source": "WP007F owner unknown-generator synthetics", "reason": "OWNER_SUPPLIED_UNKNOWN / trainingEligibility REVIEW_REQUIRED." },
+    { "source": "Consumed FLUX.1", "reason": "Post-hoc diagnostic only; excluded from initial calibrator fitting." }
+  ],
+  "fallbackResolution": {
+    "eligibleInitialFamilies": 4,
+    "minimumRequiredDevelopmentFamilies": 8,
+    "minimumRequiredConfirmationFamilies": 4,
+    "minimumRequiredReserveFamilies": 2,
+    "decision": "MODERN_DATA_ACCESS_BLOCKED"
+  }
+}

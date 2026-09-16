@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "wp007g.calibrator-selection.v1",
+  "status": "NOT_SELECTED",
+  "selectedCalibrator": null,
+  "candidates": {
+    "G1_SIGNED_LINEAR_V0": "NOT_RUN",
+    "G2_TWO_TAIL_GROUPED_V0": "NOT_RUN"
+  },
+  "selectionRule": "Lower negative FPR, then higher macro held-out-generator recall, fewer zero-recall families, lower subgroup FPR, stable coefficients, then simpler interpretation.",
+  "blockingDecision": "MODERN_DATA_ACCESS_BLOCKED",
+  "whyNoPostHocRescue": "Post-score Krea data and consumed FLUX.1 diagnostic data were excluded from initial fitting and selection; FLUX.2 remained sealed.",
+  "calibrationFreezeCreated": false,
+  "flux2PixelAccess": false
+}

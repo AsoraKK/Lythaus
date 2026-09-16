@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "wp007g.ufd-inversion-analysis.v1",
+  "status": "UNRESOLVED_NO_WP007G_NEGATIVE_CALIBRATION",
+  "hypothesis": "H_UFD_LOWTAIL",
+  "question": "Do unusually low UFD scores identify modern synthetic images across multiple generator families while remaining unusual among real controls?",
+  "result": "NOT_TESTABLE_UNDER_FROZEN_GATES",
+  "reason": "The required NEGATIVE_CALIBRATION_G role could not be formed from the available independent negative families. Modern scores are descriptive only; no empirical negative CDF, tail threshold, fold coefficient, or FPR was computed.",
+  "modernGroupMedians": {
+    "FLUX.1-schnell": 0.0008054869,
+    "GPT-4o": 0.0003586197,
+    "PixArt-Sigma-XL-2-1024-MS": 0.0012032505,
+    "stable-diffusion-3-medium-diffusers": 0.0039650796
+  },
+  "crossGeneratorConsistency": "DESCRIPTIVE_ONLY",
+  "promotionDecision": "KEEP_SHADOW_ONLY",
+  "rawModernScoresSha256": "5e6036d7183c2fedad4d972c55957fec45f4f851df90132f60fb208186195b17",
+  "flux2PixelAccess": false
+}

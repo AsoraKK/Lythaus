@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "wp007g.modern-reserve-result.v1",
+  "status": "NOT_CREATED_MODERN_DATA_ACCESS_BLOCKED",
+  "requiredRole": "MODERN_SYNTH_RESERVE",
+  "familyCount": 0,
+  "imageCount": 0,
+  "reason": "No independent reserve generator families could be materialised within the approved public/free, FLUX.2-excluding access boundary.",
+  "thresholdChanged": false,
+  "flux2PixelAccess": false
+}

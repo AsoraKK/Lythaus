@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "lythaus-wp007g-safe-rights-audit-v1",
+  "workPackage": "WP007G",
+  "auditedAt": "2026-09-16T00:00:00.000Z",
+  "upstreamRepository": "https://github.com/Ouxiang-Li/SAFE",
+  "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+  "repositoryLicense": "Apache-2.0",
+  "repositoryLicenseSha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+  "checkpoint": {
+    "source": "official repository checkpoint/checkpoint-best.pth",
+    "filename": "checkpoint-best.pth",
+    "bytes": 5840638,
+    "sha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "architecture": "official SAFE resnet50(num_classes=2) with DWT preprocessing",
+    "loadState": "key=model; strict load 0 missing, 0 unexpected"
+  },
+  "officialEvidence": {
+    "evaluationClaims": ["FLUX.1-schnell", "PixArt", "SD3", "GPT-generated images", "T2I-CoReBench"],
+    "inferencePath": "official single-image evaluation preprocessing; CenterCrop(256,256), ToTensor; model DWT preprocessing",
+    "scoreDirection": "HIGHER_SCORE_SYNTHETIC"
+  },
+  "dependencyAudit": {
+    "pytorch_wavelets": { "version": "1.3.0", "use": "official DWT preprocessing" },
+    "kornia": { "version": "0.7.2", "use": "official repository import path" },
+    "timm": { "version": "0.6.12", "use": "official model construction dependency" },
+    "pywavelets": { "version": "1.10.0", "use": "official DWT dependency" },
+    "licenseEvidence": "Versions and package metadata are frozen in runtime-lock.json; no training data or weights were acquired from these packages."
+  },
+  "rightsDecision": {
+    "researchEvaluation": "SAFE_RESEARCH_ELIGIBLE",
+    "commercialInferenceDeployment": "SAFE_DEPLOYMENT_REVIEW_REQUIRED",
+    "checkpointRedistribution": "REVIEW_REQUIRED",
+    "reason": "The repository license and checkpoint provenance support bounded research evaluation. The checkpoint's downstream commercial terms, underlying pretrained backbone terms, and training-data lineage do not establish unrestricted product deployment rights.",
+    "newRegistrationRequired": false
+  },
+  "holdoutIntegrity": {
+    "flux1Status": "CONSUMED_MODERN_GENERATOR_DIAGNOSTIC",
+    "flux2Status": "SEALED_FUTURE_RESERVE",
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0
+  }
+}

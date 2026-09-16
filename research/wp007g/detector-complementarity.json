@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "wp007g.detector-complementarity.v1",
+  "status": "NOT_RUN_NO_INITIAL_CALIBRATOR",
+  "reason": "Complementarity, joint errors, and unique true positives require a frozen modern calibrator and the predeclared negative roles. Those roles were unavailable because modern family access stopped at four eligible families.",
+  "detectors": ["SPAI_C512", "RINE", "SAFE", "UNIVERSAL_FAKE_DETECT"],
+  "correlationGroups": {
+    "SPAI_SPECTRAL": ["SPAI_C512"],
+    "CLIP_GENERATIVE": ["RINE", "UNIVERSAL_FAKE_DETECT"],
+    "SAFE_TRANSFORMATION_RESNET": ["SAFE"]
+  },
+  "noDoubleCountingRule": "RINE and UNIVERSAL_FAKE_DETECT share CLIP_GENERATIVE and cannot count as two independent groups.",
+  "rawRunArtifacts": {
+    "SPAI_C512": "d1f79dc89592271ccf5597be5258eed9fcebfd9e009c92698d73042bb264f790",
+    "RINE": "5feacc4957b87853a4ffca7f83458ca07a7477bf1c3e1c34dba588afdf17fb30",
+    "SAFE": "4fbb8b444f6a9bebe0ceba95e212cd2ad1834ef9dfbb4596854cdb763c9e2af9",
+    "UNIVERSAL_FAKE_DETECT": "5e6036d7183c2fedad4d972c55957fec45f4f851df90132f60fb208186195b17"
+  },
+  "flux2PixelAccess": false
+}

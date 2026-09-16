@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "wp007g.flux1-posthoc-diagnostic.v1",
+  "status": "NOT_RUN_NO_INITIAL_CALIBRATOR",
+  "flux1Status": "CONSUMED_MODERN_GENERATOR_DIAGNOSTIC",
+  "newWp007gPixelAccess": false,
+  "reason": "WP007G could not earn a frozen modern calibrator because the minimum modern-family roles and negative roles were unavailable. No second FLUX.1 pass was attempted.",
+  "historicalWp007fDiagnostic": {
+    "SPAI_C512": "11/40",
+    "RINE": "1/40",
+    "UNIVERSAL_FAKE_DETECT": "1/40",
+    "hardFusion": "0/40"
+  },
+  "postHocKreaExcluded": true,
+  "flux2ProviderCalls": 0,
+  "flux2PixelAccess": false
+}

@@ -1,5 +1,6 @@
 import { Container, getContainer } from '@cloudflare/containers';
 import { AUTHENTICITY_ALPHA_MODES, DEFAULT_AUTHENTICITY_ALPHA_MODE, EVIDENCE_COMPILER_VERSION, type AuthenticityAlphaMode } from '@lythaus/authenticity/alpha';
+import { DYNAMIC_EVIDENCE_COMPILER_VERSION } from '@lythaus/authenticity/wp007g';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -45,7 +46,7 @@ export default {
     const url = new URL(request.url);
     let mode: AuthenticityAlphaMode;
     try { mode = alphaMode(env); } catch { return json({ status: 'misconfigured' }, 500); }
-    if (url.pathname === '/health') return json({ status: 'ok', mode, compilerVersion: EVIDENCE_COMPILER_VERSION, registryVersion: env.DETECTOR_REGISTRY_VERSION ?? null, enforcementAuthority: 'NONE' });
+    if (url.pathname === '/health') return json({ status: 'ok', mode, compilerVersion: DYNAMIC_EVIDENCE_COMPILER_VERSION, legacyCompilerVersion: EVIDENCE_COMPILER_VERSION, registryVersion: env.DETECTOR_REGISTRY_VERSION ?? null, enforcementAuthority: 'NONE' });
     if (url.pathname !== '/score' || request.method !== 'POST') return json({ error: 'not_found' }, 404);
     if (mode === 'OFF') return json({ status: 'disabled', analysisStatus: 'DISABLED', label: null }, 200);
     if (!internalAuthorized(request, env)) return json({ error: 'internal_authentication_required' }, 401);
