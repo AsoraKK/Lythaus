@@ -1,0 +1,206 @@
+{
+  "flux1Diagnostic": {
+    "cloudflareSet": "already-consumed-WP007F-FLUX1-only",
+    "flux2AccessAllowed": false,
+    "ladder": [
+      "ORIGINAL",
+      "DIMENSION_MATCH_ONLY",
+      "RESIZE_MATCH_ONLY",
+      "FORMAT_MATCH_ONLY",
+      "QUALITY_RECOMPRESSION_MATCH_ONLY",
+      "CHROMA_SUBSAMPLING_MATCH_ONLY",
+      "METADATA_STRIP_ONLY",
+      "COMBINED_MEASURABLE_APPROXIMATION"
+    ],
+    "productionPreprocessingChangeAllowed": false,
+    "publicFamilies": [
+      "FLUX.1-dev",
+      "FLUX.1-schnell"
+    ],
+    "selection": "Use score-blind frozen R1 public sample membership; no SAFE-score selection.",
+    "status": "POSTHOC_ONLY"
+  },
+  "hypotheses": [
+    "SAFE retains useful high-authority synthetic evidence on independent modern generator families at its already frozen operating point.",
+    "SAFE applicability decreases measurably under common recompression, resampling, screenshot and blur regimes without turning input quality into authenticity evidence.",
+    "The public-to-Cloudflare FLUX.1 score gap is partly explained by measurable encoding or input-regime factors, or remains a documented domain-risk if it is not.",
+    "SPAI, RINE and UFD provide descriptive error-diversity evidence but cannot change SAFE qualification or thresholds."
+  ],
+  "modernGeneratorRoles": {
+    "excludedFamilies": [
+      "BAGEL",
+      "BLIP3o-4B",
+      "FLUX.1-dev",
+      "FLUX.1-schnell",
+      "HiDream-I1",
+      "Janus-Pro-1B",
+      "PixArt-Sigma",
+      "Qwen-Image",
+      "GPT-4o",
+      "HunyuanImage-3.0",
+      "SD-3.5-Medium",
+      "Z-Image",
+      "Gemini-2.5-Flash",
+      "GPT-Image-1.5",
+      "FLUX.2-dev",
+      "FLUX.2-klein-4B",
+      "FLUX.2-klein-9B"
+    ],
+    "futureReserve": {
+      "families": [
+        {
+          "family": "SD-3-Medium",
+          "historicalRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114"
+        },
+        {
+          "family": "Seedream-4.5",
+          "historicalRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a"
+        }
+      ],
+      "openedBeforeFinalGate": false,
+      "samplesPerFamily": 20
+    },
+    "qualificationConfirm": {
+      "families": [
+        {
+          "family": "FLUX.1-Krea-dev",
+          "historicalRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df"
+        },
+        {
+          "family": "BLIP3o-8B",
+          "historicalRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b"
+        },
+        {
+          "family": "Infinity-8B",
+          "historicalRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c"
+        },
+        {
+          "family": "Janus-Pro-7B",
+          "historicalRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8"
+        },
+        {
+          "family": "LongCat-Image",
+          "historicalRevision": "db66a763f1247697755fe17329937d1095dcaad0"
+        },
+        {
+          "family": "OmniGen2-7B",
+          "historicalRevision": "e2b453158a05e69387058e65192935ea7249c049"
+        },
+        {
+          "family": "PixArt-Alpha",
+          "historicalRevision": "15e28194bec5768aa23603a56afe27eb5c560f04"
+        },
+        {
+          "family": "Qwen-Image-2512",
+          "historicalRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357"
+        }
+      ],
+      "samplesPerFamily": 20,
+      "selection": "Enumerate paths at pinned historical revision; sort SHA256(WP007H + family + relativePath); take first 20; no pixel or SAFE-score selection."
+    },
+    "qualificationDev": {
+      "families": [],
+      "reason": "SAFE operating point is frozen; WP007H is independent qualification, not threshold design."
+    }
+  },
+  "negativeRoles": {
+    "confirmation": {
+      "cameraDigitalBalance": "report actual composition; no duplication",
+      "minimumUsefulTotal": 100,
+      "scoreBlind": true,
+      "target": "all eligible unused source families after exclusion of every prior WP006-WP007 role and final sealed family"
+    },
+    "reserve": {
+      "scoreBlind": true,
+      "target": "only if unused source families remain after confirmation allocation; unopened until confirmation is complete"
+    },
+    "rights": "CSAFE CC BY 4.0 attribution-bound internal research; controlled digital only where manifest grants research eligibility; no final sealed controls"
+  },
+  "objective": "Qualify frozen SAFE as a primary EF3 specialist within measurable input regimes and investigate the public-to-Cloudflare FLUX.1 domain shift without fitting a new ensemble.",
+  "parentSha": "fc9c1a65528a39da008fed12c1a601e32c226e09",
+  "planHashing": {
+    "canonicalization": "UTF-8 JSON, sorted keys, compact separators, with planSha256 omitted",
+    "selfHashWrittenBeforeScore": true
+  },
+  "planSha256": "e085494e28c71809c7515d18105e485bb54853acaef4c3a4d63c930f162eee00",
+  "qualificationGates": {
+    "catastrophicSubtypeFprStopThreshold": 0.1,
+    "fprTargetDemonstrationRule": "Do not claim a <=1% population bound unless sample size and interval support it; otherwise report FPR_TARGET_NOT_YET_DEMONSTRATED.",
+    "gateFreezeBeforeNewScore": true,
+    "macroFamilyRecallMinimum": 0.6,
+    "maximumModelFailureRate": 0.02,
+    "minimumFrozenSyntheticSamples": 120,
+    "minimumIndependentGeneratorFamilies": 6,
+    "observedNegativeFprMaximumForBoundedQualification": 0.05,
+    "runtimePreferredP95Seconds": 5,
+    "runtimeResearchMaximumP95Seconds": 20,
+    "syntheticRecallAtFrozenThresholdMinimum": 0.7
+  },
+  "safeFrozenConfiguration": {
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "detectorId": "SAFE",
+    "modelWeightsChangeAllowed": false,
+    "preprocessing": "RGB decode; torchvision CenterCrop(256,256); ToTensor; official SAFE DWT/model path; class-1 softmax",
+    "preprocessingChangeAllowed": false,
+    "scoreDirection": "HIGHER_IS_MORE_SYNTHETIC_LIKE",
+    "threads": 8,
+    "threshold": 0.5864923000335693,
+    "thresholdSource": "WP007G-R1 NEGATIVE_CALIBRATION_G only; frozen before WP007H curation",
+    "upstreamSha": "4e998724651b227def64f5be0cd60c0aa1552c35"
+  },
+  "schemaVersion": "lythaus-wp007h-experiment-plan-v1",
+  "scientificBoundary": {
+    "flux1": "CONSUMED_MODERN_GENERATOR_POSTHOC_DIAGNOSTIC_ONLY",
+    "flux2": {
+      "freezeSha256": "56ae0bd15b8bc21d77b28c9e6faea8149440aab8b9d101db523a43aedb98e054",
+      "pixelAccess": false,
+      "providerCalls": 0,
+      "status": "SEALED_FUTURE_RESERVE"
+    },
+    "noFineTuning": true,
+    "noNewMetaCalibrator": true,
+    "noProductionRouting": true,
+    "noPublicLabelChange": true
+  },
+  "scoreBlinding": {
+    "flux1NotUsedForFitting": true,
+    "flux2NeverAccessed": true,
+    "membershipFrozenBeforeSafeScoring": true,
+    "negativeCurationBeforeSafeScoring": true,
+    "reserveNotOpenedBeforeConfirmation": true
+  },
+  "shadowSupporters": {
+    "canChangeSafeQualification": false,
+    "canChangeSafeThreshold": false,
+    "detectors": [
+      "SPAI_C512",
+      "RINE",
+      "UFD"
+    ],
+    "purpose": "Descriptive error-diversity and future router evidence only.",
+    "roles": {
+      "RINE": "SHADOW_SUPPORTING_LEARNED_DETECTOR",
+      "SPAI_C512": "SHADOW_SECONDARY_SPECTRAL_SPECIALIST",
+      "UFD": "SHADOW_DIAGNOSTIC"
+    }
+  },
+  "transformations": {
+    "parametersFrozenBeforeScoring": true,
+    "purpose": "Measure SAFE applicability and evidence movement; transformation quality is not authenticity evidence.",
+    "singleFactorOnly": true,
+    "types": [
+      "ORIGINAL",
+      "JPEG95",
+      "JPEG85",
+      "JPEG75",
+      "RESIZE75",
+      "RESIZE50",
+      "SCREENSHOT_STYLE_RESAMPLING",
+      "METADATA_STRIP",
+      "MILD_CROP",
+      "MILD_BLUR",
+      "MILD_SHARPEN"
+    ]
+  },
+  "workPackage": "WP007H"
+}

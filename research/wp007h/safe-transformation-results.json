@@ -1,0 +1,938 @@
+{
+  "classification": "FRAGILE",
+  "classificationRule": {
+    "FRAGILE": "Any transformation has synthetic recall retention <0.70 at the frozen SAFE threshold or negative FPR increase >0.05 versus the same selected originals.",
+    "MIXED": "Otherwise any transformation has synthetic recall retention <0.90 or negative FPR increase >0.02.",
+    "ROBUST": "All measured transformations satisfy the MIXED bounds."
+  },
+  "detectorId": "SAFE",
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "noThresholdRetuning": true,
+  "sampleCount": 80,
+  "schemaVersion": "lythaus-wp007h-safe-transformation-results-v1",
+  "threshold": 0.5864923000335693,
+  "transformationCount": 800,
+  "transforms": {
+    "JPEG75": {
+      "applicability": "LOW",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 43,
+        "n": 80,
+        "rate": 0.5375,
+        "wilson95": [
+          0.42904357591268794,
+          0.6425200643721475
+        ]
+      },
+      "digitalFpr": {
+        "count": 3,
+        "n": 20,
+        "rate": 0.15,
+        "wilson95": [
+          0.052368745896216595,
+          0.36041886474075696
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 3,
+        "n": 40,
+        "rate": 0.075,
+        "wilson95": [
+          0.025836025774588198,
+          0.19864233524310543
+        ]
+      },
+      "negativeFprDelta": 0.075,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.8868446117267013,
+        "median": -0.3466557711362839
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.06419383827596903,
+        "median": 0.001128166913986206
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.07161372900009155,
+        "median": -0.8873358424752951
+      },
+      "severeCollapseCount": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "syntheticRecallRetention": 0.0
+    },
+    "JPEG85": {
+      "applicability": "MODERATE",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 40,
+        "n": 80,
+        "rate": 0.5,
+        "wilson95": [
+          0.3929741508611972,
+          0.6070258491388028
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "negativeFprDelta": 0.0,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.8941550976596773,
+        "median": -0.33737917244434357
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.02805550815537572,
+        "median": 0.00036913808435201645
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.04557524994015694,
+        "median": -0.8946519009768963
+      },
+      "severeCollapseCount": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "syntheticRecallRetention": 0.0
+    },
+    "JPEG95": {
+      "applicability": "MODERATE",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 42,
+        "n": 80,
+        "rate": 0.525,
+        "wilson95": [
+          0.41695642649729936,
+          0.6307526670259243
+        ]
+      },
+      "digitalFpr": {
+        "count": 3,
+        "n": 20,
+        "rate": 0.15,
+        "wilson95": [
+          0.052368745896216595,
+          0.36041886474075696
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 3,
+        "n": 40,
+        "rate": 0.075,
+        "wilson95": [
+          0.025836025774588198,
+          0.19864233524310543
+        ]
+      },
+      "negativeFprDelta": 0.075,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.8822361747734249,
+        "median": -0.14194907248020172
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.021538376808166504,
+        "median": -0.00014338921755552292
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.05873447936028242,
+        "median": -0.8822235111147165
+      },
+      "severeCollapseCount": {
+        "count": 39,
+        "n": 40,
+        "rate": 0.975,
+        "wilson95": [
+          0.8711863103652591,
+          0.9955731684973186
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 1,
+        "n": 40,
+        "rate": 0.025,
+        "wilson95": [
+          0.0044268315026814095,
+          0.1288136896347409
+        ]
+      },
+      "syntheticRecallRetention": 0.025
+    },
+    "METADATA_STRIP": {
+      "applicability": "HIGH",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 0,
+        "n": 80,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.0458181295355271
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "negativeFprDelta": 0.0,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.0,
+        "median": 0.0
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.0,
+        "median": 0.0
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.0,
+        "median": 0.0
+      },
+      "severeCollapseCount": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "syntheticRecallRetention": 1.0
+    },
+    "MILD_BLUR": {
+      "applicability": "MODERATE",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 3,
+        "n": 80,
+        "rate": 0.0375,
+        "wilson95": [
+          0.012834568919911402,
+          0.10454720090045115
+        ]
+      },
+      "digitalFpr": {
+        "count": 3,
+        "n": 20,
+        "rate": 0.15,
+        "wilson95": [
+          0.052368745896216595,
+          0.36041886474075696
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 3,
+        "n": 40,
+        "rate": 0.075,
+        "wilson95": [
+          0.025836025774588198,
+          0.19864233524310543
+        ]
+      },
+      "negativeFprDelta": 0.075,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.022735487204045057,
+        "median": 0.0039541395381093025
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.027896899729967117,
+        "median": 0.0039541395381093025
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.025669187307357788,
+        "median": 0.0034857988357543945
+      },
+      "severeCollapseCount": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "syntheticRecallRetention": 1.0
+    },
+    "MILD_CROP": {
+      "applicability": "MODERATE",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 2,
+        "n": 80,
+        "rate": 0.025,
+        "wilson95": [
+          0.006882893202970648,
+          0.0866443298557801
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "negativeFprDelta": 0.0,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.028894230723381042,
+        "median": 0.005137210711836815
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.04329492198303342,
+        "median": 0.008610064163804054
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.04230546951293945,
+        "median": -0.0010642409324645996
+      },
+      "severeCollapseCount": {
+        "count": 2,
+        "n": 40,
+        "rate": 0.05,
+        "wilson95": [
+          0.013820667386148344,
+          0.16503877369140962
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 38,
+        "n": 40,
+        "rate": 0.95,
+        "wilson95": [
+          0.8349612263085903,
+          0.9861793326138516
+        ]
+      },
+      "syntheticRecallRetention": 0.95
+    },
+    "MILD_SHARPEN": {
+      "applicability": "MODERATE",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 13,
+        "n": 80,
+        "rate": 0.1625,
+        "wilson95": [
+          0.09749819402950367,
+          0.2584290434069771
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "negativeFprDelta": 0.0,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.09432626469060779,
+        "median": -0.0051836371421813965
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.02218937873840332,
+        "median": 0.004292294383049011
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.48743250221014023,
+        "median": -0.08891406655311584
+      },
+      "severeCollapseCount": {
+        "count": 13,
+        "n": 40,
+        "rate": 0.325,
+        "wilson95": [
+          0.200845022317827,
+          0.47982253810122333
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 27,
+        "n": 40,
+        "rate": 0.675,
+        "wilson95": [
+          0.5201774618987768,
+          0.799154977682173
+        ]
+      },
+      "syntheticRecallRetention": 0.675
+    },
+    "RESIZE50": {
+      "applicability": "LOW",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 6,
+        "n": 80,
+        "rate": 0.075,
+        "wilson95": [
+          0.03482524929300514,
+          0.15412016081219287
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "negativeFprDelta": 0.0,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.08515019761398435,
+        "median": -0.005245697684586048
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.03493864880874753,
+        "median": -0.0015429919585585594
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.14631451666355133,
+        "median": -0.013921201229095459
+      },
+      "severeCollapseCount": {
+        "count": 6,
+        "n": 40,
+        "rate": 0.15,
+        "wilson95": [
+          0.07061187717320358,
+          0.2907232436648971
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 34,
+        "n": 40,
+        "rate": 0.85,
+        "wilson95": [
+          0.709276756335103,
+          0.9293881228267964
+        ]
+      },
+      "syntheticRecallRetention": 0.85
+    },
+    "RESIZE75": {
+      "applicability": "MODERATE",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 0,
+        "n": 80,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.0458181295355271
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "negativeFprDelta": 0.0,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.034249548334628344,
+        "median": -4.5785680413246155e-05
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.036531584337353706,
+        "median": 0.001274028792977333
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.03748391568660736,
+        "median": -0.0012215375900268555
+      },
+      "severeCollapseCount": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "syntheticRecallRetention": 1.0
+    },
+    "SCREENSHOT_STYLE_RESAMPLING": {
+      "applicability": "LOW",
+      "baselineNegativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "baselineSyntheticRecall": {
+        "count": 40,
+        "n": 40,
+        "rate": 1.0,
+        "wilson95": [
+          0.9123783988027135,
+          1.0
+        ]
+      },
+      "cameraFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "decisionFlip": {
+        "count": 2,
+        "n": 80,
+        "rate": 0.025,
+        "wilson95": [
+          0.006882893202970648,
+          0.0866443298557801
+        ]
+      },
+      "digitalFpr": {
+        "count": 0,
+        "n": 20,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.16112515805281938
+        ]
+      },
+      "negativeCount": 40,
+      "negativeFpr": {
+        "count": 0,
+        "n": 40,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.08762160119728664
+        ]
+      },
+      "negativeFprDelta": 0.0,
+      "recordCount": 80,
+      "scoreShiftAll": {
+        "iqr": 0.049210318829864264,
+        "median": 0.007117956876754761
+      },
+      "scoreShiftNegative": {
+        "iqr": 0.0659308722242713,
+        "median": 0.01500797551125288
+      },
+      "scoreShiftSynthetic": {
+        "iqr": 0.03849075734615326,
+        "median": 0.004444807767868042
+      },
+      "severeCollapseCount": {
+        "count": 2,
+        "n": 40,
+        "rate": 0.05,
+        "wilson95": [
+          0.013820667386148344,
+          0.16503877369140962
+        ]
+      },
+      "syntheticCount": 40,
+      "syntheticRecall": {
+        "count": 38,
+        "n": 40,
+        "rate": 0.95,
+        "wilson95": [
+          0.8349612263085903,
+          0.9861793326138516
+        ]
+      },
+      "syntheticRecallRetention": 0.95
+    }
+  }
+}

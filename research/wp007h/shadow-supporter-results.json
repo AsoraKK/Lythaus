@@ -1,0 +1,1035 @@
+{
+  "errorDiversity": {
+    "RINE": {
+      "agreement": 0.5661764705882353,
+      "bothCorrect": 149,
+      "bothWrong": 5,
+      "byGeneratorFamily": {
+        "BLIP3o-8B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 16,
+          "supporterCorrect": 4,
+          "supporterOnlyCorrect": 0
+        },
+        "FLUX.1-Krea-dev": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 15,
+          "supporterCorrect": 5,
+          "supporterOnlyCorrect": 0
+        },
+        "Infinity-8B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 18,
+          "supporterCorrect": 2,
+          "supporterOnlyCorrect": 0
+        },
+        "Janus-Pro-7B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 7,
+          "supporterCorrect": 13,
+          "supporterOnlyCorrect": 0
+        },
+        "LongCat-Image": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 18,
+          "supporterCorrect": 2,
+          "supporterOnlyCorrect": 0
+        },
+        "OmniGen2-7B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 17,
+          "supporterCorrect": 3,
+          "supporterOnlyCorrect": 0
+        },
+        "PixArt-Alpha": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 11,
+          "supporterCorrect": 9,
+          "supporterOnlyCorrect": 0
+        },
+        "Qwen-Image-2512": {
+          "n": 20,
+          "safeCorrect": 15,
+          "safeOnlyCorrect": 14,
+          "supporterCorrect": 1,
+          "supporterOnlyCorrect": 0
+        }
+      },
+      "byNegativeSubtype": {
+        "CAMERA": {
+          "n": 87,
+          "safeCorrect": 87,
+          "safeOnlyCorrect": 1,
+          "supporterCorrect": 86,
+          "supporterOnlyCorrect": 0
+        },
+        "DIGITAL_NON_AI": {
+          "n": 25,
+          "safeCorrect": 24,
+          "safeOnlyCorrect": 0,
+          "supporterCorrect": 25,
+          "supporterOnlyCorrect": 1
+        }
+      },
+      "disagreement": 0.4338235294117647,
+      "matchedRecords": 272,
+      "safeFalseNegativeRescued": 0,
+      "safeFalsePositiveRescued": 1,
+      "safeOnlyCorrect": 117,
+      "supporterFalseNegativeIntroduced": 116,
+      "supporterFalsePositiveIntroduced": 1,
+      "supporterOnlyCorrect": 1
+    },
+    "SPAI_C512": {
+      "agreement": 0.6176470588235294,
+      "bothCorrect": 166,
+      "bothWrong": 2,
+      "byGeneratorFamily": {
+        "BLIP3o-8B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 17,
+          "supporterCorrect": 3,
+          "supporterOnlyCorrect": 0
+        },
+        "FLUX.1-Krea-dev": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 19,
+          "supporterCorrect": 1,
+          "supporterOnlyCorrect": 0
+        },
+        "Infinity-8B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 5,
+          "supporterCorrect": 15,
+          "supporterOnlyCorrect": 0
+        },
+        "Janus-Pro-7B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 7,
+          "supporterCorrect": 13,
+          "supporterOnlyCorrect": 0
+        },
+        "LongCat-Image": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 15,
+          "supporterCorrect": 5,
+          "supporterOnlyCorrect": 0
+        },
+        "OmniGen2-7B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 18,
+          "supporterCorrect": 2,
+          "supporterOnlyCorrect": 0
+        },
+        "PixArt-Alpha": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 10,
+          "supporterCorrect": 10,
+          "supporterOnlyCorrect": 0
+        },
+        "Qwen-Image-2512": {
+          "n": 20,
+          "safeCorrect": 15,
+          "safeOnlyCorrect": 7,
+          "supporterCorrect": 11,
+          "supporterOnlyCorrect": 3
+        }
+      },
+      "byNegativeSubtype": {
+        "CAMERA": {
+          "n": 87,
+          "safeCorrect": 87,
+          "safeOnlyCorrect": 2,
+          "supporterCorrect": 85,
+          "supporterOnlyCorrect": 0
+        },
+        "DIGITAL_NON_AI": {
+          "n": 25,
+          "safeCorrect": 24,
+          "safeOnlyCorrect": 0,
+          "supporterCorrect": 25,
+          "supporterOnlyCorrect": 1
+        }
+      },
+      "disagreement": 0.38235294117647056,
+      "matchedRecords": 272,
+      "safeFalseNegativeRescued": 3,
+      "safeFalsePositiveRescued": 1,
+      "safeOnlyCorrect": 100,
+      "supporterFalseNegativeIntroduced": 98,
+      "supporterFalsePositiveIntroduced": 2,
+      "supporterOnlyCorrect": 4
+    },
+    "UNIVERSAL_FAKE_DETECT": {
+      "agreement": 0.4264705882352941,
+      "bothCorrect": 111,
+      "bothWrong": 5,
+      "byGeneratorFamily": {
+        "BLIP3o-8B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 19,
+          "supporterCorrect": 1,
+          "supporterOnlyCorrect": 0
+        },
+        "FLUX.1-Krea-dev": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 20,
+          "supporterCorrect": 0,
+          "supporterOnlyCorrect": 0
+        },
+        "Infinity-8B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 19,
+          "supporterCorrect": 1,
+          "supporterOnlyCorrect": 0
+        },
+        "Janus-Pro-7B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 19,
+          "supporterCorrect": 1,
+          "supporterOnlyCorrect": 0
+        },
+        "LongCat-Image": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 20,
+          "supporterCorrect": 0,
+          "supporterOnlyCorrect": 0
+        },
+        "OmniGen2-7B": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 20,
+          "supporterCorrect": 0,
+          "supporterOnlyCorrect": 0
+        },
+        "PixArt-Alpha": {
+          "n": 20,
+          "safeCorrect": 20,
+          "safeOnlyCorrect": 20,
+          "supporterCorrect": 0,
+          "supporterOnlyCorrect": 0
+        },
+        "Qwen-Image-2512": {
+          "n": 20,
+          "safeCorrect": 15,
+          "safeOnlyCorrect": 15,
+          "supporterCorrect": 0,
+          "supporterOnlyCorrect": 0
+        }
+      },
+      "byNegativeSubtype": {
+        "CAMERA": {
+          "n": 87,
+          "safeCorrect": 87,
+          "safeOnlyCorrect": 3,
+          "supporterCorrect": 84,
+          "supporterOnlyCorrect": 0
+        },
+        "DIGITAL_NON_AI": {
+          "n": 25,
+          "safeCorrect": 24,
+          "safeOnlyCorrect": 0,
+          "supporterCorrect": 25,
+          "supporterOnlyCorrect": 1
+        }
+      },
+      "disagreement": 0.5735294117647058,
+      "matchedRecords": 272,
+      "safeFalseNegativeRescued": 0,
+      "safeFalsePositiveRescued": 1,
+      "safeOnlyCorrect": 155,
+      "supporterFalseNegativeIntroduced": 152,
+      "supporterFalsePositiveIntroduced": 3,
+      "supporterOnlyCorrect": 1
+    }
+  },
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "matchedKeys": {
+    "RINE": 272,
+    "SPAI_C512": 272,
+    "UNIVERSAL_FAKE_DETECT": 272
+  },
+  "noRouterOptimization": true,
+  "qualificationRole": "SAFE_ONLY_PRIMARY",
+  "roles": [
+    "NEGATIVE_CONFIRM_H",
+    "QUALIFICATION_CONFIRM"
+  ],
+  "safeQualificationUnaffectedBySupporters": true,
+  "safeThreshold": 0.5864923000335693,
+  "schemaVersion": "lythaus-wp007h-shadow-supporter-results-v1",
+  "scoreBlind": true,
+  "scoreCorrelations": {
+    "RINE__SPAI_C512": {
+      "n": 272,
+      "pearson": 0.2955389285904091,
+      "spearman": 0.3633057550292682
+    },
+    "RINE__UNIVERSAL_FAKE_DETECT": {
+      "n": 272,
+      "pearson": 0.16997292805553346,
+      "spearman": 0.32742805556852816
+    },
+    "SPAI_C512__UNIVERSAL_FAKE_DETECT": {
+      "n": 272,
+      "pearson": 0.028410107435848733,
+      "spearman": 0.02089924864519079
+    }
+  },
+  "summaries": {
+    "RINE": {
+      "byGeneratorFamily": {
+        "BLIP3o-8B": {
+          "detectorId": "RINE",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.9945691823959351,
+          "scoreMedian": 0.700305163860321,
+          "scoreMin": 0.3970736563205719,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.2,
+            "tp": 4
+          }
+        },
+        "FLUX.1-Krea-dev": {
+          "detectorId": "RINE",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.9939040541648865,
+          "scoreMedian": 0.6940901875495911,
+          "scoreMin": 0.17179517447948456,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.25,
+            "tp": 5
+          }
+        },
+        "Infinity-8B": {
+          "detectorId": "RINE",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.9464187622070312,
+          "scoreMedian": 0.646352231502533,
+          "scoreMin": 0.2768308222293854,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.1,
+            "tp": 2
+          }
+        },
+        "Janus-Pro-7B": {
+          "detectorId": "RINE",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.9987680315971375,
+          "scoreMedian": 0.9350616037845612,
+          "scoreMin": 0.40781041979789734,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.65,
+            "tp": 13
+          }
+        },
+        "LongCat-Image": {
+          "detectorId": "RINE",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.9526903629302979,
+          "scoreMedian": 0.42902427911758423,
+          "scoreMin": 0.13322129845619202,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.1,
+            "tp": 2
+          }
+        },
+        "OmniGen2-7B": {
+          "detectorId": "RINE",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.9862964153289795,
+          "scoreMedian": 0.6858344376087189,
+          "scoreMin": 0.2898377776145935,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.15,
+            "tp": 3
+          }
+        },
+        "PixArt-Alpha": {
+          "detectorId": "RINE",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.9977133274078369,
+          "scoreMedian": 0.8361784219741821,
+          "scoreMin": 0.30179455876350403,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.45,
+            "tp": 9
+          }
+        },
+        "Qwen-Image-2512": {
+          "detectorId": "RINE",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.999562680721283,
+          "scoreMedian": 0.39515380561351776,
+          "scoreMin": 0.10208632051944733,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.05,
+            "tp": 1
+          }
+        }
+      },
+      "byNegativeSubtype": {
+        "CAMERA": {
+          "detectorId": "RINE",
+          "matchedRecords": 87,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.011494252873563218,
+            "n": 87
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.8936893343925476,
+          "scoreMedian": 0.4317496120929718,
+          "scoreMin": 0.15603280067443848,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        },
+        "DIGITAL_NON_AI": {
+          "detectorId": "RINE",
+          "matchedRecords": 25,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 25
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.3683633804321289,
+          "scoreMedian": 0.3030756413936615,
+          "scoreMin": 0.21971386671066284,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        }
+      },
+      "byRole": {
+        "NEGATIVE_CONFIRM_H": {
+          "detectorId": "RINE",
+          "matchedRecords": 112,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.008928571428571428,
+            "n": 112
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.8936893343925476,
+          "scoreMedian": 0.38448210060596466,
+          "scoreMin": 0.15603280067443848,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        },
+        "QUALIFICATION_CONFIRM": {
+          "detectorId": "RINE",
+          "matchedRecords": 160,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.890092938,
+          "scoreMax": 0.999562680721283,
+          "scoreMedian": 0.6689067482948303,
+          "scoreMin": 0.10208632051944733,
+          "synthetic": {
+            "n": 160,
+            "recall": 0.24375,
+            "tp": 39
+          }
+        }
+      },
+      "overall": {
+        "detectorId": "RINE",
+        "matchedRecords": 272,
+        "negative": {
+          "fp": 1,
+          "fpr": 0.008928571428571428,
+          "n": 112
+        },
+        "priorFrozenThreshold": 0.890092938,
+        "scoreMax": 0.999562680721283,
+        "scoreMedian": 0.45316243171691895,
+        "scoreMin": 0.10208632051944733,
+        "synthetic": {
+          "n": 160,
+          "recall": 0.24375,
+          "tp": 39
+        }
+      }
+    },
+    "SPAI_C512": {
+      "byGeneratorFamily": {
+        "BLIP3o-8B": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 0.9218341708183289,
+          "scoreMin": 2.110099978273519e-21,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.15,
+            "tp": 3
+          }
+        },
+        "FLUX.1-Krea-dev": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 0.3095206022262573,
+          "scoreMin": 4.928003139410248e-20,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.05,
+            "tp": 1
+          }
+        },
+        "Infinity-8B": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 1.0,
+          "scoreMin": 9.680801440481446e-07,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.75,
+            "tp": 15
+          }
+        },
+        "Janus-Pro-7B": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 1.0,
+          "scoreMin": 0.7676035761833191,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.65,
+            "tp": 13
+          }
+        },
+        "LongCat-Image": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 0.9899506866931915,
+          "scoreMin": 6.83816753221933e-11,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.25,
+            "tp": 5
+          }
+        },
+        "OmniGen2-7B": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 0.7402808964252472,
+          "scoreMin": 7.571894217753592e-25,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.1,
+            "tp": 2
+          }
+        },
+        "PixArt-Alpha": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 0.9998080730438232,
+          "scoreMin": 1.6427225353934928e-19,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.5,
+            "tp": 10
+          }
+        },
+        "Qwen-Image-2512": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 1.0,
+          "scoreMin": 0.8496314287185669,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.55,
+            "tp": 11
+          }
+        }
+      },
+      "byNegativeSubtype": {
+        "CAMERA": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 87,
+          "negative": {
+            "fp": 2,
+            "fpr": 0.022988505747126436,
+            "n": 87
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 0.02625361829996109,
+          "scoreMin": 4.514280801999082e-34,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        },
+        "DIGITAL_NON_AI": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 25,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 25
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 2.3459701736783245e-08,
+          "scoreMedian": 9.514365077971913e-17,
+          "scoreMin": 2.749494723344045e-38,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        }
+      },
+      "byRole": {
+        "NEGATIVE_CONFIRM_H": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 112,
+          "negative": {
+            "fp": 2,
+            "fpr": 0.017857142857142856,
+            "n": 112
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 4.942621423253968e-09,
+          "scoreMin": 2.749494723344045e-38,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        },
+        "QUALIFICATION_CONFIRM": {
+          "detectorId": "SPAI_C512",
+          "matchedRecords": 160,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 1.0,
+          "scoreMax": 1.0,
+          "scoreMedian": 0.9998916387557983,
+          "scoreMin": 7.571894217753592e-25,
+          "synthetic": {
+            "n": 160,
+            "recall": 0.375,
+            "tp": 60
+          }
+        }
+      },
+      "overall": {
+        "detectorId": "SPAI_C512",
+        "matchedRecords": 272,
+        "negative": {
+          "fp": 2,
+          "fpr": 0.017857142857142856,
+          "n": 112
+        },
+        "priorFrozenThreshold": 1.0,
+        "scoreMax": 1.0,
+        "scoreMedian": 0.8500121235847473,
+        "scoreMin": 2.749494723344045e-38,
+        "synthetic": {
+          "n": 160,
+          "recall": 0.375,
+          "tp": 60
+        }
+      }
+    },
+    "UNIVERSAL_FAKE_DETECT": {
+      "byGeneratorFamily": {
+        "BLIP3o-8B": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.932738721370697,
+          "scoreMedian": 0.010456225369125605,
+          "scoreMin": 0.0004711476794909686,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.05,
+            "tp": 1
+          }
+        },
+        "FLUX.1-Krea-dev": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.18573345243930817,
+          "scoreMedian": 0.0010279736015945673,
+          "scoreMin": 7.392597467514861e-07,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.0,
+            "tp": 0
+          }
+        },
+        "Infinity-8B": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.8439241647720337,
+          "scoreMedian": 0.0017035367200151086,
+          "scoreMin": 3.5106852010358125e-05,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.05,
+            "tp": 1
+          }
+        },
+        "Janus-Pro-7B": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.6981046199798584,
+          "scoreMedian": 0.004674497758969665,
+          "scoreMin": 2.1221567294560373e-05,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.05,
+            "tp": 1
+          }
+        },
+        "LongCat-Image": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.27409598231315613,
+          "scoreMedian": 0.0006448006024584174,
+          "scoreMin": 1.8561817341833375e-05,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.0,
+            "tp": 0
+          }
+        },
+        "OmniGen2-7B": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.27260732650756836,
+          "scoreMedian": 0.001512979215476662,
+          "scoreMin": 4.555253326543607e-06,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.0,
+            "tp": 0
+          }
+        },
+        "PixArt-Alpha": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.24205715954303741,
+          "scoreMedian": 0.003919747890904546,
+          "scoreMin": 1.3701846910407767e-06,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.0,
+            "tp": 0
+          }
+        },
+        "Qwen-Image-2512": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 20,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.34418898820877075,
+          "scoreMedian": 0.00038056746416259557,
+          "scoreMin": 8.031410288822372e-06,
+          "synthetic": {
+            "n": 20,
+            "recall": 0.0,
+            "tp": 0
+          }
+        }
+      },
+      "byNegativeSubtype": {
+        "CAMERA": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 87,
+          "negative": {
+            "fp": 3,
+            "fpr": 0.034482758620689655,
+            "n": 87
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.8689339756965637,
+          "scoreMedian": 0.0029365820810198784,
+          "scoreMin": 2.4505768578819698e-06,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        },
+        "DIGITAL_NON_AI": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 25,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 25
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.015965091064572334,
+          "scoreMedian": 0.0004033454169984907,
+          "scoreMin": 7.089377504598815e-06,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        }
+      },
+      "byRole": {
+        "NEGATIVE_CONFIRM_H": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 112,
+          "negative": {
+            "fp": 3,
+            "fpr": 0.026785714285714284,
+            "n": 112
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.8689339756965637,
+          "scoreMedian": 0.002388381864875555,
+          "scoreMin": 2.4505768578819698e-06,
+          "synthetic": {
+            "n": 0,
+            "recall": null,
+            "tp": 0
+          }
+        },
+        "QUALIFICATION_CONFIRM": {
+          "detectorId": "UNIVERSAL_FAKE_DETECT",
+          "matchedRecords": 160,
+          "negative": {
+            "fp": 0,
+            "fpr": null,
+            "n": 0
+          },
+          "priorFrozenThreshold": 0.543838277,
+          "scoreMax": 0.932738721370697,
+          "scoreMedian": 0.001989283598959446,
+          "scoreMin": 7.392597467514861e-07,
+          "synthetic": {
+            "n": 160,
+            "recall": 0.01875,
+            "tp": 3
+          }
+        }
+      },
+      "overall": {
+        "detectorId": "UNIVERSAL_FAKE_DETECT",
+        "matchedRecords": 272,
+        "negative": {
+          "fp": 3,
+          "fpr": 0.026785714285714284,
+          "n": 112
+        },
+        "priorFrozenThreshold": 0.543838277,
+        "scoreMax": 0.932738721370697,
+        "scoreMedian": 0.002143572084605694,
+        "scoreMin": 7.392597467514861e-07,
+        "synthetic": {
+          "n": 160,
+          "recall": 0.01875,
+          "tp": 3
+        }
+      }
+    }
+  },
+  "supporterThresholds": {
+    "RINE": 0.890092938,
+    "SPAI_C512": 1.0,
+    "UNIVERSAL_FAKE_DETECT": 0.543838277
+  },
+  "supporterTransformationCoverage": "NOT_RUN_FULL_MATRIX_CPU_BOUND; SAFE_ONLY_TRANSFORMATION_MATRIX_IS_AUTHORITATIVE",
+  "thresholdProvenance": "Prior frozen WP007F descriptive thresholds; no refit in WP007H."
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "lythaus-wp007h-transformation-plan-v1",
+  "parentSha": "fc9c1a65528a39da008fed12c1a601e32c226e09",
+  "scoreBlindMembershipFreezeRequired": true,
+  "singleFactorTransforms": {
+    "JPEG95": {"format": "JPEG", "quality": 95, "subsampling": "keep_default_rgb"},
+    "JPEG85": {"format": "JPEG", "quality": 85, "subsampling": "keep_default_rgb"},
+    "JPEG75": {"format": "JPEG", "quality": 75, "subsampling": "keep_default_rgb"},
+    "RESIZE75": {"scale": 0.75, "resampler": "LANCZOS", "rounding": "floor_then_minimum_one"},
+    "RESIZE50": {"scale": 0.50, "resampler": "LANCZOS", "rounding": "floor_then_minimum_one"},
+    "SCREENSHOT_STYLE_RESAMPLING": {"canvas": "RGB", "scale": 0.75, "resampler": "BILINEAR", "reencode": "PNG", "metadata": "strip"},
+    "METADATA_STRIP": {"operation": "RGB_decode_and_reencode_PNG_without_metadata"},
+    "MILD_CROP": {"fractionEachSide": 0.05, "anchor": "center", "resizeBack": "LANCZOS"},
+    "MILD_BLUR": {"radius": 0.6, "operation": "Pillow_GaussianBlur"},
+    "MILD_SHARPEN": {"factor": 1.4, "operation": "Pillow_UnsharpMask_radius_1_percent_150_threshold_3"}
+  },
+  "prohibitions": ["no_combinations", "no_score_based_exclusions", "no_threshold_retuning", "no_FLUX2", "no_semantic_crop"],
+  "metrics": ["rawScore", "absoluteDelta", "medianDelta", "iqrDelta", "bandChange", "decisionFlip", "syntheticRecall", "negativeFpr", "failureRate"]
+}

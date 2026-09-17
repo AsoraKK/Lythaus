@@ -1,0 +1,636 @@
+{
+  "descriptiveOnly": true,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "safeQualificationUnaffectedBySupporters": true,
+  "schemaVersion": "lythaus-wp007h-shadow-transformation-results-v1",
+  "spaiTransformationCoverage": "NOT_RUN_FULL_MATRIX_CPU_BOUND",
+  "thresholds": {
+    "RINE": 0.890092938,
+    "SAFE": 0.5864923000335693,
+    "UNIVERSAL_FAKE_DETECT": 0.543838277
+  },
+  "transforms": {
+    "JPEG75": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 3,
+            "fpr": 0.075,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 1,
+            "safeFalsePositiveRescued": 3,
+            "supporterFalseNegativeIntroduced": 0,
+            "supporterFalsePositiveIntroduced": 0
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.025,
+            "tp": 1
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 3,
+            "supporterFalseNegativeIntroduced": 0,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "JPEG85": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 2,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 0,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.05,
+            "tp": 2
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 0,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "JPEG95": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 3,
+            "fpr": 0.075,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.025,
+            "tp": 1
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 6,
+            "safeFalsePositiveRescued": 3,
+            "supporterFalseNegativeIntroduced": 1,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.15,
+            "tp": 6
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 3,
+            "supporterFalseNegativeIntroduced": 1,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "METADATA_STRIP": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 1.0,
+            "tp": 40
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 30,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.25,
+            "tp": 10
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 40,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "MILD_BLUR": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 3,
+            "fpr": 0.075,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 1.0,
+            "tp": 40
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 3,
+            "supporterFalseNegativeIntroduced": 30,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.25,
+            "tp": 10
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 3,
+            "supporterFalseNegativeIntroduced": 40,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "MILD_CROP": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.95,
+            "tp": 38
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 1,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 30,
+            "supporterFalsePositiveIntroduced": 0
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.225,
+            "tp": 9
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 37,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.025,
+            "tp": 1
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "MILD_SHARPEN": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.675,
+            "tp": 27
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 2,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 19,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.25,
+            "tp": 10
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 27,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "RESIZE50": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.85,
+            "tp": 34
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 1,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 26,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.225,
+            "tp": 9
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 34,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "RESIZE75": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 1.0,
+            "tp": 40
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 29,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.275,
+            "tp": 11
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 40,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    },
+    "SCREENSHOT_STYLE_RESAMPLING": {
+      "safe": {
+        "SAFE": {
+          "matched": 80,
+          "negative": {
+            "fp": 0,
+            "fpr": 0.0,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.95,
+            "tp": 38
+          },
+          "threshold": 0.5864923000335693
+        }
+      },
+      "supporters": {
+        "RINE": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 29,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.225,
+            "tp": 9
+          },
+          "threshold": 0.890092938
+        },
+        "UNIVERSAL_FAKE_DETECT": {
+          "errorDiversity": {
+            "matched": 80,
+            "safeFalseNegativeRescued": 0,
+            "safeFalsePositiveRescued": 0,
+            "supporterFalseNegativeIntroduced": 38,
+            "supporterFalsePositiveIntroduced": 1
+          },
+          "matched": 80,
+          "negative": {
+            "fp": 1,
+            "fpr": 0.025,
+            "n": 40
+          },
+          "synthetic": {
+            "n": 40,
+            "recall": 0.0,
+            "tp": 0
+          },
+          "threshold": 0.543838277
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,214 @@
+{
+  "detectorId": "SAFE",
+  "flux2PixelAccess": false,
+  "metadataIsNotSyntheticEvidence": true,
+  "regimes": {
+    "JPEG75": {
+      "classification": "LOW",
+      "deterministicInputEvidence": {
+        "byteMedian": 157191.5,
+        "dimensions": {
+          "1024x1024": 50,
+          "1328x1328": 5,
+          "2316x3088": 1,
+          "3088x2316": 3,
+          "384x384": 5,
+          "4000x3000": 5,
+          "4032x3024": 11
+        },
+        "formatCounts": {
+          "JPEG": 80
+        },
+        "transformationLineage": "JPEG75"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "JPEG85": {
+      "classification": "MODERATE",
+      "deterministicInputEvidence": {
+        "byteMedian": 208753.0,
+        "dimensions": {
+          "1024x1024": 50,
+          "1328x1328": 5,
+          "2316x3088": 1,
+          "3088x2316": 3,
+          "384x384": 5,
+          "4000x3000": 5,
+          "4032x3024": 11
+        },
+        "formatCounts": {
+          "JPEG": 80
+        },
+        "transformationLineage": "JPEG85"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "JPEG95": {
+      "classification": "MODERATE",
+      "deterministicInputEvidence": {
+        "byteMedian": 389312.0,
+        "dimensions": {
+          "1024x1024": 50,
+          "1328x1328": 5,
+          "2316x3088": 1,
+          "3088x2316": 3,
+          "384x384": 5,
+          "4000x3000": 5,
+          "4032x3024": 11
+        },
+        "formatCounts": {
+          "JPEG": 80
+        },
+        "transformationLineage": "JPEG95"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "METADATA_STRIP": {
+      "classification": "HIGH",
+      "deterministicInputEvidence": {
+        "byteMedian": 1264149.0,
+        "dimensions": {
+          "1024x1024": 50,
+          "1328x1328": 5,
+          "2316x3088": 1,
+          "3088x2316": 3,
+          "384x384": 5,
+          "4000x3000": 5,
+          "4032x3024": 11
+        },
+        "formatCounts": {
+          "PNG": 80
+        },
+        "transformationLineage": "METADATA_STRIP"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "MILD_BLUR": {
+      "classification": "MODERATE",
+      "deterministicInputEvidence": {
+        "byteMedian": 1215285.0,
+        "dimensions": {
+          "1024x1024": 50,
+          "1328x1328": 5,
+          "2316x3088": 1,
+          "3088x2316": 3,
+          "384x384": 5,
+          "4000x3000": 5,
+          "4032x3024": 11
+        },
+        "formatCounts": {
+          "PNG": 80
+        },
+        "transformationLineage": "MILD_BLUR"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "MILD_CROP": {
+      "classification": "MODERATE",
+      "deterministicInputEvidence": {
+        "byteMedian": 1247778.5,
+        "dimensions": {
+          "1024x1024": 50,
+          "1328x1328": 5,
+          "2316x3088": 1,
+          "3088x2316": 3,
+          "384x384": 5,
+          "4000x3000": 5,
+          "4032x3024": 11
+        },
+        "formatCounts": {
+          "PNG": 80
+        },
+        "transformationLineage": "MILD_CROP"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "MILD_SHARPEN": {
+      "classification": "MODERATE",
+      "deterministicInputEvidence": {
+        "byteMedian": 1382090.0,
+        "dimensions": {
+          "1024x1024": 50,
+          "1328x1328": 5,
+          "2316x3088": 1,
+          "3088x2316": 3,
+          "384x384": 5,
+          "4000x3000": 5,
+          "4032x3024": 11
+        },
+        "formatCounts": {
+          "PNG": 80
+        },
+        "transformationLineage": "MILD_SHARPEN"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "RESIZE50": {
+      "classification": "LOW",
+      "deterministicInputEvidence": {
+        "byteMedian": 355952.0,
+        "dimensions": {
+          "1158x1544": 1,
+          "1544x1158": 3,
+          "192x192": 5,
+          "2000x1500": 5,
+          "2016x1512": 11,
+          "512x512": 50,
+          "664x664": 5
+        },
+        "formatCounts": {
+          "PNG": 80
+        },
+        "transformationLineage": "RESIZE50"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "RESIZE75": {
+      "classification": "MODERATE",
+      "deterministicInputEvidence": {
+        "byteMedian": 751873.5,
+        "dimensions": {
+          "1737x2316": 1,
+          "2316x1737": 3,
+          "288x288": 5,
+          "3000x2250": 5,
+          "3024x2268": 11,
+          "768x768": 50,
+          "996x996": 5
+        },
+        "formatCounts": {
+          "PNG": 80
+        },
+        "transformationLineage": "RESIZE75"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    },
+    "SCREENSHOT_STYLE_RESAMPLING": {
+      "classification": "LOW",
+      "deterministicInputEvidence": {
+        "byteMedian": 683755.0,
+        "dimensions": {
+          "1737x2316": 1,
+          "2316x1737": 3,
+          "288x288": 5,
+          "3000x2250": 5,
+          "3024x2268": 11,
+          "768x768": 50,
+          "996x996": 5
+        },
+        "formatCounts": {
+          "PNG": 80
+        },
+        "transformationLineage": "SCREENSHOT_STYLE_RESAMPLING"
+      },
+      "syntheticEvidenceAuthority": "REDUCED_OR_PRESERVED_BY_APPLICABILITY_ONLY; NOT_AUTHENTICITY_TRUTH"
+    }
+  },
+  "rule": {
+    "HIGH": "ORIGINAL or metadata-only strip with no measurable resampling/recompression indicator in the input lineage.",
+    "LOW": "JPEG75, resize50 or screenshot-style resampling; strong recompression/resampling evidence limits SAFE authority.",
+    "MODERATE": "JPEG95/JPEG85, resize75, mild crop, mild blur or mild sharpen; measurable alteration exists but the regime remains within bounded stress coverage.",
+    "UNSUPPORTED": "Unknown or compounded transformation not represented by the frozen matrix; no synthetic conclusion from SAFE applicability alone."
+  },
+  "schemaVersion": "lythaus-wp007h-input-regime-applicability-v1"
+}

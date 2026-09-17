@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "lythaus-wp007h-final-artifact-hashes-v1",
+  "parentSha": "fc9c1a65528a39da008fed12c1a601e32c226e09",
+  "experimentPlanSelfHash": "e085494e28c71809c7515d18105e485bb54853acaef4c3a4d63c930f162eee00",
+  "forbiddenGeneratorFamiliesSha256": "83f9f25c86ecb29b5d762ad0bc36cde0c57361f317d953d642e622dd9c944af9",
+  "qualificationCorpusFreezeSha256": "e10b48f70b4d1ee4dde49507dea955c9ce6ecf8b55fb93b4583f3e4450d08a1c",
+  "negativeDataFreezeSha256": "615150bc1128babe1cac3763d517811e23b358ebfa5c819021f58f75b992e38e",
+  "safeArtifactRightsSha256": "d076f56042a2929143f19df44bd4f294ad353a43c2b44da6ee5ff866f83ee262",
+  "safeScoresSha256": "ce51fc98edbd07345f7de07d7718fa3db5447dfe2fdb3d8a77c4f0933fb18b1d",
+  "safeQualificationResultsSha256": "207cc63f965dd1391da98be8e208033da0cdf7cbe12cadf68b0b1bc738bb0ae4",
+  "transformationPlanSha256": "71fe5fa8514869699cf9f56de87a301eb3cae2a2052e7225d03b410078b04cbd",
+  "safeTransformationResultsSha256": "f5f499997dcfff12f377bd0532704027cd26b1648203cbe0ad8175c772f0cf6f",
+  "inputRegimeApplicabilitySha256": "15658f866993a1c6c3e30c02e41c03b005c650b1c7d0e35d3f9955e636742bd7",
+  "flux1DiagnosticPlanSha256": "5fce143c0fd7a0b81b8f3bd0e0e7e4aa288d183ea74a49d512f2d99d6d93ae8",
+  "flux1DiagnosticResultsSha256": "fdcd36754b95986eed839406b97867c16582c218953288920991d50c4025c6a4",
+  "shadowSupporterResultsSha256": "39f977ec454e5c972974d41b257dccd569e349a0414c070b75f990907339a8e9",
+  "shadowTransformationResultsSha256": "7f6539b5358817986962dcd7b04593bf645897393c65cd7adaadc2af1e1840ea",
+  "safeSpecialistProfileSha256": "0895e2b8756736f7276b13fa633551f0eaab96a2b0dbdab46330e8064096e06d",
+  "storageAccountingSha256": "240c5746fd0c9338b0c103082d778ec32eef7f8b3d0c1f6a4bcda19b6dd4703f",
+  "finalReportSha256": "ad9fcb35d248d65788e8f0797253d1d9f81f3f8a077b81f6017220bfdc7f6a7d"
+}
