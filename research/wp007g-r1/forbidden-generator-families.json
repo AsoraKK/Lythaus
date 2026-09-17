@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-forbidden-generator-families-v1",
+  "purpose": "Metadata-only denylist preventing FLUX.2 contamination of the recovered T2I-CoReBench corpus.",
+  "parentSha": "5a6231c6f8ede3de5e117ed3692bcf493f0c1a1c",
+  "pixelAccess": false,
+  "exactFamilyNames": [
+    "FLUX.2-dev",
+    "FLUX.2-klein-4B",
+    "FLUX.2-klein-9B"
+  ],
+  "caseInsensitivePatterns": [
+    "flux\\.2",
+    "flux2",
+    "flux-2"
+  ],
+  "action": "FAIL_CLOSED_EXCLUDE_BEFORE_LFS_OBJECT_DOWNLOAD",
+  "sourceEvidence": {
+    "dataset": "lioooox/T2I-CoReBench-Images",
+    "currentRevision": "2350e0f664d849626df392cb93954b66019c18ee",
+    "historicalRevisionInspected": "6467902a01ab6b2d5ac3017c03719d11a11cfa61",
+    "inspectionMode": "metadata_only"
+  }
+}

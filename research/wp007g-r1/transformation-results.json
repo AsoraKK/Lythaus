@@ -1,0 +1,823 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-transformation-results-v1",
+  "candidateId": "G2_TWO_TAIL_GROUPED_V0",
+  "selectionSha256": "4517202a0afbd486db4e62f8f9c3018f68093df3a41a946741451cd12cee2d45",
+  "source": "60 deterministic representatives; five per modern DEV family, ten camera and ten digital NEGATIVE_CONFIRM_G",
+  "noThresholdRetuning": true,
+  "transforms": {
+    "JPEG75": {
+      "recordCount": 60,
+      "syntheticCount": 40,
+      "negativeCount": 20,
+      "scoreShift": {
+        "median": -0.23412046537956657,
+        "iqr": 0.2829344872357614
+      },
+      "bands": {
+        "VERY_HIGH": {
+          "threshold": 0.27291400715160297,
+          "syntheticRecall": {
+            "count": 0,
+            "n": 40,
+            "rate": 0.0
+          },
+          "baselineSyntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "syntheticRecallRetention": 0.0,
+          "negativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.1,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "HIGH": {
+          "threshold": 0.26421564193310665,
+          "syntheticRecall": {
+            "count": 0,
+            "n": 40,
+            "rate": 0.0
+          },
+          "baselineSyntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "syntheticRecallRetention": 0.0,
+          "negativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.1,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "MODERATE": {
+          "threshold": 0.2069867121332305,
+          "syntheticRecall": {
+            "count": 3,
+            "n": 40,
+            "rate": 0.075
+          },
+          "baselineSyntheticRecall": {
+            "count": 33,
+            "n": 40,
+            "rate": 0.825
+          },
+          "syntheticRecallRetention": 0.09090909090909091,
+          "negativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "baselineNegativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "JPEG85": {
+      "recordCount": 60,
+      "syntheticCount": 40,
+      "negativeCount": 20,
+      "scoreShift": {
+        "median": -0.20800679979287923,
+        "iqr": 0.24203053601793595
+      },
+      "bands": {
+        "VERY_HIGH": {
+          "threshold": 0.27291400715160297,
+          "syntheticRecall": {
+            "count": 1,
+            "n": 40,
+            "rate": 0.025
+          },
+          "baselineSyntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "syntheticRecallRetention": 0.04,
+          "negativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "HIGH": {
+          "threshold": 0.26421564193310665,
+          "syntheticRecall": {
+            "count": 1,
+            "n": 40,
+            "rate": 0.025
+          },
+          "baselineSyntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "syntheticRecallRetention": 0.037037037037037035,
+          "negativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "MODERATE": {
+          "threshold": 0.2069867121332305,
+          "syntheticRecall": {
+            "count": 6,
+            "n": 40,
+            "rate": 0.15
+          },
+          "baselineSyntheticRecall": {
+            "count": 33,
+            "n": 40,
+            "rate": 0.825
+          },
+          "syntheticRecallRetention": 0.18181818181818182,
+          "negativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "baselineNegativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "JPEG95": {
+      "recordCount": 60,
+      "syntheticCount": 40,
+      "negativeCount": 20,
+      "scoreShift": {
+        "median": -0.17423450270633872,
+        "iqr": 0.2073692880619925
+      },
+      "bands": {
+        "VERY_HIGH": {
+          "threshold": 0.27291400715160297,
+          "syntheticRecall": {
+            "count": 2,
+            "n": 40,
+            "rate": 0.05
+          },
+          "baselineSyntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "syntheticRecallRetention": 0.08,
+          "negativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "HIGH": {
+          "threshold": 0.26421564193310665,
+          "syntheticRecall": {
+            "count": 4,
+            "n": 40,
+            "rate": 0.1
+          },
+          "baselineSyntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "syntheticRecallRetention": 0.14814814814814814,
+          "negativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "MODERATE": {
+          "threshold": 0.2069867121332305,
+          "syntheticRecall": {
+            "count": 12,
+            "n": 40,
+            "rate": 0.3
+          },
+          "baselineSyntheticRecall": {
+            "count": 33,
+            "n": 40,
+            "rate": 0.825
+          },
+          "syntheticRecallRetention": 0.36363636363636365,
+          "negativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "baselineNegativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          },
+          "digitalFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          }
+        }
+      }
+    },
+    "metadata_strip": {
+      "recordCount": 60,
+      "syntheticCount": 40,
+      "negativeCount": 20,
+      "scoreShift": {
+        "median": 0.0,
+        "iqr": 0.0
+      },
+      "bands": {
+        "VERY_HIGH": {
+          "threshold": 0.27291400715160297,
+          "syntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "baselineSyntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "syntheticRecallRetention": 1.0,
+          "negativeFpr": {
+            "count": 1,
+            "n": 20,
+            "rate": 0.05
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.05,
+          "cameraFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "HIGH": {
+          "threshold": 0.26421564193310665,
+          "syntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "baselineSyntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "syntheticRecallRetention": 1.0,
+          "negativeFpr": {
+            "count": 1,
+            "n": 20,
+            "rate": 0.05
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.05,
+          "cameraFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "MODERATE": {
+          "threshold": 0.2069867121332305,
+          "syntheticRecall": {
+            "count": 33,
+            "n": 40,
+            "rate": 0.825
+          },
+          "baselineSyntheticRecall": {
+            "count": 33,
+            "n": 40,
+            "rate": 0.825
+          },
+          "syntheticRecallRetention": 1.0,
+          "negativeFpr": {
+            "count": 3,
+            "n": 20,
+            "rate": 0.15
+          },
+          "baselineNegativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "negativeFprDelta": 0.05,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          }
+        }
+      }
+    },
+    "resize50": {
+      "recordCount": 60,
+      "syntheticCount": 40,
+      "negativeCount": 20,
+      "scoreShift": {
+        "median": -0.0533902791747434,
+        "iqr": 0.1258444010665164
+      },
+      "bands": {
+        "VERY_HIGH": {
+          "threshold": 0.27291400715160297,
+          "syntheticRecall": {
+            "count": 17,
+            "n": 40,
+            "rate": 0.425
+          },
+          "baselineSyntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "syntheticRecallRetention": 0.68,
+          "negativeFpr": {
+            "count": 1,
+            "n": 20,
+            "rate": 0.05
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.05,
+          "cameraFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "HIGH": {
+          "threshold": 0.26421564193310665,
+          "syntheticRecall": {
+            "count": 19,
+            "n": 40,
+            "rate": 0.475
+          },
+          "baselineSyntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "syntheticRecallRetention": 0.7037037037037037,
+          "negativeFpr": {
+            "count": 1,
+            "n": 20,
+            "rate": 0.05
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.05,
+          "cameraFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "MODERATE": {
+          "threshold": 0.2069867121332305,
+          "syntheticRecall": {
+            "count": 26,
+            "n": 40,
+            "rate": 0.65
+          },
+          "baselineSyntheticRecall": {
+            "count": 33,
+            "n": 40,
+            "rate": 0.825
+          },
+          "syntheticRecallRetention": 0.7878787878787878,
+          "negativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "baselineNegativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "resize75": {
+      "recordCount": 60,
+      "syntheticCount": 40,
+      "negativeCount": 20,
+      "scoreShift": {
+        "median": -0.01951373861443262,
+        "iqr": 0.06730952178070823
+      },
+      "bands": {
+        "VERY_HIGH": {
+          "threshold": 0.27291400715160297,
+          "syntheticRecall": {
+            "count": 26,
+            "n": 40,
+            "rate": 0.65
+          },
+          "baselineSyntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "syntheticRecallRetention": 1.04,
+          "negativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "HIGH": {
+          "threshold": 0.26421564193310665,
+          "syntheticRecall": {
+            "count": 28,
+            "n": 40,
+            "rate": 0.7
+          },
+          "baselineSyntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "syntheticRecallRetention": 1.037037037037037,
+          "negativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "MODERATE": {
+          "threshold": 0.2069867121332305,
+          "syntheticRecall": {
+            "count": 31,
+            "n": 40,
+            "rate": 0.775
+          },
+          "baselineSyntheticRecall": {
+            "count": 33,
+            "n": 40,
+            "rate": 0.825
+          },
+          "syntheticRecallRetention": 0.9393939393939394,
+          "negativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "baselineNegativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "negativeFprDelta": 0.0,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "screenshot_like": {
+      "recordCount": 60,
+      "syntheticCount": 40,
+      "negativeCount": 20,
+      "scoreShift": {
+        "median": 0.0,
+        "iqr": 0.0
+      },
+      "bands": {
+        "VERY_HIGH": {
+          "threshold": 0.27291400715160297,
+          "syntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "baselineSyntheticRecall": {
+            "count": 25,
+            "n": 40,
+            "rate": 0.625
+          },
+          "syntheticRecallRetention": 1.0,
+          "negativeFpr": {
+            "count": 1,
+            "n": 20,
+            "rate": 0.05
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.05,
+          "cameraFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "HIGH": {
+          "threshold": 0.26421564193310665,
+          "syntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "baselineSyntheticRecall": {
+            "count": 27,
+            "n": 40,
+            "rate": 0.675
+          },
+          "syntheticRecallRetention": 1.0,
+          "negativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "baselineNegativeFpr": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0
+          },
+          "negativeFprDelta": 0.1,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 0,
+            "n": 10,
+            "rate": 0.0
+          }
+        },
+        "MODERATE": {
+          "threshold": 0.2069867121332305,
+          "syntheticRecall": {
+            "count": 31,
+            "n": 40,
+            "rate": 0.775
+          },
+          "baselineSyntheticRecall": {
+            "count": 33,
+            "n": 40,
+            "rate": 0.825
+          },
+          "syntheticRecallRetention": 0.9393939393939394,
+          "negativeFpr": {
+            "count": 3,
+            "n": 20,
+            "rate": 0.15
+          },
+          "baselineNegativeFpr": {
+            "count": 2,
+            "n": 20,
+            "rate": 0.1
+          },
+          "negativeFprDelta": 0.05,
+          "cameraFpr": {
+            "count": 2,
+            "n": 10,
+            "rate": 0.2
+          },
+          "digitalFpr": {
+            "count": 1,
+            "n": 10,
+            "rate": 0.1
+          }
+        }
+      }
+    }
+  },
+  "classificationRule": "FRAGILE if any band has synthetic retention <0.70 or negative FPR increase >0.05; MIXED if otherwise any retention <0.90 or FPR increase >0.02; ROBUST otherwise",
+  "classification": "FRAGILE"
+}

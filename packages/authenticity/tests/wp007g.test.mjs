@@ -53,6 +53,48 @@ test('v2 output contract reports group evidence and correlation caps', () => {
   assert.ok(result.featureVector.CLIP_BOTH_HIGH >= 0);
 });
 
+test('R1 grouped profile aliases map detector-family features without double counting', () => {
+  const result = compileDynamicSyntheticEvidence({
+    detectors: [
+      detector({ rawScore: 0.9 }),
+      detector({ detectorId: 'RINE', evidenceFamily: 'EF3_LEARNED_SYNTHETIC', correlationGroup: 'CLIP_GENERATIVE', rawScore: 0.9 }),
+      detector({ detectorId: 'UNIVERSAL_FAKE_DETECT', evidenceFamily: 'EF3_LEARNED_SYNTHETIC', correlationGroup: 'CLIP_GENERATIVE', rawScore: 0.9 }),
+      detector({ detectorId: 'SAFE', evidenceFamily: 'EF3_LEARNED_SYNTHETIC', correlationGroup: 'SAFE_TRANSFORMATION_RESNET', rawScore: 0.9 }),
+    ],
+    calibration: calibration({
+      negativeProfiles: [
+        { detectorId: 'SPAI_C512', negativeRawScores: [0.1, 0.2, 0.3, 0.4] },
+        { detectorId: 'RINE', negativeRawScores: [0.1, 0.2, 0.3, 0.4] },
+        { detectorId: 'UNIVERSAL_FAKE_DETECT', negativeRawScores: [0.1, 0.2, 0.3, 0.4] },
+        { detectorId: 'SAFE', negativeRawScores: [0.1, 0.2, 0.3, 0.4] },
+      ],
+      coefficients: {
+        SPAI_HIGH_TAIL: 1,
+        CLIP_HIGH_TAIL: 1,
+        CLIP_BOTH_HIGH: 1,
+        SAFE_HIGH_TAIL: 1,
+      },
+    }),
+  });
+  assert.ok(result.featureVector.SPAI_HIGH_TAIL > 0);
+  assert.ok(result.featureVector.CLIP_HIGH_TAIL > 0);
+  assert.ok(result.featureVector.SAFE_HIGH_TAIL > 0);
+  assert.equal(result.groupEvidence.length, 3);
+});
+
+test('R1 profile aliases resolve the legacy UFD score-table identifier', () => {
+  const result = compileDynamicSyntheticEvidence({
+    detectors: [detector({ detectorId: 'UNIVERSAL_FAKE_DETECT', evidenceFamily: 'EF3_LEARNED_SYNTHETIC', correlationGroup: 'CLIP_GENERATIVE', rawScore: 0.9 })],
+    calibration: calibration({
+      negativeProfiles: [{ detectorId: 'UFD', negativeRawScores: [0.1, 0.2, 0.3, 0.4] }],
+      detectorIdAliases: { UNIVERSAL_FAKE_DETECT: 'UFD' },
+      coefficients: { CLIP_HIGH_TAIL: 1 },
+    }),
+  });
+  assert.equal(result.missingDetectors.length, 0);
+  assert.equal(result.featureVector.CLIP_HIGH_TAIL, 1);
+});
+
 test('signed coefficients may be negative without hand-reversing detector labels', () => {
   const result = compileDynamicSyntheticEvidence({
     detectors: [detector({ rawScore: 0.4 })],

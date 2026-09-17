@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-compiler-profile-v2",
+  "status": "RESEARCH_ONLY_NOT_DEPLOYABLE",
+  "compilerVersion": "lythaus-synthetic-evidence-compiler-v2",
+  "calibrationVersion": "wp007g-r1-g2-two-tail-grouped-v0",
+  "candidateId": "G2_TWO_TAIL_GROUPED_V0",
+  "profilePurpose": "Executable descriptor for the frozen R1 research calibrator; not an alpha or production activation profile.",
+  "featureNames": [
+    "SPAI_HIGH_TAIL",
+    "SPAI_LOW_TAIL",
+    "CLIP_HIGH_TAIL",
+    "CLIP_LOW_TAIL",
+    "CLIP_BOTH_HIGH",
+    "CLIP_BOTH_LOW",
+    "SAFE_HIGH_TAIL",
+    "SAFE_LOW_TAIL"
+  ],
+  "featureSemantics": {
+    "SPAI_HIGH_TAIL": "SPAI_C512 empirical high tail against NEGATIVE_CALIBRATION_G",
+    "SPAI_LOW_TAIL": "SPAI_C512 empirical low tail against NEGATIVE_CALIBRATION_G",
+    "CLIP_HIGH_TAIL": "max(RINE_HIGH_TAIL, UNIVERSAL_FAKE_DETECT_HIGH_TAIL)",
+    "CLIP_LOW_TAIL": "max(RINE_LOW_TAIL, UNIVERSAL_FAKE_DETECT_LOW_TAIL)",
+    "CLIP_BOTH_HIGH": "min(RINE_HIGH_TAIL, UNIVERSAL_FAKE_DETECT_HIGH_TAIL)",
+    "CLIP_BOTH_LOW": "min(RINE_LOW_TAIL, UNIVERSAL_FAKE_DETECT_LOW_TAIL)",
+    "SAFE_HIGH_TAIL": "SAFE empirical high tail against NEGATIVE_CALIBRATION_G",
+    "SAFE_LOW_TAIL": "SAFE empirical low tail against NEGATIVE_CALIBRATION_G"
+  },
+  "coefficients": {
+    "SPAI_HIGH_TAIL": 0.17158946098702096,
+    "SPAI_LOW_TAIL": -0.12682604642592452,
+    "CLIP_HIGH_TAIL": 0.1037813405043592,
+    "CLIP_LOW_TAIL": -0.09778504642111088,
+    "CLIP_BOTH_HIGH": 0.09256597437516018,
+    "CLIP_BOTH_LOW": -0.023197688621339033,
+    "SAFE_HIGH_TAIL": 0.21956350073225697,
+    "SAFE_LOW_TAIL": -0.07065894569806555
+  },
+  "intercept": -0.07609105552283259,
+  "scoreSemantics": {
+    "linearDecisionFunction": "intercept + sum(coefficient * feature)",
+    "compilerOutput": "round(sigmoid(linearDecisionFunction) * 100, 2)",
+    "thresholdUnits": "compilerOutput_0_to_100",
+    "thresholdsLinear": {
+      "MODERATE": 0.2069867121332305,
+      "HIGH": 0.26421564193310665,
+      "VERY_HIGH": 0.27291400715160297
+    },
+    "bandThresholds": {
+      "moderate": 55.15627154242663,
+      "high": 56.5672306134659,
+      "veryHigh": 56.78081491299127
+    }
+  },
+  "negativeCdf": {
+    "role": "NEGATIVE_CALIBRATION_G_ONLY",
+    "count": 148,
+    "detectors": ["SPAI_C512", "RINE", "UFD", "SAFE"],
+    "sourceArtifact": "research/wp007g-r1/calibrator-selection.json",
+    "sourceSha256": "4517202a0afbd486db4e62f8f9c3018f68093df3a41a946741451cd12cee2d45",
+    "jsonPointer": "/refit/calibrationNegativeScoreCdf",
+    "runtimeDetectorIdAliases": {"UNIVERSAL_FAKE_DETECT": "UFD"}
+  },
+  "correlationGroups": {
+    "SPAI_SPECTRAL": {"members": ["SPAI_C512"], "capLogit": 4},
+    "CLIP_GENERATIVE": {"members": ["RINE", "UNIVERSAL_FAKE_DETECT"], "capLogit": 4, "independence": "CORRELATED_NOT_TWO_INDEPENDENT_FAMILIES"},
+    "SAFE_TRANSFORMATION_RESNET": {"members": ["SAFE"], "capLogit": 4}
+  },
+  "detectorFamilyAliases": {
+    "SPAI_SPECTRAL": "SPAI",
+    "CLIP_GENERATIVE": "CLIP",
+    "SAFE_TRANSFORMATION_RESNET": "SAFE"
+  },
+  "trainingRoles": {
+    "positive": "MODERN_SYNTH_DEV",
+    "negative": "NEGATIVE_DEV_G",
+    "cdfAndThresholds": "NEGATIVE_CALIBRATION_G"
+  },
+  "confirmation": {
+    "opened": true,
+    "passed": false,
+    "artifact": "research/wp007g-r1/modern-confirmation.json",
+    "artifactSha256": "a6ba412c95760fdd9758c227a20b3eb6ed2a4a82df20d537a37575f9337e94e1"
+  },
+  "activation": {
+    "researchProfile": "PERMITTED_FOR_REPRODUCTION_AND_POSTHOC_DIAGNOSTIC_ONLY",
+    "deployableProfile": "NONE",
+    "alphaAction": "DO_NOT_ACTIVATE",
+    "reason": "Confirmation failed and transformation stress was FRAGILE; no live calibration profile was earned."
+  },
+  "holdoutSeal": {
+    "flux1": "POSTHOC_ONLY",
+    "flux2": "SEALED_FUTURE_RESERVE",
+    "flux2PixelsAccessed": false,
+    "flux2ProviderCalls": 0
+  }
+}

@@ -1,0 +1,623 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-ufd-inversion-analysis-v1",
+  "hypothesis": "H_UFD_LOWTAIL",
+  "rawScoreDirection": "UPSTREAM_HIGHER_SCORE_SYNTHETIC_LIKE",
+  "calibrationRole": "NEGATIVE_CALIBRATION_G_ONLY",
+  "developmentRole": "MODERN_SYNTH_DEV",
+  "folds": [
+    {
+      "heldOutGeneratorFamily": "BAGEL",
+      "withLowTail": {
+        "coefficients": [
+          0.08262437116118138,
+          -0.02601799489984103
+        ],
+        "intercept": -0.0069059252735402315,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "veryHighRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      },
+      "highTailOnly": {
+        "coefficient": 0.08286343463526864,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      }
+    },
+    {
+      "heldOutGeneratorFamily": "BLIP3o-4B",
+      "withLowTail": {
+        "coefficients": [
+          0.07380133229689292,
+          -0.02342278809961236
+        ],
+        "intercept": -0.005890147853079624,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "veryHighRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      },
+      "highTailOnly": {
+        "coefficient": 0.07401381848133552,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      }
+    },
+    {
+      "heldOutGeneratorFamily": "FLUX.1-dev",
+      "withLowTail": {
+        "coefficients": [
+          0.09855940662847136,
+          -0.04050098057045249
+        ],
+        "intercept": -0.008421132297289092,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "veryHighRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      },
+      "highTailOnly": {
+        "coefficient": 0.09892624036620142,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      }
+    },
+    {
+      "heldOutGeneratorFamily": "FLUX.1-schnell",
+      "withLowTail": {
+        "coefficients": [
+          0.08058035996906705,
+          -0.02740977181098902
+        ],
+        "intercept": -0.006554780884755622,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "veryHighRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      },
+      "highTailOnly": {
+        "coefficient": 0.0808289276710414,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      }
+    },
+    {
+      "heldOutGeneratorFamily": "HiDream-I1",
+      "withLowTail": {
+        "coefficients": [
+          0.0875075115808053,
+          -0.034367151860197835
+        ],
+        "intercept": -0.007131609722338459,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "veryHighRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      },
+      "highTailOnly": {
+        "coefficient": 0.08781948185923927,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      }
+    },
+    {
+      "heldOutGeneratorFamily": "Janus-Pro-1B",
+      "withLowTail": {
+        "coefficients": [
+          0.05160186057729546,
+          -0.018929125997584263
+        ],
+        "intercept": -0.0034908365760909833,
+        "highRecall": {
+          "count": 10,
+          "n": 20,
+          "rate": 0.5,
+          "wilson95": [
+            0.2992980081982123,
+            0.7007019918017877
+          ]
+        },
+        "veryHighRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      },
+      "highTailOnly": {
+        "coefficient": 0.05176590181192321,
+        "highRecall": {
+          "count": 10,
+          "n": 20,
+          "rate": 0.5,
+          "wilson95": [
+            0.2992980081982123,
+            0.7007019918017877
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      }
+    },
+    {
+      "heldOutGeneratorFamily": "PixArt-Sigma",
+      "withLowTail": {
+        "coefficients": [
+          0.0813408408575965,
+          -0.02928405947298943
+        ],
+        "intercept": -0.0065524601378332895,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "veryHighRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      },
+      "highTailOnly": {
+        "coefficient": 0.08160814521128022,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      }
+    },
+    {
+      "heldOutGeneratorFamily": "Qwen-Image",
+      "withLowTail": {
+        "coefficients": [
+          0.0879068278722713,
+          -0.034018907308928356
+        ],
+        "intercept": -0.007205767639318468,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "veryHighRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      },
+      "highTailOnly": {
+        "coefficient": 0.08821668400334469,
+        "highRecall": {
+          "count": 0,
+          "n": 20,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.16112515805281938
+          ]
+        },
+        "highNegativeFpr": {
+          "count": 1,
+          "n": 100,
+          "rate": 0.01,
+          "wilson95": [
+            0.0017674320641406505,
+            0.054486196178705315
+          ]
+        }
+      }
+    }
+  ],
+  "perGeneratorDescriptives": {
+    "BAGEL": {
+      "count": 20,
+      "rawScore": {
+        "median": 0.0023538150126114488,
+        "iqr": 0.01528784831680241
+      },
+      "rawHighAucAgainstCalibrationNegatives": 0.6256756756756757,
+      "rawLowTailAucAgainstCalibrationNegatives": 0.39763513513513515,
+      "highTail": {
+        "median": 0.277027027027027,
+        "iqr": 0.6756756756756757
+      },
+      "lowTail": {
+        "median": 0.0,
+        "iqr": 0.11486486486486483
+      }
+    },
+    "BLIP3o-4B": {
+      "count": 20,
+      "rawScore": {
+        "median": 0.0063827072735875845,
+        "iqr": 0.09471299304277636
+      },
+      "rawHighAucAgainstCalibrationNegatives": 0.7152027027027027,
+      "rawLowTailAucAgainstCalibrationNegatives": 0.32770270270270274,
+      "highTail": {
+        "median": 0.5270270270270271,
+        "iqr": 0.6891891891891893
+      },
+      "lowTail": {
+        "median": 0.0,
+        "iqr": 0.0
+      }
+    },
+    "FLUX.1-dev": {
+      "count": 20,
+      "rawScore": {
+        "median": 0.00010105827823281288,
+        "iqr": 0.00026599715056363493
+      },
+      "rawHighAucAgainstCalibrationNegatives": 0.3922297297297297,
+      "rawLowTailAucAgainstCalibrationNegatives": 0.6047297297297298,
+      "highTail": {
+        "median": 0.0,
+        "iqr": 0.006756756756756743
+      },
+      "lowTail": {
+        "median": 0.3175675675675676,
+        "iqr": 0.3817567567567567
+      }
+    },
+    "FLUX.1-schnell": {
+      "count": 20,
+      "rawScore": {
+        "median": 0.0038671395741403103,
+        "iqr": 0.016800445366243366
+      },
+      "rawHighAucAgainstCalibrationNegatives": 0.6317567567567568,
+      "rawLowTailAucAgainstCalibrationNegatives": 0.3824324324324325,
+      "highTail": {
+        "median": 0.3986486486486486,
+        "iqr": 0.6486486486486488
+      },
+      "lowTail": {
+        "median": 0.0,
+        "iqr": 0.023648648648648657
+      }
+    },
+    "HiDream-I1": {
+      "count": 20,
+      "rawScore": {
+        "median": 0.0006507723592221737,
+        "iqr": 0.017610746282116452
+      },
+      "rawHighAucAgainstCalibrationNegatives": 0.5260135135135136,
+      "rawLowTailAucAgainstCalibrationNegatives": 0.47128378378378377,
+      "highTail": {
+        "median": 0.04729729729729726,
+        "iqr": 0.6959459459459459
+      },
+      "lowTail": {
+        "median": 0.0,
+        "iqr": 0.5168918918918919
+      }
+    },
+    "Janus-Pro-1B": {
+      "count": 20,
+      "rawScore": {
+        "median": 0.5309378057718277,
+        "iqr": 0.9085706863552332
+      },
+      "rawHighAucAgainstCalibrationNegatives": 0.9243243243243242,
+      "rawLowTailAucAgainstCalibrationNegatives": 0.2679054054054054,
+      "highTail": {
+        "median": 0.9662162162162162,
+        "iqr": 0.18581081081081074
+      },
+      "lowTail": {
+        "median": 0.0,
+        "iqr": 0.0
+      }
+    },
+    "PixArt-Sigma": {
+      "count": 20,
+      "rawScore": {
+        "median": 0.004017635248601437,
+        "iqr": 0.01994920200377237
+      },
+      "rawHighAucAgainstCalibrationNegatives": 0.6125,
+      "rawLowTailAucAgainstCalibrationNegatives": 0.44628378378378386,
+      "highTail": {
+        "median": 0.4054054054054054,
+        "iqr": 0.6959459459459458
+      },
+      "lowTail": {
+        "median": 0.0,
+        "iqr": 0.11486486486486486
+      }
+    },
+    "Qwen-Image": {
+      "count": 20,
+      "rawScore": {
+        "median": 0.0005076772285974585,
+        "iqr": 0.005806293731438927
+      },
+      "rawHighAucAgainstCalibrationNegatives": 0.525,
+      "rawLowTailAucAgainstCalibrationNegatives": 0.493918918918919,
+      "highTail": {
+        "median": 0.04054054054054057,
+        "iqr": 0.48986486486486497
+      },
+      "lowTail": {
+        "median": 0.07432432432432434,
+        "iqr": 0.31081081081081086
+      }
+    }
+  },
+  "aggregate": {
+    "lowTailPositiveFolds": 0,
+    "foldCount": 8,
+    "lowTailPositiveFraction": 0.0,
+    "lowTailStableSupport": false,
+    "macroHighRecallDeltaVsHighOnly": 0.0,
+    "macroHighNegativeFprDeltaVsHighOnly": 0.0,
+    "improvesMacroRecallByAtLeastFivePoints": false,
+    "negativeFprIncreaseWithinOnePoint": true
+  },
+  "decision": "PROMOTE_LOW_TAIL_ONLY_IF_STABLE_AND_IMPROVES_WITHOUT_FPR_PENALTY",
+  "conclusion": "UFD_LOWTAIL_NOT_PROMOTED"
+}

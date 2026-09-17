@@ -1,0 +1,278 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-modern-calibration-freeze-v1",
+  "freezeStatus": "RESEARCH_ONLY_CONFIRMATION_GATE_FAILED",
+  "parentSha": "5a6231c6f8ede3de5e117ed3692bcf493f0c1a1c",
+  "wp007gHistoricalReportPreserved": true,
+  "modernDataFreezeSha256": "15a528da08775390e48de24e1af5ce284185b2df79f4d65448b4cf562e18ccca",
+  "forbiddenGeneratorFamiliesSha256": "329b2fdb3d8467d16a859338191ab96eb45e872c5d8508dac71a2fb0de3b16e8",
+  "negativeDataFreezeSha256": "11d9b2db8e4d9afe3647a9c264fe420a9762be822d6a71ac77cd3b36b0f6ca0b",
+  "rawModernScoresSha256": "f6e43ed63a11c454e4fb86b9ff01e1a215105a09efacb8568ad8c0adf29bef53",
+  "rawScorePrivacySanitization": {
+    "scoreValuesChanged": false,
+    "removedFields": ["absolute local detector-run paths"],
+    "sanitizedArtifact": "research/wp007g-r1/raw-modern-scores.json"
+  },
+  "foldResultsSha256": "d3c68795f7d410905bb22dd325d3db1b699dd571dacd6194340aae39b7bf14b2",
+  "selectionSha256": "4517202a0afbd486db4e62f8f9c3018f68093df3a41a946741451cd12cee2d45",
+  "ufdInversionAnalysisSha256": "0987bd5ad0c2bdd9d22c9253024d9513bb8c15b778821a8b8fbe1cb421765aa0",
+  "confirmationSha256": "a6ba412c95760fdd9758c227a20b3eb6ed2a4a82df20d537a37575f9337e94e1",
+  "transformationResultsSha256": "fc82c96c98a95afa40f5eed773e784df23d7e6c09a5be49cceec0895ef185c79",
+  "compilerProfileSha256": "fc872eb14965e937126da82a1276a0794e8aad5d2226242256ced778fb4bf96e",
+  "detectorRegistrySha256": "6430b291e227eb001531f35bd44f85cba202a78bc95fdd13cbe0ab963679a5e0",
+  "runtimeLockSha256": "f0e203856894fda196b3117d10484079275a7c6d17f27061217e5d47b6005636",
+  "reserveResultSha256": "7853b2f1366c974f7904cf1fb58056d70b8d115bb077e861864fbaf0aad34450",
+  "deploymentReadinessSha256": "14ab2bdc10b7c0762afb18f2fa025addca5d85074cf090acccf564cce4ab9507",
+  "holdoutProvenance": {
+    "flux1": "CONSUMED_MODERN_GENERATOR_POSTHOC_ONLY",
+    "flux2": "SEALED_FUTURE_RESERVE",
+    "flux2FutureReserveFreezeSha256": "56ae0bd15b8bc21d77b28c9e6faea8149440aab8a9d101db523a43aedb98e054",
+    "flux2PublicBenchmarkPixelsAccessed": false,
+    "flux2ProviderCalls": 0
+  },
+  "detectors": {
+    "SPAI_C512": {
+      "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "correlationGroup": "SPAI_SPECTRAL"
+    },
+    "RINE": {
+      "checkpointSha256": "13986ffc86e1bd9d57fd640f891358c4f14c0f8aea8e590e52c598541f69fdc1",
+      "correlationGroup": "CLIP_GENERATIVE"
+    },
+    "UFD": {
+      "checkpointSha256": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847",
+      "correlationGroup": "CLIP_GENERATIVE",
+      "status": "SHADOW_ONLY"
+    },
+    "SAFE": {
+      "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+      "upstreamSha": "4e998724651b227def64f5be0cd60c0aa1552c35",
+      "correlationGroup": "SAFE_TRANSFORMATION_RESNET"
+    }
+  },
+  "selectedCalibrator": {
+    "candidateId": "G2_TWO_TAIL_GROUPED_V0",
+    "features": [
+      "SPAI_HIGH_TAIL",
+      "SPAI_LOW_TAIL",
+      "CLIP_HIGH_TAIL",
+      "CLIP_LOW_TAIL",
+      "CLIP_BOTH_HIGH",
+      "CLIP_BOTH_LOW",
+      "SAFE_HIGH_TAIL",
+      "SAFE_LOW_TAIL"
+    ],
+    "coefficients": [
+      0.17158946098702096,
+      -0.12682604642592452,
+      0.1037813405043592,
+      -0.09778504642111088,
+      0.09256597437516018,
+      -0.023197688621339033,
+      0.21956350073225697,
+      -0.07065894569806555
+    ],
+    "intercept": -0.07609105552283259,
+    "thresholds": {
+      "VERY_HIGH": {
+        "targetFpr": 0.01,
+        "threshold": 0.27291400715160297,
+        "calibrationFpr": {
+          "count": 1,
+          "n": 148,
+          "rate": 0.006756756756756757,
+          "wilson95": [
+            0.0011937308904065753,
+            0.03727704557646182
+          ]
+        }
+      },
+      "HIGH": {
+        "targetFpr": 0.02,
+        "threshold": 0.26421564193310665,
+        "calibrationFpr": {
+          "count": 2,
+          "n": 148,
+          "rate": 0.013513513513513514,
+          "wilson95": [
+            0.00371374962448039,
+            0.04792866004147199
+          ]
+        }
+      },
+      "MODERATE": {
+        "targetFpr": 0.05,
+        "threshold": 0.2069867121332305,
+        "calibrationFpr": {
+          "count": 7,
+          "n": 148,
+          "rate": 0.0472972972972973,
+          "wilson95": [
+            0.023096998492809107,
+            0.09440357716856325
+          ]
+        }
+      }
+    },
+    "cdfNegativeRole": "NEGATIVE_CALIBRATION_G_ONLY",
+    "trainingPositiveRole": "MODERN_SYNTH_DEV",
+    "trainingNegativeRole": "NEGATIVE_DEV_G",
+    "correlationDiscipline": "RINE_AND_UFD_GROUPED_BY_MAX_TAIL_WITH_BOUNDED_BOTH_CORROBORATION"
+  },
+  "modernFamilies": {
+    "dev": [
+      "BAGEL",
+      "BLIP3o-4B",
+      "FLUX.1-dev",
+      "FLUX.1-schnell",
+      "HiDream-I1",
+      "Janus-Pro-1B",
+      "PixArt-Sigma",
+      "Qwen-Image"
+    ],
+    "confirm": [
+      "GPT-4o",
+      "HunyuanImage-3.0",
+      "SD-3.5-Medium",
+      "Z-Image"
+    ],
+    "reserve": [
+      "Gemini-2.5-Flash",
+      "GPT-Image-1.5"
+    ]
+  },
+  "confirmation": {
+    "opened": true,
+    "passed": false,
+    "reason": "VERY_HIGH pooled negative FPR exceeded the predeclared 0.02 gate",
+    "metrics": {
+      "VERY_HIGH": {
+        "threshold": 0.27291400715160297,
+        "syntheticRecall": {
+          "count": 44,
+          "n": 80,
+          "rate": 0.55,
+          "wilson95": [
+            0.44119507889355963,
+            0.6542231081528878
+          ]
+        },
+        "negativeFpr": {
+          "count": 2,
+          "n": 80,
+          "rate": 0.025,
+          "wilson95": [
+            0.006882893202970648,
+            0.0866443298557801
+          ]
+        },
+        "cameraFpr": {
+          "count": 2,
+          "n": 64,
+          "rate": 0.03125,
+          "wilson95": [
+            0.008612138346171874,
+            0.10697291770958313
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "n": 16,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.1936076805344365
+          ]
+        }
+      },
+      "HIGH": {
+        "threshold": 0.26421564193310665,
+        "syntheticRecall": {
+          "count": 45,
+          "n": 80,
+          "rate": 0.5625,
+          "wilson95": [
+            0.4534113429694972,
+            0.6658613908385618
+          ]
+        },
+        "negativeFpr": {
+          "count": 3,
+          "n": 80,
+          "rate": 0.0375,
+          "wilson95": [
+            0.012834568919911402,
+            0.10454720090045115
+          ]
+        },
+        "cameraFpr": {
+          "count": 3,
+          "n": 64,
+          "rate": 0.046875,
+          "wilson95": [
+            0.016069016786292974,
+            0.12899653740093686
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "n": 16,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.1936076805344365
+          ]
+        }
+      },
+      "MODERATE": {
+        "threshold": 0.2069867121332305,
+        "syntheticRecall": {
+          "count": 55,
+          "n": 80,
+          "rate": 0.6875,
+          "wilson95": [
+            0.5793222425531256,
+            0.7784959588710517
+          ]
+        },
+        "negativeFpr": {
+          "count": 8,
+          "n": 80,
+          "rate": 0.1,
+          "wilson95": [
+            0.05154761556738083,
+            0.18510688806104086
+          ]
+        },
+        "cameraFpr": {
+          "count": 8,
+          "n": 64,
+          "rate": 0.125,
+          "wilson95": [
+            0.06472242663330453,
+            0.22774561821129946
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "n": 16,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.1936076805344365
+          ]
+        }
+      }
+    }
+  },
+  "reserve": {
+    "opened": false,
+    "reason": "confirmation gate failed; reserve remains unopened"
+  },
+  "transformationStress": {
+    "classification": "FRAGILE",
+    "rule": "FRAGILE if any band has synthetic retention <0.70 or negative FPR increase >0.05; MIXED if otherwise any retention <0.90 or FPR increase >0.02; ROBUST otherwise"
+  },
+  "posthocPolicy": "FLUX1 diagnostic permitted after this freeze; no fitting or tuning on FLUX1; FLUX2 remains sealed",
+  "deployableModernFamilies": [],
+  "deploymentStatus": "NO_DEPLOYABLE_MODERN_CALIBRATION_RIGHTS_ESTABLISHED"
+}

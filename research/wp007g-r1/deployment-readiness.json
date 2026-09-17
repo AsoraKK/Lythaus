@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-deployment-readiness-v1",
+  "researchProfile": {
+    "status": "RESEARCH_ONLY_MEASUREMENT",
+    "detectors": ["SPAI_C512", "RINE", "SAFE", "UNIVERSAL_FAKE_DETECT_SHADOW"],
+    "calibrator": "G2_TWO_TAIL_GROUPED_V0",
+    "profile": "research/wp007g-r1/compiler-profile-v2.json"
+  },
+  "deployableProfile": {
+    "status": "NONE",
+    "detectors": [],
+    "reason": "Modern calibration material has no established commercial output rights; SAFE deployment remains review-required; confirmation and transformation gates also failed."
+  },
+  "shadow": {
+    "status": "SHADOW_READY_ONLY",
+    "visibleLabels": false,
+    "enforcementAuthority": "NONE",
+    "rollback": "Disable the existing authenticity shadow mode without changing Safety policy."
+  },
+  "alpha": {
+    "status": "BLOCKED",
+    "reason": "No deployable calibration profile was earned; do not activate visible authenticity labels from this R1 result."
+  },
+  "architectureSeparation": {
+    "safetyModeration": "SAFETY_ONLY",
+    "observer": "VISUAL_OBSERVATION_ONLY",
+    "ef1": "PROVENANCE",
+    "ef2": "CAMERA_ACQUISITION",
+    "ef3": "SYNTHETIC_DETECTOR_EVIDENCE",
+    "adjudicator": "ADVISORY_ONLY",
+    "policy": "DETERMINISTIC_FINAL_ACTION"
+  },
+  "flux2ProviderCalls": 0,
+  "flux2PixelAccess": false
+}

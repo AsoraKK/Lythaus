@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-storage-delta-v1",
+  "parentSha": "5a6231c6f8ede3de5e117ed3692bcf493f0c1a1c",
+  "scope": "R1-derived assets only; unrelated personal and project data excluded",
+  "added": {
+    "selectedModernMediaBytes": 416258012,
+    "committedResearchArtifactBytesBeforeThisRecord": 1966047,
+    "committedR1ScriptBytes": 84783,
+    "totalTrackedAndSelectedBytesBeforeThisRecord": 418308842
+  },
+  "removed": {
+    "bytes": 2097355752,
+    "roots": [
+      {"logicalAsset": "R1 score-input staging", "bytes": 503955693, "reason": "C512 derivatives and score-input copies were consumed into the committed raw score record."},
+      {"logicalAsset": "R1 transformation stress media", "bytes": 1550608591, "reason": "Transformed images were consumed into the committed transformation report and are regenerable."},
+      {"logicalAsset": "R1 smoke duplicates", "bytes": 3402866, "reason": "Smoke copies were superseded by the verified full selected corpus."},
+      {"logicalAsset": "R1 historical metadata checkout", "bytes": 9799415, "reason": "The official history index is committed; the metadata-only checkout is no longer needed."},
+      {"logicalAsset": "R1 temporary detector/run artifacts", "bytes": 29589187, "reason": "Raw run blobs, temporary manifests, CSVs, and retrieval logs are represented by committed hashes and aggregate results."}
+    ]
+  },
+  "preserved": [
+    {"logicalAsset": "Selected R1 modern corpus", "bytes": 416258012, "status": "KEEP_SELECTED_SAMPLES"},
+    {"logicalAsset": "Active SPAI, RINE, UFD, and SAFE research artifacts", "status": "KEEP_ACTIVE_RESEARCH_ARTIFACTS"},
+    {"logicalAsset": "Consumed FLUX.1 diagnostic evidence", "status": "KEEP_POSTHOC_RECORD_AND_MEDIA"},
+    {"logicalAsset": "FLUX.2 future reserve", "status": "SEALED_NO_PIXEL_ACCESS"}
+  ],
+  "holdoutIntegrity": {
+    "flux2PublicBenchmarkPixelsAccessed": false,
+    "flux2ProviderCalls": 0,
+    "selectedCorpusHashVerification": "PASS_280_OF_280"
+  }
+}
