@@ -79,6 +79,94 @@ html[data-opening="playing"] .home-page .site-header {
   }
 }
 
+/*
+ * Opening beam art direction.
+ * Keep the pin-point source fixed at centre, while doubling the moving beam's
+ * footprint and optical brightness. The outer energy shifts from pale gold to
+ * a deeper amber so the reveal reads warm rather than yellow-white.
+ */
+.home-page .wordmark-scene {
+  --light-bloom-width: 88px !important;
+  --light-bloom-height: 164px !important;
+  --light-warmth: 1 !important;
+  --light-intensity: 1.35 !important;
+  --light-ivory: #ffe2ad !important;
+  --light-gold: #dc8b2f !important;
+}
+
+html[data-opening="armed"] .home-page .wordmark-optics g[clip-path] [data-light-position] ellipse:not(.wordmark-afterlight),
+html[data-opening="playing"] .home-page .wordmark-optics g[clip-path] [data-light-position] ellipse:not(.wordmark-afterlight) {
+  rx: 42px !important;
+  filter:
+    brightness(3.1)
+    saturate(1.42)
+    drop-shadow(0 0 6px rgba(255, 244, 216, 1))
+    drop-shadow(0 0 18px rgba(247, 178, 77, 0.92))
+    drop-shadow(0 0 36px rgba(214, 119, 28, 0.66)) !important;
+}
+
+html[data-opening="armed"] .home-page [data-light-beam] .wordmark-atmosphere,
+html[data-opening="playing"] .home-page [data-light-beam] .wordmark-atmosphere {
+  rx: 250px !important;
+  ry: 300px !important;
+  opacity: 1 !important;
+  filter:
+    brightness(2.7)
+    saturate(1.55)
+    drop-shadow(0 0 28px rgba(226, 137, 38, 0.78))
+    drop-shadow(0 0 72px rgba(176, 79, 10, 0.46)) !important;
+}
+
+html[data-opening="armed"] .home-page .wordmark-bloom,
+html[data-opening="playing"] .home-page .wordmark-bloom {
+  opacity: 1 !important;
+  filter:
+    brightness(3.4)
+    saturate(1.48)
+    drop-shadow(0 0 10px rgba(255, 247, 222, 1))
+    drop-shadow(0 0 32px rgba(247, 169, 65, 0.96))
+    drop-shadow(0 0 72px rgba(213, 111, 20, 0.72))
+    drop-shadow(0 0 120px rgba(151, 61, 5, 0.4)) !important;
+}
+
+html[data-opening="armed"] .home-page [data-light-source] > ellipse:first-child,
+html[data-opening="playing"] .home-page [data-light-source] > ellipse:first-child {
+  opacity: 0.9 !important;
+  filter:
+    brightness(2.7)
+    saturate(1.5)
+    drop-shadow(0 0 36px rgba(227, 132, 31, 0.76))
+    drop-shadow(0 0 76px rgba(165, 71, 8, 0.45)) !important;
+}
+
+html[data-opening="armed"] .home-page [data-light-source] > ellipse:nth-child(2),
+html[data-opening="playing"] .home-page [data-light-source] > ellipse:nth-child(2) {
+  opacity: 1 !important;
+  filter:
+    brightness(3.6)
+    saturate(1.42)
+    drop-shadow(0 0 14px rgba(255, 250, 229, 1))
+    drop-shadow(0 0 40px rgba(245, 164, 59, 1))
+    drop-shadow(0 0 88px rgba(207, 103, 16, 0.7)) !important;
+}
+
+html[data-opening="armed"] .home-page .wordmark-core,
+html[data-opening="playing"] .home-page .wordmark-core {
+  opacity: 1 !important;
+  filter:
+    brightness(4)
+    drop-shadow(0 0 6px rgba(255, 255, 248, 1))
+    drop-shadow(0 0 16px rgba(255, 236, 190, 1))
+    drop-shadow(0 0 36px rgba(246, 157, 49, 1))
+    drop-shadow(0 0 68px rgba(194, 88, 10, 0.78)) !important;
+}
+
+html[data-opening="armed"] .home-page [data-light-projection],
+html[data-opening="playing"] .home-page [data-light-projection] {
+  opacity: 1 !important;
+  filter: brightness(3) saturate(1.52) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wordmark-settled { mask: none !important; }
   .wordmark-optics { display: none !important; }
