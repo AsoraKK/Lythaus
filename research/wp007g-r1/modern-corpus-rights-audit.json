@@ -1,0 +1,162 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-modern-corpus-rights-audit-v1",
+  "parentSha": "5a6231c6f8ede3de5e117ed3692bcf493f0c1a1c",
+  "auditedAt": "2026-09-16",
+  "dataset": {
+    "repoId": "lioooox/T2I-CoReBench-Images",
+    "url": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images",
+    "currentRevision": "2350e0f664d849626df392cb93954b66019c18ee",
+    "historicalRevision": "6467902a01ab6b2d5ac3017c03719d11a11cfa61",
+    "license": "Apache-2.0",
+    "documentedCatalog": "40 model families, 172800 images",
+    "accessFinding": "Individual historical Git-LFS paths are retrievable without downloading current multi-gigabyte archives.",
+    "rightsFinding": "The dataset card does not grant or document per-family commercial output rights; dataset Apache-2.0 metadata is not treated as a commercial license for every generated image."
+  },
+  "selectedFamilies": [
+    {
+      "family": "BAGEL",
+      "role": "DEV",
+      "sourceModel": "ByteDance-Seed/BAGEL-7B-MoT",
+      "sourceUrl": "https://huggingface.co/ByteDance-Seed/BAGEL-7B-MoT",
+      "modelLicense": "Apache-2.0",
+      "knownRestrictions": "Model card states Apache-2.0; dataset does not provide per-output provenance or an explicit commercial grant.",
+      "calibrationEligibility": "RESEARCH_ONLY",
+      "deploymentEligibility": "NOT_ESTABLISHED"
+    },
+    {
+      "family": "BLIP3o-4B",
+      "role": "DEV",
+      "sourceModel": "BLIP3o/BLIP3o-Model-4B",
+      "sourceUrl": "https://huggingface.co/BLIP3o/BLIP3o-Model-4B",
+      "modelLicense": "Apache-2.0",
+      "knownRestrictions": "Model card states Apache-2.0; dataset does not provide per-output provenance or an explicit commercial grant.",
+      "calibrationEligibility": "RESEARCH_ONLY",
+      "deploymentEligibility": "NOT_ESTABLISHED"
+    },
+    {
+      "family": "FLUX.1-dev",
+      "role": "DEV",
+      "sourceModel": "black-forest-labs/FLUX.1-dev",
+      "sourceUrl": "https://huggingface.co/black-forest-labs/FLUX.1-dev",
+      "modelLicense": "FLUX.1-dev non-commercial license",
+      "knownRestrictions": "Non-commercial model terms; not eligible for a commercial calibration corpus.",
+      "calibrationEligibility": "RESEARCH_ONLY",
+      "deploymentEligibility": "BLOCKED_NONCOMMERCIAL"
+    },
+    {
+      "family": "FLUX.1-schnell",
+      "role": "DEV",
+      "sourceModel": "black-forest-labs/FLUX.1-schnell",
+      "sourceUrl": "https://huggingface.co/black-forest-labs/FLUX.1-schnell",
+      "modelLicense": "Apache-2.0",
+      "knownRestrictions": "Model card states Apache-2.0; dataset does not provide per-output provenance or an explicit commercial grant.",
+      "calibrationEligibility": "RESEARCH_ONLY",
+      "deploymentEligibility": "NOT_ESTABLISHED"
+    },
+    {
+      "family": "HiDream-I1",
+      "role": "DEV",
+      "sourceModel": "HiDream-ai/HiDream-I1-Full",
+      "sourceUrl": "https://huggingface.co/HiDream-ai/HiDream-I1-Full",
+      "modelLicense": "MIT with component-specific terms",
+      "knownRestrictions": "Model card identifies a FLUX.1-schnell VAE, Apache T5, and Llama 3.1 Community License text encoder; dataset output provenance remains undocumented.",
+      "calibrationEligibility": "RESEARCH_ONLY",
+      "deploymentEligibility": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "Janus-Pro-1B",
+      "role": "DEV",
+      "sourceModel": "deepseek-ai/Janus-Pro-1B",
+      "sourceUrl": "https://huggingface.co/deepseek-ai/Janus-Pro-1B",
+      "modelLicense": "MIT",
+      "knownRestrictions": "Model card states MIT; dataset does not provide per-output provenance or an explicit commercial grant.",
+      "calibrationEligibility": "RESEARCH_ONLY",
+      "deploymentEligibility": "NOT_ESTABLISHED"
+    },
+    {
+      "family": "PixArt-Sigma",
+      "role": "DEV",
+      "sourceModel": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+      "sourceUrl": "https://huggingface.co/PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+      "modelLicense": "OpenRAIL++",
+      "knownRestrictions": "Model card uses OpenRAIL++; exact dataset-output and downstream calibration rights are not documented.",
+      "calibrationEligibility": "RESEARCH_ONLY",
+      "deploymentEligibility": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "Qwen-Image",
+      "role": "DEV",
+      "sourceModel": "Qwen/Qwen-Image",
+      "sourceUrl": "https://huggingface.co/Qwen/Qwen-Image",
+      "modelLicense": "Apache-2.0",
+      "knownRestrictions": "Model card states Apache-2.0; dataset does not provide per-output provenance or an explicit commercial grant.",
+      "calibrationEligibility": "RESEARCH_ONLY",
+      "deploymentEligibility": "NOT_ESTABLISHED"
+    },
+    {
+      "family": "GPT-4o",
+      "role": "CONFIRM",
+      "sourceModel": "OpenAI GPT-4o image generation",
+      "sourceUrl": "https://platform.openai.com/docs/models",
+      "modelLicense": "Proprietary service terms",
+      "knownRestrictions": "Third-party benchmark outputs do not establish a commercial license for detector calibration.",
+      "calibrationEligibility": "RESEARCH_ONLY_EVALUATION",
+      "deploymentEligibility": "BLOCKED_UNESTABLISHED"
+    },
+    {
+      "family": "HunyuanImage-3.0",
+      "role": "CONFIRM",
+      "sourceModel": "tencent/HunyuanImage-3.0",
+      "sourceUrl": "https://huggingface.co/tencent/HunyuanImage-3.0",
+      "modelLicense": "Tencent Hunyuan Community License",
+      "knownRestrictions": "License excludes EU, UK and South Korea and prohibits using output or results to improve another AI model; never use this family for calibrator fitting.",
+      "calibrationEligibility": "EVALUATION_ONLY",
+      "deploymentEligibility": "BLOCKED_LICENSE_SCOPE"
+    },
+    {
+      "family": "SD-3.5-Medium",
+      "role": "CONFIRM",
+      "sourceModel": "stabilityai/stable-diffusion-3.5-medium",
+      "sourceUrl": "https://huggingface.co/stabilityai/stable-diffusion-3.5-medium",
+      "modelLicense": "Stability AI Community License",
+      "knownRestrictions": "Commercial use requires compliance with Stability terms and registration; dataset output provenance is not documented.",
+      "calibrationEligibility": "RESEARCH_ONLY_EVALUATION",
+      "deploymentEligibility": "REVIEW_REQUIRED"
+    },
+    {
+      "family": "Z-Image",
+      "role": "CONFIRM",
+      "sourceModel": "Tongyi-MAI/Z-Image",
+      "sourceUrl": "https://huggingface.co/Tongyi-MAI/Z-Image",
+      "modelLicense": "Apache-2.0",
+      "knownRestrictions": "Model card states Apache-2.0; dataset does not provide per-output provenance or an explicit commercial grant.",
+      "calibrationEligibility": "RESEARCH_ONLY_EVALUATION",
+      "deploymentEligibility": "NOT_ESTABLISHED"
+    },
+    {
+      "family": "Gemini-2.5-Flash",
+      "role": "RESERVE",
+      "sourceModel": "Google Gemini 2.5 Flash",
+      "sourceUrl": "https://ai.google.dev/gemini-api/docs/models",
+      "modelLicense": "Proprietary service terms",
+      "knownRestrictions": "Third-party benchmark outputs do not establish a commercial license for detector calibration.",
+      "calibrationEligibility": "RESEARCH_ONLY_EVALUATION",
+      "deploymentEligibility": "BLOCKED_UNESTABLISHED"
+    },
+    {
+      "family": "GPT-Image-1.5",
+      "role": "RESERVE",
+      "sourceModel": "OpenAI GPT-Image-1.5",
+      "sourceUrl": "https://platform.openai.com/docs/models",
+      "modelLicense": "Proprietary service terms",
+      "knownRestrictions": "Third-party benchmark outputs do not establish a commercial license for detector calibration.",
+      "calibrationEligibility": "RESEARCH_ONLY_EVALUATION",
+      "deploymentEligibility": "BLOCKED_UNESTABLISHED"
+    }
+  ],
+  "researchDecision": "RESEARCH_RETRIEVAL_ALLOWED_WITH_ROLE_LIMITS",
+  "deployableModernFamilies": [],
+  "deploymentDecision": "NO_DEPLOYABLE_MODERN_CALIBRATION_CORPUS_ESTABLISHED",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

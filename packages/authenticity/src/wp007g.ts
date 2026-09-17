@@ -17,6 +17,8 @@ export interface DynamicNegativeProfile {
 export interface DynamicCalibration {
   readonly calibrationVersion: string;
   readonly negativeProfiles: readonly DynamicNegativeProfile[];
+  /** Optional mapping from runtime detector IDs to frozen calibration IDs. */
+  readonly detectorIdAliases?: Readonly<Record<string, string>>;
   readonly intercept: number;
   readonly coefficients: Readonly<Record<string, number>>;
   readonly bandThresholds: {
@@ -120,11 +122,19 @@ export function twoTailedEvidence(rawScore: number | null, negativeRawScores: re
 }
 
 function profileFor(calibration: DynamicCalibration, detectorId: string): DynamicNegativeProfile | undefined {
-  return calibration.negativeProfiles.find((profile) => profile.detectorId === detectorId);
+  const aliasedId = calibration.detectorIdAliases?.[detectorId];
+  return calibration.negativeProfiles.find((profile) => profile.detectorId === detectorId || profile.detectorId === aliasedId);
 }
 
 function addFeature(features: Record<string, number>, name: string, value: number): void {
   features[name] = finite(value) ? clamp(value, 0, 1) : 0;
+}
+
+function canonicalGroupPrefix(correlationGroup: string): string | null {
+  if (correlationGroup === 'SPAI_SPECTRAL') return 'SPAI';
+  if (correlationGroup === 'CLIP_GENERATIVE') return 'CLIP';
+  if (correlationGroup === 'SAFE_TRANSFORMATION_RESNET') return 'SAFE';
+  return null;
 }
 
 function sigmoid(value: number): number {
@@ -205,6 +215,20 @@ function featureAndGroups(
       groupHighName,
       groupLowName,
     ];
+    // R1's frozen grouped calibrator uses stable detector-family names while
+    // the v2 contract keeps the correlation-group names for diagnostics.
+    // Emit both aliases so a frozen research profile can be applied without
+    // changing the prior WP007G contract or double-counting a group.
+    const canonicalPrefix = canonicalGroupPrefix(correlationGroup);
+    if (canonicalPrefix) {
+      const canonicalHighName = `${canonicalPrefix}_HIGH_TAIL`;
+      const canonicalLowName = `${canonicalPrefix}_LOW_TAIL`;
+      addFeature(features, canonicalHighName, highTail);
+      addFeature(features, canonicalLowName, lowTail);
+      groupedFeatureNames.add(canonicalHighName);
+      groupedFeatureNames.add(canonicalLowName);
+      featureNames.push(canonicalHighName, canonicalLowName);
+    }
     if (correlationGroup === 'CLIP_GENERATIVE') {
       addFeature(features, 'CLIP_BOTH_HIGH', bothHigh);
       addFeature(features, 'CLIP_BOTH_LOW', bothLow);

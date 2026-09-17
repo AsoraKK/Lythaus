@@ -1,0 +1,360 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-modern-evaluation-v1",
+  "candidateId": "G2_TWO_TAIL_GROUPED_V0",
+  "selectionSha256": "4517202a0afbd486db4e62f8f9c3018f68093df3a41a946741451cd12cee2d45",
+  "positiveRole": "MODERN_SYNTH_CONFIRM",
+  "negativeRole": "NEGATIVE_CONFIRM_G",
+  "thresholdSource": "NEGATIVE_CALIBRATION_G_ONLY_FROZEN_IN_SELECTION",
+  "noRetuning": true,
+  "metrics": {
+    "label": "MODERN_SYNTH_CONFIRM_ON_NEGATIVE_CONFIRM_G",
+    "candidateId": "G2_TWO_TAIL_GROUPED_V0",
+    "positiveCount": 80,
+    "negativeCount": 80,
+    "positiveScore": {
+      "median": 0.31112752807464045,
+      "iqr": 0.19890481247231048
+    },
+    "negativeScore": {
+      "median": -0.0014905518164562773,
+      "iqr": 0.19837676477355384
+    },
+    "rocAuc": 0.89734375,
+    "prAuc": 0.9152098108803663,
+    "bands": {
+      "VERY_HIGH": {
+        "threshold": 0.27291400715160297,
+        "syntheticRecall": {
+          "count": 44,
+          "n": 80,
+          "rate": 0.55,
+          "wilson95": [
+            0.44119507889355963,
+            0.6542231081528878
+          ]
+        },
+        "negativeFpr": {
+          "count": 2,
+          "n": 80,
+          "rate": 0.025,
+          "wilson95": [
+            0.006882893202970648,
+            0.0866443298557801
+          ]
+        },
+        "cameraFpr": {
+          "count": 2,
+          "n": 64,
+          "rate": 0.03125,
+          "wilson95": [
+            0.008612138346171874,
+            0.10697291770958313
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "n": 16,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.1936076805344365
+          ]
+        }
+      },
+      "HIGH": {
+        "threshold": 0.26421564193310665,
+        "syntheticRecall": {
+          "count": 45,
+          "n": 80,
+          "rate": 0.5625,
+          "wilson95": [
+            0.4534113429694972,
+            0.6658613908385618
+          ]
+        },
+        "negativeFpr": {
+          "count": 3,
+          "n": 80,
+          "rate": 0.0375,
+          "wilson95": [
+            0.012834568919911402,
+            0.10454720090045115
+          ]
+        },
+        "cameraFpr": {
+          "count": 3,
+          "n": 64,
+          "rate": 0.046875,
+          "wilson95": [
+            0.016069016786292974,
+            0.12899653740093686
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "n": 16,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.1936076805344365
+          ]
+        }
+      },
+      "MODERATE": {
+        "threshold": 0.2069867121332305,
+        "syntheticRecall": {
+          "count": 55,
+          "n": 80,
+          "rate": 0.6875,
+          "wilson95": [
+            0.5793222425531256,
+            0.7784959588710517
+          ]
+        },
+        "negativeFpr": {
+          "count": 8,
+          "n": 80,
+          "rate": 0.1,
+          "wilson95": [
+            0.05154761556738083,
+            0.18510688806104086
+          ]
+        },
+        "cameraFpr": {
+          "count": 8,
+          "n": 64,
+          "rate": 0.125,
+          "wilson95": [
+            0.06472242663330453,
+            0.22774561821129946
+          ]
+        },
+        "digitalFpr": {
+          "count": 0,
+          "n": 16,
+          "rate": 0.0,
+          "wilson95": [
+            0.0,
+            0.1936076805344365
+          ]
+        }
+      }
+    },
+    "negativeBySubtype": {
+      "CAMERA": {
+        "count": 64,
+        "bands": {
+          "VERY_HIGH": {
+            "count": 2,
+            "n": 64,
+            "rate": 0.03125,
+            "wilson95": [
+              0.008612138346171874,
+              0.10697291770958313
+            ]
+          },
+          "HIGH": {
+            "count": 3,
+            "n": 64,
+            "rate": 0.046875,
+            "wilson95": [
+              0.016069016786292974,
+              0.12899653740093686
+            ]
+          },
+          "MODERATE": {
+            "count": 8,
+            "n": 64,
+            "rate": 0.125,
+            "wilson95": [
+              0.06472242663330453,
+              0.22774561821129946
+            ]
+          }
+        }
+      },
+      "DIGITAL": {
+        "count": 16,
+        "bands": {
+          "VERY_HIGH": {
+            "count": 0,
+            "n": 16,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.1936076805344365
+            ]
+          },
+          "HIGH": {
+            "count": 0,
+            "n": 16,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.1936076805344365
+            ]
+          },
+          "MODERATE": {
+            "count": 0,
+            "n": 16,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.1936076805344365
+            ]
+          }
+        }
+      }
+    },
+    "perFamily": {
+      "GPT-4o": {
+        "count": 20,
+        "score": {
+          "median": 0.1341546823080683,
+          "iqr": 0.1974694227192006
+        },
+        "rocAucAgainstNegatives": 0.7,
+        "bands": {
+          "VERY_HIGH": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.16112515805281938
+            ]
+          },
+          "HIGH": {
+            "count": 0,
+            "n": 20,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.16112515805281938
+            ]
+          },
+          "MODERATE": {
+            "count": 3,
+            "n": 20,
+            "rate": 0.15,
+            "wilson95": [
+              0.052368745896216595,
+              0.36041886474075696
+            ]
+          }
+        }
+      },
+      "HunyuanImage-3.0": {
+        "count": 20,
+        "score": {
+          "median": 0.3350764453368255,
+          "iqr": 0.1642432593303617
+        },
+        "rocAucAgainstNegatives": 0.9550000000000001,
+        "bands": {
+          "VERY_HIGH": {
+            "count": 13,
+            "n": 20,
+            "rate": 0.65,
+            "wilson95": [
+              0.43285427668523624,
+              0.818808175898918
+            ]
+          },
+          "HIGH": {
+            "count": 14,
+            "n": 20,
+            "rate": 0.7,
+            "wilson95": [
+              0.4810271816464765,
+              0.8545227551323956
+            ]
+          },
+          "MODERATE": {
+            "count": 15,
+            "n": 20,
+            "rate": 0.75,
+            "wilson95": [
+              0.531299122381256,
+              0.8881382985923343
+            ]
+          }
+        }
+      },
+      "SD-3.5-Medium": {
+        "count": 20,
+        "score": {
+          "median": 0.3741462369948416,
+          "iqr": 0.10153931339442451
+        },
+        "rocAucAgainstNegatives": 0.995,
+        "bands": {
+          "VERY_HIGH": {
+            "count": 19,
+            "n": 20,
+            "rate": 0.95,
+            "wilson95": [
+              0.763868806553258,
+              0.9911185511992047
+            ]
+          },
+          "HIGH": {
+            "count": 19,
+            "n": 20,
+            "rate": 0.95,
+            "wilson95": [
+              0.763868806553258,
+              0.9911185511992047
+            ]
+          },
+          "MODERATE": {
+            "count": 19,
+            "n": 20,
+            "rate": 0.95,
+            "wilson95": [
+              0.763868806553258,
+              0.9911185511992047
+            ]
+          }
+        }
+      },
+      "Z-Image": {
+        "count": 20,
+        "score": {
+          "median": 0.3641012443670628,
+          "iqr": 0.20918976136480688
+        },
+        "rocAucAgainstNegatives": 0.939375,
+        "bands": {
+          "VERY_HIGH": {
+            "count": 12,
+            "n": 20,
+            "rate": 0.6,
+            "wilson95": [
+              0.3865815007622531,
+              0.781193467627183
+            ]
+          },
+          "HIGH": {
+            "count": 12,
+            "n": 20,
+            "rate": 0.6,
+            "wilson95": [
+              0.3865815007622531,
+              0.781193467627183
+            ]
+          },
+          "MODERATE": {
+            "count": 18,
+            "n": 20,
+            "rate": 0.9,
+            "wilson95": [
+              0.6989663547715128,
+              0.9721335187862319
+            ]
+          }
+        }
+      }
+    }
+  }
+}

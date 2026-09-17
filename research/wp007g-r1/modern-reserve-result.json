@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "lythaus-wp007g-r1-modern-reserve-result-v1",
+  "opened": false,
+  "status": "SEALED_UNOPENED",
+  "reason": "MODERN_CONFIRMATION_GATE_FAILED",
+  "confirmationFailure": "VERY_HIGH pooled negative FPR was 0.025, exceeding the predeclared 0.02 gate",
+  "reservedFamilies": [
+    "Gemini-2.5-Flash",
+    "GPT-Image-1.5"
+  ],
+  "reservedNegativeRole": "NEGATIVE_RESERVE_G",
+  "scoresMaterialised": false,
+  "flux2AccessPermitted": false,
+  "flux2PixelsAccessed": false,
+  "preservationRule": "Do not open or score reserve roles after confirmation failure; retain membership and hashes for audit only."
+}
