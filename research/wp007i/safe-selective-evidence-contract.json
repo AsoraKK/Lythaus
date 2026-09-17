@@ -1,0 +1,40 @@
+{
+  "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+  "detectorId": "SAFE",
+  "fields": [
+    "contentSha256",
+    "detectorId",
+    "artifactHash",
+    "preprocessingVersion",
+    "rawScore",
+    "frozenThreshold",
+    "resolution",
+    "evidenceLevel",
+    "applicability",
+    "applicabilityReasons",
+    "inputRegime",
+    "encodingFacts",
+    "modelStatus",
+    "runtimeMs",
+    "transformationContext",
+    "evidenceSchemaVersion",
+    "policyVersion",
+    "timestamp"
+  ],
+  "frozenThreshold": 0.5864923000335693,
+  "policyVersion": "WP007I_SAFE_POSITIVE_ONLY_APPLICABILITY_V1",
+  "preprocessingVersion": "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1",
+  "productionAuthorization": "NO",
+  "publicViewOmits": [
+    "rawScore",
+    "internalArtifactDiagnostics"
+  ],
+  "schemaVersion": "lythaus-wp007i-safe-selective-evidence-v1",
+  "semantics": {
+    "cameraConflict": "preserve EF2 and EF3 as independent axes",
+    "highScore": "positive synthetic-origin EF3 evidence only",
+    "lowScoreDegradedRegime": "inconclusive due to input regime",
+    "lowScoreSupportedRegime": "low synthetic evidence; never human authorship",
+    "missingOrTimeout": "model unavailable; never negative evidence"
+  }
+}

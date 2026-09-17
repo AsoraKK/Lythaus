@@ -1,0 +1,10 @@
+{
+  "basis": "All WP007I manifests deny FLUX.2 families and all inference manifests carry flux2PixelAccess=false.",
+  "flux2Inference": false,
+  "flux2ManualInspection": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "flux2PublicBenchmarkPixelsAccessed": false,
+  "flux2Transforms": false,
+  "schemaVersion": "lythaus-wp007i-flux2-zero-access-v1"
+}

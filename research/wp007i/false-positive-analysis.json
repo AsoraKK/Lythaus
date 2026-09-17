@@ -1,0 +1,123 @@
+{
+  "count": 4,
+  "notRemovedFromDenominator": true,
+  "records": [
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": null,
+      "inputFacts": {
+        "fileBytes": 5170252,
+        "fileSha256": "944b16f5bab782a97bd2a7051162276d5ca88b76b801410d7befef5d8604851b",
+        "format": "JPEG",
+        "height": 6000,
+        "jpegQualityEstimate": 89,
+        "metadataKeys": [
+          "icc_profile"
+        ],
+        "metadataPresent": true,
+        "mime": "image/jpeg",
+        "pixelCount": 24000000,
+        "status": "OK",
+        "width": 4000
+      },
+      "rawScore": 0.7278463840484619,
+      "rowKey": "NEGATIVE_DEV_I__UNSPLASH_LITE_FAMILY_qwoW4mdqjWw__UNSPLASH_qwoW4mdqjWw",
+      "sampleId": "UNSPLASH_qwoW4mdqjWw",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_qwoW4mdqjWw",
+      "sourceSubtype": "CAMERA_NATIVE",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": null,
+      "inputFacts": {
+        "fileBytes": 2629861,
+        "fileSha256": "0d9f4af4b0207c4634e5c861e8735f826881a740db0ff84fd1bf5b38eb2c02bb",
+        "format": "JPEG",
+        "height": 4000,
+        "jpegQualityEstimate": 89,
+        "metadataKeys": [
+          "icc_profile"
+        ],
+        "metadataPresent": true,
+        "mime": "image/jpeg",
+        "pixelCount": 24000000,
+        "status": "OK",
+        "width": 6000
+      },
+      "rawScore": 0.8140270113945007,
+      "rowKey": "NEGATIVE_CONFIRM_I__UNSPLASH_LITE_FAMILY_5B-I62BwJ5E__UNSPLASH_5B-I62BwJ5E",
+      "sampleId": "UNSPLASH_5B-I62BwJ5E",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_5B-I62BwJ5E",
+      "sourceSubtype": "CAMERA_NATIVE",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": null,
+      "inputFacts": {
+        "fileBytes": 2084183,
+        "fileSha256": "a1604269b4f3c4cb73f014d9dd980b08a5de4a5bb91517165aa97950d446423b",
+        "format": "JPEG",
+        "height": 2592,
+        "jpegQualityEstimate": 89,
+        "metadataKeys": [
+          "icc_profile"
+        ],
+        "metadataPresent": true,
+        "mime": "image/jpeg",
+        "pixelCount": 10077696,
+        "status": "OK",
+        "width": 3888
+      },
+      "rawScore": 0.6343904733657837,
+      "rowKey": "NEGATIVE_CONFIRM_I__UNSPLASH_LITE_FAMILY_XECNPsL6PVM__UNSPLASH_XECNPsL6PVM",
+      "sampleId": "UNSPLASH_XECNPsL6PVM",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_XECNPsL6PVM",
+      "sourceSubtype": "CAMERA_NATIVE",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": null,
+      "inputFacts": {
+        "fileBytes": 1085039,
+        "fileSha256": "e83d9042dda747650b9cb9cf540967b33213811c910c2cefbf100f36ce4df76b",
+        "format": "JPEG",
+        "height": 3264,
+        "jpegQualityEstimate": 89,
+        "metadataKeys": [
+          "icc_profile"
+        ],
+        "metadataPresent": true,
+        "mime": "image/jpeg",
+        "pixelCount": 16032768,
+        "status": "OK",
+        "width": 4912
+      },
+      "rawScore": 0.7979730367660522,
+      "rowKey": "NEGATIVE_CONFIRM_I__UNSPLASH_LITE_FAMILY_eMcMZGw2fcQ__UNSPLASH_eMcMZGw2fcQ",
+      "sampleId": "UNSPLASH_eMcMZGw2fcQ",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_eMcMZGw2fcQ",
+      "sourceSubtype": "CAMERA_NATIVE",
+      "transformation": "ORIGINAL"
+    }
+  ],
+  "schemaVersion": "lythaus-wp007i-false-positive-analysis-v1"
+}

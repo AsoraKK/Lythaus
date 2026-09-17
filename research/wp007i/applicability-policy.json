@@ -1,0 +1,53 @@
+{
+  "features": {
+    "containerFormat": "decoded image format",
+    "decodeStatus": "Pillow decode success/failure",
+    "fileBytes": "encoded byte size",
+    "height": "decoded pixel height",
+    "jpegProgressive": "JPEG progressive marker when readable",
+    "jpegQualityEstimate": "nearest standard JPEG quality estimate from quantization tables; diagnostic only when residual is low",
+    "jpegQuantizationTableCount": "number of readable JPEG quantization tables",
+    "metadataPresent": "EXIF/XMP/ICC/JFIF metadata presence only",
+    "minimumDimension": "min(width,height)",
+    "width": "decoded pixel width"
+  },
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "frozenBeforeConfirmationScoring": true,
+  "limitations": [
+    "The rule intentionally does not infer resize, screenshot, or JPEG provenance from an unavailable parent file.",
+    "Metadata absence is not authenticity evidence.",
+    "A DEGRADED or UNSUPPORTED state withdraws authority from a low SAFE score; it does not imply AI or human origin."
+  ],
+  "logic": [
+    "If decode fails, return UNKNOWN with DECODE_FAILURE.",
+    "If min(width,height) < 256, return UNSUPPORTED with DIMENSION_TOO_SMALL.",
+    "If JPEG has no metadata and a readable estimated quality <= 98, return DEGRADED with JPEG_RECOMPRESSION_EVIDENCE and JPEG_METADATA_ABSENT.",
+    "If JPEG has no metadata and quality is unreadable or > 98, return MODERATE with JPEG_METADATA_ABSENT.",
+    "If JPEG has metadata and no low-quality signal, return HIGH with NO_DESTRUCTIVE_BYTE_SIGNAL.",
+    "If a PNG has a common screen dimension and no metadata, return MODERATE with COMMON_SCREEN_DIMENSION; this is applicability only, never synthetic evidence.",
+    "Otherwise return HIGH with NO_DESTRUCTIVE_BYTE_SIGNAL."
+  ],
+  "policySha256": "56ff64986982c9186f3875f365ceb36488111742fc4325eb1909a204e8cb3a47",
+  "policyVersion": "WP007I_APPLICABILITY_RULE_V1",
+  "reasonCodes": [
+    "DECODE_FAILURE",
+    "DIMENSION_TOO_SMALL",
+    "JPEG_RECOMPRESSION_EVIDENCE",
+    "JPEG_METADATA_ABSENT",
+    "COMMON_SCREEN_DIMENSION",
+    "NO_DESTRUCTIVE_BYTE_SIGNAL",
+    "ENCODING_STATE_UNKNOWN"
+  ],
+  "schemaVersion": "lythaus-wp007i-applicability-policy-v1",
+  "states": [
+    "HIGH",
+    "MODERATE",
+    "DEGRADED",
+    "UNSUPPORTED",
+    "UNKNOWN"
+  ],
+  "usesGroundTruth": false,
+  "usesSafeScore": false,
+  "usesSupporterScores": false
+}

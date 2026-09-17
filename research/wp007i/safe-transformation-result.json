@@ -1,0 +1,529 @@
+{
+  "baseCount": 16,
+  "inputRegimeIsSeparateFromTruth": true,
+  "results": {
+    "JPEG75": {
+      "applicabilityStates": {
+        "DEGRADED": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.18481232558863633,
+        "numerator": 6,
+        "rate": 0.375,
+        "upper": 0.6135895945449727
+      },
+      "meanScoreDelta": -0.3350358052412048,
+      "medianScoreDelta": -0.11696342471987009,
+      "scoreDeltaIqr": 0.8624340817332268,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 8,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.4126984126984127,
+        "precision": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "rocAuc": 0.28125,
+        "scoreIqr": 0.07275349972769618,
+        "scoreMedian": 0.05415853671729565,
+        "tn": 8,
+        "tp": 0,
+        "validCount": 16
+      }
+    },
+    "JPEG85": {
+      "applicabilityStates": {
+        "DEGRADED": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.18481232558863633,
+        "numerator": 6,
+        "rate": 0.375,
+        "upper": 0.6135895945449727
+      },
+      "meanScoreDelta": -0.3523349823663011,
+      "medianScoreDelta": -0.10237249359488487,
+      "scoreDeltaIqr": 0.818051639944315,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 8,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.523611111111111,
+        "precision": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "rocAuc": 0.5,
+        "scoreIqr": 0.06442540092393756,
+        "scoreMedian": 0.05423807166516781,
+        "tn": 8,
+        "tp": 0,
+        "validCount": 16
+      }
+    },
+    "JPEG95": {
+      "applicabilityStates": {
+        "DEGRADED": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.18481232558863633,
+        "numerator": 6,
+        "rate": 0.375,
+        "upper": 0.6135895945449727
+      },
+      "meanScoreDelta": -0.3480031963554211,
+      "medianScoreDelta": -0.11973733827471733,
+      "scoreDeltaIqr": 0.8273858428001404,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 8,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.4550820707070707,
+        "precision": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "rocAuc": 0.375,
+        "scoreIqr": 0.047658112831413746,
+        "scoreMedian": 0.053022442385554314,
+        "tn": 8,
+        "tp": 0,
+        "validCount": 16
+      }
+    },
+    "METADATA_STRIP": {
+      "applicabilityStates": {
+        "HIGH": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "meanScoreDelta": 0.0,
+      "medianScoreDelta": 0.0,
+      "scoreDeltaIqr": 0.0,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 2,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.975,
+        "precision": {
+          "denominator": 6,
+          "lower": 0.6096657120978346,
+          "numerator": 6,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.40927543031016883,
+          "numerator": 6,
+          "rate": 0.75,
+          "upper": 0.9285207872478909
+        },
+        "rocAuc": 0.96875,
+        "scoreIqr": 0.8492838526144624,
+        "scoreMedian": 0.46345482766628265,
+        "tn": 8,
+        "tp": 6,
+        "validCount": 16
+      }
+    },
+    "MILD_BLUR": {
+      "applicabilityStates": {
+        "HIGH": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.03497748774324047,
+        "numerator": 2,
+        "rate": 0.125,
+        "upper": 0.36022827265758695
+      },
+      "meanScoreDelta": -0.05354068346787244,
+      "medianScoreDelta": 0.0005384720861911774,
+      "scoreDeltaIqr": 0.053494300693273544,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 4,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.8802579365079365,
+        "precision": {
+          "denominator": 4,
+          "lower": 0.5101091635454027,
+          "numerator": 4,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.21521606221387757,
+          "numerator": 4,
+          "rate": 0.5,
+          "upper": 0.7847839377861224
+        },
+        "rocAuc": 0.875,
+        "scoreIqr": 0.7308516949415207,
+        "scoreMedian": 0.33593714237213135,
+        "tn": 8,
+        "tp": 4,
+        "validCount": 16
+      }
+    },
+    "MILD_CROP": {
+      "applicabilityStates": {
+        "HIGH": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.03497748774324047,
+        "numerator": 2,
+        "rate": 0.125,
+        "upper": 0.36022827265758695
+      },
+      "meanScoreDelta": 0.016586444398853928,
+      "medianScoreDelta": -0.002707168459892273,
+      "scoreDeltaIqr": 0.07428154000081122,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 2,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.9472222222222222,
+        "precision": {
+          "denominator": 6,
+          "lower": 0.6096657120978346,
+          "numerator": 6,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.40927543031016883,
+          "numerator": 6,
+          "rate": 0.75,
+          "upper": 0.9285207872478909
+        },
+        "rocAuc": 0.9375,
+        "scoreIqr": 0.8332827081903815,
+        "scoreMedian": 0.4353375732898712,
+        "tn": 8,
+        "tp": 6,
+        "validCount": 16
+      }
+    },
+    "MILD_SHARPEN": {
+      "applicabilityStates": {
+        "HIGH": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.01111934476464252,
+        "numerator": 1,
+        "rate": 0.0625,
+        "upper": 0.28328737570298945
+      },
+      "meanScoreDelta": 0.01799924677470699,
+      "medianScoreDelta": 0.0017291996628046036,
+      "scoreDeltaIqr": 0.06634648353792727,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 1,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.9375,
+        "precision": {
+          "denominator": 7,
+          "lower": 0.6456695649333126,
+          "numerator": 7,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.5291118177871464,
+          "numerator": 7,
+          "rate": 0.875,
+          "upper": 0.9775825085499433
+        },
+        "rocAuc": 0.875,
+        "scoreIqr": 0.8146572168916464,
+        "scoreMedian": 0.44832533597946167,
+        "tn": 8,
+        "tp": 7,
+        "validCount": 16
+      }
+    },
+    "RESIZE50": {
+      "applicabilityStates": {
+        "HIGH": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.06591599071428142,
+        "numerator": 3,
+        "rate": 0.1875,
+        "upper": 0.4300888096197414
+      },
+      "meanScoreDelta": -0.12329273571958765,
+      "medianScoreDelta": -0.02722644992172718,
+      "scoreDeltaIqr": 0.22518770024180412,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 5,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.8757326007326007,
+        "precision": {
+          "denominator": 3,
+          "lower": 0.4385029682449546,
+          "numerator": 3,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.13684428582359742,
+          "numerator": 3,
+          "rate": 0.375,
+          "upper": 0.6942576053973727
+        },
+        "rocAuc": 0.84375,
+        "scoreIqr": 0.399586015380919,
+        "scoreMedian": 0.2258223444223404,
+        "tn": 8,
+        "tp": 3,
+        "validCount": 16
+      }
+    },
+    "RESIZE75": {
+      "applicabilityStates": {
+        "HIGH": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.03497748774324047,
+        "numerator": 2,
+        "rate": 0.125,
+        "upper": 0.36022827265758695
+      },
+      "meanScoreDelta": 0.009167386160697788,
+      "medianScoreDelta": -0.0027737226337194443,
+      "scoreDeltaIqr": 0.07912709447555244,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 2,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.975,
+        "precision": {
+          "denominator": 6,
+          "lower": 0.6096657120978346,
+          "numerator": 6,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.40927543031016883,
+          "numerator": 6,
+          "rate": 0.75,
+          "upper": 0.9285207872478909
+        },
+        "rocAuc": 0.96875,
+        "scoreIqr": 0.7616256615146995,
+        "scoreMedian": 0.43019670248031616,
+        "tn": 8,
+        "tp": 6,
+        "validCount": 16
+      }
+    },
+    "SCREENSHOT_STYLE_RESAMPLING": {
+      "applicabilityStates": {
+        "HIGH": 16
+      },
+      "count": 16,
+      "decisionFlip": {
+        "denominator": 16,
+        "lower": 0.06591599071428142,
+        "numerator": 3,
+        "rate": 0.1875,
+        "upper": 0.4300888096197414
+      },
+      "meanScoreDelta": -0.006423374346923083,
+      "medianScoreDelta": -0.0006723403930664062,
+      "scoreDeltaIqr": 0.15281504672020674,
+      "scoreMetrics": {
+        "brier": null,
+        "brierNote": "NOT_APPLICABLE_RAW_SCORE_IS_NOT_A_PROBABILITY",
+        "ece": null,
+        "failureCount": 0,
+        "fn": 3,
+        "fp": 0,
+        "fpr": {
+          "denominator": 8,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.32440756488388023
+        },
+        "prAuc": 0.9293650793650793,
+        "precision": {
+          "denominator": 5,
+          "lower": 0.5655175352168251,
+          "numerator": 5,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "recall": {
+          "denominator": 8,
+          "lower": 0.30574239460262737,
+          "numerator": 5,
+          "rate": 0.625,
+          "upper": 0.8631557141764026
+        },
+        "rocAuc": 0.921875,
+        "scoreIqr": 0.6585688441991806,
+        "scoreMedian": 0.46031521260738373,
+        "tn": 8,
+        "tp": 5,
+        "validCount": 16
+      }
+    }
+  },
+  "schemaVersion": "lythaus-wp007i-safe-transformation-result-v1",
+  "threshold": 0.5864923000335693,
+  "transformationCount": 160
+}

@@ -1,0 +1,506 @@
+{
+  "devAndConfirmAreDisjoint": true,
+  "interpretation": "Applicability is a deterministic input-regime description, not origin evidence.",
+  "result": {
+    "byRole": {
+      "APPLICABILITY_CONFIRM": {
+        "originalCount": 90,
+        "originalFalseDowngrade": {
+          "denominator": 90,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.04093562556432678
+        },
+        "originalStateCounts": {
+          "HIGH": 90
+        },
+        "originalSupportedCoverage": {
+          "denominator": 90,
+          "lower": 0.9590643744356734,
+          "numerator": 90,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "transformations": {
+          "JPEG75": {
+            "count": 8,
+            "destructiveDeclared": true,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.6755924351161198,
+              "numerator": 8,
+              "rate": 1.0,
+              "upper": 1.0
+            },
+            "stateCounts": {
+              "DEGRADED": 8
+            }
+          },
+          "JPEG85": {
+            "count": 8,
+            "destructiveDeclared": true,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.6755924351161198,
+              "numerator": 8,
+              "rate": 1.0,
+              "upper": 1.0
+            },
+            "stateCounts": {
+              "DEGRADED": 8
+            }
+          },
+          "JPEG95": {
+            "count": 8,
+            "destructiveDeclared": true,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.6755924351161198,
+              "numerator": 8,
+              "rate": 1.0,
+              "upper": 1.0
+            },
+            "stateCounts": {
+              "DEGRADED": 8
+            }
+          },
+          "METADATA_STRIP": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "MILD_BLUR": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "MILD_CROP": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "MILD_SHARPEN": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "RESIZE50": {
+            "count": 8,
+            "destructiveDeclared": true,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "RESIZE75": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "SCREENSHOT_STYLE_RESAMPLING": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          }
+        }
+      },
+      "APPLICABILITY_DEV": {
+        "originalCount": 90,
+        "originalFalseDowngrade": {
+          "denominator": 90,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.04093562556432678
+        },
+        "originalStateCounts": {
+          "HIGH": 90
+        },
+        "originalSupportedCoverage": {
+          "denominator": 90,
+          "lower": 0.9590643744356734,
+          "numerator": 90,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "transformations": {
+          "JPEG75": {
+            "count": 8,
+            "destructiveDeclared": true,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.6755924351161198,
+              "numerator": 8,
+              "rate": 1.0,
+              "upper": 1.0
+            },
+            "stateCounts": {
+              "DEGRADED": 8
+            }
+          },
+          "JPEG85": {
+            "count": 8,
+            "destructiveDeclared": true,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.6755924351161198,
+              "numerator": 8,
+              "rate": 1.0,
+              "upper": 1.0
+            },
+            "stateCounts": {
+              "DEGRADED": 8
+            }
+          },
+          "JPEG95": {
+            "count": 8,
+            "destructiveDeclared": true,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.6755924351161198,
+              "numerator": 8,
+              "rate": 1.0,
+              "upper": 1.0
+            },
+            "stateCounts": {
+              "DEGRADED": 8
+            }
+          },
+          "METADATA_STRIP": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "MILD_BLUR": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "MILD_CROP": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "MILD_SHARPEN": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "RESIZE50": {
+            "count": 8,
+            "destructiveDeclared": true,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "RESIZE75": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          },
+          "SCREENSHOT_STYLE_RESAMPLING": {
+            "count": 8,
+            "destructiveDeclared": false,
+            "destructiveStateDetection": {
+              "denominator": 8,
+              "lower": 0.0,
+              "numerator": 0,
+              "rate": 0.0,
+              "upper": 0.32440756488388023
+            },
+            "stateCounts": {
+              "HIGH": 8
+            }
+          }
+        }
+      }
+    },
+    "destructiveSet": [
+      "JPEG75",
+      "JPEG85",
+      "JPEG95",
+      "RESIZE50"
+    ],
+    "devConfirmCounts": {
+      "APPLICABILITY_CONFIRM": 90,
+      "APPLICABILITY_DEV": 90,
+      "NOT_IN_APPLICABILITY_MATRIX": 740
+    },
+    "originalCount": 920,
+    "originalFalseDowngrade": {
+      "denominator": 920,
+      "lower": 0.0,
+      "numerator": 0,
+      "rate": 0.0,
+      "upper": 0.0041581364248340184
+    },
+    "originalStateCounts": {
+      "HIGH": 920
+    },
+    "originalSupportedCoverage": {
+      "denominator": 920,
+      "lower": 0.9958418635751661,
+      "numerator": 920,
+      "rate": 1.0,
+      "upper": 1.0
+    },
+    "policyVersion": "WP007I_APPLICABILITY_RULE_V1",
+    "scoreIndependent": true,
+    "transformations": {
+      "JPEG75": {
+        "count": 16,
+        "destructiveDeclared": true,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.8063923194655637,
+          "numerator": 16,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "stateCounts": {
+          "DEGRADED": 16
+        }
+      },
+      "JPEG85": {
+        "count": 16,
+        "destructiveDeclared": true,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.8063923194655637,
+          "numerator": 16,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "stateCounts": {
+          "DEGRADED": 16
+        }
+      },
+      "JPEG95": {
+        "count": 16,
+        "destructiveDeclared": true,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.8063923194655637,
+          "numerator": 16,
+          "rate": 1.0,
+          "upper": 1.0
+        },
+        "stateCounts": {
+          "DEGRADED": 16
+        }
+      },
+      "METADATA_STRIP": {
+        "count": 16,
+        "destructiveDeclared": false,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.1936076805344365
+        },
+        "stateCounts": {
+          "HIGH": 16
+        }
+      },
+      "MILD_BLUR": {
+        "count": 16,
+        "destructiveDeclared": false,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.1936076805344365
+        },
+        "stateCounts": {
+          "HIGH": 16
+        }
+      },
+      "MILD_CROP": {
+        "count": 16,
+        "destructiveDeclared": false,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.1936076805344365
+        },
+        "stateCounts": {
+          "HIGH": 16
+        }
+      },
+      "MILD_SHARPEN": {
+        "count": 16,
+        "destructiveDeclared": false,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.1936076805344365
+        },
+        "stateCounts": {
+          "HIGH": 16
+        }
+      },
+      "RESIZE50": {
+        "count": 16,
+        "destructiveDeclared": true,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.1936076805344365
+        },
+        "stateCounts": {
+          "HIGH": 16
+        }
+      },
+      "RESIZE75": {
+        "count": 16,
+        "destructiveDeclared": false,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.1936076805344365
+        },
+        "stateCounts": {
+          "HIGH": 16
+        }
+      },
+      "SCREENSHOT_STYLE_RESAMPLING": {
+        "count": 16,
+        "destructiveDeclared": false,
+        "destructiveStateDetection": {
+          "denominator": 16,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.1936076805344365
+        },
+        "stateCounts": {
+          "HIGH": 16
+        }
+      }
+    }
+  },
+  "schemaVersion": "lythaus-wp007i-applicability-confirmation-result-v1"
+}

@@ -1,0 +1,20 @@
+{
+  "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+  "parentWp007hHead": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+  "preprocessingFrozen": true,
+  "productionAuthorization": "NO",
+  "rightsStatus": "RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED",
+  "schemaVersion": "lythaus-wp007i-safe-freeze-reference-v1",
+  "sourceWorkPackage": "WP007H",
+  "threshold": 0.5864923000335693,
+  "thresholdFrozen": true,
+  "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+  "wp007hArtifactHashes": {
+    "experiment-plan.json": "4e34a5d4bafef257faf832f3bf07ed56dcc8a937f2277abca1d9c601f983d30c",
+    "forbidden-generator-families.json": "39d0e9148779c809a18e27c35239040432d7cc7c7c9c165cbed63b0477740ac7",
+    "safe-artifact-rights.json": "c9790d99a616839ebb883ba17121993d636a362441593bba280aed8fd3809bc1",
+    "safe-qualification-results.json": "207cc63f965dd1391da98be8e208033da0cdf7cbe12cadf68b0b1bc738bb0ae4",
+    "safe-specialist-profile.json": "694adefe57dbf83c14f76a85317020c90dc24e0140baa66ac04a39578f2ebd07",
+    "safe-transformation-results.json": "f5f499997dcfff12f377bd0532704027cd26b1648203cbe0ad8175c772f0cf6f"
+  }
+}

@@ -1,0 +1,196 @@
+{
+  "applicability": {
+    "candidateInputs": [
+      "container format and MIME",
+      "dimensions and aspect ratio",
+      "JPEG quantization-table structure and estimated quality",
+      "JPEG sampling/progressive markers where readable",
+      "metadata presence/state",
+      "file-size-to-pixel relationship",
+      "deterministic resampling indicators"
+    ],
+    "candidateRuleVersion": "WP007I_APPLICABILITY_RULE_V1",
+    "devConfirmSplit": "Source families are frozen separately before any SAFE scoring.",
+    "forbiddenInputs": [
+      "SAFE raw score",
+      "ground-truth origin",
+      "supporter scores",
+      "EF2 score",
+      "Moondream",
+      "Safety",
+      "Judge"
+    ],
+    "states": [
+      "HIGH",
+      "MODERATE",
+      "DEGRADED",
+      "UNSUPPORTED",
+      "UNKNOWN"
+    ]
+  },
+  "branch": "agent/wp007i-safe-policy",
+  "freshSyntheticCorpus": {
+    "families": [
+      {
+        "family": "SD-3.5-Large",
+        "revision": "cad54bdbf289fa95678aac7ddd19f5871a8774c1"
+      },
+      {
+        "family": "Seedream-4",
+        "revision": "aae6dcedc48c878bab2825d5972bee6b6df4653a"
+      },
+      {
+        "family": "Gemini-2.0-Flash",
+        "revision": "0cbf2aed1ac30538880012bc5e0ea7bb3a26878b"
+      },
+      {
+        "family": "GoT-R1-7B",
+        "revision": "a50cecb2c822c1865d1e98ef56d12edcb814914f"
+      },
+      {
+        "family": "Nano-Banana",
+        "revision": "88c97bb55a7dedccf5aa7d532142390e5cb5ca37"
+      },
+      {
+        "family": "imagen-4",
+        "revision": "a24a279b3a48ed84d8b2d5a6f8e9adf642db6c6b"
+      }
+    ],
+    "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ARE_ESTABLISHED",
+    "roles": {
+      "FRESH_SYNTHETIC_CONFIRM": 60,
+      "FRESH_SYNTHETIC_DEV": 60
+    },
+    "samplesPerFamily": 20,
+    "scoreBlind": true,
+    "selection": "SHA256(WP007I-SYNTH|generatorFamily|relativePath), first 20 per family.",
+    "totalTarget": 120
+  },
+  "hypotheses": [
+    "SAFE high-score evidence remains specific on a substantially larger independent negative population.",
+    "A deterministic byte/input-regime gate can identify destructive transformations without using SAFE score or truth labels at inference time.",
+    "Positive-only SAFE policy reduces false accusations relative to treating low SAFE scores as human evidence.",
+    "Shadow supporters do not alter SAFE qualification and are promoted only for repeated unique rescue with low contradiction burden."
+  ],
+  "integrity": {
+    "confirmationCannotFitPolicy": true,
+    "forbiddenFamiliesSha256": "106b15f89f259aeb22ef84d49d7fc62a3388ee983213679640284c726dd7b143",
+    "membershipFrozenBeforeScoring": true,
+    "reserveCannotBeOpened": true,
+    "scoreBlindCuration": true,
+    "wp007hArtifactHashes": {
+      "experiment-plan.json": "4e34a5d4bafef257faf832f3bf07ed56dcc8a937f2277abca1d9c601f983d30c",
+      "forbidden-generator-families.json": "39d0e9148779c809a18e27c35239040432d7cc7c7c9c165cbed63b0477740ac7",
+      "safe-artifact-rights.json": "c9790d99a616839ebb883ba17121993d636a362441593bba280aed8fd3809bc1",
+      "safe-qualification-results.json": "207cc63f965dd1391da98be8e208033da0cdf7cbe12cadf68b0b1bc738bb0ae4",
+      "safe-specialist-profile.json": "694adefe57dbf83c14f76a85317020c90dc24e0140baa66ac04a39578f2ebd07",
+      "safe-transformation-results.json": "f5f499997dcfff12f377bd0532704027cd26b1648203cbe0ad8175c772f0cf6f"
+    }
+  },
+  "negativeCorpus": {
+    "minimumIfRightsCleanDiversityFails": 400,
+    "plannedSources": [
+      {
+        "count": 600,
+        "rights": "INTERNAL_COMMERCIAL_ML_LICENSE; NO REDISTRIBUTION",
+        "source": "UNSPLASH_LITE",
+        "subtype": "CAMERA_NATIVE"
+      },
+      {
+        "count": 200,
+        "rights": "LYTHAUS_OWNED_DETERMINISTIC_GENERATION",
+        "source": "LYTHAUS_PROCEDURAL_HARD_NEGATIVES",
+        "subtype": "DIGITAL_NON_AI_HARD_NEGATIVE"
+      }
+    ],
+    "primaryDenominatorUsesIndependentSourceFamilies": true,
+    "roles": {
+      "NEGATIVE_CONFIRM_I": 400,
+      "NEGATIVE_DEV_I": 400
+    },
+    "scoreBlind": true,
+    "targetFreshIndependentFamilies": 800
+  },
+  "objective": "Qualify frozen SAFE as selective positive EF3 evidence under a deterministic, independently tested applicability gate.",
+  "parentPullRequest": 848,
+  "parentSha": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+  "planHashing": {
+    "canonicalization": "UTF-8 JSON sorted keys compact separators with planSha256 omitted",
+    "selfHashWrittenBeforeScoring": true
+  },
+  "planSha256": "3381e62f670a2b7aca4328a872f9eb7efe1a29ba546679355f60a2f60f4268b7",
+  "policies": {
+    "P0_SAFE_RAW_REFERENCE": "Frozen threshold and raw evidence band; no applicability conditioning.",
+    "P1_SAFE_POSITIVE_ONLY": "Above frozen threshold is positive synthetic evidence; below threshold is not a human conclusion.",
+    "P2_SAFE_APPLICABILITY": "High SAFE evidence is authoritative only in supported input regimes; low score in degraded/unknown regime is inconclusive.",
+    "P3_P2_EF2_CONFLICT_PRESERVATION": "P2 plus explicit conflict state when independent strong EF2 and SAFE positive evidence coexist; no score cancellation."
+  },
+  "qualificationGates": {
+    "applicabilityDestructiveRegimeDetectionMinimum": 0.75,
+    "applicabilityOriginalFalseDowngradeMaximum": 0.2,
+    "applicabilityOriginalSupportedCoverageMinimum": 0.7,
+    "catastrophicNegativeSubtypeFprStop": 0.1,
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "fprReporting": "Every material rate includes numerator, denominator, observed rate, and Wilson 95% interval.",
+    "maximumModelFailureRate": 0.02,
+    "minimumFreshSyntheticFamilies": 4,
+    "minimumFreshSyntheticSamples": 80,
+    "minimumNegativeConfirmFamilies": 200,
+    "minimumNegativeSourceFamilies": 400,
+    "preferredNegativeSourceFamilies": 800,
+    "safeThresholdImmutable": true
+  },
+  "safeFrozenConfiguration": {
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "detectorId": "SAFE",
+    "modelWeightsChangeAllowed": false,
+    "preprocessing": "RGB decode; torchvision CenterCrop(256,256); ToTensor; official SAFE DWT/model; class-1 softmax",
+    "preprocessingChangeAllowed": false,
+    "preprocessingVersion": "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1",
+    "threshold": 0.5864923000335693,
+    "thresholdSource": "WP007G-R1 frozen threshold; WP007I cannot retune it.",
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35"
+  },
+  "schemaVersion": "lythaus-wp007i-experiment-plan-v1",
+  "scientificBoundaries": {
+    "flux1": "CONSUMED_POSTHOC_DIAGNOSTIC_ONLY; no retuning",
+    "flux2": "SEALED; no pixel access, decode, scoring, transform, provider calls, or manual inspection",
+    "noFineTuning": true,
+    "noNewMetaCalibrator": true,
+    "noProductionRouting": true,
+    "noPublicLabelChange": true
+  },
+  "shadowSupporters": {
+    "canChangeSafeQualification": false,
+    "detectors": [
+      "SPAI_C512",
+      "RINE",
+      "UFD"
+    ],
+    "noRouterOptimization": true,
+    "roles": {
+      "RINE": "SHADOW_LEARNED_SUPPORT",
+      "SPAI_C512": "SHADOW_SPECTRAL_SPECIALIST",
+      "UFD": "SHADOW_DIAGNOSTIC"
+    }
+  },
+  "transformations": {
+    "parametersFrozenBeforeScoring": true,
+    "singleFactorOnly": true,
+    "sourceFamilyDisjointDevConfirm": true,
+    "types": [
+      "JPEG95",
+      "JPEG85",
+      "JPEG75",
+      "RESIZE75",
+      "RESIZE50",
+      "SCREENSHOT_STYLE_RESAMPLING",
+      "METADATA_STRIP",
+      "MILD_CROP",
+      "MILD_BLUR",
+      "MILD_SHARPEN"
+    ]
+  },
+  "workPackage": "WP007I"
+}

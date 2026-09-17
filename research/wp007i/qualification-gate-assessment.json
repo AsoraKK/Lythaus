@@ -1,0 +1,85 @@
+{
+  "applicabilityDestructiveDetection": {
+    "denominator": 64,
+    "numerator": 48,
+    "rate": 0.75,
+    "resize50Detected": false
+  },
+  "applicabilityOriginalFalseDowngrade": {
+    "denominator": 920,
+    "lower": 0.0,
+    "numerator": 0,
+    "rate": 0.0,
+    "upper": 0.0041581364248340184
+  },
+  "applicabilityOriginalSupportedCoverage": {
+    "denominator": 920,
+    "lower": 0.9958418635751661,
+    "numerator": 920,
+    "rate": 1.0,
+    "upper": 1.0
+  },
+  "flux1Role": "POSTHOC_DIAGNOSTIC_ONLY",
+  "flux2PixelAccess": false,
+  "negativeFprTargetUpperBoundOnePercentDemonstrated": false,
+  "negativeOverallFpr": {
+    "denominator": 800,
+    "lower": 0.0019460690034415126,
+    "numerator": 4,
+    "rate": 0.005,
+    "upper": 0.012785018440177761
+  },
+  "p2SemanticBenefit": "P2 converts low SAFE scores on detected JPEG degradation to inconclusive; original-byte metrics are unchanged.",
+  "populationFprClaim": "FPR_TARGET_NOT_YET_DEMONSTRATED",
+  "primaryDisposition": "SAFE_POSITIVE_SPECIALIST_QUALIFIED_APPLICABILITY_GATE_UNPROVEN",
+  "productionAuthorization": "NO",
+  "safePositiveSpecialistSignal": true,
+  "safeThresholdImmutable": true,
+  "schemaVersion": "lythaus-wp007i-qualification-gate-assessment-v1",
+  "supportersCanChangeQualification": false,
+  "syntheticFamilyRecall": {
+    "Gemini-2.0-Flash": {
+      "denominator": 20,
+      "lower": 0.763868806553258,
+      "numerator": 19,
+      "rate": 0.95,
+      "upper": 0.9911185511992047
+    },
+    "GoT-R1-7B": {
+      "denominator": 20,
+      "lower": 0.8388748419471806,
+      "numerator": 20,
+      "rate": 1.0,
+      "upper": 1.0
+    },
+    "Nano-Banana": {
+      "denominator": 20,
+      "lower": 0.8388748419471806,
+      "numerator": 20,
+      "rate": 1.0,
+      "upper": 1.0
+    },
+    "SD-3.5-Large": {
+      "denominator": 20,
+      "lower": 0.763868806553258,
+      "numerator": 19,
+      "rate": 0.95,
+      "upper": 0.9911185511992047
+    },
+    "Seedream-4": {
+      "denominator": 20,
+      "lower": 0.0,
+      "numerator": 0,
+      "rate": 0.0,
+      "upper": 0.16112515805281938
+    },
+    "imagen-4": {
+      "denominator": 20,
+      "lower": 0.008881448800795402,
+      "numerator": 1,
+      "rate": 0.05,
+      "upper": 0.23613119344674205
+    }
+  },
+  "syntheticOriginalCount": 120
+}

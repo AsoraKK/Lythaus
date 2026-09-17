@@ -1,0 +1,5412 @@
+{
+  "schemaVersion": "lythaus-wp007c-spai-score-run-v1",
+  "candidateId": "SPAI_C512",
+  "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+  "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+  "optimized": true,
+  "cpuThreads": 4,
+  "inputCount": 1080,
+  "records": [
+    {
+      "sampleId": "0000-8376934b6eae06f2",
+      "score": 0.06616511940956116,
+      "runtimeSeconds": 3.316519
+    },
+    {
+      "sampleId": "0001-89dda3062ca99ecc",
+      "score": 0.50557541847229,
+      "runtimeSeconds": 3.404947
+    },
+    {
+      "sampleId": "0002-ac372b5687de1217",
+      "score": 0.9556057453155518,
+      "runtimeSeconds": 3.689418
+    },
+    {
+      "sampleId": "0003-0b2455352e624ee3",
+      "score": 0.9990542531013489,
+      "runtimeSeconds": 3.721888
+    },
+    {
+      "sampleId": "0004-34bee2d86bfb78fa",
+      "score": 0.00031016013235785067,
+      "runtimeSeconds": 3.728837
+    },
+    {
+      "sampleId": "0005-4c35438494fff7ce",
+      "score": 1.0,
+      "runtimeSeconds": 4.829902
+    },
+    {
+      "sampleId": "0006-a64cbc38d1f62d08",
+      "score": 0.23068207502365112,
+      "runtimeSeconds": 17.597851
+    },
+    {
+      "sampleId": "0007-e8edeca96df1bcfc",
+      "score": 0.0036500217393040657,
+      "runtimeSeconds": 3.982117
+    },
+    {
+      "sampleId": "0008-46899d732edaa0e3",
+      "score": 0.9993657469749451,
+      "runtimeSeconds": 3.52457
+    },
+    {
+      "sampleId": "0009-9ebb6c4b51979230",
+      "score": 0.03475506603717804,
+      "runtimeSeconds": 3.485725
+    },
+    {
+      "sampleId": "0010-eba3e3fb82ede62f",
+      "score": 0.9998348951339722,
+      "runtimeSeconds": 3.710242
+    },
+    {
+      "sampleId": "0011-74fda933c11260bd",
+      "score": 0.002406885614618659,
+      "runtimeSeconds": 3.728133
+    },
+    {
+      "sampleId": "0012-d2434a7d44ec9e67",
+      "score": 0.9853954911231995,
+      "runtimeSeconds": 3.342744
+    },
+    {
+      "sampleId": "0013-0a622231ed71c59b",
+      "score": 0.6556444764137268,
+      "runtimeSeconds": 3.089188
+    },
+    {
+      "sampleId": "0014-953a08255862abba",
+      "score": 1.0,
+      "runtimeSeconds": 3.067078
+    },
+    {
+      "sampleId": "0015-4266437101cb78c6",
+      "score": 0.3544265925884247,
+      "runtimeSeconds": 6.497569
+    },
+    {
+      "sampleId": "0016-2bc0941d0779444d",
+      "score": 0.9997804760932922,
+      "runtimeSeconds": 15.697634
+    },
+    {
+      "sampleId": "0017-c70029778c92cb9b",
+      "score": 0.03865646570920944,
+      "runtimeSeconds": 2.826973
+    },
+    {
+      "sampleId": "0018-33db6221cd9113a6",
+      "score": 0.9999979734420776,
+      "runtimeSeconds": 2.841625
+    },
+    {
+      "sampleId": "0019-178a68ae3cd2fc00",
+      "score": 0.8001120686531067,
+      "runtimeSeconds": 3.639014
+    },
+    {
+      "sampleId": "0020-d5c63ec532daf150",
+      "score": 0.9313932061195374,
+      "runtimeSeconds": 3.696732
+    },
+    {
+      "sampleId": "0021-e875e54a2b8d87f2",
+      "score": 0.9375399947166443,
+      "runtimeSeconds": 3.699937
+    },
+    {
+      "sampleId": "0022-c90ff8a842a846cc",
+      "score": 0.8615588545799255,
+      "runtimeSeconds": 3.731444
+    },
+    {
+      "sampleId": "0023-e5d1e3f3d11c3fe7",
+      "score": 0.939857006072998,
+      "runtimeSeconds": 3.320555
+    },
+    {
+      "sampleId": "0024-92fbf21c213562fa",
+      "score": 0.9313932061195374,
+      "runtimeSeconds": 2.897366
+    },
+    {
+      "sampleId": "0025-ac7486fa3af2386e",
+      "score": 0.9986782670021057,
+      "runtimeSeconds": 11.23931
+    },
+    {
+      "sampleId": "0026-db106d33cbdf0b90",
+      "score": 0.9983600974082947,
+      "runtimeSeconds": 11.258461
+    },
+    {
+      "sampleId": "0027-cfeaddc3314e4a92",
+      "score": 1.8930786609416828e-06,
+      "runtimeSeconds": 3.532168
+    },
+    {
+      "sampleId": "0028-86239c43825e5659",
+      "score": 0.026206564158201218,
+      "runtimeSeconds": 3.651515
+    },
+    {
+      "sampleId": "0029-6bab3bfa39b45f2a",
+      "score": 0.7915506362915039,
+      "runtimeSeconds": 3.259087
+    },
+    {
+      "sampleId": "0030-bd78c14f65f1002a",
+      "score": 0.9815269112586975,
+      "runtimeSeconds": 3.500094
+    },
+    {
+      "sampleId": "0031-b8f9f4323e56bd0c",
+      "score": 0.9999947547912598,
+      "runtimeSeconds": 3.677888
+    },
+    {
+      "sampleId": "0032-767ea6ea2dd62c9c",
+      "score": 1.0278652491194426e-24,
+      "runtimeSeconds": 3.668771
+    },
+    {
+      "sampleId": "0033-cd9d995cb7b37323",
+      "score": 0.22678764164447784,
+      "runtimeSeconds": 3.828304
+    },
+    {
+      "sampleId": "0034-4c8a5f8e7cf63430",
+      "score": 0.20908789336681366,
+      "runtimeSeconds": 7.637761
+    },
+    {
+      "sampleId": "0035-9c096867370de812",
+      "score": 0.04270116984844208,
+      "runtimeSeconds": 15.338445
+    },
+    {
+      "sampleId": "0036-5d28a138e99f6f8a",
+      "score": 0.9944384098052979,
+      "runtimeSeconds": 3.564567
+    },
+    {
+      "sampleId": "0037-9fdb468289c68de7",
+      "score": 0.2735249102115631,
+      "runtimeSeconds": 3.628818
+    },
+    {
+      "sampleId": "0038-feaab806e8618d76",
+      "score": 0.3627394437789917,
+      "runtimeSeconds": 3.685823
+    },
+    {
+      "sampleId": "0039-74feb2d226c447c9",
+      "score": 0.24661241471767426,
+      "runtimeSeconds": 3.185674
+    },
+    {
+      "sampleId": "0040-4d795cc52e00466b",
+      "score": 0.23114734888076782,
+      "runtimeSeconds": 2.780211
+    },
+    {
+      "sampleId": "0041-45a991b9003dd873",
+      "score": 0.2735249102115631,
+      "runtimeSeconds": 3.562626
+    },
+    {
+      "sampleId": "0042-ad2a00dd188b596f",
+      "score": 0.6665970683097839,
+      "runtimeSeconds": 3.19148
+    },
+    {
+      "sampleId": "0043-43700556a071ee67",
+      "score": 0.1622023731470108,
+      "runtimeSeconds": 3.433104
+    },
+    {
+      "sampleId": "0044-ff66df72588335dd",
+      "score": 5.4067791701574365e-28,
+      "runtimeSeconds": 12.200737
+    },
+    {
+      "sampleId": "0045-a4ac72d9c871ba8f",
+      "score": 0.0003882219025399536,
+      "runtimeSeconds": 10.415628
+    },
+    {
+      "sampleId": "0046-57430e8eb43c849b",
+      "score": 0.0020488102454692125,
+      "runtimeSeconds": 2.917124
+    },
+    {
+      "sampleId": "0047-488d6501b6252768",
+      "score": 0.4099821448326111,
+      "runtimeSeconds": 2.920175
+    },
+    {
+      "sampleId": "0048-461265e8902cd38a",
+      "score": 0.9979642629623413,
+      "runtimeSeconds": 2.824715
+    },
+    {
+      "sampleId": "0049-c10765122c924a90",
+      "score": 0.3873113691806793,
+      "runtimeSeconds": 3.304403
+    },
+    {
+      "sampleId": "0050-8a135fbb84882c70",
+      "score": 0.9924687743186951,
+      "runtimeSeconds": 3.774702
+    },
+    {
+      "sampleId": "0051-5bc20f6941dc7efe",
+      "score": 6.608404643509629e-18,
+      "runtimeSeconds": 3.437734
+    },
+    {
+      "sampleId": "0052-3d502d2515103351",
+      "score": 0.00043758066021837294,
+      "runtimeSeconds": 3.69591
+    },
+    {
+      "sampleId": "0053-3493ff0d7be84ec5",
+      "score": 0.9998132586479187,
+      "runtimeSeconds": 4.351116
+    },
+    {
+      "sampleId": "0054-dce7342a6e3ff0af",
+      "score": 0.9992455244064331,
+      "runtimeSeconds": 16.487518
+    },
+    {
+      "sampleId": "0055-9e7e2874e66054ca",
+      "score": 0.9649779200553894,
+      "runtimeSeconds": 5.119392
+    },
+    {
+      "sampleId": "0056-fb4d4ea60f65b3f7",
+      "score": 0.8069702982902527,
+      "runtimeSeconds": 3.630374
+    },
+    {
+      "sampleId": "0057-e58d905c164b79b5",
+      "score": 0.9825417995452881,
+      "runtimeSeconds": 3.652489
+    },
+    {
+      "sampleId": "0058-42a453cb21472f0a",
+      "score": 0.9817360043525696,
+      "runtimeSeconds": 3.679838
+    },
+    {
+      "sampleId": "0059-42bcd5598f56fd8e",
+      "score": 0.9649779200553894,
+      "runtimeSeconds": 3.733614
+    },
+    {
+      "sampleId": "0060-ebeca9ebc493c2be",
+      "score": 0.998332679271698,
+      "runtimeSeconds": 3.788815
+    },
+    {
+      "sampleId": "0061-dd8eec55cdf7bb53",
+      "score": 0.9951033592224121,
+      "runtimeSeconds": 3.759495
+    },
+    {
+      "sampleId": "0062-77588334b332ba30",
+      "score": 6.434035970670493e-09,
+      "runtimeSeconds": 3.039758
+    },
+    {
+      "sampleId": "0063-17219c32c26f2da2",
+      "score": 2.941337304876202e-24,
+      "runtimeSeconds": 12.355508
+    },
+    {
+      "sampleId": "0064-51eac06f4731e0ab",
+      "score": 0.050987500697374344,
+      "runtimeSeconds": 9.708205
+    },
+    {
+      "sampleId": "0065-0539be955552d6f5",
+      "score": 0.4393320679664612,
+      "runtimeSeconds": 3.590775
+    },
+    {
+      "sampleId": "0066-aa9b7203982a7a93",
+      "score": 0.9999735355377197,
+      "runtimeSeconds": 3.086769
+    },
+    {
+      "sampleId": "0067-5835a9254c2d555c",
+      "score": 0.9501821398735046,
+      "runtimeSeconds": 3.326588
+    },
+    {
+      "sampleId": "0068-4e6d15383e35c6f3",
+      "score": 0.9964302182197571,
+      "runtimeSeconds": 3.703775
+    },
+    {
+      "sampleId": "0069-d54d27672370ef39",
+      "score": 0.9995419979095459,
+      "runtimeSeconds": 3.70466
+    },
+    {
+      "sampleId": "0070-b7e94a2fdfd7f998",
+      "score": 0.9999735355377197,
+      "runtimeSeconds": 3.733513
+    },
+    {
+      "sampleId": "0071-ea07b0ae8f833999",
+      "score": 0.9999996423721313,
+      "runtimeSeconds": 3.751404
+    },
+    {
+      "sampleId": "0072-03e21d8ab9005d2b",
+      "score": 0.9999997615814209,
+      "runtimeSeconds": 6.015126
+    },
+    {
+      "sampleId": "0073-459a5aa01ce493ad",
+      "score": 0.00017164468590635806,
+      "runtimeSeconds": 16.19144
+    },
+    {
+      "sampleId": "0074-5fcb346dde53fbdc",
+      "score": 6.0157017287565395e-06,
+      "runtimeSeconds": 4.078423
+    },
+    {
+      "sampleId": "0075-753e87a72c559875",
+      "score": 0.01606794074177742,
+      "runtimeSeconds": 2.701943
+    },
+    {
+      "sampleId": "0076-bddaa0e46217f89e",
+      "score": 0.16996796429157257,
+      "runtimeSeconds": 3.435849
+    },
+    {
+      "sampleId": "0077-1a0088777abaeaf6",
+      "score": 1.0,
+      "runtimeSeconds": 2.883472
+    },
+    {
+      "sampleId": "0078-a5bc57b7077c2e1f",
+      "score": 0.0002919022517744452,
+      "runtimeSeconds": 3.774133
+    },
+    {
+      "sampleId": "0079-538d93a8906f6ea5",
+      "score": 0.123568095266819,
+      "runtimeSeconds": 3.359341
+    },
+    {
+      "sampleId": "0080-b00352e1a111c04f",
+      "score": 1.8681368601392023e-05,
+      "runtimeSeconds": 3.266777
+    },
+    {
+      "sampleId": "0081-90a1bc635e1c5f38",
+      "score": 2.037379763123222e-18,
+      "runtimeSeconds": 3.728837
+    },
+    {
+      "sampleId": "0082-7b831aa5a0e859ee",
+      "score": 0.026681311428546906,
+      "runtimeSeconds": 7.806247
+    },
+    {
+      "sampleId": "0083-e9b6c61f52cb4189",
+      "score": 0.30713123083114624,
+      "runtimeSeconds": 14.487
+    },
+    {
+      "sampleId": "0084-e468cfb5887dc312",
+      "score": 0.04773787409067154,
+      "runtimeSeconds": 3.188418
+    },
+    {
+      "sampleId": "0085-a80d938c50d890ae",
+      "score": 0.648486852645874,
+      "runtimeSeconds": 3.540749
+    },
+    {
+      "sampleId": "0086-6a7f162b88a3f1ed",
+      "score": 1.0,
+      "runtimeSeconds": 3.48392
+    },
+    {
+      "sampleId": "0087-dd5bcf30d124b3d3",
+      "score": 0.6114704608917236,
+      "runtimeSeconds": 2.800821
+    },
+    {
+      "sampleId": "0088-640e79ca8b128a94",
+      "score": 0.9999996423721313,
+      "runtimeSeconds": 2.718598
+    },
+    {
+      "sampleId": "0089-1e114fc52b73dd04",
+      "score": 1.2090914008355692e-22,
+      "runtimeSeconds": 3.118514
+    },
+    {
+      "sampleId": "0090-e33c68bdd33d4c9b",
+      "score": 0.999981164932251,
+      "runtimeSeconds": 3.382177
+    },
+    {
+      "sampleId": "0091-60f5912ca2f0cac1",
+      "score": 1.0,
+      "runtimeSeconds": 3.216253
+    },
+    {
+      "sampleId": "0092-e90d5c998516e1a6",
+      "score": 1.0,
+      "runtimeSeconds": 5.222431
+    },
+    {
+      "sampleId": "0093-0096ac0762721740",
+      "score": 1.4139246549841125e-14,
+      "runtimeSeconds": 15.3192
+    },
+    {
+      "sampleId": "0094-99957daa930e026a",
+      "score": 0.988938570022583,
+      "runtimeSeconds": 4.01334
+    },
+    {
+      "sampleId": "0095-300f6f1abf3bd91f",
+      "score": 0.2768939733505249,
+      "runtimeSeconds": 3.433699
+    },
+    {
+      "sampleId": "0096-9c9a35281305c14a",
+      "score": 6.945577479200438e-05,
+      "runtimeSeconds": 3.506278
+    },
+    {
+      "sampleId": "0097-0a0e3c3722c7acf7",
+      "score": 0.5858612656593323,
+      "runtimeSeconds": 3.58907
+    },
+    {
+      "sampleId": "0098-6f08e7025c2279de",
+      "score": 0.00035802306956611574,
+      "runtimeSeconds": 3.764097
+    },
+    {
+      "sampleId": "0099-e406db999d7562fa",
+      "score": 5.780089449348909e-19,
+      "runtimeSeconds": 3.593068
+    },
+    {
+      "sampleId": "0100-83036afbc305061b",
+      "score": 0.5624242424964905,
+      "runtimeSeconds": 3.120244
+    },
+    {
+      "sampleId": "0101-7e9b9b546a74b1fa",
+      "score": 0.9108793139457703,
+      "runtimeSeconds": 3.159004
+    },
+    {
+      "sampleId": "0102-46b53a4a7b27cef4",
+      "score": 0.9999947547912598,
+      "runtimeSeconds": 4.969054
+    },
+    {
+      "sampleId": "0103-d7b67ce8c1ff4972",
+      "score": 0.0058594802394509315,
+      "runtimeSeconds": 16.374512
+    },
+    {
+      "sampleId": "0104-89c9df4146650f3a",
+      "score": 1.0,
+      "runtimeSeconds": 3.681405
+    },
+    {
+      "sampleId": "0105-c4751a597e27309f",
+      "score": 0.9999986886978149,
+      "runtimeSeconds": 3.64311
+    },
+    {
+      "sampleId": "0106-7a2ed619519f0a34",
+      "score": 1.0,
+      "runtimeSeconds": 3.590211
+    },
+    {
+      "sampleId": "0107-f3d396d1babe7322",
+      "score": 0.01807260513305664,
+      "runtimeSeconds": 3.617097
+    },
+    {
+      "sampleId": "0108-929a5fc16d04a5cc",
+      "score": 0.43869173526763916,
+      "runtimeSeconds": 3.696934
+    },
+    {
+      "sampleId": "0109-1d4cb87cee483c19",
+      "score": 0.04705522954463959,
+      "runtimeSeconds": 3.137071
+    },
+    {
+      "sampleId": "0110-f00bbeaa98caad59",
+      "score": 0.12581190466880798,
+      "runtimeSeconds": 3.587006
+    },
+    {
+      "sampleId": "0111-658b488706181d60",
+      "score": 0.05291890725493431,
+      "runtimeSeconds": 3.444704
+    },
+    {
+      "sampleId": "0112-7eace6ebb23ff48b",
+      "score": 0.08309023827314377,
+      "runtimeSeconds": 11.018333
+    },
+    {
+      "sampleId": "0113-776dade4c0842377",
+      "score": 0.04705522954463959,
+      "runtimeSeconds": 10.995546
+    },
+    {
+      "sampleId": "0114-87912fa0a5f4a999",
+      "score": 0.4528420865535736,
+      "runtimeSeconds": 3.702148
+    },
+    {
+      "sampleId": "0115-4031d54b68b86ba6",
+      "score": 0.27066293358802795,
+      "runtimeSeconds": 2.942065
+    },
+    {
+      "sampleId": "0116-2a1387355af49400",
+      "score": 0.00031892434344626963,
+      "runtimeSeconds": 3.589392
+    },
+    {
+      "sampleId": "0117-331540a9e53d9512",
+      "score": 0.0004024384543299675,
+      "runtimeSeconds": 3.251193
+    },
+    {
+      "sampleId": "0118-241b1cbe95800c32",
+      "score": 0.0004791152023244649,
+      "runtimeSeconds": 2.778453
+    },
+    {
+      "sampleId": "0119-e552615478c7bf56",
+      "score": 0.01136389933526516,
+      "runtimeSeconds": 3.006189
+    },
+    {
+      "sampleId": "0120-c355668185187f76",
+      "score": 0.060529764741659164,
+      "runtimeSeconds": 3.599499
+    },
+    {
+      "sampleId": "0121-e5e875b7bd896ebb",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 3.803538
+    },
+    {
+      "sampleId": "0122-b4c84c88ed2e41cf",
+      "score": 9.772847808786622e-11,
+      "runtimeSeconds": 13.595356
+    },
+    {
+      "sampleId": "0123-081b05e0d6548c35",
+      "score": 0.002716995310038328,
+      "runtimeSeconds": 9.379224
+    },
+    {
+      "sampleId": "0124-a6283735021371cc",
+      "score": 0.2810409367084503,
+      "runtimeSeconds": 3.63516
+    },
+    {
+      "sampleId": "0125-c98033d91cd4cb0c",
+      "score": 0.11615526676177979,
+      "runtimeSeconds": 3.266265
+    },
+    {
+      "sampleId": "0126-7c32c04509d126cb",
+      "score": 0.02461613342165947,
+      "runtimeSeconds": 3.219471
+    },
+    {
+      "sampleId": "0127-56ca515901d40df9",
+      "score": 0.002716995310038328,
+      "runtimeSeconds": 3.74873
+    },
+    {
+      "sampleId": "0128-b76b26ec9ac1bc56",
+      "score": 0.024578213691711426,
+      "runtimeSeconds": 3.804649
+    },
+    {
+      "sampleId": "0129-e26030a1102b53d5",
+      "score": 0.9973697662353516,
+      "runtimeSeconds": 3.72022
+    },
+    {
+      "sampleId": "0130-02991d60f3b864ac",
+      "score": 0.8350403904914856,
+      "runtimeSeconds": 3.653354
+    },
+    {
+      "sampleId": "0131-ae0e3a92639b5861",
+      "score": 1.3563663360317404e-23,
+      "runtimeSeconds": 11.277674
+    },
+    {
+      "sampleId": "0132-dda7d36c93691358",
+      "score": 5.431880532664352e-19,
+      "runtimeSeconds": 11.636075
+    },
+    {
+      "sampleId": "0133-bd5fd1e96b473844",
+      "score": 6.949569500598607e-13,
+      "runtimeSeconds": 3.159709
+    },
+    {
+      "sampleId": "0134-1bceda099f9ebf5f",
+      "score": 6.365168701449875e-06,
+      "runtimeSeconds": 3.490322
+    },
+    {
+      "sampleId": "0135-78d7f119d58b67e9",
+      "score": 2.2475567240665129e-10,
+      "runtimeSeconds": 3.738272
+    },
+    {
+      "sampleId": "0136-0619d6f382309bee",
+      "score": 1.0,
+      "runtimeSeconds": 3.396656
+    },
+    {
+      "sampleId": "0137-fb2d669affd7eb65",
+      "score": 1.0,
+      "runtimeSeconds": 3.791026
+    },
+    {
+      "sampleId": "0138-1c4b56289fb04983",
+      "score": 1.0,
+      "runtimeSeconds": 3.701656
+    },
+    {
+      "sampleId": "0139-58978d4cc41bc5a0",
+      "score": 1.0,
+      "runtimeSeconds": 3.925279
+    },
+    {
+      "sampleId": "0140-e11257f38894bdc7",
+      "score": 0.3798176348209381,
+      "runtimeSeconds": 9.863558
+    },
+    {
+      "sampleId": "0141-2736289d20910811",
+      "score": 0.10570661723613739,
+      "runtimeSeconds": 12.877545
+    },
+    {
+      "sampleId": "0142-ccf0a670c595ab30",
+      "score": 0.9998534917831421,
+      "runtimeSeconds": 3.66967
+    },
+    {
+      "sampleId": "0143-50a14855c8c8df85",
+      "score": 0.9900621175765991,
+      "runtimeSeconds": 3.687693
+    },
+    {
+      "sampleId": "0144-9e2fb6f37177c774",
+      "score": 0.9986985921859741,
+      "runtimeSeconds": 3.500607
+    },
+    {
+      "sampleId": "0145-24422460f696ed10",
+      "score": 0.9996383190155029,
+      "runtimeSeconds": 4.204653
+    },
+    {
+      "sampleId": "0146-3948ba58aa2bb73d",
+      "score": 0.9998534917831421,
+      "runtimeSeconds": 3.814291
+    },
+    {
+      "sampleId": "0147-bdaf06340e3f6624",
+      "score": 0.999903678894043,
+      "runtimeSeconds": 3.584191
+    },
+    {
+      "sampleId": "0148-70f94323ef8af74d",
+      "score": 0.9999384880065918,
+      "runtimeSeconds": 3.320697
+    },
+    {
+      "sampleId": "0149-c94dbb52037a025d",
+      "score": 0.9526906609535217,
+      "runtimeSeconds": 9.182261
+    },
+    {
+      "sampleId": "0150-8156745d220633d9",
+      "score": 0.0008435525232926011,
+      "runtimeSeconds": 13.425373
+    },
+    {
+      "sampleId": "0151-ee6dd7471ac37041",
+      "score": 0.21490201354026794,
+      "runtimeSeconds": 3.574173
+    },
+    {
+      "sampleId": "0152-d60dfdb8b5ce855b",
+      "score": 0.609093964099884,
+      "runtimeSeconds": 3.113549
+    },
+    {
+      "sampleId": "0153-7b5f5385a393ee98",
+      "score": 1.0,
+      "runtimeSeconds": 3.551444
+    },
+    {
+      "sampleId": "0154-300d9686da3b9f66",
+      "score": 1.0,
+      "runtimeSeconds": 3.752569
+    },
+    {
+      "sampleId": "0155-030552ba29eccb03",
+      "score": 0.9993711113929749,
+      "runtimeSeconds": 3.769405
+    },
+    {
+      "sampleId": "0156-61296ca055787a6f",
+      "score": 0.2588442265987396,
+      "runtimeSeconds": 3.39184
+    },
+    {
+      "sampleId": "0157-47af4636e84c346b",
+      "score": 1.0,
+      "runtimeSeconds": 3.859686
+    },
+    {
+      "sampleId": "0158-8490cdef31702506",
+      "score": 0.6317535638809204,
+      "runtimeSeconds": 6.083401
+    },
+    {
+      "sampleId": "0159-a2f6f1c7b5de4023",
+      "score": 0.9992654919624329,
+      "runtimeSeconds": 16.382826
+    },
+    {
+      "sampleId": "0160-95d97dd1a2e612ef",
+      "score": 0.9999712705612183,
+      "runtimeSeconds": 3.576059
+    },
+    {
+      "sampleId": "0161-e28f1d9bd17b2e3b",
+      "score": 0.9999996423721313,
+      "runtimeSeconds": 2.868997
+    },
+    {
+      "sampleId": "0162-1f97f8cccdcf019c",
+      "score": 0.9999716281890869,
+      "runtimeSeconds": 2.939024
+    },
+    {
+      "sampleId": "0163-5c6681f56bbb7ee9",
+      "score": 8.65256382098778e-08,
+      "runtimeSeconds": 2.693445
+    },
+    {
+      "sampleId": "0164-ec1eae01e48103c5",
+      "score": 0.9997156262397766,
+      "runtimeSeconds": 3.738276
+    },
+    {
+      "sampleId": "0165-00942ac6a5260021",
+      "score": 0.994175910949707,
+      "runtimeSeconds": 3.432982
+    },
+    {
+      "sampleId": "0166-59f51b74af708ef5",
+      "score": 1.0,
+      "runtimeSeconds": 3.34431
+    },
+    {
+      "sampleId": "0167-8aa8bbd859b414f0",
+      "score": 1.0,
+      "runtimeSeconds": 2.864109
+    },
+    {
+      "sampleId": "0168-6521271aad339723",
+      "score": 1.0,
+      "runtimeSeconds": 3.641489
+    },
+    {
+      "sampleId": "0169-1419bb8d13662b50",
+      "score": 0.9999107122421265,
+      "runtimeSeconds": 15.594066
+    },
+    {
+      "sampleId": "0170-a60cc1c08970463b",
+      "score": 0.05676260218024254,
+      "runtimeSeconds": 6.023355
+    },
+    {
+      "sampleId": "0171-fe8d26977b4e34d2",
+      "score": 0.00155741220805794,
+      "runtimeSeconds": 3.410157
+    },
+    {
+      "sampleId": "0172-c6c2af830da7f9c7",
+      "score": 0.01589416339993477,
+      "runtimeSeconds": 2.984617
+    },
+    {
+      "sampleId": "0173-aee82c586ec3d4dd",
+      "score": 0.019664304330945015,
+      "runtimeSeconds": 3.758984
+    },
+    {
+      "sampleId": "0174-26b5dd540d04036e",
+      "score": 0.05676260218024254,
+      "runtimeSeconds": 2.898095
+    },
+    {
+      "sampleId": "0175-78f3a59ecd098660",
+      "score": 0.36722394824028015,
+      "runtimeSeconds": 3.385608
+    },
+    {
+      "sampleId": "0176-e8e03cdd4680346a",
+      "score": 0.6447224617004395,
+      "runtimeSeconds": 3.585559
+    },
+    {
+      "sampleId": "0177-8e6eca066a902319",
+      "score": 1.4876972045385628e-06,
+      "runtimeSeconds": 3.75563
+    },
+    {
+      "sampleId": "0178-fbe7a25d4325e7ae",
+      "score": 3.8533291657919595e-16,
+      "runtimeSeconds": 7.374826
+    },
+    {
+      "sampleId": "0179-d62645ab0433340e",
+      "score": 9.717514330986887e-07,
+      "runtimeSeconds": 15.517722
+    },
+    {
+      "sampleId": "0180-d9bcc9cf06d07a58",
+      "score": 0.00017585318710189313,
+      "runtimeSeconds": 3.09937
+    },
+    {
+      "sampleId": "0181-c4e3f49f90eb5ac6",
+      "score": 0.9998555183410645,
+      "runtimeSeconds": 2.91502
+    },
+    {
+      "sampleId": "0182-b0707c85a3a7c457",
+      "score": 0.9971796274185181,
+      "runtimeSeconds": 2.892193
+    },
+    {
+      "sampleId": "0183-cb079f9125dcb157",
+      "score": 1.0,
+      "runtimeSeconds": 3.027174
+    },
+    {
+      "sampleId": "0184-f7bfda48ceca6487",
+      "score": 0.4518721103668213,
+      "runtimeSeconds": 3.063596
+    },
+    {
+      "sampleId": "0185-416ad6e840e12e2f",
+      "score": 0.9930346012115479,
+      "runtimeSeconds": 3.220248
+    },
+    {
+      "sampleId": "0186-9c74d5d1d988923b",
+      "score": 1.0,
+      "runtimeSeconds": 3.162946
+    },
+    {
+      "sampleId": "0187-4082bb2946a56151",
+      "score": 0.0006311417673714459,
+      "runtimeSeconds": 2.886347
+    },
+    {
+      "sampleId": "0188-f7fe363f2be9f8a6",
+      "score": 1.3989042813022934e-08,
+      "runtimeSeconds": 3.458783
+    },
+    {
+      "sampleId": "0189-cd9bd957a872ff74",
+      "score": 0.9996412992477417,
+      "runtimeSeconds": 15.739755
+    },
+    {
+      "sampleId": "0190-d76055d1fb938a29",
+      "score": 0.9172582030296326,
+      "runtimeSeconds": 6.439265
+    },
+    {
+      "sampleId": "0191-bb3dcef48bd8685b",
+      "score": 1.0,
+      "runtimeSeconds": 3.669992
+    },
+    {
+      "sampleId": "0192-4cd00d74adedb5b9",
+      "score": 1.0,
+      "runtimeSeconds": 2.9998
+    },
+    {
+      "sampleId": "0193-fa51c39a37f3edaa",
+      "score": 0.9975761771202087,
+      "runtimeSeconds": 3.539892
+    },
+    {
+      "sampleId": "0194-76b4cc3384c62a11",
+      "score": 0.999982476234436,
+      "runtimeSeconds": 3.763118
+    },
+    {
+      "sampleId": "0195-0d7d2ab95d062af1",
+      "score": 0.9999774694442749,
+      "runtimeSeconds": 3.213986
+    },
+    {
+      "sampleId": "0196-34a0981c612bc750",
+      "score": 1.0,
+      "runtimeSeconds": 3.064992
+    },
+    {
+      "sampleId": "0197-c300c476f48270fb",
+      "score": 0.9999821186065674,
+      "runtimeSeconds": 2.974955
+    },
+    {
+      "sampleId": "0198-2252d78957d04fdf",
+      "score": 0.9999967813491821,
+      "runtimeSeconds": 3.395934
+    },
+    {
+      "sampleId": "0199-a35ab8a34f069fc5",
+      "score": 0.9999988079071045,
+      "runtimeSeconds": 17.690025
+    },
+    {
+      "sampleId": "0200-2a73741bcb7672cb",
+      "score": 2.997158490924834e-21,
+      "runtimeSeconds": 4.893645
+    },
+    {
+      "sampleId": "0201-93966064a02e092b",
+      "score": 5.375295239534616e-20,
+      "runtimeSeconds": 3.071527
+    },
+    {
+      "sampleId": "0202-ef929541fcc327e9",
+      "score": 7.167205017394725e-17,
+      "runtimeSeconds": 3.00699
+    },
+    {
+      "sampleId": "0203-06fb026369d84332",
+      "score": 3.3269462730824196e-19,
+      "runtimeSeconds": 2.98669
+    },
+    {
+      "sampleId": "0204-774fad20d7d753c6",
+      "score": 1.1057542806275123e-17,
+      "runtimeSeconds": 3.004116
+    },
+    {
+      "sampleId": "0205-84dbfe704ba3bc63",
+      "score": 2.280415222974397e-12,
+      "runtimeSeconds": 3.04804
+    },
+    {
+      "sampleId": "0206-9d8572bd88237899",
+      "score": 1.983556490682286e-21,
+      "runtimeSeconds": 3.840828
+    },
+    {
+      "sampleId": "0207-dfaf8370cb21d2ea",
+      "score": 5.521393834184164e-21,
+      "runtimeSeconds": 3.789025
+    },
+    {
+      "sampleId": "0208-8e59105686dc22fb",
+      "score": 3.53195121535769e-26,
+      "runtimeSeconds": 5.54187
+    },
+    {
+      "sampleId": "0209-51599ef6d0fd6daf",
+      "score": 2.2623474750275987e-29,
+      "runtimeSeconds": 16.755837
+    },
+    {
+      "sampleId": "0210-1a47737c444eae4a",
+      "score": 1.9250461850928386e-21,
+      "runtimeSeconds": 3.776259
+    },
+    {
+      "sampleId": "0211-87faa5e2a6797a0d",
+      "score": 9.981517618278983e-23,
+      "runtimeSeconds": 3.327602
+    },
+    {
+      "sampleId": "0212-9720517f62bb4679",
+      "score": 1.5274795749328595e-21,
+      "runtimeSeconds": 3.596981
+    },
+    {
+      "sampleId": "0213-9917f49668cf0772",
+      "score": 1.6444646523478659e-35,
+      "runtimeSeconds": 3.271445
+    },
+    {
+      "sampleId": "0214-76fbd660e25d9593",
+      "score": 3.710935005232595e-36,
+      "runtimeSeconds": 3.141721
+    },
+    {
+      "sampleId": "0215-302320a69c452ef3",
+      "score": 2.573951878692471e-37,
+      "runtimeSeconds": 3.62094
+    },
+    {
+      "sampleId": "0216-7065e95e20d2e3b1",
+      "score": 1.1632522208678887e-20,
+      "runtimeSeconds": 3.779825
+    },
+    {
+      "sampleId": "0217-a3314014b87c1c76",
+      "score": 1.511006358175308e-17,
+      "runtimeSeconds": 3.788427
+    },
+    {
+      "sampleId": "0218-c151a7d61e2ef55f",
+      "score": 5.6698702621815755e-08,
+      "runtimeSeconds": 11.413957
+    },
+    {
+      "sampleId": "0219-a34c2df502867d03",
+      "score": 3.027953601180745e-23,
+      "runtimeSeconds": 11.222888
+    },
+    {
+      "sampleId": "0220-7f14067dc71491b9",
+      "score": 3.1272944303606387e-13,
+      "runtimeSeconds": 3.244132
+    },
+    {
+      "sampleId": "0221-9da627e67479d9ce",
+      "score": 7.324434877503587e-20,
+      "runtimeSeconds": 3.381516
+    },
+    {
+      "sampleId": "0222-78ab0b1973ce408b",
+      "score": 4.5515499294215634e-24,
+      "runtimeSeconds": 3.373599
+    },
+    {
+      "sampleId": "0223-d573dd63ff969ea5",
+      "score": 1.946622830893405e-22,
+      "runtimeSeconds": 3.097047
+    },
+    {
+      "sampleId": "0224-2de619d7214d83d8",
+      "score": 5.9593519694174125e-15,
+      "runtimeSeconds": 3.152843
+    },
+    {
+      "sampleId": "0225-c06bf6c6cd88722e",
+      "score": 4.4420517394426375e-36,
+      "runtimeSeconds": 3.099472
+    },
+    {
+      "sampleId": "0226-da4cab60e9537a3d",
+      "score": 0.0,
+      "runtimeSeconds": 3.843642
+    },
+    {
+      "sampleId": "0227-6c73e8aa620a9d2b",
+      "score": 1.583098291845632e-17,
+      "runtimeSeconds": 4.578909
+    },
+    {
+      "sampleId": "0228-1d701e59326483db",
+      "score": 6.8930212722276404e-34,
+      "runtimeSeconds": 17.398466
+    },
+    {
+      "sampleId": "0229-c22a3bde1fa3aacd",
+      "score": 1.3821843437138123e-31,
+      "runtimeSeconds": 4.361574
+    },
+    {
+      "sampleId": "0230-4329728bc68f4192",
+      "score": 6.443543283891159e-31,
+      "runtimeSeconds": 3.738954
+    },
+    {
+      "sampleId": "0231-34ddafd5968f3ee2",
+      "score": 9.351799038255516e-38,
+      "runtimeSeconds": 3.741151
+    },
+    {
+      "sampleId": "0232-e2728c8e8c5e51a9",
+      "score": 1.0266507875830327e-31,
+      "runtimeSeconds": 3.185986
+    },
+    {
+      "sampleId": "0233-fcfadceee7628d09",
+      "score": 0.0,
+      "runtimeSeconds": 3.283522
+    },
+    {
+      "sampleId": "0234-e395461d8e14d81d",
+      "score": 2.216477755727118e-19,
+      "runtimeSeconds": 3.220491
+    },
+    {
+      "sampleId": "0235-1254c62755b56a07",
+      "score": 2.4654875986932986e-15,
+      "runtimeSeconds": 3.648225
+    },
+    {
+      "sampleId": "0236-29bcd8e396dc1ca8",
+      "score": 4.764254312242255e-13,
+      "runtimeSeconds": 3.644416
+    },
+    {
+      "sampleId": "0237-1f100a62094d69a7",
+      "score": 6.4444316446839525e-15,
+      "runtimeSeconds": 8.185519
+    },
+    {
+      "sampleId": "0238-d1048b6d9667c9d5",
+      "score": 7.213088560536919e-18,
+      "runtimeSeconds": 14.061895
+    },
+    {
+      "sampleId": "0239-5337df7f969d3544",
+      "score": 2.3356602971409737e-20,
+      "runtimeSeconds": 3.654321
+    },
+    {
+      "sampleId": "0240-ddea32e0ee84b3f8",
+      "score": 4.423727587938171e-18,
+      "runtimeSeconds": 3.50364
+    },
+    {
+      "sampleId": "0241-01c807755b651e5c",
+      "score": 1.4769306925458553e-13,
+      "runtimeSeconds": 3.83616
+    },
+    {
+      "sampleId": "0242-849450d5fc7e3cda",
+      "score": 1.2883594918867695e-20,
+      "runtimeSeconds": 3.734446
+    },
+    {
+      "sampleId": "0243-da47a8475a80c0c8",
+      "score": 3.981842275201226e-37,
+      "runtimeSeconds": 3.784373
+    },
+    {
+      "sampleId": "0244-fda644821ec2b00c",
+      "score": 2.396430254088204e-25,
+      "runtimeSeconds": 3.77267
+    },
+    {
+      "sampleId": "0245-f6d9353f6fe7ec48",
+      "score": 4.6073668470875116e-30,
+      "runtimeSeconds": 3.115419
+    },
+    {
+      "sampleId": "0246-ac13c36310e3e119",
+      "score": 2.2465527526273964e-26,
+      "runtimeSeconds": 5.140434
+    },
+    {
+      "sampleId": "0247-741c5987527b8cc8",
+      "score": 1.7942963195967387e-13,
+      "runtimeSeconds": 16.00149
+    },
+    {
+      "sampleId": "0248-13479327115839c1",
+      "score": 1.1661050896950945e-34,
+      "runtimeSeconds": 3.649344
+    },
+    {
+      "sampleId": "0249-0f09afbe3ab2a946",
+      "score": 6.896501602562302e-39,
+      "runtimeSeconds": 3.698624
+    },
+    {
+      "sampleId": "0250-83fbd102dff1d3a7",
+      "score": 3.7714955922220475e-17,
+      "runtimeSeconds": 3.514546
+    },
+    {
+      "sampleId": "0251-b0174c12a10e8c99",
+      "score": 9.160459946144783e-09,
+      "runtimeSeconds": 3.451785
+    },
+    {
+      "sampleId": "0252-e3b3da816dfb0528",
+      "score": 1.5550448728450988e-32,
+      "runtimeSeconds": 3.131724
+    },
+    {
+      "sampleId": "0253-6c24a3d5b5d8591d",
+      "score": 1.8488626539563654e-30,
+      "runtimeSeconds": 2.772516
+    },
+    {
+      "sampleId": "0254-a1ebdc433cb0179b",
+      "score": 2.232152337158644e-24,
+      "runtimeSeconds": 3.828266
+    },
+    {
+      "sampleId": "0255-9d0b13e9faf8765b",
+      "score": 1.0010949526489808e-31,
+      "runtimeSeconds": 3.615544
+    },
+    {
+      "sampleId": "0256-e90f9d789522092a",
+      "score": 1.2021944881808917e-34,
+      "runtimeSeconds": 9.07095
+    },
+    {
+      "sampleId": "0257-ac8dd4a82befa084",
+      "score": 1.425605977668164e-19,
+      "runtimeSeconds": 13.755287
+    },
+    {
+      "sampleId": "0258-bee575d871ccc019",
+      "score": 6.010857431294817e-38,
+      "runtimeSeconds": 3.675043
+    },
+    {
+      "sampleId": "0259-8ba559eca16673a7",
+      "score": 0.08734097331762314,
+      "runtimeSeconds": 3.664233
+    },
+    {
+      "sampleId": "0260-cba98f0eb2f3eeae",
+      "score": 0.018251286819577217,
+      "runtimeSeconds": 3.680719
+    },
+    {
+      "sampleId": "0261-88f91f093cf26b6d",
+      "score": 0.004004559013992548,
+      "runtimeSeconds": 3.713187
+    },
+    {
+      "sampleId": "0262-c4ba3ffc935f01d5",
+      "score": 0.001292313332669437,
+      "runtimeSeconds": 3.723387
+    },
+    {
+      "sampleId": "0263-a6dfccdee5e41956",
+      "score": 0.018069086596369743,
+      "runtimeSeconds": 3.460238
+    },
+    {
+      "sampleId": "0264-0aff409782ea088b",
+      "score": 0.016333362087607384,
+      "runtimeSeconds": 2.85284
+    },
+    {
+      "sampleId": "0265-adb0999c430fd733",
+      "score": 0.1149609312415123,
+      "runtimeSeconds": 6.793131
+    },
+    {
+      "sampleId": "0266-aa4c5e3f0fda2b43",
+      "score": 0.0019626503344625235,
+      "runtimeSeconds": 15.861251
+    },
+    {
+      "sampleId": "0267-bffb0c684ed38c28",
+      "score": 4.792930852204336e-08,
+      "runtimeSeconds": 3.909342
+    },
+    {
+      "sampleId": "0268-f7499b2fa870552d",
+      "score": 4.175064294287267e-09,
+      "runtimeSeconds": 3.483095
+    },
+    {
+      "sampleId": "0269-262fa6d498dfec69",
+      "score": 8.821265851111093e-07,
+      "runtimeSeconds": 2.773913
+    },
+    {
+      "sampleId": "0270-5fdcaa29b9f977d2",
+      "score": 0.2624799609184265,
+      "runtimeSeconds": 2.971425
+    },
+    {
+      "sampleId": "0271-27e12f6a7b2df5d9",
+      "score": 0.1777433454990387,
+      "runtimeSeconds": 2.892051
+    },
+    {
+      "sampleId": "0272-a1507f27370609ad",
+      "score": 1.27549606077082e-06,
+      "runtimeSeconds": 3.709903
+    },
+    {
+      "sampleId": "0273-5968dddfe98c8f8d",
+      "score": 0.3372438848018646,
+      "runtimeSeconds": 3.788865
+    },
+    {
+      "sampleId": "0274-3796d05f30527a9f",
+      "score": 0.0004566990537568927,
+      "runtimeSeconds": 3.692803
+    },
+    {
+      "sampleId": "0275-ebf155869c08730e",
+      "score": 8.104412974052622e-12,
+      "runtimeSeconds": 8.195935
+    },
+    {
+      "sampleId": "0276-4b21d0058c7579b6",
+      "score": 4.641375267995062e-16,
+      "runtimeSeconds": 13.79837
+    },
+    {
+      "sampleId": "0277-3aac4b290dd70e62",
+      "score": 1.7170421925984656e-16,
+      "runtimeSeconds": 3.636488
+    },
+    {
+      "sampleId": "0278-3eb50943131c7d1c",
+      "score": 3.211751565665637e-23,
+      "runtimeSeconds": 2.687672
+    },
+    {
+      "sampleId": "0279-4357bffef8440edf",
+      "score": 9.412747858778795e-16,
+      "runtimeSeconds": 3.70524
+    },
+    {
+      "sampleId": "0280-20bb877f1ca961ed",
+      "score": 1.2787134632402664e-13,
+      "runtimeSeconds": 3.047956
+    },
+    {
+      "sampleId": "0281-c6da036556eb687c",
+      "score": 1.6185080120331335e-18,
+      "runtimeSeconds": 2.846975
+    },
+    {
+      "sampleId": "0282-87ef9eab26675121",
+      "score": 4.056134941810008e-11,
+      "runtimeSeconds": 3.493714
+    },
+    {
+      "sampleId": "0283-09c3b1341fbb3c3f",
+      "score": 6.393501299601653e-22,
+      "runtimeSeconds": 3.750863
+    },
+    {
+      "sampleId": "0284-c3a5e6ce0bbc3780",
+      "score": 5.501124678002347e-22,
+      "runtimeSeconds": 3.78561
+    },
+    {
+      "sampleId": "0285-1037ed74d6e53268",
+      "score": 4.81974522679001e-27,
+      "runtimeSeconds": 11.616417
+    },
+    {
+      "sampleId": "0286-681d795522e1ff25",
+      "score": 3.2082294598723138e-09,
+      "runtimeSeconds": 10.893456
+    },
+    {
+      "sampleId": "0287-3de8cfc8a6e784e4",
+      "score": 2.9123671769928655e-22,
+      "runtimeSeconds": 2.795854
+    },
+    {
+      "sampleId": "0288-29ef12a8946f00c7",
+      "score": 6.145979643094203e-33,
+      "runtimeSeconds": 3.13111
+    },
+    {
+      "sampleId": "0289-3d939a3e152c3bf4",
+      "score": 0.0,
+      "runtimeSeconds": 3.344882
+    },
+    {
+      "sampleId": "0290-8517c66335b769f6",
+      "score": 4.1979104449912424e-35,
+      "runtimeSeconds": 2.718719
+    },
+    {
+      "sampleId": "0291-41eb7cb355317d16",
+      "score": 1.1655281423740315e-32,
+      "runtimeSeconds": 3.646857
+    },
+    {
+      "sampleId": "0292-9d421298067a0a31",
+      "score": 1.5242425946488118e-22,
+      "runtimeSeconds": 3.581984
+    },
+    {
+      "sampleId": "0293-ac6b36055fc8078e",
+      "score": 2.3137067259359512e-17,
+      "runtimeSeconds": 3.294606
+    },
+    {
+      "sampleId": "0294-febf360f709ba348",
+      "score": 3.367052910903635e-17,
+      "runtimeSeconds": 3.790761
+    },
+    {
+      "sampleId": "0295-65926a2bef82c1a6",
+      "score": 3.9214044202573115e-14,
+      "runtimeSeconds": 13.117255
+    },
+    {
+      "sampleId": "0296-e1faa86e3fc2e544",
+      "score": 2.6482990506337956e-05,
+      "runtimeSeconds": 9.273179
+    },
+    {
+      "sampleId": "0297-c343747554da6709",
+      "score": 2.2625413294008467e-06,
+      "runtimeSeconds": 3.014552
+    },
+    {
+      "sampleId": "0298-dc4f2e29953315f8",
+      "score": 6.473307621490676e-06,
+      "runtimeSeconds": 3.47519
+    },
+    {
+      "sampleId": "0299-b5176268e020f8a4",
+      "score": 2.6191490178462118e-05,
+      "runtimeSeconds": 2.783864
+    },
+    {
+      "sampleId": "0300-5daeb06263a882ff",
+      "score": 2.6482990506337956e-05,
+      "runtimeSeconds": 3.135777
+    },
+    {
+      "sampleId": "0301-f727b9be201f914e",
+      "score": 0.07701104879379272,
+      "runtimeSeconds": 3.759831
+    },
+    {
+      "sampleId": "0302-6094831947611b80",
+      "score": 0.06660324335098267,
+      "runtimeSeconds": 3.337631
+    },
+    {
+      "sampleId": "0303-47482002661e7541",
+      "score": 2.780425120363361e-06,
+      "runtimeSeconds": 3.744157
+    },
+    {
+      "sampleId": "0304-a0f97fa901800b99",
+      "score": 1.7062387744001817e-13,
+      "runtimeSeconds": 4.318184
+    },
+    {
+      "sampleId": "0305-fabec33da01faf8e",
+      "score": 2.0226767816211577e-08,
+      "runtimeSeconds": 16.978297
+    },
+    {
+      "sampleId": "0306-c3136b6352bb4034",
+      "score": 3.079702946706675e-05,
+      "runtimeSeconds": 4.9702
+    },
+    {
+      "sampleId": "0307-810a7d4da4454576",
+      "score": 2.4763647722854647e-15,
+      "runtimeSeconds": 3.515123
+    },
+    {
+      "sampleId": "0308-c658b62a298e4148",
+      "score": 1.4959741703395042e-17,
+      "runtimeSeconds": 3.272669
+    },
+    {
+      "sampleId": "0309-ccbe51f97990a569",
+      "score": 1.9028940749510337e-14,
+      "runtimeSeconds": 2.771375
+    },
+    {
+      "sampleId": "0310-34d4300184a28e45",
+      "score": 0.9567797780036926,
+      "runtimeSeconds": 2.908193
+    },
+    {
+      "sampleId": "0311-f90e127c886ef7e4",
+      "score": 0.5306356549263,
+      "runtimeSeconds": 3.056314
+    },
+    {
+      "sampleId": "0312-30083189031e9ac2",
+      "score": 0.00040623507811687887,
+      "runtimeSeconds": 3.600718
+    },
+    {
+      "sampleId": "0313-448f125f9e78468b",
+      "score": 1.0,
+      "runtimeSeconds": 3.811431
+    },
+    {
+      "sampleId": "0314-1faf55ef4fb82166",
+      "score": 0.1543325036764145,
+      "runtimeSeconds": 5.728771
+    },
+    {
+      "sampleId": "0315-46f253852ce1959c",
+      "score": 0.6406927108764648,
+      "runtimeSeconds": 15.749505
+    },
+    {
+      "sampleId": "0316-6d822fb084ee0122",
+      "score": 0.0036376332864165306,
+      "runtimeSeconds": 3.76234
+    },
+    {
+      "sampleId": "0317-ef9e8323a0c12535",
+      "score": 0.00022648079902864993,
+      "runtimeSeconds": 3.158257
+    },
+    {
+      "sampleId": "0318-016fdbc7a7aea0c8",
+      "score": 0.8437682390213013,
+      "runtimeSeconds": 3.130211
+    },
+    {
+      "sampleId": "0319-b2baa119a0c67a9f",
+      "score": 1.0,
+      "runtimeSeconds": 2.802341
+    },
+    {
+      "sampleId": "0320-59f1be0d8175bde3",
+      "score": 0.0017474147025495768,
+      "runtimeSeconds": 2.881844
+    },
+    {
+      "sampleId": "0321-1f0f99b3662335c7",
+      "score": 1.0,
+      "runtimeSeconds": 3.600232
+    },
+    {
+      "sampleId": "0322-2c9ffd37021cc6e2",
+      "score": 5.140094639537803e-19,
+      "runtimeSeconds": 3.201124
+    },
+    {
+      "sampleId": "0323-9a217eed68e973fe",
+      "score": 0.9639421105384827,
+      "runtimeSeconds": 3.28368
+    },
+    {
+      "sampleId": "0324-1061433c5b2fa565",
+      "score": 2.989288105936794e-08,
+      "runtimeSeconds": 4.320343
+    },
+    {
+      "sampleId": "0325-867699ef7eda4f00",
+      "score": 0.9035114049911499,
+      "runtimeSeconds": 14.989673
+    },
+    {
+      "sampleId": "0326-c05c3af9c14b8e4f",
+      "score": 0.6809557676315308,
+      "runtimeSeconds": 6.632423
+    },
+    {
+      "sampleId": "0327-a2f496bac54a5016",
+      "score": 0.01143550593405962,
+      "runtimeSeconds": 3.130124
+    },
+    {
+      "sampleId": "0328-95fd3adcb066d4e7",
+      "score": 0.19489139318466187,
+      "runtimeSeconds": 2.909032
+    },
+    {
+      "sampleId": "0329-347a9dc66acc1e3f",
+      "score": 0.6279598474502563,
+      "runtimeSeconds": 3.014365
+    },
+    {
+      "sampleId": "0330-c48d641859fd1c45",
+      "score": 0.005228385329246521,
+      "runtimeSeconds": 2.822582
+    },
+    {
+      "sampleId": "0331-a8ea8d680ce39876",
+      "score": 7.705361349508166e-05,
+      "runtimeSeconds": 3.231355
+    },
+    {
+      "sampleId": "0332-46f89f0798f6bb4d",
+      "score": 0.4571191370487213,
+      "runtimeSeconds": 3.432734
+    },
+    {
+      "sampleId": "0333-da486927596e4d11",
+      "score": 0.82492595911026,
+      "runtimeSeconds": 3.045733
+    },
+    {
+      "sampleId": "0334-11d6eec10370de98",
+      "score": 0.7718750834465027,
+      "runtimeSeconds": 3.572905
+    },
+    {
+      "sampleId": "0335-855ebfcd24d1d4c7",
+      "score": 0.015280287712812424,
+      "runtimeSeconds": 9.098949
+    },
+    {
+      "sampleId": "0336-f1d7aaa620a47f5a",
+      "score": 0.05117744952440262,
+      "runtimeSeconds": 13.391005
+    },
+    {
+      "sampleId": "0337-7087ebd34e5abb16",
+      "score": 1.0,
+      "runtimeSeconds": 3.756987
+    },
+    {
+      "sampleId": "0338-d7f4e1450ba48ce1",
+      "score": 0.5102127194404602,
+      "runtimeSeconds": 3.16057
+    },
+    {
+      "sampleId": "0339-70d003f4c60eacf7",
+      "score": 1.0,
+      "runtimeSeconds": 3.150141
+    },
+    {
+      "sampleId": "0340-66ff24092f5a215c",
+      "score": 1.0,
+      "runtimeSeconds": 3.623416
+    },
+    {
+      "sampleId": "0341-13bec369e025e7ca",
+      "score": 0.9996812343597412,
+      "runtimeSeconds": 3.130855
+    },
+    {
+      "sampleId": "0342-eadb933d68ba502f",
+      "score": 9.042624355970474e-07,
+      "runtimeSeconds": 3.556552
+    },
+    {
+      "sampleId": "0343-78a515b9f24e2491",
+      "score": 1.5265394495145301e-06,
+      "runtimeSeconds": 2.719471
+    },
+    {
+      "sampleId": "0344-15abe4c3b82e217b",
+      "score": 0.7024969458580017,
+      "runtimeSeconds": 3.544451
+    },
+    {
+      "sampleId": "0345-dff945087e4212d3",
+      "score": 0.9967944025993347,
+      "runtimeSeconds": 15.933251
+    },
+    {
+      "sampleId": "0346-92321ecf529288bd",
+      "score": 0.9457299113273621,
+      "runtimeSeconds": 6.790077
+    },
+    {
+      "sampleId": "0347-e2646411d38417fb",
+      "score": 0.9336603879928589,
+      "runtimeSeconds": 2.9897
+    },
+    {
+      "sampleId": "0348-94b00b2465ca0cc9",
+      "score": 0.1416085660457611,
+      "runtimeSeconds": 3.396379
+    },
+    {
+      "sampleId": "0349-f00f91e1e0d65a8b",
+      "score": 0.0028778868727385998,
+      "runtimeSeconds": 3.571145
+    },
+    {
+      "sampleId": "0350-f934ff0aa1e6ee2c",
+      "score": 1.0384636262017466e-08,
+      "runtimeSeconds": 2.935696
+    },
+    {
+      "sampleId": "0351-84ff172c4797539a",
+      "score": 0.007089214865118265,
+      "runtimeSeconds": 3.242817
+    },
+    {
+      "sampleId": "0352-9e3ab454007e937a",
+      "score": 0.9815587401390076,
+      "runtimeSeconds": 2.950413
+    },
+    {
+      "sampleId": "0353-8e25e77ee05b8bfc",
+      "score": 0.9999853372573853,
+      "runtimeSeconds": 3.580804
+    },
+    {
+      "sampleId": "0354-fe7a33ea2b9e94ed",
+      "score": 0.12877856194972992,
+      "runtimeSeconds": 5.094263
+    },
+    {
+      "sampleId": "0355-9c031f03791b7f81",
+      "score": 0.9852922558784485,
+      "runtimeSeconds": 17.093224
+    },
+    {
+      "sampleId": "0356-036067b99689e624",
+      "score": 0.7963354587554932,
+      "runtimeSeconds": 4.090703
+    },
+    {
+      "sampleId": "0357-c5548e228dd51486",
+      "score": 0.1374882161617279,
+      "runtimeSeconds": 2.910236
+    },
+    {
+      "sampleId": "0358-62cdec3a9b8b0da0",
+      "score": 0.004827540367841721,
+      "runtimeSeconds": 3.248924
+    },
+    {
+      "sampleId": "0359-2d97c15fb6d82cf2",
+      "score": 0.6356979608535767,
+      "runtimeSeconds": 3.465109
+    },
+    {
+      "sampleId": "0360-83c64bf498f248aa",
+      "score": 0.9999945163726807,
+      "runtimeSeconds": 3.692872
+    },
+    {
+      "sampleId": "0361-72cdee8856659807",
+      "score": 0.9224803447723389,
+      "runtimeSeconds": 3.297998
+    },
+    {
+      "sampleId": "0362-94f8b373e608d0f0",
+      "score": 0.9997909665107727,
+      "runtimeSeconds": 3.774353
+    },
+    {
+      "sampleId": "0363-afaf36b6865b43bc",
+      "score": 1.0,
+      "runtimeSeconds": 3.77141
+    },
+    {
+      "sampleId": "0364-924e7bcf33093239",
+      "score": 7.345881385845132e-06,
+      "runtimeSeconds": 9.193055
+    },
+    {
+      "sampleId": "0365-15e736605018610d",
+      "score": 0.815849781036377,
+      "runtimeSeconds": 13.366909
+    },
+    {
+      "sampleId": "0366-61c84f9f27d14e91",
+      "score": 0.45243850350379944,
+      "runtimeSeconds": 3.386914
+    },
+    {
+      "sampleId": "0367-32a908af7cbe476e",
+      "score": 0.045589473098516464,
+      "runtimeSeconds": 3.700071
+    },
+    {
+      "sampleId": "0368-24b8136758f6737a",
+      "score": 0.6516039967536926,
+      "runtimeSeconds": 3.715283
+    },
+    {
+      "sampleId": "0369-d2844acca4d235ef",
+      "score": 2.0908011550334277e-18,
+      "runtimeSeconds": 3.749253
+    },
+    {
+      "sampleId": "0370-1fcf55a0fd8c65dd",
+      "score": 9.231517594798788e-08,
+      "runtimeSeconds": 3.820922
+    },
+    {
+      "sampleId": "0371-830655844286857e",
+      "score": 1.0,
+      "runtimeSeconds": 3.823502
+    },
+    {
+      "sampleId": "0372-20123b957fc3d350",
+      "score": 0.9979473948478699,
+      "runtimeSeconds": 3.664883
+    },
+    {
+      "sampleId": "0373-6a381ea2db982a6f",
+      "score": 0.0002831716265063733,
+      "runtimeSeconds": 7.226851
+    },
+    {
+      "sampleId": "0374-d4c3177128432871",
+      "score": 1.0,
+      "runtimeSeconds": 15.067045
+    },
+    {
+      "sampleId": "0375-72f281bbb349b56c",
+      "score": 0.9829692840576172,
+      "runtimeSeconds": 3.655026
+    },
+    {
+      "sampleId": "0376-cf9e335b068f3be0",
+      "score": 0.018411317840218544,
+      "runtimeSeconds": 3.718961
+    },
+    {
+      "sampleId": "0377-b6b4e3c9b05609a9",
+      "score": 0.9935145378112793,
+      "runtimeSeconds": 3.736104
+    },
+    {
+      "sampleId": "0378-920a41649f127b94",
+      "score": 3.122974590041849e-08,
+      "runtimeSeconds": 3.372971
+    },
+    {
+      "sampleId": "0379-f83deaf7e46edeef",
+      "score": 0.010564949363470078,
+      "runtimeSeconds": 3.750482
+    },
+    {
+      "sampleId": "0380-ef98022aea461a55",
+      "score": 0.9961795806884766,
+      "runtimeSeconds": 3.731653
+    },
+    {
+      "sampleId": "0381-ad3e61681d6db6aa",
+      "score": 6.910628144396469e-05,
+      "runtimeSeconds": 3.783867
+    },
+    {
+      "sampleId": "0382-3270f2be173fde28",
+      "score": 2.6634944305568997e-19,
+      "runtimeSeconds": 6.696116
+    },
+    {
+      "sampleId": "0383-c4fe913b0fc57ebe",
+      "score": 0.03523194044828415,
+      "runtimeSeconds": 15.309332
+    },
+    {
+      "sampleId": "0384-acc4a178929c3036",
+      "score": 0.38174644112586975,
+      "runtimeSeconds": 3.144459
+    },
+    {
+      "sampleId": "0385-626820be773d722d",
+      "score": 2.5571745784248867e-13,
+      "runtimeSeconds": 3.543169
+    },
+    {
+      "sampleId": "0386-755aa81c8cced363",
+      "score": 0.6685120463371277,
+      "runtimeSeconds": 3.72851
+    },
+    {
+      "sampleId": "0387-a6dc2218ee163488",
+      "score": 0.998907208442688,
+      "runtimeSeconds": 3.764294
+    },
+    {
+      "sampleId": "0388-3e04ee4cad9b2bc4",
+      "score": 0.9409592151641846,
+      "runtimeSeconds": 3.702216
+    },
+    {
+      "sampleId": "0389-4d684c893670ebfe",
+      "score": 0.675943911075592,
+      "runtimeSeconds": 3.542271
+    },
+    {
+      "sampleId": "0390-bf52d1fcfab35266",
+      "score": 0.9999991655349731,
+      "runtimeSeconds": 3.594698
+    },
+    {
+      "sampleId": "0391-d9ba62264604ada0",
+      "score": 2.3334776493889875e-13,
+      "runtimeSeconds": 4.081267
+    },
+    {
+      "sampleId": "0392-8aa7d36a0a6d03b7",
+      "score": 0.9443801641464233,
+      "runtimeSeconds": 16.778597
+    },
+    {
+      "sampleId": "0393-defc65e07471fd09",
+      "score": 0.03234865888953209,
+      "runtimeSeconds": 4.698825
+    },
+    {
+      "sampleId": "0394-e1da2e3ffe2c7841",
+      "score": 0.29156583547592163,
+      "runtimeSeconds": 2.982325
+    },
+    {
+      "sampleId": "0395-75068de7fd535089",
+      "score": 0.9361619353294373,
+      "runtimeSeconds": 3.538872
+    },
+    {
+      "sampleId": "0396-5ac2f540a5d43c57",
+      "score": 0.2555045485496521,
+      "runtimeSeconds": 3.737761
+    },
+    {
+      "sampleId": "0397-0b2e591b70c44290",
+      "score": 0.07635819911956787,
+      "runtimeSeconds": 3.583068
+    },
+    {
+      "sampleId": "0398-873d1c5c415ba29c",
+      "score": 0.0012598298490047455,
+      "runtimeSeconds": 2.848043
+    },
+    {
+      "sampleId": "0399-c667bcf883ecff12",
+      "score": 9.710660823624567e-14,
+      "runtimeSeconds": 3.298498
+    },
+    {
+      "sampleId": "0400-dc288bf1ca72a3ac",
+      "score": 1.0401177835683839e-10,
+      "runtimeSeconds": 3.285979
+    },
+    {
+      "sampleId": "0401-aba12fdc476f67f3",
+      "score": 0.6859620809555054,
+      "runtimeSeconds": 5.332712
+    },
+    {
+      "sampleId": "0402-c8eb1c31a46aa334",
+      "score": 0.9999370574951172,
+      "runtimeSeconds": 16.939826
+    },
+    {
+      "sampleId": "0403-a06d7d629dcb308b",
+      "score": 0.23762717843055725,
+      "runtimeSeconds": 3.313268
+    },
+    {
+      "sampleId": "0404-99f4d082152b5ae2",
+      "score": 0.0608220212161541,
+      "runtimeSeconds": 2.76793
+    },
+    {
+      "sampleId": "0405-f03c2134179c2a47",
+      "score": 0.2945430874824524,
+      "runtimeSeconds": 3.654765
+    },
+    {
+      "sampleId": "0406-d3085bd70cd71ef9",
+      "score": 3.8435876703601934e-09,
+      "runtimeSeconds": 2.982437
+    },
+    {
+      "sampleId": "0407-ef019fda38d01438",
+      "score": 0.7875435948371887,
+      "runtimeSeconds": 3.130467
+    },
+    {
+      "sampleId": "0408-59fa46a35e570e6b",
+      "score": 0.09673947840929031,
+      "runtimeSeconds": 3.264518
+    },
+    {
+      "sampleId": "0409-e9940558eac8f6a5",
+      "score": 0.632189929485321,
+      "runtimeSeconds": 2.709094
+    },
+    {
+      "sampleId": "0410-a27687f9048bc143",
+      "score": 0.9999971389770508,
+      "runtimeSeconds": 3.126088
+    },
+    {
+      "sampleId": "0411-ab91169ad3fbfb68",
+      "score": 0.5978970527648926,
+      "runtimeSeconds": 3.055094
+    },
+    {
+      "sampleId": "0412-9ec47358b5770636",
+      "score": 0.7144366502761841,
+      "runtimeSeconds": 10.19666
+    },
+    {
+      "sampleId": "0413-16094b085ef92643",
+      "score": 0.9999992847442627,
+      "runtimeSeconds": 12.437345
+    },
+    {
+      "sampleId": "0414-747584c5d07692e0",
+      "score": 0.9997647404670715,
+      "runtimeSeconds": 3.139037
+    },
+    {
+      "sampleId": "0415-2120f4db90152f6c",
+      "score": 0.3366677165031433,
+      "runtimeSeconds": 3.112471
+    },
+    {
+      "sampleId": "0416-7a3f20b57331cd7b",
+      "score": 0.9345821142196655,
+      "runtimeSeconds": 2.678644
+    },
+    {
+      "sampleId": "0417-643238cec9c4e6c0",
+      "score": 1.021814403923127e-11,
+      "runtimeSeconds": 2.841043
+    },
+    {
+      "sampleId": "0418-d00c195eff801267",
+      "score": 2.3423866878147237e-05,
+      "runtimeSeconds": 3.611446
+    },
+    {
+      "sampleId": "0419-41ef0a7009fe26a9",
+      "score": 4.078992333234055e-06,
+      "runtimeSeconds": 3.6827
+    },
+    {
+      "sampleId": "0420-3f4f9069c191b6f4",
+      "score": 0.3439937233924866,
+      "runtimeSeconds": 3.763907
+    },
+    {
+      "sampleId": "0421-c762422578899407",
+      "score": 0.947880744934082,
+      "runtimeSeconds": 3.758376
+    },
+    {
+      "sampleId": "0422-7b8ad25d04961b7c",
+      "score": 0.7880014777183533,
+      "runtimeSeconds": 14.00213
+    },
+    {
+      "sampleId": "0423-c0ed027dfcf1693f",
+      "score": 0.49197033047676086,
+      "runtimeSeconds": 8.426428
+    },
+    {
+      "sampleId": "0424-4cf7fc22b53e33d8",
+      "score": 0.00016952758596744388,
+      "runtimeSeconds": 3.284788
+    },
+    {
+      "sampleId": "0425-c01b5112c5046119",
+      "score": 1.0,
+      "runtimeSeconds": 2.982145
+    },
+    {
+      "sampleId": "0426-c42afb4262ce4964",
+      "score": 0.23558200895786285,
+      "runtimeSeconds": 3.122596
+    },
+    {
+      "sampleId": "0427-abba4bbd4979ee90",
+      "score": 0.9908361434936523,
+      "runtimeSeconds": 3.036395
+    },
+    {
+      "sampleId": "0428-0082e7004333a771",
+      "score": 0.03898603841662407,
+      "runtimeSeconds": 3.759913
+    },
+    {
+      "sampleId": "0429-3ffe88e7f12a1383",
+      "score": 0.004130897112190723,
+      "runtimeSeconds": 3.762093
+    },
+    {
+      "sampleId": "0430-d089ec29d64d7a0c",
+      "score": 0.9999996423721313,
+      "runtimeSeconds": 3.756891
+    },
+    {
+      "sampleId": "0431-9931f0e5fa83cfac",
+      "score": 6.711432099768032e-15,
+      "runtimeSeconds": 6.176312
+    },
+    {
+      "sampleId": "0432-62655732422ffe04",
+      "score": 0.0344468392431736,
+      "runtimeSeconds": 16.661382
+    },
+    {
+      "sampleId": "0433-e73eb25068af4c83",
+      "score": 0.737522542476654,
+      "runtimeSeconds": 3.592804
+    },
+    {
+      "sampleId": "0434-cad1b014faeebbf2",
+      "score": 0.9998315572738647,
+      "runtimeSeconds": 3.754348
+    },
+    {
+      "sampleId": "0435-38098335741bd976",
+      "score": 2.826199079208891e-07,
+      "runtimeSeconds": 3.67222
+    },
+    {
+      "sampleId": "0436-23097e8a5f67b5fe",
+      "score": 0.6972783803939819,
+      "runtimeSeconds": 3.739635
+    },
+    {
+      "sampleId": "0437-28af70f8890ff764",
+      "score": 8.258131813961728e-30,
+      "runtimeSeconds": 3.728437
+    },
+    {
+      "sampleId": "0438-beeb75b5497029a1",
+      "score": 0.935340404510498,
+      "runtimeSeconds": 3.659272
+    },
+    {
+      "sampleId": "0439-2a04e26f6f8ffa16",
+      "score": 0.679148256778717,
+      "runtimeSeconds": 3.742629
+    },
+    {
+      "sampleId": "0440-967050ccdfe80341",
+      "score": 0.9701491594314575,
+      "runtimeSeconds": 6.323622
+    },
+    {
+      "sampleId": "0441-f7834a917d9a7433",
+      "score": 0.9538377523422241,
+      "runtimeSeconds": 15.786724
+    },
+    {
+      "sampleId": "0442-d82e47ed2cc440ce",
+      "score": 0.0003998472529929131,
+      "runtimeSeconds": 4.129902
+    },
+    {
+      "sampleId": "0443-ff196f040cc595b7",
+      "score": 1.0,
+      "runtimeSeconds": 3.124463
+    },
+    {
+      "sampleId": "0444-64678d77b3212760",
+      "score": 0.00042285621748305857,
+      "runtimeSeconds": 3.095963
+    },
+    {
+      "sampleId": "0445-ff3017e88013b64b",
+      "score": 1.9605546697221143e-07,
+      "runtimeSeconds": 3.295548
+    },
+    {
+      "sampleId": "0446-63436097d611ad84",
+      "score": 0.002475925488397479,
+      "runtimeSeconds": 3.406305
+    },
+    {
+      "sampleId": "0447-15d5ff21ed8619a7",
+      "score": 0.019831445068120956,
+      "runtimeSeconds": 3.584209
+    },
+    {
+      "sampleId": "0448-3c1e5ccf221117cc",
+      "score": 2.955168846861701e-25,
+      "runtimeSeconds": 3.032646
+    },
+    {
+      "sampleId": "0449-1183e3d0e3b8434d",
+      "score": 0.08943503350019455,
+      "runtimeSeconds": 3.288566
+    },
+    {
+      "sampleId": "0450-970d9dc4df6e144f",
+      "score": 0.7184638977050781,
+      "runtimeSeconds": 6.777794
+    },
+    {
+      "sampleId": "0451-fb1d4f90e774be6d",
+      "score": 0.1971290409564972,
+      "runtimeSeconds": 15.70079
+    },
+    {
+      "sampleId": "0452-adfad05978b2b588",
+      "score": 0.00120907137170434,
+      "runtimeSeconds": 3.641555
+    },
+    {
+      "sampleId": "0453-8a0178b482edcc30",
+      "score": 0.8138585686683655,
+      "runtimeSeconds": 3.622904
+    },
+    {
+      "sampleId": "0454-adb115beb24846fa",
+      "score": 0.012927090749144554,
+      "runtimeSeconds": 3.581003
+    },
+    {
+      "sampleId": "0455-aaf53f2362836bc0",
+      "score": 3.196246552761295e-06,
+      "runtimeSeconds": 3.677722
+    },
+    {
+      "sampleId": "0456-9b8bc5050a091199",
+      "score": 0.5671525597572327,
+      "runtimeSeconds": 3.627032
+    },
+    {
+      "sampleId": "0457-9621f0ca5b5d7a39",
+      "score": 1.0,
+      "runtimeSeconds": 3.719797
+    },
+    {
+      "sampleId": "0458-1067a7d1d58e91ba",
+      "score": 0.005769604817032814,
+      "runtimeSeconds": 3.615614
+    },
+    {
+      "sampleId": "0459-6bc19e4005a145ac",
+      "score": 0.276984304189682,
+      "runtimeSeconds": 6.618145
+    },
+    {
+      "sampleId": "0460-002b39f04293db7c",
+      "score": 0.47555404901504517,
+      "runtimeSeconds": 15.432033
+    },
+    {
+      "sampleId": "0461-5fb14011be255288",
+      "score": 0.053256865590810776,
+      "runtimeSeconds": 3.99549
+    },
+    {
+      "sampleId": "0462-333d1b04ed23cbd1",
+      "score": 3.2577640922681894e-06,
+      "runtimeSeconds": 3.640131
+    },
+    {
+      "sampleId": "0463-6af84a79e2a40479",
+      "score": 0.39158129692077637,
+      "runtimeSeconds": 3.695003
+    },
+    {
+      "sampleId": "0464-378bdca55bd93de3",
+      "score": 0.04466843605041504,
+      "runtimeSeconds": 3.756042
+    },
+    {
+      "sampleId": "0465-4cf57a3fe8f5c9ec",
+      "score": 0.9702258706092834,
+      "runtimeSeconds": 3.74481
+    },
+    {
+      "sampleId": "0466-0c072451183631e3",
+      "score": 0.9999333620071411,
+      "runtimeSeconds": 3.31478
+    },
+    {
+      "sampleId": "0467-7b6b5ef914e28125",
+      "score": 0.8356807231903076,
+      "runtimeSeconds": 2.996564
+    },
+    {
+      "sampleId": "0468-356ad8d24d3a3085",
+      "score": 0.9906430840492249,
+      "runtimeSeconds": 3.287864
+    },
+    {
+      "sampleId": "0469-cf975a6e6f75bbd3",
+      "score": 0.9702258706092834,
+      "runtimeSeconds": 13.963062
+    },
+    {
+      "sampleId": "0470-432d74d9f3fdb710",
+      "score": 0.9999594688415527,
+      "runtimeSeconds": 8.900879
+    },
+    {
+      "sampleId": "0471-c167cfa6f39a0c33",
+      "score": 0.9996196031570435,
+      "runtimeSeconds": 3.713681
+    },
+    {
+      "sampleId": "0472-31a15f9be90657c4",
+      "score": 0.002408473053947091,
+      "runtimeSeconds": 3.248118
+    },
+    {
+      "sampleId": "0473-cf5149f927976a57",
+      "score": 0.8475721478462219,
+      "runtimeSeconds": 2.872236
+    },
+    {
+      "sampleId": "0474-90f59eea1c33df14",
+      "score": 0.6059355735778809,
+      "runtimeSeconds": 3.048185
+    },
+    {
+      "sampleId": "0475-a0cfe2e703a69e8b",
+      "score": 0.846825361251831,
+      "runtimeSeconds": 3.734953
+    },
+    {
+      "sampleId": "0476-c3b511f1bb6c84f9",
+      "score": 9.765804648986997e-26,
+      "runtimeSeconds": 3.724705
+    },
+    {
+      "sampleId": "0477-25571166e2f09e13",
+      "score": 0.926239550113678,
+      "runtimeSeconds": 3.157333
+    },
+    {
+      "sampleId": "0478-1d95c87dbde53e73",
+      "score": 0.5160087943077087,
+      "runtimeSeconds": 3.622663
+    },
+    {
+      "sampleId": "0479-7404e228597409f1",
+      "score": 0.6635491251945496,
+      "runtimeSeconds": 15.710308
+    },
+    {
+      "sampleId": "0480-3d78a3a79dded0d2",
+      "score": 0.01382962055504322,
+      "runtimeSeconds": 5.837442
+    },
+    {
+      "sampleId": "0481-ecaae34fd7a023cb",
+      "score": 0.1338135451078415,
+      "runtimeSeconds": 2.957761
+    },
+    {
+      "sampleId": "0482-1914ee40b7494fb4",
+      "score": 0.002662405138835311,
+      "runtimeSeconds": 2.715388
+    },
+    {
+      "sampleId": "0483-2322ceff09d779f6",
+      "score": 2.3622836325953855e-11,
+      "runtimeSeconds": 3.222182
+    },
+    {
+      "sampleId": "0484-e0e0e63ae302d184",
+      "score": 0.9199169874191284,
+      "runtimeSeconds": 3.7748
+    },
+    {
+      "sampleId": "0485-dc9156f9167b7b2f",
+      "score": 5.539930292286499e-09,
+      "runtimeSeconds": 3.7872
+    },
+    {
+      "sampleId": "0486-fae4b175f778cba6",
+      "score": 6.225008064575377e-07,
+      "runtimeSeconds": 3.736392
+    },
+    {
+      "sampleId": "0487-aefd00354f84e6e4",
+      "score": 0.01870855875313282,
+      "runtimeSeconds": 3.751653
+    },
+    {
+      "sampleId": "0488-8abedf24ebc815dc",
+      "score": 0.73378986120224,
+      "runtimeSeconds": 7.997942
+    },
+    {
+      "sampleId": "0489-0d8809ea24d449ba",
+      "score": 0.9698428511619568,
+      "runtimeSeconds": 15.062172
+    },
+    {
+      "sampleId": "0490-b514bdb9835043c7",
+      "score": 0.7601006031036377,
+      "runtimeSeconds": 3.247638
+    },
+    {
+      "sampleId": "0491-b90db9a0faebab05",
+      "score": 0.003065934171900153,
+      "runtimeSeconds": 3.601174
+    },
+    {
+      "sampleId": "0492-0a3de28553be486a",
+      "score": 0.6335415244102478,
+      "runtimeSeconds": 3.897103
+    },
+    {
+      "sampleId": "0493-47c94c1337aa8b6c",
+      "score": 0.9563049077987671,
+      "runtimeSeconds": 3.775217
+    },
+    {
+      "sampleId": "0494-be197c972e1f0132",
+      "score": 0.40297454595565796,
+      "runtimeSeconds": 3.666802
+    },
+    {
+      "sampleId": "0495-1f776d0544c2dd07",
+      "score": 0.9998483657836914,
+      "runtimeSeconds": 3.522583
+    },
+    {
+      "sampleId": "0496-faf9980b6d03bac8",
+      "score": 1.4432607109426954e-08,
+      "runtimeSeconds": 2.919291
+    },
+    {
+      "sampleId": "0497-c27796330fe1f538",
+      "score": 0.999473512172699,
+      "runtimeSeconds": 6.348053
+    },
+    {
+      "sampleId": "0498-70da5ef1a87aeb09",
+      "score": 3.0726947443326935e-05,
+      "runtimeSeconds": 16.199812
+    },
+    {
+      "sampleId": "0499-f589114a54336b1f",
+      "score": 0.4906763732433319,
+      "runtimeSeconds": 4.074752
+    },
+    {
+      "sampleId": "0500-0c90120a3e73a4cb",
+      "score": 0.12575408816337585,
+      "runtimeSeconds": 2.99517
+    },
+    {
+      "sampleId": "0501-34755b5e678e70c9",
+      "score": 1.2483027603593655e-05,
+      "runtimeSeconds": 3.124361
+    },
+    {
+      "sampleId": "0502-3fbeb4cc4a5eaff2",
+      "score": 4.2144443490599315e-09,
+      "runtimeSeconds": 3.742562
+    },
+    {
+      "sampleId": "0503-fc4aa73efdaa68de",
+      "score": 0.0028841784223914146,
+      "runtimeSeconds": 3.704235
+    },
+    {
+      "sampleId": "0504-02354a6e8ee9a2c5",
+      "score": 2.260709619505974e-09,
+      "runtimeSeconds": 3.736228
+    },
+    {
+      "sampleId": "0505-7ccb16b83ee02cc5",
+      "score": 0.171513631939888,
+      "runtimeSeconds": 3.395683
+    },
+    {
+      "sampleId": "0506-06c427e3c8324da1",
+      "score": 0.6967260241508484,
+      "runtimeSeconds": 4.156787
+    },
+    {
+      "sampleId": "0507-e605868703483a21",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 17.161776
+    },
+    {
+      "sampleId": "0508-6441f339b56f1f52",
+      "score": 1.2145165428911753e-10,
+      "runtimeSeconds": 5.397262
+    },
+    {
+      "sampleId": "0509-980a328d253106e4",
+      "score": 0.1446305811405182,
+      "runtimeSeconds": 3.264937
+    },
+    {
+      "sampleId": "0510-5a1fd31ec3288539",
+      "score": 5.643757017281814e-09,
+      "runtimeSeconds": 3.443811
+    },
+    {
+      "sampleId": "0511-cfd0ed069ec71f52",
+      "score": 0.798183023929596,
+      "runtimeSeconds": 3.760676
+    },
+    {
+      "sampleId": "0512-6502043e6a5596f7",
+      "score": 0.9999825954437256,
+      "runtimeSeconds": 3.430016
+    },
+    {
+      "sampleId": "0513-d876cc86a3367d55",
+      "score": 1.9342307311376317e-08,
+      "runtimeSeconds": 3.796434
+    },
+    {
+      "sampleId": "0514-5b48117c322b1ae9",
+      "score": 0.18300262093544006,
+      "runtimeSeconds": 3.430783
+    },
+    {
+      "sampleId": "0515-aeefab8bc1002d80",
+      "score": 0.812228798866272,
+      "runtimeSeconds": 3.094493
+    },
+    {
+      "sampleId": "0516-3edd7969e5237d5f",
+      "score": 0.2485739141702652,
+      "runtimeSeconds": 7.392364
+    },
+    {
+      "sampleId": "0517-d1b042f4e88a2c96",
+      "score": 0.9716659784317017,
+      "runtimeSeconds": 14.948136
+    },
+    {
+      "sampleId": "0518-b191cda17a985d3a",
+      "score": 0.0184397604316473,
+      "runtimeSeconds": 3.660607
+    },
+    {
+      "sampleId": "0519-4c74a7c1f87144c1",
+      "score": 0.9702066779136658,
+      "runtimeSeconds": 3.664
+    },
+    {
+      "sampleId": "0520-23d25337edcf16ed",
+      "score": 0.957661509513855,
+      "runtimeSeconds": 3.74798
+    },
+    {
+      "sampleId": "0521-b95fa2403a32ed93",
+      "score": 0.9716659784317017,
+      "runtimeSeconds": 2.690138
+    },
+    {
+      "sampleId": "0522-a8e151ef16050287",
+      "score": 0.9963614344596863,
+      "runtimeSeconds": 3.084174
+    },
+    {
+      "sampleId": "0523-2ef029a97d124c7e",
+      "score": 0.9995262622833252,
+      "runtimeSeconds": 2.78852
+    },
+    {
+      "sampleId": "0524-082489ad0de0be47",
+      "score": 0.00018886786710936576,
+      "runtimeSeconds": 2.96778
+    },
+    {
+      "sampleId": "0525-d9a51eab52c97c92",
+      "score": 3.2033129946339167e-13,
+      "runtimeSeconds": 2.927236
+    },
+    {
+      "sampleId": "0526-2a80ed71b03fa6ed",
+      "score": 0.7919557690620422,
+      "runtimeSeconds": 5.357157
+    },
+    {
+      "sampleId": "0527-bbcd4ef079ba4c22",
+      "score": 0.9086483716964722,
+      "runtimeSeconds": 16.696574
+    },
+    {
+      "sampleId": "0528-ff480665692042cb",
+      "score": 0.03471840173006058,
+      "runtimeSeconds": 4.267994
+    },
+    {
+      "sampleId": "0529-d5892b029aa05158",
+      "score": 0.4302895665168762,
+      "runtimeSeconds": 3.728625
+    },
+    {
+      "sampleId": "0530-03d8c8eccf568436",
+      "score": 7.066691409818304e-07,
+      "runtimeSeconds": 3.532753
+    },
+    {
+      "sampleId": "0531-9a6f4dc3a73a09f6",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 3.779217
+    },
+    {
+      "sampleId": "0532-62556f4127980650",
+      "score": 2.07302664617659e-11,
+      "runtimeSeconds": 3.763971
+    },
+    {
+      "sampleId": "0533-8f96838b29a63f4e",
+      "score": 0.9992184638977051,
+      "runtimeSeconds": 3.79025
+    },
+    {
+      "sampleId": "0534-94e960c4d4c31b59",
+      "score": 0.001144279376603663,
+      "runtimeSeconds": 3.829195
+    },
+    {
+      "sampleId": "0535-45d0c6852eaf8c7b",
+      "score": 0.8559151887893677,
+      "runtimeSeconds": 7.74735
+    },
+    {
+      "sampleId": "0536-b00f7c63cb52534a",
+      "score": 0.018424542620778084,
+      "runtimeSeconds": 15.184509
+    },
+    {
+      "sampleId": "0537-47f98e7ae963746e",
+      "score": 0.12993167340755463,
+      "runtimeSeconds": 3.26169
+    },
+    {
+      "sampleId": "0538-36f93438e19e926d",
+      "score": 0.001270658802241087,
+      "runtimeSeconds": 4.560112
+    },
+    {
+      "sampleId": "0539-1b31ddccd414b235",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 4.345167
+    },
+    {
+      "sampleId": "0540-109a2220d1c7a829",
+      "score": 3.234940092531563e-24,
+      "runtimeSeconds": 4.632962
+    },
+    {
+      "sampleId": "0541-dc8094423d8a25d2",
+      "score": 0.9999334812164307,
+      "runtimeSeconds": 4.695759
+    },
+    {
+      "sampleId": "0542-3e9c2933d8e1ce3f",
+      "score": 0.993661642074585,
+      "runtimeSeconds": 4.709509
+    },
+    {
+      "sampleId": "0543-0169fa8146df5c7d",
+      "score": 0.00035297745489515364,
+      "runtimeSeconds": 4.568372
+    },
+    {
+      "sampleId": "0544-5b55153c0f59558b",
+      "score": 8.270924635282728e-13,
+      "runtimeSeconds": 4.329656
+    },
+    {
+      "sampleId": "0545-1b17e5b446400b02",
+      "score": 0.8247601985931396,
+      "runtimeSeconds": 3.899994
+    },
+    {
+      "sampleId": "0546-0f7ce1ac0fb3ea44",
+      "score": 0.9811608195304871,
+      "runtimeSeconds": 3.854413
+    },
+    {
+      "sampleId": "0547-f0995981215f32a9",
+      "score": 0.9252722263336182,
+      "runtimeSeconds": 8.102287
+    },
+    {
+      "sampleId": "0548-e3f98956d6961797",
+      "score": 0.8478017449378967,
+      "runtimeSeconds": 11.353414
+    },
+    {
+      "sampleId": "0549-186296e4966e8a12",
+      "score": 0.8247601985931396,
+      "runtimeSeconds": 3.508862
+    },
+    {
+      "sampleId": "0550-36ba0c8dd348ee6a",
+      "score": 0.9803921580314636,
+      "runtimeSeconds": 3.621297
+    },
+    {
+      "sampleId": "0551-83b30df4a11b0dc3",
+      "score": 0.8298827409744263,
+      "runtimeSeconds": 3.704923
+    },
+    {
+      "sampleId": "0552-ff5fcdff67185a17",
+      "score": 0.12924987077713013,
+      "runtimeSeconds": 4.495677
+    },
+    {
+      "sampleId": "0553-00d2f48419c39530",
+      "score": 2.6335587222092727e-07,
+      "runtimeSeconds": 5.729323
+    },
+    {
+      "sampleId": "0554-12d608ea0cccccaa",
+      "score": 0.4959324300289154,
+      "runtimeSeconds": 7.657214
+    },
+    {
+      "sampleId": "0555-c5c0415052e7eb72",
+      "score": 0.7425901889801025,
+      "runtimeSeconds": 4.988297
+    },
+    {
+      "sampleId": "0556-abfdd51f35045856",
+      "score": 0.2191419154405594,
+      "runtimeSeconds": 3.653312
+    },
+    {
+      "sampleId": "0557-7d233697db305d57",
+      "score": 0.01748090237379074,
+      "runtimeSeconds": 3.36931
+    },
+    {
+      "sampleId": "0558-86e2323693958123",
+      "score": 1.0,
+      "runtimeSeconds": 2.848315
+    },
+    {
+      "sampleId": "0559-28890cb005c2bb43",
+      "score": 0.8967958092689514,
+      "runtimeSeconds": 2.805303
+    },
+    {
+      "sampleId": "0560-30d5c74456b79d26",
+      "score": 0.053219299763441086,
+      "runtimeSeconds": 3.865199
+    },
+    {
+      "sampleId": "0561-f63b549039578bf4",
+      "score": 0.9919975399971008,
+      "runtimeSeconds": 3.371921
+    },
+    {
+      "sampleId": "0562-fde3e23ca9389775",
+      "score": 0.6019120216369629,
+      "runtimeSeconds": 5.817858
+    },
+    {
+      "sampleId": "0563-5e8039ca3c81092e",
+      "score": 9.234515929712472e-11,
+      "runtimeSeconds": 15.29046
+    },
+    {
+      "sampleId": "0564-aa3c74466d52ee30",
+      "score": 0.9999197721481323,
+      "runtimeSeconds": 5.013852
+    },
+    {
+      "sampleId": "0565-cf85fb089dad6206",
+      "score": 0.000555471982806921,
+      "runtimeSeconds": 4.54545
+    },
+    {
+      "sampleId": "0566-367672ac7cfbd539",
+      "score": 1.143747804799311e-10,
+      "runtimeSeconds": 4.681464
+    },
+    {
+      "sampleId": "0567-f71a431c5c10f8cd",
+      "score": 0.2930004596710205,
+      "runtimeSeconds": 4.142707
+    },
+    {
+      "sampleId": "0568-7df329e6f210498c",
+      "score": 0.000922905805055052,
+      "runtimeSeconds": 3.900037
+    },
+    {
+      "sampleId": "0569-331ff8e49a8d43bd",
+      "score": 2.4574056123327637e-09,
+      "runtimeSeconds": 3.747318
+    },
+    {
+      "sampleId": "0570-82ea92da8861a6e9",
+      "score": 1.0,
+      "runtimeSeconds": 3.891247
+    },
+    {
+      "sampleId": "0571-e6ce10401b9603e0",
+      "score": 9.769828002159642e-11,
+      "runtimeSeconds": 3.746608
+    },
+    {
+      "sampleId": "0572-9a2dfb054fab9915",
+      "score": 0.0005275095463730395,
+      "runtimeSeconds": 3.699297
+    },
+    {
+      "sampleId": "0573-398d3259995aacbd",
+      "score": 1.0,
+      "runtimeSeconds": 9.063545
+    },
+    {
+      "sampleId": "0574-4292158a78440094",
+      "score": 0.013591372407972813,
+      "runtimeSeconds": 10.802695
+    },
+    {
+      "sampleId": "0575-40ef551e50edb194",
+      "score": 1.0,
+      "runtimeSeconds": 3.710843
+    },
+    {
+      "sampleId": "0576-06c208b0da1ae065",
+      "score": 0.8162034749984741,
+      "runtimeSeconds": 2.702957
+    },
+    {
+      "sampleId": "0577-34421b165cb9c8c8",
+      "score": 0.005918778944760561,
+      "runtimeSeconds": 3.528259
+    },
+    {
+      "sampleId": "0578-773c755cd5b0bd88",
+      "score": 1.0162125363422092e-06,
+      "runtimeSeconds": 2.996107
+    },
+    {
+      "sampleId": "0579-21531c387ec455d3",
+      "score": 0.004975494462996721,
+      "runtimeSeconds": 3.245907
+    },
+    {
+      "sampleId": "0580-6b4f7be881f9c28c",
+      "score": 5.359876467991853e-06,
+      "runtimeSeconds": 3.754723
+    },
+    {
+      "sampleId": "0581-8e0aed2fbd55cf72",
+      "score": 0.9778963327407837,
+      "runtimeSeconds": 3.787922
+    },
+    {
+      "sampleId": "0582-3eeed6c1a383652f",
+      "score": 0.9998929500579834,
+      "runtimeSeconds": 3.496519
+    },
+    {
+      "sampleId": "0583-b7d127dc19da0202",
+      "score": 2.6098961825482547e-05,
+      "runtimeSeconds": 18.96079
+    },
+    {
+      "sampleId": "0584-7f68047e8444bcb3",
+      "score": 0.9999957084655762,
+      "runtimeSeconds": 4.677896
+    },
+    {
+      "sampleId": "0585-b09116556bc4101f",
+      "score": 0.940410852432251,
+      "runtimeSeconds": 3.75393
+    },
+    {
+      "sampleId": "0586-f6a6c9b245d32cfe",
+      "score": 0.2761519253253937,
+      "runtimeSeconds": 3.662391
+    },
+    {
+      "sampleId": "0587-cfa15f080bc49e4d",
+      "score": 1.1497221521494794e-06,
+      "runtimeSeconds": 3.373072
+    },
+    {
+      "sampleId": "0588-82ffb9b411047a1e",
+      "score": 0.9677361845970154,
+      "runtimeSeconds": 2.928548
+    },
+    {
+      "sampleId": "0589-07fd60595b5383d2",
+      "score": 1.2443801608491298e-26,
+      "runtimeSeconds": 3.306198
+    },
+    {
+      "sampleId": "0590-7c35e91128974ab8",
+      "score": 1.0,
+      "runtimeSeconds": 3.744757
+    },
+    {
+      "sampleId": "0591-07a40dbf46a1caa4",
+      "score": 0.9999760389328003,
+      "runtimeSeconds": 3.770941
+    },
+    {
+      "sampleId": "0592-5f2d42343c7ac482",
+      "score": 0.009710301645100117,
+      "runtimeSeconds": 15.725769
+    },
+    {
+      "sampleId": "0593-9da92ff858eb960e",
+      "score": 0.9966306090354919,
+      "runtimeSeconds": 7.046615
+    },
+    {
+      "sampleId": "0594-86c282d10ec2827f",
+      "score": 0.9778984189033508,
+      "runtimeSeconds": 2.736688
+    },
+    {
+      "sampleId": "0595-b2071dd3c6219df5",
+      "score": 0.005860933102667332,
+      "runtimeSeconds": 3.506001
+    },
+    {
+      "sampleId": "0596-9a35f62f8d010ff8",
+      "score": 0.6508702635765076,
+      "runtimeSeconds": 3.410701
+    },
+    {
+      "sampleId": "0597-09acb6fbd2457be6",
+      "score": 3.566090890672058e-05,
+      "runtimeSeconds": 2.988016
+    },
+    {
+      "sampleId": "0598-ef3d92c69956f131",
+      "score": 0.133248433470726,
+      "runtimeSeconds": 2.746556
+    },
+    {
+      "sampleId": "0599-a3d215345e543ee3",
+      "score": 6.249882972042542e-06,
+      "runtimeSeconds": 3.261761
+    },
+    {
+      "sampleId": "0600-9f483fd740a38fc4",
+      "score": 0.23839502036571503,
+      "runtimeSeconds": 3.403839
+    },
+    {
+      "sampleId": "0601-8f0feb7727c98541",
+      "score": 0.29912376403808594,
+      "runtimeSeconds": 3.139664
+    },
+    {
+      "sampleId": "0602-2124c21b6f9ff22e",
+      "score": 1.717936174827628e-05,
+      "runtimeSeconds": 11.129272
+    },
+    {
+      "sampleId": "0603-c2e67b49b45750bd",
+      "score": 0.998357355594635,
+      "runtimeSeconds": 11.745471
+    },
+    {
+      "sampleId": "0604-19466640bbc40f76",
+      "score": 0.6564270257949829,
+      "runtimeSeconds": 3.655196
+    },
+    {
+      "sampleId": "0605-c81aafd30642547f",
+      "score": 5.751627668360015e-06,
+      "runtimeSeconds": 2.766038
+    },
+    {
+      "sampleId": "0606-13689637129816e7",
+      "score": 1.6791003645266755e-06,
+      "runtimeSeconds": 3.478159
+    },
+    {
+      "sampleId": "0607-c8074a4c0c504fd4",
+      "score": 0.004517263732850552,
+      "runtimeSeconds": 3.080477
+    },
+    {
+      "sampleId": "0608-6918f185f271e463",
+      "score": 3.7817666452610865e-05,
+      "runtimeSeconds": 3.159019
+    },
+    {
+      "sampleId": "0609-e99a987c92bae019",
+      "score": 1.2127871948895697e-14,
+      "runtimeSeconds": 3.750904
+    },
+    {
+      "sampleId": "0610-9a6651a002ed5bc0",
+      "score": 1.0920152570329615e-36,
+      "runtimeSeconds": 3.788646
+    },
+    {
+      "sampleId": "0611-9b2e0e3b68d4bfd1",
+      "score": 1.0334038312576066e-11,
+      "runtimeSeconds": 5.867372
+    },
+    {
+      "sampleId": "0612-b72c0bb426c093fa",
+      "score": 0.5843333005905151,
+      "runtimeSeconds": 16.709593
+    },
+    {
+      "sampleId": "0613-69388408db98f503",
+      "score": 4.138982774293254e-07,
+      "runtimeSeconds": 4.495334
+    },
+    {
+      "sampleId": "0614-45fdde6157c8303e",
+      "score": 0.9999436140060425,
+      "runtimeSeconds": 3.964667
+    },
+    {
+      "sampleId": "0615-4dabc49ed5c7deeb",
+      "score": 0.6731650829315186,
+      "runtimeSeconds": 3.482144
+    },
+    {
+      "sampleId": "0616-ee6a220e677c5921",
+      "score": 3.1275276083853124e-24,
+      "runtimeSeconds": 3.535265
+    },
+    {
+      "sampleId": "0617-4e5e60f5a14a317d",
+      "score": 0.0007002241327427328,
+      "runtimeSeconds": 3.235789
+    },
+    {
+      "sampleId": "0618-884927384de50e22",
+      "score": 0.2134910523891449,
+      "runtimeSeconds": 3.298684
+    },
+    {
+      "sampleId": "0619-b7ddc56961251793",
+      "score": 0.0063577149994671345,
+      "runtimeSeconds": 3.749131
+    },
+    {
+      "sampleId": "0620-635ccc6c968a9e6f",
+      "score": 0.9988312125205994,
+      "runtimeSeconds": 5.13697
+    },
+    {
+      "sampleId": "0621-ec4fc20195911540",
+      "score": 8.247136429417878e-05,
+      "runtimeSeconds": 15.099366
+    },
+    {
+      "sampleId": "0622-d5b4b68bfb19f173",
+      "score": 1.1105916533638016e-11,
+      "runtimeSeconds": 5.438981
+    },
+    {
+      "sampleId": "0623-d164a9a4df6df59a",
+      "score": 1.1431362061904934e-19,
+      "runtimeSeconds": 3.326675
+    },
+    {
+      "sampleId": "0624-c69219ab48c3c0ad",
+      "score": 0.42418190836906433,
+      "runtimeSeconds": 3.812405
+    },
+    {
+      "sampleId": "0625-1958874fb7d3afec",
+      "score": 0.6475023627281189,
+      "runtimeSeconds": 3.847178
+    },
+    {
+      "sampleId": "0626-58305cdb5f051b0e",
+      "score": 0.5629777312278748,
+      "runtimeSeconds": 3.744694
+    },
+    {
+      "sampleId": "0627-c55ae86494e4fe73",
+      "score": 0.9955734014511108,
+      "runtimeSeconds": 3.640576
+    },
+    {
+      "sampleId": "0628-9456bda0e48e4b80",
+      "score": 7.239365654736836e-31,
+      "runtimeSeconds": 4.894967
+    },
+    {
+      "sampleId": "0629-af07556dda988d9b",
+      "score": 2.1115913568792166e-06,
+      "runtimeSeconds": 7.246116
+    },
+    {
+      "sampleId": "0630-74308d799108471e",
+      "score": 1.0,
+      "runtimeSeconds": 9.635446
+    },
+    {
+      "sampleId": "0631-3469230807f95d00",
+      "score": 0.0005983180017210543,
+      "runtimeSeconds": 6.076995
+    },
+    {
+      "sampleId": "0632-24a87b19c01b724c",
+      "score": 0.006731388159096241,
+      "runtimeSeconds": 3.8326
+    },
+    {
+      "sampleId": "0633-be8a152873a349fc",
+      "score": 0.018239328637719154,
+      "runtimeSeconds": 3.972705
+    },
+    {
+      "sampleId": "0634-52deacb3ff009205",
+      "score": 0.00991694163531065,
+      "runtimeSeconds": 3.494579
+    },
+    {
+      "sampleId": "0635-8668c09d89c60b30",
+      "score": 6.6579386839293875e-06,
+      "runtimeSeconds": 3.599589
+    },
+    {
+      "sampleId": "0636-032950a1a27b2782",
+      "score": 1.751499922875155e-07,
+      "runtimeSeconds": 3.690485
+    },
+    {
+      "sampleId": "0637-8458e5b7c8f2a7d4",
+      "score": 0.880912184715271,
+      "runtimeSeconds": 6.253732
+    },
+    {
+      "sampleId": "0638-acd53ce976fa102c",
+      "score": 0.012921233661472797,
+      "runtimeSeconds": 7.165827
+    },
+    {
+      "sampleId": "0639-a1bb6a63d4504f9a",
+      "score": 5.634616684346838e-08,
+      "runtimeSeconds": 8.209954
+    },
+    {
+      "sampleId": "0640-0347a4ab17d5343b",
+      "score": 5.126221797442871e-15,
+      "runtimeSeconds": 3.72643
+    },
+    {
+      "sampleId": "0641-09320096fcdee708",
+      "score": 1.5412731091402065e-09,
+      "runtimeSeconds": 3.695405
+    },
+    {
+      "sampleId": "0642-e4497567f3e157d7",
+      "score": 5.3053777174792146e-21,
+      "runtimeSeconds": 3.448325
+    },
+    {
+      "sampleId": "0643-b00d2a69c0d8de12",
+      "score": 5.556880706991153e-14,
+      "runtimeSeconds": 5.40471
+    },
+    {
+      "sampleId": "0644-a596c2a0409673d1",
+      "score": 3.481841757124354e-17,
+      "runtimeSeconds": 6.90925
+    },
+    {
+      "sampleId": "0645-cab129d4fb015429",
+      "score": 3.965602787380476e-17,
+      "runtimeSeconds": 7.429447
+    },
+    {
+      "sampleId": "0646-c9d0aeec295e2f1c",
+      "score": 1.7726429175638956e-15,
+      "runtimeSeconds": 3.414521
+    },
+    {
+      "sampleId": "0647-c68477591eba253b",
+      "score": 1.420340585328352e-19,
+      "runtimeSeconds": 3.771377
+    },
+    {
+      "sampleId": "0648-a45bcc352236e95b",
+      "score": 1.3300016470096931e-13,
+      "runtimeSeconds": 3.93241
+    },
+    {
+      "sampleId": "0649-b203168d3173bbc9",
+      "score": 7.723797955744957e-33,
+      "runtimeSeconds": 3.668301
+    },
+    {
+      "sampleId": "0650-82fb02dc707c35d5",
+      "score": 1.9646719572977002e-19,
+      "runtimeSeconds": 3.403222
+    },
+    {
+      "sampleId": "0651-3c30aaf8d1c4f79c",
+      "score": 7.384675461491203e-26,
+      "runtimeSeconds": 3.768243
+    },
+    {
+      "sampleId": "0652-58a6169a7b297555",
+      "score": 1.2367018784300503e-15,
+      "runtimeSeconds": 6.065564
+    },
+    {
+      "sampleId": "0653-be59addd93d162d7",
+      "score": 3.668981223345479e-25,
+      "runtimeSeconds": 12.914503
+    },
+    {
+      "sampleId": "0654-feb7bb4c65a66dc4",
+      "score": 2.6669836600805584e-25,
+      "runtimeSeconds": 6.317743
+    },
+    {
+      "sampleId": "0655-ceef787c4ebb5112",
+      "score": 2.0144405390099176e-20,
+      "runtimeSeconds": 3.760734
+    },
+    {
+      "sampleId": "0656-bc6e547f00af31a2",
+      "score": 3.518901854499089e-21,
+      "runtimeSeconds": 4.078506
+    },
+    {
+      "sampleId": "0657-d4e008922fd97743",
+      "score": 4.907840418108812e-18,
+      "runtimeSeconds": 3.825414
+    },
+    {
+      "sampleId": "0658-af80c68f50f1c2bf",
+      "score": 8.765927983489519e-10,
+      "runtimeSeconds": 3.807976
+    },
+    {
+      "sampleId": "0659-d0ea24b3834d6243",
+      "score": 3.5176206273397224e-17,
+      "runtimeSeconds": 3.87525
+    },
+    {
+      "sampleId": "0660-db08c5df278006da",
+      "score": 3.1604591583774336e-14,
+      "runtimeSeconds": 3.638376
+    },
+    {
+      "sampleId": "0661-204336b8c8185b3d",
+      "score": 1.5992030616418518e-11,
+      "runtimeSeconds": 6.499618
+    },
+    {
+      "sampleId": "0662-4fbd340eb40cd9d9",
+      "score": 2.8995379773404106e-13,
+      "runtimeSeconds": 8.549892
+    },
+    {
+      "sampleId": "0663-c65e42b0d72c4a74",
+      "score": 6.22512733286226e-23,
+      "runtimeSeconds": 6.261497
+    },
+    {
+      "sampleId": "0664-15438a613f7299ed",
+      "score": 1.355314754152822e-18,
+      "runtimeSeconds": 3.5869
+    },
+    {
+      "sampleId": "0665-57ced978b03e9b87",
+      "score": 1.0666346996120718e-26,
+      "runtimeSeconds": 3.780475
+    },
+    {
+      "sampleId": "0666-7baade6764b40317",
+      "score": 2.849576093801216e-27,
+      "runtimeSeconds": 3.773455
+    },
+    {
+      "sampleId": "0667-262820eba6dd9e9b",
+      "score": 4.7938455587887573e-23,
+      "runtimeSeconds": 3.614818
+    },
+    {
+      "sampleId": "0668-0fa1f7c98c4bc6d8",
+      "score": 1.4860876044320344e-26,
+      "runtimeSeconds": 3.901321
+    },
+    {
+      "sampleId": "0669-816f72e10f399f90",
+      "score": 8.114211282189424e-29,
+      "runtimeSeconds": 5.548091
+    },
+    {
+      "sampleId": "0670-f2a0b34ab0a47bfb",
+      "score": 1.4658024253895254e-33,
+      "runtimeSeconds": 7.857522
+    },
+    {
+      "sampleId": "0671-5e939175d49284e4",
+      "score": 2.804288522087063e-17,
+      "runtimeSeconds": 10.689787
+    },
+    {
+      "sampleId": "0672-975f8149f00b86d5",
+      "score": 1.4585049413251308e-28,
+      "runtimeSeconds": 3.483058
+    },
+    {
+      "sampleId": "0673-3f0d4966a43f78a1",
+      "score": 5.50969284339275e-22,
+      "runtimeSeconds": 3.621332
+    },
+    {
+      "sampleId": "0674-072abae06acacc89",
+      "score": 1.3433705374227972e-14,
+      "runtimeSeconds": 3.590064
+    },
+    {
+      "sampleId": "0675-95a1bf73028360bb",
+      "score": 2.522624307794291e-13,
+      "runtimeSeconds": 3.912012
+    },
+    {
+      "sampleId": "0676-417cf5a38650750a",
+      "score": 1.1826700914169958e-14,
+      "runtimeSeconds": 3.599549
+    },
+    {
+      "sampleId": "0677-89c30ea70f6165a2",
+      "score": 2.38402903076281e-18,
+      "runtimeSeconds": 3.661995
+    },
+    {
+      "sampleId": "0678-6dfe267d2d270734",
+      "score": 2.701115961909004e-20,
+      "runtimeSeconds": 4.217138
+    },
+    {
+      "sampleId": "0679-c8d59508c2310ebb",
+      "score": 1.4843413587791696e-20,
+      "runtimeSeconds": 12.97552
+    },
+    {
+      "sampleId": "0680-032dc38421392ece",
+      "score": 1.7237806573312288e-14,
+      "runtimeSeconds": 8.867932
+    },
+    {
+      "sampleId": "0681-9a6f4f54dd3a3d35",
+      "score": 1.5704397533843943e-21,
+      "runtimeSeconds": 3.701402
+    },
+    {
+      "sampleId": "0682-c071615f8e71b79f",
+      "score": 1.22791172876797e-22,
+      "runtimeSeconds": 3.517344
+    },
+    {
+      "sampleId": "0683-18da0e08de68805a",
+      "score": 1.30078032593573e-26,
+      "runtimeSeconds": 4.149325
+    },
+    {
+      "sampleId": "0684-2f9fa61f8a94b4e6",
+      "score": 1.2851247633272897e-20,
+      "runtimeSeconds": 3.541417
+    },
+    {
+      "sampleId": "0685-15b9b9381d1021e3",
+      "score": 7.85645665943512e-24,
+      "runtimeSeconds": 3.656941
+    },
+    {
+      "sampleId": "0686-29aa6259358f36c6",
+      "score": 2.9318965962157514e-22,
+      "runtimeSeconds": 3.780555
+    },
+    {
+      "sampleId": "0687-aa01d387df8cd6f0",
+      "score": 1.1049666207295718e-23,
+      "runtimeSeconds": 4.045745
+    },
+    {
+      "sampleId": "0688-b0219033a1ca00a0",
+      "score": 7.352565319120212e-21,
+      "runtimeSeconds": 15.434274
+    },
+    {
+      "sampleId": "0689-c63313234b586d71",
+      "score": 1.534618171891967e-19,
+      "runtimeSeconds": 7.079122
+    },
+    {
+      "sampleId": "0690-dec82219e52f04a2",
+      "score": 1.8293588151044827e-23,
+      "runtimeSeconds": 3.539691
+    },
+    {
+      "sampleId": "0691-eb408db5000551f6",
+      "score": 3.046956777048918e-30,
+      "runtimeSeconds": 3.575382
+    },
+    {
+      "sampleId": "0692-684f1b912803c422",
+      "score": 2.8898445670600815e-23,
+      "runtimeSeconds": 3.935379
+    },
+    {
+      "sampleId": "0693-8cc0a0145b18d375",
+      "score": 1.7556055149304897e-28,
+      "runtimeSeconds": 3.807397
+    },
+    {
+      "sampleId": "0694-9f975caf31cb4a59",
+      "score": 0.0,
+      "runtimeSeconds": 3.430918
+    },
+    {
+      "sampleId": "0695-26a8218747b5a659",
+      "score": 1.2597871285513913e-28,
+      "runtimeSeconds": 3.386595
+    },
+    {
+      "sampleId": "0696-ff9eb80be0149dff",
+      "score": 2.6385187149173538e-17,
+      "runtimeSeconds": 3.484934
+    },
+    {
+      "sampleId": "0697-e4679c6adf68abf1",
+      "score": 5.697118419460181e-21,
+      "runtimeSeconds": 9.975944
+    },
+    {
+      "sampleId": "0698-8f08db13c0663b68",
+      "score": 0.05993567034602165,
+      "runtimeSeconds": 12.445889
+    },
+    {
+      "sampleId": "0699-e81be00d62831529",
+      "score": 0.015213647857308388,
+      "runtimeSeconds": 3.821711
+    },
+    {
+      "sampleId": "0700-4f1674e7d3256a15",
+      "score": 0.014390693046152592,
+      "runtimeSeconds": 3.400427
+    },
+    {
+      "sampleId": "0701-920bf813cc48af5d",
+      "score": 0.03329592943191528,
+      "runtimeSeconds": 3.570615
+    },
+    {
+      "sampleId": "0702-24f8a96c7780ec2a",
+      "score": 0.04110240563750267,
+      "runtimeSeconds": 2.903178
+    },
+    {
+      "sampleId": "0703-9d104a11a1691c10",
+      "score": 0.007381146773695946,
+      "runtimeSeconds": 3.390358
+    },
+    {
+      "sampleId": "0704-35cd36926ab3e578",
+      "score": 0.04384813457727432,
+      "runtimeSeconds": 3.835644
+    },
+    {
+      "sampleId": "0705-e4ecd149234232e1",
+      "score": 0.02339487336575985,
+      "runtimeSeconds": 3.810365
+    },
+    {
+      "sampleId": "0706-4805d6af3e299f57",
+      "score": 1.797967144057111e-07,
+      "runtimeSeconds": 8.287374
+    },
+    {
+      "sampleId": "0707-d83eb3c73d347738",
+      "score": 0.00514165498316288,
+      "runtimeSeconds": 14.739265
+    },
+    {
+      "sampleId": "0708-fd877b8053fd6522",
+      "score": 7.658084359718487e-05,
+      "runtimeSeconds": 3.636785
+    },
+    {
+      "sampleId": "0709-66b3b2d7048816aa",
+      "score": 0.00017609783390071243,
+      "runtimeSeconds": 3.686907
+    },
+    {
+      "sampleId": "0710-c62328f442fd11a7",
+      "score": 0.01914655975997448,
+      "runtimeSeconds": 3.656575
+    },
+    {
+      "sampleId": "0711-2e3e4b7f6c10cf5e",
+      "score": 0.00017656019190326333,
+      "runtimeSeconds": 3.133932
+    },
+    {
+      "sampleId": "0712-6add8e60e849f22a",
+      "score": 0.009585552848875523,
+      "runtimeSeconds": 3.205591
+    },
+    {
+      "sampleId": "0713-c428d789ca22cb7a",
+      "score": 0.3481448292732239,
+      "runtimeSeconds": 3.518948
+    },
+    {
+      "sampleId": "0714-1afa7a23ef9f9c36",
+      "score": 4.725933055939391e-25,
+      "runtimeSeconds": 3.821788
+    },
+    {
+      "sampleId": "0715-da9e1aea6e06c44d",
+      "score": 9.805952199597266e-15,
+      "runtimeSeconds": 5.123249
+    },
+    {
+      "sampleId": "0716-e87735f5e54c335d",
+      "score": 9.709063488892635e-15,
+      "runtimeSeconds": 16.858936
+    },
+    {
+      "sampleId": "0717-a6cd5ffb6bcb0e87",
+      "score": 5.0626998086417054e-20,
+      "runtimeSeconds": 4.088215
+    },
+    {
+      "sampleId": "0718-fe2fce27ac224003",
+      "score": 2.4286028988411487e-18,
+      "runtimeSeconds": 2.655532
+    },
+    {
+      "sampleId": "0719-7faf9b0a4bca1194",
+      "score": 6.28823411052905e-15,
+      "runtimeSeconds": 2.893177
+    },
+    {
+      "sampleId": "0720-13a5383038eb2681",
+      "score": 5.045757482410697e-18,
+      "runtimeSeconds": 3.51297
+    },
+    {
+      "sampleId": "0721-f8f0c43e84cdf93b",
+      "score": 2.550064420811792e-16,
+      "runtimeSeconds": 3.599103
+    },
+    {
+      "sampleId": "0722-ae39eaebd40f93ea",
+      "score": 1.2889512943786114e-17,
+      "runtimeSeconds": 3.78325
+    },
+    {
+      "sampleId": "0723-fcee658ca9834f1f",
+      "score": 4.1098290117246345e-34,
+      "runtimeSeconds": 3.791801
+    },
+    {
+      "sampleId": "0724-b1b930a8b9acaa4f",
+      "score": 5.760700025597936e-18,
+      "runtimeSeconds": 3.774036
+    },
+    {
+      "sampleId": "0725-a8e9b6d3ddc02f19",
+      "score": 4.0552917087914156e-26,
+      "runtimeSeconds": 8.925291
+    },
+    {
+      "sampleId": "0726-a0e1d519a6a5fc08",
+      "score": 9.062795693017937e-23,
+      "runtimeSeconds": 13.508591
+    },
+    {
+      "sampleId": "0727-00124cd1c6bfbeea",
+      "score": 7.977461290934039e-26,
+      "runtimeSeconds": 3.747784
+    },
+    {
+      "sampleId": "0728-9b46727b8b7a0541",
+      "score": 1.941178034039479e-24,
+      "runtimeSeconds": 3.692638
+    },
+    {
+      "sampleId": "0729-cb00dbf27d5d8120",
+      "score": 1.0937309622698703e-17,
+      "runtimeSeconds": 3.238639
+    },
+    {
+      "sampleId": "0730-c8752638fd810158",
+      "score": 2.6761087632422004e-22,
+      "runtimeSeconds": 3.764952
+    },
+    {
+      "sampleId": "0731-929348f2d3b473a2",
+      "score": 1.9374977170821408e-20,
+      "runtimeSeconds": 3.697011
+    },
+    {
+      "sampleId": "0732-b61c0dd599ff3920",
+      "score": 1.0489439178362758e-13,
+      "runtimeSeconds": 2.856515
+    },
+    {
+      "sampleId": "0733-4b332c509fd47ae5",
+      "score": 2.1625674861969202e-10,
+      "runtimeSeconds": 3.217826
+    },
+    {
+      "sampleId": "0734-36a8ec4564ea36fa",
+      "score": 2.93374043506704e-16,
+      "runtimeSeconds": 5.69861
+    },
+    {
+      "sampleId": "0735-b62d9ef64a7feee8",
+      "score": 1.5117397488353467e-23,
+      "runtimeSeconds": 18.255003
+    },
+    {
+      "sampleId": "0736-ad28b8a93cc392cf",
+      "score": 6.995456617591181e-19,
+      "runtimeSeconds": 3.732827
+    },
+    {
+      "sampleId": "0737-54735ce4fb8a58a6",
+      "score": 2.2253874700580052e-14,
+      "runtimeSeconds": 3.381976
+    },
+    {
+      "sampleId": "0738-3d5fcb156c7dca9a",
+      "score": 5.840257721878572e-10,
+      "runtimeSeconds": 3.416143
+    },
+    {
+      "sampleId": "0739-09f9e1081129871a",
+      "score": 6.969337326822732e-16,
+      "runtimeSeconds": 3.469828
+    },
+    {
+      "sampleId": "0740-0dbf87c3e0974c15",
+      "score": 0.252291738986969,
+      "runtimeSeconds": 3.546693
+    },
+    {
+      "sampleId": "0741-569955232850029b",
+      "score": 2.8402598672983004e-06,
+      "runtimeSeconds": 3.745163
+    },
+    {
+      "sampleId": "0742-f7dd6b34cbfe3449",
+      "score": 0.8530145287513733,
+      "runtimeSeconds": 3.447284
+    },
+    {
+      "sampleId": "0743-1d09f75042751e27",
+      "score": 0.9999780654907227,
+      "runtimeSeconds": 3.782245
+    },
+    {
+      "sampleId": "0744-46facebe3e6f0d66",
+      "score": 8.968668431153731e-22,
+      "runtimeSeconds": 16.886282
+    },
+    {
+      "sampleId": "0745-6fe773e8b9dddc4b",
+      "score": 0.44557541608810425,
+      "runtimeSeconds": 4.376207
+    },
+    {
+      "sampleId": "0746-3859d268c74b84d0",
+      "score": 0.6486587524414062,
+      "runtimeSeconds": 3.097862
+    },
+    {
+      "sampleId": "0747-23b8e6efa6f1bdab",
+      "score": 1.0,
+      "runtimeSeconds": 3.039715
+    },
+    {
+      "sampleId": "0748-14a4537ac6c77227",
+      "score": 1.0,
+      "runtimeSeconds": 3.536459
+    },
+    {
+      "sampleId": "0749-631cba5ef2602da4",
+      "score": 0.7411177158355713,
+      "runtimeSeconds": 3.262811
+    },
+    {
+      "sampleId": "0750-ab65aa5ad75abd66",
+      "score": 0.01126929186284542,
+      "runtimeSeconds": 3.848058
+    },
+    {
+      "sampleId": "0751-6b54ffbe5164de63",
+      "score": 4.616506430465961e-06,
+      "runtimeSeconds": 3.049565
+    },
+    {
+      "sampleId": "0752-a3bdbdcf63c098e3",
+      "score": 1.0,
+      "runtimeSeconds": 2.990057
+    },
+    {
+      "sampleId": "0753-14047f504b5e9f26",
+      "score": 0.021017802879214287,
+      "runtimeSeconds": 2.888415
+    },
+    {
+      "sampleId": "0754-4609ed27dfffcf97",
+      "score": 0.9917757511138916,
+      "runtimeSeconds": 11.696102
+    },
+    {
+      "sampleId": "0755-cf927fd4da97570b",
+      "score": 0.9998849630355835,
+      "runtimeSeconds": 10.37626
+    },
+    {
+      "sampleId": "0756-9993ff515336a1e8",
+      "score": 0.4946805536746979,
+      "runtimeSeconds": 3.733763
+    },
+    {
+      "sampleId": "0757-23ac992d3ad741a6",
+      "score": 1.0251174041575606e-11,
+      "runtimeSeconds": 3.236659
+    },
+    {
+      "sampleId": "0758-808acecf64e8580f",
+      "score": 9.77833876130244e-24,
+      "runtimeSeconds": 3.486726
+    },
+    {
+      "sampleId": "0759-5ee09d3d1b4a00c8",
+      "score": 1.0,
+      "runtimeSeconds": 3.755791
+    },
+    {
+      "sampleId": "0760-6fc46fba9ce9dddc",
+      "score": 0.4884103536605835,
+      "runtimeSeconds": 3.489616
+    },
+    {
+      "sampleId": "0761-f44d6a2f492e89ea",
+      "score": 2.083429123667102e-10,
+      "runtimeSeconds": 3.79073
+    },
+    {
+      "sampleId": "0762-0e5861adb6e1423c",
+      "score": 2.9763150450889952e-05,
+      "runtimeSeconds": 3.796879
+    },
+    {
+      "sampleId": "0763-0fb9210b0403bda8",
+      "score": 0.005273108836263418,
+      "runtimeSeconds": 8.118356
+    },
+    {
+      "sampleId": "0764-77594e816ecf640a",
+      "score": 2.7291724435940523e-10,
+      "runtimeSeconds": 15.116331
+    },
+    {
+      "sampleId": "0765-6737c191c9604b31",
+      "score": 2.3383514417218976e-05,
+      "runtimeSeconds": 3.345804
+    },
+    {
+      "sampleId": "0766-8afd42b89a080425",
+      "score": 1.0,
+      "runtimeSeconds": 2.97347
+    },
+    {
+      "sampleId": "0767-86852bf1b341b05e",
+      "score": 3.1420805957083076e-09,
+      "runtimeSeconds": 3.327211
+    },
+    {
+      "sampleId": "0768-563c47edbc4e1784",
+      "score": 0.7140594720840454,
+      "runtimeSeconds": 3.730137
+    },
+    {
+      "sampleId": "0769-b47d283c8e971f9d",
+      "score": 0.9998107552528381,
+      "runtimeSeconds": 3.803211
+    },
+    {
+      "sampleId": "0770-d43fb49b5bc03d8e",
+      "score": 3.3467313365065365e-09,
+      "runtimeSeconds": 3.378119
+    },
+    {
+      "sampleId": "0771-1cf8bf9b54abd444",
+      "score": 6.105478860263247e-07,
+      "runtimeSeconds": 3.109438
+    },
+    {
+      "sampleId": "0772-09e5ac4380cc9055",
+      "score": 0.5363990068435669,
+      "runtimeSeconds": 3.709579
+    },
+    {
+      "sampleId": "0773-0975cf7e62fd1c6e",
+      "score": 0.0008840577211230993,
+      "runtimeSeconds": 17.317234
+    },
+    {
+      "sampleId": "0774-12054198a1597700",
+      "score": 1.0272472535956517e-14,
+      "runtimeSeconds": 4.970674
+    },
+    {
+      "sampleId": "0775-57727edf6e136abb",
+      "score": 0.9814713597297668,
+      "runtimeSeconds": 3.640944
+    },
+    {
+      "sampleId": "0776-134beb6ee67f2a83",
+      "score": 1.0,
+      "runtimeSeconds": 3.679259
+    },
+    {
+      "sampleId": "0777-9982ef9a6fd77bdc",
+      "score": 0.0003592933062463999,
+      "runtimeSeconds": 3.707723
+    },
+    {
+      "sampleId": "0778-a121ea92cc0a774a",
+      "score": 6.56206758039863e-15,
+      "runtimeSeconds": 3.718818
+    },
+    {
+      "sampleId": "0779-922b6ab09bf1ad6b",
+      "score": 0.04420412704348564,
+      "runtimeSeconds": 3.779656
+    },
+    {
+      "sampleId": "0780-52f7d7cd0c9f179a",
+      "score": 0.9889698028564453,
+      "runtimeSeconds": 3.798997
+    },
+    {
+      "sampleId": "0781-c7d3f7cbb1474254",
+      "score": 0.5318442583084106,
+      "runtimeSeconds": 3.311878
+    },
+    {
+      "sampleId": "0782-5e0ea4fc9704b105",
+      "score": 0.9958612322807312,
+      "runtimeSeconds": 14.703031
+    },
+    {
+      "sampleId": "0783-dd072c61a127fc79",
+      "score": 1.3587908824774786e-06,
+      "runtimeSeconds": 8.381525
+    },
+    {
+      "sampleId": "0784-3120239d232dde1a",
+      "score": 0.9988455772399902,
+      "runtimeSeconds": 4.528402
+    },
+    {
+      "sampleId": "0785-41e2d8f714891980",
+      "score": 0.9947251677513123,
+      "runtimeSeconds": 4.674554
+    },
+    {
+      "sampleId": "0786-b994a1390d0db8cc",
+      "score": 0.46733421087265015,
+      "runtimeSeconds": 4.718661
+    },
+    {
+      "sampleId": "0787-9dd7080330e20654",
+      "score": 2.2620291327980074e-13,
+      "runtimeSeconds": 3.865215
+    },
+    {
+      "sampleId": "0788-a14a4b43ffb1082e",
+      "score": 0.07966561615467072,
+      "runtimeSeconds": 3.775428
+    },
+    {
+      "sampleId": "0789-ec01ad73341c2f59",
+      "score": 0.8300073742866516,
+      "runtimeSeconds": 3.784012
+    },
+    {
+      "sampleId": "0790-66e449002c60e511",
+      "score": 2.7914217493076684e-21,
+      "runtimeSeconds": 3.55456
+    },
+    {
+      "sampleId": "0791-1045ee193ff3bb03",
+      "score": 0.9992662072181702,
+      "runtimeSeconds": 3.427652
+    },
+    {
+      "sampleId": "0792-eb2946d38620d83c",
+      "score": 9.846885950537398e-05,
+      "runtimeSeconds": 7.244086
+    },
+    {
+      "sampleId": "0793-fa048399d78809ac",
+      "score": 0.7728592157363892,
+      "runtimeSeconds": 14.7755
+    },
+    {
+      "sampleId": "0794-4267fc179028d07d",
+      "score": 3.5827544624538576e-20,
+      "runtimeSeconds": 3.45861
+    },
+    {
+      "sampleId": "0795-474cf62daf6a58b8",
+      "score": 0.6864873766899109,
+      "runtimeSeconds": 3.652115
+    },
+    {
+      "sampleId": "0796-9ffe613c44bd4045",
+      "score": 0.8458062410354614,
+      "runtimeSeconds": 3.680059
+    },
+    {
+      "sampleId": "0797-9cabbb6c2fcf3ac2",
+      "score": 9.033831460669717e-09,
+      "runtimeSeconds": 3.704953
+    },
+    {
+      "sampleId": "0798-f221eae0643bca0c",
+      "score": 6.267729002473743e-09,
+      "runtimeSeconds": 3.823507
+    },
+    {
+      "sampleId": "0799-b52bff9228c64de5",
+      "score": 9.22941900682872e-09,
+      "runtimeSeconds": 3.803009
+    },
+    {
+      "sampleId": "0800-48ea5dec9e04fc70",
+      "score": 8.072890800292498e-09,
+      "runtimeSeconds": 3.811218
+    },
+    {
+      "sampleId": "0801-9f029b0cdc887ae8",
+      "score": 9.033831460669717e-09,
+      "runtimeSeconds": 8.940511
+    },
+    {
+      "sampleId": "0802-1cae45d167cb7a5a",
+      "score": 0.00016670252080075443,
+      "runtimeSeconds": 14.54139
+    },
+    {
+      "sampleId": "0803-6b1a5ddf2d916efd",
+      "score": 3.8504207822143144e-08,
+      "runtimeSeconds": 3.573081
+    },
+    {
+      "sampleId": "0804-085a889c06dda127",
+      "score": 3.659877522571575e-12,
+      "runtimeSeconds": 3.12402
+    },
+    {
+      "sampleId": "0805-71fb4080f4bbb5a2",
+      "score": 8.120870705339925e-21,
+      "runtimeSeconds": 2.698461
+    },
+    {
+      "sampleId": "0806-23844b9a35815fe5",
+      "score": 4.710337992917735e-21,
+      "runtimeSeconds": 2.725207
+    },
+    {
+      "sampleId": "0807-165bf505a3148ac2",
+      "score": 1.570931982394413e-20,
+      "runtimeSeconds": 3.161526
+    },
+    {
+      "sampleId": "0808-02984920d23a78c4",
+      "score": 1.0,
+      "runtimeSeconds": 3.585591
+    },
+    {
+      "sampleId": "0809-6ce64b6943d0b423",
+      "score": 0.05921180918812752,
+      "runtimeSeconds": 2.930218
+    },
+    {
+      "sampleId": "0810-2b5e0c6afde2ad8d",
+      "score": 0.9859580397605896,
+      "runtimeSeconds": 3.1173
+    },
+    {
+      "sampleId": "0811-9dfc56f3197b37a9",
+      "score": 3.284162346517405e-07,
+      "runtimeSeconds": 5.40193
+    },
+    {
+      "sampleId": "0812-91802f986481eab7",
+      "score": 0.8385547399520874,
+      "runtimeSeconds": 15.575064
+    },
+    {
+      "sampleId": "0813-f95b992f30a5735e",
+      "score": 0.016735324636101723,
+      "runtimeSeconds": 4.495537
+    },
+    {
+      "sampleId": "0814-cb99670fc4792582",
+      "score": 0.0012228073319420218,
+      "runtimeSeconds": 2.841483
+    },
+    {
+      "sampleId": "0815-7726feebd95921d7",
+      "score": 0.9978558421134949,
+      "runtimeSeconds": 3.368422
+    },
+    {
+      "sampleId": "0816-f5f0ff7431b06b15",
+      "score": 0.013871877454221249,
+      "runtimeSeconds": 3.75095
+    },
+    {
+      "sampleId": "0817-0fd9ebc39fbc502c",
+      "score": 0.7044672966003418,
+      "runtimeSeconds": 3.445571
+    },
+    {
+      "sampleId": "0818-17947982e3db9c8b",
+      "score": 0.9981868863105774,
+      "runtimeSeconds": 3.494115
+    },
+    {
+      "sampleId": "0819-49675b8258c2e254",
+      "score": 3.971051265594383e-10,
+      "runtimeSeconds": 2.834118
+    },
+    {
+      "sampleId": "0820-a795e8824b76ce17",
+      "score": 0.39802008867263794,
+      "runtimeSeconds": 2.794211
+    },
+    {
+      "sampleId": "0821-8fb82c490a127aec",
+      "score": 0.99793541431427,
+      "runtimeSeconds": 6.564802
+    },
+    {
+      "sampleId": "0822-2a78e8df7ee7250b",
+      "score": 1.727598140937425e-26,
+      "runtimeSeconds": 17.167505
+    },
+    {
+      "sampleId": "0823-fc5017cf8c2e9c3e",
+      "score": 0.9575657248497009,
+      "runtimeSeconds": 3.18458
+    },
+    {
+      "sampleId": "0824-a96ded7b78e97478",
+      "score": 0.9691020250320435,
+      "runtimeSeconds": 3.165983
+    },
+    {
+      "sampleId": "0825-2962717ef978939a",
+      "score": 0.9381306767463684,
+      "runtimeSeconds": 3.227056
+    },
+    {
+      "sampleId": "0826-4fe392afe8c61c27",
+      "score": 0.9104223847389221,
+      "runtimeSeconds": 3.353436
+    },
+    {
+      "sampleId": "0827-d7374ed31c53e3e9",
+      "score": 1.0,
+      "runtimeSeconds": 3.588209
+    },
+    {
+      "sampleId": "0828-99ba3efe73e88c2d",
+      "score": 0.10446809232234955,
+      "runtimeSeconds": 3.64946
+    },
+    {
+      "sampleId": "0829-b4e5689ab504d5ae",
+      "score": 0.4539356827735901,
+      "runtimeSeconds": 3.413124
+    },
+    {
+      "sampleId": "0830-8d9457157dea5de3",
+      "score": 1.0844112274810414e-08,
+      "runtimeSeconds": 3.632144
+    },
+    {
+      "sampleId": "0831-d2af32e378552c76",
+      "score": 0.005012433510273695,
+      "runtimeSeconds": 15.17758
+    },
+    {
+      "sampleId": "0832-6b26c9698cdc5436",
+      "score": 0.6919586658477783,
+      "runtimeSeconds": 7.601305
+    },
+    {
+      "sampleId": "0833-134bbf5a353fb48b",
+      "score": 6.825957160616625e-11,
+      "runtimeSeconds": 3.67739
+    },
+    {
+      "sampleId": "0834-6c9e3306033cb8e4",
+      "score": 0.00039998526335693896,
+      "runtimeSeconds": 3.688161
+    },
+    {
+      "sampleId": "0835-7cb155e823dc9bff",
+      "score": 0.0012132093543186784,
+      "runtimeSeconds": 3.336533
+    },
+    {
+      "sampleId": "0836-1a521a35f8aa8a40",
+      "score": 1.0,
+      "runtimeSeconds": 3.568531
+    },
+    {
+      "sampleId": "0837-08019ce939a8f76f",
+      "score": 0.435744047164917,
+      "runtimeSeconds": 3.784526
+    },
+    {
+      "sampleId": "0838-73a56114c04fad56",
+      "score": 0.00022252708731684834,
+      "runtimeSeconds": 3.703739
+    },
+    {
+      "sampleId": "0839-752cc618b29154f3",
+      "score": 0.1393490433692932,
+      "runtimeSeconds": 2.914378
+    },
+    {
+      "sampleId": "0840-026aeabeb23a43b2",
+      "score": 0.7727349996566772,
+      "runtimeSeconds": 6.994546
+    },
+    {
+      "sampleId": "0841-0a3c9f44077d0dfd",
+      "score": 0.924184262752533,
+      "runtimeSeconds": 14.781231
+    },
+    {
+      "sampleId": "0842-38ab7c0bd0f66844",
+      "score": 0.05048239976167679,
+      "runtimeSeconds": 3.729401
+    },
+    {
+      "sampleId": "0843-b4773e6b64e791aa",
+      "score": 0.9913758635520935,
+      "runtimeSeconds": 3.002491
+    },
+    {
+      "sampleId": "0844-a7717dfe39d770c1",
+      "score": 0.9922882318496704,
+      "runtimeSeconds": 3.651557
+    },
+    {
+      "sampleId": "0845-e7a91f2b9a033672",
+      "score": 4.786294994119089e-06,
+      "runtimeSeconds": 3.663338
+    },
+    {
+      "sampleId": "0846-e5439cb66c0fbab3",
+      "score": 0.5383334159851074,
+      "runtimeSeconds": 3.550199
+    },
+    {
+      "sampleId": "0847-cbd023d32b05a17d",
+      "score": 0.1609979122877121,
+      "runtimeSeconds": 3.750943
+    },
+    {
+      "sampleId": "0848-1405a0b96803636c",
+      "score": 0.6640690565109253,
+      "runtimeSeconds": 3.170385
+    },
+    {
+      "sampleId": "0849-f65c116968325239",
+      "score": 0.006137952674180269,
+      "runtimeSeconds": 3.131444
+    },
+    {
+      "sampleId": "0850-41faf58bb36b9b59",
+      "score": 3.510513060800413e-11,
+      "runtimeSeconds": 13.729099
+    },
+    {
+      "sampleId": "0851-5d428eec88d575e4",
+      "score": 0.12288503348827362,
+      "runtimeSeconds": 8.809183
+    },
+    {
+      "sampleId": "0852-c23b4f0bb2b975eb",
+      "score": 1.9166469300557765e-08,
+      "runtimeSeconds": 3.107204
+    },
+    {
+      "sampleId": "0853-e8c7bc748588509e",
+      "score": 0.9999679327011108,
+      "runtimeSeconds": 2.940562
+    },
+    {
+      "sampleId": "0854-104b032a6e5ba859",
+      "score": 0.9516201615333557,
+      "runtimeSeconds": 3.044675
+    },
+    {
+      "sampleId": "0855-527722c2c8f4ad06",
+      "score": 3.57631836945811e-15,
+      "runtimeSeconds": 3.746962
+    },
+    {
+      "sampleId": "0856-5eb75d1e1b20cfe5",
+      "score": 0.003366646124050021,
+      "runtimeSeconds": 3.777832
+    },
+    {
+      "sampleId": "0857-a7fa2c8e56779c83",
+      "score": 0.9999165534973145,
+      "runtimeSeconds": 3.342148
+    },
+    {
+      "sampleId": "0858-9439331cb32aadb0",
+      "score": 3.515524440445006e-07,
+      "runtimeSeconds": 2.833777
+    },
+    {
+      "sampleId": "0859-4823ba960a45f66a",
+      "score": 1.4715874352422276e-10,
+      "runtimeSeconds": 3.1554
+    },
+    {
+      "sampleId": "0860-9490c78589cb908a",
+      "score": 1.0,
+      "runtimeSeconds": 12.578825
+    },
+    {
+      "sampleId": "0861-b4d9174842490c3d",
+      "score": 0.9999529123306274,
+      "runtimeSeconds": 10.071706
+    },
+    {
+      "sampleId": "0862-25db6d5e349bebd1",
+      "score": 0.7806560397148132,
+      "runtimeSeconds": 3.129444
+    },
+    {
+      "sampleId": "0863-72002d0592413c8c",
+      "score": 0.00024801125982776284,
+      "runtimeSeconds": 3.684137
+    },
+    {
+      "sampleId": "0864-10200ed826d70621",
+      "score": 5.567321932176128e-05,
+      "runtimeSeconds": 3.210306
+    },
+    {
+      "sampleId": "0865-9a5e72a432fed5e4",
+      "score": 0.9936942458152771,
+      "runtimeSeconds": 2.977935
+    },
+    {
+      "sampleId": "0866-c82ab749a6bbcd8f",
+      "score": 2.230254955477314e-16,
+      "runtimeSeconds": 3.268418
+    },
+    {
+      "sampleId": "0867-7f726722cd291bbe",
+      "score": 4.456952033141303e-22,
+      "runtimeSeconds": 3.718176
+    },
+    {
+      "sampleId": "0868-a8d12824f748a563",
+      "score": 0.01010785810649395,
+      "runtimeSeconds": 3.759857
+    },
+    {
+      "sampleId": "0869-6c522bc8aa285b59",
+      "score": 0.45017704367637634,
+      "runtimeSeconds": 4.684415
+    },
+    {
+      "sampleId": "0870-65b28051ecfd5dde",
+      "score": 2.8864213020064313e-21,
+      "runtimeSeconds": 17.00143
+    },
+    {
+      "sampleId": "0871-84c07a9c44a2cb37",
+      "score": 0.002081161830574274,
+      "runtimeSeconds": 4.256492
+    },
+    {
+      "sampleId": "0872-967075c599ab7a6d",
+      "score": 0.00039613444823771715,
+      "runtimeSeconds": 3.286423
+    },
+    {
+      "sampleId": "0873-ebf214bb7c51ec6e",
+      "score": 0.8891289234161377,
+      "runtimeSeconds": 3.196658
+    },
+    {
+      "sampleId": "0874-6b426424e59690c8",
+      "score": 0.9160376191139221,
+      "runtimeSeconds": 3.289581
+    },
+    {
+      "sampleId": "0875-3d0c5b14784e1af8",
+      "score": 0.680316150188446,
+      "runtimeSeconds": 3.58016
+    },
+    {
+      "sampleId": "0876-e3621293e76c4e23",
+      "score": 0.5165618658065796,
+      "runtimeSeconds": 3.767403
+    },
+    {
+      "sampleId": "0877-7102fbb04ef73b87",
+      "score": 0.8769799470901489,
+      "runtimeSeconds": 3.716302
+    },
+    {
+      "sampleId": "0878-d118f2a28333fdff",
+      "score": 0.8706791400909424,
+      "runtimeSeconds": 3.396422
+    },
+    {
+      "sampleId": "0879-6ff99e112d240562",
+      "score": 5.283662413273781e-30,
+      "runtimeSeconds": 8.528527
+    },
+    {
+      "sampleId": "0880-197e583b405363d3",
+      "score": 0.9893855452537537,
+      "runtimeSeconds": 13.381675
+    },
+    {
+      "sampleId": "0881-97045e1187075e3b",
+      "score": 0.1872003972530365,
+      "runtimeSeconds": 3.295743
+    },
+    {
+      "sampleId": "0882-4048d38df14adc01",
+      "score": 3.479023575891915e-07,
+      "runtimeSeconds": 3.430369
+    },
+    {
+      "sampleId": "0883-e003e4cbcd587660",
+      "score": 1.0,
+      "runtimeSeconds": 3.25329
+    },
+    {
+      "sampleId": "0884-ea8cc3119d757d59",
+      "score": 0.999815046787262,
+      "runtimeSeconds": 3.644667
+    },
+    {
+      "sampleId": "0885-fcf509c48ce8292d",
+      "score": 0.9990611672401428,
+      "runtimeSeconds": 3.71848
+    },
+    {
+      "sampleId": "0886-0435a83c7c66d276",
+      "score": 0.5275678634643555,
+      "runtimeSeconds": 3.834158
+    },
+    {
+      "sampleId": "0887-79addd3b4ebef794",
+      "score": 6.613053153992675e-23,
+      "runtimeSeconds": 3.755987
+    },
+    {
+      "sampleId": "0888-39d694d19fb367a4",
+      "score": 0.9802937507629395,
+      "runtimeSeconds": 5.215005
+    },
+    {
+      "sampleId": "0889-6d39fd861c2cedef",
+      "score": 0.9912336468696594,
+      "runtimeSeconds": 16.785429
+    },
+    {
+      "sampleId": "0890-87cf8759ac0956dd",
+      "score": 0.9869816899299622,
+      "runtimeSeconds": 3.753922
+    },
+    {
+      "sampleId": "0891-9253837fb7443732",
+      "score": 0.9403492212295532,
+      "runtimeSeconds": 2.96493
+    },
+    {
+      "sampleId": "0892-860af975f4ab5b1b",
+      "score": 0.45749348402023315,
+      "runtimeSeconds": 3.05533
+    },
+    {
+      "sampleId": "0893-2ba32f2ab399beb2",
+      "score": 8.649561095808167e-06,
+      "runtimeSeconds": 3.371068
+    },
+    {
+      "sampleId": "0894-e0141cdc8feb957e",
+      "score": 1.969509685295634e-05,
+      "runtimeSeconds": 3.055139
+    },
+    {
+      "sampleId": "0895-e1658acd4fac3ffb",
+      "score": 0.3880942463874817,
+      "runtimeSeconds": 3.232329
+    },
+    {
+      "sampleId": "0896-931add4c96de9b9b",
+      "score": 0.9961419701576233,
+      "runtimeSeconds": 3.265849
+    },
+    {
+      "sampleId": "0897-203c83eb05e355a1",
+      "score": 9.153931301852936e-08,
+      "runtimeSeconds": 3.809737
+    },
+    {
+      "sampleId": "0898-7e9e6e4554b9f209",
+      "score": 8.140906162081366e-14,
+      "runtimeSeconds": 6.145618
+    },
+    {
+      "sampleId": "0899-e84550a23aa6c6b9",
+      "score": 1.1823927947851587e-10,
+      "runtimeSeconds": 15.558609
+    },
+    {
+      "sampleId": "0900-f07ab7edef42351b",
+      "score": 0.5623629689216614,
+      "runtimeSeconds": 4.362647
+    },
+    {
+      "sampleId": "0901-e91698e6f6e54cd5",
+      "score": 0.5126667618751526,
+      "runtimeSeconds": 3.688308
+    },
+    {
+      "sampleId": "0902-bc657ef3e6dceccd",
+      "score": 0.6283953785896301,
+      "runtimeSeconds": 3.427719
+    },
+    {
+      "sampleId": "0903-b1bcbf3b9af88ea7",
+      "score": 3.0540820983304684e-09,
+      "runtimeSeconds": 3.147564
+    },
+    {
+      "sampleId": "0904-0a04847f9ffd6e50",
+      "score": 0.9999994039535522,
+      "runtimeSeconds": 3.645525
+    },
+    {
+      "sampleId": "0905-1196055bfee5c35a",
+      "score": 0.9999477863311768,
+      "runtimeSeconds": 3.768878
+    },
+    {
+      "sampleId": "0906-7d18355f4d8d6d62",
+      "score": 3.441015724092722e-05,
+      "runtimeSeconds": 3.796132
+    },
+    {
+      "sampleId": "0907-c03ff04b56e1b55d",
+      "score": 0.9538679718971252,
+      "runtimeSeconds": 3.475873
+    },
+    {
+      "sampleId": "0908-a9e18048eed0a786",
+      "score": 0.9978664517402649,
+      "runtimeSeconds": 13.839446
+    },
+    {
+      "sampleId": "0909-faea2059eeb8e323",
+      "score": 0.9993159770965576,
+      "runtimeSeconds": 8.825508
+    },
+    {
+      "sampleId": "0910-3493b64e616dfb6a",
+      "score": 0.6754351258277893,
+      "runtimeSeconds": 3.679312
+    },
+    {
+      "sampleId": "0911-43a383b8fa569ac2",
+      "score": 8.709386634109251e-07,
+      "runtimeSeconds": 3.667516
+    },
+    {
+      "sampleId": "0912-17f9c22de9fb8d74",
+      "score": 0.6079471111297607,
+      "runtimeSeconds": 3.498081
+    },
+    {
+      "sampleId": "0913-4e7700bc265ebed2",
+      "score": 0.43817922472953796,
+      "runtimeSeconds": 3.312906
+    },
+    {
+      "sampleId": "0914-2a21c00317c680db",
+      "score": 0.9999996423721313,
+      "runtimeSeconds": 3.351898
+    },
+    {
+      "sampleId": "0915-d3166fb0520dc95a",
+      "score": 0.7378418445587158,
+      "runtimeSeconds": 3.73814
+    },
+    {
+      "sampleId": "0916-26d1829b11c1d192",
+      "score": 0.31047168374061584,
+      "runtimeSeconds": 3.613681
+    },
+    {
+      "sampleId": "0917-2bea7937b7dd1799",
+      "score": 1.9571496637518548e-31,
+      "runtimeSeconds": 7.991444
+    },
+    {
+      "sampleId": "0918-6044071234b1f9e4",
+      "score": 9.81410579470321e-08,
+      "runtimeSeconds": 14.591642
+    },
+    {
+      "sampleId": "0919-4afe978b020fb0b9",
+      "score": 0.35980525612831116,
+      "runtimeSeconds": 3.651003
+    },
+    {
+      "sampleId": "0920-378e94c04e4842ac",
+      "score": 2.4196320737246424e-05,
+      "runtimeSeconds": 3.593983
+    },
+    {
+      "sampleId": "0921-9a93b5cec51e77a8",
+      "score": 0.954211413860321,
+      "runtimeSeconds": 3.563059
+    },
+    {
+      "sampleId": "0922-7e55434aba473fd0",
+      "score": 0.9667796492576599,
+      "runtimeSeconds": 3.419778
+    },
+    {
+      "sampleId": "0923-fcb5fccf070e47d6",
+      "score": 0.6832196712493896,
+      "runtimeSeconds": 2.798481
+    },
+    {
+      "sampleId": "0924-c712083ea39da69a",
+      "score": 1.0,
+      "runtimeSeconds": 3.550772
+    },
+    {
+      "sampleId": "0925-d5a81e0d920f7d41",
+      "score": 3.205527536920272e-05,
+      "runtimeSeconds": 3.777372
+    },
+    {
+      "sampleId": "0926-c1db34c6ceb12c72",
+      "score": 0.00041457804036326706,
+      "runtimeSeconds": 4.312672
+    },
+    {
+      "sampleId": "0927-f964bf8e046a38b8",
+      "score": 0.00044790873653255403,
+      "runtimeSeconds": 17.040071
+    },
+    {
+      "sampleId": "0928-762bced6a2ed944e",
+      "score": 0.00019517290638759732,
+      "runtimeSeconds": 4.774628
+    },
+    {
+      "sampleId": "0929-802f2d06ec9efd0d",
+      "score": 0.00045409705489873886,
+      "runtimeSeconds": 3.261575
+    },
+    {
+      "sampleId": "0930-2eda5a36c9744e43",
+      "score": 0.00041457804036326706,
+      "runtimeSeconds": 3.038762
+    },
+    {
+      "sampleId": "0931-51edb7759098ede8",
+      "score": 0.0004600990505423397,
+      "runtimeSeconds": 3.703386
+    },
+    {
+      "sampleId": "0932-239d01ca21bb0349",
+      "score": 0.01046870555728674,
+      "runtimeSeconds": 3.740114
+    },
+    {
+      "sampleId": "0933-b190c877f6523fa5",
+      "score": 0.00013258247054181993,
+      "runtimeSeconds": 3.801386
+    },
+    {
+      "sampleId": "0934-47c0dde5d99229b8",
+      "score": 3.208660767639593e-11,
+      "runtimeSeconds": 3.795107
+    },
+    {
+      "sampleId": "0935-1bbdceebcb7729b2",
+      "score": 3.0690947028233495e-07,
+      "runtimeSeconds": 3.823107
+    },
+    {
+      "sampleId": "0936-c22876782bdae8d5",
+      "score": 1.1176055522810202e-05,
+      "runtimeSeconds": 13.308699
+    },
+    {
+      "sampleId": "0937-6803058f25b6aac6",
+      "score": 0.19932390749454498,
+      "runtimeSeconds": 8.464895
+    },
+    {
+      "sampleId": "0938-e5bf0915ed6ef0ca",
+      "score": 0.6257533431053162,
+      "runtimeSeconds": 3.67636
+    },
+    {
+      "sampleId": "0939-3d752527aa69df49",
+      "score": 2.194230734609004e-11,
+      "runtimeSeconds": 3.169583
+    },
+    {
+      "sampleId": "0940-9a9f1f19297d41ed",
+      "score": 0.6711627244949341,
+      "runtimeSeconds": 3.570522
+    },
+    {
+      "sampleId": "0941-3c4ff7430b4015d3",
+      "score": 0.20904195308685303,
+      "runtimeSeconds": 3.705262
+    },
+    {
+      "sampleId": "0942-f15bfb11961d9efb",
+      "score": 0.29319217801094055,
+      "runtimeSeconds": 3.319216
+    },
+    {
+      "sampleId": "0943-7258a8ed2821efd6",
+      "score": 0.25160589814186096,
+      "runtimeSeconds": 3.277398
+    },
+    {
+      "sampleId": "0944-c9910725efa2a491",
+      "score": 1.0267998895585606e-08,
+      "runtimeSeconds": 3.148373
+    },
+    {
+      "sampleId": "0945-19f16237ebcb7765",
+      "score": 0.005113578867167234,
+      "runtimeSeconds": 4.358871
+    },
+    {
+      "sampleId": "0946-14e09c4d5b46d010",
+      "score": 0.029746007174253464,
+      "runtimeSeconds": 16.742054
+    },
+    {
+      "sampleId": "0947-d781f6b001bac30b",
+      "score": 0.9998360872268677,
+      "runtimeSeconds": 4.903895
+    },
+    {
+      "sampleId": "0948-b8d7e3ce333c9fbf",
+      "score": 0.002410458168014884,
+      "runtimeSeconds": 2.82059
+    },
+    {
+      "sampleId": "0949-c607991091988df8",
+      "score": 0.4716150760650635,
+      "runtimeSeconds": 3.626315
+    },
+    {
+      "sampleId": "0950-e70705d40efcf37d",
+      "score": 3.3413749198074605e-12,
+      "runtimeSeconds": 2.8725
+    },
+    {
+      "sampleId": "0951-84f01b105cb74688",
+      "score": 2.4443045752318895e-15,
+      "runtimeSeconds": 2.798501
+    },
+    {
+      "sampleId": "0952-158abf4d38750bd9",
+      "score": 0.9470052123069763,
+      "runtimeSeconds": 3.703826
+    },
+    {
+      "sampleId": "0953-a4c6e920787aaaa2",
+      "score": 1.0,
+      "runtimeSeconds": 3.083132
+    },
+    {
+      "sampleId": "0954-fd18fadd0da55908",
+      "score": 5.3822987462325694e-14,
+      "runtimeSeconds": 3.820258
+    },
+    {
+      "sampleId": "0955-438a398af154545c",
+      "score": 0.8083401322364807,
+      "runtimeSeconds": 5.008745
+    },
+    {
+      "sampleId": "0956-34f7c3683fd50bac",
+      "score": 0.9999792575836182,
+      "runtimeSeconds": 16.540873
+    },
+    {
+      "sampleId": "0957-2c479983c0d9eca8",
+      "score": 0.44760996103286743,
+      "runtimeSeconds": 3.997583
+    },
+    {
+      "sampleId": "0958-10f75f63d2c6c39e",
+      "score": 3.172170909238048e-05,
+      "runtimeSeconds": 3.094157
+    },
+    {
+      "sampleId": "0959-95c56e2b2c5389d1",
+      "score": 2.1656987314599974e-08,
+      "runtimeSeconds": 3.707048
+    },
+    {
+      "sampleId": "0960-2857811658d800a7",
+      "score": 0.35898280143737793,
+      "runtimeSeconds": 3.074632
+    },
+    {
+      "sampleId": "0961-912c5c38f39cff5e",
+      "score": 0.9630972743034363,
+      "runtimeSeconds": 3.787599
+    },
+    {
+      "sampleId": "0962-eb07448605900d8a",
+      "score": 0.9993756413459778,
+      "runtimeSeconds": 3.802228
+    },
+    {
+      "sampleId": "0963-4b76f870f321a4c8",
+      "score": 0.9995488524436951,
+      "runtimeSeconds": 3.866748
+    },
+    {
+      "sampleId": "0964-6ded1a8ab17f3e3c",
+      "score": 0.9996321201324463,
+      "runtimeSeconds": 3.772509
+    },
+    {
+      "sampleId": "0965-c37c81856ecbff10",
+      "score": 5.659885113696351e-20,
+      "runtimeSeconds": 11.725275
+    },
+    {
+      "sampleId": "0966-a804bcb80c91c6d5",
+      "score": 0.0006626071408390999,
+      "runtimeSeconds": 10.602886
+    },
+    {
+      "sampleId": "0967-5f8f037a519f12a2",
+      "score": 0.08226553350687027,
+      "runtimeSeconds": 3.068472
+    },
+    {
+      "sampleId": "0968-533ffda4df6420d3",
+      "score": 0.9522693157196045,
+      "runtimeSeconds": 3.642828
+    },
+    {
+      "sampleId": "0969-b00adbc2abdac28e",
+      "score": 0.9997864365577698,
+      "runtimeSeconds": 2.774497
+    },
+    {
+      "sampleId": "0970-8173363a33a44a4b",
+      "score": 0.6633530855178833,
+      "runtimeSeconds": 3.699486
+    },
+    {
+      "sampleId": "0971-882f27ae3303caca",
+      "score": 6.125787308519648e-07,
+      "runtimeSeconds": 3.485598
+    },
+    {
+      "sampleId": "0972-30437bb6aec76b1d",
+      "score": 2.117459985129244e-08,
+      "runtimeSeconds": 3.736363
+    },
+    {
+      "sampleId": "0973-4adabacfb92a3f34",
+      "score": 0.942439079284668,
+      "runtimeSeconds": 3.800771
+    },
+    {
+      "sampleId": "0974-821b47ab99f20266",
+      "score": 0.9910079836845398,
+      "runtimeSeconds": 3.464758
+    },
+    {
+      "sampleId": "0975-e49ba8c1db67ac0b",
+      "score": 0.9983402490615845,
+      "runtimeSeconds": 17.140428
+    },
+    {
+      "sampleId": "0976-69b5cc38e05a8766",
+      "score": 0.4263496398925781,
+      "runtimeSeconds": 4.783683
+    },
+    {
+      "sampleId": "0977-651af95d3f574587",
+      "score": 0.9994981288909912,
+      "runtimeSeconds": 3.665093
+    },
+    {
+      "sampleId": "0978-288054516d60066a",
+      "score": 1.0,
+      "runtimeSeconds": 2.899705
+    },
+    {
+      "sampleId": "0979-68e6fc4d17892f4c",
+      "score": 0.0006529773818328977,
+      "runtimeSeconds": 2.903505
+    },
+    {
+      "sampleId": "0980-3e962682904a2b5c",
+      "score": 1.0,
+      "runtimeSeconds": 3.164458
+    },
+    {
+      "sampleId": "0981-002ee397e08d6a53",
+      "score": 0.9959586262702942,
+      "runtimeSeconds": 2.9488
+    },
+    {
+      "sampleId": "0982-badb86aab27d9c9e",
+      "score": 0.9993988275527954,
+      "runtimeSeconds": 3.738881
+    },
+    {
+      "sampleId": "0983-f0d728892d4e4c6b",
+      "score": 0.9982225298881531,
+      "runtimeSeconds": 2.930366
+    },
+    {
+      "sampleId": "0984-22f64c4c6d397fe0",
+      "score": 0.9979020357131958,
+      "runtimeSeconds": 2.809825
+    },
+    {
+      "sampleId": "0985-f1d2a3435338bed0",
+      "score": 0.9959586262702942,
+      "runtimeSeconds": 14.18237
+    },
+    {
+      "sampleId": "0986-27ff8ae9d707340d",
+      "score": 0.9999996423721313,
+      "runtimeSeconds": 8.479206
+    },
+    {
+      "sampleId": "0987-613212f074009291",
+      "score": 0.6075547337532043,
+      "runtimeSeconds": 3.042761
+    },
+    {
+      "sampleId": "0988-b87a858e4dbce8ef",
+      "score": 0.9685354828834534,
+      "runtimeSeconds": 2.779602
+    },
+    {
+      "sampleId": "0989-fd8dae18566fec38",
+      "score": 0.10693026334047318,
+      "runtimeSeconds": 2.697386
+    },
+    {
+      "sampleId": "0990-5b707d4dea272449",
+      "score": 0.18211674690246582,
+      "runtimeSeconds": 2.822515
+    },
+    {
+      "sampleId": "0991-44e88c12e2c5fb48",
+      "score": 0.5417351722717285,
+      "runtimeSeconds": 3.525045
+    },
+    {
+      "sampleId": "0992-f68b82cb8df63cee",
+      "score": 0.0006393111543729901,
+      "runtimeSeconds": 3.538252
+    },
+    {
+      "sampleId": "0993-1d0c6d0efa26ef62",
+      "score": 8.342648005764335e-21,
+      "runtimeSeconds": 3.691339
+    },
+    {
+      "sampleId": "0994-4632d19294743f1e",
+      "score": 0.03252570331096649,
+      "runtimeSeconds": 3.351947
+    },
+    {
+      "sampleId": "0995-51159cf677b5dfc7",
+      "score": 0.9400668144226074,
+      "runtimeSeconds": 9.779551
+    },
+    {
+      "sampleId": "0996-3fd23a0ebd563487",
+      "score": 0.9999997615814209,
+      "runtimeSeconds": 13.03359
+    },
+    {
+      "sampleId": "0997-1a1d064e3bd66399",
+      "score": 0.00011632095265667886,
+      "runtimeSeconds": 3.237239
+    },
+    {
+      "sampleId": "0998-bff5dc0de69e41dd",
+      "score": 0.9902656674385071,
+      "runtimeSeconds": 3.697357
+    },
+    {
+      "sampleId": "0999-2220b057c8023650",
+      "score": 0.06687135994434357,
+      "runtimeSeconds": 3.652334
+    },
+    {
+      "sampleId": "1000-27a5a338be59ce10",
+      "score": 0.15756210684776306,
+      "runtimeSeconds": 3.410305
+    },
+    {
+      "sampleId": "1001-6d2bc684d3a5c838",
+      "score": 1.1145572216264554e-06,
+      "runtimeSeconds": 3.234852
+    },
+    {
+      "sampleId": "1002-39cec7f312ccd9c8",
+      "score": 0.031582534313201904,
+      "runtimeSeconds": 3.801699
+    },
+    {
+      "sampleId": "1003-e170a9910ca77e12",
+      "score": 0.19810451567173004,
+      "runtimeSeconds": 3.727783
+    },
+    {
+      "sampleId": "1004-d4f2f2400c373dc4",
+      "score": 0.9807589650154114,
+      "runtimeSeconds": 5.834156
+    },
+    {
+      "sampleId": "1005-48ce7e53e932a242",
+      "score": 0.01594044826924801,
+      "runtimeSeconds": 16.42932
+    },
+    {
+      "sampleId": "1006-6040517edd01f1af",
+      "score": 0.658036470413208,
+      "runtimeSeconds": 3.813297
+    },
+    {
+      "sampleId": "1007-2320baf75a5a54fc",
+      "score": 0.020959988236427307,
+      "runtimeSeconds": 3.073635
+    },
+    {
+      "sampleId": "1008-af5119131efbf866",
+      "score": 0.30818644165992737,
+      "runtimeSeconds": 3.198754
+    },
+    {
+      "sampleId": "1009-82ac640ca9dfb76b",
+      "score": 1.659584275559567e-11,
+      "runtimeSeconds": 3.674979
+    },
+    {
+      "sampleId": "1010-bb113bafe70ce0ea",
+      "score": 0.14856456220149994,
+      "runtimeSeconds": 3.814949
+    },
+    {
+      "sampleId": "1011-e213897cc9135d26",
+      "score": 0.0051514203660190105,
+      "runtimeSeconds": 3.762573
+    },
+    {
+      "sampleId": "1012-685773e500416ff8",
+      "score": 0.9476102590560913,
+      "runtimeSeconds": 3.15585
+    },
+    {
+      "sampleId": "1013-e604117cf38fbf76",
+      "score": 0.594020426273346,
+      "runtimeSeconds": 2.833764
+    },
+    {
+      "sampleId": "1014-859262a9192a122c",
+      "score": 0.9485477209091187,
+      "runtimeSeconds": 7.722983
+    },
+    {
+      "sampleId": "1015-d65c7d0332c27d10",
+      "score": 0.08774840831756592,
+      "runtimeSeconds": 14.422716
+    },
+    {
+      "sampleId": "1016-746b143039eaddf1",
+      "score": 2.4289925626419517e-10,
+      "runtimeSeconds": 2.71311
+    },
+    {
+      "sampleId": "1017-3642155f0ddc850f",
+      "score": 0.6395432949066162,
+      "runtimeSeconds": 3.595448
+    },
+    {
+      "sampleId": "1018-aa30667c68e524ee",
+      "score": 0.11972146481275558,
+      "runtimeSeconds": 3.709411
+    },
+    {
+      "sampleId": "1019-8750cff4fba58d02",
+      "score": 2.4142745094768436e-12,
+      "runtimeSeconds": 3.724229
+    },
+    {
+      "sampleId": "1020-b2389a512d72e206",
+      "score": 0.7658264636993408,
+      "runtimeSeconds": 3.74402
+    },
+    {
+      "sampleId": "1021-71e93ca0567baf18",
+      "score": 5.042780770736499e-08,
+      "runtimeSeconds": 3.191211
+    },
+    {
+      "sampleId": "1022-36a1c50352b8baef",
+      "score": 0.01920952834188938,
+      "runtimeSeconds": 3.870494
+    },
+    {
+      "sampleId": "1023-1eb21076abe30013",
+      "score": 1.8748908851351427e-17,
+      "runtimeSeconds": 3.884521
+    },
+    {
+      "sampleId": "1024-8d150ede61c96e48",
+      "score": 5.070767370949299e-17,
+      "runtimeSeconds": 17.206787
+    },
+    {
+      "sampleId": "1025-97abe17fed6403af",
+      "score": 0.5660514831542969,
+      "runtimeSeconds": 4.68146
+    },
+    {
+      "sampleId": "1026-782267d2b343df91",
+      "score": 0.9806194305419922,
+      "runtimeSeconds": 3.69092
+    },
+    {
+      "sampleId": "1027-1061bd19bcd2c54b",
+      "score": 0.9999985694885254,
+      "runtimeSeconds": 3.67358
+    },
+    {
+      "sampleId": "1028-cc0068df725a6ff9",
+      "score": 9.95653602289424e-15,
+      "runtimeSeconds": 2.799102
+    },
+    {
+      "sampleId": "1029-8696246f57653a06",
+      "score": 0.23422442376613617,
+      "runtimeSeconds": 3.685088
+    },
+    {
+      "sampleId": "1030-6688f1d765bdf670",
+      "score": 0.2833913266658783,
+      "runtimeSeconds": 3.69063
+    },
+    {
+      "sampleId": "1031-66e41e57f0867268",
+      "score": 0.9996868371963501,
+      "runtimeSeconds": 3.26107
+    },
+    {
+      "sampleId": "1032-9fe9de45c1d242df",
+      "score": 0.0023369472473859787,
+      "runtimeSeconds": 3.505292
+    },
+    {
+      "sampleId": "1033-84908d0ce3204ba3",
+      "score": 4.018799515392857e-08,
+      "runtimeSeconds": 10.927523
+    },
+    {
+      "sampleId": "1034-a2a85f867dfbd7de",
+      "score": 0.000314828212140128,
+      "runtimeSeconds": 12.153455
+    },
+    {
+      "sampleId": "1035-73094ca26fbefa3a",
+      "score": 1.2182734820953556e-09,
+      "runtimeSeconds": 3.710721
+    },
+    {
+      "sampleId": "1036-0f0ce596267e422e",
+      "score": 0.0058751837350428104,
+      "runtimeSeconds": 3.754182
+    },
+    {
+      "sampleId": "1037-090709cca5250dd8",
+      "score": 0.9999978542327881,
+      "runtimeSeconds": 3.575397
+    },
+    {
+      "sampleId": "1038-8b33e8ec900deaf4",
+      "score": 0.8989953398704529,
+      "runtimeSeconds": 3.736329
+    },
+    {
+      "sampleId": "1039-a855204c9a961f48",
+      "score": 2.020034662564285e-05,
+      "runtimeSeconds": 3.152458
+    },
+    {
+      "sampleId": "1040-0f88924be8d1c862",
+      "score": 0.0009529132512398064,
+      "runtimeSeconds": 3.553402
+    },
+    {
+      "sampleId": "1041-ce8386d01ff30957",
+      "score": 3.7750183423668204e-07,
+      "runtimeSeconds": 3.811178
+    },
+    {
+      "sampleId": "1042-e21fd33c9f863725",
+      "score": 0.9979106783866882,
+      "runtimeSeconds": 10.145975
+    },
+    {
+      "sampleId": "1043-6edbde6e6a992c0b",
+      "score": 1.0,
+      "runtimeSeconds": 12.696226
+    },
+    {
+      "sampleId": "1044-c309f92650665b61",
+      "score": 0.000547988573089242,
+      "runtimeSeconds": 3.683995
+    },
+    {
+      "sampleId": "1045-41373f38fee9d213",
+      "score": 5.345525662875812e-34,
+      "runtimeSeconds": 3.201309
+    },
+    {
+      "sampleId": "1046-3e225936ae1aaf70",
+      "score": 0.8852770924568176,
+      "runtimeSeconds": 3.123909
+    },
+    {
+      "sampleId": "1047-4a767b315ca53630",
+      "score": 0.9996616840362549,
+      "runtimeSeconds": 3.588806
+    },
+    {
+      "sampleId": "1048-7409c082b270c5de",
+      "score": 0.0001507630804553628,
+      "runtimeSeconds": 2.736119
+    },
+    {
+      "sampleId": "1049-3211c4f8536a75b7",
+      "score": 7.180671218520729e-06,
+      "runtimeSeconds": 3.128221
+    },
+    {
+      "sampleId": "1050-ad4dc236e6a461cf",
+      "score": 0.6737938523292542,
+      "runtimeSeconds": 2.981815
+    },
+    {
+      "sampleId": "1051-dd96eec17156cfbd",
+      "score": 0.41175681352615356,
+      "runtimeSeconds": 3.740744
+    },
+    {
+      "sampleId": "1052-73026ccf44ec5003",
+      "score": 2.825433043085468e-08,
+      "runtimeSeconds": 12.256057
+    },
+    {
+      "sampleId": "1053-28f3240778fddb01",
+      "score": 0.026640379801392555,
+      "runtimeSeconds": 10.732012
+    },
+    {
+      "sampleId": "1054-2518dbf612a810fd",
+      "score": 0.646914005279541,
+      "runtimeSeconds": 3.308099
+    },
+    {
+      "sampleId": "1055-cd1bdb8233d2da99",
+      "score": 2.780416048249752e-18,
+      "runtimeSeconds": 3.690502
+    },
+    {
+      "sampleId": "1056-957d8a82cd32038d",
+      "score": 0.9831242561340332,
+      "runtimeSeconds": 2.780708
+    },
+    {
+      "sampleId": "1057-9cb4e0b0a5c14060",
+      "score": 0.00018388518947176635,
+      "runtimeSeconds": 3.462513
+    },
+    {
+      "sampleId": "1058-d63c91600e5348fd",
+      "score": 0.00035488943103700876,
+      "runtimeSeconds": 3.712266
+    },
+    {
+      "sampleId": "1059-392884144dc3db93",
+      "score": 0.00022096569591667503,
+      "runtimeSeconds": 3.624376
+    },
+    {
+      "sampleId": "1060-952450fa17e09749",
+      "score": 0.00020674255210906267,
+      "runtimeSeconds": 3.720077
+    },
+    {
+      "sampleId": "1061-22c065349323b9a8",
+      "score": 0.00018388518947176635,
+      "runtimeSeconds": 7.365289
+    },
+    {
+      "sampleId": "1062-e712f108052cb2a3",
+      "score": 0.0021817467641085386,
+      "runtimeSeconds": 15.678167
+    },
+    {
+      "sampleId": "1063-a5179d445196ee61",
+      "score": 0.018353376537561417,
+      "runtimeSeconds": 3.508015
+    },
+    {
+      "sampleId": "1064-64e24fab247fe774",
+      "score": 2.576902957684979e-08,
+      "runtimeSeconds": 3.68847
+    },
+    {
+      "sampleId": "1065-0f1c1b8673aa99db",
+      "score": 5.796769500906107e-16,
+      "runtimeSeconds": 3.547006
+    },
+    {
+      "sampleId": "1066-aa3a3df5ce29bbea",
+      "score": 1.1925839005569316e-12,
+      "runtimeSeconds": 3.684988
+    },
+    {
+      "sampleId": "1067-d37f4b2131518716",
+      "score": 2.5055879680074833e-12,
+      "runtimeSeconds": 3.714961
+    },
+    {
+      "sampleId": "1068-feb0f56502d2cd36",
+      "score": 1.5903226513458435e-09,
+      "runtimeSeconds": 3.732878
+    },
+    {
+      "sampleId": "1069-798d86f2d487ea6f",
+      "score": 0.005988153163343668,
+      "runtimeSeconds": 3.719126
+    },
+    {
+      "sampleId": "1070-ae4a9ff9107994e4",
+      "score": 0.04797661304473877,
+      "runtimeSeconds": 7.901385
+    },
+    {
+      "sampleId": "1071-949b03a8c10bd6de",
+      "score": 9.411802587289131e-11,
+      "runtimeSeconds": 15.035804
+    },
+    {
+      "sampleId": "1072-e4f02be9f2b527ea",
+      "score": 4.389661171444459e-06,
+      "runtimeSeconds": 3.603726
+    },
+    {
+      "sampleId": "1073-8ed79bbf8b6765b2",
+      "score": 0.7744024991989136,
+      "runtimeSeconds": 3.622646
+    },
+    {
+      "sampleId": "1074-81200c9a95e84b46",
+      "score": 0.9498695731163025,
+      "runtimeSeconds": 3.633392
+    },
+    {
+      "sampleId": "1075-c344031b161c53c6",
+      "score": 0.5972955226898193,
+      "runtimeSeconds": 3.647698
+    },
+    {
+      "sampleId": "1076-78a8b2c6157707be",
+      "score": 0.07295135408639908,
+      "runtimeSeconds": 3.342944
+    },
+    {
+      "sampleId": "1077-32460bd12b9c304a",
+      "score": 0.9877780079841614,
+      "runtimeSeconds": 2.796674
+    },
+    {
+      "sampleId": "1078-03b4fb9dfc4aa059",
+      "score": 0.15820816159248352,
+      "runtimeSeconds": 3.28364
+    },
+    {
+      "sampleId": "1079-3bf6eca07714eafe",
+      "score": 0.9999983310699463,
+      "runtimeSeconds": 3.268465
+    }
+  ],
+  "inferenceMode": "torch.inference_mode"
+}

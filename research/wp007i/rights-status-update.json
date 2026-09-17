@@ -1,0 +1,23 @@
+{
+  "lythausProcedural": {
+    "status": "LYTHAUS_OWNED_DETERMINISTIC_EVALUATION_MEDIA",
+    "useInWp007i": "PRIVATE_EVALUATION_ONLY"
+  },
+  "noInferenceFromSilence": true,
+  "safe": {
+    "checkpointSpecificCommercialGrant": "NOT_STATED",
+    "evidenceArtifact": "research/wp007h/safe-artifact-rights.json",
+    "productionAuthorization": "NO",
+    "status": "RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED"
+  },
+  "schemaVersion": "lythaus-wp007i-rights-status-v1",
+  "t2iCoreBench": {
+    "status": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+    "useInWp007i": "PRIVATE_RESEARCH_CONFIRMATION_ONLY"
+  },
+  "unsplashLite": {
+    "restriction": "NO_REDisTRIBUTION_OR_PUBLIC_DISCLOSURE_OF_DATASET_CONTENT",
+    "status": "INTERNAL_COMMERCIAL_ML_LICENSE_FOR_LITE_DATASET",
+    "useInWp007i": "PRIVATE_EVALUATION_ONLY"
+  }
+}
