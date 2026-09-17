@@ -1,0 +1,19 @@
+{
+  "familyDisjointnessChecked": true,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "forbiddenFamiliesSha256": "106b15f89f259aeb22ef84d49d7fc62a3388ee983213679640284c726dd7b143",
+  "negativeFreezeSha256": "bfcdc660f29b0a762f384ff03be96ac221722c82c7a49d43d46462339583c9a9",
+  "parentSha": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+  "roles": {
+    "FLUX1": "POSTHOC_ONLY",
+    "FLUX2": "SEALED",
+    "FRESH_SYNTHETIC_CONFIRM": 60,
+    "FRESH_SYNTHETIC_DEV": 60,
+    "NEGATIVE_CONFIRM_I": 400,
+    "NEGATIVE_DEV_I": 400
+  },
+  "schemaVersion": "lythaus-wp007i-data-role-freeze-v1",
+  "scoreBlind": true,
+  "syntheticFreezeSha256": "3e327665591994fc8dced9a08d5c8d9e7368f85d233956a3d17d93067ba8b7a9"
+}

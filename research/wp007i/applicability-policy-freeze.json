@@ -1,0 +1,30 @@
+{
+  "frozenBeforeConfirmationScoring": true,
+  "limitations": [
+    "The rule intentionally does not infer resize, screenshot, or JPEG provenance from an unavailable parent file.",
+    "Metadata absence is not authenticity evidence.",
+    "A DEGRADED or UNSUPPORTED state withdraws authority from a low SAFE score; it does not imply AI or human origin."
+  ],
+  "logic": [
+    "If decode fails, return UNKNOWN with DECODE_FAILURE.",
+    "If min(width,height) < 256, return UNSUPPORTED with DIMENSION_TOO_SMALL.",
+    "If JPEG has no metadata and a readable estimated quality <= 98, return DEGRADED with JPEG_RECOMPRESSION_EVIDENCE and JPEG_METADATA_ABSENT.",
+    "If JPEG has no metadata and quality is unreadable or > 98, return MODERATE with JPEG_METADATA_ABSENT.",
+    "If JPEG has metadata and no low-quality signal, return HIGH with NO_DESTRUCTIVE_BYTE_SIGNAL.",
+    "If a PNG has a common screen dimension and no metadata, return MODERATE with COMMON_SCREEN_DIMENSION; this is applicability only, never synthetic evidence.",
+    "Otherwise return HIGH with NO_DESTRUCTIVE_BYTE_SIGNAL."
+  ],
+  "policyFileSha256": "65dffb063cf93c1fa67ec181849afc5239bf9748bfbe01b42674f1c15a683260",
+  "policySha256": "56ff64986982c9186f3875f365ceb36488111742fc4325eb1909a204e8cb3a47",
+  "policyVersion": "WP007I_APPLICABILITY_RULE_V1",
+  "schemaVersion": "lythaus-wp007i-applicability-policy-freeze-v1",
+  "states": [
+    "HIGH",
+    "MODERATE",
+    "DEGRADED",
+    "UNSUPPORTED",
+    "UNKNOWN"
+  ],
+  "usesGroundTruth": false,
+  "usesSafeScore": false
+}

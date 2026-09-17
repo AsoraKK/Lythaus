@@ -1,0 +1,14 @@
+{
+  "cloudflareConsumedMedianSafeScore": 0.0466,
+  "cloudflareHighCount": 0,
+  "dimensionMatchingExplainedOnlyPartOfGap": true,
+  "interpretation": "UNRESOLVED_DOMAIN_OR_PIPELINE_SHIFT",
+  "newInference": false,
+  "newPixelAccess": false,
+  "publicFluxMedianSafeScore": 0.9487,
+  "publicHighCount": 39,
+  "schemaVersion": "lythaus-wp007i-flux1-posthoc-risk-v1",
+  "source": "WP007H preserved diagnostic; not a WP007I confirmation set.",
+  "status": "CONSUMED_POSTHOC_DIAGNOSTIC_ONLY",
+  "tuningPermitted": false
+}

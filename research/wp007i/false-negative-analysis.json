@@ -1,0 +1,1114 @@
+{
+  "count": 41,
+  "notUsedForRetuning": true,
+  "records": [
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "SD-3.5-Large",
+      "inputFacts": {
+        "fileBytes": 1552384,
+        "fileSha256": "757ce151ae1fa36f51bbd8c10ade4a4f399254323612f2a228d27dec7de2bf3a",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.3902587890625,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-005-2__SD-3.5-Large__R-GR-005-2",
+      "sampleId": "SD-3.5-Large__R-GR-005-2",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-005-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 5228432,
+        "fileSha256": "6aa80f4b821ce7cbc2d0950036b1d4b6cc7413b3bb082e75bcbfd20ddf0838d2",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.023571105673909187,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-051-2__Seedream-4__R-GR-051-2",
+      "sampleId": "Seedream-4__R-GR-051-2",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-051-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 4452390,
+        "fileSha256": "fe5ef204d1c8b235179b443f81e91f52607a9c02b1fb605f7f1efe93f0511269",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.08009527623653412,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-001-3__Seedream-4__R-GR-001-3",
+      "sampleId": "Seedream-4__R-GR-001-3",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-001-3",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 3931033,
+        "fileSha256": "5aaa82507002541efff460a5053c7d8a0532f42447b0fa23f323d52c81270aa1",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.03665879741311073,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-024-2__Seedream-4__R-GR-024-2",
+      "sampleId": "Seedream-4__R-GR-024-2",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-024-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 3962547,
+        "fileSha256": "659a8e3915862bb2da82420fbda0daf677b022f6a65c18fc2c6d899185ea9518",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.03392816334962845,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-085-0__Seedream-4__R-GR-085-0",
+      "sampleId": "Seedream-4__R-GR-085-0",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-085-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 4366952,
+        "fileSha256": "b1bff32d454db13aeb404b40047870b37023927d66d6379578309bdfe5f299cc",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.022114112973213196,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0__Seedream-4__R-GR-064-0",
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 5117377,
+        "fileSha256": "c54f9100872a30b34a08703bb6590de48e51f534b3ea11211f0a83708785cd53",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.06351076066493988,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1__Seedream-4__R-GR-009-1",
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 5189843,
+        "fileSha256": "6219726b5c6d72f490801b3bfa74b0dce8c8e7d2b80c8b4d1c759827beb53f88",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.038381267338991165,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-005-1__Seedream-4__R-GR-005-1",
+      "sampleId": "Seedream-4__R-GR-005-1",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-005-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 5033097,
+        "fileSha256": "468cf85b7035b093499b44352a9f3be30b366b88f615586c48b9e397b18bbd58",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.03128642588853836,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-077-1__Seedream-4__R-GR-077-1",
+      "sampleId": "Seedream-4__R-GR-077-1",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-077-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 4925053,
+        "fileSha256": "79b423b9699177dd6c153810a4b1fb2d4fab1080646d9e01b878c35b2f7153bc",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.07571496069431305,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0__Seedream-4__R-GR-013-0",
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 5108148,
+        "fileSha256": "4c164d97393173353e9cfe92fe28beee5e2bd467eda9b9604b3d3853fc8f0513",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.051246073096990585,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-025-1__Seedream-4__R-GR-025-1",
+      "sampleId": "Seedream-4__R-GR-025-1",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-025-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 5325134,
+        "fileSha256": "9cfc55d58d45be818925465f4a52bcc6cd5c5740dca946c9c2976d29d9158b54",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.07774193584918976,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-010-2__Seedream-4__R-GR-010-2",
+      "sampleId": "Seedream-4__R-GR-010-2",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-010-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 3619875,
+        "fileSha256": "9eee53728840a1f63004ee0de11fad25af8fda8b86d0ff49d9d5c8803cf7bb13",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.023199042305350304,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-040-1__Seedream-4__R-GR-040-1",
+      "sampleId": "Seedream-4__R-GR-040-1",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-040-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 5159463,
+        "fileSha256": "d79ee11a0951c48146dca2e96a5e3cc0b556efce100b9a12b82714760fe802aa",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.04395689815282822,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-083-3__Seedream-4__R-GR-083-3",
+      "sampleId": "Seedream-4__R-GR-083-3",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-083-3",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 4702568,
+        "fileSha256": "40b8ac546c0357e2b0d005484c8bf4e11a4d412865a3ee63c526f259f35d9821",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.03166733682155609,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-038-0__Seedream-4__R-GR-038-0",
+      "sampleId": "Seedream-4__R-GR-038-0",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-038-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 3671207,
+        "fileSha256": "df7dd1e1213340bfc206389aed2e5bdec7a1991b4551827e4d57207d1fea598d",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.02317984774708748,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-071-0__Seedream-4__R-GR-071-0",
+      "sampleId": "Seedream-4__R-GR-071-0",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-071-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 4090493,
+        "fileSha256": "eb326c882a532ee9ab382bb838a3838fed26f46ca58c3f02db00d957717a010f",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.0446358360350132,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-044-2__Seedream-4__R-GR-044-2",
+      "sampleId": "Seedream-4__R-GR-044-2",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-044-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 4758665,
+        "fileSha256": "1bd1d26d6e85715180878b0b84c89f301460ac8c31224902463521aaa00b461f",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.04991884529590607,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-070-3__Seedream-4__R-GR-070-3",
+      "sampleId": "Seedream-4__R-GR-070-3",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-070-3",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 4722571,
+        "fileSha256": "aab4e20728d53022dc4f47953fca86191d887cf8a852098a7b675d43218fe0e5",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.030635913833975792,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0__Seedream-4__R-GR-056-0",
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 5354914,
+        "fileSha256": "c857d665250cc2ed404a1366bc1579309a588da2510826de7604a8c8aef8daf1",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.026468882337212563,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-028-3__Seedream-4__R-GR-028-3",
+      "sampleId": "Seedream-4__R-GR-028-3",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-028-3",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Seedream-4",
+      "inputFacts": {
+        "fileBytes": 3556419,
+        "fileSha256": "d35605c867f6ac24eaefd84e225a370dd17c533354a1c74ffe17421bf653282a",
+        "format": "PNG",
+        "height": 2048,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 4194304,
+        "status": "OK",
+        "width": 2048
+      },
+      "rawScore": 0.12148324400186539,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1__Seedream-4__R-GR-019-1",
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "Gemini-2.0-Flash",
+      "inputFacts": {
+        "fileBytes": 280160,
+        "fileSha256": "e845b733063da92085465208cffc645c9e8c4e851fdf4a7f403b468af51327ff",
+        "format": "PNG",
+        "height": 826,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 845824,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.5735019445419312,
+      "rowKey": "FRESH_SYNTHETIC_DEV__T2I_FAMILY_Gemini-2.0-Flash_Gemini-2.0-Flash__R-GR-036-2__Gemini-2.0-Flash__R-GR-036-2",
+      "sampleId": "Gemini-2.0-Flash__R-GR-036-2",
+      "sourceFamilyId": "T2I_FAMILY_Gemini-2.0-Flash_Gemini-2.0-Flash__R-GR-036-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1394305,
+        "fileSha256": "3ee4b15d743ac5e416a551816b8b090981b224a046b35d2f6855a649d66cf8a6",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.0605449415743351,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-028-1__imagen-4__R-GR-028-1",
+      "sampleId": "imagen-4__R-GR-028-1",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-028-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1153051,
+        "fileSha256": "c76b6454f89c0d8d926bd6fc2918add379f4bdacd930982946a8aa917f0fa794",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.040364641696214676,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-039-1__imagen-4__R-GR-039-1",
+      "sampleId": "imagen-4__R-GR-039-1",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-039-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1299331,
+        "fileSha256": "c21c9bba880b45c24745673457ae257ab19c6d897f082c05b88f2c7a723dfd5d",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.050658129155635834,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-001-0__imagen-4__R-GR-001-0",
+      "sampleId": "imagen-4__R-GR-001-0",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-001-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1240291,
+        "fileSha256": "efefb93eab564924f9ae1353b1f28c14f11fdfc9160744f6b4e5475dd2e47f15",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.05170140787959099,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-019-0__imagen-4__R-GR-019-0",
+      "sampleId": "imagen-4__R-GR-019-0",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-019-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1237575,
+        "fileSha256": "6c90090fa3e5f079c41a4560eb53db0a0ac86eb69d9f53ad77325770bbf91727",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.0506531223654747,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-011-0__imagen-4__R-GR-011-0",
+      "sampleId": "imagen-4__R-GR-011-0",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-011-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1362512,
+        "fileSha256": "9119083534b619ce445d6a80624784e2392ac69ca6714b7ace9de466c837473f",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.1660679131746292,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-077-0__imagen-4__R-GR-077-0",
+      "sampleId": "imagen-4__R-GR-077-0",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-077-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1871555,
+        "fileSha256": "5299d1e6d3a7936f1f0242f86eabc993217e69d4142f60cb260e0c72e1e6efdd",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.02699113078415394,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1__imagen-4__R-GR-027-1",
+      "sampleId": "imagen-4__R-GR-027-1",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1716756,
+        "fileSha256": "33f72702a0b30068686f3fc1e75b39ed2a0ac8e9a2c65deb1700e66cd05b5ede",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.060119111090898514,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2__imagen-4__R-GR-083-2",
+      "sampleId": "imagen-4__R-GR-083-2",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1329150,
+        "fileSha256": "c3f2722563fe1704d0723f88dcdd3e47589c8293b4548cbb57348f5a388c33ba",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.01675991714000702,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-050-2__imagen-4__R-GR-050-2",
+      "sampleId": "imagen-4__R-GR-050-2",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-050-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1484725,
+        "fileSha256": "911d7df6488b8de03940328fb5498ef512f5f789af3920b05d808515db8e1221",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.03955933824181557,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0__imagen-4__R-GR-075-0",
+      "sampleId": "imagen-4__R-GR-075-0",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 473050,
+        "fileSha256": "123ea413defab3bcd1e25a436ab98e80c517ba34967d12dfb7d0b1c8acad05d7",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.09333916753530502,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-042-2__imagen-4__R-GR-042-2",
+      "sampleId": "imagen-4__R-GR-042-2",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-042-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1547771,
+        "fileSha256": "065feeeb581d73494ddad630d4c44c087591db991ee05a0474d0f9991ccdc213",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.08725142478942871,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-020-2__imagen-4__R-GR-020-2",
+      "sampleId": "imagen-4__R-GR-020-2",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-020-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1664820,
+        "fileSha256": "edf03522dafc4041eb51b65719f7e1df97b66cee7b734b8852a35860a5931bc7",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.03611151874065399,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-022-2__imagen-4__R-GR-022-2",
+      "sampleId": "imagen-4__R-GR-022-2",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-022-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1326495,
+        "fileSha256": "0e3eefd1c9cd656cbc7a32e6edb26b9b5cf990744444174712bc6d0b4d23d1bd",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.04555129259824753,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-052-2__imagen-4__R-GR-052-2",
+      "sampleId": "imagen-4__R-GR-052-2",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-052-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1410523,
+        "fileSha256": "ce792019e12e56072a716e0a29956e9f86230699b27284c884634ec8e123f161",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.07426588237285614,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-077-2__imagen-4__R-GR-077-2",
+      "sampleId": "imagen-4__R-GR-077-2",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-077-2",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1493676,
+        "fileSha256": "dc4541da3d1e40abb8845c6c91ea8d43d33efcbf4ea2d03644ac7732cba81fe1",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.031974997371435165,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3__imagen-4__R-GR-061-3",
+      "sampleId": "imagen-4__R-GR-061-3",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1264873,
+        "fileSha256": "3fb789b5eb26af647735e185eea8e7457af83bd374be8dcf90ec4eee78952220",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.07375846058130264,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-050-3__imagen-4__R-GR-050-3",
+      "sampleId": "imagen-4__R-GR-050-3",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-050-3",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1092868,
+        "fileSha256": "82f8e4f2a762bd59873dc0eb5f79409c713738a07bc1480937593fc5dbf07da5",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.029353803023695946,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-002-1__imagen-4__R-GR-002-1",
+      "sampleId": "imagen-4__R-GR-002-1",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-002-1",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    },
+    {
+      "applicability": {
+        "reasons": [],
+        "state": "HIGH",
+        "version": "WP007I_APPLICABILITY_RULE_V1"
+      },
+      "generatorFamily": "imagen-4",
+      "inputFacts": {
+        "fileBytes": 1410242,
+        "fileSha256": "f30947de0a493d933babbeefbe25b8a999bb03534553f8da558f931af8e54fed",
+        "format": "PNG",
+        "height": 1024,
+        "jpegQualityEstimate": null,
+        "metadataKeys": [],
+        "metadataPresent": false,
+        "mime": "image/png",
+        "pixelCount": 1048576,
+        "status": "OK",
+        "width": 1024
+      },
+      "rawScore": 0.021949052810668945,
+      "rowKey": "FRESH_SYNTHETIC_CONFIRM__T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0__imagen-4__R-GR-046-0",
+      "sampleId": "imagen-4__R-GR-046-0",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0",
+      "sourceSubtype": "MODERN_GENERATED",
+      "transformation": "ORIGINAL"
+    }
+  ],
+  "schemaVersion": "lythaus-wp007i-false-negative-analysis-v1"
+}

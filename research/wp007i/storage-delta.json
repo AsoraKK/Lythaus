@@ -1,0 +1,29 @@
+{
+  "bytesAddedForExperiment": 3958862973,
+  "bytesPreserved": 3107030595,
+  "bytesRemoved": 851832378,
+  "bytesUnresolved": 0,
+  "deleted": [
+    {
+      "bytes": 851832378,
+      "logicalAssetId": "WP007I_SPAI_C512_DERIVATIVES",
+      "pathClass": "EXACT_TEMP_RESEARCH_ROOT",
+      "reason": "SPAI shadow scores and input manifest verified; C512 PNG derivatives are reproducible and not needed for committed evidence.",
+      "regenerable": true
+    }
+  ],
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "materializedBytesBeforeCleanup": 3958862973,
+  "preserved": [
+    {
+      "bytes": 3107030595,
+      "logicalAssetId": "WP007I_SELECTED_MEDIA_AND_TRANSFORMS",
+      "pathClass": "EXTERNAL_RESEARCH_MEDIA",
+      "reason": "Selected source media and transformation descendants remain available outside Git for audit/reproduction."
+    }
+  ],
+  "schemaVersion": "lythaus-wp007i-storage-delta-v1",
+  "spaiInputManifestSha256": "5e2b9a271c964ced945a03becbacec17ecdb707a21b942314ccd8385a665857a",
+  "spaiScoreSha256": "933b98b326fae7ec2087734be97a7debb9a12a80d1092ba3e31c6a25520ef64e"
+}

@@ -1,0 +1,41 @@
+{
+  "flux2FamilyPatterns": [
+    "flux\\.2",
+    "flux2",
+    "flux-2"
+  ],
+  "pixelAccess": false,
+  "providerCalls": 0,
+  "purpose": "Fail closed before media retrieval; metadata enumeration is permitted only for exclusion.",
+  "schemaVersion": "lythaus-wp007i-forbidden-families-v1",
+  "sealedPriorGeneratorFamilies": [
+    "BAGEL",
+    "BLIP3o-4B",
+    "BLIP3o-8B",
+    "FLUX.1-Krea-dev",
+    "FLUX.1-dev",
+    "FLUX.1-schnell",
+    "FLUX.2-dev",
+    "FLUX.2-klein-4B",
+    "FLUX.2-klein-9B",
+    "GPT-4o",
+    "GPT-Image-1.5",
+    "Gemini-2.5-Flash",
+    "HiDream-I1",
+    "HunyuanImage-3.0",
+    "Infinity-8B",
+    "Janus-Pro-1B",
+    "Janus-Pro-7B",
+    "LongCat-Image",
+    "OmniGen2-7B",
+    "PixArt-Alpha",
+    "PixArt-Sigma",
+    "Qwen-Image",
+    "Qwen-Image-2512",
+    "SD-3-Medium",
+    "SD-3.5-Medium",
+    "Seedream-4.5",
+    "Z-Image"
+  ],
+  "sealedReservePolicy": "Do not open WP007H future reserve or any EF2/future benchmark reserve in WP007I."
+}
