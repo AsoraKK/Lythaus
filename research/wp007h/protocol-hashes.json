@@ -1,0 +1,8 @@
+{
+  "forbiddenGeneratorFamiliesSha256": "83f9f25c86ecb29b5d762ad0bc36cde0c57361f317d953d642e622dd9c944af9",
+  "frozenBefore": "WP007H new media retrieval and all SAFE scoring",
+  "planSha256": "e085494e28c71809c7515d18105e485bb54853acaef4c3a4d63c930f162eee00",
+  "safeArtifactRightsSha256": "d076f56042a2929143f19df44bd4f294ad353a43c2b44da6ee5ff866f83ee262",
+  "schemaVersion": "lythaus-wp007h-protocol-hashes-v1",
+  "transformationPlanSha256": "71fe5fa8514869699cf9f56de87a301eb3cae2a2052e7225d03b410078b04cbd"
+}

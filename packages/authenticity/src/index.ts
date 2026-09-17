@@ -96,3 +96,4 @@ export * from './wp006a.ts';
 export * from './wp006b.ts';
 export * from './wp007a.ts';
 export * from './wp007g.ts';
+export * from './wp007h.ts';

@@ -1,0 +1,710 @@
+{
+  "baselineComparison": {
+    "absoluteMedianGap": 0.902095852419734,
+    "cloudflare": {
+      "count": 40,
+      "iqr": 0.043085295241326094,
+      "max": 0.15308909118175507,
+      "median": 0.04657998867332935,
+      "min": 0.022837992757558823,
+      "thresholdHits": 0,
+      "thresholdRate": 0.0
+    },
+    "cloudflareMedian": 0.04657998867332935,
+    "interpretation": "A stage trajectory that moves toward the Cloudflare distribution is evidence that the measured operation may contribute; it is not proof of provider-internal equivalence.",
+    "publicOriginal": {
+      "count": 40,
+      "iqr": 0.023444727063179016,
+      "max": 0.9845467209815979,
+      "median": 0.9486758410930634,
+      "min": 0.441577672958374,
+      "thresholdHits": 39,
+      "thresholdRate": 0.975
+    },
+    "publicOriginalMedian": 0.9486758410930634
+  },
+  "diagnosticRole": "POST_HOC_FAILURE_MODE_DIAGNOSTIC",
+  "fitUse": false,
+  "flux1PixelAccess": true,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "manifestSha256": "788d9e196bcdab51fc666d34b73cb6712e559a2cc1384d06931cdf337b3a9f93",
+  "noSafeRetuning": true,
+  "notApplicableStages": {
+    "CHROMA_SUBSAMPLING_MATCH_ONLY": "Cloudflare diagnostic files are PNG with no JPEG chroma subsampling.",
+    "QUALITY_RECOMPRESSION_MATCH_ONLY": "Cloudflare diagnostic files are PNG with no JPEG quantization metadata.",
+    "RESIZE_MATCH_ONLY": "No provider resize algorithm is inferable from the consumed Cloudflare PNGs; dimension match uses fixed LANCZOS and the limitation is recorded."
+  },
+  "planSha256": "5fce143c0fd07a0b81b8f3bd0e0e7e4aa288d183ea74a49d512f2d99d6d93ae8",
+  "safeThreshold": 0.5864923000335693,
+  "sampleTrajectories": [
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.18061447143554688,
+      "sampleId": "FLUX.1-dev__C-MA-014-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.7646318078041077,
+        "DIMENSION_MATCH_ONLY": 0.7646318078041077,
+        "FORMAT_MATCH_ONLY": 0.9452462792396545,
+        "METADATA_STRIP_ONLY": 0.9452462792396545,
+        "ORIGINAL": 0.9452462792396545
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.014421582221984863,
+      "sampleId": "FLUX.1-dev__C-MA-073-1",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9277997612953186,
+        "DIMENSION_MATCH_ONLY": 0.9277997612953186,
+        "FORMAT_MATCH_ONLY": 0.9422213435173035,
+        "METADATA_STRIP_ONLY": 0.9422213435173035,
+        "ORIGINAL": 0.9422213435173035
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.02933114767074585,
+      "sampleId": "FLUX.1-dev__C-MI-004-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9157539010047913,
+        "DIMENSION_MATCH_ONLY": 0.9157539010047913,
+        "FORMAT_MATCH_ONLY": 0.9450850486755371,
+        "METADATA_STRIP_ONLY": 0.9450850486755371,
+        "ORIGINAL": 0.9450850486755371
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.05720013380050659,
+      "sampleId": "FLUX.1-dev__C-MI-021-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9050778150558472,
+        "DIMENSION_MATCH_ONLY": 0.9050778150558472,
+        "FORMAT_MATCH_ONLY": 0.9622779488563538,
+        "METADATA_STRIP_ONLY": 0.9622779488563538,
+        "ORIGINAL": 0.9622779488563538
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.02097266912460327,
+      "sampleId": "FLUX.1-dev__C-MI-061-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9240115880966187,
+        "DIMENSION_MATCH_ONLY": 0.9240115880966187,
+        "FORMAT_MATCH_ONLY": 0.9449842572212219,
+        "METADATA_STRIP_ONLY": 0.9449842572212219,
+        "ORIGINAL": 0.9449842572212219
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.017301738262176514,
+      "sampleId": "FLUX.1-dev__C-MI-066-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9240286350250244,
+        "DIMENSION_MATCH_ONLY": 0.9240286350250244,
+        "FORMAT_MATCH_ONLY": 0.9413303732872009,
+        "METADATA_STRIP_ONLY": 0.9413303732872009,
+        "ORIGINAL": 0.9413303732872009
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.11837846040725708,
+      "sampleId": "FLUX.1-dev__C-MI-076-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.8383470773696899,
+        "DIMENSION_MATCH_ONLY": 0.8383470773696899,
+        "FORMAT_MATCH_ONLY": 0.956725537776947,
+        "METADATA_STRIP_ONLY": 0.956725537776947,
+        "ORIGINAL": 0.956725537776947
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.5139051973819733,
+      "sampleId": "FLUX.1-dev__C-MR-032-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.44810643792152405,
+        "DIMENSION_MATCH_ONLY": 0.44810643792152405,
+        "FORMAT_MATCH_ONLY": 0.9620116353034973,
+        "METADATA_STRIP_ONLY": 0.9620116353034973,
+        "ORIGINAL": 0.9620116353034973
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.09304124116897583,
+      "sampleId": "FLUX.1-dev__R-AR-010-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.8369143605232239,
+        "DIMENSION_MATCH_ONLY": 0.8369143605232239,
+        "FORMAT_MATCH_ONLY": 0.9299556016921997,
+        "METADATA_STRIP_ONLY": 0.9299556016921997,
+        "ORIGINAL": 0.9299556016921997
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.1313292384147644,
+      "sampleId": "FLUX.1-dev__R-AR-061-1",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.8447189331054688,
+        "DIMENSION_MATCH_ONLY": 0.8447189331054688,
+        "FORMAT_MATCH_ONLY": 0.9760481715202332,
+        "METADATA_STRIP_ONLY": 0.9760481715202332,
+        "ORIGINAL": 0.9760481715202332
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.2063525915145874,
+      "sampleId": "FLUX.1-dev__R-AR-081-1",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.6731414198875427,
+        "DIMENSION_MATCH_ONLY": 0.6731414198875427,
+        "FORMAT_MATCH_ONLY": 0.8794940114021301,
+        "METADATA_STRIP_ONLY": 0.8794940114021301,
+        "ORIGINAL": 0.8794940114021301
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.13211500644683838,
+      "sampleId": "FLUX.1-dev__R-GR-053-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.8171369433403015,
+        "DIMENSION_MATCH_ONLY": 0.8171369433403015,
+        "FORMAT_MATCH_ONLY": 0.9492519497871399,
+        "METADATA_STRIP_ONLY": 0.9492519497871399,
+        "ORIGINAL": 0.9492519497871399
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.15912050008773804,
+      "sampleId": "FLUX.1-dev__R-GR-058-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.7705225348472595,
+        "DIMENSION_MATCH_ONLY": 0.7705225348472595,
+        "FORMAT_MATCH_ONLY": 0.9296430349349976,
+        "METADATA_STRIP_ONLY": 0.9296430349349976,
+        "ORIGINAL": 0.9296430349349976
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.2711371183395386,
+      "sampleId": "FLUX.1-dev__R-HR-021-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.6871367692947388,
+        "DIMENSION_MATCH_ONLY": 0.6871367692947388,
+        "FORMAT_MATCH_ONLY": 0.9582738876342773,
+        "METADATA_STRIP_ONLY": 0.9582738876342773,
+        "ORIGINAL": 0.9582738876342773
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.15906208753585815,
+      "sampleId": "FLUX.1-dev__R-HR-037-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.7790004014968872,
+        "DIMENSION_MATCH_ONLY": 0.7790004014968872,
+        "FORMAT_MATCH_ONLY": 0.9380624890327454,
+        "METADATA_STRIP_ONLY": 0.9380624890327454,
+        "ORIGINAL": 0.9380624890327454
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.17361003160476685,
+      "sampleId": "FLUX.1-dev__R-LR-041-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.7693544030189514,
+        "DIMENSION_MATCH_ONLY": 0.7693544030189514,
+        "FORMAT_MATCH_ONLY": 0.9429644346237183,
+        "METADATA_STRIP_ONLY": 0.9429644346237183,
+        "ORIGINAL": 0.9429644346237183
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.4938674867153168,
+      "sampleId": "FLUX.1-dev__R-LR-061-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.4745834767818451,
+        "DIMENSION_MATCH_ONLY": 0.4745834767818451,
+        "FORMAT_MATCH_ONLY": 0.9684509634971619,
+        "METADATA_STRIP_ONLY": 0.9684509634971619,
+        "ORIGINAL": 0.9684509634971619
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.21764671802520752,
+      "sampleId": "FLUX.1-dev__R-RR-016-1",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.7523429989814758,
+        "DIMENSION_MATCH_ONLY": 0.7523429989814758,
+        "FORMAT_MATCH_ONLY": 0.9699897170066833,
+        "METADATA_STRIP_ONLY": 0.9699897170066833,
+        "ORIGINAL": 0.9699897170066833
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.2815231680870056,
+      "sampleId": "FLUX.1-dev__R-RR-023-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.6553277373313904,
+        "DIMENSION_MATCH_ONLY": 0.6553277373313904,
+        "FORMAT_MATCH_ONLY": 0.936850905418396,
+        "METADATA_STRIP_ONLY": 0.936850905418396,
+        "ORIGINAL": 0.936850905418396
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-dev",
+      "originalToCombinedDelta": -0.046722412109375,
+      "sampleId": "FLUX.1-dev__R-RR-028-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9140421152114868,
+        "DIMENSION_MATCH_ONLY": 0.9140421152114868,
+        "FORMAT_MATCH_ONLY": 0.9607645273208618,
+        "METADATA_STRIP_ONLY": 0.9607645273208618,
+        "ORIGINAL": 0.9607645273208618
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.03833049535751343,
+      "sampleId": "FLUX.1-schnell__C-MA-011-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9276646375656128,
+        "DIMENSION_MATCH_ONLY": 0.9276646375656128,
+        "FORMAT_MATCH_ONLY": 0.9659951329231262,
+        "METADATA_STRIP_ONLY": 0.9659951329231262,
+        "ORIGINAL": 0.9659951329231262
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.026781737804412842,
+      "sampleId": "FLUX.1-schnell__C-MA-088-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9559078812599182,
+        "DIMENSION_MATCH_ONLY": 0.9559078812599182,
+        "FORMAT_MATCH_ONLY": 0.982689619064331,
+        "METADATA_STRIP_ONLY": 0.982689619064331,
+        "ORIGINAL": 0.982689619064331
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.14484047889709473,
+      "sampleId": "FLUX.1-schnell__C-MI-019-1",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.821744441986084,
+        "DIMENSION_MATCH_ONLY": 0.821744441986084,
+        "FORMAT_MATCH_ONLY": 0.9665849208831787,
+        "METADATA_STRIP_ONLY": 0.9665849208831787,
+        "ORIGINAL": 0.9665849208831787
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.1499982476234436,
+      "sampleId": "FLUX.1-schnell__C-MI-025-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.7939462065696716,
+        "DIMENSION_MATCH_ONLY": 0.7939462065696716,
+        "FORMAT_MATCH_ONLY": 0.9439444541931152,
+        "METADATA_STRIP_ONLY": 0.9439444541931152,
+        "ORIGINAL": 0.9439444541931152
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.20470064878463745,
+      "sampleId": "FLUX.1-schnell__C-MI-048-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.7321298718452454,
+        "DIMENSION_MATCH_ONLY": 0.7321298718452454,
+        "FORMAT_MATCH_ONLY": 0.9368305206298828,
+        "METADATA_STRIP_ONLY": 0.9368305206298828,
+        "ORIGINAL": 0.9368305206298828
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.19353508949279785,
+      "sampleId": "FLUX.1-schnell__C-MI-076-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.7701616287231445,
+        "DIMENSION_MATCH_ONLY": 0.7701616287231445,
+        "FORMAT_MATCH_ONLY": 0.9636967182159424,
+        "METADATA_STRIP_ONLY": 0.9636967182159424,
+        "ORIGINAL": 0.9636967182159424
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.7559547424316406,
+      "sampleId": "FLUX.1-schnell__C-TR-054-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.18272316455841064,
+        "DIMENSION_MATCH_ONLY": 0.18272316455841064,
+        "FORMAT_MATCH_ONLY": 0.9386779069900513,
+        "METADATA_STRIP_ONLY": 0.9386779069900513,
+        "ORIGINAL": 0.9386779069900513
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": 0.011625528335571289,
+      "sampleId": "FLUX.1-schnell__R-AR-011-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9597252607345581,
+        "DIMENSION_MATCH_ONLY": 0.9597252607345581,
+        "FORMAT_MATCH_ONLY": 0.9480997323989868,
+        "METADATA_STRIP_ONLY": 0.9480997323989868,
+        "ORIGINAL": 0.9480997323989868
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.7721380740404129,
+      "sampleId": "FLUX.1-schnell__R-BR-021-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.16125606000423431,
+        "DIMENSION_MATCH_ONLY": 0.16125606000423431,
+        "FORMAT_MATCH_ONLY": 0.9333941340446472,
+        "METADATA_STRIP_ONLY": 0.9333941340446472,
+        "ORIGINAL": 0.9333941340446472
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.022808372974395752,
+      "sampleId": "FLUX.1-schnell__R-BR-044-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9455963969230652,
+        "DIMENSION_MATCH_ONLY": 0.9455963969230652,
+        "FORMAT_MATCH_ONLY": 0.9684047698974609,
+        "METADATA_STRIP_ONLY": 0.9684047698974609,
+        "ORIGINAL": 0.9684047698974609
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.11833316087722778,
+      "sampleId": "FLUX.1-schnell__R-CR-022-1",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.8322815299034119,
+        "DIMENSION_MATCH_ONLY": 0.8322815299034119,
+        "FORMAT_MATCH_ONLY": 0.9506146907806396,
+        "METADATA_STRIP_ONLY": 0.9506146907806396,
+        "ORIGINAL": 0.9506146907806396
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.029841840267181396,
+      "sampleId": "FLUX.1-schnell__R-CR-073-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9228121638298035,
+        "DIMENSION_MATCH_ONLY": 0.9228121638298035,
+        "FORMAT_MATCH_ONLY": 0.9526540040969849,
+        "METADATA_STRIP_ONLY": 0.9526540040969849,
+        "ORIGINAL": 0.9526540040969849
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.6432023048400879,
+      "sampleId": "FLUX.1-schnell__R-HR-007-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.29529792070388794,
+        "DIMENSION_MATCH_ONLY": 0.29529792070388794,
+        "FORMAT_MATCH_ONLY": 0.9385002255439758,
+        "METADATA_STRIP_ONLY": 0.9385002255439758,
+        "ORIGINAL": 0.9385002255439758
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.019899964332580566,
+      "sampleId": "FLUX.1-schnell__R-HR-023-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9343643188476562,
+        "DIMENSION_MATCH_ONLY": 0.9343643188476562,
+        "FORMAT_MATCH_ONLY": 0.9542642831802368,
+        "METADATA_STRIP_ONLY": 0.9542642831802368,
+        "ORIGINAL": 0.9542642831802368
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": 0.011552691459655762,
+      "sampleId": "FLUX.1-schnell__R-HR-057-1",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9688720107078552,
+        "DIMENSION_MATCH_ONLY": 0.9688720107078552,
+        "FORMAT_MATCH_ONLY": 0.9573193192481995,
+        "METADATA_STRIP_ONLY": 0.9573193192481995,
+        "ORIGINAL": 0.9573193192481995
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.05961030721664429,
+      "sampleId": "FLUX.1-schnell__R-HR-071-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.8735484480857849,
+        "DIMENSION_MATCH_ONLY": 0.8735484480857849,
+        "FORMAT_MATCH_ONLY": 0.9331587553024292,
+        "METADATA_STRIP_ONLY": 0.9331587553024292,
+        "ORIGINAL": 0.9331587553024292
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.3004116415977478,
+      "sampleId": "FLUX.1-schnell__R-HR-089-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.14116603136062622,
+        "DIMENSION_MATCH_ONLY": 0.14116603136062622,
+        "FORMAT_MATCH_ONLY": 0.441577672958374,
+        "METADATA_STRIP_ONLY": 0.441577672958374,
+        "ORIGINAL": 0.441577672958374
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.019610881805419922,
+      "sampleId": "FLUX.1-schnell__R-PR-012-2",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.964935839176178,
+        "DIMENSION_MATCH_ONLY": 0.964935839176178,
+        "FORMAT_MATCH_ONLY": 0.9845467209815979,
+        "METADATA_STRIP_ONLY": 0.9845467209815979,
+        "ORIGINAL": 0.9845467209815979
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.025487422943115234,
+      "sampleId": "FLUX.1-schnell__R-RR-053-0",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.9222214221954346,
+        "DIMENSION_MATCH_ONLY": 0.9222214221954346,
+        "FORMAT_MATCH_ONLY": 0.9477088451385498,
+        "METADATA_STRIP_ONLY": 0.9477088451385498,
+        "ORIGINAL": 0.9477088451385498
+      }
+    },
+    {
+      "generatorFamily": "FLUX.1-schnell",
+      "originalToCombinedDelta": -0.4728690981864929,
+      "sampleId": "FLUX.1-schnell__R-RR-071-3",
+      "scores": {
+        "COMBINED_MEASURABLE_APPROXIMATION": 0.4789174795150757,
+        "DIMENSION_MATCH_ONLY": 0.4789174795150757,
+        "FORMAT_MATCH_ONLY": 0.9517865777015686,
+        "METADATA_STRIP_ONLY": 0.9517865777015686,
+        "ORIGINAL": 0.9517865777015686
+      }
+    }
+  ],
+  "schemaVersion": "lythaus-wp007h-flux1-diagnostic-results-v1",
+  "scoreSha256": "6ec5681f1362e362f1b16a801fdcd80d7fa3a26326fb2eda9a134f47b7324927",
+  "stages": {
+    "CLOUDFLARE_BASELINE": {
+      "families": {
+        "CLOUDFLARE_FLUX.1_SCHNELL": {
+          "count": 40,
+          "iqr": 0.043085295241326094,
+          "max": 0.15308909118175507,
+          "median": 0.04657998867332935,
+          "min": 0.022837992757558823,
+          "thresholdHits": 0,
+          "thresholdRate": 0.0
+        }
+      },
+      "records": 40,
+      "score": {
+        "count": 40,
+        "iqr": 0.043085295241326094,
+        "max": 0.15308909118175507,
+        "median": 0.04657998867332935,
+        "min": 0.022837992757558823,
+        "thresholdHits": 0,
+        "thresholdRate": 0.0
+      }
+    },
+    "COMBINED_MEASURABLE_APPROXIMATION": {
+      "families": {
+        "FLUX.1-dev": {
+          "count": 20,
+          "iqr": 0.17127744853496552,
+          "max": 0.9277997612953186,
+          "median": 0.7980686724185944,
+          "min": 0.44810643792152405,
+          "thresholdHits": 18,
+          "thresholdRate": 0.9
+        },
+        "FLUX.1-schnell": {
+          "count": 20,
+          "iqr": 0.26834556460380554,
+          "max": 0.9688720107078552,
+          "median": 0.8529149889945984,
+          "min": 0.14116603136062622,
+          "thresholdHits": 15,
+          "thresholdRate": 0.75
+        }
+      },
+      "records": 40,
+      "score": {
+        "count": 40,
+        "iqr": 0.20223042368888855,
+        "max": 0.9688720107078552,
+        "median": 0.8270129859447479,
+        "min": 0.14116603136062622,
+        "thresholdHits": 33,
+        "thresholdRate": 0.825
+      }
+    },
+    "DIMENSION_MATCH_ONLY": {
+      "families": {
+        "FLUX.1-dev": {
+          "count": 20,
+          "iqr": 0.17127744853496552,
+          "max": 0.9277997612953186,
+          "median": 0.7980686724185944,
+          "min": 0.44810643792152405,
+          "thresholdHits": 18,
+          "thresholdRate": 0.9
+        },
+        "FLUX.1-schnell": {
+          "count": 20,
+          "iqr": 0.26834556460380554,
+          "max": 0.9688720107078552,
+          "median": 0.8529149889945984,
+          "min": 0.14116603136062622,
+          "thresholdHits": 15,
+          "thresholdRate": 0.75
+        }
+      },
+      "records": 40,
+      "score": {
+        "count": 40,
+        "iqr": 0.20223042368888855,
+        "max": 0.9688720107078552,
+        "median": 0.8270129859447479,
+        "min": 0.14116603136062622,
+        "thresholdHits": 33,
+        "thresholdRate": 0.825
+      }
+    },
+    "FORMAT_MATCH_ONLY": {
+      "families": {
+        "FLUX.1-dev": {
+          "count": 20,
+          "iqr": 0.020562902092933655,
+          "max": 0.9760481715202332,
+          "median": 0.9451656639575958,
+          "min": 0.8794940114021301,
+          "thresholdHits": 20,
+          "thresholdRate": 1.0
+        },
+        "FLUX.1-schnell": {
+          "count": 20,
+          "iqr": 0.025637835264205933,
+          "max": 0.9845467209815979,
+          "median": 0.9512006342411041,
+          "min": 0.441577672958374,
+          "thresholdHits": 19,
+          "thresholdRate": 0.95
+        }
+      },
+      "records": 40,
+      "score": {
+        "count": 40,
+        "iqr": 0.023444727063179016,
+        "max": 0.9845467209815979,
+        "median": 0.9486758410930634,
+        "min": 0.441577672958374,
+        "thresholdHits": 39,
+        "thresholdRate": 0.975
+      }
+    },
+    "METADATA_STRIP_ONLY": {
+      "families": {
+        "FLUX.1-dev": {
+          "count": 20,
+          "iqr": 0.020562902092933655,
+          "max": 0.9760481715202332,
+          "median": 0.9451656639575958,
+          "min": 0.8794940114021301,
+          "thresholdHits": 20,
+          "thresholdRate": 1.0
+        },
+        "FLUX.1-schnell": {
+          "count": 20,
+          "iqr": 0.025637835264205933,
+          "max": 0.9845467209815979,
+          "median": 0.9512006342411041,
+          "min": 0.441577672958374,
+          "thresholdHits": 19,
+          "thresholdRate": 0.95
+        }
+      },
+      "records": 40,
+      "score": {
+        "count": 40,
+        "iqr": 0.023444727063179016,
+        "max": 0.9845467209815979,
+        "median": 0.9486758410930634,
+        "min": 0.441577672958374,
+        "thresholdHits": 39,
+        "thresholdRate": 0.975
+      }
+    },
+    "ORIGINAL": {
+      "families": {
+        "FLUX.1-dev": {
+          "count": 20,
+          "iqr": 0.020562902092933655,
+          "max": 0.9760481715202332,
+          "median": 0.9451656639575958,
+          "min": 0.8794940114021301,
+          "thresholdHits": 20,
+          "thresholdRate": 1.0
+        },
+        "FLUX.1-schnell": {
+          "count": 20,
+          "iqr": 0.025637835264205933,
+          "max": 0.9845467209815979,
+          "median": 0.9512006342411041,
+          "min": 0.441577672958374,
+          "thresholdHits": 19,
+          "thresholdRate": 0.95
+        }
+      },
+      "records": 40,
+      "score": {
+        "count": 40,
+        "iqr": 0.023444727063179016,
+        "max": 0.9845467209815979,
+        "median": 0.9486758410930634,
+        "min": 0.441577672958374,
+        "thresholdHits": 39,
+        "thresholdRate": 0.975
+      }
+    }
+  },
+  "thresholdUse": false
+}

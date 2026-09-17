@@ -1,0 +1,1791 @@
+{
+  "cloudflareCount": 40,
+  "cloudflareRecords": [
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "sha256": "9423c6ce91e4b7771a67d5199498199f3c17c46a1691a5fb8be226bf51643408",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_001.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "sha256": "d62f965f400ee82d9ae842f5c9c6f2b53bbf4b0401e65f1da4f0103dd2fb83c1",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_002.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_003",
+      "sha256": "29db1a011037e34c73cd5c5bcf01bb3f23fbba17ef15f3c82fd5cadfad2d35ab",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_003.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "sha256": "40b95e90e1f3c08d4ff1e1da04981ce36074b9aace840783d2d610af2a6ecbeb",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_004.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_005",
+      "sha256": "3d57bb405581044f565b3d52be2433a1dee312ad0967ec20c39c54dbfa9d9bea",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_005.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_011",
+      "sha256": "e24a118b470839220e742f5023c238ebc5d24cca7d5f06f5177dc8dd1c8666c9",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_011.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "sha256": "f466b9d67e9796519c552ff88b3c0039269d9c39e040acdb4bb2c39c55cfb1c5",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_012.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "sha256": "9f44e1aa003bab71bcf59ef85d6c88fbbe2614e34f74406767275a5837dc62f9",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_013.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_014",
+      "sha256": "3c5d17e74b8154592a85b541653dd537e8ddae4203fd2ebfe0dd0fc5939e4246",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_014.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_015",
+      "sha256": "50a7c0db6d65aa1f49f1a4e4698e9c4d53b57661deedc094cb3a8d0f6aaa2b44",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_015.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_021",
+      "sha256": "0e90e7c63aeec49713af700ab2905647acf1032539319871d70f4fb95a5fa788",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_021.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_022",
+      "sha256": "7c38bd8d33fb9fdee8dd7eb1732d47a5e876818113018779388672b092447532",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_022.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_023",
+      "sha256": "c83fb6061e5dd01c348c5081bd27746932bd0f8e2a6d7fc7e5d4bb4829f7e1a1",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_023.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_024",
+      "sha256": "8178c35970bfce3c89e07c115566483960bd655a557ecbc81cf0e89a595ae2c5",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_024.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_025",
+      "sha256": "8f4f064745f34fdb2fd142157e276419332771f41f14d80eef301a408b834497",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_025.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_031",
+      "sha256": "38b8fe26444adcc977f6659eb627df635002989236a271923197aee3066a98b1",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_031.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_032",
+      "sha256": "5f51e74cf1cfb20f44fbbc810d0f392ee431761d69825247cd279c9326293296",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_032.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_033",
+      "sha256": "30301755ed5c51ca308f9e5a40b9a913e4495ffdd4f40351fd13a268f2bb923d",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_033.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_034",
+      "sha256": "b3ab1d5fa26f3729cae00feb389ba023561dc89f62c69d8e46c456c927eee147",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_034.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_035",
+      "sha256": "f48ac585eea216152da8fb9b22f1653c5b09f09c80c526e977c65cf91b348fb7",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_035.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_041",
+      "sha256": "74a9e79382b9f2abcd98806472b67ba997e3abfaa92b372e5a111f90fdff3242",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_041.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_042",
+      "sha256": "c1d6e38656dcd59bf79794425843f324e48e030acdf39676284062777e056749",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_042.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_043",
+      "sha256": "e4c0e692b07e9aa9783fd1906a850e19b35d09b2d74c6bd65b758706ee8b539a",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_043.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_044",
+      "sha256": "66d976900ebf970bc5e1effe2ecf13e402cd73056834ca802d8195f0a0221b0d",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_044.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_045",
+      "sha256": "412d9f9a0756363c1691840b9fb677567ffca5a650b421298f43b770f3957074",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_045.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_051",
+      "sha256": "790b91b081f7bb231a2f04f7d9311664208fdcd74ea3e68a91355fe081881e23",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_051.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_052",
+      "sha256": "5450dfa440ad6cad13041d63751e2281e4862fb372354919fd11ff03f5dc0e35",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_052.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_053",
+      "sha256": "8341e930812452e0a42bd075066cbd355e74043da0ba1d739aa61c8ccec6d710",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_053.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_054",
+      "sha256": "ae32da820821899715fc067df5bf666d58248591f88cbbca8915c15600e8e918",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_054.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_055",
+      "sha256": "975628cf272a9f9a1c619798708964e7ad8ed4bd48447e7d39962b4c51e10feb",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_055.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_061",
+      "sha256": "acac5ccb7105314ef8a3d373c6afe1771128534d0507ff6c19920992c49f3158",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_061.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_062",
+      "sha256": "3a1b2ce32fc9fe43551e87cdbac619da3af555e204636ee888fd411cae23d46a",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_062.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_063",
+      "sha256": "842acdcfcdfb38d884f30335494308ef6b763f789d196aa595990c880d05a7a3",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_063.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_064",
+      "sha256": "02955c612882db0068f94606bd38c3525c0b1d1ce4f0bcaff1c8dbaa79ea9ed4",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_064.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_065",
+      "sha256": "74b8fd84c953ce8f1a2000481818ac31529a811590efb17eda0af3635ea61267",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_065.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_071",
+      "sha256": "0366bf8f7d88ed4c0efa8bd32495ec386289f3387b44983f792aa24ae2990488",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_071.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_072",
+      "sha256": "d35c3e7d63dbec619e74ce851366626d9aec7e938d0f5fd739d514bff9988eeb",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_072.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_073",
+      "sha256": "058fd57531ac8f819632fd4a683c888e5b96b148dcd3f63d9cb3acb794b63d7d",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_073.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_074",
+      "sha256": "84388e71f86fca0a1da2c48ae283bb18ccc7e9ab72dd6df7e19f888829e6fed8",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_074.png",
+      "width": 512
+    },
+    {
+      "bytes": 787271,
+      "format": "PNG",
+      "generatorFamily": "CLOUDFLARE_FLUX.1_SCHNELL",
+      "hasExif": false,
+      "height": 512,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mode": "RGB",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_075",
+      "sha256": "3582baf19a8ea98653598487017b8ea68cbb8d431e2e8de377ddd79e00051690",
+      "source": "CONSUMED_CLOUDFLARE_FLUX1",
+      "sourcePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_075.png",
+      "width": 512
+    }
+  ],
+  "cloudflareSource": "research/wp007f/final-exam-inputs.json plus consumed local diagnostic bytes",
+  "createdBeforeDiagnosticScoring": true,
+  "diagnosticRole": "POST_HOC_PUBLIC_TO_CLOUDFLARE_DOMAIN_SHIFT",
+  "diagnosticRules": {
+    "cloudflarePixelsAlreadyConsumed": true,
+    "convergenceReporting": "Report median, IQR, ECDF separation and per-sample trajectories for every applicable ladder stage. Convergence is descriptive only; no stage is allowed to change SAFE preprocessing or qualification.",
+    "fitUse": false,
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "interpretation": "Compare score distributions and trajectories; do not infer exact provider internals from convergence alone.",
+    "noSafeTuning": true,
+    "safeThreshold": 0.5864923000335693,
+    "thresholdUse": false
+  },
+  "ladder": [
+    {
+      "operation": "score public bytes exactly as retrieved",
+      "stage": "ORIGINAL"
+    },
+    {
+      "operation": "resize public pixels to modal Cloudflare dimensions; fixed high-quality resampler",
+      "stage": "DIMENSION_MATCH_ONLY"
+    },
+    {
+      "operation": "resize public pixels to a representative Cloudflare dimension using the same declared resampler",
+      "stage": "RESIZE_MATCH_ONLY"
+    },
+    {
+      "operation": "encode public pixels in the modal Cloudflare format without other changes",
+      "stage": "FORMAT_MATCH_ONLY"
+    },
+    {
+      "operation": "where JPEG metadata supports it, use the deterministic quality ladder selected from metadata; otherwise NOT_APPLICABLE",
+      "stage": "QUALITY_RECOMPRESSION_MATCH_ONLY"
+    },
+    {
+      "operation": "where JPEG metadata supports it, match the modal subsampling; otherwise NOT_APPLICABLE",
+      "stage": "CHROMA_SUBSAMPLING_MATCH_ONLY"
+    },
+    {
+      "operation": "remove non-pixel metadata and preserve decoded pixels",
+      "stage": "METADATA_STRIP_ONLY"
+    },
+    {
+      "operation": "apply only the above measurable factors; never claim provider-internal equivalence",
+      "stage": "COMBINED_MEASURABLE_APPROXIMATION"
+    }
+  ],
+  "metadataOnlyBeforeScoring": true,
+  "publicCount": 40,
+  "publicFamilies": [
+    "FLUX.1-dev",
+    "FLUX.1-schnell"
+  ],
+  "publicRecords": [
+    {
+      "bytes": 1371677,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__C-MA-014-3.png",
+      "mode": "RGB",
+      "officialRevision": "b86fddd8451579e3b046222c6af2c56e01930fcf",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__C-MA-014-3",
+      "sha256": "11b1babb12e48137b1b98838cb582ece49248aea8702b57eae50fe95812cb202",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/C-MA/C-MA-014-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 775222,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__C-MA-073-1.png",
+      "mode": "RGB",
+      "officialRevision": "978f233793e90571e33812a3f9679119b6b0de31",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__C-MA-073-1",
+      "sha256": "cadc44114a36d4e025fb8aca7a1fc99a5204bf6f22de890e25790570c318f67f",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/C-MA/C-MA-073-1.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1518171,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__C-MI-004-0.png",
+      "mode": "RGB",
+      "officialRevision": "9257437e92e2646f51e3fd9ffdcc30d3853b9472",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__C-MI-004-0",
+      "sha256": "1757821a660e6bbf4362ae472bc41b3d4453076c84315b43b4fa44a99fd76f8f",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/C-MI/C-MI-004-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1297927,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__C-MI-021-2.png",
+      "mode": "RGB",
+      "officialRevision": "9257437e92e2646f51e3fd9ffdcc30d3853b9472",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__C-MI-021-2",
+      "sha256": "90f5226469ae9ab5132c6d38ef4583c38805902fc82928b3a1928648a9fa2eaa",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/C-MI/C-MI-021-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1215098,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__C-MI-061-3.png",
+      "mode": "RGB",
+      "officialRevision": "f5444625fc07173ec8fc2116509806210d7bb65a",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__C-MI-061-3",
+      "sha256": "e7312d9c7e925bd1b14c90105cabd38dec6002f6f8fb33c3931e661fcb37b573",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/C-MI/C-MI-061-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1791931,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__C-MI-066-2.png",
+      "mode": "RGB",
+      "officialRevision": "da49fec2fd8b33bce2498b297c162a8b9ad0c833",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__C-MI-066-2",
+      "sha256": "1e44576638cc466f004f65bb3485b3b436483b77144c525588ca2242d5d898bb",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/C-MI/C-MI-066-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1781427,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__C-MI-076-3.png",
+      "mode": "RGB",
+      "officialRevision": "f985c4047641c60b33b60ca7febdf0086c77ba7c",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__C-MI-076-3",
+      "sha256": "803a5b519e1e0e021f3fd8167194738445b6203eb15c5873fc15d0b8cac38129",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/C-MI/C-MI-076-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1271237,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__C-MR-032-3.png",
+      "mode": "RGB",
+      "officialRevision": "dc4c0881ef3f0385c3d904fbfe84c6bf50ddd490",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__C-MR-032-3",
+      "sha256": "38221a5d09fe6c26c1760b38311881aadaef30c70b61527d83fecb3f4ecc7162",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/C-MR/C-MR-032-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 2093349,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-AR-010-0.png",
+      "mode": "RGB",
+      "officialRevision": "9b1633aee8a1f818574bec25ae751ab9fa73db9c",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-AR-010-0",
+      "sha256": "8f88411dcd0b84b59549af61eeeb2d1e8005c22ba9ee3350a352ff1225d43877",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-AR/R-AR-010-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1137204,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-AR-061-1.png",
+      "mode": "RGB",
+      "officialRevision": "c31984c3465d558db6508cc3b552d2cc8f73a423",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-AR-061-1",
+      "sha256": "5ad9ef3ec4ccd3fe23749cb4c30636bf0c79789054c4713a3bc7489019e8256d",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-AR/R-AR-061-1.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1448075,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-AR-081-1.png",
+      "mode": "RGB",
+      "officialRevision": "c31984c3465d558db6508cc3b552d2cc8f73a423",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-AR-081-1",
+      "sha256": "e04de052b03697826b0797f4e725a250f7123b325da57928d04a4aeca8989837",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-AR/R-AR-081-1.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1147828,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-GR-053-0.png",
+      "mode": "RGB",
+      "officialRevision": "cf48290ce73162a93ce35721fbe55e73716c510f",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-GR-053-0",
+      "sha256": "8ce03fb3aa5d4609e74aea3f498c8419786d7e1557daa37345026e3ac74b105e",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-GR/R-GR-053-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1342845,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-GR-058-0.png",
+      "mode": "RGB",
+      "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-GR-058-0",
+      "sha256": "a5bff461ef2f7a554ff0341b2b23c316e71d30485fb80ff648d06128de2b2e66",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-GR/R-GR-058-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1181534,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-HR-021-3.png",
+      "mode": "RGB",
+      "officialRevision": "4e8203898ebf8ba15c6c66f0a96d7843a74635d0",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-HR-021-3",
+      "sha256": "9c42c9145629cd76ec648df6c2925bb7ba9a70b41d22711cfcb989eb1083a13a",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-HR/R-HR-021-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1418836,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-HR-037-2.png",
+      "mode": "RGB",
+      "officialRevision": "c9e2747c7676d0e0d1b0f8e15e60e87a2caa6ec4",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-HR-037-2",
+      "sha256": "889561f96211b65c1c41bd7aa62e96012ff0524efb3757b4ec44546785895c2d",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-HR/R-HR-037-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 987030,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-LR-041-0.png",
+      "mode": "RGB",
+      "officialRevision": "da3768c8b8b2f05caf743deead7d87dcf6148d28",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-LR-041-0",
+      "sha256": "371b311ec038bd719a16342feb6949c54b5160707d07b67414de001f359dfcbb",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-LR/R-LR-041-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 836538,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-LR-061-3.png",
+      "mode": "RGB",
+      "officialRevision": "45b81717c76e237446e66453845324574ee4a9ab",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-LR-061-3",
+      "sha256": "0b2bac16f75b05eb626c12d328b30b5373b371a0c3f182aaceb85713dd85b4dc",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-LR/R-LR-061-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1268817,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-RR-016-1.png",
+      "mode": "RGB",
+      "officialRevision": "45b81717c76e237446e66453845324574ee4a9ab",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-RR-016-1",
+      "sha256": "429b99e5a1169716e1d2c2868fa34007db00a57e7eb07d48d43aa7aec5dffb34",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-RR/R-RR-016-1.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1091255,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-RR-023-0.png",
+      "mode": "RGB",
+      "officialRevision": "b06c6540bc9d361be9a5e27819369d4977fbb894",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-RR-023-0",
+      "sha256": "249b9fb35a6589a7edb8555c89260f94f166dd3bfc2de5820d7bf5e4148ed4ba",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-RR/R-RR-023-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1307498,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-dev",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-dev__R-RR-028-3.png",
+      "mode": "RGB",
+      "officialRevision": "45b81717c76e237446e66453845324574ee4a9ab",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-dev__R-RR-028-3",
+      "sha256": "5555502f7c5e0fd1d1cd2b19ffcda4df44a3990939cf59edf42ae9e617c57eb5",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-dev/R-RR/R-RR-028-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1539594,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__C-MA-011-3.png",
+      "mode": "RGB",
+      "officialRevision": "1e6bdc1028ff9285c7a7fabfe0105a325a690e05",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__C-MA-011-3",
+      "sha256": "560584cf51cbfa50a59350f331e4d1353cb18737410fb340644471c7f8612134",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/C-MA/C-MA-011-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 950949,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__C-MA-088-2.png",
+      "mode": "RGB",
+      "officialRevision": "1e6bdc1028ff9285c7a7fabfe0105a325a690e05",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__C-MA-088-2",
+      "sha256": "c0ecadb402f224cb7969acb99b9d17aa3ae0c8d69fdfb8e7ba8a242f04535767",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/C-MA/C-MA-088-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 2068222,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__C-MI-019-1.png",
+      "mode": "RGB",
+      "officialRevision": "b07a7ecb0995fb9372b91701ccac664bcdf69874",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__C-MI-019-1",
+      "sha256": "dcbeceda72486f715451b039488422e89101d7c9c8f5b45e32e89676bfd25d88",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/C-MI/C-MI-019-1.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1711206,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__C-MI-025-2.png",
+      "mode": "RGB",
+      "officialRevision": "3a734a71d22273eb520bfef3bb15dfc9be3a9be4",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__C-MI-025-2",
+      "sha256": "56df135c6dcfe96fa257db273b731f33ec3852521414712978426fdee64209d3",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/C-MI/C-MI-025-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1355788,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__C-MI-048-2.png",
+      "mode": "RGB",
+      "officialRevision": "b07a7ecb0995fb9372b91701ccac664bcdf69874",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__C-MI-048-2",
+      "sha256": "805deac4dd3bcc95784b91545c42c00bdb4ce702bcb0b2b19e344988280f0dfc",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/C-MI/C-MI-048-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1923585,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__C-MI-076-2.png",
+      "mode": "RGB",
+      "officialRevision": "b07a7ecb0995fb9372b91701ccac664bcdf69874",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__C-MI-076-2",
+      "sha256": "9e4af20abf6f83eff2ed5c630a1bb06b7d84db5232e2144235b6bb857b2f0014",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/C-MI/C-MI-076-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1712829,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__C-TR-054-2.png",
+      "mode": "RGB",
+      "officialRevision": "b5f18eabac099bde7d650aa1004a6f656423dc98",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__C-TR-054-2",
+      "sha256": "31660835395598b6719257027bb2df90ed0fd0dc5f038ab6d843d1069458a8e8",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/C-TR/C-TR-054-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 722424,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-AR-011-3.png",
+      "mode": "RGB",
+      "officialRevision": "30aa0941e083df3f85763d461284b00f477ef0d2",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-AR-011-3",
+      "sha256": "723af51b4c9b78bbb688ff67fe93273728548b541463508c31fcad4add098ace",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-AR/R-AR-011-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 992966,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-BR-021-0.png",
+      "mode": "RGB",
+      "officialRevision": "654c6a63bacdee6dd2fb41dabade50ac633648e6",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-BR-021-0",
+      "sha256": "f3f78c635865e3cad31b2eee501230613298c6e08fc79f425c6d15efa34f7ddf",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-BR/R-BR-021-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1586180,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-BR-044-3.png",
+      "mode": "RGB",
+      "officialRevision": "dcf61378d26f8a3edb8fa0362da0526915f400f8",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-BR-044-3",
+      "sha256": "233447fe935569538655ea99cec3afb6bab75d5fa1e515d51935771118434268",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-BR/R-BR-044-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1529322,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-CR-022-1.png",
+      "mode": "RGB",
+      "officialRevision": "df580c02ffd00acefa80ece05a9f3c1a795cf0d2",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-CR-022-1",
+      "sha256": "341b99bef1e078384851f402c1e949a4105a5091307cfc82a94d1b54c416b1c2",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-CR/R-CR-022-1.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1268553,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-CR-073-2.png",
+      "mode": "RGB",
+      "officialRevision": "0448a951f876bce5d6baf24e0b649c6364ee7aa9",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-CR-073-2",
+      "sha256": "ae877385203c5ff3acd6b54d6c3e73cdbf0c91d65e168b8ba1042efdd1fc9a01",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-CR/R-CR-073-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1874491,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-HR-007-3.png",
+      "mode": "RGB",
+      "officialRevision": "37b4232934a5b9587aa1405f7a8e0c9ee360538d",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-HR-007-3",
+      "sha256": "775e6f569d9285f6920cff587586758287dc5e68b9946ec7833d069bc8bcedb3",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-HR/R-HR-007-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 2169156,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-HR-023-0.png",
+      "mode": "RGB",
+      "officialRevision": "cd27b5d587a09a072db5d2c92b06fe8801992036",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-HR-023-0",
+      "sha256": "9ccd4a7437f4fad09dee1647d3ffceb51c95bd7e604abc66692aba81dbd4dd56",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-HR/R-HR-023-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1045804,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-HR-057-1.png",
+      "mode": "RGB",
+      "officialRevision": "37b4232934a5b9587aa1405f7a8e0c9ee360538d",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-HR-057-1",
+      "sha256": "7d9f334b88dcaf0ea1e2cc6d5a35837915d953afb94030c0d6f346a48513a395",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-HR/R-HR-057-1.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1419545,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-HR-071-2.png",
+      "mode": "RGB",
+      "officialRevision": "cd27b5d587a09a072db5d2c92b06fe8801992036",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-HR-071-2",
+      "sha256": "453c65f817e8fefa7c793de981af4dea7c5b90471fad2449ae45e3599f6e7aed",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-HR/R-HR-071-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 991350,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-HR-089-3.png",
+      "mode": "RGB",
+      "officialRevision": "37b4232934a5b9587aa1405f7a8e0c9ee360538d",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-HR-089-3",
+      "sha256": "36ca03fd03ab22032112752f956278972c5c9953681de6de153ac4f2f77e2181",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-HR/R-HR-089-3.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1127642,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-PR-012-2.png",
+      "mode": "RGB",
+      "officialRevision": "bdb519d366b084a3113ee38eb2ef1252baa7868d",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-PR-012-2",
+      "sha256": "69b2db2f18c4607c87056e431f135e2402b5e3787bad3983391b27e2fc37037b",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-PR/R-PR-012-2.png",
+      "width": 1024
+    },
+    {
+      "bytes": 1287262,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-RR-053-0.png",
+      "mode": "RGB",
+      "officialRevision": "ef899db56f151ea54b46386f86c57f7397117411",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-RR-053-0",
+      "sha256": "4309b83790b9af0413b0ee4e7adc9451863c2020e4afb8271ccdf1a2f989c4b7",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-RR/R-RR-053-0.png",
+      "width": 1024
+    },
+    {
+      "bytes": 953616,
+      "format": "PNG",
+      "generatorFamily": "FLUX.1-schnell",
+      "hasExif": false,
+      "height": 1024,
+      "iccProfileBytes": 0,
+      "infoKeys": [],
+      "mediaRelativePath": "FLUX.1-schnell__R-RR-071-3.png",
+      "mode": "RGB",
+      "officialRevision": "e74dffbfd7facb573baeabf8a6e71d7330ddc906",
+      "quantization": {
+        "present": false,
+        "tables": {}
+      },
+      "role": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+      "sampleId": "FLUX.1-schnell__R-RR-071-3",
+      "sha256": "56a44644bcfe402d48ef8be11cfd8a314bdb54106f2e64d723909405ee05d64e",
+      "source": "PUBLIC_T2I_COREBENCH",
+      "sourcePath": "data/FLUX.1-schnell/R-RR/R-RR-071-3.png",
+      "width": 1024
+    }
+  ],
+  "publicSourceFreeze": "research/wp007g-r1/modern-generator-data-freeze.json",
+  "safeCheckpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+  "safeUpstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+  "schemaVersion": "lythaus-wp007h-flux1-diagnostic-plan-v1",
+  "summary": {
+    "cloudflare": {
+      "byteMax": 787271,
+      "byteMedian": 787271,
+      "byteMin": 787271,
+      "count": 40,
+      "dimensions": {
+        "512x512": 40
+      },
+      "exifCount": 0,
+      "formats": {
+        "PNG": 40
+      },
+      "iccCount": 0,
+      "modes": {
+        "RGB": 40
+      },
+      "quantizedCount": 0
+    },
+    "public": {
+      "byteMax": 2169156,
+      "byteMedian": 1307498,
+      "byteMin": 722424,
+      "count": 40,
+      "dimensions": {
+        "1024x1024": 40
+      },
+      "exifCount": 0,
+      "formats": {
+        "PNG": 40
+      },
+      "iccCount": 0,
+      "modes": {
+        "RGB": 40
+      },
+      "quantizedCount": 0
+    }
+  },
+  "targetCharacteristics": {
+    "dimensions": {
+      "height": 512,
+      "width": 512
+    },
+    "format": "PNG",
+    "targetSelectionRule": "modal measurable Cloudflare characteristic; no SAFE scores used"
+  }
+}

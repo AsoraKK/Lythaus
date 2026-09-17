@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "lythaus-wp007h-safe-specialist-profile-v1",
+  "detectorId": "SAFE",
+  "role": "PRIMARY_EF3_SPECIALIST_CANDIDATE",
+  "qualificationDisposition": "SAFE_SPECIALIST_QUALIFIED_WITH_LIMITED_APPLICABILITY",
+  "qualificationScope": "Frozen SAFE threshold qualified on eight independent modern generator families and bounded original-input negatives; this is a research disposition, not production authority.",
+  "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+  "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+  "preprocessingVersion": "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1",
+  "threshold": 0.5864923000335693,
+  "thresholdProvenance": "WP007G-R1 NEGATIVE_CALIBRATION_G; frozen before WP007H membership scoring",
+  "inputApplicability": {
+    "high": ["ORIGINAL_OR_HIGH_QUALITY", "METADATA_STRIP"],
+    "moderate": ["RESAMPLED", "MODERATELY_TRANSFORMED"],
+    "low": ["HEAVILY_RECOMPRESSED", "SCREENSHOT_LIKELY"],
+    "unsupported": ["UNKNOWN_TRANSFORMATION_STATE"],
+    "observedLimitation": "The predeclared generic MODERATE class did not predict JPEG95/JPEG85 collapse; future JPEG-specific applicability rules require a new independently frozen experiment. No post-hoc rule change is made in WP007H."
+  },
+  "qualification": {
+    "synthetic": "155/160 at frozen threshold; Wilson 95% [0.9289397087143583, 0.9865794833123556]",
+    "negative": "1/112; Wilson 95% [0.001577854703292133, 0.048848468308884896]",
+    "cameraNegative": "0/87; Wilson 95% [0, 0.04228750694412034]",
+    "digitalNegative": "1/25; Wilson 95% [0.007096233501987265, 0.19544063736193734]",
+    "rocAuc": 0.993359375,
+    "prAuc": 0.9958706409454495,
+    "fprTargetStatus": "FPR_TARGET_NOT_YET_DEMONSTRATED",
+    "generatorFamilyCount": 8
+  },
+  "transformationStatus": "FRAGILE",
+  "domainShiftStatus": "PUBLIC_TO_CLOUDFLARE_FLUX1_GAP_NOT_EXPLAINED_BY_MEASURED_FORMAT_OR_METADATA; 512-DIMENSION MATCH MOVES SCORES DOWN BUT DOES NOT REACH CLOUDFLARE DISTRIBUTION",
+  "rightsStatus": "RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED",
+  "productionAuthorization": "NO",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "supporterPolicy": "SPAI_C512, RINE and UFD remain shadow-only; no learned fusion or supporter output changes this profile."
+}

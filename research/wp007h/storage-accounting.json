@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "lythaus-wp007h-storage-accounting-v1",
+  "selectedModernCorpusBytesRetained": 223312322,
+  "hWorktreeAndResearchArtifactsBytes": 44220797,
+  "regenerableDerivativeBytesEligibleForCleanup": 2366809117,
+  "bytesDeleted": 0,
+  "bytesRetainedOutsideGit": 2590121439,
+  "cleanupStatus": "DERIVATIVE_MEDIA_RETAINED_OUTSIDE_GIT; destructive cleanup command was rejected by the local execution policy",
+  "retainedPaths": [
+    "selected WP007H modern corpus",
+    "regenerable SAFE transformation descendants",
+    "regenerable SPAI C512 inputs",
+    "post-hoc FLUX.1 diagnostic derivatives"
+  ],
+  "sealedReserveStatus": "FLUX.2 preserved and untouched"
+}

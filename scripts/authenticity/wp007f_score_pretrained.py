@@ -71,6 +71,12 @@ def prepared_tensors(records: list[dict], args: argparse.Namespace, preprocess) 
             "sampleId": record["sampleId"],
             "sourceFamilyId": record["sourceFamilyId"],
             "role": record["role"],
+            "rowKey": record.get("rowKey"),
+            "baseRowKey": record.get("baseRowKey"),
+            "transform": record.get("transform"),
+            "transformation": record.get("transformation"),
+            "inputRegime": record.get("inputRegime"),
+            "generatorFamily": record.get("generatorFamily"),
             "sourceSubtype": record.get("sourceSubtype"),
             "cameraDeviceFamily": record.get("cameraDeviceFamily"),
             "decodedPixelSha256": hashlib.sha256(np.asarray(image).tobytes()).hexdigest(),
@@ -95,11 +101,15 @@ def run_ufd(records: list[dict], args: argparse.Namespace) -> dict:
     batch, metadata = prepared_tensors(records, args, preprocess)
     output: list[dict] = []
     with torch.inference_mode():
-        for index, item in enumerate(metadata):
+        for start in range(0, len(metadata), args.batch_size):
+            stop = min(len(metadata), start + args.batch_size)
             inference_started = time.perf_counter()
-            feature = clip_model.encode_image(batch[index:index + 1]).float()
-            score = torch.sigmoid(head(feature)).reshape(-1)[0].item()
-            output.append({**item, "rawScore": float(score), "runtimeSeconds": round(time.perf_counter() - inference_started, 6)})
+            features = clip_model.encode_image(batch[start:stop]).float()
+            scores = torch.sigmoid(head(features)).reshape(-1).tolist()
+            elapsed = time.perf_counter() - inference_started
+            per_item = elapsed / max(1, stop - start)
+            for item, score in zip(metadata[start:stop], scores):
+                output.append({**item, "rawScore": float(score), "runtimeSeconds": round(per_item, 6), "batchRuntimeSeconds": round(elapsed, 6)})
     result = {
         "detectorId": "UNIVERSAL_FAKE_DETECT",
         "displayName": "UniversalFakeDetect",
@@ -142,11 +152,15 @@ def run_rine(records: list[dict], args: argparse.Namespace) -> dict:
     batch, metadata = prepared_tensors(records, args, model.preprocess)
     output: list[dict] = []
     with torch.inference_mode():
-        for index, item in enumerate(metadata):
+        for start in range(0, len(metadata), args.batch_size):
+            stop = min(len(metadata), start + args.batch_size)
             inference_started = time.perf_counter()
-            logits, _ = model(batch[index:index + 1])
-            score = torch.sigmoid(logits).reshape(-1)[0].item()
-            output.append({**item, "rawScore": float(score), "runtimeSeconds": round(time.perf_counter() - inference_started, 6)})
+            logits, _ = model(batch[start:stop])
+            scores = torch.sigmoid(logits).reshape(-1).tolist()
+            elapsed = time.perf_counter() - inference_started
+            per_item = elapsed / max(1, stop - start)
+            for item, score in zip(metadata[start:stop], scores):
+                output.append({**item, "rawScore": float(score), "runtimeSeconds": round(per_item, 6), "batchRuntimeSeconds": round(elapsed, 6)})
     result = {
         "detectorId": "RINE",
         "displayName": "RINE",
@@ -177,13 +191,20 @@ def main() -> None:
     parser.add_argument("--threads", type=int, default=8)
     parser.add_argument("--detector", choices=["UNIVERSAL_FAKE_DETECT", "RINE"], action="append")
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--records-json", type=Path, default=None)
+    parser.add_argument("--role", action="append", dest="roles_filter")
     parser.add_argument("--final-exam", action="store_true")
     args = parser.parse_args()
     torch.set_num_threads(args.threads)
     torch.set_num_interop_threads(1)
+    if args.batch_size < 1:
+        raise ValueError("BATCH_SIZE_MUST_BE_POSITIVE")
     roles = json.loads(args.roles.read_text(encoding="utf-8"))
     records = json.loads(args.records_json.read_text(encoding="utf-8"))["records"] if args.records_json else select_records(roles, args.stage)
+    if args.roles_filter:
+        allowed = set(args.roles_filter)
+        records = [record for record in records if record.get("role") in allowed]
     if args.limit is not None:
         if args.limit < 1:
             raise ValueError("LIMIT_MUST_BE_POSITIVE")

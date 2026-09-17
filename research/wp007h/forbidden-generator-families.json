@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "lythaus-wp007h-forbidden-generator-families-v1",
+  "purpose": "Metadata-only fail-closed denylist for FLUX.2 public families and provider reserve.",
+  "parentSha": "fc9c1a65528a39da008fed12c1a601e32c226e09",
+  "exactFamilyNames": ["FLUX.2-dev", "FLUX.2-klein-4B", "FLUX.2-klein-9B"],
+  "caseInsensitivePatterns": ["flux\\.2", "flux2", "flux-2"],
+  "action": "Exclude before any LFS object download; metadata/path enumeration only.",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

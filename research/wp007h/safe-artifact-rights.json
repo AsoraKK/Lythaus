@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "lythaus-wp007h-safe-artifact-rights-v1",
+  "auditStatus": "RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED",
+  "auditedAt": "2026-09-17",
+  "detectorId": "SAFE",
+  "officialRepository": "https://github.com/Ouxiang-Li/SAFE",
+  "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+  "repositoryLicense": "Apache-2.0",
+  "repositoryLicenseEvidence": "The pinned upstream repository contains LICENSE; exact bytes are hashed below.",
+  "checkpoint": {
+    "relativePath": "checkpoint/checkpoint-best.pth",
+    "bytes": 5840638,
+    "sha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "source": "Official SAFE repository checkpoint at pinned upstream revision",
+    "checkpointSpecificLicense": "Not separately stated in the repository materials inspected; do not infer commercial redistribution or deployment rights from code license.",
+    "redistribution": "NOT_ASSUMED"
+  },
+  "sourceFileHashes": {
+    "LICENSE": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+    "README.md": "7f385dc6645a81835bee5b78cf57648836213311306cdb03508bbe4ccfec46a1",
+    "main_finetune.py": "9ae7c7c09c10fd82c90de0a5d44a9a3de3ad52dc4559166e4a6128b48a1626f5",
+    "engine_finetune.py": "a88a0cad96809d56d0c9f37ae9571b36fe8cfed962c8a99e16d44e7a6875434a",
+    "models/resnet.py": "57eb62f43283daffc1828bfa8b01a783c3f0b14e11cda09994fd7c22a531f3ac"
+  },
+  "foundationDependencies": [
+    {"name": "PyTorch", "version": "2.2.1 upstream requirement; local execution used the existing CPU-only environment", "license": "BSD-3-Clause", "status": "dependency-rights-not-a-checkpoint-license"},
+    {"name": "torchvision", "version": "0.17.1 upstream requirement", "license": "BSD-3-Clause", "status": "dependency-rights-not-a-checkpoint-license"},
+    {"name": "timm", "version": "0.6.12", "license": "Apache-2.0", "status": "dependency"},
+    {"name": "kornia", "version": "0.7.2", "license": "Apache-2.0", "status": "dependency"},
+    {"name": "pytorch_wavelets", "version": "unversioned in upstream requirements", "license": "MIT", "status": "dependency-license-to-recheck-if-redistributed"}
+  ],
+  "trainingDataLineage": "SAFE repository documents training/evaluation against multiple synthetic-image benchmarks including T2I-CoReBench; no claim is made that every source-output right is commercial.",
+  "researchEvaluation": "ELIGIBLE for bounded private local scientific evaluation under the pinned code/checkpoint provenance.",
+  "internalDeployment": "REVIEW_REQUIRED",
+  "commercialProduct": "NOT_CLEARED",
+  "derivedOutputAndDistillation": "No distillation or derivative checkpoint is created by WP007H.",
+  "attribution": "Retain Apache-2.0 attribution and upstream citation in research report.",
+  "decision": "Proceed with research qualification only; do not authorize production or live alpha deployment."
+}

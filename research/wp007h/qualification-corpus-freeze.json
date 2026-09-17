@@ -1,0 +1,3619 @@
+{
+  "flux1Role": "NOT_IN_H_QUALIFICATION_MEMBERSHIP",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "openedReserve": false,
+  "parentSha": "fc9c1a65528a39da008fed12c1a601e32c226e09",
+  "rightsClassification": "RESEARCH_ONLY_UNLESS_SEPARATE_PER_FAMILY_OUTPUT_RIGHTS_ARE_ESTABLISHED",
+  "roles": {
+    "FUTURE_RESERVE": [
+      {
+        "bytes": 1044955,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "2671a75e3129d0545a61fc92ddf8def6d926bf174c3de1bc632ce9e9a463a2c0",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-HR/R-HR-085-0.png",
+        "relativePath": "R-HR/R-HR-085-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0011604ff363f1bb34e652a198d820e71a2e155407f4e274d8f656e707df20ed"
+      },
+      {
+        "bytes": 1242744,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "7e0e156ae3c578dcdef99a71b64421aa17157f47677247c578571bc5d0644b2f",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-BR/R-BR-018-3.png",
+        "relativePath": "R-BR/R-BR-018-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0014ec1a862c34d1ddae50dd6522e61fd5ba690e353aeb24b98e1078807ef1a3"
+      },
+      {
+        "bytes": 1251915,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "18e128f837956e6eefb33c445e56f3e175ebe136d75d39bb5aa236e037b600ac",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/C-MA/C-MA-010-0.png",
+        "relativePath": "C-MA/C-MA-010-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "001db18b8f88487245fd796df00816efa007ba4c4450e3b623cde7ee1ed596ed"
+      },
+      {
+        "bytes": 1209623,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "38a0dfcbf6e6282c869f00c66996939845163a99256c42d49d9c67b77f9f5d41",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-BR/R-BR-073-2.png",
+        "relativePath": "R-BR/R-BR-073-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00518a2cdd689b19573f80a8be06b4175086b190436e6a019ff0d6f524fe23d5"
+      },
+      {
+        "bytes": 440742,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "cc41be780687e6dccdab24caf2cb3a55bc177e477e778583569f8fd9c02b0b0a",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-LR/R-LR-071-1.png",
+        "relativePath": "R-LR/R-LR-071-1.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "006e4312dc25378348fd47f2d2eb70c5ac52526e347f08ccdb768ac27573055e"
+      },
+      {
+        "bytes": 532741,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "f1e47ec820d6c4e9f8ab32a575807231a135af17ea399b725f577c3029e7da9c",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-AR/R-AR-041-0.png",
+        "relativePath": "R-AR/R-AR-041-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "007589cb42e33d9c8ed8b6f4ad49f22357d3bdc570cc9303b445cdf589712a89"
+      },
+      {
+        "bytes": 1217571,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "dbc31b0f4aebf5c194988ae32a817b2f00b4c14415a5ed8979832705a6806782",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/C-MI/C-MI-055-3.png",
+        "relativePath": "C-MI/C-MI-055-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "008cb23a1c0b65a35660bc6016cc2d1626db8c638765e38284b4be24ae0f689d"
+      },
+      {
+        "bytes": 681328,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "fb4219cd9c54a0d8c298c698634c3e275fa885ec82b760c7c33a186bf3bd9efb",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-LR/R-LR-067-2.png",
+        "relativePath": "R-LR/R-LR-067-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "008cd93cbe00cc50f5e40cbeaf4fec27560cba7b09fa3d5b7b30bdec29b664d6"
+      },
+      {
+        "bytes": 1322795,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "e575dca450f0c475b9de259b055c37d17e3ad20294311f5979277076a6838220",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-CR/R-CR-046-0.png",
+        "relativePath": "R-CR/R-CR-046-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00929e64fdd980824a92a4c4f7cbf52d438db978784e062ea3c167581e548855"
+      },
+      {
+        "bytes": 1430297,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "2e72e4095dd266d741bcd489b07bc2753e0b2b1b0b5b8f00734b9b5cde3e1b17",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-BR/R-BR-050-1.png",
+        "relativePath": "R-BR/R-BR-050-1.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0093317c19c88328b56285de9fb356ff82ae93b20cbf501e46998f5444d0afc7"
+      },
+      {
+        "bytes": 777345,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "6a530d7ff7af538642e5a1702368e17f8c7d7f6c166c56689324b280098c9ac3",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/C-TR/C-TR-077-1.png",
+        "relativePath": "C-TR/C-TR-077-1.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0094982c0d0a7eb19ec1169032df22a8d51c8d8fc309dc11735bb1047f3102ed"
+      },
+      {
+        "bytes": 1564282,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "564ff9ff8fba11c0d164fa9e1c302c1fa64a35332e1aeba221880c8c3cdafe51",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-AR/R-AR-070-2.png",
+        "relativePath": "R-AR/R-AR-070-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0095abf79ed99f5cc545c4fd4669017828e4e491c5ad34ab01292e255c75d408"
+      },
+      {
+        "bytes": 1231098,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "b20f6a96ee52c468e9e7fd6f33ce17ff6a89868a3deb6ecad472b09918cf277f",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-GR/R-GR-013-0.png",
+        "relativePath": "R-GR/R-GR-013-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0097a47c0d4decaebcf62c33a4a30306492194424242b8676218845429c3f54f"
+      },
+      {
+        "bytes": 2362591,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "23b0cf760d8f3b4d4a6ccfd13c54abd5ba3945019621dae58e128ede3b706d56",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-CR/R-CR-054-2.png",
+        "relativePath": "R-CR/R-CR-054-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "009822a31282f4eb46b2ee5a68cbdeb39838088f09b3048c7be13b469e25127a"
+      },
+      {
+        "bytes": 818861,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "58f596ac1841a35e32056bada14ea919419e4f4811e49c9b82a511922e60887f",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/C-MA/C-MA-061-0.png",
+        "relativePath": "C-MA/C-MA-061-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "009a3188782f9ade622374332ce52d50ec19cb8a5a25295f70228012504b7c8c"
+      },
+      {
+        "bytes": 2209345,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "4b1e7f8e235c99728684f6a738eb6df3c398eb80c834f30b636f5300e95bf779",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/C-MI/C-MI-084-0.png",
+        "relativePath": "C-MI/C-MI-084-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00a1a8146e86fca35503a0fb5a475342a48b6a1615f2d286dfff3fa81e3ae5dc"
+      },
+      {
+        "bytes": 376070,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "40f23d21f9d425dfa1da7006a8948db24fdb59fa39b56ad042dfa585e39fff4c",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/C-TR/C-TR-052-2.png",
+        "relativePath": "C-TR/C-TR-052-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00cb4ba7d620300543b136c797162fa3eca6832f9626d0d779c53ab8e1ab6d70"
+      },
+      {
+        "bytes": 1654952,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "d749813fa7ecb0a0004ab2cb5177af0fefc13017fee7d1eb2e34b8db806a66da",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/R-PR/R-PR-067-2.png",
+        "relativePath": "R-PR/R-PR-067-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00cfb19c21394e93ea4f25634d4a710392d7c35a097e43903107370cd8f9ecd6"
+      },
+      {
+        "bytes": 1459589,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "f779d5ed0b2c6928e49357cadf59283d1eb6c1e108dc55afd63107f9434269b9",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/C-MA/C-MA-012-2.png",
+        "relativePath": "C-MA/C-MA-012-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00e52eda73613b6e6e7069a8ed14f4a2c28de1291619f491f7ae6c6662c9f317"
+      },
+      {
+        "bytes": 1429846,
+        "generatorFamily": "SD-3-Medium",
+        "lfsSha256": "1589beca973eab17333a21c53dcb456dbb6d1b7e3c010bf2a19affcb1153bb62",
+        "officialRevision": "c32e3deb9830e57e8050ff22d61b393e73ccb114",
+        "path": "data/SD-3-Medium/C-TR/C-TR-058-0.png",
+        "relativePath": "C-TR/C-TR-058-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00f300d551d896318d8aabfc1e90d7b59bdf2f02607626a160c402e14b9c467e"
+      },
+      {
+        "bytes": 5361206,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "80b736ee7f8c79a3410b677bc5ee20a4740c007ffe38fdf682618a3cf37019ba",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/C-MA/C-MA-082-0.png",
+        "relativePath": "C-MA/C-MA-082-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "002d836d1f48081fd887e21ff7d03ccc95f2660d86f6ea36afc290e37914c51d"
+      },
+      {
+        "bytes": 5171989,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "a4e68309fc6a7570781395c8c60e30082f77a3939bf31489c31682fec250db79",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-PR/R-PR-018-0.png",
+        "relativePath": "R-PR/R-PR-018-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "003aaa5321d95e0dd0ff88eb5ffb9aa7bf62adb6ac2197b0f77a1bdfe81327a1"
+      },
+      {
+        "bytes": 4604955,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "bd026208da7ebf97cb6bd7b03d4813b4aad23a7461bcc014142b423308a31bea",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-CR/R-CR-081-1.png",
+        "relativePath": "R-CR/R-CR-081-1.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "003c83ff11ae4af97734548c14e541dc1395ebc8f63d7646720a01cab0239acb"
+      },
+      {
+        "bytes": 4887852,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "bb969356b47d63b2d787a46d296677ce4583fc5248dd35e6baf70b45f31179c8",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/C-MA/C-MA-005-1.png",
+        "relativePath": "C-MA/C-MA-005-1.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00496aaabbb28cda729259b35daf2ee28e054dbf0ac9690e5e1f44aaaf9a4573"
+      },
+      {
+        "bytes": 4505641,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "a4c8301409dcf2522ab7f5c6872db39378c489b3540e322f3185a9ec4c218007",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-AR/R-AR-004-3.png",
+        "relativePath": "R-AR/R-AR-004-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0065575509ea88a0f3561cf7666d50c4ed24549888393ef9dda67fec35b270de"
+      },
+      {
+        "bytes": 4883727,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "0c7716707908418cb2b0a59b9ab5ff8631004b4162cecaab043178b2379a57e8",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-GR/R-GR-019-3.png",
+        "relativePath": "R-GR/R-GR-019-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0070a57194adac50388f94dc7b98b70277fa57f3344f2d6c68504a3cbe15d4ce"
+      },
+      {
+        "bytes": 4276667,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "5f4a682c7594cb3654dd98c15c43fba82a7f8185ec53dd8df75b2b12e6fda45a",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-HR/R-HR-082-2.png",
+        "relativePath": "R-HR/R-HR-082-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00775358d296a3717a0b4cf5b3b33ab81f06bdd288bce76cef901e22b71454b0"
+      },
+      {
+        "bytes": 2693606,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "c18a4593183207744e20ed294c0581da16ef9686f6ff188f93059ff0fd804860",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/C-TR/C-TR-020-0.png",
+        "relativePath": "C-TR/C-TR-020-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00793f435d6fb266e82d2c89b04215dda21ca988bdde4e9e77022488de3ab7d1"
+      },
+      {
+        "bytes": 4591674,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "c4f8f87d54236d44f9eaeb2eb3d29511d964941016e3c7ce45b487257b72510d",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-BR/R-BR-079-2.png",
+        "relativePath": "R-BR/R-BR-079-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "0091feb98ea76c9bc0eaa8ba9e5d1a98b459e0af349abb918d82c8bf2e6133f4"
+      },
+      {
+        "bytes": 5070482,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "f21703e2988f5b17f00946c83bd06bb2a3651ffb86899a290d4b27588d01ba8d",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/C-MA/C-MA-013-3.png",
+        "relativePath": "C-MA/C-MA-013-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00acbe0aae6b6b39c9d9d081e453a1e3ab77e221eab02fb446a49053da694a67"
+      },
+      {
+        "bytes": 5052395,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "20d3ae1e23a8968c5090d75db6444f3e92823a4a965f0869043aa058705566b5",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/C-MR/C-MR-004-3.png",
+        "relativePath": "C-MR/C-MR-004-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00b192c632f89be519c88a247974b02a830a7625c30b1ce0b4c28c1e9547600e"
+      },
+      {
+        "bytes": 5272957,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "3677f7e7e9d78226d106503787af49dbf512d95eaaf0d258e47a7d9727c398b6",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/C-TR/C-TR-025-2.png",
+        "relativePath": "C-TR/C-TR-025-2.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00b35ddd02ed0f83de3a098f70fdbe6457bae1cbc090e86c03b160cf6a920104"
+      },
+      {
+        "bytes": 3939256,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "f551982d85219a2042217737083331c13623d26eebea8d11d9a1b6384bdb933c",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/C-TR/C-TR-017-3.png",
+        "relativePath": "C-TR/C-TR-017-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00c01afa9e79fb0c06811813dcc7c46fc74643f1ec1d5691271bc0a264d6a1ce"
+      },
+      {
+        "bytes": 4583729,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "46f491f7bf003699f3bb3e9f7862ac96ca19bd43406a43da33d4cf2335e2c9fc",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-PR/R-PR-074-3.png",
+        "relativePath": "R-PR/R-PR-074-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00ca62bd9a8b49d80e42b207db0b5ae00383b7f3800564e97c3d7fe1229aa70e"
+      },
+      {
+        "bytes": 4900083,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "37a0eb28086ebdb9abc56c5b3efb82e1a0b3d1148ba98716717171619a1091ce",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-CR/R-CR-024-0.png",
+        "relativePath": "R-CR/R-CR-024-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00d4e51c7c2607f0522ea6f2534b52554bf23482ad14755db645bde08d221849"
+      },
+      {
+        "bytes": 4459176,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "dbc0187319baa8110710c4c49ab8fc36ef640a1227ac8841f6d5ab0b37b4729d",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-LR/R-LR-018-1.png",
+        "relativePath": "R-LR/R-LR-018-1.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00d94c709c9afd8f031fc81314ffc838252159a8e57a314823e307b4c22fdb1a"
+      },
+      {
+        "bytes": 4491866,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "66f38fa7c25797ae9e07db4279d371deb686403e53d3d8a2e00beb80e1d62387",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-HR/R-HR-046-0.png",
+        "relativePath": "R-HR/R-HR-046-0.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00df905516887623bd59fd5f6fadc276ed501c27c9de67fe9ed3ca083e74a526"
+      },
+      {
+        "bytes": 5145646,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "9c37e9d228ed7af7d64008b1eb1fffb6e11faeefa864c0948131a2415cd7b24a",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-AR/R-AR-090-3.png",
+        "relativePath": "R-AR/R-AR-090-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "00ec4d28bab5dc664673dab9076902ff46588974fd5287bd3184d6dc8c27e04f"
+      },
+      {
+        "bytes": 4369814,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "bad2b8dfa6d002b518d35714bbbc1b25d3d7fdd0f89cb4e2edf76f72dd2c62a0",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-RR/R-RR-020-1.png",
+        "relativePath": "R-RR/R-RR-020-1.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "011985e1cd463a2e294ef86840556c4fb974d03149ef98cf58a4859fc2723384"
+      },
+      {
+        "bytes": 5261402,
+        "generatorFamily": "Seedream-4.5",
+        "lfsSha256": "c5a5dec252731bdc0e6b4a668830066c14f5f72e3346008b51d0c764b2a78e11",
+        "officialRevision": "6ce1a785717ee9a3e8b3d0ca1aca1bcba771bf9a",
+        "path": "data/Seedream-4.5/R-HR/R-HR-077-3.png",
+        "relativePath": "R-HR/R-HR-077-3.png",
+        "retrievalStatus": "RESERVE_NOT_OPENED",
+        "selectionHash": "01216067dd4880e8af8566809b9f5260f66c9f4004aa47773ea7898f1603aa3f"
+      }
+    ],
+    "QUALIFICATION_CONFIRM": [
+      {
+        "bytes": 1495754,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1495754,
+        "downloadedSha256": "0c15705ee4442d94850a0dc44dbd059cce0939e8b5dd142c3dd47f714f2d9cfe",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "0c15705ee4442d94850a0dc44dbd059cce0939e8b5dd142c3dd47f714f2d9cfe",
+        "localRelativePath": "FLUX.1-Krea-dev/C-MI/C-MI-015-3.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/C-MI/C-MI-015-3.png",
+        "relativePath": "C-MI/C-MI-015-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0011934c36857dd44fdbf39749cb820a42572d1d9ab0b3e80823a07abc4e3210",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/C-MI/C-MI-015-3.png"
+      },
+      {
+        "bytes": 1473000,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1473000,
+        "downloadedSha256": "e07c02343d0a95280605bf4c1cc23ea8be5a14d68534c26a90079483e7fd440a",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "e07c02343d0a95280605bf4c1cc23ea8be5a14d68534c26a90079483e7fd440a",
+        "localRelativePath": "FLUX.1-Krea-dev/R-PR/R-PR-088-0.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-PR/R-PR-088-0.png",
+        "relativePath": "R-PR/R-PR-088-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0014c59f8ebb4687ab5a7a9b1aa12335613b831ef66d2de75cb64153c9fb4a87",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-PR/R-PR-088-0.png"
+      },
+      {
+        "bytes": 1303748,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1303748,
+        "downloadedSha256": "801b2dabcade3dc1254d9616d4d91f6a941a4a9c680bbfcf5ef8d098aeffe6ea",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "801b2dabcade3dc1254d9616d4d91f6a941a4a9c680bbfcf5ef8d098aeffe6ea",
+        "localRelativePath": "FLUX.1-Krea-dev/R-BR/R-BR-082-0.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-BR/R-BR-082-0.png",
+        "relativePath": "R-BR/R-BR-082-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0021589656f5e3fa278e1f61471570534e68dcc64f1a68fe3ed7bf0c744201f7",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-BR/R-BR-082-0.png"
+      },
+      {
+        "bytes": 1277055,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1277055,
+        "downloadedSha256": "2a9b55b6ac94675cdcaa2b220ff6574b25187a721a0f4097983b513e602ad995",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "2a9b55b6ac94675cdcaa2b220ff6574b25187a721a0f4097983b513e602ad995",
+        "localRelativePath": "FLUX.1-Krea-dev/R-BR/R-BR-057-0.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-BR/R-BR-057-0.png",
+        "relativePath": "R-BR/R-BR-057-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0040cad601878e926ede8b4b036d02ae9b6392d534e52679265efd81abcbedfe",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-BR/R-BR-057-0.png"
+      },
+      {
+        "bytes": 1207642,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1207642,
+        "downloadedSha256": "d3ec9235fcace268ce99a31a08bf509b43b075ac8ce6a5d0fc0bb0ac18accad9",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "d3ec9235fcace268ce99a31a08bf509b43b075ac8ce6a5d0fc0bb0ac18accad9",
+        "localRelativePath": "FLUX.1-Krea-dev/R-GR/R-GR-028-1.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-GR/R-GR-028-1.png",
+        "relativePath": "R-GR/R-GR-028-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "006cf513b5b44b60ae4634380a03bd5c3681234711c3792a1f639f73708e2076",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-GR/R-GR-028-1.png"
+      },
+      {
+        "bytes": 1505045,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1505045,
+        "downloadedSha256": "a8f6f77cd50737d2d55ea5b16ecfa11b140fff028ec760e5b178a7a2024b0462",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "a8f6f77cd50737d2d55ea5b16ecfa11b140fff028ec760e5b178a7a2024b0462",
+        "localRelativePath": "FLUX.1-Krea-dev/R-GR/R-GR-053-1.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-GR/R-GR-053-1.png",
+        "relativePath": "R-GR/R-GR-053-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "006df20c3c8943c12fb833e8f67e69e91250419b1586d5008b16e40416a41f4b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-GR/R-GR-053-1.png"
+      },
+      {
+        "bytes": 860168,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 860168,
+        "downloadedSha256": "9a6768c71780526098180d9f2c09451dc90e6b3ff1db290a8b949f6eb9557fe4",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "9a6768c71780526098180d9f2c09451dc90e6b3ff1db290a8b949f6eb9557fe4",
+        "localRelativePath": "FLUX.1-Krea-dev/R-RR/R-RR-041-3.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-RR/R-RR-041-3.png",
+        "relativePath": "R-RR/R-RR-041-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "007899448effb9feaa9f84532a83cee87b1773e32047165cb1d27f98e8688f53",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-RR/R-RR-041-3.png"
+      },
+      {
+        "bytes": 1503165,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1503165,
+        "downloadedSha256": "a3333438ff3dd0b622ac12245d107935ebd3ab762fa1bdec9b80cff0703717e9",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "a3333438ff3dd0b622ac12245d107935ebd3ab762fa1bdec9b80cff0703717e9",
+        "localRelativePath": "FLUX.1-Krea-dev/R-PR/R-PR-032-3.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-PR/R-PR-032-3.png",
+        "relativePath": "R-PR/R-PR-032-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "008eff2399e14d20305943e0430eb283af2778df434086bbe6018746f0563114",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-PR/R-PR-032-3.png"
+      },
+      {
+        "bytes": 927629,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 927629,
+        "downloadedSha256": "04a769a92d05c1a62b04b74e322e1478477b75619e90d4df2d00ef94101e6997",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "04a769a92d05c1a62b04b74e322e1478477b75619e90d4df2d00ef94101e6997",
+        "localRelativePath": "FLUX.1-Krea-dev/C-TR/C-TR-021-3.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/C-TR/C-TR-021-3.png",
+        "relativePath": "C-TR/C-TR-021-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "008fd97017a34e0c069e99ac9064f69c088851c1d6628d2bb9d9d7a6142f6727",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/C-TR/C-TR-021-3.png"
+      },
+      {
+        "bytes": 1425406,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1425406,
+        "downloadedSha256": "990563bd5712b9c1ff44ff82c891f97d8524310ccd960909ec0941e0f4440e64",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "990563bd5712b9c1ff44ff82c891f97d8524310ccd960909ec0941e0f4440e64",
+        "localRelativePath": "FLUX.1-Krea-dev/R-PR/R-PR-053-0.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-PR/R-PR-053-0.png",
+        "relativePath": "R-PR/R-PR-053-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00a0dbfda505a404eb2f786fdbea33c6408279ef10e1efb10a99135dc341614f",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-PR/R-PR-053-0.png"
+      },
+      {
+        "bytes": 944241,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 944241,
+        "downloadedSha256": "5f89b0420fcdc3d01b0e919903060768cc752a88dfaf93712553b1cada4a476c",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "5f89b0420fcdc3d01b0e919903060768cc752a88dfaf93712553b1cada4a476c",
+        "localRelativePath": "FLUX.1-Krea-dev/R-AR/R-AR-041-2.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-AR/R-AR-041-2.png",
+        "relativePath": "R-AR/R-AR-041-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00ad7449bc245867d2fcdf66bd990e0b89adc3935934875631f565b67fda4948",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-AR/R-AR-041-2.png"
+      },
+      {
+        "bytes": 1418111,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1418111,
+        "downloadedSha256": "536a3deacc0d3da39554b7179898a7e7ec576fdd58da3326389cb7ad434987ab",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "536a3deacc0d3da39554b7179898a7e7ec576fdd58da3326389cb7ad434987ab",
+        "localRelativePath": "FLUX.1-Krea-dev/C-MR/C-MR-025-0.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/C-MR/C-MR-025-0.png",
+        "relativePath": "C-MR/C-MR-025-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b3dcb12c133187bdbdf4ca3bd92574dd686d17283ddcfede7c55f823c3ff4a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/C-MR/C-MR-025-0.png"
+      },
+      {
+        "bytes": 1439311,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1439311,
+        "downloadedSha256": "8c805d38d4d2bfb8dbf86542e0e8458b8f8f0e2626e619cb4495cc6fe9a9b3cb",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "8c805d38d4d2bfb8dbf86542e0e8458b8f8f0e2626e619cb4495cc6fe9a9b3cb",
+        "localRelativePath": "FLUX.1-Krea-dev/R-BR/R-BR-060-0.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-BR/R-BR-060-0.png",
+        "relativePath": "R-BR/R-BR-060-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b6eac4342a797f18ef60b1aa26321b8c3cde3c616e149fdc0c64685e8afbd8",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-BR/R-BR-060-0.png"
+      },
+      {
+        "bytes": 1230552,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1230552,
+        "downloadedSha256": "b1c5c0d9092256db8b86cbec923d2d6dac5146f7756f787f4df3ae52e1d4b8f7",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "b1c5c0d9092256db8b86cbec923d2d6dac5146f7756f787f4df3ae52e1d4b8f7",
+        "localRelativePath": "FLUX.1-Krea-dev/R-PR/R-PR-043-3.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-PR/R-PR-043-3.png",
+        "relativePath": "R-PR/R-PR-043-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00c0bb81b38a13103fb6fd9d184fc683c158465d2b1dc8e45309a5ec34dd9a0c",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-PR/R-PR-043-3.png"
+      },
+      {
+        "bytes": 1341866,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1341866,
+        "downloadedSha256": "63e3d85b74c6a5a08fecda2afb73ad9574233f14ea23b29c15a91f3cbdc596e4",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "63e3d85b74c6a5a08fecda2afb73ad9574233f14ea23b29c15a91f3cbdc596e4",
+        "localRelativePath": "FLUX.1-Krea-dev/R-LR/R-LR-046-2.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-LR/R-LR-046-2.png",
+        "relativePath": "R-LR/R-LR-046-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00c8523ac53f990cde9d7615a3ea5b1a37689797dabeab7943ebbe4a46aafb3a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-LR/R-LR-046-2.png"
+      },
+      {
+        "bytes": 1048251,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1048251,
+        "downloadedSha256": "cf38cced22872539fcfd2fe5fee7172ee4a14ef5f565bb21821a8f9763d46aa6",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "cf38cced22872539fcfd2fe5fee7172ee4a14ef5f565bb21821a8f9763d46aa6",
+        "localRelativePath": "FLUX.1-Krea-dev/R-LR/R-LR-018-3.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-LR/R-LR-018-3.png",
+        "relativePath": "R-LR/R-LR-018-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00cc1fb6bd63e89f63e2de05b890c628c436cb30dc6d68a393126c79d2a5a0fd",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-LR/R-LR-018-3.png"
+      },
+      {
+        "bytes": 1107755,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1107755,
+        "downloadedSha256": "92779fd62e62bb5e68704b23695a5e6ae4f845c7424bd93fb3c0945a2c960f9c",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "92779fd62e62bb5e68704b23695a5e6ae4f845c7424bd93fb3c0945a2c960f9c",
+        "localRelativePath": "FLUX.1-Krea-dev/R-LR/R-LR-039-1.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-LR/R-LR-039-1.png",
+        "relativePath": "R-LR/R-LR-039-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00d4b8273059e33af1c544a86adf100e7a2c5c89f9a2a9e2331b3d6b79b2dad3",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-LR/R-LR-039-1.png"
+      },
+      {
+        "bytes": 1705259,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1705259,
+        "downloadedSha256": "5d701fdc24b09d86ed9fac8321444a1c0d7a4e2a0ba630407b2a13962e225e29",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "5d701fdc24b09d86ed9fac8321444a1c0d7a4e2a0ba630407b2a13962e225e29",
+        "localRelativePath": "FLUX.1-Krea-dev/C-MA/C-MA-043-1.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/C-MA/C-MA-043-1.png",
+        "relativePath": "C-MA/C-MA-043-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00e74af7f8de1e23a998a5a83d2bd0b203072e2aed030b85db6912e98dfb2e13",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/C-MA/C-MA-043-1.png"
+      },
+      {
+        "bytes": 731032,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 731032,
+        "downloadedSha256": "71d5a3caf8bc4a1e76c00d771dbde3cf24e3f65e75b12b4ea466a836fd405371",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "71d5a3caf8bc4a1e76c00d771dbde3cf24e3f65e75b12b4ea466a836fd405371",
+        "localRelativePath": "FLUX.1-Krea-dev/R-LR/R-LR-068-2.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-LR/R-LR-068-2.png",
+        "relativePath": "R-LR/R-LR-068-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0112e12e4c28e988fd6cc363e8d16691d42d48c9b4dd87597cb5b0cc07af3a51",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-LR/R-LR-068-2.png"
+      },
+      {
+        "bytes": 1127063,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1127063,
+        "downloadedSha256": "18956d391c77333783d3db540be9561973a1e5a126f65f7ea28623d17e8cfb2a",
+        "generatorFamily": "FLUX.1-Krea-dev",
+        "lfsSha256": "18956d391c77333783d3db540be9561973a1e5a126f65f7ea28623d17e8cfb2a",
+        "localRelativePath": "FLUX.1-Krea-dev/R-AR/R-AR-076-2.png",
+        "officialRevision": "f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df",
+        "path": "data/FLUX.1-Krea-dev/R-AR/R-AR-076-2.png",
+        "relativePath": "R-AR/R-AR-076-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "01187785ad5ccbbfd6edaa150abfc3fc4fb1e2af6112355b845125a9d29a89c6",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/f7c1ec9c04f9ddc4b739d09a5becee9c1b0486df/data/FLUX.1-Krea-dev/R-AR/R-AR-076-2.png"
+      },
+      {
+        "bytes": 1573083,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1573083,
+        "downloadedSha256": "09558237afad03e094550c9fb3794131e75ad83f9aaefc5fc772582f4d97a208",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "09558237afad03e094550c9fb3794131e75ad83f9aaefc5fc772582f4d97a208",
+        "localRelativePath": "BLIP3o-8B/R-LR/R-LR-010-3.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-LR/R-LR-010-3.png",
+        "relativePath": "R-LR/R-LR-010-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0010c45dc7fc9739a69ecd4d0667e69f549cb794348e0ffa5d20a7eec557017e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-LR/R-LR-010-3.png"
+      },
+      {
+        "bytes": 1378001,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1378001,
+        "downloadedSha256": "23256a61ece1a546e0fec173746c944eca365ba63d0de734656075fa3811d9f5",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "23256a61ece1a546e0fec173746c944eca365ba63d0de734656075fa3811d9f5",
+        "localRelativePath": "BLIP3o-8B/R-BR/R-BR-049-2.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-BR/R-BR-049-2.png",
+        "relativePath": "R-BR/R-BR-049-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "002250466f17187381cc1ad5b428f80cdac0b52e6d79c2e743155973e8e36054",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-BR/R-BR-049-2.png"
+      },
+      {
+        "bytes": 1760018,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1760018,
+        "downloadedSha256": "faa1161f11c4070e965538183d2b45471267e73cf20bdc8d46f2b819a0086a5d",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "faa1161f11c4070e965538183d2b45471267e73cf20bdc8d46f2b819a0086a5d",
+        "localRelativePath": "BLIP3o-8B/R-BR/R-BR-033-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-BR/R-BR-033-0.png",
+        "relativePath": "R-BR/R-BR-033-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "002a0efea45faf2457ba5b78699c1de9349974ef6c68264ae29966401b31c29b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-BR/R-BR-033-0.png"
+      },
+      {
+        "bytes": 1651514,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1651514,
+        "downloadedSha256": "09fdaeddb1dcf5837e654782c555737ca2d3452a3fa1d9ff5230d71a6fa36be9",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "09fdaeddb1dcf5837e654782c555737ca2d3452a3fa1d9ff5230d71a6fa36be9",
+        "localRelativePath": "BLIP3o-8B/C-MI/C-MI-066-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/C-MI/C-MI-066-0.png",
+        "relativePath": "C-MI/C-MI-066-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "002d7cc89fc16205cffd4c11a52dc9b30db9fa22ddb9892c3c480de5f25a45c8",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/C-MI/C-MI-066-0.png"
+      },
+      {
+        "bytes": 1386911,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1386911,
+        "downloadedSha256": "d5e2b8f37225a750bc5d0ed438ff6de5ca4dba89826b75ef00470d5369bd4a80",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "d5e2b8f37225a750bc5d0ed438ff6de5ca4dba89826b75ef00470d5369bd4a80",
+        "localRelativePath": "BLIP3o-8B/R-BR/R-BR-080-1.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-BR/R-BR-080-1.png",
+        "relativePath": "R-BR/R-BR-080-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0044ac00d95eebacf5d155410dd6b05d1ce66b53de0dc5b70c3bf87015c2c1eb",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-BR/R-BR-080-1.png"
+      },
+      {
+        "bytes": 1572147,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1572147,
+        "downloadedSha256": "0b0434eb86ded4b901801cac2afac57682125178a38fb2f8bf89a67e986084f0",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "0b0434eb86ded4b901801cac2afac57682125178a38fb2f8bf89a67e986084f0",
+        "localRelativePath": "BLIP3o-8B/R-RR/R-RR-024-1.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-RR/R-RR-024-1.png",
+        "relativePath": "R-RR/R-RR-024-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00499d72a337080201542755119c35597bad12359b862188f499c1004f96c83b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-RR/R-RR-024-1.png"
+      },
+      {
+        "bytes": 830800,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 830800,
+        "downloadedSha256": "d10c12763c6115789f6a4dade7272736542791c2be6d8102206e569cc506a54e",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "d10c12763c6115789f6a4dade7272736542791c2be6d8102206e569cc506a54e",
+        "localRelativePath": "BLIP3o-8B/R-HR/R-HR-073-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-HR/R-HR-073-0.png",
+        "relativePath": "R-HR/R-HR-073-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00520ec24eb4e7e7b7345dc0dca33dc24da44d4ffc0dca4bdc39731ab6b4f508",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-HR/R-HR-073-0.png"
+      },
+      {
+        "bytes": 1816477,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1816477,
+        "downloadedSha256": "911e9b7bbd7dd8d6446f5a3a9e156f67952bdb4524877e2c53eac41f48efce13",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "911e9b7bbd7dd8d6446f5a3a9e156f67952bdb4524877e2c53eac41f48efce13",
+        "localRelativePath": "BLIP3o-8B/R-RR/R-RR-086-3.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-RR/R-RR-086-3.png",
+        "relativePath": "R-RR/R-RR-086-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00925b729983fb361719242b64b7dde5fe8771439eff3a70515b9c42fe524b30",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-RR/R-RR-086-3.png"
+      },
+      {
+        "bytes": 1598708,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1598708,
+        "downloadedSha256": "b31905146b7fdc450a3d4ca1e5fdda1307e9f6b8080b00eb41ab8f3a533b0f43",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "b31905146b7fdc450a3d4ca1e5fdda1307e9f6b8080b00eb41ab8f3a533b0f43",
+        "localRelativePath": "BLIP3o-8B/C-MI/C-MI-004-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/C-MI/C-MI-004-0.png",
+        "relativePath": "C-MI/C-MI-004-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00a95105d383072c784bff243bf31b6a311e378d094f9b03349ff1bbfc3d945e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/C-MI/C-MI-004-0.png"
+      },
+      {
+        "bytes": 1658629,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1658629,
+        "downloadedSha256": "8d8156f5142097a0904f45464c3bf69311180cba1733ed3c0e70acd6931e21df",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "8d8156f5142097a0904f45464c3bf69311180cba1733ed3c0e70acd6931e21df",
+        "localRelativePath": "BLIP3o-8B/R-PR/R-PR-035-3.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-PR/R-PR-035-3.png",
+        "relativePath": "R-PR/R-PR-035-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00afa7fc37ee68b7956d18dc730775dce02b7eed94b77616f81929d2c1f63a21",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-PR/R-PR-035-3.png"
+      },
+      {
+        "bytes": 1629744,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1629744,
+        "downloadedSha256": "120f29b59885b0e915359c83bf406c5a9b65ed2e0f99b40b8a86019be8a250cf",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "120f29b59885b0e915359c83bf406c5a9b65ed2e0f99b40b8a86019be8a250cf",
+        "localRelativePath": "BLIP3o-8B/R-CR/R-CR-034-3.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-CR/R-CR-034-3.png",
+        "relativePath": "R-CR/R-CR-034-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b289b4ab7aa5671e1fdc574d4d2f52b9318446d6857128bb77cbca7052c36e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-CR/R-CR-034-3.png"
+      },
+      {
+        "bytes": 2483055,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 2483055,
+        "downloadedSha256": "01c5d6b14456058167d33fa6b2d805daeadc5d8583e89f4d0bbe5f1ddaffce43",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "01c5d6b14456058167d33fa6b2d805daeadc5d8583e89f4d0bbe5f1ddaffce43",
+        "localRelativePath": "BLIP3o-8B/R-AR/R-AR-054-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-AR/R-AR-054-0.png",
+        "relativePath": "R-AR/R-AR-054-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b2e1cddbb35aa6cf84e997e64725a7c6c59910a9dc8ba4bda3138f54a2cd9f",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-AR/R-AR-054-0.png"
+      },
+      {
+        "bytes": 1444428,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1444428,
+        "downloadedSha256": "ef6664c3845f5d9f6b1716595d2a0410856709b63f8b0a99e4b813ea29c3df63",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "ef6664c3845f5d9f6b1716595d2a0410856709b63f8b0a99e4b813ea29c3df63",
+        "localRelativePath": "BLIP3o-8B/R-RR/R-RR-030-2.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-RR/R-RR-030-2.png",
+        "relativePath": "R-RR/R-RR-030-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00cbf56843d8709b683b109621412052df284edd3e5ef0da98bc8cb42f35ba04",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-RR/R-RR-030-2.png"
+      },
+      {
+        "bytes": 1545043,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1545043,
+        "downloadedSha256": "846f5dc4a06d32cc6aab4c6064501683ca0e336a291630684c90d0ef2b66dcec",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "846f5dc4a06d32cc6aab4c6064501683ca0e336a291630684c90d0ef2b66dcec",
+        "localRelativePath": "BLIP3o-8B/R-GR/R-GR-087-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-GR/R-GR-087-0.png",
+        "relativePath": "R-GR/R-GR-087-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00cf93cbca04afafcce8e29302b9fe4a304bb18c0b4d886cb44b6883a4a7d63c",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-GR/R-GR-087-0.png"
+      },
+      {
+        "bytes": 1626269,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1626269,
+        "downloadedSha256": "1274b03e44331b4a7602fb98b942cc544c28c01a1e9e662aeb19d381c873cecc",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "1274b03e44331b4a7602fb98b942cc544c28c01a1e9e662aeb19d381c873cecc",
+        "localRelativePath": "BLIP3o-8B/R-HR/R-HR-078-1.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-HR/R-HR-078-1.png",
+        "relativePath": "R-HR/R-HR-078-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00dc840eedcb045acc5acc1bfdf4be9796b1ab1783f5f71d9c5840622122442e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-HR/R-HR-078-1.png"
+      },
+      {
+        "bytes": 1789262,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1789262,
+        "downloadedSha256": "a9d1654350bb7dfce35e3fca22a2e3a0d309e6879cad68e87c3fd0d51b59e473",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "a9d1654350bb7dfce35e3fca22a2e3a0d309e6879cad68e87c3fd0d51b59e473",
+        "localRelativePath": "BLIP3o-8B/R-RR/R-RR-032-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-RR/R-RR-032-0.png",
+        "relativePath": "R-RR/R-RR-032-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "01075e735597152eebcd6dd70b05b590ca58885dd33c6d7107d6da0488fc0021",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-RR/R-RR-032-0.png"
+      },
+      {
+        "bytes": 954521,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 954521,
+        "downloadedSha256": "d91a401fb339e9978c3ec52c4ddef51cd2e53e300f490da7edd184b12246c5cf",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "d91a401fb339e9978c3ec52c4ddef51cd2e53e300f490da7edd184b12246c5cf",
+        "localRelativePath": "BLIP3o-8B/C-TR/C-TR-086-3.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/C-TR/C-TR-086-3.png",
+        "relativePath": "C-TR/C-TR-086-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "011e22ad83af16bc4d5aa2bc611de56d45aeb9bea286a1dd4adc991dd4cce21e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/C-TR/C-TR-086-3.png"
+      },
+      {
+        "bytes": 1374987,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1374987,
+        "downloadedSha256": "b46b2e0533b2c8e7bcc661c1ec8f1b4b6380e4605e496c9b87803ca0d77bdc8a",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "b46b2e0533b2c8e7bcc661c1ec8f1b4b6380e4605e496c9b87803ca0d77bdc8a",
+        "localRelativePath": "BLIP3o-8B/R-HR/R-HR-060-3.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-HR/R-HR-060-3.png",
+        "relativePath": "R-HR/R-HR-060-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0122de4e29507c819b72c0538aa24b7a610a7dafc2d6d5d7610990614a6bf30c",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-HR/R-HR-060-3.png"
+      },
+      {
+        "bytes": 1277628,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1277628,
+        "downloadedSha256": "f8a49c925618373af5e062297dd1ab79b3c109bff1cf955d14ebdc34cee82146",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "f8a49c925618373af5e062297dd1ab79b3c109bff1cf955d14ebdc34cee82146",
+        "localRelativePath": "BLIP3o-8B/R-PR/R-PR-022-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-PR/R-PR-022-0.png",
+        "relativePath": "R-PR/R-PR-022-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0131e2535193e91118ed85b1c5395f062ef0b87ebfaeecaa17b3f4ce428e19cd",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-PR/R-PR-022-0.png"
+      },
+      {
+        "bytes": 1632552,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1632552,
+        "downloadedSha256": "7e4f69dd88c4ce6ec1411e30512f5e96e92c384e15dd4bd6fd81bc3bd92b611d",
+        "generatorFamily": "BLIP3o-8B",
+        "lfsSha256": "7e4f69dd88c4ce6ec1411e30512f5e96e92c384e15dd4bd6fd81bc3bd92b611d",
+        "localRelativePath": "BLIP3o-8B/R-LR/R-LR-007-0.png",
+        "officialRevision": "60d48c68d2f0e0ec67db0964b75ee62d10abe37b",
+        "path": "data/BLIP3o-8B/R-LR/R-LR-007-0.png",
+        "relativePath": "R-LR/R-LR-007-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0146c44c932b2bf8510a072e8b37310a9a9a55d46944fe7ef95164a7108c898b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/60d48c68d2f0e0ec67db0964b75ee62d10abe37b/data/BLIP3o-8B/R-LR/R-LR-007-0.png"
+      },
+      {
+        "bytes": 1534766,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1534766,
+        "downloadedSha256": "bdc116148dd87d9c925432f029800664bf9b025c6e986a411ac68d348a0487dc",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "bdc116148dd87d9c925432f029800664bf9b025c6e986a411ac68d348a0487dc",
+        "localRelativePath": "Infinity-8B/R-GR/R-GR-054-2.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-GR/R-GR-054-2.png",
+        "relativePath": "R-GR/R-GR-054-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0009614ee31a75563000831fd55cf52a30a4cdc1510779b23cb8719bf7191bbe",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-GR/R-GR-054-2.png"
+      },
+      {
+        "bytes": 2076432,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 2076432,
+        "downloadedSha256": "c3480348878a4ba4f80cb4404c448ef47ea1d71eedf240912428846f711af941",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "c3480348878a4ba4f80cb4404c448ef47ea1d71eedf240912428846f711af941",
+        "localRelativePath": "Infinity-8B/R-LR/R-LR-089-3.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-LR/R-LR-089-3.png",
+        "relativePath": "R-LR/R-LR-089-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0017bc37921fdafcc80d027abdf393a8cdbee1da0f1d5ec2b749b95aae7899be",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-LR/R-LR-089-3.png"
+      },
+      {
+        "bytes": 1373457,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1373457,
+        "downloadedSha256": "98c2437b1b344cf86718177d044928a03665e4bad8fe3cd1692be21f99a8e5df",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "98c2437b1b344cf86718177d044928a03665e4bad8fe3cd1692be21f99a8e5df",
+        "localRelativePath": "Infinity-8B/C-MR/C-MR-066-2.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-MR/C-MR-066-2.png",
+        "relativePath": "C-MR/C-MR-066-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "002757b7b2e240a401aeb2cfd3d57c03acd258fba32e556478ad34b1a4bfa398",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-MR/C-MR-066-2.png"
+      },
+      {
+        "bytes": 2563601,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 2563601,
+        "downloadedSha256": "b52799126682803a3f52f816314988aba2384762b9afbc46da3c0f2cfadfb854",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "b52799126682803a3f52f816314988aba2384762b9afbc46da3c0f2cfadfb854",
+        "localRelativePath": "Infinity-8B/C-MI/C-MI-047-1.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-MI/C-MI-047-1.png",
+        "relativePath": "C-MI/C-MI-047-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00315c16da250540c71a5ceadeba2df21ee5c5942aacad6bb0c126d4dbf199a2",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-MI/C-MI-047-1.png"
+      },
+      {
+        "bytes": 1045450,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1045450,
+        "downloadedSha256": "f04dd01cb4c35a5f5d39f63e8d90e71a144a0a15fa2c09363ee984dd23f2ed54",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "f04dd01cb4c35a5f5d39f63e8d90e71a144a0a15fa2c09363ee984dd23f2ed54",
+        "localRelativePath": "Infinity-8B/R-GR/R-GR-069-2.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-GR/R-GR-069-2.png",
+        "relativePath": "R-GR/R-GR-069-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "003bfaa763be9b8f489c9744c7c4799283389b40d84068b76bd7eceba6deb9a0",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-GR/R-GR-069-2.png"
+      },
+      {
+        "bytes": 1299775,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1299775,
+        "downloadedSha256": "c86c9b884f809ef8505b2bfd48e82a2f8f9bc246e9b23015c6d77f1e9045857f",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "c86c9b884f809ef8505b2bfd48e82a2f8f9bc246e9b23015c6d77f1e9045857f",
+        "localRelativePath": "Infinity-8B/R-GR/R-GR-050-2.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-GR/R-GR-050-2.png",
+        "relativePath": "R-GR/R-GR-050-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "003f43b4ae37f17cd2215ebe8f601c61c868efe49794662d84e66bc8c31e861d",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-GR/R-GR-050-2.png"
+      },
+      {
+        "bytes": 1037969,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1037969,
+        "downloadedSha256": "859fcd4656acaf317af88bbaf208cb73f4ffc93f1c51536199a151c13db25d07",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "859fcd4656acaf317af88bbaf208cb73f4ffc93f1c51536199a151c13db25d07",
+        "localRelativePath": "Infinity-8B/C-TR/C-TR-077-2.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-TR/C-TR-077-2.png",
+        "relativePath": "C-TR/C-TR-077-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "003fbfe849914a9cd44d5666383f28c363a230bb4c1271840e8a28b837c76255",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-TR/C-TR-077-2.png"
+      },
+      {
+        "bytes": 1075811,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1075811,
+        "downloadedSha256": "4602d3eb930616dce00bd6ab8ba1182675e997e058d6322b014099008041f16b",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "4602d3eb930616dce00bd6ab8ba1182675e997e058d6322b014099008041f16b",
+        "localRelativePath": "Infinity-8B/C-MA/C-MA-040-1.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-MA/C-MA-040-1.png",
+        "relativePath": "C-MA/C-MA-040-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00444845bbd2a2d2bcf954af8ede44adc138e0d44230747d96917b43177a485d",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-MA/C-MA-040-1.png"
+      },
+      {
+        "bytes": 1198912,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1198912,
+        "downloadedSha256": "678b03bb5a2281b9735cf22f75e9eb619253cc51a5f77b01bf7f2d5c331c79ee",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "678b03bb5a2281b9735cf22f75e9eb619253cc51a5f77b01bf7f2d5c331c79ee",
+        "localRelativePath": "Infinity-8B/R-GR/R-GR-085-1.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-GR/R-GR-085-1.png",
+        "relativePath": "R-GR/R-GR-085-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "004a9380e5116e423d05e01460b61cbd883fbe0dbfdf253fed0ab3ee8779d145",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-GR/R-GR-085-1.png"
+      },
+      {
+        "bytes": 1703849,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1703849,
+        "downloadedSha256": "61e3b24904a7f1b4388f6dacdde7b8afb2c7d483b3f026e6ad36f0d62d93b1d5",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "61e3b24904a7f1b4388f6dacdde7b8afb2c7d483b3f026e6ad36f0d62d93b1d5",
+        "localRelativePath": "Infinity-8B/C-MR/C-MR-089-3.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-MR/C-MR-089-3.png",
+        "relativePath": "C-MR/C-MR-089-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00541438ac3a0ccab2bc55903194f42fc4134eafbc30875c47b4654e49cff0e2",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-MR/C-MR-089-3.png"
+      },
+      {
+        "bytes": 1604221,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1604221,
+        "downloadedSha256": "3181238c7d36301486c38325dbc7586bd987288c78ce5182d9996ebb573b8b70",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "3181238c7d36301486c38325dbc7586bd987288c78ce5182d9996ebb573b8b70",
+        "localRelativePath": "Infinity-8B/C-MI/C-MI-072-1.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-MI/C-MI-072-1.png",
+        "relativePath": "C-MI/C-MI-072-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00643ede025e51c1e7e45869b154e923dfcd5252a981dd444d6c4281c3e3d24f",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-MI/C-MI-072-1.png"
+      },
+      {
+        "bytes": 1058778,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1058778,
+        "downloadedSha256": "6199d6a1363372f28e8b7822f29acee000bad73d6e8f439a8946cd692eef8fee",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "6199d6a1363372f28e8b7822f29acee000bad73d6e8f439a8946cd692eef8fee",
+        "localRelativePath": "Infinity-8B/R-PR/R-PR-084-0.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-PR/R-PR-084-0.png",
+        "relativePath": "R-PR/R-PR-084-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0070c0456ffb8025cefb543c1bc3c706829dabf38d21ecffae7b0d68f0f5894a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-PR/R-PR-084-0.png"
+      },
+      {
+        "bytes": 1690096,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1690096,
+        "downloadedSha256": "e4ad13693c6ea92db937492de5bec958299e58f27efa3fe6cb0cb916da4c00de",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "e4ad13693c6ea92db937492de5bec958299e58f27efa3fe6cb0cb916da4c00de",
+        "localRelativePath": "Infinity-8B/C-MR/C-MR-035-1.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-MR/C-MR-035-1.png",
+        "relativePath": "C-MR/C-MR-035-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "007a6f6b7a76c7e5e3491855af5f32da03ce9b200abd599e85da439095f1391c",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-MR/C-MR-035-1.png"
+      },
+      {
+        "bytes": 2098686,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 2098686,
+        "downloadedSha256": "b7bff5ecd36da0df7a50f98e73a50f82852c88977a1f5fe14d785ad028b0aa48",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "b7bff5ecd36da0df7a50f98e73a50f82852c88977a1f5fe14d785ad028b0aa48",
+        "localRelativePath": "Infinity-8B/C-MI/C-MI-054-3.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-MI/C-MI-054-3.png",
+        "relativePath": "C-MI/C-MI-054-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "009300cd1fbc525cad1dc96b629f8b0f1d4a7ca50d995c7f09dbd33711306457",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-MI/C-MI-054-3.png"
+      },
+      {
+        "bytes": 2202266,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 2202266,
+        "downloadedSha256": "02980e655007c9ede5aacc7a57ff005a23f77d07cd7f362bf8cd572230dcadf0",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "02980e655007c9ede5aacc7a57ff005a23f77d07cd7f362bf8cd572230dcadf0",
+        "localRelativePath": "Infinity-8B/R-AR/R-AR-010-3.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-AR/R-AR-010-3.png",
+        "relativePath": "R-AR/R-AR-010-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00a7e977a92bcb5831904abaa676901bc6700c68ac6d1421d1fae6f1c9b6faff",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-AR/R-AR-010-3.png"
+      },
+      {
+        "bytes": 1545635,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1545635,
+        "downloadedSha256": "6277ea31822b44b4446ba93bc8be9a836861b8795e31915c66ab6afbcadd92e8",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "6277ea31822b44b4446ba93bc8be9a836861b8795e31915c66ab6afbcadd92e8",
+        "localRelativePath": "Infinity-8B/R-BR/R-BR-004-3.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-BR/R-BR-004-3.png",
+        "relativePath": "R-BR/R-BR-004-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b486d697a662a9fccab7166bf711c3e9cb9f9ef7414ba23f496956446351d9",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-BR/R-BR-004-3.png"
+      },
+      {
+        "bytes": 1127300,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1127300,
+        "downloadedSha256": "6a6d08a5b42768cd4f7cd446560c0243cf4ced725ef98950ab8e5bef6ba775c5",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "6a6d08a5b42768cd4f7cd446560c0243cf4ced725ef98950ab8e5bef6ba775c5",
+        "localRelativePath": "Infinity-8B/R-PR/R-PR-003-0.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-PR/R-PR-003-0.png",
+        "relativePath": "R-PR/R-PR-003-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00e2b683d0c7a62757f60a73b676efd95d98b7868b5ff84e3e88e0da5c4a4263",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-PR/R-PR-003-0.png"
+      },
+      {
+        "bytes": 1637955,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1637955,
+        "downloadedSha256": "b5ba3482231b2f59dc8bbcf5afc0de4bc6fd8f7e6d4bb5b4e6df5549e4a7ecef",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "b5ba3482231b2f59dc8bbcf5afc0de4bc6fd8f7e6d4bb5b4e6df5549e4a7ecef",
+        "localRelativePath": "Infinity-8B/C-MI/C-MI-039-0.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/C-MI/C-MI-039-0.png",
+        "relativePath": "C-MI/C-MI-039-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "011946677acdf177d90c6fd8c2e3c993ba05a8b714f703580822d1f909cd094f",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/C-MI/C-MI-039-0.png"
+      },
+      {
+        "bytes": 1408280,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1408280,
+        "downloadedSha256": "77e8cb2797e00c08e36d0e0fa9456dc08204d0340e5e58a440008587eea08617",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "77e8cb2797e00c08e36d0e0fa9456dc08204d0340e5e58a440008587eea08617",
+        "localRelativePath": "Infinity-8B/R-CR/R-CR-046-2.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-CR/R-CR-046-2.png",
+        "relativePath": "R-CR/R-CR-046-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "011b785f7f1aaf850546e5620d915b55cc90ef3dfc00163cf9e4936dc1c7b054",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-CR/R-CR-046-2.png"
+      },
+      {
+        "bytes": 1236649,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1236649,
+        "downloadedSha256": "901ff98c1321cd05e355e38e107e6d16072f9ae13e348c12517fc8dd068d5209",
+        "generatorFamily": "Infinity-8B",
+        "lfsSha256": "901ff98c1321cd05e355e38e107e6d16072f9ae13e348c12517fc8dd068d5209",
+        "localRelativePath": "Infinity-8B/R-PR/R-PR-004-1.png",
+        "officialRevision": "88f5011fffe2eb09435b5880d93b9ee96f2b590c",
+        "path": "data/Infinity-8B/R-PR/R-PR-004-1.png",
+        "relativePath": "R-PR/R-PR-004-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "012f9c7d877cb983f815cfb5f0ef14898700a112a150ba0077ccdef90818c382",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/88f5011fffe2eb09435b5880d93b9ee96f2b590c/data/Infinity-8B/R-PR/R-PR-004-1.png"
+      },
+      {
+        "bytes": 173003,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 173003,
+        "downloadedSha256": "53d90bac09108bbf10cb934448de2d9c1e551ac6f7f2f0c833a2d75430027b19",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "53d90bac09108bbf10cb934448de2d9c1e551ac6f7f2f0c833a2d75430027b19",
+        "localRelativePath": "Janus-Pro-7B/R-PR/R-PR-025-1.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-PR/R-PR-025-1.png",
+        "relativePath": "R-PR/R-PR-025-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "000701c306b87b957ff529505dba410cfc73b8559652d8f1ab7619ef4e7cae72",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-PR/R-PR-025-1.png"
+      },
+      {
+        "bytes": 189932,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 189932,
+        "downloadedSha256": "6757a67b4523f8154f4f1f763a945cf00d71c766b5b62ed1ea3a3b0fb75d8479",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "6757a67b4523f8154f4f1f763a945cf00d71c766b5b62ed1ea3a3b0fb75d8479",
+        "localRelativePath": "Janus-Pro-7B/R-GR/R-GR-047-1.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-GR/R-GR-047-1.png",
+        "relativePath": "R-GR/R-GR-047-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0015acc322fd66da0ae205d6a3f254c14ae0df2605c2bede35e855f4ce73e5d4",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-GR/R-GR-047-1.png"
+      },
+      {
+        "bytes": 234896,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 234896,
+        "downloadedSha256": "684ec1f76d26f77d666886fffbb0e46e5a7f3636db7be1a9484a59013b797fae",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "684ec1f76d26f77d666886fffbb0e46e5a7f3636db7be1a9484a59013b797fae",
+        "localRelativePath": "Janus-Pro-7B/R-CR/R-CR-032-0.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-CR/R-CR-032-0.png",
+        "relativePath": "R-CR/R-CR-032-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "001bca51aec19499bb0113bbf550fc36f3ea3e884ef9a2bda1a92209bb316170",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-CR/R-CR-032-0.png"
+      },
+      {
+        "bytes": 312932,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 312932,
+        "downloadedSha256": "485abbcf85e308d4e44ce755716f1634f5b59cc65abca7860d7818f520a6be3d",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "485abbcf85e308d4e44ce755716f1634f5b59cc65abca7860d7818f520a6be3d",
+        "localRelativePath": "Janus-Pro-7B/R-BR/R-BR-071-1.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-BR/R-BR-071-1.png",
+        "relativePath": "R-BR/R-BR-071-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "002c02c4ec756ab2d2148cda6639b0f482f4b52b35f9dc40ed6d482489eb4a22",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-BR/R-BR-071-1.png"
+      },
+      {
+        "bytes": 155329,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 155329,
+        "downloadedSha256": "3d6d8559798dbb75b0d5a10f7d82a7c50b7528f2464923bd1e5904ed4eed377d",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "3d6d8559798dbb75b0d5a10f7d82a7c50b7528f2464923bd1e5904ed4eed377d",
+        "localRelativePath": "Janus-Pro-7B/R-PR/R-PR-085-0.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-PR/R-PR-085-0.png",
+        "relativePath": "R-PR/R-PR-085-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00370bacf9e16c232e9910d691292ebe6d11af719028550802e2d2eef7ca689a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-PR/R-PR-085-0.png"
+      },
+      {
+        "bytes": 258591,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 258591,
+        "downloadedSha256": "d2822316ac8e1de4a04e254dbcf4ceace485ebdb685a5c95dcb20aa3f23be3e0",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "d2822316ac8e1de4a04e254dbcf4ceace485ebdb685a5c95dcb20aa3f23be3e0",
+        "localRelativePath": "Janus-Pro-7B/C-MI/C-MI-074-0.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/C-MI/C-MI-074-0.png",
+        "relativePath": "C-MI/C-MI-074-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0059579d6698e31ca753515ae86c6fdb5f0ef25b07bd2df549795f07b46b19aa",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/C-MI/C-MI-074-0.png"
+      },
+      {
+        "bytes": 316708,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 316708,
+        "downloadedSha256": "820641887c99a981e73aac83f455edfb58c0d4acda106d9bda50c3d0bace9e6d",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "820641887c99a981e73aac83f455edfb58c0d4acda106d9bda50c3d0bace9e6d",
+        "localRelativePath": "Janus-Pro-7B/C-MR/C-MR-018-0.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/C-MR/C-MR-018-0.png",
+        "relativePath": "C-MR/C-MR-018-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0087e9c9b821b5d8e6c0186bc338191967323452131ab61532343887048a94b5",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/C-MR/C-MR-018-0.png"
+      },
+      {
+        "bytes": 225957,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 225957,
+        "downloadedSha256": "5022b2908f2b9d1b28394f5c87447070a605095e66bb928fbfe82d2649cb45da",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "5022b2908f2b9d1b28394f5c87447070a605095e66bb928fbfe82d2649cb45da",
+        "localRelativePath": "Janus-Pro-7B/R-PR/R-PR-051-2.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-PR/R-PR-051-2.png",
+        "relativePath": "R-PR/R-PR-051-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b5c6998094a3b86f06639b2917fdd1d6ecefa85a1c1f0b5d04ea15f697d331",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-PR/R-PR-051-2.png"
+      },
+      {
+        "bytes": 200085,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 200085,
+        "downloadedSha256": "41b77cd9b1192a31ccb4054a83198ef17c0ab4f292a3d713af28c2c5c2c863ed",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "41b77cd9b1192a31ccb4054a83198ef17c0ab4f292a3d713af28c2c5c2c863ed",
+        "localRelativePath": "Janus-Pro-7B/R-HR/R-HR-062-3.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-HR/R-HR-062-3.png",
+        "relativePath": "R-HR/R-HR-062-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b67ad73128a4f5c5188e0365979131346f4b38117239652691e18bd1b0ad55",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-HR/R-HR-062-3.png"
+      },
+      {
+        "bytes": 279876,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 279876,
+        "downloadedSha256": "4b4d8abc3d193e862821c2ee1f25a09365386606399c6deef7bee3065cbace72",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "4b4d8abc3d193e862821c2ee1f25a09365386606399c6deef7bee3065cbace72",
+        "localRelativePath": "Janus-Pro-7B/C-MR/C-MR-032-1.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/C-MR/C-MR-032-1.png",
+        "relativePath": "C-MR/C-MR-032-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00d528bfad9882f181b09cf0427594f58b91b0e6f33130057a7be0a934683a71",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/C-MR/C-MR-032-1.png"
+      },
+      {
+        "bytes": 268351,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 268351,
+        "downloadedSha256": "ca4949e540a2553de6a0c700952be348a29fc6323b43dc8e88adeb8983e77747",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "ca4949e540a2553de6a0c700952be348a29fc6323b43dc8e88adeb8983e77747",
+        "localRelativePath": "Janus-Pro-7B/R-HR/R-HR-046-0.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-HR/R-HR-046-0.png",
+        "relativePath": "R-HR/R-HR-046-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00fa88eb35aa04d22c0b4c8ce8f429f90487162c921357fe954a9f76e690f6f1",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-HR/R-HR-046-0.png"
+      },
+      {
+        "bytes": 192126,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 192126,
+        "downloadedSha256": "524818be54f4111410e3b55e79f112c5924ca4970f171db28e558558a300a347",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "524818be54f4111410e3b55e79f112c5924ca4970f171db28e558558a300a347",
+        "localRelativePath": "Janus-Pro-7B/R-RR/R-RR-062-1.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-RR/R-RR-062-1.png",
+        "relativePath": "R-RR/R-RR-062-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "010d0d18c5db70d1dce497e8dfe4aed32c67dc878c16b79c0ae85489c14e5c22",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-RR/R-RR-062-1.png"
+      },
+      {
+        "bytes": 244578,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 244578,
+        "downloadedSha256": "6ff06c991a7567c06f4739a9a8116d7c8b14e4083d9496b5a87cc945707caaed",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "6ff06c991a7567c06f4739a9a8116d7c8b14e4083d9496b5a87cc945707caaed",
+        "localRelativePath": "Janus-Pro-7B/R-LR/R-LR-031-2.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-LR/R-LR-031-2.png",
+        "relativePath": "R-LR/R-LR-031-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0147da499b7f1a158e0b2095021adf4ee8e4909d316a869a8e57aa0bf53a0b91",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-LR/R-LR-031-2.png"
+      },
+      {
+        "bytes": 198475,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 198475,
+        "downloadedSha256": "8813762f67956df58a19449d0d2e3db59fa4ed500686b911ef83e4f5a24a593f",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "8813762f67956df58a19449d0d2e3db59fa4ed500686b911ef83e4f5a24a593f",
+        "localRelativePath": "Janus-Pro-7B/R-BR/R-BR-025-3.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-BR/R-BR-025-3.png",
+        "relativePath": "R-BR/R-BR-025-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "017628ccc3512d3b813a3c96c2ae2ede6bc5ee71fd2f923d3fb568fab24093d8",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-BR/R-BR-025-3.png"
+      },
+      {
+        "bytes": 207002,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 207002,
+        "downloadedSha256": "878119b447054b925d4f171003090f2333f96830dc7225028df706c1af3d27b1",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "878119b447054b925d4f171003090f2333f96830dc7225028df706c1af3d27b1",
+        "localRelativePath": "Janus-Pro-7B/R-AR/R-AR-001-0.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-AR/R-AR-001-0.png",
+        "relativePath": "R-AR/R-AR-001-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0187d0616fe06eee31ab557006513ee7a186671565638a74f02f7c594bc2a4ca",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-AR/R-AR-001-0.png"
+      },
+      {
+        "bytes": 232155,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 232155,
+        "downloadedSha256": "33054e2cc3356b43eb4e18618b7b4cdc81cf057e791879c522641d4cf31ecc1f",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "33054e2cc3356b43eb4e18618b7b4cdc81cf057e791879c522641d4cf31ecc1f",
+        "localRelativePath": "Janus-Pro-7B/C-MA/C-MA-051-2.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/C-MA/C-MA-051-2.png",
+        "relativePath": "C-MA/C-MA-051-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "018ce2473ba75d24ec8894a92e9bfcc913b48f986d8d427c30f69dfbfb9bb737",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/C-MA/C-MA-051-2.png"
+      },
+      {
+        "bytes": 232333,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 232333,
+        "downloadedSha256": "05830b238f5438944e30ed8f5cb1a2cfdce06ecbf4304b9bd9ac6dfe0112dc99",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "05830b238f5438944e30ed8f5cb1a2cfdce06ecbf4304b9bd9ac6dfe0112dc99",
+        "localRelativePath": "Janus-Pro-7B/R-AR/R-AR-026-0.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-AR/R-AR-026-0.png",
+        "relativePath": "R-AR/R-AR-026-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "01a4cab841e764c2baa1043446677052426c8cbfe58dc913633fc76960916423",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-AR/R-AR-026-0.png"
+      },
+      {
+        "bytes": 268170,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 268170,
+        "downloadedSha256": "9ee282a7ef2394bf36fb0a97f054f2186a21a2a6c7294c01a68ca05e1fb62df7",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "9ee282a7ef2394bf36fb0a97f054f2186a21a2a6c7294c01a68ca05e1fb62df7",
+        "localRelativePath": "Janus-Pro-7B/R-HR/R-HR-083-1.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-HR/R-HR-083-1.png",
+        "relativePath": "R-HR/R-HR-083-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "01b3796995ac93e360c686676b93abd7483cd14a02b5116bb9d2a554c5a0220f",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-HR/R-HR-083-1.png"
+      },
+      {
+        "bytes": 278810,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 278810,
+        "downloadedSha256": "9bb2488fc1df954cb35dddf7757b17b5e3c6479ff3bba60b91c39b1980707b16",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "9bb2488fc1df954cb35dddf7757b17b5e3c6479ff3bba60b91c39b1980707b16",
+        "localRelativePath": "Janus-Pro-7B/C-MI/C-MI-084-1.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/C-MI/C-MI-084-1.png",
+        "relativePath": "C-MI/C-MI-084-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "01b43c31d64f9d363b55e46c098ad1780731342164a273ccd0688eb004dfdbb9",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/C-MI/C-MI-084-1.png"
+      },
+      {
+        "bytes": 225371,
+        "decode": {
+          "format": "PNG",
+          "height": 384,
+          "mode": "RGB",
+          "width": 384
+        },
+        "downloadedBytes": 225371,
+        "downloadedSha256": "dba3f618a9c377e5ec1c8d8e6d19647b61e60baedc5e5bd3db61deb5032c5e55",
+        "generatorFamily": "Janus-Pro-7B",
+        "lfsSha256": "dba3f618a9c377e5ec1c8d8e6d19647b61e60baedc5e5bd3db61deb5032c5e55",
+        "localRelativePath": "Janus-Pro-7B/R-LR/R-LR-090-0.png",
+        "officialRevision": "a8c7be4f3601c12725c93047e4e3afca7e2787a8",
+        "path": "data/Janus-Pro-7B/R-LR/R-LR-090-0.png",
+        "relativePath": "R-LR/R-LR-090-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "01b784e9565a7aabc2f72ad71f80dab3a90fa3d533fdfd75babdb693f9d582b7",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/a8c7be4f3601c12725c93047e4e3afca7e2787a8/data/Janus-Pro-7B/R-LR/R-LR-090-0.png"
+      },
+      {
+        "bytes": 1488088,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1488088,
+        "downloadedSha256": "4db81dcc22e31387a3e44a1d693c9d7b94380e149e2553ea31cdaebd242161b2",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "4db81dcc22e31387a3e44a1d693c9d7b94380e149e2553ea31cdaebd242161b2",
+        "localRelativePath": "LongCat-Image/C-MI/C-MI-059-0.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/C-MI/C-MI-059-0.png",
+        "relativePath": "C-MI/C-MI-059-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00012ba2615085f24d73d7dc52ffa42b3442abd40c236ff6bb513a9b7cafe933",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/C-MI/C-MI-059-0.png"
+      },
+      {
+        "bytes": 1584445,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1584445,
+        "downloadedSha256": "f426a5f5594091a358f4ca728f4e92f0eb6bec6aeb54d5558f013ae2973cf1b2",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "f426a5f5594091a358f4ca728f4e92f0eb6bec6aeb54d5558f013ae2973cf1b2",
+        "localRelativePath": "LongCat-Image/R-BR/R-BR-044-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-BR/R-BR-044-3.png",
+        "relativePath": "R-BR/R-BR-044-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "001995efe79451f04722d300cefce31f9c45a3cc4dd9e1ffab29c1d96d38964e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-BR/R-BR-044-3.png"
+      },
+      {
+        "bytes": 1373616,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1373616,
+        "downloadedSha256": "4370f69d6e3824e3960e436c2e1c593705f72db2f8898cf46fb5319dc46c65ca",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "4370f69d6e3824e3960e436c2e1c593705f72db2f8898cf46fb5319dc46c65ca",
+        "localRelativePath": "LongCat-Image/R-GR/R-GR-020-2.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-GR/R-GR-020-2.png",
+        "relativePath": "R-GR/R-GR-020-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00208dfe95d9a1324559672af7211f74726ad5777254cff5ca5596bfb093f1b0",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-GR/R-GR-020-2.png"
+      },
+      {
+        "bytes": 1531552,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1531552,
+        "downloadedSha256": "a5ece0dd78e0830891568c8ad417619defeba2d1181d57f8f1916e1fc41b89c6",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "a5ece0dd78e0830891568c8ad417619defeba2d1181d57f8f1916e1fc41b89c6",
+        "localRelativePath": "LongCat-Image/C-MA/C-MA-086-1.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/C-MA/C-MA-086-1.png",
+        "relativePath": "C-MA/C-MA-086-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0022fa63593c8acbc533cb1f8106760e78d16a0c1c7b4e05ca3d973d2833720c",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/C-MA/C-MA-086-1.png"
+      },
+      {
+        "bytes": 1957906,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1957906,
+        "downloadedSha256": "582701426533830701bdc800b00a320ee50309a351d580fbc2377a0dfe651ef1",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "582701426533830701bdc800b00a320ee50309a351d580fbc2377a0dfe651ef1",
+        "localRelativePath": "LongCat-Image/R-AR/R-AR-062-2.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-AR/R-AR-062-2.png",
+        "relativePath": "R-AR/R-AR-062-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00234a18ee92f8aa7884a7494e02fd0936ce398ecf01dd205db5332ef044ee5b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-AR/R-AR-062-2.png"
+      },
+      {
+        "bytes": 1630459,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1630459,
+        "downloadedSha256": "0276926e164ac081d3fde53add6646d7cad4dbe1c01ec72d4c6c8ccda5c3ca46",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "0276926e164ac081d3fde53add6646d7cad4dbe1c01ec72d4c6c8ccda5c3ca46",
+        "localRelativePath": "LongCat-Image/C-MA/C-MA-036-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/C-MA/C-MA-036-3.png",
+        "relativePath": "C-MA/C-MA-036-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00296d3816ac7b123c7f37b792a93f5ccff5a35b4f273a987cc1fe3f1898dbe5",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/C-MA/C-MA-036-3.png"
+      },
+      {
+        "bytes": 1275563,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1275563,
+        "downloadedSha256": "f92687d57030522144195baa2909963f0dc86213401c57bbbfc155d0c44d2585",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "f92687d57030522144195baa2909963f0dc86213401c57bbbfc155d0c44d2585",
+        "localRelativePath": "LongCat-Image/R-GR/R-GR-084-0.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-GR/R-GR-084-0.png",
+        "relativePath": "R-GR/R-GR-084-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00386263e4fa8601567355eb492443aab1620b96eb429985df650b724466bc3d",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-GR/R-GR-084-0.png"
+      },
+      {
+        "bytes": 1298070,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1298070,
+        "downloadedSha256": "996ee06c34508e0266eced5985d17361388a810eae1915155445a1597e8c5d9a",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "996ee06c34508e0266eced5985d17361388a810eae1915155445a1597e8c5d9a",
+        "localRelativePath": "LongCat-Image/R-RR/R-RR-055-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-RR/R-RR-055-3.png",
+        "relativePath": "R-RR/R-RR-055-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "003e284ea1522f9820069b1bc999d02266a333326531fcd1a1ff11d95259cfad",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-RR/R-RR-055-3.png"
+      },
+      {
+        "bytes": 1246497,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1246497,
+        "downloadedSha256": "64c15598a06659f447da9f0946c2e0812d2f769a924e7da0b0a38098226c104c",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "64c15598a06659f447da9f0946c2e0812d2f769a924e7da0b0a38098226c104c",
+        "localRelativePath": "LongCat-Image/R-AR/R-AR-055-1.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-AR/R-AR-055-1.png",
+        "relativePath": "R-AR/R-AR-055-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "003f4d69c1685955a2d79dedcfe75e63aef1a0bc8ae34aee405979c34b47ec10",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-AR/R-AR-055-1.png"
+      },
+      {
+        "bytes": 1812838,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1812838,
+        "downloadedSha256": "ee4940ab419c5d9d1e202c38a14e1189c0fe937219dfd47bf9b43def9cf28b49",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "ee4940ab419c5d9d1e202c38a14e1189c0fe937219dfd47bf9b43def9cf28b49",
+        "localRelativePath": "LongCat-Image/C-MI/C-MI-028-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/C-MI/C-MI-028-3.png",
+        "relativePath": "C-MI/C-MI-028-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "004229b04575d4d717c6e074afec0062957ceceacfa960f7d61559e7bc185a57",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/C-MI/C-MI-028-3.png"
+      },
+      {
+        "bytes": 1104245,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1104245,
+        "downloadedSha256": "38cac9b4487b4318b34328e185ab80e893fab0d8f3882e8ca261ee9bcd48aadb",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "38cac9b4487b4318b34328e185ab80e893fab0d8f3882e8ca261ee9bcd48aadb",
+        "localRelativePath": "LongCat-Image/R-PR/R-PR-037-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-PR/R-PR-037-3.png",
+        "relativePath": "R-PR/R-PR-037-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0054510151a1d77e6ef15b40a4ca1a529523ce2e90c490130021f5e600a2ebfc",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-PR/R-PR-037-3.png"
+      },
+      {
+        "bytes": 1390041,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1390041,
+        "downloadedSha256": "1c7c07303bd0cc178f710f3dba6610fd29317f2d947961e651066933c0330c22",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "1c7c07303bd0cc178f710f3dba6610fd29317f2d947961e651066933c0330c22",
+        "localRelativePath": "LongCat-Image/C-MR/C-MR-047-1.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/C-MR/C-MR-047-1.png",
+        "relativePath": "C-MR/C-MR-047-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "007384ef6aa3a2d9e7a665bab92fb1aace5ceddcdb8ece7f3d06b54126580238",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/C-MR/C-MR-047-1.png"
+      },
+      {
+        "bytes": 1389809,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1389809,
+        "downloadedSha256": "788bdc132535e289ba9aa5d212e61d11505e9ec6a8820147d705d29affaff40b",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "788bdc132535e289ba9aa5d212e61d11505e9ec6a8820147d705d29affaff40b",
+        "localRelativePath": "LongCat-Image/R-CR/R-CR-048-0.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-CR/R-CR-048-0.png",
+        "relativePath": "R-CR/R-CR-048-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "007e41f91697b7987d55a5588bba09c33a3365d4f98c37ea42fc7d005c8feef9",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-CR/R-CR-048-0.png"
+      },
+      {
+        "bytes": 1190961,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1190961,
+        "downloadedSha256": "a2b45860de8e3f5d56101e15812d9cf308172af70804b9a8c26bf4571806fe0c",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "a2b45860de8e3f5d56101e15812d9cf308172af70804b9a8c26bf4571806fe0c",
+        "localRelativePath": "LongCat-Image/C-TR/C-TR-030-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/C-TR/C-TR-030-3.png",
+        "relativePath": "C-TR/C-TR-030-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "008894b84c86cf42a004daa28dafab6530f324972a38270188c918ce697571c9",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/C-TR/C-TR-030-3.png"
+      },
+      {
+        "bytes": 1316776,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1316776,
+        "downloadedSha256": "87c0652f63ce14e8cd4270d8f32d8f435aadd0fd747dd13adfa96d9c89d02957",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "87c0652f63ce14e8cd4270d8f32d8f435aadd0fd747dd13adfa96d9c89d02957",
+        "localRelativePath": "LongCat-Image/R-AR/R-AR-060-2.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-AR/R-AR-060-2.png",
+        "relativePath": "R-AR/R-AR-060-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "009736f79702e20060930165f38e462f057d331ab47cdb66dd650337c976467a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-AR/R-AR-060-2.png"
+      },
+      {
+        "bytes": 1702199,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1702199,
+        "downloadedSha256": "451a8566d2731f59a5b14b2efd93ff0b6e7a6c8c0a6bc37f348b4b77ff67d8e3",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "451a8566d2731f59a5b14b2efd93ff0b6e7a6c8c0a6bc37f348b4b77ff67d8e3",
+        "localRelativePath": "LongCat-Image/C-MI/C-MI-042-0.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/C-MI/C-MI-042-0.png",
+        "relativePath": "C-MI/C-MI-042-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "009b5519db5b62df3bd41e0e2030468231bba9e94893d9ba2da4a6325865ea4a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/C-MI/C-MI-042-0.png"
+      },
+      {
+        "bytes": 1593233,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1593233,
+        "downloadedSha256": "83340476f3d3b5999c3cdc29bd7511050a25ba0cc936e9d70c9ee6b4327fa03d",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "83340476f3d3b5999c3cdc29bd7511050a25ba0cc936e9d70c9ee6b4327fa03d",
+        "localRelativePath": "LongCat-Image/C-MI/C-MI-010-2.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/C-MI/C-MI-010-2.png",
+        "relativePath": "C-MI/C-MI-010-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00a5c836b5ff62a134e6bfbcbfab81ac627055733e60b787dd8773d2f2a58e29",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/C-MI/C-MI-010-2.png"
+      },
+      {
+        "bytes": 1257371,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1257371,
+        "downloadedSha256": "bf026f79093bb008e50be9fd222e0135376917097249a77f69a1e0c0da158cc8",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "bf026f79093bb008e50be9fd222e0135376917097249a77f69a1e0c0da158cc8",
+        "localRelativePath": "LongCat-Image/R-LR/R-LR-079-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-LR/R-LR-079-3.png",
+        "relativePath": "R-LR/R-LR-079-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00be51ad5aedda7d6de76ab36a0f21055ca4531a4295496987a9a7fc2a89be31",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-LR/R-LR-079-3.png"
+      },
+      {
+        "bytes": 1328889,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1328889,
+        "downloadedSha256": "58e3c3f1d4ff6085d58374ff8d5ab1365f0251f5aca86a74a7388b94dae6d0f2",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "58e3c3f1d4ff6085d58374ff8d5ab1365f0251f5aca86a74a7388b94dae6d0f2",
+        "localRelativePath": "LongCat-Image/R-RR/R-RR-012-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-RR/R-RR-012-3.png",
+        "relativePath": "R-RR/R-RR-012-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00c89266cb328e1947cde20747708d93752086a995e904011005121d3b2f8adc",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-RR/R-RR-012-3.png"
+      },
+      {
+        "bytes": 1565483,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1565483,
+        "downloadedSha256": "1f55c4d31e61d975888ec30486c12b3b36ff01c3e0683fa55a47ad1d20df3c79",
+        "generatorFamily": "LongCat-Image",
+        "lfsSha256": "1f55c4d31e61d975888ec30486c12b3b36ff01c3e0683fa55a47ad1d20df3c79",
+        "localRelativePath": "LongCat-Image/R-BR/R-BR-028-3.png",
+        "officialRevision": "db66a763f1247697755fe17329937d1095dcaad0",
+        "path": "data/LongCat-Image/R-BR/R-BR-028-3.png",
+        "relativePath": "R-BR/R-BR-028-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00eb283142a21983c48d35fe5d5c54f30894e24bb7584c880f601b9f3613cb50",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/db66a763f1247697755fe17329937d1095dcaad0/data/LongCat-Image/R-BR/R-BR-028-3.png"
+      },
+      {
+        "bytes": 1316415,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1316415,
+        "downloadedSha256": "98c4d87e873b7ca3bea3684a15570caf6d067940b254dbd1eabc5d6c587eb8fe",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "98c4d87e873b7ca3bea3684a15570caf6d067940b254dbd1eabc5d6c587eb8fe",
+        "localRelativePath": "OmniGen2-7B/C-MR/C-MR-007-3.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/C-MR/C-MR-007-3.png",
+        "relativePath": "C-MR/C-MR-007-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0005b30640b737198e876ea7d34b07a3a309d1f3a644557c480122cac0a4088d",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/C-MR/C-MR-007-3.png"
+      },
+      {
+        "bytes": 1124808,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1124808,
+        "downloadedSha256": "b5671397edaa85fafe6f297c5f3c0dcb2670831a52b276e931d9aa902c29c57f",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "b5671397edaa85fafe6f297c5f3c0dcb2670831a52b276e931d9aa902c29c57f",
+        "localRelativePath": "OmniGen2-7B/R-GR/R-GR-084-0.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-GR/R-GR-084-0.png",
+        "relativePath": "R-GR/R-GR-084-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0009e3e0df161514b828b69a41a9225f4c0f4c0de6416819e2148ebed9cc926e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-GR/R-GR-084-0.png"
+      },
+      {
+        "bytes": 1716545,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1716545,
+        "downloadedSha256": "da6a817cb8fc5722095719035900e61d0ff3c07126d92869393db8676565d7ad",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "da6a817cb8fc5722095719035900e61d0ff3c07126d92869393db8676565d7ad",
+        "localRelativePath": "OmniGen2-7B/C-MI/C-MI-038-2.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/C-MI/C-MI-038-2.png",
+        "relativePath": "C-MI/C-MI-038-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "001504d2458bf306ffb61f493e708835dda93a18af7ab7d208394aa57704790d",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/C-MI/C-MI-038-2.png"
+      },
+      {
+        "bytes": 1314882,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1314882,
+        "downloadedSha256": "7d6ad8a63809b1ab48a1b5772cad1805457d62b1f4ef4731c10459992844436d",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "7d6ad8a63809b1ab48a1b5772cad1805457d62b1f4ef4731c10459992844436d",
+        "localRelativePath": "OmniGen2-7B/R-CR/R-CR-061-1.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-CR/R-CR-061-1.png",
+        "relativePath": "R-CR/R-CR-061-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "002b5719fcf2eaae96893066bba3aac39c7eeee294fd81ac8b39e76fccad508e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-CR/R-CR-061-1.png"
+      },
+      {
+        "bytes": 862319,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 862319,
+        "downloadedSha256": "72a554f00fe73d8b70b198c290e83341e02c7b3928ae4b01ffae5dc0061fd358",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "72a554f00fe73d8b70b198c290e83341e02c7b3928ae4b01ffae5dc0061fd358",
+        "localRelativePath": "OmniGen2-7B/R-PR/R-PR-070-3.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-PR/R-PR-070-3.png",
+        "relativePath": "R-PR/R-PR-070-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "005e2f2c0395c6c5971f2b292088e9289881fe99b2f55a7b9850c47f2f858065",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-PR/R-PR-070-3.png"
+      },
+      {
+        "bytes": 717520,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 717520,
+        "downloadedSha256": "3390a9aa9aca67caac73b8a2e21338cf0dcf9d68f3d6d87011627ff98f2b7cf3",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "3390a9aa9aca67caac73b8a2e21338cf0dcf9d68f3d6d87011627ff98f2b7cf3",
+        "localRelativePath": "OmniGen2-7B/R-GR/R-GR-023-1.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-GR/R-GR-023-1.png",
+        "relativePath": "R-GR/R-GR-023-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0060c4ddb69e2696b052939a6694827c994c47304d0a9e5d96ba2098cd99186e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-GR/R-GR-023-1.png"
+      },
+      {
+        "bytes": 1105203,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1105203,
+        "downloadedSha256": "cbd466f56ee98e208e22b243ab1217737cfdecf23913f0b74d4e69684b2b7be9",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "cbd466f56ee98e208e22b243ab1217737cfdecf23913f0b74d4e69684b2b7be9",
+        "localRelativePath": "OmniGen2-7B/R-BR/R-BR-055-0.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-BR/R-BR-055-0.png",
+        "relativePath": "R-BR/R-BR-055-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00629c2108e2e86bbd5b8cc0dd836fe0512d3bac5a51a0ae574450fbccf248ea",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-BR/R-BR-055-0.png"
+      },
+      {
+        "bytes": 1352528,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1352528,
+        "downloadedSha256": "bbc93b8a20379fd7618ec21993e737180f6df57e33788f0f328efd78bf235850",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "bbc93b8a20379fd7618ec21993e737180f6df57e33788f0f328efd78bf235850",
+        "localRelativePath": "OmniGen2-7B/R-CR/R-CR-076-3.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-CR/R-CR-076-3.png",
+        "relativePath": "R-CR/R-CR-076-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00651b55f644d4c1a1125ae2c6f8b8550bf9d52770737ff0584ed86d3f46e047",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-CR/R-CR-076-3.png"
+      },
+      {
+        "bytes": 979794,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 979794,
+        "downloadedSha256": "032399b5f379e0f9533ae9b63daabda631cb90ce9997ddc4e783043aac1728af",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "032399b5f379e0f9533ae9b63daabda631cb90ce9997ddc4e783043aac1728af",
+        "localRelativePath": "OmniGen2-7B/R-GR/R-GR-011-2.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-GR/R-GR-011-2.png",
+        "relativePath": "R-GR/R-GR-011-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0066841800296d0e04b7065beab96e0f1df5ee49346ff3985a523f1ca3b8951a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-GR/R-GR-011-2.png"
+      },
+      {
+        "bytes": 804004,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 804004,
+        "downloadedSha256": "4843fc7577cbd79747cc36f3888301237a5a7fe51e823dc0fcf166cde20351df",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "4843fc7577cbd79747cc36f3888301237a5a7fe51e823dc0fcf166cde20351df",
+        "localRelativePath": "OmniGen2-7B/C-TR/C-TR-036-1.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/C-TR/C-TR-036-1.png",
+        "relativePath": "C-TR/C-TR-036-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00adfd9cb3ff07d38fa79151d5d5c56d640f1ee5578f6226f0adb3cd9cf75d3c",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/C-TR/C-TR-036-1.png"
+      },
+      {
+        "bytes": 1185781,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1185781,
+        "downloadedSha256": "ed6f4f66f0e8abd8625ba1ab52ad2f8d80f112402aec34c1ab6549e1c020b1db",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "ed6f4f66f0e8abd8625ba1ab52ad2f8d80f112402aec34c1ab6549e1c020b1db",
+        "localRelativePath": "OmniGen2-7B/R-AR/R-AR-043-2.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-AR/R-AR-043-2.png",
+        "relativePath": "R-AR/R-AR-043-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00ae1d0558c780d6d8083e59f420dde79125c770dd37aacb03c306910a4e888b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-AR/R-AR-043-2.png"
+      },
+      {
+        "bytes": 528930,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 528930,
+        "downloadedSha256": "1dabbfe73b224d0b80f9046cf2943a2b3cc0b13436100cdd38d4479a392c517d",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "1dabbfe73b224d0b80f9046cf2943a2b3cc0b13436100cdd38d4479a392c517d",
+        "localRelativePath": "OmniGen2-7B/R-LR/R-LR-078-1.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-LR/R-LR-078-1.png",
+        "relativePath": "R-LR/R-LR-078-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b6f3eeef312d8580a97b23885d216d48f823f81bd7b45e1350ff808bf4e616",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-LR/R-LR-078-1.png"
+      },
+      {
+        "bytes": 1091205,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1091205,
+        "downloadedSha256": "dbe5f8c13c524887c597bfab87e383caf9a7374b314d827e41c359a90f519f8f",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "dbe5f8c13c524887c597bfab87e383caf9a7374b314d827e41c359a90f519f8f",
+        "localRelativePath": "OmniGen2-7B/C-MA/C-MA-049-0.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/C-MA/C-MA-049-0.png",
+        "relativePath": "C-MA/C-MA-049-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00d420e64dffba144649630ee900744b2f153e7e0ffe45c162cda72ff7e25716",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/C-MA/C-MA-049-0.png"
+      },
+      {
+        "bytes": 886590,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 886590,
+        "downloadedSha256": "8c4f5b6fc12b9de3226519d311266b3ae76e5c4e91562ea26974a20f97397c81",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "8c4f5b6fc12b9de3226519d311266b3ae76e5c4e91562ea26974a20f97397c81",
+        "localRelativePath": "OmniGen2-7B/R-BR/R-BR-017-0.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-BR/R-BR-017-0.png",
+        "relativePath": "R-BR/R-BR-017-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00d920f605bb677c91c85b433b496b484a427f4b573abdc0ce01207073272cd4",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-BR/R-BR-017-0.png"
+      },
+      {
+        "bytes": 823517,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 823517,
+        "downloadedSha256": "18ae1164fb1a3ddc4ba9864288619ec543e5943ae2fabaaf6b8d1de5f109bc99",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "18ae1164fb1a3ddc4ba9864288619ec543e5943ae2fabaaf6b8d1de5f109bc99",
+        "localRelativePath": "OmniGen2-7B/R-PR/R-PR-065-3.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-PR/R-PR-065-3.png",
+        "relativePath": "R-PR/R-PR-065-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00dd029c85c16cb2438e8d0ac86014d237bf4650f09766f48de6dfeaba2e219e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-PR/R-PR-065-3.png"
+      },
+      {
+        "bytes": 1132078,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1132078,
+        "downloadedSha256": "b04b9e96f47d3772c6c6e210dd37ab86f529ea2f8d604cb179284432a6e8ca9b",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "b04b9e96f47d3772c6c6e210dd37ab86f529ea2f8d604cb179284432a6e8ca9b",
+        "localRelativePath": "OmniGen2-7B/R-CR/R-CR-055-1.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-CR/R-CR-055-1.png",
+        "relativePath": "R-CR/R-CR-055-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00e0a9124fcc88591cc18013f623bfdd94b8a347479462440156aa686a15c45c",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-CR/R-CR-055-1.png"
+      },
+      {
+        "bytes": 1445731,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1445731,
+        "downloadedSha256": "cb7af14feada091574da2c1eeed298846d08213dcd6f24245d706d68834a953a",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "cb7af14feada091574da2c1eeed298846d08213dcd6f24245d706d68834a953a",
+        "localRelativePath": "OmniGen2-7B/R-RR/R-RR-043-0.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-RR/R-RR-043-0.png",
+        "relativePath": "R-RR/R-RR-043-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00ffcb2ec9d412296c3496a87af475346e251408032ee450908d1886ffaa151d",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-RR/R-RR-043-0.png"
+      },
+      {
+        "bytes": 996466,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 996466,
+        "downloadedSha256": "f2dc331e04b7b8582a22e7f9afb663f9d9edcbc72a908c4d6d1bcd868b5ff2e2",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "f2dc331e04b7b8582a22e7f9afb663f9d9edcbc72a908c4d6d1bcd868b5ff2e2",
+        "localRelativePath": "OmniGen2-7B/R-RR/R-RR-019-0.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-RR/R-RR-019-0.png",
+        "relativePath": "R-RR/R-RR-019-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "010b47f8a0d9d64806adae84f4bb6a347c3de796de282baaa3eb798b06db0e77",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-RR/R-RR-019-0.png"
+      },
+      {
+        "bytes": 697830,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 697830,
+        "downloadedSha256": "66a16039440eaf57ac107c4ef14383e9271fe48d521bc3dccebc7ea555187424",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "66a16039440eaf57ac107c4ef14383e9271fe48d521bc3dccebc7ea555187424",
+        "localRelativePath": "OmniGen2-7B/R-BR/R-BR-075-3.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/R-BR/R-BR-075-3.png",
+        "relativePath": "R-BR/R-BR-075-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "011f0d7ecf1ae66a33ae6e21efe824c0f31d0734143f96620a433283411f846a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/R-BR/R-BR-075-3.png"
+      },
+      {
+        "bytes": 1578182,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1578182,
+        "downloadedSha256": "ed0722c8f6ad9982b0793e1409d115ac9851a2975fc32216cad39ad9731e4a26",
+        "generatorFamily": "OmniGen2-7B",
+        "lfsSha256": "ed0722c8f6ad9982b0793e1409d115ac9851a2975fc32216cad39ad9731e4a26",
+        "localRelativePath": "OmniGen2-7B/C-MI/C-MI-049-0.png",
+        "officialRevision": "e2b453158a05e69387058e65192935ea7249c049",
+        "path": "data/OmniGen2-7B/C-MI/C-MI-049-0.png",
+        "relativePath": "C-MI/C-MI-049-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0148228d73e9343089f84e55e97f786ca4f4951b1fc5ed1656968f641d44f814",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/e2b453158a05e69387058e65192935ea7249c049/data/OmniGen2-7B/C-MI/C-MI-049-0.png"
+      },
+      {
+        "bytes": 2506723,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 2506723,
+        "downloadedSha256": "7b770bd44b9a033928a529a27c763788df8fd1d53e6f09198f8c4b4912ebcaca",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "7b770bd44b9a033928a529a27c763788df8fd1d53e6f09198f8c4b4912ebcaca",
+        "localRelativePath": "PixArt-Alpha/C-MI/C-MI-007-1.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-MI/C-MI-007-1.png",
+        "relativePath": "C-MI/C-MI-007-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "000268ea62155fbe5287afa98579dc8977d59f7109a4dd2729cd2405349a8600",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-MI/C-MI-007-1.png"
+      },
+      {
+        "bytes": 1273309,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1273309,
+        "downloadedSha256": "ba4f6d5b342a9a2a24453f90d62319fd2e058b4463342e10f707f2b294c0b8d6",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "ba4f6d5b342a9a2a24453f90d62319fd2e058b4463342e10f707f2b294c0b8d6",
+        "localRelativePath": "PixArt-Alpha/C-MA/C-MA-025-0.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-MA/C-MA-025-0.png",
+        "relativePath": "C-MA/C-MA-025-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00084e0ee67242b9513ec680c1c6f2ec0fc7712ab17503bbc42c422ec994257a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-MA/C-MA-025-0.png"
+      },
+      {
+        "bytes": 772421,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 772421,
+        "downloadedSha256": "8130f363e88ce8ce128410f81c916c5764fc57f60d579988185844cde891587f",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "8130f363e88ce8ce128410f81c916c5764fc57f60d579988185844cde891587f",
+        "localRelativePath": "PixArt-Alpha/C-TR/C-TR-041-1.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-TR/C-TR-041-1.png",
+        "relativePath": "C-TR/C-TR-041-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0019283e2ea2346a8c7270c57b0f558c57972f9d208a98f56ad6805f27643441",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-TR/C-TR-041-1.png"
+      },
+      {
+        "bytes": 1362044,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1362044,
+        "downloadedSha256": "52e3f0a960909c728b588e0df2a3107185b5ffe1439e7f3208c2b0f3f0e60505",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "52e3f0a960909c728b588e0df2a3107185b5ffe1439e7f3208c2b0f3f0e60505",
+        "localRelativePath": "PixArt-Alpha/C-MI/C-MI-024-2.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-MI/C-MI-024-2.png",
+        "relativePath": "C-MI/C-MI-024-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "001b583bf2d916e0f9e4c8edbc587a5de7ba51a199267d2ca0ef06bb7dfe8c3e",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-MI/C-MI-024-2.png"
+      },
+      {
+        "bytes": 2117012,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 2117012,
+        "downloadedSha256": "0e424bb78774d008780ea7b6f7ee050bb633e439a2ff8c4cfb97f2b58fb71d37",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "0e424bb78774d008780ea7b6f7ee050bb633e439a2ff8c4cfb97f2b58fb71d37",
+        "localRelativePath": "PixArt-Alpha/C-MI/C-MI-063-3.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-MI/C-MI-063-3.png",
+        "relativePath": "C-MI/C-MI-063-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "002510509c90d0a49eb3c747ad1c8c6f417c8a1eff969800e8651b90cb1ba48f",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-MI/C-MI-063-3.png"
+      },
+      {
+        "bytes": 1308780,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1308780,
+        "downloadedSha256": "5c1992fc876c2ef15a57d9e56d490c888bf97c774f5765a6bb9fd959b6d94fc0",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "5c1992fc876c2ef15a57d9e56d490c888bf97c774f5765a6bb9fd959b6d94fc0",
+        "localRelativePath": "PixArt-Alpha/R-PR/R-PR-043-0.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-PR/R-PR-043-0.png",
+        "relativePath": "R-PR/R-PR-043-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0028ea4d939d5c9459f530fa2b6a6547f6cfd954d4a6c197b5cfd442c1611c39",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-PR/R-PR-043-0.png"
+      },
+      {
+        "bytes": 1252384,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1252384,
+        "downloadedSha256": "2567d8393dbeef7082d1244240fbbb71475abb0a20a8b404827f5770ff5b9f56",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "2567d8393dbeef7082d1244240fbbb71475abb0a20a8b404827f5770ff5b9f56",
+        "localRelativePath": "PixArt-Alpha/R-GR/R-GR-032-3.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-GR/R-GR-032-3.png",
+        "relativePath": "R-GR/R-GR-032-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "004066a394704e77c17643132f7e59a0cc2913e3892221d9fdd0a869ab936419",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-GR/R-GR-032-3.png"
+      },
+      {
+        "bytes": 1663272,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1663272,
+        "downloadedSha256": "2025a19479dbf4ea03f2c9c128707dc65927a87dafcf74bed9c9e88122a18fc4",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "2025a19479dbf4ea03f2c9c128707dc65927a87dafcf74bed9c9e88122a18fc4",
+        "localRelativePath": "PixArt-Alpha/C-MR/C-MR-036-2.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-MR/C-MR-036-2.png",
+        "relativePath": "C-MR/C-MR-036-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00443801e17dd9f31ac3d31a49f3d1ae746fdf19f623bb5d8819faad141e980d",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-MR/C-MR-036-2.png"
+      },
+      {
+        "bytes": 1546495,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1546495,
+        "downloadedSha256": "a2b8c21b1be8736c48d20835f76f3b224a8b71113dcbd2b494ec6a4942f0676e",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "a2b8c21b1be8736c48d20835f76f3b224a8b71113dcbd2b494ec6a4942f0676e",
+        "localRelativePath": "PixArt-Alpha/R-CR/R-CR-056-1.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-CR/R-CR-056-1.png",
+        "relativePath": "R-CR/R-CR-056-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0046de13576a5212a33df34103ba9a8ad53773a33c640d460b9253966cb2a24d",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-CR/R-CR-056-1.png"
+      },
+      {
+        "bytes": 1369440,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1369440,
+        "downloadedSha256": "651151994bd90df225ce7028b75a014c48ab504f02d5708a09895d5c1b14c156",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "651151994bd90df225ce7028b75a014c48ab504f02d5708a09895d5c1b14c156",
+        "localRelativePath": "PixArt-Alpha/R-AR/R-AR-015-1.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-AR/R-AR-015-1.png",
+        "relativePath": "R-AR/R-AR-015-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0048f2ff969871bd135e9e680e3d7b48ec59f9461901604364fe7dcddcb4e924",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-AR/R-AR-015-1.png"
+      },
+      {
+        "bytes": 1843630,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1843630,
+        "downloadedSha256": "bc2125f93687fa577bdaf9a73522dd3c5cdfc2c20dfdeafa2a9fe5c9dc68cb01",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "bc2125f93687fa577bdaf9a73522dd3c5cdfc2c20dfdeafa2a9fe5c9dc68cb01",
+        "localRelativePath": "PixArt-Alpha/R-CR/R-CR-011-0.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-CR/R-CR-011-0.png",
+        "relativePath": "R-CR/R-CR-011-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "004a8d72ecd2821913f695282804ca131ff0f13ac527b56a392acca959c6964b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-CR/R-CR-011-0.png"
+      },
+      {
+        "bytes": 1286517,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1286517,
+        "downloadedSha256": "47cfc59e84695814f33ab0da23de974d756a9f258abd9d8e5799256d7739e398",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "47cfc59e84695814f33ab0da23de974d756a9f258abd9d8e5799256d7739e398",
+        "localRelativePath": "PixArt-Alpha/C-TR/C-TR-015-2.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-TR/C-TR-015-2.png",
+        "relativePath": "C-TR/C-TR-015-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "004ea467dc309a8c6ed5cd388c3f7aac44f8c3b29d16a9ca8e611b7a19ce6dbe",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-TR/C-TR-015-2.png"
+      },
+      {
+        "bytes": 1653886,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1653886,
+        "downloadedSha256": "f00f92f0861bad5edc751731a744c79819cdc6ab10a8ee34ff680774c2b21f37",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "f00f92f0861bad5edc751731a744c79819cdc6ab10a8ee34ff680774c2b21f37",
+        "localRelativePath": "PixArt-Alpha/R-HR/R-HR-049-0.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-HR/R-HR-049-0.png",
+        "relativePath": "R-HR/R-HR-049-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0056c7a1b85876300834c13f7cf91189407a1d23f27e150c5af2150929103b5a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-HR/R-HR-049-0.png"
+      },
+      {
+        "bytes": 1210648,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1210648,
+        "downloadedSha256": "8d00afe083eb3b504e83bcffda15d20c7e615b9d9973323282e2f6f1dfbc8876",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "8d00afe083eb3b504e83bcffda15d20c7e615b9d9973323282e2f6f1dfbc8876",
+        "localRelativePath": "PixArt-Alpha/R-PR/R-PR-016-0.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-PR/R-PR-016-0.png",
+        "relativePath": "R-PR/R-PR-016-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "005829a9cae01dd7fe8a7ea1e0064181c4eee8eb7d7e750a6e30ecb86afb9ab9",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-PR/R-PR-016-0.png"
+      },
+      {
+        "bytes": 1300846,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1300846,
+        "downloadedSha256": "6884955eb8a70674211c13a92b007fab2abe792f685c4de53d4fa9ab6bc6c4b2",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "6884955eb8a70674211c13a92b007fab2abe792f685c4de53d4fa9ab6bc6c4b2",
+        "localRelativePath": "PixArt-Alpha/C-MA/C-MA-041-0.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-MA/C-MA-041-0.png",
+        "relativePath": "C-MA/C-MA-041-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0060c1d0a0368eaef832c034a4b855a4af10c91c278be276c244f298b88456db",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-MA/C-MA-041-0.png"
+      },
+      {
+        "bytes": 1903893,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1903893,
+        "downloadedSha256": "c9c545b136cdb15a26a5c0166cbcdb7eda22eb90cb091d408fc9a5ca1e0a9ee0",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "c9c545b136cdb15a26a5c0166cbcdb7eda22eb90cb091d408fc9a5ca1e0a9ee0",
+        "localRelativePath": "PixArt-Alpha/C-TR/C-TR-058-1.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-TR/C-TR-058-1.png",
+        "relativePath": "C-TR/C-TR-058-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "007f9c278afbf5d32be42e56a66d62a6925152b68e8f1a0f1c9b7e9429d05309",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-TR/C-TR-058-1.png"
+      },
+      {
+        "bytes": 908478,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 908478,
+        "downloadedSha256": "949d58c5d87afcd2348223c41c8b89490e61bc67c01c31da0eff3bcb9c1cdc50",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "949d58c5d87afcd2348223c41c8b89490e61bc67c01c31da0eff3bcb9c1cdc50",
+        "localRelativePath": "PixArt-Alpha/C-MR/C-MR-028-0.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-MR/C-MR-028-0.png",
+        "relativePath": "C-MR/C-MR-028-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "008173bde029aa04ce2c9b3b9efc985dd752f8884f7f190e44bcf5a85c121519",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-MR/C-MR-028-0.png"
+      },
+      {
+        "bytes": 1744538,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1744538,
+        "downloadedSha256": "9509c8c815912620bc67cb5cdbec908553b73719ba2fbf1196bca9ad0ecc3908",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "9509c8c815912620bc67cb5cdbec908553b73719ba2fbf1196bca9ad0ecc3908",
+        "localRelativePath": "PixArt-Alpha/R-RR/R-RR-058-2.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-RR/R-RR-058-2.png",
+        "relativePath": "R-RR/R-RR-058-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "008e9f1bf583d974c845b1e3cb98f2103b5cf0db78082a03813d2279a3a09272",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-RR/R-RR-058-2.png"
+      },
+      {
+        "bytes": 1479483,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1479483,
+        "downloadedSha256": "89986ac3e73d54d41665c7bbe7782bb1869eaa83cf0389662a1b5039cb45e0d8",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "89986ac3e73d54d41665c7bbe7782bb1869eaa83cf0389662a1b5039cb45e0d8",
+        "localRelativePath": "PixArt-Alpha/C-MR/C-MR-037-2.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/C-MR/C-MR-037-2.png",
+        "relativePath": "C-MR/C-MR-037-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0098292ed03f4b0b06812621fbbb132fba9a76322b649a7997c7697e6c8e205f",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/C-MR/C-MR-037-2.png"
+      },
+      {
+        "bytes": 1418260,
+        "decode": {
+          "format": "PNG",
+          "height": 1024,
+          "mode": "RGB",
+          "width": 1024
+        },
+        "downloadedBytes": 1418260,
+        "downloadedSha256": "022f624d2f4d0d4dbaea1ddd3185da349c809acffe4a2ab47a68ee68be933444",
+        "generatorFamily": "PixArt-Alpha",
+        "lfsSha256": "022f624d2f4d0d4dbaea1ddd3185da349c809acffe4a2ab47a68ee68be933444",
+        "localRelativePath": "PixArt-Alpha/R-GR/R-GR-038-3.png",
+        "officialRevision": "15e28194bec5768aa23603a56afe27eb5c560f04",
+        "path": "data/PixArt-Alpha/R-GR/R-GR-038-3.png",
+        "relativePath": "R-GR/R-GR-038-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "009f8f57ee3a5de7d1b9062c72d5c3bd8e4470763fe6c97556770882aad40ba2",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/15e28194bec5768aa23603a56afe27eb5c560f04/data/PixArt-Alpha/R-GR/R-GR-038-3.png"
+      },
+      {
+        "bytes": 2615838,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2615838,
+        "downloadedSha256": "2649d6a5ccf1c9394050b019bd047f30df4556eb89ca114c8508d6ab59949063",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "2649d6a5ccf1c9394050b019bd047f30df4556eb89ca114c8508d6ab59949063",
+        "localRelativePath": "Qwen-Image-2512/R-RR/R-RR-001-2.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-RR/R-RR-001-2.png",
+        "relativePath": "R-RR/R-RR-001-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00080fe7c490767fc3350b9d9c1c5505a3e0a1154702109c5c81895ba0768e22",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-RR/R-RR-001-2.png"
+      },
+      {
+        "bytes": 2724047,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2724047,
+        "downloadedSha256": "697fbfd4c0947becfbf5d43369bfff667f0976dbb5cf91c814a6d41d74fd70d9",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "697fbfd4c0947becfbf5d43369bfff667f0976dbb5cf91c814a6d41d74fd70d9",
+        "localRelativePath": "Qwen-Image-2512/C-MI/C-MI-032-0.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MI/C-MI-032-0.png",
+        "relativePath": "C-MI/C-MI-032-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0009899e60187eae41f0c2f700d5f086b85c0dabc52f1694ea3f212de700c888",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MI/C-MI-032-0.png"
+      },
+      {
+        "bytes": 2054048,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2054048,
+        "downloadedSha256": "60a42267cdebdbcf8964a487bb24b278e9fbe3b4552031f174ab39d83e05446e",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "60a42267cdebdbcf8964a487bb24b278e9fbe3b4552031f174ab39d83e05446e",
+        "localRelativePath": "Qwen-Image-2512/C-MR/C-MR-088-0.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MR/C-MR-088-0.png",
+        "relativePath": "C-MR/C-MR-088-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "001379e8dbce6c213afe0341ff29460023e7e4f821fc324f9a15211339d2d13a",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MR/C-MR-088-0.png"
+      },
+      {
+        "bytes": 2878495,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2878495,
+        "downloadedSha256": "87ec2d5bba7d9c1793f8f05a02ad2098effcb45cc5dd51ff65fdb84dcad82680",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "87ec2d5bba7d9c1793f8f05a02ad2098effcb45cc5dd51ff65fdb84dcad82680",
+        "localRelativePath": "Qwen-Image-2512/R-AR/R-AR-057-1.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-AR/R-AR-057-1.png",
+        "relativePath": "R-AR/R-AR-057-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "004b9acc576db0189b117dbf7e87ff2fd3a90bd44c9f02c4d8df907502f236d9",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-AR/R-AR-057-1.png"
+      },
+      {
+        "bytes": 2533254,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2533254,
+        "downloadedSha256": "e770005d96923a323b4e1facfce8e5b98b739fb687c65f057f309d752c304f38",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "e770005d96923a323b4e1facfce8e5b98b739fb687c65f057f309d752c304f38",
+        "localRelativePath": "Qwen-Image-2512/C-MR/C-MR-053-2.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MR/C-MR-053-2.png",
+        "relativePath": "C-MR/C-MR-053-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00538a1b65e0bc20464a21d272b5be6b6b1f5698a665466e972c53a75ffab46f",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MR/C-MR-053-2.png"
+      },
+      {
+        "bytes": 2938508,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2938508,
+        "downloadedSha256": "20f0f7f3a30595c01586d2be75e47fa1791b269362c4512ea2df6d64aed4f105",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "20f0f7f3a30595c01586d2be75e47fa1791b269362c4512ea2df6d64aed4f105",
+        "localRelativePath": "Qwen-Image-2512/C-MA/C-MA-019-1.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MA/C-MA-019-1.png",
+        "relativePath": "C-MA/C-MA-019-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0055d35175cdaac98c82dca8e16a6e64f93802d2ef472685a3485da52ab7f3e7",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MA/C-MA-019-1.png"
+      },
+      {
+        "bytes": 2665512,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2665512,
+        "downloadedSha256": "e2bd35148c4b3e39a1a7050a809a82d66ae95b17d23adef1338393fc468d36a5",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "e2bd35148c4b3e39a1a7050a809a82d66ae95b17d23adef1338393fc468d36a5",
+        "localRelativePath": "Qwen-Image-2512/R-CR/R-CR-041-3.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-CR/R-CR-041-3.png",
+        "relativePath": "R-CR/R-CR-041-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0060172e628d482a54e1add86ee50fe80ca3cb152e44d4a0ec1b6a110a179a25",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-CR/R-CR-041-3.png"
+      },
+      {
+        "bytes": 2521138,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2521138,
+        "downloadedSha256": "fcb2c6a5040908ab20387c34f6a0ef3dc21b3e3b9dfe204441d3a5633e1872c4",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "fcb2c6a5040908ab20387c34f6a0ef3dc21b3e3b9dfe204441d3a5633e1872c4",
+        "localRelativePath": "Qwen-Image-2512/C-MA/C-MA-068-2.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MA/C-MA-068-2.png",
+        "relativePath": "C-MA/C-MA-068-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00689cf9ccb3c7a1cfadbc695d3757e601538330726f17de67451e23fe343d9b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MA/C-MA-068-2.png"
+      },
+      {
+        "bytes": 2612459,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2612459,
+        "downloadedSha256": "3cb33f64c7c7bceada6a8bebedcac3c7481fbabb77d93e6defb696329e7298b9",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "3cb33f64c7c7bceada6a8bebedcac3c7481fbabb77d93e6defb696329e7298b9",
+        "localRelativePath": "Qwen-Image-2512/R-RR/R-RR-033-1.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-RR/R-RR-033-1.png",
+        "relativePath": "R-RR/R-RR-033-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0074a99893fea114e2e6421a2994d4d13b9d0d92bd5aa41d4bd5d0194f4c1dbc",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-RR/R-RR-033-1.png"
+      },
+      {
+        "bytes": 2536497,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2536497,
+        "downloadedSha256": "7f552ca6682f750aaf6f0546196dd5829d912a1cd4ab58af074c66eba3f275ea",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "7f552ca6682f750aaf6f0546196dd5829d912a1cd4ab58af074c66eba3f275ea",
+        "localRelativePath": "Qwen-Image-2512/R-LR/R-LR-010-0.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-LR/R-LR-010-0.png",
+        "relativePath": "R-LR/R-LR-010-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0078b693fcff169c3091a42330fa79ce80eca5c02b4f3c1e6a70b3532e642a26",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-LR/R-LR-010-0.png"
+      },
+      {
+        "bytes": 2969918,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2969918,
+        "downloadedSha256": "97b0e7fa9a9ba5d7a0d1797789023532db6eb1490b22a3891d3f9ce42c329400",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "97b0e7fa9a9ba5d7a0d1797789023532db6eb1490b22a3891d3f9ce42c329400",
+        "localRelativePath": "Qwen-Image-2512/R-RR/R-RR-002-1.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-RR/R-RR-002-1.png",
+        "relativePath": "R-RR/R-RR-002-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "008ad7c9fe40c31e60eb2138a93a6e00dc739e60f97351c3b01d7de5950fe427",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-RR/R-RR-002-1.png"
+      },
+      {
+        "bytes": 2457157,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2457157,
+        "downloadedSha256": "22b8fa9db4b9746abc8701067816122ea1a51c056bd25f3474a9b7f7503566af",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "22b8fa9db4b9746abc8701067816122ea1a51c056bd25f3474a9b7f7503566af",
+        "localRelativePath": "Qwen-Image-2512/C-MI/C-MI-055-1.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MI/C-MI-055-1.png",
+        "relativePath": "C-MI/C-MI-055-1.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0099cbe6890e4d880a4340c6771472652974d2c4c24c72106687475ca717d1e9",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MI/C-MI-055-1.png"
+      },
+      {
+        "bytes": 3142975,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 3142975,
+        "downloadedSha256": "0c0106d1b72cfc2d738a5228876ce483deaef12364922cae78cf43a629e1d63a",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "0c0106d1b72cfc2d738a5228876ce483deaef12364922cae78cf43a629e1d63a",
+        "localRelativePath": "Qwen-Image-2512/R-AR/R-AR-068-3.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-AR/R-AR-068-3.png",
+        "relativePath": "R-AR/R-AR-068-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00b562d0eb8a2cd9f1ae146b4d0e4f6f2f584fa8e2a6f8136bd99118ab22d073",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-AR/R-AR-068-3.png"
+      },
+      {
+        "bytes": 2344635,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2344635,
+        "downloadedSha256": "884fadf341bf6875e433d615e868fec304668071908ee4faf3e00bec60d04eca",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "884fadf341bf6875e433d615e868fec304668071908ee4faf3e00bec60d04eca",
+        "localRelativePath": "Qwen-Image-2512/R-BR/R-BR-073-2.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-BR/R-BR-073-2.png",
+        "relativePath": "R-BR/R-BR-073-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00cfd00e727fdfed2a21cccdbc1f15f9ee12390e2a0a4d08e78e419817e85300",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-BR/R-BR-073-2.png"
+      },
+      {
+        "bytes": 2817451,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2817451,
+        "downloadedSha256": "157d75405bd71b2428cb46a910f2303d1dd01641c6e39776ce4c36ebb9df7d64",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "157d75405bd71b2428cb46a910f2303d1dd01641c6e39776ce4c36ebb9df7d64",
+        "localRelativePath": "Qwen-Image-2512/C-MI/C-MI-053-2.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MI/C-MI-053-2.png",
+        "relativePath": "C-MI/C-MI-053-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00dc65b8f495ac96ce8fe89b3125991a2bbf8a9162bdc80939054e5b7979c8af",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MI/C-MI-053-2.png"
+      },
+      {
+        "bytes": 2509037,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2509037,
+        "downloadedSha256": "4cd199b346033349a080ff4d3a827a609cd829870fdc778758fe0e795419e97a",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "4cd199b346033349a080ff4d3a827a609cd829870fdc778758fe0e795419e97a",
+        "localRelativePath": "Qwen-Image-2512/C-MI/C-MI-037-0.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MI/C-MI-037-0.png",
+        "relativePath": "C-MI/C-MI-037-0.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "00fbf4798ae98110122c294a0633775661201b5ad98fadcb075a3a0472aadff9",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MI/C-MI-037-0.png"
+      },
+      {
+        "bytes": 2414076,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2414076,
+        "downloadedSha256": "1902360a24acb4e0cad0d6a310f80ac288b33c3318b4a3a89dec29fe68c92ead",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "1902360a24acb4e0cad0d6a310f80ac288b33c3318b4a3a89dec29fe68c92ead",
+        "localRelativePath": "Qwen-Image-2512/R-GR/R-GR-038-2.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-GR/R-GR-038-2.png",
+        "relativePath": "R-GR/R-GR-038-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "010aad99c73d8d375bd421971da2f3dbef3cfdd32a7f18ca7e09cf7b5d34b21b",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-GR/R-GR-038-2.png"
+      },
+      {
+        "bytes": 1962812,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 1962812,
+        "downloadedSha256": "240b8d44e20ad3a61ba23605fe28ecd738b2f5482094fa2f881fb8918dd09c59",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "240b8d44e20ad3a61ba23605fe28ecd738b2f5482094fa2f881fb8918dd09c59",
+        "localRelativePath": "Qwen-Image-2512/R-LR/R-LR-034-2.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-LR/R-LR-034-2.png",
+        "relativePath": "R-LR/R-LR-034-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0110d98a252cb9b21ea19c0cab4d844050dab78874a3ed82522a4f4fdebe37ad",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-LR/R-LR-034-2.png"
+      },
+      {
+        "bytes": 2487308,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2487308,
+        "downloadedSha256": "fd1a4772f993277083a51e94f49dfb40e9804313bf96c4877752ae782a26e16c",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "fd1a4772f993277083a51e94f49dfb40e9804313bf96c4877752ae782a26e16c",
+        "localRelativePath": "Qwen-Image-2512/C-MR/C-MR-090-3.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/C-MR/C-MR-090-3.png",
+        "relativePath": "C-MR/C-MR-090-3.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "0116942435923e423b6f792a56a21594860f5b31311fe7a156ad93cab06a45e4",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/C-MR/C-MR-090-3.png"
+      },
+      {
+        "bytes": 2236331,
+        "decode": {
+          "format": "PNG",
+          "height": 1328,
+          "mode": "RGB",
+          "width": 1328
+        },
+        "downloadedBytes": 2236331,
+        "downloadedSha256": "14b4a3733b7b469bea3cf32d14d0d82dd804e24de95faccb62aff12841e0bfea",
+        "generatorFamily": "Qwen-Image-2512",
+        "lfsSha256": "14b4a3733b7b469bea3cf32d14d0d82dd804e24de95faccb62aff12841e0bfea",
+        "localRelativePath": "Qwen-Image-2512/R-GR/R-GR-020-2.png",
+        "officialRevision": "16d2cf56b245dbcb070b8951b43c3e67214ab357",
+        "path": "data/Qwen-Image-2512/R-GR/R-GR-020-2.png",
+        "relativePath": "R-GR/R-GR-020-2.png",
+        "retrievalStatus": "RETRIEVED_VERIFIED",
+        "selectionHash": "01322d1504dd0b9943a0fe17d77b64a21654c7951b023b901a22c56bc4ed0260",
+        "sourceUrlIdentity": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images/resolve/16d2cf56b245dbcb070b8951b43c3e67214ab357/data/Qwen-Image-2512/R-GR/R-GR-020-2.png"
+      }
+    ]
+  },
+  "schemaVersion": "lythaus-wp007h-qualification-corpus-freeze-v1",
+  "scoreBlind": true,
+  "selectionRule": "SHA256(WP007H + generatorFamily + relativePath), first 20 per family",
+  "sourceDataset": "T2I-CoReBench-Images",
+  "sourceRepository": "https://huggingface.co/datasets/lioooox/T2I-CoReBench-Images"
+}

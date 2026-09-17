@@ -1,0 +1,1372 @@
+{
+  "schemaVersion": "lythaus-wp007c-spai-score-run-v1",
+  "candidateId": "SPAI_C512",
+  "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+  "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+  "optimized": true,
+  "cpuThreads": 8,
+  "inputCount": 272,
+  "records": [
+    {
+      "sampleId": "R1FRESH__0008",
+      "score": 0.0006505612982437015,
+      "runtimeSeconds": 2.270888
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.122615
+    },
+    {
+      "sampleId": "R1FRESH__0015",
+      "score": 3.3769377896632428e-21,
+      "runtimeSeconds": 2.11785
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 2.088829
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 2.075989
+    },
+    {
+      "sampleId": "R1FRESH__0023",
+      "score": 0.0008494973299093544,
+      "runtimeSeconds": 2.123553
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 2.11452
+    },
+    {
+      "sampleId": "R1FRESH__0008",
+      "score": 0.0006505612982437015,
+      "runtimeSeconds": 2.083453
+    },
+    {
+      "sampleId": "R1FRESH__0000",
+      "score": 0.9796083569526672,
+      "runtimeSeconds": 2.091938
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_DIAGRAM_02",
+      "score": 9.000257107146935e-17,
+      "runtimeSeconds": 2.091208
+    },
+    {
+      "sampleId": "R1FRESH__0005",
+      "score": 0.5506399869918823,
+      "runtimeSeconds": 2.350755
+    },
+    {
+      "sampleId": "R1FRESH__0016",
+      "score": 0.9786950945854187,
+      "runtimeSeconds": 4.244305
+    },
+    {
+      "sampleId": "R1FRESH__0005",
+      "score": 0.5506399869918823,
+      "runtimeSeconds": 5.344213
+    },
+    {
+      "sampleId": "R1FRESH__0002",
+      "score": 0.1960582137107849,
+      "runtimeSeconds": 6.15159
+    },
+    {
+      "sampleId": "R1FRESH__0003",
+      "score": 2.4490235066232453e-18,
+      "runtimeSeconds": 3.332892
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_OTHER_DIGITAL_NON_AI_07",
+      "score": 1.6161023908001226e-10,
+      "runtimeSeconds": 2.092062
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 2.084366
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_UI_CAPTURE_08",
+      "score": 1.3350692873690033e-36,
+      "runtimeSeconds": 2.054333
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 2.086853
+    },
+    {
+      "sampleId": "R1FRESH__0020",
+      "score": 0.00047806635848246515,
+      "runtimeSeconds": 2.067992
+    },
+    {
+      "sampleId": "R1FRESH__0009",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.074424
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_DIAGRAM_06",
+      "score": 9.514365077971913e-17,
+      "runtimeSeconds": 2.083417
+    },
+    {
+      "sampleId": "R1FRESH__0000",
+      "score": 0.9796083569526672,
+      "runtimeSeconds": 2.083236
+    },
+    {
+      "sampleId": "R1FRESH__0006",
+      "score": 0.9926300048828125,
+      "runtimeSeconds": 2.10148
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_UI_CAPTURE_03",
+      "score": 8.39169956950329e-30,
+      "runtimeSeconds": 2.077458
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.093303
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_CHART_04",
+      "score": 2.5391519442585775e-10,
+      "runtimeSeconds": 2.086464
+    },
+    {
+      "sampleId": "R1FRESH__0023",
+      "score": 0.0008494973299093544,
+      "runtimeSeconds": 2.133643
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_CHART_07",
+      "score": 7.835950777135281e-10,
+      "runtimeSeconds": 2.107749
+    },
+    {
+      "sampleId": "R1FRESH__0004",
+      "score": 0.8500121235847473,
+      "runtimeSeconds": 3.962897
+    },
+    {
+      "sampleId": "R1FRESH__0003",
+      "score": 2.4490235066232453e-18,
+      "runtimeSeconds": 9.197701
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_VECTOR_GRAPHIC_03",
+      "score": 4.20247895286041e-19,
+      "runtimeSeconds": 8.511178
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 2.102797
+    },
+    {
+      "sampleId": "R1FRESH__0006",
+      "score": 0.9926300048828125,
+      "runtimeSeconds": 2.087105
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_VECTOR_GRAPHIC_07",
+      "score": 4.349835262577401e-16,
+      "runtimeSeconds": 2.091048
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_TEXT_GRAPHIC_03",
+      "score": 2.063854898884821e-14,
+      "runtimeSeconds": 2.074069
+    },
+    {
+      "sampleId": "R1FRESH__0009",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.052664
+    },
+    {
+      "sampleId": "R1FRESH__0009",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.085689
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 2.076853
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 2.073295
+    },
+    {
+      "sampleId": "R1FRESH__0009",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.108978
+    },
+    {
+      "sampleId": "R1FRESH__0001",
+      "score": 0.02625361829996109,
+      "runtimeSeconds": 2.103316
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.118181
+    },
+    {
+      "sampleId": "R1FRESH__0002",
+      "score": 0.1960582137107849,
+      "runtimeSeconds": 2.096889
+    },
+    {
+      "sampleId": "R1FRESH__0008",
+      "score": 0.0006505612982437015,
+      "runtimeSeconds": 2.606223
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 4.054883
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 4.829504
+    },
+    {
+      "sampleId": "R1FRESH__0001",
+      "score": 0.02625361829996109,
+      "runtimeSeconds": 7.838164
+    },
+    {
+      "sampleId": "R1FRESH__0004",
+      "score": 0.8500121235847473,
+      "runtimeSeconds": 3.447203
+    },
+    {
+      "sampleId": "R1FRESH__0003",
+      "score": 2.4490235066232453e-18,
+      "runtimeSeconds": 2.087523
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_TEXT_GRAPHIC_06",
+      "score": 6.1181480122390655e-24,
+      "runtimeSeconds": 2.090323
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.073755
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_OTHER_DIGITAL_NON_AI_08",
+      "score": 4.474188380898525e-12,
+      "runtimeSeconds": 2.0574
+    },
+    {
+      "sampleId": "R1FRESH__0000",
+      "score": 0.9796083569526672,
+      "runtimeSeconds": 2.093287
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_DIAGRAM_05",
+      "score": 2.8574961407484833e-15,
+      "runtimeSeconds": 2.097131
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_TEXT_GRAPHIC_02",
+      "score": 1.7793826623786496e-24,
+      "runtimeSeconds": 2.108958
+    },
+    {
+      "sampleId": "R1FRESH__0000",
+      "score": 0.9796083569526672,
+      "runtimeSeconds": 2.10215
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_UI_CAPTURE_01",
+      "score": 2.8300398892656912e-30,
+      "runtimeSeconds": 2.102463
+    },
+    {
+      "sampleId": "R1FRESH__0002",
+      "score": 0.1960582137107849,
+      "runtimeSeconds": 2.10364
+    },
+    {
+      "sampleId": "R1FRESH__0005",
+      "score": 0.5506399869918823,
+      "runtimeSeconds": 2.14208
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_TEXT_GRAPHIC_04",
+      "score": 1.120087307046844e-31,
+      "runtimeSeconds": 2.201795
+    },
+    {
+      "sampleId": "R1FRESH__0000",
+      "score": 0.9796083569526672,
+      "runtimeSeconds": 2.4207
+    },
+    {
+      "sampleId": "R1FRESH__0003",
+      "score": 2.4490235066232453e-18,
+      "runtimeSeconds": 4.187888
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 5.285539
+    },
+    {
+      "sampleId": "R1FRESH__0022",
+      "score": 0.6026014089584351,
+      "runtimeSeconds": 6.476303
+    },
+    {
+      "sampleId": "R1FRESH__0001",
+      "score": 0.02625361829996109,
+      "runtimeSeconds": 3.251109
+    },
+    {
+      "sampleId": "R1FRESH__0001",
+      "score": 0.02625361829996109,
+      "runtimeSeconds": 2.06284
+    },
+    {
+      "sampleId": "R1FRESH__0003",
+      "score": 2.4490235066232453e-18,
+      "runtimeSeconds": 2.045739
+    },
+    {
+      "sampleId": "R1FRESH__0006",
+      "score": 0.9926300048828125,
+      "runtimeSeconds": 2.027322
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 2.088141
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_OTHER_DIGITAL_NON_AI_06",
+      "score": 1.9491977603317e-18,
+      "runtimeSeconds": 2.090236
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_OTHER_DIGITAL_NON_AI_05",
+      "score": 1.178271369361994e-09,
+      "runtimeSeconds": 2.090923
+    },
+    {
+      "sampleId": "R1FRESH__0004",
+      "score": 0.8500121235847473,
+      "runtimeSeconds": 2.095823
+    },
+    {
+      "sampleId": "R1FRESH__0019",
+      "score": 1.0,
+      "runtimeSeconds": 2.079404
+    },
+    {
+      "sampleId": "R1FRESH__0000",
+      "score": 0.9796083569526672,
+      "runtimeSeconds": 2.11157
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_CHART_01",
+      "score": 2.3459701736783245e-08,
+      "runtimeSeconds": 2.097669
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 2.811432
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 3.689512
+    },
+    {
+      "sampleId": "R1FRESH__0001",
+      "score": 0.02625361829996109,
+      "runtimeSeconds": 4.407082
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_DIAGRAM_08",
+      "score": 5.550865645453037e-17,
+      "runtimeSeconds": 9.333563
+    },
+    {
+      "sampleId": "R1FRESH__0006",
+      "score": 0.9926300048828125,
+      "runtimeSeconds": 3.996886
+    },
+    {
+      "sampleId": "R1FRESH__0005",
+      "score": 0.5506399869918823,
+      "runtimeSeconds": 2.41693
+    },
+    {
+      "sampleId": "R1FRESH__0018",
+      "score": 0.4628676176071167,
+      "runtimeSeconds": 2.073982
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_CHART_02",
+      "score": 5.118087065270061e-10,
+      "runtimeSeconds": 2.052217
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.060687
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_VECTOR_GRAPHIC_05",
+      "score": 3.3275736766730235e-12,
+      "runtimeSeconds": 2.093543
+    },
+    {
+      "sampleId": "R1FRESH__0009",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.09279
+    },
+    {
+      "sampleId": "R1FRESH__0009",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.092131
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_UI_CAPTURE_02",
+      "score": 3.1606089560022472e-37,
+      "runtimeSeconds": 2.07432
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_UI_CAPTURE_04",
+      "score": 2.749494723344045e-38,
+      "runtimeSeconds": 2.060153
+    },
+    {
+      "sampleId": "R1FRESH__0009",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.064843
+    },
+    {
+      "sampleId": "R1FRESH__0009",
+      "score": 1.0419068385836283e-10,
+      "runtimeSeconds": 2.113232
+    },
+    {
+      "sampleId": "R1FRESH__0004",
+      "score": 0.8500121235847473,
+      "runtimeSeconds": 2.092579
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 2.08876
+    },
+    {
+      "sampleId": "R1FRESH__0001",
+      "score": 0.02625361829996109,
+      "runtimeSeconds": 2.11559
+    },
+    {
+      "sampleId": "R1FRESH__0003",
+      "score": 2.4490235066232453e-18,
+      "runtimeSeconds": 2.092684
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 2.794749
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 9.281954
+    },
+    {
+      "sampleId": "R1FRESH__0000",
+      "score": 0.9796083569526672,
+      "runtimeSeconds": 10.171422
+    },
+    {
+      "sampleId": "R1FRESH__0019",
+      "score": 1.0,
+      "runtimeSeconds": 3.495675
+    },
+    {
+      "sampleId": "R1FRESH__0004",
+      "score": 0.8500121235847473,
+      "runtimeSeconds": 6.688506
+    },
+    {
+      "sampleId": "R1FRESH__0010",
+      "score": 0.9944339394569397,
+      "runtimeSeconds": 3.077816
+    },
+    {
+      "sampleId": "R1FRESH__0004",
+      "score": 0.8500121235847473,
+      "runtimeSeconds": 3.010257
+    },
+    {
+      "sampleId": "R1FRESH__0011",
+      "score": 4.942621423253968e-09,
+      "runtimeSeconds": 2.914597
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.788576
+    },
+    {
+      "sampleId": "R1FRESH__0002",
+      "score": 0.1960582137107849,
+      "runtimeSeconds": 2.707908
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.345454
+    },
+    {
+      "sampleId": "R1FRESH__PNGN_VECTOR_GRAPHIC_02",
+      "score": 1.6372884819607569e-16,
+      "runtimeSeconds": 2.083427
+    },
+    {
+      "sampleId": "R1FRESH__0008",
+      "score": 0.0006505612982437015,
+      "runtimeSeconds": 2.108766
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.082969
+    },
+    {
+      "sampleId": "R1FRESH__0007",
+      "score": 4.514280801999082e-34,
+      "runtimeSeconds": 2.113011
+    },
+    {
+      "sampleId": "R1FRESH__0004",
+      "score": 0.8500121235847473,
+      "runtimeSeconds": 2.077676
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_01c5d6b14456",
+      "score": 1.0,
+      "runtimeSeconds": 2.142199
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_09558237afad",
+      "score": 1.0,
+      "runtimeSeconds": 2.096517
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_09fdaeddb1dc",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 2.131893
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_0b0434eb86de",
+      "score": 0.0038084557745605707,
+      "runtimeSeconds": 2.101527
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_120f29b59885",
+      "score": 4.817425724468194e-05,
+      "runtimeSeconds": 2.080725
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_1274b03e4433",
+      "score": 0.9999539852142334,
+      "runtimeSeconds": 2.083681
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_23256a61ece1",
+      "score": 0.9439877867698669,
+      "runtimeSeconds": 2.601806
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_7e4f69dd88c4",
+      "score": 0.9999969005584717,
+      "runtimeSeconds": 3.445265
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_846f5dc4a06d",
+      "score": 0.9999966621398926,
+      "runtimeSeconds": 3.534668
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_8d8156f51420",
+      "score": 0.910272479057312,
+      "runtimeSeconds": 4.32099
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_911e9b7bbd7d",
+      "score": 1.0,
+      "runtimeSeconds": 5.610988
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_a9d1654350bb",
+      "score": 2.110099978273519e-21,
+      "runtimeSeconds": 2.105434
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_b31905146b7f",
+      "score": 0.7037697434425354,
+      "runtimeSeconds": 2.090702
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_b46b2e0533b2",
+      "score": 0.21588507294654846,
+      "runtimeSeconds": 2.09475
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_d10c12763c61",
+      "score": 0.8506375551223755,
+      "runtimeSeconds": 2.089063
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_d5e2b8f37225",
+      "score": 0.9999991655349731,
+      "runtimeSeconds": 2.126172
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_d91a401fb339",
+      "score": 0.9333958625793457,
+      "runtimeSeconds": 2.10668
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_ef6664c3845f",
+      "score": 8.818734637827888e-18,
+      "runtimeSeconds": 2.537455
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_f8a49c925618",
+      "score": 0.04182927682995796,
+      "runtimeSeconds": 3.376117
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_faa1161f11c4",
+      "score": 0.033903397619724274,
+      "runtimeSeconds": 3.522236
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_04a769a92d05",
+      "score": 0.03350696340203285,
+      "runtimeSeconds": 3.58827
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_0c15705ee444",
+      "score": 0.0012802466517314315,
+      "runtimeSeconds": 3.767088
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_18956d391c77",
+      "score": 4.928003139410248e-20,
+      "runtimeSeconds": 3.386712
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_2a9b55b6ac94",
+      "score": 0.02247232012450695,
+      "runtimeSeconds": 2.085823
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_536a3deacc0d",
+      "score": 0.9961044788360596,
+      "runtimeSeconds": 2.048867
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_5d701fdc24b0",
+      "score": 0.2571471631526947,
+      "runtimeSeconds": 2.032365
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_5f89b0420fcd",
+      "score": 0.8117596507072449,
+      "runtimeSeconds": 2.053794
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_63e3d85b74c6",
+      "score": 0.022454943507909775,
+      "runtimeSeconds": 2.094564
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_71d5a3caf8bc",
+      "score": 6.543587915075477e-06,
+      "runtimeSeconds": 2.098579
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_801b2dabcade",
+      "score": 1.0,
+      "runtimeSeconds": 2.615445
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_8c805d38d4d2",
+      "score": 0.4880554974079132,
+      "runtimeSeconds": 3.415073
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_92779fd62e62",
+      "score": 0.99965500831604,
+      "runtimeSeconds": 3.527579
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_990563bd5712",
+      "score": 0.9997683167457581,
+      "runtimeSeconds": 3.658183
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_9a6768c71780",
+      "score": 0.999988317489624,
+      "runtimeSeconds": 3.799234
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_a3333438ff3d",
+      "score": 0.8208736777305603,
+      "runtimeSeconds": 3.161175
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_a8f6f77cd507",
+      "score": 0.9971150159835815,
+      "runtimeSeconds": 2.053558
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_b1c5c0d90922",
+      "score": 0.04437241703271866,
+      "runtimeSeconds": 2.037244
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_cf38cced2287",
+      "score": 0.36189404129981995,
+      "runtimeSeconds": 2.008804
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_d3ec9235fcac",
+      "score": 6.030941221979447e-06,
+      "runtimeSeconds": 2.069117
+    },
+    {
+      "sampleId": "WP007H_FLUX.1-Krea-dev_e07c02343d0a",
+      "score": 0.10051053762435913,
+      "runtimeSeconds": 2.10468
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_02980e655007",
+      "score": 9.680801440481446e-07,
+      "runtimeSeconds": 2.162266
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_3181238c7d36",
+      "score": 1.0,
+      "runtimeSeconds": 2.84647
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_4602d3eb9306",
+      "score": 0.999895453453064,
+      "runtimeSeconds": 3.517968
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_6199d6a13633",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 3.559661
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_61e3b24904a7",
+      "score": 1.0,
+      "runtimeSeconds": 3.699524
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_6277ea31822b",
+      "score": 1.0,
+      "runtimeSeconds": 3.884252
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_678b03bb5a22",
+      "score": 1.0,
+      "runtimeSeconds": 2.797168
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_6a6d08a5b427",
+      "score": 1.0,
+      "runtimeSeconds": 2.065211
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_77e8cb2797e0",
+      "score": 0.9999932050704956,
+      "runtimeSeconds": 2.049795
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_859fcd4656ac",
+      "score": 1.0,
+      "runtimeSeconds": 2.040205
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_901ff98c1321",
+      "score": 1.0,
+      "runtimeSeconds": 2.046663
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_98c2437b1b34",
+      "score": 1.0,
+      "runtimeSeconds": 2.105521
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_b52799126682",
+      "score": 1.0,
+      "runtimeSeconds": 2.059628
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_b5ba3482231b",
+      "score": 1.0,
+      "runtimeSeconds": 2.944562
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_b7bff5ecd36d",
+      "score": 1.0,
+      "runtimeSeconds": 3.472095
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_bdc116148dd8",
+      "score": 1.0,
+      "runtimeSeconds": 3.593159
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_c3480348878a",
+      "score": 1.0,
+      "runtimeSeconds": 3.80037
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_c86c9b884f80",
+      "score": 0.9995716214179993,
+      "runtimeSeconds": 3.90454
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_e4ad13693c6e",
+      "score": 1.0,
+      "runtimeSeconds": 2.573525
+    },
+    {
+      "sampleId": "WP007H_Infinity-8B_f04dd01cb4c3",
+      "score": 1.0,
+      "runtimeSeconds": 2.156374
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_05830b238f54",
+      "score": 1.0,
+      "runtimeSeconds": 2.092164
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_33054e2cc335",
+      "score": 1.0,
+      "runtimeSeconds": 2.074315
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_3d6d8559798d",
+      "score": 0.9950786828994751,
+      "runtimeSeconds": 2.18495
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_41b77cd9b119",
+      "score": 1.0,
+      "runtimeSeconds": 2.102713
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_485abbcf85e3",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 2.109003
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_4b4d8abc3d19",
+      "score": 1.0,
+      "runtimeSeconds": 3.403851
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_5022b2908f2b",
+      "score": 1.0,
+      "runtimeSeconds": 3.49581
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_524818be54f4",
+      "score": 0.9767961502075195,
+      "runtimeSeconds": 3.593386
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_53d90bac0910",
+      "score": 1.0,
+      "runtimeSeconds": 3.741968
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_6757a67b4523",
+      "score": 0.8685807585716248,
+      "runtimeSeconds": 3.921676
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_684ec1f76d26",
+      "score": 1.0,
+      "runtimeSeconds": 2.105808
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_6ff06c991a75",
+      "score": 1.0,
+      "runtimeSeconds": 2.088403
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_820641887c99",
+      "score": 0.9928827285766602,
+      "runtimeSeconds": 2.04342
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_878119b44705",
+      "score": 0.7676035761833191,
+      "runtimeSeconds": 2.053401
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_8813762f6795",
+      "score": 0.9997503161430359,
+      "runtimeSeconds": 2.114095
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_9bb2488fc1df",
+      "score": 1.0,
+      "runtimeSeconds": 2.08239
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_9ee282a7ef23",
+      "score": 1.0,
+      "runtimeSeconds": 2.306641
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_ca4949e540a2",
+      "score": 1.0,
+      "runtimeSeconds": 3.461676
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_d2822316ac8e",
+      "score": 1.0,
+      "runtimeSeconds": 3.551846
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_dba3f618a9c3",
+      "score": 1.0,
+      "runtimeSeconds": 3.665185
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_0276926e164a",
+      "score": 2.212716754002031e-05,
+      "runtimeSeconds": 3.836157
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_1c7c07303bd0",
+      "score": 1.0,
+      "runtimeSeconds": 3.535022
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_1f55c4d31e61",
+      "score": 1.0,
+      "runtimeSeconds": 2.107845
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_38cac9b4487b",
+      "score": 0.9998878240585327,
+      "runtimeSeconds": 2.095066
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_4370f69d6e38",
+      "score": 0.5586318969726562,
+      "runtimeSeconds": 2.052294
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_451a8566d273",
+      "score": 6.83816753221933e-11,
+      "runtimeSeconds": 2.083625
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_4db81dcc22e3",
+      "score": 0.8977912068367004,
+      "runtimeSeconds": 2.12866
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_582701426533",
+      "score": 0.11051436513662338,
+      "runtimeSeconds": 2.134657
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_58e3c3f1d4ff",
+      "score": 0.6688174605369568,
+      "runtimeSeconds": 2.659655
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_64c15598a066",
+      "score": 0.0011504095746204257,
+      "runtimeSeconds": 3.493179
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_788bdc132535",
+      "score": 0.9997450709342957,
+      "runtimeSeconds": 3.633013
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_83340476f3d3",
+      "score": 1.0,
+      "runtimeSeconds": 3.726892
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_87c0652f63ce",
+      "score": 0.9999796152114868,
+      "runtimeSeconds": 3.910336
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_996ee06c3450",
+      "score": 0.0003103855415247381,
+      "runtimeSeconds": 2.990565
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_a2b45860de8e",
+      "score": 1.0,
+      "runtimeSeconds": 2.060576
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_a5ece0dd78e0",
+      "score": 1.0,
+      "runtimeSeconds": 2.062326
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_bf026f79093b",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 2.029727
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_ee4940ab419c",
+      "score": 0.980467677116394,
+      "runtimeSeconds": 2.078718
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_f426a5f55940",
+      "score": 0.017376258969306946,
+      "runtimeSeconds": 2.090024
+    },
+    {
+      "sampleId": "WP007H_LongCat-Image_f92687d57030",
+      "score": 0.999433696269989,
+      "runtimeSeconds": 2.102524
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_032399b5f379",
+      "score": 1.976861874197766e-08,
+      "runtimeSeconds": 2.957372
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_18ae1164fb1a",
+      "score": 1.0,
+      "runtimeSeconds": 3.411098
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_1dabbfe73b22",
+      "score": 0.5733579993247986,
+      "runtimeSeconds": 3.55378
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_3390a9aa9aca",
+      "score": 7.571894217753592e-25,
+      "runtimeSeconds": 3.702562
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_4843fc7577cb",
+      "score": 1.0,
+      "runtimeSeconds": 3.878836
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_66a16039440e",
+      "score": 0.9999829530715942,
+      "runtimeSeconds": 2.682148
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_72a554f00fe7",
+      "score": 6.543812560266815e-06,
+      "runtimeSeconds": 2.101104
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_7d6ad8a63809",
+      "score": 0.03568315878510475,
+      "runtimeSeconds": 2.036066
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_8c4f5b6fc12b",
+      "score": 0.4137747883796692,
+      "runtimeSeconds": 2.012634
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_98c4d87e873b",
+      "score": 0.9166454076766968,
+      "runtimeSeconds": 2.075251
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_b04b9e96f47d",
+      "score": 0.9999085664749146,
+      "runtimeSeconds": 2.101455
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_b5671397edaa",
+      "score": 0.6011518239974976,
+      "runtimeSeconds": 2.071507
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_bbc93b8a2037",
+      "score": 0.6314569711685181,
+      "runtimeSeconds": 3.068451
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_cb7af14feada",
+      "score": 0.9990321397781372,
+      "runtimeSeconds": 3.481117
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_cbd466f56ee9",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 3.585137
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_da6a817cb8fc",
+      "score": 6.596933417313267e-07,
+      "runtimeSeconds": 3.727913
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_dbe5f8c13c52",
+      "score": 0.9999982118606567,
+      "runtimeSeconds": 3.806877
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_ed0722c8f6ad",
+      "score": 5.984815182710196e-17,
+      "runtimeSeconds": 2.467672
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_ed6f4f66f0e8",
+      "score": 0.9999971389770508,
+      "runtimeSeconds": 2.051214
+    },
+    {
+      "sampleId": "WP007H_OmniGen2-7B_f2dc331e04b7",
+      "score": 0.8491048216819763,
+      "runtimeSeconds": 2.082769
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_022f624d2f4d",
+      "score": 0.5725023746490479,
+      "runtimeSeconds": 2.137156
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_0e424bb78774",
+      "score": 1.0,
+      "runtimeSeconds": 2.129976
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_2025a19479db",
+      "score": 1.0,
+      "runtimeSeconds": 2.089166
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_2567d8393dbe",
+      "score": 0.00019896066805813462,
+      "runtimeSeconds": 2.152938
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_47cfc59e8469",
+      "score": 1.1449931669460511e-08,
+      "runtimeSeconds": 3.36569
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_52e3f0a96090",
+      "score": 1.0,
+      "runtimeSeconds": 3.535042
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_5c1992fc876c",
+      "score": 1.0,
+      "runtimeSeconds": 3.674239
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_651151994bd9",
+      "score": 1.0,
+      "runtimeSeconds": 3.786433
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_6884955eb8a7",
+      "score": 1.0,
+      "runtimeSeconds": 3.884249
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_7b770bd44b9a",
+      "score": 1.0,
+      "runtimeSeconds": 2.054432
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_8130f363e88c",
+      "score": 0.9996161460876465,
+      "runtimeSeconds": 2.054487
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_89986ac3e73d",
+      "score": 0.49306970834732056,
+      "runtimeSeconds": 2.028496
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_8d00afe083eb",
+      "score": 1.0,
+      "runtimeSeconds": 2.021164
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_949d58c5d87a",
+      "score": 1.96155633602757e-06,
+      "runtimeSeconds": 2.082937
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_9509c8c81591",
+      "score": 0.010608318261802197,
+      "runtimeSeconds": 2.077745
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_a2b8c21b1be8",
+      "score": 3.1521747969736937e-18,
+      "runtimeSeconds": 2.224793
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_ba4f6d5b342a",
+      "score": 1.0,
+      "runtimeSeconds": 3.398884
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_bc2125f93687",
+      "score": 0.0499643050134182,
+      "runtimeSeconds": 3.485587
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_c9c545b136cd",
+      "score": 1.6427225353934928e-19,
+      "runtimeSeconds": 3.744052
+    },
+    {
+      "sampleId": "WP007H_PixArt-Alpha_f00f92f0861b",
+      "score": 1.0,
+      "runtimeSeconds": 4.081358
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_0c0106d1b72c",
+      "score": 1.0,
+      "runtimeSeconds": 3.692076
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_14b4a3733b7b",
+      "score": 1.0,
+      "runtimeSeconds": 2.223693
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_157d75405bd7",
+      "score": 0.9942202568054199,
+      "runtimeSeconds": 2.133885
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_1902360a24ac",
+      "score": 0.9997807145118713,
+      "runtimeSeconds": 2.028683
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_20f0f7f3a305",
+      "score": 1.0,
+      "runtimeSeconds": 2.082508
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_22b8fa9db4b9",
+      "score": 1.0,
+      "runtimeSeconds": 2.139248
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_240b8d44e20a",
+      "score": 0.9996893405914307,
+      "runtimeSeconds": 2.204984
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_2649d6a5ccf1",
+      "score": 1.0,
+      "runtimeSeconds": 2.926297
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_3cb33f64c7c7",
+      "score": 0.8496314287185669,
+      "runtimeSeconds": 3.540903
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_4cd199b34603",
+      "score": 0.9999985694885254,
+      "runtimeSeconds": 3.588238
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_60a42267cdeb",
+      "score": 1.0,
+      "runtimeSeconds": 3.711989
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_697fbfd4c094",
+      "score": 1.0,
+      "runtimeSeconds": 3.900968
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_7f552ca6682f",
+      "score": 1.0,
+      "runtimeSeconds": 2.615624
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_87ec2d5bba7d",
+      "score": 0.9399684071540833,
+      "runtimeSeconds": 2.084186
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_884fadf341bf",
+      "score": 1.0,
+      "runtimeSeconds": 2.074425
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_97b0e7fa9a9b",
+      "score": 0.9645904302597046,
+      "runtimeSeconds": 2.025543
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_e2bd35148c4b",
+      "score": 1.0,
+      "runtimeSeconds": 2.078311
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_e770005d9692",
+      "score": 0.9999991655349731,
+      "runtimeSeconds": 2.077172
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_fcb2c6a50409",
+      "score": 1.0,
+      "runtimeSeconds": 2.063861
+    },
+    {
+      "sampleId": "WP007H_Qwen-Image-2512_fd1a4772f993",
+      "score": 0.9999361038208008,
+      "runtimeSeconds": 3.058943
+    }
+  ],
+  "inferenceMode": "torch.inference_mode"
+}

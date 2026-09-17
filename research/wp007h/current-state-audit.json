@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "lythaus-wp007h-current-state-audit-v1",
+  "workPackage": "WP007H",
+  "auditedAt": "2026-09-17",
+  "parent": {
+    "pullRequest": 847,
+    "parentSha": "fc9c1a65528a39da008fed12c1a601e32c226e09",
+    "parentBranch": "agent/wp007g-r1-data-recovery",
+    "workingBranch": "agent/wp007h-safe-specialist",
+    "lineagePreserved": true
+  },
+  "origin": {
+    "mainSha": "8e3b3ebad2f846e61db2bfe819376723da7e9863",
+    "mainWasUsedAsParent": false,
+    "reason": "WP007H preserves the unmerged WP007G-R1 research lineage."
+  },
+  "priorPullRequests": {
+    "844": {"state": "OPEN", "headSha": "4c4f02349f497e2ff021ff3c37abb432cb93dc0d", "base": "main", "mergeState": "BEHIND", "checks": "SUCCESS"},
+    "845": {"state": "OPEN", "headSha": "5a6231c6f8ede3de5e117ed3692bcf493f0c1a1c", "base": "agent/wp007f-alpha", "mergeState": "CLEAN", "checks": "NO_COMPLETED_CHECKS"},
+    "847": {"state": "OPEN", "headSha": "fc9c1a65528a39da008fed12c1a601e32c226e09", "base": "agent/wp007g-modern-calibration", "mergeState": "CLEAN", "checks": "NO_COMPLETED_CHECKS"}
+  },
+  "priorFreezeArtifacts": {
+    "wp007gR1ModernCalibrationFreezeSha256": "f545c2f72f31af914e8064fc36e443fd38cba8ddb45921980fcfe2677257ec64",
+    "wp007gR1ModernDataFreezeSha256": "15a528da08775390e48de24e1af5ce284185b2df79f4d65448b4cf562e18ccca",
+    "wp007gR1NegativeDataFreezeSha256": "11d9b2db8e4d9afe3647a9c264fe420a9762be822d6a71ac77cd3b36b0f6ca0b",
+    "wp007gR1ForbiddenFlux2FamiliesSha256": "329b2fdb3d8467d16a859338191ab96eb45e872c5d8508dac71a2fb0de3b16e8",
+    "wp007gR1CompilerProfileFileSha256": "1b41e7016df804465c87b32050bd11aa9922f5c2f43506c18958e83f92a73ca5"
+  },
+  "detectorArtifacts": {
+    "SAFE": {"checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e", "upstreamSha": "4e998724651b227def64f5be0cd60c0aa1552c35", "frozenThreshold": 0.5864923000335693, "preprocessing": "RGB decode; CenterCrop(256,256); ToTensor; official SAFE model DWT; class-1 softmax"},
+    "SPAI_C512": {"checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55", "role": "SHADOW_SECONDARY_SPECTRAL_SPECIALIST"},
+    "RINE": {"checkpointSha256": "13986ffc86e1bd9d57fd640f891358c4f14c0f8aea8e590e52c598541f69fdc1", "role": "SHADOW_SUPPORTING_LEARNED_DETECTOR"},
+    "UFD": {"checkpointSha256": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847", "role": "SHADOW_DIAGNOSTIC"}
+  },
+  "currentContracts": {
+    "dynamicCompiler": "packages/authenticity/src/wp007g.ts",
+    "dynamicCompilerVersion": "lythaus-synthetic-evidence-compiler-v2",
+    "historicalReportsPreserved": true,
+    "productionRoutingChanged": false,
+    "publicLabelsChanged": false,
+    "safetyChanged": false
+  },
+  "dataAvailability": {
+    "officialModernCorpus": "T2I-CoReBench historical individual Git-LFS objects available; current archive packaging is not used",
+    "r1ModernCorpus": "SELECTED_OUTSIDE_G_NEW_FAMILY_ROSTER",
+    "cameraNegativeCache": "CSAFE_WP006E_CACHE",
+    "digitalNegativeCache": "WP007E_CONTROLLED_DIGITAL_CACHE",
+    "consumedFlux1": "DIAGNOSTIC_ONLY",
+    "flux2": "SEALED_FUTURE_RESERVE",
+    "flux2ReserveFreezeSha256": "56ae0bd15b8bc21d77b28c9e6faea8149440aab8a9d101db523a43aedb98e054"
+  },
+  "localResourceSnapshot": {
+    "cpu": "AMD Ryzen 7 7730U; 8 physical cores; 16 logical processors",
+    "ramGiB": 15.34,
+    "freeDiskBytesAtAudit": 25999937536,
+    "power": "AC/battery status reported charging",
+    "executionPolicy": "CPU; bounded workers; no training; no GPU; no new provider"
+  },
+  "integrityAssertions": {
+    "flux1UsedOnlyAsPosthocDiagnostic": true,
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "noNewMetaCalibrator": true,
+    "safeFrozen": true,
+    "noScoreVisibleDuringCuration": true
+  }
+}

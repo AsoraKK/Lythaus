@@ -1,0 +1,620 @@
+{
+  "calibrationInterpretation": "Raw SAFE output is not a probability; frozen threshold is a research operating point.",
+  "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+  "detectorId": "SAFE",
+  "expandedAuxiliaryDescriptive": {
+    "auc": {
+      "prAuc": 0.9913743664595203,
+      "rocAuc": 0.9924647177419356
+    },
+    "cameraFpr": {
+      "count": 1,
+      "n": 177,
+      "rate": 0.005649717514124294,
+      "wilson95": [
+        0.0009980110259014442,
+        0.031303535637056984
+      ]
+    },
+    "digitalFpr": {
+      "count": 1,
+      "n": 71,
+      "rate": 0.014084507042253521,
+      "wilson95": [
+        0.002490603270544213,
+        0.07556050520249005
+      ]
+    },
+    "falseNegative": {
+      "count": 5,
+      "n": 160,
+      "rate": 0.03125,
+      "wilson95": [
+        0.013420516687644407,
+        0.07106029128564172
+      ]
+    },
+    "falsePositive": {
+      "count": 2,
+      "n": 248,
+      "rate": 0.008064516129032258,
+      "wilson95": [
+        0.0022143743392366525,
+        0.028922114694036785
+      ]
+    },
+    "synthetic": {
+      "count": 155,
+      "n": 160,
+      "rate": 0.96875,
+      "wilson95": [
+        0.9289397087143583,
+        0.9865794833123556
+      ]
+    },
+    "threshold": 0.5864923000335693
+  },
+  "fprTargetStatus": "FPR_TARGET_NOT_YET_DEMONSTRATED",
+  "gates": {
+    "minimumIndependentGeneratorFamilies": 8,
+    "minimumMacroFamilyRecallPass": true,
+    "minimumRecallPass": true,
+    "minimumSyntheticSamples": 160,
+    "observedNegativeFprPass": true,
+    "runtimePass": true
+  },
+  "negativeCameraDevices": {
+    "UNKNOWN": {
+      "auc": null,
+      "count": 25,
+      "negativeFpr": {
+        "count": 1,
+        "n": 25,
+        "rate": 0.04,
+        "wilson95": [
+          0.007096233501987265,
+          0.19544063736193734
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.43837079405784607
+    },
+    "iPhone11_1": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.02558419667184353
+    },
+    "iPhone11_2": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.023800695315003395
+    },
+    "iPhone11_3": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.054218120872974396
+    },
+    "iPhone11_5": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.021984299644827843
+    },
+    "iPhone12_1": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.023550109937787056
+    },
+    "iPhone12_2": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.019637977704405785
+    },
+    "iPhone12_3": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.024174122139811516
+    },
+    "iPhone12_5": {
+      "auc": null,
+      "count": 5,
+      "negativeFpr": {
+        "count": 0,
+        "n": 5,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.43448246478317476
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.027081511914730072
+    },
+    "iPhone14_1": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.03797296807169914
+    },
+    "iPhone14_2": {
+      "auc": null,
+      "count": 5,
+      "negativeFpr": {
+        "count": 0,
+        "n": 5,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.43448246478317476
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.028347916901111603
+    },
+    "iPhone14_3": {
+      "auc": null,
+      "count": 3,
+      "negativeFpr": {
+        "count": 0,
+        "n": 3,
+        "rate": 0.0,
+        "wilson95": [
+          5.551115123125783e-17,
+          0.5614970317550454
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.03513352945446968
+    },
+    "iPhone14_5": {
+      "auc": null,
+      "count": 5,
+      "negativeFpr": {
+        "count": 0,
+        "n": 5,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.43448246478317476
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.02866731956601143
+    },
+    "note10_1": {
+      "auc": null,
+      "count": 5,
+      "negativeFpr": {
+        "count": 0,
+        "n": 5,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.43448246478317476
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.03906242176890373
+    },
+    "note10_2": {
+      "auc": null,
+      "count": 6,
+      "negativeFpr": {
+        "count": 0,
+        "n": 6,
+        "rate": 0.0,
+        "wilson95": [
+          2.7755575615628914e-17,
+          0.3903342879021653
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.0540601871907711
+    },
+    "note10_3": {
+      "auc": null,
+      "count": 4,
+      "negativeFpr": {
+        "count": 0,
+        "n": 4,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.4898908364545973
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.06918136775493622
+    },
+    "note10_5": {
+      "auc": null,
+      "count": 6,
+      "negativeFpr": {
+        "count": 0,
+        "n": 6,
+        "rate": 0.0,
+        "wilson95": [
+          2.7755575615628914e-17,
+          0.3903342879021653
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.07059764862060547
+    },
+    "s20_3": {
+      "auc": null,
+      "count": 2,
+      "negativeFpr": {
+        "count": 0,
+        "n": 2,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.6576197724933469
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.12049354612827301
+    },
+    "s20_4": {
+      "auc": null,
+      "count": 3,
+      "negativeFpr": {
+        "count": 0,
+        "n": 3,
+        "rate": 0.0,
+        "wilson95": [
+          5.551115123125783e-17,
+          0.5614970317550454
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.039279621094465256
+    },
+    "s21_1": {
+      "auc": null,
+      "count": 2,
+      "negativeFpr": {
+        "count": 0,
+        "n": 2,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.6576197724933469
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.027052616700530052
+    },
+    "s21_3": {
+      "auc": null,
+      "count": 3,
+      "negativeFpr": {
+        "count": 0,
+        "n": 3,
+        "rate": 0.0,
+        "wilson95": [
+          5.551115123125783e-17,
+          0.5614970317550454
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.04275370389223099
+    },
+    "s21_4": {
+      "auc": null,
+      "count": 6,
+      "negativeFpr": {
+        "count": 0,
+        "n": 6,
+        "rate": 0.0,
+        "wilson95": [
+          2.7755575615628914e-17,
+          0.3903342879021653
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.02422957308590412
+    }
+  },
+  "negativeSubtypes": {
+    "CAMERA": {
+      "auc": null,
+      "count": 87,
+      "negativeFpr": {
+        "count": 0,
+        "n": 87,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.04228750694412034
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.027081511914730072
+    },
+    "DIGITAL_NON_AI": {
+      "auc": null,
+      "count": 25,
+      "negativeFpr": {
+        "count": 1,
+        "n": 25,
+        "rate": 0.04,
+        "wilson95": [
+          0.007096233501987265,
+          0.19544063736193734
+        ]
+      },
+      "positive": null,
+      "scoreMedian": 0.43837079405784607
+    }
+  },
+  "qualificationConfirm": {
+    "auc": {
+      "prAuc": 0.9958706409454495,
+      "rocAuc": 0.993359375
+    },
+    "cameraFpr": {
+      "count": 0,
+      "n": 87,
+      "rate": 0.0,
+      "wilson95": [
+        0.0,
+        0.04228750694412034
+      ]
+    },
+    "digitalFpr": {
+      "count": 1,
+      "n": 25,
+      "rate": 0.04,
+      "wilson95": [
+        0.007096233501987265,
+        0.19544063736193734
+      ]
+    },
+    "falseNegative": {
+      "count": 5,
+      "n": 160,
+      "rate": 0.03125,
+      "wilson95": [
+        0.013420516687644407,
+        0.07106029128564172
+      ]
+    },
+    "falsePositive": {
+      "count": 1,
+      "n": 112,
+      "rate": 0.008928571428571428,
+      "wilson95": [
+        0.001577854703292133,
+        0.048848468308884896
+      ]
+    },
+    "synthetic": {
+      "count": 155,
+      "n": 160,
+      "rate": 0.96875,
+      "wilson95": [
+        0.9289397087143583,
+        0.9865794833123556
+      ]
+    },
+    "threshold": 0.5864923000335693
+  },
+  "qualificationGeneratorFamilies": {
+    "BLIP3o-8B": {
+      "auc": null,
+      "count": 20,
+      "negativeFpr": null,
+      "positive": {
+        "count": 20,
+        "n": 20,
+        "rate": 1.0,
+        "wilson95": [
+          0.8388748419471806,
+          1.0
+        ]
+      },
+      "scoreMedian": 0.9458649158477783
+    },
+    "FLUX.1-Krea-dev": {
+      "auc": null,
+      "count": 20,
+      "negativeFpr": null,
+      "positive": {
+        "count": 20,
+        "n": 20,
+        "rate": 1.0,
+        "wilson95": [
+          0.8388748419471806,
+          1.0
+        ]
+      },
+      "scoreMedian": 0.9488286375999451
+    },
+    "Infinity-8B": {
+      "auc": null,
+      "count": 20,
+      "negativeFpr": null,
+      "positive": {
+        "count": 20,
+        "n": 20,
+        "rate": 1.0,
+        "wilson95": [
+          0.8388748419471806,
+          1.0
+        ]
+      },
+      "scoreMedian": 0.9481494426727295
+    },
+    "Janus-Pro-7B": {
+      "auc": null,
+      "count": 20,
+      "negativeFpr": null,
+      "positive": {
+        "count": 20,
+        "n": 20,
+        "rate": 1.0,
+        "wilson95": [
+          0.8388748419471806,
+          1.0
+        ]
+      },
+      "scoreMedian": 0.9289869070053101
+    },
+    "LongCat-Image": {
+      "auc": null,
+      "count": 20,
+      "negativeFpr": null,
+      "positive": {
+        "count": 20,
+        "n": 20,
+        "rate": 1.0,
+        "wilson95": [
+          0.8388748419471806,
+          1.0
+        ]
+      },
+      "scoreMedian": 0.9637615084648132
+    },
+    "OmniGen2-7B": {
+      "auc": null,
+      "count": 20,
+      "negativeFpr": null,
+      "positive": {
+        "count": 20,
+        "n": 20,
+        "rate": 1.0,
+        "wilson95": [
+          0.8388748419471806,
+          1.0
+        ]
+      },
+      "scoreMedian": 0.953412652015686
+    },
+    "PixArt-Alpha": {
+      "auc": null,
+      "count": 20,
+      "negativeFpr": null,
+      "positive": {
+        "count": 20,
+        "n": 20,
+        "rate": 1.0,
+        "wilson95": [
+          0.8388748419471806,
+          1.0
+        ]
+      },
+      "scoreMedian": 0.9428373575210571
+    },
+    "Qwen-Image-2512": {
+      "auc": null,
+      "count": 20,
+      "negativeFpr": null,
+      "positive": {
+        "count": 15,
+        "n": 20,
+        "rate": 0.75,
+        "wilson95": [
+          0.531299122381256,
+          0.8881382985923343
+        ]
+      },
+      "scoreMedian": 0.8294949531555176
+    }
+  },
+  "qualificationInputFreezeSha256": "bd10a94e2238456416603df19dbb10c7f2577e1d8ace96cab03a34008b466c58",
+  "runtime": {
+    "loadSeconds": 0.25865689999773167,
+    "p50Ms": 28.41100000659935,
+    "p95Ms": 93.16499999840744,
+    "peakRssBytes": null
+  },
+  "schemaVersion": "lythaus-wp007h-safe-qualification-results-v1",
+  "scoreIntegrity": {
+    "allStatusOk": true,
+    "flux1PixelAccess": false,
+    "flux2PixelAccess": false,
+    "rows": 520
+  },
+  "threshold": 0.5864923000335693,
+  "thresholdFrozenFrom": "WP007G-R1 NEGATIVE_CALIBRATION_G"
+}

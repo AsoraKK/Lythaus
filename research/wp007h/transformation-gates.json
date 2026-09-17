@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "lythaus-wp007h-transformation-gates-v1",
+  "parentSha": "fc9c1a65528a39da008fed12c1a601e32c226e09",
+  "frozenBeforeTransformationScoreRead": true,
+  "classificationRule": {
+    "FRAGILE": "Any transformation has synthetic recall retention <0.70 at the frozen SAFE threshold or negative FPR increase >0.05 versus the same selected originals.",
+    "MIXED": "Otherwise any transformation has synthetic recall retention <0.90 or negative FPR increase >0.02.",
+    "ROBUST": "All measured transformations satisfy the MIXED bounds."
+  },
+  "applicabilityRule": {
+    "HIGH": "ORIGINAL or metadata-only strip with no measurable resampling/recompression indicator in the input lineage.",
+    "MODERATE": "JPEG95/JPEG85, resize75, mild crop, mild blur or mild sharpen; measurable alteration exists but the regime remains within bounded stress coverage.",
+    "LOW": "JPEG75, resize50 or screenshot-style resampling; strong recompression/resampling evidence limits SAFE authority.",
+    "UNSUPPORTED": "Unknown or compounded transformation not represented by the frozen matrix; no synthetic conclusion from SAFE applicability alone."
+  },
+  "productBoundary": "Applicability changes the authority of SAFE evidence, never the authenticity truth label by itself."
+}
