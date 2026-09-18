@@ -1,0 +1,1845 @@
+{
+  "centroidDistanceMatrix": {
+    "FLUX1_CLOUDFLARE": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": -2.220446049250313e-16,
+        "euclidean": 0.0
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.44692051854752357,
+        "euclidean": 3.178134359546949
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.04114411457170386,
+        "euclidean": 1.4792154581944112
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.4140486934400728,
+        "euclidean": 2.7652699892776984
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.44950383288039986,
+        "euclidean": 3.093752730089835
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.5306504256415747,
+        "euclidean": 3.2813147920970387
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.4575019039025866,
+        "euclidean": 3.130834035871268
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.5584562573522412,
+        "euclidean": 3.400183125292532
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.4640281067235351,
+        "euclidean": 3.1975566580078976
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.46597868839844037,
+        "euclidean": 3.1400384692961
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.3417699229113126,
+        "euclidean": 2.6244148109763685
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.4296333665536767,
+        "euclidean": 3.004354119095124
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.02232081514921158,
+        "euclidean": 0.7002049729267764
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.0164217155769264,
+        "euclidean": 1.1394931578150274
+      }
+    },
+    "FLUX1_PUBLIC": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.44692051854752357,
+        "euclidean": 3.178134359546949
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.0,
+        "euclidean": 0.0
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.49825457839145504,
+        "euclidean": 3.8891627660167623
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.7243272353654524,
+        "euclidean": 3.452192415710999
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.002078085104410099,
+        "euclidean": 0.2782697771261333
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.015527729960436387,
+        "euclidean": 0.6730077976588322
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.003111572586864675,
+        "euclidean": 0.3122045545186632
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.03244975282001672,
+        "euclidean": 0.9112625341597619
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.0016323722297928445,
+        "euclidean": 0.21315194229441994
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.0013032695616983503,
+        "euclidean": 0.2532849569311226
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.022109396921630387,
+        "euclidean": 0.7861850881674286
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.007288016890933169,
+        "euclidean": 0.46538020768442684
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.39773277916960914,
+        "euclidean": 3.0684089851713634
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.4485649140102759,
+        "euclidean": 3.6245032913944564
+      }
+    },
+    "REAL_CAMERA": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.04114411457170419,
+        "euclidean": 1.4792154581944112
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.49825457839145515,
+        "euclidean": 3.8891627660167623
+      },
+      "REAL_CAMERA": {
+        "cosine": 2.220446049250313e-16,
+        "euclidean": 0.0
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.470367000239714,
+        "euclidean": 3.854592403632718
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.5039138902694754,
+        "euclidean": 3.8503372143513475
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.563848884156078,
+        "euclidean": 4.013352107760498
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.5025885136890789,
+        "euclidean": 3.8517451047976157
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.594843243647728,
+        "euclidean": 4.140473154370054
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.5144346693228599,
+        "euclidean": 3.9243613861872926
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.5170567957263217,
+        "euclidean": 3.892389102478496
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.40828098656174705,
+        "euclidean": 3.440646384065959
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.49310565043729326,
+        "euclidean": 3.79725113349756
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.10135747287777364,
+        "euclidean": 1.8766803359039412
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.021415662789347034,
+        "euclidean": 0.8555866917718656
+      }
+    },
+    "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.4140486934400729,
+        "euclidean": 2.7652699892776984
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.7243272353654524,
+        "euclidean": 3.452192415710999
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.4703670002397139,
+        "euclidean": 3.854592403632718
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 1.1102230246251565e-16,
+        "euclidean": 0.0
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.7158662114301997,
+        "euclidean": 3.285598800088817
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.7937419705797489,
+        "euclidean": 3.203278647343211
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.717617719801722,
+        "euclidean": 3.304334722965416
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.7928619876519609,
+        "euclidean": 3.2613575406020554
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.7275691270350995,
+        "euclidean": 3.38801836493595
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.7273132745144504,
+        "euclidean": 3.2767277650088995
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.616251937799347,
+        "euclidean": 3.0621431660386196
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.6847116104306165,
+        "euclidean": 3.2267671588274767
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.3978569876921637,
+        "euclidean": 2.9442363300399164
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.4402973565867878,
+        "euclidean": 3.7141071361728817
+      }
+    },
+    "SYNTH_EASY_BLIP3o-8B": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.44950383288039997,
+        "euclidean": 3.093752730089835
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.00207808510441021,
+        "euclidean": 0.2782697771261333
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.5039138902694753,
+        "euclidean": 3.8503372143513475
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.7158662114301997,
+        "euclidean": 3.285598800088817
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 1.1102230246251565e-16,
+        "euclidean": 0.0
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.022247722210360754,
+        "euclidean": 0.7176388565078882
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.00693936620696578,
+        "euclidean": 0.4030841730751631
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.02948047164028067,
+        "euclidean": 0.8220653195612542
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.0035448018623009947,
+        "euclidean": 0.3066110991066137
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.00105511272801051,
+        "euclidean": 0.157117222631043
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.02715302209194881,
+        "euclidean": 0.791927892843997
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.003240602002083315,
+        "euclidean": 0.2756498221409565
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.3967341436670797,
+        "euclidean": 2.982795945777274
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.45284233766870086,
+        "euclidean": 3.5832389613744913
+      }
+    },
+    "SYNTH_EASY_FLUX.1-Krea-dev": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.5306504256415747,
+        "euclidean": 3.2813147920970387
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.015527729960436387,
+        "euclidean": 0.6730077976588322
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.563848884156078,
+        "euclidean": 4.013352107760498
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.7937419705797488,
+        "euclidean": 3.203278647343211
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.022247722210360532,
+        "euclidean": 0.7176388565078882
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 1.1102230246251565e-16,
+        "euclidean": 0.0
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.011283839169499932,
+        "euclidean": 0.526113313963295
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.01969615335637742,
+        "euclidean": 0.6583164371474185
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.011448091306048402,
+        "euclidean": 0.562696210706995
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.014989278242755977,
+        "euclidean": 0.5891520231245785
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.05449150869193975,
+        "euclidean": 1.076932197845007
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.03734194339736241,
+        "euclidean": 0.9128795360571974
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.48886243128261897,
+        "euclidean": 3.2415560830498555
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.5188933468927537,
+        "euclidean": 3.778242246027374
+      }
+    },
+    "SYNTH_EASY_Gemini-2.0-Flash": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.4575019039025867,
+        "euclidean": 3.130834035871268
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.003111572586864897,
+        "euclidean": 0.3122045545186632
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.5025885136890789,
+        "euclidean": 3.8517451047976157
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.717617719801722,
+        "euclidean": 3.304334722965416
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.00693936620696578,
+        "euclidean": 0.4030841730751631
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.011283839169500043,
+        "euclidean": 0.526113313963295
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.0,
+        "euclidean": 0.0
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.034572287308183514,
+        "euclidean": 0.8936877910395677
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.004173877483826471,
+        "euclidean": 0.32625700715692346
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.005050079213611891,
+        "euclidean": 0.3444231181036777
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.024459780599927483,
+        "euclidean": 0.7591855550056841
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.015540498660317925,
+        "euclidean": 0.6018526484369688
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.41298725021048166,
+        "euclidean": 3.0519261438526892
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.45514349191345815,
+        "euclidean": 3.5981328756011983
+      }
+    },
+    "SYNTH_EASY_GoT-R1-7B": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.5584562573522412,
+        "euclidean": 3.400183125292532
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.03244975282001672,
+        "euclidean": 0.9112625341597619
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.5948432436477278,
+        "euclidean": 4.140473154370054
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.7928619876519609,
+        "euclidean": 3.2613575406020554
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.02948047164028067,
+        "euclidean": 0.8220653195612542
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.01969615335637742,
+        "euclidean": 0.6583164371474185
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.03457228730818329,
+        "euclidean": 0.8936877910395677
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 1.1102230246251565e-16,
+        "euclidean": 0.0
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.025963528293289073,
+        "euclidean": 0.7977876766538514
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.02460794735460925,
+        "euclidean": 0.7483644550547035
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.09094803150895658,
+        "euclidean": 1.4060944438948897
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.04211203790497209,
+        "euclidean": 0.9734243684249226
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.5061946485845512,
+        "euclidean": 3.3288585257032914
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.5464753630250319,
+        "euclidean": 3.8960931308475564
+      }
+    },
+    "SYNTH_EASY_Nano-Banana": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.4640281067235351,
+        "euclidean": 3.1975566580078976
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.0016323722297928445,
+        "euclidean": 0.21315194229441994
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.5144346693228599,
+        "euclidean": 3.9243613861872926
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.7275691270350995,
+        "euclidean": 3.38801836493595
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.0035448018623007727,
+        "euclidean": 0.3066110991066137
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.011448091306048402,
+        "euclidean": 0.562696210706995
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.004173877483826249,
+        "euclidean": 0.32625700715692346
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.025963528293289073,
+        "euclidean": 0.7977876766538514
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 1.1102230246251565e-16,
+        "euclidean": 0.0
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.0013238586141599562,
+        "euclidean": 0.21039896920536988
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.025760690948606335,
+        "euclidean": 0.8077817095221826
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.008498466357223178,
+        "euclidean": 0.4680839004789109
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.41342730934729255,
+        "euclidean": 3.0928722657247563
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.46344074701067495,
+        "euclidean": 3.657905434340561
+      }
+    },
+    "SYNTH_EASY_PixArt-Alpha": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.46597868839844037,
+        "euclidean": 3.1400384692961
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.0013032695616985723,
+        "euclidean": 0.2532849569311226
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.5170567957263217,
+        "euclidean": 3.892389102478496
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.7273132745144504,
+        "euclidean": 3.2767277650088995
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.00105511272801051,
+        "euclidean": 0.157117222631043
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.014989278242756088,
+        "euclidean": 0.5891520231245785
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.005050079213611891,
+        "euclidean": 0.3444231181036777
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.02460794735460925,
+        "euclidean": 0.7483644550547035
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.0013238586141601782,
+        "euclidean": 0.21039896920536988
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 1.1102230246251565e-16,
+        "euclidean": 0.0
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.028932128487974884,
+        "euclidean": 0.8113950855416135
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.005830957524785685,
+        "euclidean": 0.3658327795011218
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.4140548813477789,
+        "euclidean": 3.038987122502878
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.46665263311457816,
+        "euclidean": 3.6300886393210066
+      }
+    },
+    "SYNTH_EASY_Qwen-Image-2512": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.3417699229113127,
+        "euclidean": 2.6244148109763685
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.022109396921630498,
+        "euclidean": 0.7861850881674286
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.40828098656174705,
+        "euclidean": 3.440646384065959
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.616251937799347,
+        "euclidean": 3.0621431660386196
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.02715302209194881,
+        "euclidean": 0.791927892843997
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.05449150869193986,
+        "euclidean": 1.076932197845007
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.024459780599927483,
+        "euclidean": 0.7591855550056841
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.0909480315089567,
+        "euclidean": 1.4060944438948897
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.025760690948606557,
+        "euclidean": 0.8077817095221826
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.028932128487974884,
+        "euclidean": 0.8113950855416135
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.0,
+        "euclidean": 0.0
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.02286497527895992,
+        "euclidean": 0.7179463658603595
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.2935342130735408,
+        "euclidean": 2.502793935921716
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.3546051120770246,
+        "euclidean": 3.147405575082372
+      }
+    },
+    "SYNTH_EASY_SD-3.5-Large": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.4296333665536767,
+        "euclidean": 3.004354119095124
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.007288016890933169,
+        "euclidean": 0.46538020768442684
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.49310565043729326,
+        "euclidean": 3.79725113349756
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.6847116104306163,
+        "euclidean": 3.2267671588274767
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.003240602002083204,
+        "euclidean": 0.2756498221409565
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.03734194339736241,
+        "euclidean": 0.9128795360571974
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.015540498660317814,
+        "euclidean": 0.6018526484369688
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.04211203790497209,
+        "euclidean": 0.9734243684249226
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.008498466357223178,
+        "euclidean": 0.4680839004789109
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.005830957524785685,
+        "euclidean": 0.3658327795011218
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.0228649752789597,
+        "euclidean": 0.7179463658603595
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 1.1102230246251565e-16,
+        "euclidean": 0.0
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.3703775172695086,
+        "euclidean": 2.8642972620184004
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.4379080894318391,
+        "euclidean": 3.513065880120784
+      }
+    },
+    "SYNTH_IMAGEN_4": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.02232081514921158,
+        "euclidean": 0.7002049729267764
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.39773277916960914,
+        "euclidean": 3.0684089851713634
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.10135747287777352,
+        "euclidean": 1.8766803359039412
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.3978569876921637,
+        "euclidean": 2.9442363300399164
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.3967341436670796,
+        "euclidean": 2.982795945777274
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.48886243128261897,
+        "euclidean": 3.2415560830498555
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.41298725021048166,
+        "euclidean": 3.0519261438526892
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.5061946485845512,
+        "euclidean": 3.3288585257032914
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.41342730934729255,
+        "euclidean": 3.0928722657247563
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.4140548813477789,
+        "euclidean": 3.038987122502878
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.29353421307354066,
+        "euclidean": 2.502793935921716
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.3703775172695086,
+        "euclidean": 2.8642972620184004
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.0,
+        "euclidean": 0.0
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 0.04418908174408309,
+        "euclidean": 1.3159271118395126
+      }
+    },
+    "SYNTH_SEEDREAM_4": {
+      "FLUX1_CLOUDFLARE": {
+        "cosine": 0.01642171557692651,
+        "euclidean": 1.1394931578150274
+      },
+      "FLUX1_PUBLIC": {
+        "cosine": 0.4485649140102759,
+        "euclidean": 3.6245032913944564
+      },
+      "REAL_CAMERA": {
+        "cosine": 0.021415662789347256,
+        "euclidean": 0.8555866917718656
+      },
+      "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+        "cosine": 0.4402973565867878,
+        "euclidean": 3.7141071361728817
+      },
+      "SYNTH_EASY_BLIP3o-8B": {
+        "cosine": 0.45284233766870086,
+        "euclidean": 3.5832389613744913
+      },
+      "SYNTH_EASY_FLUX.1-Krea-dev": {
+        "cosine": 0.5188933468927537,
+        "euclidean": 3.778242246027374
+      },
+      "SYNTH_EASY_Gemini-2.0-Flash": {
+        "cosine": 0.45514349191345815,
+        "euclidean": 3.5981328756011983
+      },
+      "SYNTH_EASY_GoT-R1-7B": {
+        "cosine": 0.546475363025032,
+        "euclidean": 3.8960931308475564
+      },
+      "SYNTH_EASY_Nano-Banana": {
+        "cosine": 0.46344074701067506,
+        "euclidean": 3.657905434340561
+      },
+      "SYNTH_EASY_PixArt-Alpha": {
+        "cosine": 0.4666526331145783,
+        "euclidean": 3.6300886393210066
+      },
+      "SYNTH_EASY_Qwen-Image-2512": {
+        "cosine": 0.3546051120770246,
+        "euclidean": 3.147405575082372
+      },
+      "SYNTH_EASY_SD-3.5-Large": {
+        "cosine": 0.43790808943183923,
+        "euclidean": 3.513065880120784
+      },
+      "SYNTH_IMAGEN_4": {
+        "cosine": 0.0441890817440832,
+        "euclidean": 1.3159271118395126
+      },
+      "SYNTH_SEEDREAM_4": {
+        "cosine": 2.220446049250313e-16,
+        "euclidean": 0.0
+      }
+    }
+  },
+  "dimension": 512,
+  "easySyntheticCentroid": {
+    "l2Norm": 3.3387522267997305,
+    "n": 160
+  },
+  "embeddingArtifactSha256": "1f7ba38e496e695231a86abfd4c76cbd86338717454c40b8da9b2d3056f2019d",
+  "familySummary": {
+    "FLUX1_CLOUDFLARE": {
+      "centroidL2Norm": 3.0894992217347337,
+      "centroidSha256": "87884a83cb6d197d2c57270b6c87aa529b3cb208f41de0bbfe4e3d6e0308fda3",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.7447648828356015,
+        "mean": 0.5028885345551746,
+        "median": 0.4986562982073964,
+        "min": 0.2703453236837967,
+        "n": 40,
+        "p05": 0.38257389385873025,
+        "p25": 0.46988333769403984,
+        "p75": 0.532338754268403,
+        "p95": 0.6757522328783517,
+        "std": 0.08814679301224804
+      },
+      "cosineToRealCentroid": {
+        "max": 0.40042150331004733,
+        "mean": 0.11868504048982145,
+        "median": 0.10420655456550237,
+        "min": 0.01070738663210602,
+        "n": 40,
+        "p05": 0.019748767641164372,
+        "p25": 0.05731940226742796,
+        "p75": 0.16160843581476284,
+        "p95": 0.245182265321285,
+        "std": 0.07947233987052539
+      },
+      "euclideanToRealCentroid": {
+        "max": 3.3987949280129457,
+        "mean": 1.7065308601460558,
+        "median": 1.6168395087939655,
+        "min": 0.6964703134163576,
+        "n": 40,
+        "p05": 0.9025550906284048,
+        "p25": 1.323201749422852,
+        "p75": 1.997406736234704,
+        "p95": 2.8729441680013923,
+        "std": 0.5707963410074836
+      },
+      "n": 40,
+      "withinCentroidEuclidean": {
+        "max": 3.8755061633622936,
+        "mean": 1.4315719062902814,
+        "median": 1.232105832514128,
+        "min": 0.6360206575170845,
+        "n": 40,
+        "p05": 0.8508362282146169,
+        "p25": 1.0668399725978646,
+        "p75": 1.6439816593942909,
+        "p95": 2.632827648475248,
+        "std": 0.6494402178720183
+      }
+    },
+    "FLUX1_PUBLIC": {
+      "centroidL2Norm": 3.5729597150802257,
+      "centroidSha256": "9174ae0ef1ed139699eb5f94f821a286dc4205885d251977f4e2d3b4a3f25aff",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.14015113612644203,
+        "mean": 0.03500491329639779,
+        "median": 0.02486202969109763,
+        "min": 0.002693049590806851,
+        "n": 40,
+        "p05": 0.004738958685155354,
+        "p25": 0.011976867251609041,
+        "p75": 0.050566058032455785,
+        "p95": 0.08322114482427743,
+        "std": 0.03069203247494789
+      },
+      "cosineToRealCentroid": {
+        "max": 0.6525016500356328,
+        "mean": 0.5142720990778515,
+        "median": 0.5312427018230711,
+        "min": 0.3312874549892658,
+        "n": 40,
+        "p05": 0.39155834230974074,
+        "p25": 0.4478989141581292,
+        "p75": 0.5771914313351003,
+        "p95": 0.6341085861614629,
+        "std": 0.08316334729804868
+      },
+      "euclideanToRealCentroid": {
+        "max": 4.19437183513269,
+        "mean": 3.519978374538801,
+        "median": 3.533940896005733,
+        "min": 2.6932441444473283,
+        "n": 40,
+        "p05": 2.912896985420437,
+        "p25": 3.377983353828494,
+        "p75": 3.7417884602425264,
+        "p95": 4.042425578066993,
+        "std": 0.343058803648189
+      },
+      "n": 40,
+      "withinCentroidEuclidean": {
+        "max": 1.8584427425968992,
+        "mean": 0.9172919360491779,
+        "median": 0.8869411340744229,
+        "min": 0.2847897750237807,
+        "n": 40,
+        "p05": 0.3991568887873291,
+        "p25": 0.6704416898010016,
+        "p75": 1.1681235662431395,
+        "p95": 1.4491366027119352,
+        "std": 0.35884147891627743
+      }
+    },
+    "REAL_CAMERA": {
+      "centroidL2Norm": 4.1535162955678855,
+      "centroidSha256": "5cf8d29719c3d420c5982ec751bc0f3cd75f9cbcf66addf47946a08ab23b3468",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.9401808408559457,
+        "mean": 0.5458116205386038,
+        "median": 0.5543498940292402,
+        "min": 0.05145365389195933,
+        "n": 600,
+        "p05": 0.3626991184799005,
+        "p25": 0.5148381964233205,
+        "p75": 0.5917693209235185,
+        "p95": 0.6679009161963022,
+        "std": 0.09820451753033291
+      },
+      "cosineToRealCentroid": {
+        "max": 0.853562922556463,
+        "mean": 0.12198307122555055,
+        "median": 0.08090994195927226,
+        "min": 0.00846507300982946,
+        "n": 600,
+        "p05": 0.025622126057894185,
+        "p25": 0.04724972518237888,
+        "p75": 0.17563831020455187,
+        "p95": 0.30362379150171825,
+        "std": 0.10684873972999426
+      },
+      "euclideanToRealCentroid": {
+        "max": 8.008322125020593,
+        "mean": 2.675004443756747,
+        "median": 2.2555993159792926,
+        "min": 0.43339384164134637,
+        "n": 600,
+        "p05": 1.1387318842473304,
+        "p25": 1.7788560891452412,
+        "p75": 3.2934703321647154,
+        "p95": 5.325223431689097,
+        "std": 1.3181098138536487
+      },
+      "n": 600,
+      "withinCentroidEuclidean": {
+        "max": 7.2070960574059235,
+        "mean": 2.630249802747236,
+        "median": 2.5215205238147376,
+        "min": 0.7305567911242011,
+        "n": 600,
+        "p05": 1.1904603992053813,
+        "p25": 1.8651971788417856,
+        "p75": 3.166835145379295,
+        "p95": 4.517521423248474,
+        "std": 1.022854128534381
+      }
+    },
+    "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+      "centroidL2Norm": 0.636036908301604,
+      "centroidSha256": "04a2859e48218a84c6be3d2c1b340c4185c3442ecceccbc925c4a1132c6cc105",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.966294394468154,
+        "mean": 0.8003075706990012,
+        "median": 0.8241307447798614,
+        "min": 0.21817673935772874,
+        "n": 200,
+        "p05": 0.5229401153289507,
+        "p25": 0.7270814116761323,
+        "p75": 0.9249806564570511,
+        "p95": 0.947352163513159,
+        "std": 0.13755961879589707
+      },
+      "cosineToRealCentroid": {
+        "max": 0.9241437126986844,
+        "mean": 0.6295052144772663,
+        "median": 0.6694129411754245,
+        "min": 0.11978063210595236,
+        "n": 200,
+        "p05": 0.23322495459021877,
+        "p25": 0.4643636604607623,
+        "p75": 0.8294358151349528,
+        "p95": 0.8869416587207043,
+        "std": 0.21365401038982637
+      },
+      "euclideanToRealCentroid": {
+        "max": 3.90719252208906,
+        "mean": 3.013522221559007,
+        "median": 3.1038686614276685,
+        "min": 1.6155320908687159,
+        "n": 200,
+        "p05": 2.2873866097175055,
+        "p25": 2.9385829748409753,
+        "p75": 3.1733354798265565,
+        "p95": 3.3781400214066117,
+        "std": 0.3328163603003129
+      },
+      "n": 200,
+      "withinCentroidEuclidean": {
+        "max": 2.6920358873351278,
+        "mean": 0.7330784625411964,
+        "median": 0.5233013798520874,
+        "min": 0.21421896677719018,
+        "n": 200,
+        "p05": 0.307375921541871,
+        "p25": 0.4278188606030668,
+        "p75": 0.7037582338759345,
+        "p95": 2.1077408615752624,
+        "std": 0.545087071775006
+      }
+    },
+    "SYNTH_EASY_BLIP3o-8B": {
+      "centroidL2Norm": 3.4092294636226477,
+      "centroidSha256": "c0841eb193cb42e2b6c03f658eb4e4d154e44c51d9dca986450c479f731cad96",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.10475525535943964,
+        "mean": 0.032721185413034856,
+        "median": 0.01476248110720263,
+        "min": 0.0019032046170642802,
+        "n": 20,
+        "p05": 0.00584085472665063,
+        "p25": 0.010902679929942899,
+        "p75": 0.06268897306750143,
+        "p95": 0.09068080976093934,
+        "std": 0.03132943598528555
+      },
+      "cosineToRealCentroid": {
+        "max": 0.6515209012330527,
+        "mean": 0.5197936944475023,
+        "median": 0.5249775725484889,
+        "min": 0.37071281981293447,
+        "n": 20,
+        "p05": 0.38776964058603003,
+        "p25": 0.4826490755139712,
+        "p75": 0.5481584078787364,
+        "p95": 0.6384655700901046,
+        "std": 0.07390180328769913
+      },
+      "euclideanToRealCentroid": {
+        "max": 3.7719092599431936,
+        "mean": 3.433004764151812,
+        "median": 3.5315884603420855,
+        "min": 2.898999751573789,
+        "n": 20,
+        "p05": 2.985037019842378,
+        "p25": 3.197393767923926,
+        "p75": 3.6150139301632214,
+        "p95": 3.757678983149799,
+        "std": 0.26431571525503134
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 1.4487454081177762,
+        "mean": 0.8417241752390827,
+        "median": 0.770416214297402,
+        "min": 0.3121167017780885,
+        "n": 20,
+        "p05": 0.3742993644953975,
+        "p25": 0.6040675749163857,
+        "p75": 1.1332636669389433,
+        "p95": 1.3768017897422908,
+        "std": 0.3393015488312561
+      }
+    },
+    "SYNTH_EASY_FLUX.1-Krea-dev": {
+      "centroidL2Norm": 3.273425991899927,
+      "centroidSha256": "5f7b4ffd3bcfeea6fecf4cb64cefd052b632166ad6f4efbf2e13b1db5c3b2598",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.13415457674949538,
+        "mean": 0.04579511861781897,
+        "median": 0.043171818106716386,
+        "min": 0.006132505183126469,
+        "n": 20,
+        "p05": 0.00694343307685234,
+        "p25": 0.02575932593425026,
+        "p75": 0.06440614468269365,
+        "p95": 0.0769759337835916,
+        "std": 0.03007824855317207
+      },
+      "cosineToRealCentroid": {
+        "max": 0.7137918037213744,
+        "mean": 0.5782153002594714,
+        "median": 0.5787403697284657,
+        "min": 0.37691704268612913,
+        "n": 20,
+        "p05": 0.4283603532131297,
+        "p25": 0.5435897718471359,
+        "p75": 0.6372877371421963,
+        "p95": 0.662112419945497,
+        "std": 0.08048645206591822
+      },
+      "euclideanToRealCentroid": {
+        "max": 3.957984738964588,
+        "mean": 3.5494288112724006,
+        "median": 3.582555934942812,
+        "min": 2.679194887209501,
+        "n": 20,
+        "p05": 2.985311684135312,
+        "p25": 3.406404305136626,
+        "p75": 3.837696761103388,
+        "p95": 3.9120847748835543,
+        "std": 0.33762167129468756
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 1.5639068782911425,
+        "mean": 0.8616841526398524,
+        "median": 0.7792621433002547,
+        "min": 0.39179939149972254,
+        "n": 20,
+        "p05": 0.3941569303297299,
+        "p25": 0.6755529501847931,
+        "p75": 1.0597255061881565,
+        "p95": 1.4390340040902798,
+        "std": 0.3321021058035248
+      }
+    },
+    "SYNTH_EASY_Gemini-2.0-Flash": {
+      "centroidL2Norm": 3.4271189345915243,
+      "centroidSha256": "5c0ff37385da7f325cf18ec9d5909c6dbaaeb5649d764276905ac3a26a7e9b93",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.08659513623387693,
+        "mean": 0.030199801892118145,
+        "median": 0.021098198499740817,
+        "min": 0.004848182030640968,
+        "n": 20,
+        "p05": 0.009673860651440897,
+        "p25": 0.01606954472093844,
+        "p75": 0.03955980883001167,
+        "p95": 0.06747441359939381,
+        "std": 0.021049298915754064
+      },
+      "cosineToRealCentroid": {
+        "max": 0.6349125752059884,
+        "mean": 0.5158146281529852,
+        "median": 0.5445728419852418,
+        "min": 0.33010164138407583,
+        "n": 20,
+        "p05": 0.3410515507308877,
+        "p25": 0.47180330514414826,
+        "p75": 0.5769857706528633,
+        "p95": 0.6274702626493098,
+        "std": 0.08663552078851523
+      },
+      "euclideanToRealCentroid": {
+        "max": 4.370806161988607,
+        "mean": 3.4216500919217845,
+        "median": 3.4415868425347247,
+        "min": 2.749512558516972,
+        "n": 20,
+        "p05": 2.7893671392315103,
+        "p25": 3.2433146972167286,
+        "p75": 3.626622341548391,
+        "p95": 3.803014726218814,
+        "std": 0.35468296645875413
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 1.6382576959578408,
+        "mean": 0.8017846377158753,
+        "median": 0.6683290668207056,
+        "min": 0.3779978963161238,
+        "n": 20,
+        "p05": 0.43305659498528626,
+        "p25": 0.5494759050120754,
+        "p75": 0.988358593525877,
+        "p95": 1.4780862542045423,
+        "std": 0.34622461715042363
+      }
+    },
+    "SYNTH_EASY_GoT-R1-7B": {
+      "centroidL2Norm": 3.3331951312758936,
+      "centroidSha256": "e1ed0c71e63932b595a257b50bc3a8e6739bd70e66151fb1eae7ff256e0c23da",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.16978591632525208,
+        "mean": 0.04740440827419077,
+        "median": 0.03700906481510707,
+        "min": 0.004083051300864171,
+        "n": 20,
+        "p05": 0.005327539842155676,
+        "p25": 0.019080696002975517,
+        "p75": 0.05598463036225665,
+        "p95": 0.12547745826510126,
+        "std": 0.041460002294742074
+      },
+      "cosineToRealCentroid": {
+        "max": 0.7534827372896183,
+        "mean": 0.6056871701240207,
+        "median": 0.5979854125325232,
+        "min": 0.4805207534960393,
+        "n": 20,
+        "p05": 0.4990291574992716,
+        "p25": 0.5610210604940739,
+        "p75": 0.6397476682368913,
+        "p95": 0.6998011896348743,
+        "std": 0.06594406612183577
+      },
+      "euclideanToRealCentroid": {
+        "max": 3.995830012802347,
+        "mean": 3.6418624044543733,
+        "median": 3.6174585119073073,
+        "min": 3.0893380361080927,
+        "n": 20,
+        "p05": 3.2205009248334258,
+        "p25": 3.550924960329867,
+        "p75": 3.7827694382846966,
+        "p95": 3.927289691814689,
+        "std": 0.21187998900462926
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 1.2677734094121278,
+        "mean": 0.6936206236719349,
+        "median": 0.6252362803069922,
+        "min": 0.3064738591076724,
+        "n": 20,
+        "p05": 0.34196859401804947,
+        "p25": 0.4365400363330504,
+        "p75": 0.9663523191661908,
+        "p95": 1.217300094635573,
+        "std": 0.3099138780899824
+      }
+    },
+    "SYNTH_EASY_Nano-Banana": {
+      "centroidL2Norm": 3.5055651076205403,
+      "centroidSha256": "757bfcb7821aafa8a18910bb3c14714324c0bdafa23b87f11a808a2301d0707d",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.13671130084347038,
+        "mean": 0.03865263359561918,
+        "median": 0.03381295955050112,
+        "min": 0.0039119260939033396,
+        "n": 20,
+        "p05": 0.006865038690144809,
+        "p25": 0.01762379422905408,
+        "p75": 0.043341396697453655,
+        "p95": 0.09939209141140247,
+        "std": 0.031234495065320063
+      },
+      "cosineToRealCentroid": {
+        "max": 0.6883400921506108,
+        "mean": 0.5367720180074667,
+        "median": 0.5210364090566177,
+        "min": 0.3641822487986025,
+        "n": 20,
+        "p05": 0.4247986930194092,
+        "p25": 0.4756302161259828,
+        "p75": 0.6244573802452849,
+        "p95": 0.6590632150655875,
+        "std": 0.08624192776510763
+      },
+      "euclideanToRealCentroid": {
+        "max": 3.932042775912432,
+        "mean": 3.565329401949115,
+        "median": 3.5368620372724253,
+        "min": 3.02928612780089,
+        "n": 20,
+        "p05": 3.0835139312184725,
+        "p25": 3.43144945836549,
+        "p75": 3.8505995936079067,
+        "p95": 3.924596091772505,
+        "std": 0.29017825965378813
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 1.9374325928433704,
+        "mean": 1.012140338244233,
+        "median": 0.9999044296275816,
+        "min": 0.24849476318634542,
+        "n": 20,
+        "p05": 0.4877897953908401,
+        "p25": 0.845996408799412,
+        "p75": 1.1090062482602314,
+        "p95": 1.5658622867602703,
+        "std": 0.3702374404284456
+      }
+    },
+    "SYNTH_EASY_PixArt-Alpha": {
+      "centroidL2Norm": 3.392519889783845,
+      "centroidSha256": "0501d91596c77c161295201b1c714ffa5d7158205563bc99eb8c9e635a96742a",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.1544690116787223,
+        "mean": 0.029207132666951862,
+        "median": 0.023745087163838496,
+        "min": 0.0037018967692488136,
+        "n": 20,
+        "p05": 0.005792005988470689,
+        "p25": 0.015522770252621526,
+        "p75": 0.03078746008190425,
+        "p95": 0.0600213210800289,
+        "std": 0.030933523492358974
+      },
+      "cosineToRealCentroid": {
+        "max": 0.611612931857399,
+        "mean": 0.5316108688478611,
+        "median": 0.5402854131304856,
+        "min": 0.3916711071728296,
+        "n": 20,
+        "p05": 0.45306589083327126,
+        "p25": 0.48102285590298144,
+        "p75": 0.5815244445757081,
+        "p95": 0.6108975861247966,
+        "std": 0.0601463127627136
+      },
+      "euclideanToRealCentroid": {
+        "max": 4.174832557390839,
+        "mean": 3.4716238057826203,
+        "median": 3.4260651915409355,
+        "min": 2.9925464834286184,
+        "n": 20,
+        "p05": 3.0811542448929528,
+        "p25": 3.2466922723244207,
+        "p75": 3.6898603296227,
+        "p95": 3.87838018249882,
+        "std": 0.29307992864037286
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 2.0983297144213364,
+        "mean": 0.8700371396568695,
+        "median": 0.8048888016542588,
+        "min": 0.4426158202202533,
+        "n": 20,
+        "p05": 0.5574371314692822,
+        "p25": 0.6629932758373989,
+        "p75": 0.9254079293532997,
+        "p95": 1.2769599933371005,
+        "std": 0.3459770959224085
+      }
+    },
+    "SYNTH_EASY_Qwen-Image-2512": {
+      "centroidL2Norm": 3.2493652479322366,
+      "centroidSha256": "f0d2d9ed90df145d3c38efb38e0f5d35b95077c744f8412d3ae011d7418f31b1",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.2336331261393766,
+        "mean": 0.0724926448237764,
+        "median": 0.03979953302852951,
+        "min": 0.00641800448889418,
+        "n": 20,
+        "p05": 0.011570559071976105,
+        "p25": 0.02990560085998989,
+        "p75": 0.108813216159755,
+        "p95": 0.1697907373246489,
+        "std": 0.06309052665857365
+      },
+      "cosineToRealCentroid": {
+        "max": 0.5988651794454687,
+        "mean": 0.43081355912296154,
+        "median": 0.4251638565893381,
+        "min": 0.18504883711365983,
+        "n": 20,
+        "p05": 0.2865475500676242,
+        "p25": 0.34168273777476665,
+        "p75": 0.5168289612394155,
+        "p95": 0.5988157608192722,
+        "std": 0.11054307475574615
+      },
+      "euclideanToRealCentroid": {
+        "max": 3.9376645198936204,
+        "mean": 3.0560314998613527,
+        "median": 3.0871713458321213,
+        "min": 1.9661788618469984,
+        "n": 20,
+        "p05": 2.5014347219579367,
+        "p25": 2.740201941513479,
+        "p75": 3.3601593385147015,
+        "p95": 3.7746785096407347,
+        "std": 0.4667197504979313
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 1.6490952296789765,
+        "mean": 0.9915509821044296,
+        "median": 0.9373328718944651,
+        "min": 0.3458294420238105,
+        "n": 20,
+        "p05": 0.4273126885710319,
+        "p25": 0.7441176877820166,
+        "p75": 1.3134497250702255,
+        "p95": 1.6375713205845952,
+        "std": 0.3702966962050439
+      }
+    },
+    "SYNTH_EASY_SD-3.5-Large": {
+      "centroidL2Norm": 3.370345402665459,
+      "centroidSha256": "dec33416f4023f245c0e38f3e121bfab53dd3f2af1cb0c505fe2968d58388fc5",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.1479285282807833,
+        "mean": 0.05382190250643273,
+        "median": 0.04969985954404188,
+        "min": 0.0027308445907890944,
+        "n": 20,
+        "p05": 0.00888763520007182,
+        "p25": 0.025639619339946296,
+        "p75": 0.07298038381029376,
+        "p95": 0.12112747084396772,
+        "std": 0.03863134660297338
+      },
+      "cosineToRealCentroid": {
+        "max": 0.6556560513288525,
+        "mean": 0.5105933640743515,
+        "median": 0.5048477124710745,
+        "min": 0.3502357032038014,
+        "n": 20,
+        "p05": 0.40403012506966557,
+        "p25": 0.4370510413395993,
+        "p75": 0.5939293337700267,
+        "p95": 0.6523943678901543,
+        "std": 0.08652943583702116
+      },
+      "euclideanToRealCentroid": {
+        "max": 4.302431240674738,
+        "mean": 3.419656215806288,
+        "median": 3.4113266164635245,
+        "min": 2.494463506704501,
+        "n": 20,
+        "p05": 3.0205143217847334,
+        "p25": 3.148574863895756,
+        "p75": 3.613210853838451,
+        "p95": 4.291294352027295,
+        "std": 0.416815099181459
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 1.710045144133226,
+        "mean": 1.0382567855720908,
+        "median": 0.9342662562765287,
+        "min": 0.42089842939279,
+        "n": 20,
+        "p05": 0.4608094178140824,
+        "p25": 0.7465089036298932,
+        "p75": 1.4068130768322271,
+        "p95": 1.6853740175039498,
+        "std": 0.3978889205736942
+      }
+    },
+    "SYNTH_IMAGEN_4": {
+      "centroidL2Norm": 3.2830993615232553,
+      "centroidSha256": "6a37cff046dde337d1d282bf7c249ac6b69bda515883501bc7d7ea6cf78eb8c8",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.6603702200753994,
+        "mean": 0.4573337349736602,
+        "median": 0.49676081322060633,
+        "min": 0.13430529514573375,
+        "n": 20,
+        "p05": 0.21796125368633143,
+        "p25": 0.3633250082672812,
+        "p75": 0.5688491263793792,
+        "p95": 0.6435855831383587,
+        "std": 0.13961597292863454
+      },
+      "cosineToRealCentroid": {
+        "max": 0.32200494639366883,
+        "mean": 0.17192588197525877,
+        "median": 0.18523991483605,
+        "min": 0.025328789771257076,
+        "n": 20,
+        "p05": 0.041760455812668316,
+        "p25": 0.10918306630557334,
+        "p75": 0.22992396980747096,
+        "p95": 0.3130999997007265,
+        "std": 0.08550929862681417
+      },
+      "euclideanToRealCentroid": {
+        "max": 2.842683285943297,
+        "mean": 2.012996440898365,
+        "median": 2.136918231989583,
+        "min": 0.8107171154925151,
+        "n": 20,
+        "p05": 1.012090703233919,
+        "p25": 1.7473812792526757,
+        "p75": 2.392285947276755,
+        "p95": 2.646154374642348,
+        "std": 0.5132146498513509
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 2.4315449052595786,
+        "mean": 1.4424317717025987,
+        "median": 1.3450694637400273,
+        "min": 0.8589627350934839,
+        "n": 20,
+        "p05": 0.8632738750357687,
+        "p25": 1.1530482964047997,
+        "p75": 1.6519697707931975,
+        "p95": 2.4212931762359053,
+        "std": 0.46066127997491546
+      }
+    },
+    "SYNTH_SEEDREAM_4": {
+      "centroidL2Norm": 4.032508755763543,
+      "centroidSha256": "62b9cb6d15263a4b987e98b35c658dc787048f25da64d9d4bc7eb56e8c7d6793",
+      "cosineToEasySyntheticCentroid": {
+        "max": 0.5778653414624882,
+        "mean": 0.47775750883710416,
+        "median": 0.5121015134820339,
+        "min": 0.27061003748743295,
+        "n": 20,
+        "p05": 0.29308785889013994,
+        "p25": 0.4282037330308207,
+        "p75": 0.5313562197973791,
+        "p95": 0.551560879647285,
+        "std": 0.08466247158729961
+      },
+      "cosineToRealCentroid": {
+        "max": 0.2409934347433924,
+        "mean": 0.08588296592873454,
+        "median": 0.07145315356240095,
+        "min": 0.01604557285287589,
+        "n": 20,
+        "p05": 0.01678385423350045,
+        "p25": 0.030167347315125076,
+        "p75": 0.11339470630474416,
+        "p95": 0.20792732254484025,
+        "std": 0.0650149540383229
+      },
+      "euclideanToRealCentroid": {
+        "max": 3.102437364600117,
+        "mean": 1.9767801579728448,
+        "median": 1.912665404928465,
+        "min": 1.317727823647565,
+        "n": 20,
+        "p05": 1.3785136300748924,
+        "p25": 1.5338800057713415,
+        "p75": 2.264530640910251,
+        "p95": 2.9133807482204377,
+        "std": 0.5173354681534108
+      },
+      "n": 20,
+      "withinCentroidEuclidean": {
+        "max": 2.8792764916743376,
+        "mean": 1.6024761781873493,
+        "median": 1.5799809577993096,
+        "min": 0.7453928438753438,
+        "n": 20,
+        "p05": 0.8318816370135413,
+        "p25": 0.9720474621991249,
+        "p75": 2.1835281210850024,
+        "p95": 2.6817432446523344,
+        "std": 0.6289272374155205
+      }
+    }
+  },
+  "finite": true,
+  "groups": {
+    "FLUX1_CLOUDFLARE": 40,
+    "FLUX1_PUBLIC": 40,
+    "REAL_CAMERA": 600,
+    "REAL_DIGITAL_OR_HARD_NEGATIVE": 200,
+    "SYNTH_EASY_BLIP3o-8B": 20,
+    "SYNTH_EASY_FLUX.1-Krea-dev": 20,
+    "SYNTH_EASY_Gemini-2.0-Flash": 20,
+    "SYNTH_EASY_GoT-R1-7B": 20,
+    "SYNTH_EASY_Nano-Banana": 20,
+    "SYNTH_EASY_PixArt-Alpha": 20,
+    "SYNTH_EASY_Qwen-Image-2512": 20,
+    "SYNTH_EASY_SD-3.5-Large": 20,
+    "SYNTH_IMAGEN_4": 20,
+    "SYNTH_SEEDREAM_4": 20
+  },
+  "inputResultsSha256": "e9a52d696a432c3f33cafa34505ddf2e7cd5923cd7b484deaf77dad0305ec828",
+  "linearProbeDecision": {
+    "nextStep": "DO_NOT_FIT_SAFE_B; REPRESENTATION_DOMAIN_GAP_REMAINS",
+    "plausibleSeparationSignal": false,
+    "rule": "Permit a predeclared family-held-out linear probe only if at least one missed family is outside the real-control cosine P95 and not closer to the real centroid than to the easy-synthetic centroid."
+  },
+  "missedFamilyCases": {
+    "Imagen-4": {
+      "case": "C_REAL_IMAGE_SPACE",
+      "medianCosineToEasyCentroid": 0.49676081322060633,
+      "medianCosineToRealCentroid": 0.18523991483605,
+      "n": 20,
+      "realControlCosineP95": 0.8519753969307344
+    },
+    "Seedream-4": {
+      "case": "C_REAL_IMAGE_SPACE",
+      "medianCosineToEasyCentroid": 0.5121015134820339,
+      "medianCosineToRealCentroid": 0.07145315356240095,
+      "n": 20,
+      "realControlCosineP95": 0.8519753969307344
+    }
+  },
+  "n": 1080,
+  "nearestNeighbourComposition": {
+    "FLUX1_CLOUDFLARE": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_CLOUDFLARE": 34,
+        "REAL_CAMERA": 145,
+        "SYNTH_IMAGEN_4": 13,
+        "SYNTH_SEEDREAM_4": 8
+      },
+      "meanSyntheticNeighbourCount": 1.375,
+      "nQueries": 40
+    },
+    "FLUX1_PUBLIC": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_PUBLIC": 40,
+        "SYNTH_EASY_BLIP3o-8B": 23,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 22,
+        "SYNTH_EASY_Gemini-2.0-Flash": 19,
+        "SYNTH_EASY_GoT-R1-7B": 22,
+        "SYNTH_EASY_Nano-Banana": 18,
+        "SYNTH_EASY_PixArt-Alpha": 20,
+        "SYNTH_EASY_Qwen-Image-2512": 10,
+        "SYNTH_EASY_SD-3.5-Large": 26
+      },
+      "meanSyntheticNeighbourCount": 5.0,
+      "nQueries": 40
+    },
+    "REAL_CAMERA": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_CLOUDFLARE": 141,
+        "FLUX1_PUBLIC": 3,
+        "REAL_CAMERA": 2650,
+        "REAL_DIGITAL_OR_HARD_NEGATIVE": 33,
+        "SYNTH_EASY_BLIP3o-8B": 4,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 1,
+        "SYNTH_EASY_Gemini-2.0-Flash": 4,
+        "SYNTH_EASY_Nano-Banana": 2,
+        "SYNTH_EASY_PixArt-Alpha": 1,
+        "SYNTH_EASY_Qwen-Image-2512": 18,
+        "SYNTH_EASY_SD-3.5-Large": 6,
+        "SYNTH_IMAGEN_4": 59,
+        "SYNTH_SEEDREAM_4": 78
+      },
+      "meanSyntheticNeighbourCount": 0.5283333333333333,
+      "nQueries": 600
+    },
+    "REAL_DIGITAL_OR_HARD_NEGATIVE": {
+      "fiveNearestNeighbourGroupCounts": {
+        "REAL_CAMERA": 28,
+        "REAL_DIGITAL_OR_HARD_NEGATIVE": 967,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 1,
+        "SYNTH_EASY_SD-3.5-Large": 1,
+        "SYNTH_IMAGEN_4": 2,
+        "SYNTH_SEEDREAM_4": 1
+      },
+      "meanSyntheticNeighbourCount": 0.025,
+      "nQueries": 200
+    },
+    "SYNTH_EASY_BLIP3o-8B": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_PUBLIC": 24,
+        "REAL_CAMERA": 2,
+        "SYNTH_EASY_BLIP3o-8B": 14,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 5,
+        "SYNTH_EASY_Gemini-2.0-Flash": 8,
+        "SYNTH_EASY_GoT-R1-7B": 10,
+        "SYNTH_EASY_Nano-Banana": 9,
+        "SYNTH_EASY_PixArt-Alpha": 13,
+        "SYNTH_EASY_Qwen-Image-2512": 1,
+        "SYNTH_EASY_SD-3.5-Large": 14
+      },
+      "meanSyntheticNeighbourCount": 4.9,
+      "nQueries": 20
+    },
+    "SYNTH_EASY_FLUX.1-Krea-dev": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_PUBLIC": 19,
+        "REAL_CAMERA": 1,
+        "SYNTH_EASY_BLIP3o-8B": 3,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 22,
+        "SYNTH_EASY_Gemini-2.0-Flash": 10,
+        "SYNTH_EASY_GoT-R1-7B": 14,
+        "SYNTH_EASY_Nano-Banana": 15,
+        "SYNTH_EASY_PixArt-Alpha": 6,
+        "SYNTH_EASY_Qwen-Image-2512": 7,
+        "SYNTH_EASY_SD-3.5-Large": 3
+      },
+      "meanSyntheticNeighbourCount": 4.95,
+      "nQueries": 20
+    },
+    "SYNTH_EASY_Gemini-2.0-Flash": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_PUBLIC": 21,
+        "REAL_CAMERA": 2,
+        "SYNTH_EASY_BLIP3o-8B": 11,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 7,
+        "SYNTH_EASY_Gemini-2.0-Flash": 20,
+        "SYNTH_EASY_GoT-R1-7B": 9,
+        "SYNTH_EASY_Nano-Banana": 9,
+        "SYNTH_EASY_PixArt-Alpha": 7,
+        "SYNTH_EASY_Qwen-Image-2512": 5,
+        "SYNTH_EASY_SD-3.5-Large": 9
+      },
+      "meanSyntheticNeighbourCount": 4.9,
+      "nQueries": 20
+    },
+    "SYNTH_EASY_GoT-R1-7B": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_PUBLIC": 14,
+        "SYNTH_EASY_BLIP3o-8B": 7,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 13,
+        "SYNTH_EASY_Gemini-2.0-Flash": 8,
+        "SYNTH_EASY_GoT-R1-7B": 27,
+        "SYNTH_EASY_Nano-Banana": 6,
+        "SYNTH_EASY_PixArt-Alpha": 12,
+        "SYNTH_EASY_Qwen-Image-2512": 2,
+        "SYNTH_EASY_SD-3.5-Large": 11
+      },
+      "meanSyntheticNeighbourCount": 5.0,
+      "nQueries": 20
+    },
+    "SYNTH_EASY_Nano-Banana": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_PUBLIC": 21,
+        "SYNTH_EASY_BLIP3o-8B": 11,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 14,
+        "SYNTH_EASY_Gemini-2.0-Flash": 3,
+        "SYNTH_EASY_GoT-R1-7B": 12,
+        "SYNTH_EASY_Nano-Banana": 10,
+        "SYNTH_EASY_PixArt-Alpha": 15,
+        "SYNTH_EASY_Qwen-Image-2512": 5,
+        "SYNTH_EASY_SD-3.5-Large": 9
+      },
+      "meanSyntheticNeighbourCount": 5.0,
+      "nQueries": 20
+    },
+    "SYNTH_EASY_PixArt-Alpha": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_PUBLIC": 19,
+        "SYNTH_EASY_BLIP3o-8B": 14,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 8,
+        "SYNTH_EASY_Gemini-2.0-Flash": 7,
+        "SYNTH_EASY_GoT-R1-7B": 15,
+        "SYNTH_EASY_Nano-Banana": 14,
+        "SYNTH_EASY_PixArt-Alpha": 11,
+        "SYNTH_EASY_Qwen-Image-2512": 1,
+        "SYNTH_EASY_SD-3.5-Large": 11
+      },
+      "meanSyntheticNeighbourCount": 5.0,
+      "nQueries": 20
+    },
+    "SYNTH_EASY_Qwen-Image-2512": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_CLOUDFLARE": 2,
+        "FLUX1_PUBLIC": 14,
+        "REAL_CAMERA": 12,
+        "SYNTH_EASY_BLIP3o-8B": 2,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 8,
+        "SYNTH_EASY_Gemini-2.0-Flash": 7,
+        "SYNTH_EASY_GoT-R1-7B": 2,
+        "SYNTH_EASY_Nano-Banana": 7,
+        "SYNTH_EASY_PixArt-Alpha": 1,
+        "SYNTH_EASY_Qwen-Image-2512": 35,
+        "SYNTH_EASY_SD-3.5-Large": 7,
+        "SYNTH_IMAGEN_4": 3
+      },
+      "meanSyntheticNeighbourCount": 4.4,
+      "nQueries": 20
+    },
+    "SYNTH_EASY_SD-3.5-Large": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_PUBLIC": 23,
+        "REAL_CAMERA": 1,
+        "SYNTH_EASY_BLIP3o-8B": 14,
+        "SYNTH_EASY_FLUX.1-Krea-dev": 4,
+        "SYNTH_EASY_Gemini-2.0-Flash": 4,
+        "SYNTH_EASY_GoT-R1-7B": 11,
+        "SYNTH_EASY_Nano-Banana": 10,
+        "SYNTH_EASY_PixArt-Alpha": 9,
+        "SYNTH_EASY_Qwen-Image-2512": 6,
+        "SYNTH_EASY_SD-3.5-Large": 18
+      },
+      "meanSyntheticNeighbourCount": 4.95,
+      "nQueries": 20
+    },
+    "SYNTH_IMAGEN_4": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_CLOUDFLARE": 12,
+        "REAL_CAMERA": 64,
+        "SYNTH_EASY_Nano-Banana": 1,
+        "SYNTH_EASY_Qwen-Image-2512": 3,
+        "SYNTH_EASY_SD-3.5-Large": 2,
+        "SYNTH_IMAGEN_4": 15,
+        "SYNTH_SEEDREAM_4": 3
+      },
+      "meanSyntheticNeighbourCount": 1.8,
+      "nQueries": 20
+    },
+    "SYNTH_SEEDREAM_4": {
+      "fiveNearestNeighbourGroupCounts": {
+        "FLUX1_CLOUDFLARE": 11,
+        "REAL_CAMERA": 63,
+        "SYNTH_IMAGEN_4": 2,
+        "SYNTH_SEEDREAM_4": 24
+      },
+      "meanSyntheticNeighbourCount": 1.85,
+      "nQueries": 20
+    }
+  },
+  "pca": {
+    "coordinateArtifact": "representation-pca.json",
+    "explainedVarianceRatioFirst10": [
+      0.633851064388831,
+      0.14487068277955054,
+      0.08787717606272774,
+      0.05119295879480301,
+      0.02332302580172353,
+      0.013444976661166097,
+      0.0102765181282504,
+      0.008074371739368525,
+      0.004589411659238768,
+      0.003874789351889998
+    ]
+  },
+  "realControlCentroid": {
+    "l2Norm": 3.202195491095074,
+    "n": 800,
+    "p95CosineRadius": 0.8519753969307344
+  },
+  "schemaVersion": "lythaus-wp007jr1-representation-analysis-v1",
+  "scoreDistanceRelationships": {
+    "cosineToRealCentroid": {
+      "pearson": 0.7011703018097486,
+      "spearman": 0.7734983710222538
+    },
+    "euclideanToRealCentroid": {
+      "pearson": 0.2962143590685562,
+      "spearman": 0.14541727996133827
+    }
+  }
+}

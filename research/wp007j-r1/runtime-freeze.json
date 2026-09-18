@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "lythaus-wp007jr1-runtime-freeze-v1",
+  "observedDate": "2026-09-18",
+  "hostProfile": {
+    "os": "Windows",
+    "cpuClass": "Ryzen 7-class CPU as configured host; exact hardware not committed",
+    "ramTotalGiB": 15.34,
+    "ramFreeGiBAtAudit": 5.23,
+    "diskFreeBytesAtAudit": 18909188096,
+    "gpuUsed": false,
+    "workerPolicy": "bounded CPU workers; SAFE threads <=4 unless measured otherwise"
+  },
+  "environment": {
+    "logicalEnvironmentId": "WP007E_SAFE_VENV_REUSED",
+    "python": "3.13.5",
+    "torch": "2.14.0+cpu",
+    "torchvision": "0.29.0+cpu",
+    "pillow": "12.3.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1",
+    "scikitLearn": "1.9.1",
+    "pywavelets": "1.10.0",
+    "pytorchWavelets": "1.3.0",
+    "kornia": "0.7.2",
+    "opencv": "UNAVAILABLE_IN_REUSED_ENV",
+    "sharp": "AVAILABLE_IN_WP007J_NODE_MODULES",
+    "dependencySource": "pre-existing approved WP007E environment; no new paid dependency"
+  },
+  "safeArtifact": {
+    "logicalCheckoutId": "SAFE_OFFICIAL_4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointBytes": 5840638,
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e"
+  },
+  "reproducibility": {
+    "torchThreads": 4,
+    "torchInteropThreads": 1,
+    "randomSeed": 20260918,
+    "safeAWeightsModified": false,
+    "safeAPreprocessingModified": false,
+    "safeAThresholdModified": false
+  }
+}

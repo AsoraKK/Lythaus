@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "WP007J_R1_FLUX1_REPRESENTATION_INDEPENDENT_CHECK_V1",
+  "method": "Independent NumPy recomputation from frozen vectors and sample order.",
+  "summaries": {
+    "FLUX1_PUBLIC": {
+      "n": 40,
+      "medianCosineToRealCentroid": 0.5312427018230711,
+      "medianCosineToEasySyntheticCentroid": 0.02486202969109763
+    },
+    "FLUX1_CLOUDFLARE": {
+      "n": 40,
+      "medianCosineToRealCentroid": 0.10420655456550237,
+      "medianCosineToEasySyntheticCentroid": 0.4986562982073964
+    }
+  },
+  "expectedFromPrimaryAnalysis": {
+    "FLUX1_PUBLIC": {
+      "medianCosineToRealCentroid": 0.5312427018230711,
+      "medianCosineToEasySyntheticCentroid": 0.02486202969109763
+    },
+    "FLUX1_CLOUDFLARE": {
+      "medianCosineToRealCentroid": 0.10420655456550237,
+      "medianCosineToEasySyntheticCentroid": 0.4986562982073964
+    }
+  },
+  "deltas": {
+    "FLUX1_PUBLIC": {
+      "medianCosineToRealCentroid": 0.0,
+      "medianCosineToEasySyntheticCentroid": 0.0
+    },
+    "FLUX1_CLOUDFLARE": {
+      "medianCosineToRealCentroid": 0.0,
+      "medianCosineToEasySyntheticCentroid": 0.0
+    }
+  },
+  "maxAbsoluteDelta": 0.0,
+  "pass": true,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

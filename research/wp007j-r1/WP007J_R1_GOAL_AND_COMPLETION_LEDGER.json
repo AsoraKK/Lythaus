@@ -1,0 +1,171 @@
+{
+  "package": "WP007J-R1",
+  "parentSha": "1d3830febbbe0a9511e1f7ea3bd0ef322003b1a0",
+  "parentPr": 850,
+  "safeReference": {
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "threshold": 0.5864923000335693
+  },
+  "sealedBoundaries": {
+    "flux2PixelAccess": false,
+    "flux2FeatureAccess": false,
+    "flux2ProviderCalls": 0,
+    "safeAWeightsModified": false,
+    "safeAPreprocessingModified": false,
+    "productionChanged": false
+  },
+  "statusVocabulary": [
+    "NOT_STARTED",
+    "IN_PROGRESS",
+    "BLOCKED",
+    "100_PERCENT_CORE_COMPLETE",
+    "110_PERCENT_VALIDATED_COMPLETE"
+  ],
+  "achievables": [
+    {
+      "id": "A_RUNTIME_AND_LINEAGE",
+      "objective": "Verify repository lineage, PR state, approved artifacts, runtime, resource limits, and SAFE-A reproducibility.",
+      "whyItMatters": "Prevents scientific work from running on an incorrect parent or unreproducible environment.",
+      "requiredEvidence": ["current-state-audit.json", "runtime-freeze.json"],
+      "requiredExperiment": "Audit current GitHub/repository/runtime/cache state and reproduce the frozen SAFE-A load path.",
+      "requiredValidation": ["exact parent SHA", "PR #850 open/unmerged", "SAFE hash and threshold match", "resource safety check"],
+      "requiredIndependentCrossCheck": "Second source for PR/commit state and independent checkpoint hash verification.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["current-state-audit.json", "runtime-freeze.json", "run-manifest.json"]
+    },
+    {
+      "id": "B_SAFE_REPRESENTATION_PROBE",
+      "objective": "Extract frozen SAFE-A 512-D pre-fc1 embeddings and determine whether missed generator families retain non-real structure.",
+      "whyItMatters": "Decides whether a small SAFE-B head is scientifically justified or whether an independent specialist is required.",
+      "requiredEvidence": ["representation-probe-manifest.json", "representation-probe-results.json", "embedding-aggregate.npz.sha256"],
+      "requiredExperiment": "Run SAFE-A on approved real, SAFE-easy, Seedream-4, Imagen-4, public FLUX.1, and consumed Cloudflare FLUX.1 samples; save embeddings and scores.",
+      "requiredValidation": ["512-D dimension", "finite values", "family-level descriptive distances", "PCA", "score-distance relationships"],
+      "requiredIndependentCrossCheck": "Repeat selected rows through an independent model-hook or deterministic embedding reader and verify hashes/statistics.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["representation-probe-results.json", "representation-analysis.json", "representation-pca.json", "representation-cohort-freeze.json", "flux1-representation-independent-check.json"]
+    },
+    {
+      "id": "C_SAFE_B_DECISION",
+      "objective": "Conditionally test a tiny frozen-backbone SAFE-B head only if representation analysis shows plausible separation.",
+      "whyItMatters": "Tests cheap domain rescue without modifying SAFE-A or introducing a large learned ensemble.",
+      "requiredEvidence": ["safe-b-plan.json", "safe-b-results.json or safe-b-not-justified.json"],
+      "requiredExperiment": "Use family-held-out splits and a simple linear head; include a predeclared escalation rule for a tiny MLP only if linear underfits.",
+      "requiredValidation": ["unique SAFE-A rescue", "Seedream/Imagen transfer", "negative specificity", "clean/degraded comparison", "CPU/RAM"],
+      "requiredIndependentCrossCheck": "Independent negative confirmation split and exact rerun of a held-out family.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["safe-b-not-justified.json", "safe-code-inspection.json", "representation-analysis.json"]
+    },
+    {
+      "id": "D_REAL_JPEG_LAB",
+      "objective": "Map the actual SAFE-A JPEG failure cliff across quality, encoder, subsampling, and compound transformations on frozen project media.",
+      "whyItMatters": "A defensible eligibility boundary requires real encoded descendants, not numeric toy matrices.",
+      "requiredEvidence": ["jpeg-lab-manifest.json", "jpeg-safe-curves.json", "jpeg-safe-curves.md"],
+      "requiredExperiment": "Run frozen SAFE-A over original, Q100-Q50, multiple subsampling modes, two encoder paths, and predeclared compound transforms.",
+      "requiredValidation": ["actual DQT/SOF capture", "per-generator curves", "negative movement", "encoder/subsampling comparison"],
+      "requiredIndependentCrossCheck": "Independent encoder/tool metadata comparison and rerun of representative descendants.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["jpeg-lab-cohort-freeze.json", "jpeg-lab-generated-manifest.json", "jpeg-lab-sharp-manifest.json", "jpeg-safe-lab-results.json", "jpeg-safe-curves.json", "jpeg-safe-curves.md"]
+    },
+    {
+      "id": "E_PHASE_DCT_VALIDATION",
+      "objective": "Measure phase, FFT, DCT, quantization-aware, and block-boundary features on the same real media pairs.",
+      "whyItMatters": "Determines whether a lightweight Lythaus-owned cue survives compression and provides unique rescue.",
+      "requiredEvidence": ["phase-dct-real-results.json", "phase-dct-effect-sizes.json"],
+      "requiredExperiment": "Run frozen feature extraction on original/JPEG/compound descendants and compare stability, discrimination, and SAFE-miss rescue.",
+      "requiredValidation": ["known-answer FFT/DCT fixtures", "real-media finite checks", "grouped effect sizes", "scalar AUROC"],
+      "requiredIndependentCrossCheck": "Cross-check numerical outputs against NumPy/SciPy or fixed fixtures and rerun representative samples.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["phase-dct-real-results.json", "phase-dct-effect-sizes.json", "phase-dct-rescue-assessment.json"]
+    },
+    {
+      "id": "F_JPEG_INSPECTOR_VALIDATION",
+      "objective": "Validate the deterministic JPEG inspector over the complete generated matrix and an independent decoder/tool.",
+      "whyItMatters": "Separates reliably measurable current bytes from probabilistic compression-history claims.",
+      "requiredEvidence": ["jpeg-inspector-validation.json", "jpeg-inspector-crosscheck.json"],
+      "requiredExperiment": "Parse every generated descendant and compare format, dimensions, DQT, sampling, progressive state, markers, and quality estimate to known parameters.",
+      "requiredValidation": ["exact DQT", "SOF sampling", "dimension", "quality-estimate error", "encoder cases"],
+      "requiredIndependentCrossCheck": "Pillow/libjpeg/OpenCV/Sharp metadata comparison plus byte inspection for disagreements.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["jpeg-inspector-validation.json", "jpeg-inspector-pillow-crosscheck.json", "jpeg-lab-generated-manifest.json"]
+    },
+    {
+      "id": "G_CORE_PAPER_EXTRACTION",
+      "objective": "Replace placeholder literature fields with exact primary-source extraction for the 10-12 core methods.",
+      "whyItMatters": "Prevents transferring unsupported paper claims into Lythaus architecture decisions.",
+      "requiredEvidence": ["core-paper-extraction.md", "core-paper-extraction.json"],
+      "requiredExperiment": "Read primary papers/official code and extract exact data, degradation, metrics, ablations, compute, and rights.",
+      "requiredValidation": ["no placeholder fields", "direct source URLs", "NOT REPORTED BY AUTHORS where appropriate"],
+      "requiredIndependentCrossCheck": "Compare paper tables against official code/readme or a second primary artifact where available.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["core-paper-extraction.json", "core-paper-extraction.md"]
+    },
+    {
+      "id": "H_FLUX1_REPRESENTATION_DIAGNOSTIC",
+      "objective": "Determine whether public and consumed Cloudflare FLUX.1 differ only at SAFE-A head output or across the full embedding.",
+      "whyItMatters": "Quantifies unresolved provider/domain risk without retuning or touching FLUX.2.",
+      "requiredEvidence": ["flux1-representation-diagnostic.json"],
+      "requiredExperiment": "Compare approved public/Cloudflare embeddings, centroids, distances, variance, and score relationships.",
+      "requiredValidation": ["consumed diagnostic labeling", "no threshold tuning", "no FLUX.2 access"],
+      "requiredIndependentCrossCheck": "Recompute aggregate distances from the external embedding artifact.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["flux1-representation-diagnostic.json", "flux1-representation-independent-check.json"]
+    },
+    {
+      "id": "I_ELIGIBILITY_BOUNDARY",
+      "objective": "Derive an evidence-grade input eligibility proposal from measured SAFE, JPEG, phase/DCT, PNG-history, and camera-JPEG results.",
+      "whyItMatters": "Defines honest scope without treating a lossless container as proof of an uncompressed history.",
+      "requiredEvidence": ["eligibility-analysis.json", "eligibility-recommendation.md"],
+      "requiredExperiment": "Compare native camera JPEG, recompressed camera JPEG, JPEG-to-PNG, genuine PNG, and synthetic transformations under the frozen measurements.",
+      "requiredValidation": ["criteria tied to measured facts", "explicit reliable/probabilistic/unknowable boundaries", "no production mutation"],
+      "requiredIndependentCrossCheck": "Apply proposal to held-out descendants not used to derive the boundary.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["eligibility-analysis.json", "eligibility-recommendation.md", "jpeg-inspector-pillow-crosscheck.json"]
+    },
+    {
+      "id": "J_REPRODUCIBILITY_AND_VALIDATION",
+      "objective": "Make every run reproducible and pass focused plus historical validation without weakening contracts.",
+      "whyItMatters": "110% completion requires independent checks, clean leakage controls, and auditable commands.",
+      "requiredEvidence": ["run-manifest.json", "validation-summary.json", "completion-self-audit.md"],
+      "requiredExperiment": "Run focused tests, historical authenticity suites, type/scope/security/schema checks, and exact rerun samples.",
+      "requiredValidation": ["git diff --check", "JSON parse", "syntax", "secret/private-path scan", "FLUX.2 zero-access assertion"],
+      "requiredIndependentCrossCheck": "Second-run hashes and independent metric/decoder checks.",
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "blocker": null,
+      "evidenceFiles": ["run-manifest.json", "validation-summary.json", "completion-self-audit.md"]
+    },
+    {
+      "id": "K_UNMERGED_PR",
+      "objective": "Publish the complete research result as an unmerged stacked continuation PR without production changes.",
+      "whyItMatters": "Preserves reviewability, lineage, and explicit separation between research evidence and authorization.",
+      "requiredEvidence": ["PR URL", "head SHA", "parent SHA", "final report", "test summary"],
+      "requiredExperiment": "Commit only sanitized artifacts/code/tests and open the stacked PR from WP007J.",
+      "requiredValidation": ["parent exact", "PR open/unmerged", "no SAFE-A/FLUX.2/production mutations"],
+      "requiredIndependentCrossCheck": "GitHub PR metadata and local commit/diff comparison.",
+      "status": "IN_PROGRESS",
+      "completionPercent": 90,
+      "blocker": null,
+      "evidenceFiles": []
+    }
+  ],
+  "lastUpdated": "2026-09-18_AFTER_EMPIRICAL_RUNS_AND_VALIDATION"
+}

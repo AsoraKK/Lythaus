@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "WP007J_R1_FLUX1_REPRESENTATION_DIAGNOSTIC_V1",
+  "status": "POST_HOC_DIAGNOSTIC_ONLY",
+  "safeA": {
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "threshold": 0.5864923000335693
+  },
+  "cohort": {
+    "publicFlux1": 40,
+    "cloudflareFlux1": 40,
+    "publicRole": "POST_HOC_PUBLIC_FLUX1_DIAGNOSTIC",
+    "cloudflareRole": "CONSUMED_CLOUDFLARE_FLUX1_DIAGNOSTIC",
+    "freshValidation": false,
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0
+  },
+  "safeScore": {
+    "publicMedian": 0.9487,
+    "cloudflareMedian": 0.0466,
+    "publicThresholdPassCount": 38,
+    "cloudflareThresholdPassCount": 0,
+    "interpretation": "The final SAFE-A head remains strongly separated between the two consumed diagnostic groups. No threshold or preprocessing change was made."
+  },
+  "embeddingDistances": {
+    "publicMedianCosineToRealCentroid": 0.5312427018230711,
+    "cloudflareMedianCosineToRealCentroid": 0.10420655456550237,
+    "publicMedianCosineToEasySyntheticCentroid": 0.02486202969109763,
+    "cloudflareMedianCosineToEasySyntheticCentroid": 0.4986562982073964,
+    "publicMedianEuclideanToRealCentroid": 3.533940896005733,
+    "cloudflareMedianEuclideanToRealCentroid": 1.6168395087939655,
+    "realCameraMedianCosineToRealCentroid": 0.08090994195927226,
+    "conclusion": "Cloudflare FLUX.1 is moved toward the real-control embedding space, not merely compressed at the final classifier head. This supports a material provider/runtime/domain shift, while not identifying its cause."
+  },
+  "independentCrossCheck": {
+    "method": "Recompute group centroids and public/cloudflare cosine distances from the frozen NPZ vectors and sample-id order, then compare to representation-analysis.json.",
+    "result": "PASS",
+    "artifact": "flux1-representation-independent-check.json"
+  },
+  "limits": [
+    "The Cloudflare set is consumed diagnostic data, not an unbiased holdout.",
+    "The comparison does not establish whether provider encoding, generation runtime, or upstream generator variation caused the shift.",
+    "No FLUX.2 bytes, pixels, features, embeddings, or provider calls were used."
+  ],
+  "evidenceFiles": [
+    "representation-probe-results.json",
+    "representation-analysis.json",
+    "representation-cohort-freeze.json"
+  ]
+}
