@@ -14,7 +14,7 @@
 | H FLUX.1 diagnostic | Yes | Independent recomputation from frozen embeddings | Consumed post-hoc diagnostic only, no tuning, FLUX.2 untouched | 110_PERCENT_VALIDATED_COMPLETE | `flux1-representation-diagnostic.json`, `flux1-representation-independent-check.json` |
 | I Eligibility boundary | Yes, conservative boundary only | Family-disjoint supplemental checks and inspector cross-check | No production mutation; PNG history and JPEG history limits explicit | 110_PERCENT_VALIDATED_COMPLETE | `eligibility-analysis.json`, `eligibility-recommendation.md` |
 | J Reproducibility and validation | Yes | Focused 7/7; authenticity 353/353; numerical/decoder checks | JSON/syntax/path scans pass; native architecture 255/256 with one unchanged baseline failure | 110_PERCENT_VALIDATED_COMPLETE | `run-manifest.json`, `validation-summary.json`, this audit |
-| K Unmerged PR | Yes | PR #851 is open/unmerged and points to the pushed R1 head | No merge; no production changes; parent retained | 110_PERCENT_VALIDATED_COMPLETE | `https://github.com/AsoraKK/Lythaus/pull/851`, head `5688d38a05ab2654bc5c14f57399509cad9fa3d6`, parent `1d3830febbbe0a9511e1f7ea3bd0ef322003b1a0` |
+| K Unmerged PR | Yes | PR #851 is open/unmerged and contains the pushed R1 empirical and closure commits | No merge; no production changes; parent retained | 110_PERCENT_VALIDATED_COMPLETE | `https://github.com/AsoraKK/Lythaus/pull/851`, empirical commit `5688d38a05ab2654bc5c14f57399509cad9fa3d6`, closure commit `f0bd481e08799cda4f6a1e9f3bbb5b4eaffac346`, parent `1d3830febbbe0a9511e1f7ea3bd0ef322003b1a0` |
 
 ## Baseline validation exception
 
