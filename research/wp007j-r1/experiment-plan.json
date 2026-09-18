@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "lythaus-wp007jr1-experiment-plan-v1",
+  "status": "FROZEN_BEFORE_SAFE_SCORING",
+  "objective": "Empirically qualify the frozen SAFE-A representation, map its real JPEG failure cliff, validate phase/DCT cues and the JPEG inspector on actual project media, and decide whether a tiny SAFE-B head or independent compression specialist is justified.",
+  "primaryQuestions": [
+    "Whether Seedream-4 and Imagen-4 occupy non-real structure in the frozen 512-D representation",
+    "Where SAFE-A collapses across actual JPEG tables, encoders, subsampling, and compound transforms",
+    "Whether phase/DCT features remain stable and discriminative when SAFE-A fails",
+    "Whether deterministic inspector outputs match known bytes and an independent decoder",
+    "Whether a frozen-backbone linear head has unique rescue without sacrificing specificity"
+  ],
+  "dataRoles": {
+    "representation": "research/wp007j-r1/representation-cohort-freeze.json; membership frozen score-blind; 1080 records",
+    "jpegLab": "research/wp007j-r1/jpeg-lab-cohort-freeze.json; membership frozen score-blind; 100 original parents",
+    "flux1": "consumed diagnostic only; never fitting, threshold design, or independent confirmation",
+    "flux2": "sealed; zero access"
+  },
+  "safeA": {
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "threshold": 0.5864923000335693,
+    "preprocessing": "official SAFE path unchanged",
+    "embedding": "512-D avgpool flatten before fc1",
+    "threads": 4
+  },
+  "jpegMatrix": {
+    "qualityRequests": [100, 99, 98, 97, 96, 95, 92, 90, 85, 80, 75, 65, 50],
+    "subsampling": ["4:4:4", "4:2:2", "4:2:0"],
+    "encoders": ["Pillow/libjpeg", "Sharp/libvips encoder"],
+    "compound": ["JPEG95_TO_JPEG85", "JPEG85_TO_JPEG95", "JPEG75_TO_JPEG95", "NON8_CROP_TO_JPEG95", "RESIZE75_TO_JPEG95", "RESIZE50_TO_JPEG95", "JPEG95_TO_RESIZE75", "SCREENSHOT_STYLE_TO_JPEG95", "JPEG_TO_PNG"]
+  },
+  "phaseDct": {
+    "features": ["fft_magnitude", "fft_phase", "radial_frequency", "phase_coherence", "dct_dc", "dct_ac", "dct_high_frequency", "dct_low_frequency", "dct_zero_rate", "dct_histogram", "quantization_normalized", "block_boundary"],
+    "thresholdTuning": "none on confirmation; scalar AUC/effect sizes descriptive"
+  },
+  "safeB": {
+    "condition": "only after descriptive representation analysis shows plausible held-out family separation",
+    "allowed": ["linear logistic head", "tiny MLP only after predeclared linear-underfit escalation"],
+    "forbidden": ["SAFE-A weight changes", "full fine-tuning", "random forest", "XGBoost", "meta-ensemble", "confirmation threshold tuning"]
+  },
+  "validation": {
+    "knownAnswerFixtures": true,
+    "independentDecoderCrossCheck": true,
+    "familyLeakageCheck": true,
+    "secondRunHashCheck": true,
+    "historicalSuites": true,
+    "productionChanges": false,
+    "flux2ZeroAccess": true
+  },
+  "stopRules": [
+    "SAFE hash/preprocessing mismatch",
+    "score-blind membership violation",
+    "sealed-data access",
+    "unsafe RAM/disk/thermal state",
+    "rights or paid-resource blocker",
+    "irreproducible transforms or numerical outputs"
+  ]
+}

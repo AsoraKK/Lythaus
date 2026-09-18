@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "WP007J_R1_ELIGIBILITY_ANALYSIS_V1",
+  "status": "JPEG_ELIGIBILITY_BOUNDARY_NOT_SIMPLE",
+  "scope": "Research proposal only; no upload enforcement or production route changed.",
+  "inputs": {
+    "safeThreshold": 0.5864923000335693,
+    "safeCurves": "jpeg-safe-curves.json",
+    "jpegInspector": "jpeg-inspector-validation.json",
+    "pillowCrosscheck": "jpeg-inspector-pillow-crosscheck.json",
+    "domainGapCrosscheck": "safe-domain-gap-results.json",
+    "primaryParents": {
+      "synthetic": 40,
+      "cameraNativeJpeg": 40,
+      "digitalPng": 20
+    },
+    "primaryDescendants": 2140,
+    "domainGapDescendants": 120
+  },
+  "observations": {
+    "safeOriginalParents": "38/40 synthetic primary parents passed SAFE-A; 0/60 negative parents passed.",
+    "pillowQualityMatrix": "At the frozen threshold, the 4:2:0 Pillow/libjpeg descendants had 0/40 synthetic detections at Q100, Q97, Q96, Q95, Q92, Q90, Q85, Q80, Q75, Q65 and Q50; Q99 and Q98 each had 1/40. This is a bounded test of re-encoding, not a universal quality-factor law.",
+    "pillowQ95Subsampling": "Synthetic recall was 0/40 for 4:4:4, 4:2:2 and 4:2:0. Negative FPR was 0/20 for 4:4:4, 1/20 for 4:2:2 and 6/20 for 4:2:0.",
+    "sharpQ95Subsampling": "Synthetic recall was 0/40 for both tested 4:4:4 and 4:2:0 paths. Negative FPR was 0/20 for 4:4:4 and 6/20 for 4:2:0.",
+    "pngHistory": "JPEG->PNG descendants retained the SAFE collapse: 0/40 synthetic detections and 6/20 negative false positives in the bounded operation slice. A PNG container therefore does not prove an uncompressed history.",
+    "nativeCamera": "Native camera JPEG parents were included as negative controls. R1 did not establish a universal byte-only rule that distinguishes every camera-native JPEG from every recompressed JPEG.",
+    "inspector": "Current format, dimensions, DQT, SOF sampling and progressive state were recovered across the generated matrix. Pillow/libjpeg cross-check had zero mismatches across 2,140 rows. Sharp/libvips disagreed with the inspector on 60 Pillow 4:2:2 metadata observations; those disagreements remain recorded rather than hidden.",
+    "independentDomainGap": "Seedream-4 and Imagen-4 supplemental descendants had 0/20 SAFE detections at Q95, Q85 and Q75 for each family; this independent family diagnostic supports the limited-authority conclusion but does not create a new threshold."
+  },
+  "reliabilityBoundary": {
+    "reliablyMeasurable": [
+      "Current file format and decodability",
+      "Current dimensions",
+      "Current JPEG DQT values",
+      "Current JPEG SOF sampling factors",
+      "Current progressive/baseline state",
+      "Current marker/metadata presence",
+      "Known transformation lineage when Lythaus created the descendant"
+    ],
+    "conditionallyInferable": [
+      "Approximate standard quality from current quantization tables",
+      "Possible double-JPEG or resampling indicators if a validated forensic detector is later qualified",
+      "Input regime suitability for the exact SAFE-A preprocessing"
+    ],
+    "notProvableFromFinalBytesAlone": [
+      "Complete prior edit chain",
+      "That a PNG was never JPEG-compressed earlier",
+      "That a current JPEG is the camera's first JPEG encode",
+      "That an image has never been resized or screenshotted"
+    ]
+  },
+  "proposedResearchEligibility": {
+    "tierA_EVIDENCE_GRADE": {
+      "criteria": [
+        "Original bytes are retained and hash-bound.",
+        "Provenance or acquisition lineage is available, or the file is a true lossless source with no contrary transformation evidence.",
+        "For JPEG, current DQT/sampling/encoder facts fall inside a separately validated native/original profile; a filename extension is insufficient.",
+        "No known recompression, non-8-pixel crop, screenshot or resize step is in the lineage."
+      ],
+      "SAFEAuthority": "SAFE-A positive evidence may be used at the frozen threshold; a low score still never proves human origin.",
+      "status": "RESEARCH_SUPPORTED_NOT_PRODUCTION_AUTHORIZED"
+    },
+    "tierB_LIMITED": {
+      "criteria": [
+        "Original uploaded bytes are available, but history or encoder identity is incomplete.",
+        "Current DQT/sampling and dimensions are measurable, but the profile is not yet validated as evidence-grade."
+      ],
+      "SAFEAuthority": "High positive SAFE-A scores may be retained as bounded positive evidence with an applicability warning; low scores are inconclusive.",
+      "status": "LIMITED_RESEARCH_EVIDENCE"
+    },
+    "tierC_UNSUPPORTED_FOR_CERTIFICATION": {
+      "criteria": [
+        "Known destructive recompression or compound JPEG history.",
+        "Known screenshot, severe resampling, non-8-pixel crop or unknown internet propagation history.",
+        "PNG whose bytes are known or suspected to descend from JPEG without a preserved original.",
+        "Current input regime cannot be matched to a validated SAFE-A applicability profile."
+      ],
+      "SAFEAuthority": "Do not use a low SAFE-A score as negative authenticity evidence. Route to insufficient/evidence-degraded handling in future policy; do not silently label human.",
+      "status": "NOT_SUITABLE_FOR_CERTIFICATION"
+    }
+  },
+  "independentCrossCheck": {
+    "source": "safe-domain-gap-results.json and jpeg-domain-gap-generated-manifest.json",
+    "result": "PASS",
+    "finding": "The family-disjoint Seedream-4/Imagen-4 descendants confirmed that the boundary is not a property of only the SAFE-easy primary families.",
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0
+  },
+  "conclusion": "The evidence supports an evidence-grade/original-bytes research boundary, but not a single JPEG quality cutoff. Current JPEG facts should gate applicability, not assert authenticity. PNG must not be treated as automatically clean. Native camera JPEGs must remain admissible where provenance and validated current-byte conditions support them.",
+  "productionAuthorization": "NO"
+}

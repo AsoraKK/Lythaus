@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "lythaus-wp007jr1-validation-summary-v1",
+  "parentSha": "1d3830febbbe0a9511e1f7ea3bd0ef322003b1a0",
+  "focused": {
+    "command": "node --test packages/authenticity/tests/wp007jr1.test.mjs",
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "status": "PASS"
+  },
+  "authenticityRegression": {
+    "command": "node --experimental-strip-types --test packages/authenticity/tests/*.test.mjs",
+    "tests": 353,
+    "pass": 353,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "status": "PASS"
+  },
+  "repositoryChecks": [
+    {"command": "npm ci --ignore-scripts --no-audit --no-fund", "status": "PASS", "note": "repository lockfile hydration; no lockfile change"},
+    {"command": "npm run typecheck:native", "status": "PASS"},
+    {"command": "npm run validate:native-scope", "status": "PASS"},
+    {"command": "npm run validate:no-retired-provider-dependencies", "status": "PASS"},
+    {"command": "npm run validate:workflow-action-pins", "status": "PASS"},
+    {"command": "git diff --check", "status": "PASS"},
+    {"command": "node --check scripts/authenticity/wp007jr1_*.mjs", "status": "PASS"},
+    {"command": "python -m py_compile scripts/authenticity/wp007jr1_*.py", "status": "PASS"},
+    {"command": "PowerShell JSON parse of research/wp007j-r1/*.json", "status": "PASS"},
+    {"command": "private-path/secret scan over R1 artifacts and scripts", "status": "PASS"}
+  ],
+  "nativeArchitecture": {
+    "command": "npm run test:native-architecture",
+    "tests": 256,
+    "pass": 255,
+    "fail": 1,
+    "status": "BASELINE_FAILURE_OUTSIDE_R1_SCOPE",
+    "failingTest": "canonical manifest finalizes VERIFIED or BLOCKED after production smoke",
+    "failureSource": "scripts/tests/production-release-governance.test.mjs:329-335",
+    "causeEvidence": "The test and referenced workflow are unchanged from WP007J-R1 parent; git diff against parent is empty for scripts/tests, .github/workflows, scripts/ci, apps, and packages.",
+    "r1Impact": "No R1 scientific or production artifact depends on this failure. It is retained, not weakened."
+  },
+  "sealedBoundaries": {
+    "flux2PixelAccess": false,
+    "flux2FeatureAccess": false,
+    "flux2ProviderCalls": 0,
+    "safeAWeightsModified": false,
+    "safeAPreprocessingModified": false,
+    "productionChanged": false
+  }
+}

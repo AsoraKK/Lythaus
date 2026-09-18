@@ -1,0 +1,16 @@
+{
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "independentDecoder": "Pillow JpegImagePlugin",
+  "mismatches": [],
+  "priorJpegHistory": "UNDETERMINED_FROM_FINAL_BYTES",
+  "records": 2140,
+  "schemaVersion": "lythaus-wp007jr1-jpeg-inspector-pillow-crosscheck-v1",
+  "summary": {
+    "dimensionsAgreement": 2140,
+    "formatAgreement": 2140,
+    "progressiveAgreement": 2140,
+    "quantizationCountAgreement": 2140,
+    "samplingAgreement": 2140
+  }
+}

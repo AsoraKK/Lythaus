@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "WP007J_R1_PHASE_DCT_RESCUE_ASSESSMENT_V1",
+  "status": "PHASE_CONTEXT_ONLY",
+  "sourceMeasurement": "phase-dct-real-results.json",
+  "analysis": "phase-dct-effect-sizes.json",
+  "cohort": {
+    "originalParents": 100,
+    "descendants": 2140,
+    "q95PrimarySynthetic": 40,
+    "q95PrimaryGenuine": 60,
+    "safeMissesAtQ95": 40,
+    "genuineAtQ95": 60,
+    "seedreamImagenSupplemental": 40,
+    "seedreamImagenSupplementalDescendants": 120
+  },
+  "knownAnswerFixtures": {
+    "constantDctDc": {"actual": 8.000000000000002, "expected": 8.0},
+    "constantDctNonDcMaxAbs": 0.0,
+    "impulseFftMagnitudeMaxError": 0.0,
+    "passed": true
+  },
+  "q95SyntheticVsGenuineScalarAuc": {
+    "dctDcStd": 0.7445833333333333,
+    "pixelStd": 0.7304166666666667,
+    "fftLogMagnitudeMean": 0.7183333333333333,
+    "dctLowFrequencyEnergy": 0.7116666666666667,
+    "dctAcL1Mean": 0.7062499999999999,
+    "dctAcEnergy": 0.6916666666666668,
+    "dctHighFrequencyEnergy": 0.6475000000000001,
+    "fftPhaseMeanAbsolute": 0.6154166666666667,
+    "fftPhaseCircularCoherence": 0.5245833333333334,
+    "blockBoundaryRatio": 0.5933333333333333,
+    "dctHighToLowEnergyRatio": 0.51
+  },
+  "q95SafeMissVsGenuineScalarAuc": {
+    "dctDcStd": 0.74,
+    "pixelStd": 0.73,
+    "fftLogMagnitudeMean": 0.72,
+    "dctLowFrequencyEnergy": 0.71,
+    "dctAcL1Mean": 0.71,
+    "dctAcEnergy": 0.69,
+    "dctAcZeroRate": 0.65,
+    "fftPhaseMeanAbsolute": 0.62,
+    "fftPhaseCircularCoherence": 0.52
+  },
+  "stability": {
+    "mostStableFeaturesByMedianAbsoluteDelta": [
+      "dctHighFrequencyEnergy",
+      "dctAcEnergy",
+      "dctLowFrequencyEnergy",
+      "pixelStd",
+      "fftPhaseCircularCoherence",
+      "dctDcMean",
+      "dctDcStd",
+      "dctAcL1Mean"
+    ],
+    "interpretation": "Several DCT/magnitude features remain measurable and show bounded scalar separation in this small frozen slice. Phase circular coherence is relatively stable but near chance for q95 synthetic/genuine separation. Stability is not sufficient evidence of a deployable specialist."
+  },
+  "rescueDecision": {
+    "classifierFitted": false,
+    "thresholdsFitted": false,
+    "uniqueRescueDemonstrated": false,
+    "reason": "R1 predeclared descriptive phase/DCT work and did not fit a threshold or classifier against the same descendants. The observed miss-vs-genuine scalar AUCs justify a future held-out specialist experiment, not a rescue claim.",
+    "futureQualification": "Use source-family-held-out real JPEG descendants, hard negatives, Seedream/Imagen and an independent encoder matrix; compare unique SAFE-A rescue and FPR before promotion."
+  },
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "productionAuthorization": "NO"
+}

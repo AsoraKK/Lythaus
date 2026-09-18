@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "lythaus-wp007jr1-current-state-audit-v1",
+  "package": "WP007J-R1",
+  "parentPr": 850,
+  "parentSha": "1d3830febbbe0a9511e1f7ea3bd0ef322003b1a0",
+  "parentBranch": "agent/wp007j-research-reconnaissance",
+  "pr850": {
+    "state": "OPEN",
+    "headSha": "1d3830febbbe0a9511e1f7ea3bd0ef322003b1a0",
+    "baseBranch": "agent/wp007i-safe-policy",
+    "baseSha": "cce247e66be4de3fb0e927cc12e7a0c87d70561d",
+    "mergeState": "CLEAN",
+    "merged": false
+  },
+  "originMainObservedSha": "8e3b3ebad2f846e61db2bfe819376723da7e9863",
+  "activeAuthenticityPrs": [850, 849, 848, 847, 845, 844],
+  "safeReference": {
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "threshold": 0.5864923000335693,
+    "representation": "512-D flattened avgpool vector immediately before fc1",
+    "preprocessing": "RGB decode; torchvision CenterCrop(256,256); ToTensor; official SAFE DWT bior1.3 J=1; class-1 softmax"
+  },
+  "historicalStatesPreserved": [
+    "WP007H SAFE_SPECIALIST_QUALIFIED_WITH_LIMITED_APPLICABILITY",
+    "WP007I SAFE_POSITIVE_SPECIALIST_QUALIFIED_APPLICABILITY_GATE_UNPROVEN",
+    "WP007J reconnaissance with experiments marked NOT_RUN where applicable"
+  ],
+  "sealedBoundaries": {
+    "flux2PixelAccess": false,
+    "flux2FeatureAccess": false,
+    "flux2ProviderCalls": 0,
+    "productionChanged": false,
+    "safeAChanged": false
+  },
+  "approvedRoots": [
+    "WP007I_MEDIA",
+    "WP007H_MODERN",
+    "PUBLIC_FLUX1",
+    "CLOUDFLARE_FLUX1",
+    "SAFE_OFFICIAL_CHECKOUT"
+  ],
+  "newProviders": 0,
+  "newPaidServices": 0,
+  "gpuUsed": false
+}

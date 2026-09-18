@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "lythaus-wp007jr1-run-manifest-v1",
+  "package": "WP007J-R1",
+  "parentPr": 850,
+  "parentSha": "1d3830febbbe0a9511e1f7ea3bd0ef322003b1a0",
+  "branch": "agent/wp007j-r1-deep-probe",
+  "repositoryBaseline": {
+    "originMainObserved": "8e3b3ebad2f846e61db2bfe819376723da7e9863",
+    "parentPrState": "OPEN_UNMERGED",
+    "safeUpstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "safeCheckpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "safeThreshold": 0.5864923000335693
+  },
+  "environment": {
+    "logicalEnvironmentId": "WP007E_SAFE_VENV_REUSED",
+    "python": "3.13.5",
+    "torch": "2.14.0+cpu",
+    "torchvision": "0.29.0+cpu",
+    "pillow": "12.3.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1",
+    "scikitLearn": "1.9.1",
+    "pywavelets": "1.10.0",
+    "pytorchWavelets": "1.3.0",
+    "kornia": "0.7.2",
+    "sharp": "0.35.4",
+    "libvips": "8.18.6",
+    "mozjpeg": "0826579",
+    "cpuOnly": true,
+    "torchThreads": 4,
+    "seed": 20260918
+  },
+  "commands": [
+    "python scripts/authenticity/wp007jr1_safe_representation_probe.py --cohort research/wp007j-r1/representation-cohort-freeze.json --output research/wp007j-r1/representation-probe-results.json --embedding-output external/wp007jr1/safe-a-embeddings.npz",
+    "python scripts/authenticity/wp007jr1_analyze_embeddings.py",
+    "python scripts/authenticity/wp007jr1_materialize_jpeg_lab.py",
+    "node scripts/authenticity/wp007jr1_sharp_jpeg_lab.mjs",
+    "python scripts/authenticity/wp007jr1_score_jpeg_lab.py",
+    "python scripts/authenticity/wp007jr1_analyze_jpeg_safe.py",
+    "python scripts/authenticity/wp007jr1_phase_dct_real.py",
+    "python scripts/authenticity/wp007jr1_analyze_phase_dct.py",
+    "node scripts/authenticity/wp007jr1_validate_jpeg_inspector.mjs",
+    "python scripts/authenticity/wp007jr1_pillow_crosscheck_inspector.py",
+    "python scripts/authenticity/wp007jr1_recompute_flux1_aggregates.py",
+    "node --test packages/authenticity/tests/wp007jr1.test.mjs",
+    "node --experimental-strip-types --test packages/authenticity/tests/*.test.mjs"
+  ],
+  "primaryArtifactHashes": {
+    "representationCohortFreeze": "8FEF0C15A89E88A261B7DF9031CA9E7FE0D7C35E8383A5134A16A952A3C2E323",
+    "representationResults": "E9A52D696A432C3F33CAFA34505DDF2E7CD5923CD7B484DEAF77DAD0305EC828",
+    "embeddingNpz": "1f7ba38e496e695231a86abfd4c76cbd86338717454c40b8da9b2d3056f2019d",
+    "jpegPillowManifest": "5D6B3AB8CC6BB250706C26D2C791E061EC55BC387484C0FFFB3360828CC1CFB2",
+    "jpegSharpManifest": "01D820EF1A917EEADFC1401415BF40D2F2463006E69CF839F01A83D9FA07BB5F",
+    "jpegSafeResults": "0F13A9A9776EF0AC9DCA26AF2D71D2A1131A2256B2D66D0BD2BE68D648C79069",
+    "phaseDctResults": "14051DCA83A4EB2DA811C75D8EEACC6ACB27AE216897A6362F239C15FF47B9D1",
+    "jpegInspectorValidation": "B7E3C6C22FAB92E9752A65D367E42B25A0F2F4C635401A6866BE403D65B8AA44",
+    "corePaperExtraction": "308892AE3CD12E18EE783141D43E1728DAAE524BB119CFFA43865FA83445D46E",
+    "flux1IndependentCheck": "06D5F28F7C6E6C8250E6A975314B7561220C560DAE497B9C6188D217EFE8BDC4"
+  },
+  "sampleCounts": {
+    "representationRecords": 1080,
+    "jpegOriginalParents": 100,
+    "jpegLabRows": 2140,
+    "phaseDctRows": 2240,
+    "jpegInspectorRows": 2140,
+    "corePapers": 12
+  },
+  "crossChecks": [
+    "SAFE hook logits versus official forward path: maximum absolute delta 0.0",
+    "SAFE scores versus 920 matching WP007I historical records: maximum and mean absolute delta 0.0",
+    "FLUX.1 aggregates independently recomputed from frozen NPZ: maximum absolute delta 0.0",
+    "DCT constant and FFT impulse known-answer fixtures: pass",
+    "JPEG inspector versus Pillow/libjpeg: zero mismatches across 2140 rows",
+    "JPEG inspector versus Sharp/libvips: 2080/2140 sampling agreement; 60 known 4:2:2 interpretation discrepancies retained"
+  ],
+  "costAndSafety": {
+    "newPaidServices": 0,
+    "gpuUsed": false,
+    "flux2ProviderCalls": 0,
+    "productionChanges": false,
+    "sourceMediaCommitted": false,
+    "modelWeightsCommitted": false
+  }
+}

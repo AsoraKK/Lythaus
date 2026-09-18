@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "lythaus-wp007jr1-flux2-zero-access-v1",
+  "status": "SEALED",
+  "publicBenchmarkPixelsAccessed": false,
+  "pixelDecodeCount": 0,
+  "thumbnailCount": 0,
+  "featureExtractionCount": 0,
+  "safeInferenceCount": 0,
+  "phaseInferenceCount": 0,
+  "providerCallCount": 0,
+  "sealedFamilyRule": "Any family/path containing FLUX.2, flux2, or flux-2 is denied before byte resolution.",
+  "assertion": "WP007J-R1 uses no FLUX.2 pixels, features, transformations, or provider calls."
+}
