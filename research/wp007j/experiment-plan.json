@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "lythaus-wp007j-experiment-plan-v1",
+  "workPackage": "WP007J_RESEARCH_RECONNAISSANCE",
+  "planStatus": "FROZEN_BEFORE_PROTOTYPE_EXECUTION",
+  "parentSha": "cce247e66be4de3fb0e927cc12e7a0c87d70561d",
+  "objective": "Identify the lowest-cost defensible path for JPEG-robust synthetic evidence, SAFE domain expansion, deterministic JPEG eligibility, and an evidence-grade first-input boundary.",
+  "nonObjectives": [
+    "No SAFE retraining or fine-tuning",
+    "No learned ensemble or meta-calibrator",
+    "No production routing, public-label, or enforcement change",
+    "No model-weight or dataset download beyond already approved artifacts",
+    "No FLUX.2 access or provider call",
+    "No JPEG restoration treated as recovery of authoritative pixels"
+  ],
+  "lockedEvidence": {
+    "safeCheckpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "safeUpstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "safeThreshold": 0.5864923000335693,
+    "safeHead": "SAFE-A_FROZEN",
+    "flux2": "ZERO_PIXEL_ACCESS_ZERO_PROVIDER_CALLS"
+  },
+  "researchQuestions": [
+    "What JPEG information is lost or destabilized for SAFE?",
+    "Which phase, DCT, global, semantic, provenance, or camera cues can complement SAFE?",
+    "Does the frozen SAFE representation contain information about Seedream-4 and Imagen-4 misses?",
+    "Which JPEG properties are measurable versus only probabilistically inferable?",
+    "What conservative eligibility boundary is technically defensible for an initial product?"
+  ],
+  "sourceRequirements": {
+    "primaryPaperMinimum": 30,
+    "compressionSpecificMinimum": 10,
+    "unseenGeneratorMinimum": 10,
+    "deterministicJpegMethodsMinimum": 5,
+    "sourceHierarchy": ["primary paper", "official implementation", "official library documentation", "secondary discovery only"]
+  },
+  "boundedPrototypes": [
+    {
+      "id": "JPEG_INSPECTOR",
+      "status": "RUN",
+      "purpose": "Parse final bytes without treating container facts as authenticity evidence",
+      "inputs": "approved existing media only",
+      "outputs": ["format", "dimensions", "quantization tables", "estimated table-equivalent quality", "sampling", "progressive state", "metadata presence", "history unknown"],
+      "explicitNonOutput": ["double-JPEG verdict", "prior-JPEG proof for PNG", "AI probability"]
+    },
+    {
+      "id": "PHASE_DCT_MEASUREMENT",
+      "status": "RUN_SYNTHETIC_GRID_ONLY",
+      "purpose": "Demonstrate deterministic Lythaus-owned measurements without fitting a classifier",
+      "inputs": "synthetic 8x8 luminance grid",
+      "outputs": ["DCT coefficients", "DFT phase/magnitude summary"],
+      "explicitNonOutput": ["detector score", "authorship claim"]
+    },
+    {
+      "id": "SAFE_FEATURE_PROBE",
+      "status": "DESIGN_ONLY_RUNTIME_BLOCKED",
+      "purpose": "Define a future frozen-backbone embedding probe",
+      "inputs": "approved sample manifest and exact SAFE checkpoint",
+      "outputs": ["future embedding manifest", "future split and probe protocol"],
+      "explicitNonOutput": ["new head training", "threshold tuning", "FLUX.2 access"]
+    }
+  ],
+  "futureTrainingProtocol": {
+    "status": "DESIGN_ONLY",
+    "safeA": "unchanged frozen checkpoint",
+    "safeB": "separate frozen-backbone head or adapter only after feature probe",
+    "requiredControls": ["actual JPEG encoders", "encoder/table diversity", "untouched generator families", "WP007I 800-negative control", "clean recall preservation"]
+  },
+  "stopRules": [
+    "Do not claim JPEG history from container fields alone",
+    "Do not treat differentiable JPEG as equivalent to a real encoder without validation",
+    "Do not treat a paper's reported AUC as Lythaus reproduction",
+    "Stop future training proposals if rights, CPU/RAM, or independent hard-negative evidence fail",
+    "Keep FLUX.2 sealed regardless of reconnaissance outcome"
+  ],
+  "hashing": {
+    "canonicalization": "UTF-8 JSON with deterministic key order and whitespace removed; self hash is recorded in protocol-hashes.json",
+    "selfHashSidecar": "research/wp007j/protocol-hashes.json"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "lythaus-wp007j-protocol-hashes-v1",
+  "hashAlgorithm": "SHA-256",
+  "parentSha": "cce247e66be4de3fb0e927cc12e7a0c87d70561d",
+  "experimentPlanSha256": "e2eb53f5c3263b5b779bc1af2040ab8f6bd4299927c0ef0ee409bd2e8447e4d6",
+  "researchLedgerSha256": "958585c60a07f6151cbf5ff21607afc0d0956b5bc5acc1610e35b6444429e08a",
+  "finalReportSha256": "c2999d410f9a038fa905874921e964284a270b0606a60e3db22aec2e34536a2d",
+  "jpegInspectorSha256": "da9f24bcd08211693adf1e88aabc271ab172dc4d4f5775d6c7e6794298a93aea",
+  "phaseDctProbeSha256": "ecb29e0c2a35b9774934f15e0059d0aca54e70beb898f2035fd02c636422d13e",
+  "planHashRule": "The experiment plan is immutable and its byte hash is recorded here; this sidecar is the protocol binding artifact.",
+  "flux2": {
+    "pixelAccess": false,
+    "providerCalls": 0,
+    "featureExtraction": false,
+    "transforms": false
+  }
+}

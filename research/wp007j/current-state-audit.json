@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "lythaus-wp007j-current-state-audit-v1",
+  "workPackage": "WP007J_RESEARCH_RECONNAISSANCE",
+  "auditedAt": "2026-09-18",
+  "parent": {
+    "sha": "cce247e66be4de3fb0e927cc12e7a0c87d70561d",
+    "branch": "agent/wp007i-safe-policy",
+    "pullRequest": 849,
+    "headVerified": true,
+    "mergeAction": "NONE"
+  },
+  "originMain": "8e3b3ebad2f846e61db2bfe819376723da7e9863",
+  "authenticityPullRequests": {
+    "844": "OPEN_4c4f02349f497e2ff021ff3c37abb432cb93dc0d",
+    "845": "OPEN_5a6231c6f8ede3de5e117ed3692bcf493f0c1a1c",
+    "847": "OPEN_fc9c1a65528a39da008fed12c1a601e32c226e09",
+    "848": "OPEN_bcbadd676f8ff0670369de80d487d77a6613fcf5",
+    "849": "OPEN_cce247e66be4de3fb0e927cc12e7a0c87d70561d"
+  },
+  "newerAuthenticityResearchPr": false,
+  "historicalResultsPreserved": [
+    "WP007H_SAFE_SPECIALIST_QUALIFIED_WITH_LIMITED_APPLICABILITY",
+    "WP007I_SAFE_POSITIVE_SPECIALIST_QUALIFIED_APPLICABILITY_GATE_UNPROVEN"
+  ],
+  "safeFrozenState": {
+    "upstreamRepository": "https://github.com/Ouxiang-Li/SAFE",
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "threshold": 0.5864923000335693,
+    "preprocessing": "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1",
+    "architecture": "official ResNet-50, DWT input transform, 512-dimensional fc1 input",
+    "qualificationStatus": "RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED"
+  },
+  "priorEvidence": {
+    "wp007h": {
+      "syntheticRecall": "155/160",
+      "rocAuc": 0.99336,
+      "jpeg95Recall": "1/40",
+      "jpeg85Recall": "0/40",
+      "jpeg75Recall": "0/40",
+      "publicFlux1Median": 0.9487,
+      "cloudflareFlux1Median": 0.0466
+    },
+    "wp007i": {
+      "freshSyntheticRecall": "79/120",
+      "negativeFalsePositives": "4/800",
+      "cameraFalsePositives": "4/600",
+      "digitalFalsePositives": "0/200",
+      "seedream4Recall": "0/20",
+      "imagen4Recall": "1/20",
+      "applicabilityGate": "UNPROVEN",
+      "supporterRescue": "INSUFFICIENT_UNIQUE_VALUE"
+    }
+  },
+  "sealedControls": {
+    "flux1": "CONSUMED_DIAGNOSTIC_ONLY",
+    "flux2": "SEALED_FUTURE_RESERVE",
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "productionAuthorization": "NO",
+    "newProviderOrPaidCompute": false
+  },
+  "approvedLocalEvidence": {
+    "mediaRootLogicalKey": "WP007I_APPROVED_MEDIA_ROOT",
+    "mediaBytesOutsideGit": 3107030595,
+    "mediaFileCount": 1086,
+    "composition": {
+      "cameraNegative": 600,
+      "proceduralHardNegative": 200,
+      "syntheticFreshFamilies": 120,
+      "transformationDescendants": 160
+    },
+    "safeRepositoryLogicalKey": "WP007G_SAFE_CHECKOUT",
+    "safeCheckpointBytes": 5840638
+  },
+  "localResourceSnapshot": {
+    "cpu": "AMD Ryzen 7 7730U with Radeon Graphics",
+    "logicalProcessors": 16,
+    "freeRamGbAtAudit": 2.58,
+    "totalRamGb": 7.63,
+    "freeDiskGbAtAudit": 339.38,
+    "pythonTorchAvailable": false,
+    "pythonPillowAvailable": false,
+    "executionBoundary": "CPU bounded prototypes only; no training; no GPU; no provider"
+  },
+  "currentCodeReferences": [
+    "packages/authenticity/src/forensics.ts",
+    "packages/authenticity/src/wp007h.ts",
+    "packages/authenticity/src/wp007i.ts",
+    "packages/authenticity/src/model-registry.ts",
+    "research/wp007h/wp007h-final-report.md",
+    "research/wp007i/wp007i-final-report.md"
+  ],
+  "findings": {
+    "existingJpegParser": "measures container-level fields but its doubleCompressionIndicator is not a validated double-JPEG detector",
+    "safeEmbeddingProbe": "NOT_RUN_PYTORCH_AND_PILLOW_UNAVAILABLE",
+    "reconnaissanceScope": "literature, rights, runtime, deterministic inspector, and probe design"
+  }
+}

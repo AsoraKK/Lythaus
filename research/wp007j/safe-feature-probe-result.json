@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "lythaus-wp007j-safe-feature-probe-result-v1",
+  "status": "NOT_RUN",
+  "reason": "The bounded clean environment has no PyTorch, Pillow, or NumPy; installing a new model runtime and extracting SAFE embeddings was outside this reconnaissance package.",
+  "model": {
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "candidateProbeDimension": 512,
+    "probeLocation": "avgpool flattened vector before fc1"
+  },
+  "noDataAccessed": ["FLUX.2", "new external datasets", "sealed EF2 reserves"],
+  "nextAction": "Run only under a separately approved frozen-backbone feature-probe protocol."
+}
