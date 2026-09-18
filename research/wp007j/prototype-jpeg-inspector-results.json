@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "lythaus-wp007j-jpeg-inspector-results-v1",
+  "status": "BOUNDED_RUN",
+  "mediaSource": "WP007I_APPROVED_MEDIA_ROOT",
+  "records": [
+    {
+      "sampleId": "APPROVED_JPEG95_SAMPLE",
+      "sha256": "45b4e72de9adb121f731b0aa9a624748e49624748fac61989b2e0a2bdacaeae0",
+      "byteLength": 626515,
+      "format": "JPEG",
+      "valid": true,
+      "dimensions": {"width": 1024, "height": 1024},
+      "progressive": false,
+      "sampling": "4:4:4",
+      "quantizationTableCount": 2,
+      "estimatedStandardQuality": {"quality": 95, "normalizedError": 0, "confidence": "HIGH_TABLE_MATCH"},
+      "metadata": ["JFIF"],
+      "previousJpegHistory": "UNDETERMINED_FROM_FINAL_BYTES",
+      "doubleJpeg": "NOT_INFERRED",
+      "evidenceRole": "INPUT_REGIME_CONTEXT_ONLY"
+    },
+    {
+      "sampleId": "APPROVED_SYNTHETIC_PNG_SAMPLE",
+      "sha256": "2c3cadc6279bd2dc4818185d326523d519f0513f89b39565726b22f6969034eb",
+      "byteLength": 562337,
+      "format": "PNG",
+      "valid": true,
+      "dimensions": {"width": 1024, "height": 573},
+      "metadata": [],
+      "previousJpegHistory": "UNDETERMINED_FROM_FINAL_BYTES",
+      "evidenceRole": "INPUT_REGIME_CONTEXT_ONLY"
+    }
+  ],
+  "conclusion": "The prototype measures current encoding facts and deliberately makes no prior-history or authenticity claim."
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "lythaus-wp007j-validation-summary-v1",
+  "focusedAuthenticity": {
+    "command": "node --experimental-strip-types --test packages/authenticity/tests/*.mjs",
+    "tests": 346,
+    "passed": 346,
+    "failed": 0
+  },
+  "nativeTypecheck": {"command": "npm run typecheck:native", "status": "PASS"},
+  "nativeScope": {"command": "npm run validate:native-scope", "status": "PASS"},
+  "retiredProviderDependencyValidation": {"command": "npm run validate:no-retired-provider-dependencies", "status": "PASS"},
+  "workflowActionPinValidation": {"command": "npm run validate:workflow-action-pins", "status": "PASS"},
+  "nativeArchitecture": {
+    "command": "npm run test:native-architecture",
+    "status": "ENVIRONMENT_BLOCKED_UNRELATED",
+    "tests": 256,
+    "passed": 255,
+    "failed": 1,
+    "failure": "canonical manifest finalizes VERIFIED or BLOCKED after production smoke",
+    "evidence": "auth_acceptance_observer_access_service_token_incomplete",
+    "action": "not modified; existing auth/Access infrastructure remains outside WP007J scope"
+  },
+  "diffCheck": "PASS",
+  "jsonParse": "PASS",
+  "productionChanges": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

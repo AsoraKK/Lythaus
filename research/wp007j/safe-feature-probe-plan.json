@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "lythaus-wp007j-safe-feature-probe-plan-v1",
+  "status": "DESIGN_ONLY_RUNTIME_BLOCKED",
+  "frozenModel": {
+    "repository": "https://github.com/Ouxiang-Li/SAFE",
+    "commit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "architecture": "ResNet-50",
+    "inputTransform": "official DWT bior1.3 J=1 path with 256 center crop",
+    "head": "fc1 consumes a 512-dimensional vector and emits two logits"
+  },
+  "extractionPoint": {
+    "module": "avgpool output after flatten, before fc1",
+    "dimension": 512,
+    "weightsChanged": false,
+    "headOutputAlsoRecorded": true
+  },
+  "approvedRoles": {
+    "real": ["WP007I camera negatives", "WP007I digital hard negatives"],
+    "synthetic": ["WP007I easy families", "WP007I Seedream-4 misses", "WP007I Imagen-4 misses", "public FLUX.1 if already approved"],
+    "diagnosticOnly": ["consumed Cloudflare FLUX.1"],
+    "forbidden": ["FLUX.2", "new downloaded corpus without rights audit"]
+  },
+  "descriptiveAnalyses": [
+    "PCA only for visualization, never as a performance claim",
+    "cosine and Euclidean distances to real centroid",
+    "family centroids and within-family dispersion",
+    "nearest-neighbour composition under family-disjoint splits",
+    "linear probe only as a separately authorized future experiment"
+  ],
+  "leakageControls": [
+    "fit no probe in this reconnaissance",
+    "keep generator family disjoint across any future probe roles",
+    "keep all WP007I negatives as an independent specificity reference",
+    "do not use SAFE output or threshold as a feature",
+    "do not use FLUX.1 to select features"
+  ],
+  "runtimeBlocker": {
+    "pythonTorch": false,
+    "pythonPillow": false,
+    "result": "NOT_RUN; extracting the actual 512-dimensional representation would require installing a new runtime and was outside this bounded reconnaissance"
+  },
+  "futureDecision": "If missed families form separable clusters, propose a tiny head experiment; if not, prefer a distinct specialist or deterministic feature family."
+}

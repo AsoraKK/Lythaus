@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "lythaus-wp007j-rights-runtime-matrix-v1",
+  "scope": "research reconnaissance; no deployment approval",
+  "entries": [
+    {
+      "candidate": "SAFE-A",
+      "role": "frozen primary specialist",
+      "codeLicense": "Apache-2.0 in official repository",
+      "checkpointLicense": "not separately stated in the inspected release; deployment review required",
+      "dataRights": "evaluation evidence is already approved locally; upstream training-data commercial status not established",
+      "compute": "LOCAL_FEASIBLE after existing artifact setup",
+      "runtimeEvidence": "WP007H CPU p95 approximately 93 ms",
+      "incrementalValue": "baseline only",
+      "commercialPath": "RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED"
+    },
+    {
+      "candidate": "CPTFormer",
+      "role": "phase-spectrum compression-robust specialist",
+      "codeLicense": "official code not located during reconnaissance",
+      "checkpointLicense": "not verified",
+      "dataRights": "paper datasets require separate audit",
+      "compute": "paper-scale transformer; CPU feasibility unknown",
+      "runtimeEvidence": "not reproduced",
+      "incrementalValue": "potentially distinct phase cue",
+      "commercialPath": "NOT_ESTABLISHED"
+    },
+    {
+      "candidate": "DCPT",
+      "role": "future training objective",
+      "codeLicense": "official code not located during reconnaissance",
+      "checkpointLicense": "not applicable to objective",
+      "dataRights": "future training data must be rights-cleared",
+      "compute": "adds training complexity, no stated inference parameters",
+      "runtimeEvidence": "paper claim only",
+      "incrementalValue": "promising SAFE-B objective, not a drop-in model",
+      "commercialPath": "depends on future Lythaus-trained model rights"
+    },
+    {
+      "candidate": "CO-SPY",
+      "role": "semantic plus artifact comparison",
+      "codeLicense": "MIT stated by official repository",
+      "checkpointLicense": "weights and foundation model require separate review",
+      "dataRights": "CO-SPY-Bench and released data require separate review",
+      "compute": "OpenCLIP/VAE branches likely LOCAL_EVAL_ONLY on this laptop",
+      "runtimeEvidence": "not reproduced",
+      "incrementalValue": "semantic branch may complement local SAFE cues",
+      "commercialPath": "NOT_CLEARED"
+    },
+    {
+      "candidate": "Diff-JPEG",
+      "role": "future training augmentation",
+      "codeLicense": "BSD-3-Clause in official repository",
+      "checkpointLicense": "not applicable",
+      "dataRights": "augmentation code only; generated training pairs need own rights",
+      "compute": "CPU-compatible library; training still out of scope",
+      "runtimeEvidence": "not benchmarked here",
+      "incrementalValue": "supports controlled differentiable augmentation",
+      "commercialPath": "code license plausible; equivalence to real JPEG must be validated"
+    },
+    {
+      "candidate": "Kornia differentiable JPEG",
+      "role": "future augmentation comparison",
+      "codeLicense": "Apache-2.0 project license",
+      "checkpointLicense": "not applicable",
+      "dataRights": "augmentation code only",
+      "compute": "CPU possible with PyTorch",
+      "runtimeEvidence": "not benchmarked here",
+      "incrementalValue": "convenient reference implementation",
+      "commercialPath": "library license plausible; real-codec validation required"
+    },
+    {
+      "candidate": "B-Free",
+      "role": "research-only semantic alignment design",
+      "codeLicense": "official repository states all-rights-reserved / informational nonprofit use",
+      "checkpointLicense": "not deployment-cleared",
+      "dataRights": "separate audit required",
+      "compute": "GPU-oriented diffusion dependency",
+      "runtimeEvidence": "not reproduced",
+      "incrementalValue": "useful design reference, not an adopted dependency",
+      "commercialPath": "BLOCKED_PENDING_OWNER_REVIEW"
+    },
+    {
+      "candidate": "Lythaus JPEG inspector",
+      "role": "deterministic eligibility measurement",
+      "codeLicense": "Lythaus-owned research code",
+      "checkpointLicense": "not applicable",
+      "dataRights": "operates on user-provided bytes under existing policy; prototype only",
+      "compute": "LOCAL_FEASIBLE; Node core only",
+      "runtimeEvidence": "bounded prototype run",
+      "incrementalValue": "exposes measurable input facts without AI claims",
+      "commercialPath": "subject to product/privacy review; no production change here"
+    }
+  ],
+  "rightsRule": "Code repository permission does not establish checkpoint, training-data, or commercial deployment rights."
+}

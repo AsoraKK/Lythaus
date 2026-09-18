@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "lythaus-wp007j-phase-dct-measurement-v1",
+  "status": "BOUNDED_SYNTHETIC_GRID_RUN",
+  "grid": "deterministic 8x8 ramp 0..63; no media bytes",
+  "measurementOnly": true,
+  "classifierInvoked": false,
+  "dctDc": 252.00000000000003,
+  "dctAcL1": 187.5429545158037,
+  "meanMagnitude": 81.98758523176453,
+  "meanAbsolutePhase": 0.697748479588894,
+  "nonDcMagnitude": 3231.2054548329347,
+  "evidenceRole": "EF4_MEASUREMENT_CANDIDATE_ONLY",
+  "productAuthority": "NONE"
+}
