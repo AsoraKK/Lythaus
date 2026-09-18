@@ -3,9 +3,7 @@
   "workPackage": "WP007K",
   "parentSha": "d6eb253b8e219d1920196fda037bae6b2e3caf4c",
   "branch": "agent/wp007k-codec-specialist",
-  "headSha": "79df24cd",
-  "headShaFull": "79df24cd4b6e23063cf1eba2db4ac026e5247627",
-  "pullRequest": {"number": 852, "state": "OPEN", "merged": false, "url": "https://github.com/AsoraKK/Lythaus/pull/852"},
+  "pullRequest": {"number": 852, "state": "OPEN", "merged": false, "url": "https://github.com/AsoraKK/Lythaus/pull/852", "headResolution": "Verify final headRefOid from GitHub after the last push; the manifest intentionally avoids a self-referential commit hash."},
   "environment": {
     "os": "Windows",
     "cpuClass": "Ryzen-7-class",

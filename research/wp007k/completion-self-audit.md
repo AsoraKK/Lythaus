@@ -23,7 +23,7 @@ SAFE-A: frozen; upstream `4e998724651b227def64f5be0cd60c0aa1552c35`; checkpoint 
 | FLUX.1 diagnostic | Frozen candidate scored on consumed public/provider diagnostics only | Separate post-hoc manifest/result recomputation | No fitting or threshold changes after exposure | Consumed diagnostic role preserved | YES | `flux1-diagnostic-manifest.json`, `flux1-diagnostic-result.json` |
 | FLUX.2 zero access | Sealed reserve preserved throughout | Manifest and run controls assert zero pixels/calls | No reserve path in scripts | Sealed status retained | YES | `flux2-zero-access.json`, `validation-summary.json` |
 | Regression validation | Focused and historical authenticity suites plus static checks run | 362/362 authenticity; focused 9/9; syntax/schema/scans pass | Two unrelated inherited failures isolated and not changed | No production files changed | YES | `validation-summary.json` |
-| PR creation | Dedicated branch/commit and unmerged PR from verified parent | PR #852 is OPEN, unmerged, base `d6eb253b8e219d1920196fda037bae6b2e3caf4c`, head `4ee7f9225f32550f61a80a7aeacbfdb65ced51fe` | No merge, no rebase, no production mutation | Review-only publication | YES | PR #852, `WP007K_GOAL_AND_COMPLETION_LEDGER.json`, `validation-summary.json` |
+| PR creation | Dedicated branch/commit and unmerged PR from verified parent | PR #852 is OPEN and unmerged; final base/head OIDs are verified from GitHub after the last push | No merge, no rebase, no production mutation | Review-only publication | YES | PR #852, `WP007K_GOAL_AND_COMPLETION_LEDGER.json`, `validation-summary.json`, `run-manifest.json` |
 
 ## Honest completion boundary
 
