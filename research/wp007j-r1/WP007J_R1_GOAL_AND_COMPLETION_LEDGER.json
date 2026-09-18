@@ -161,11 +161,11 @@
       "requiredExperiment": "Commit only sanitized artifacts/code/tests and open the stacked PR from WP007J.",
       "requiredValidation": ["parent exact", "PR open/unmerged", "no SAFE-A/FLUX.2/production mutations"],
       "requiredIndependentCrossCheck": "GitHub PR metadata and local commit/diff comparison.",
-      "status": "IN_PROGRESS",
-      "completionPercent": 90,
+      "status": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
       "blocker": null,
-      "evidenceFiles": []
+      "evidenceFiles": ["PR-851", "final-report.md", "validation-summary.json", "run-manifest.json"]
     }
   ],
-  "lastUpdated": "2026-09-18_AFTER_EMPIRICAL_RUNS_AND_VALIDATION"
+  "lastUpdated": "2026-09-18_PR_851_OPEN_AND_UNMERGED"
 }
