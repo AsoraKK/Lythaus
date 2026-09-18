@@ -1,0 +1,107 @@
+{
+  "boundedResearchEstimateOnly": true,
+  "byOperation": {
+    "DOUBLE_Q95_Q85": {
+      "UNSUPPORTED": 280
+    },
+    "ORIGINAL": {
+      "LIMITED": 416,
+      "UNSUPPORTED": 560
+    },
+    "Q75_420": {
+      "UNSUPPORTED": 600
+    },
+    "Q85_420": {
+      "UNSUPPORTED": 600
+    },
+    "Q95_420": {
+      "UNSUPPORTED": 600
+    },
+    "Q95_444": {
+      "UNSUPPORTED": 600
+    }
+  },
+  "criteria": {
+    "EVIDENCE_GRADE": "Only a validated current-byte regime; current WP007K conservative rule does not certify history.",
+    "LIMITED_FORENSIC_QUALITY": "Current JPEG/PNG bytes with limited or unknown prior-history authority.",
+    "UNKNOWN": "Unsupported/invalid format or insufficient measurable facts.",
+    "UNSUPPORTED_FOR_CERTIFICATION": "Estimated JPEG quality <=97 under the frozen standard-table estimate, or a controlled destructive regime."
+  },
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "originalBySourceSubtype": {
+    "CAMERA_NATIVE": {
+      "UNSUPPORTED": 560
+    },
+    "CGI": {
+      "LIMITED": 15
+    },
+    "CHART": {
+      "LIMITED": 33
+    },
+    "COMPOSITE": {
+      "LIMITED": 14
+    },
+    "DIAGRAM": {
+      "LIMITED": 30
+    },
+    "DIGITAL_ILLUSTRATION": {
+      "LIMITED": 16
+    },
+    "GAME_SCREENSHOT": {
+      "LIMITED": 15
+    },
+    "MEME": {
+      "LIMITED": 14
+    },
+    "MODERN_GENERATED": {
+      "LIMITED": 140
+    },
+    "OTHER_DIGITAL_NON_AI": {
+      "LIMITED": 16
+    },
+    "PROCEDURAL_PATTERN": {
+      "LIMITED": 14
+    },
+    "TEXT_GRAPHIC": {
+      "LIMITED": 30
+    },
+    "THREE_D_RENDER": {
+      "LIMITED": 14
+    },
+    "UI_CAPTURE": {
+      "LIMITED": 16
+    },
+    "UI_SCREENSHOT": {
+      "LIMITED": 17
+    },
+    "VECTOR_GRAPHIC": {
+      "LIMITED": 16
+    },
+    "VECTOR_LIKE": {
+      "LIMITED": 16
+    }
+  },
+  "productionChanged": false,
+  "schemaVersion": "lythaus-wp007k-eligibility-analysis-v1",
+  "stateCounts": {
+    "LIMITED": 416,
+    "UNSUPPORTED": 3240
+  },
+  "stateRates": {
+    "LIMITED": {
+      "denominator": 3656,
+      "lower": 0.10389497862691321,
+      "numerator": 416,
+      "rate": 0.1137855579868709,
+      "upper": 0.12448689753501926
+    },
+    "UNSUPPORTED": {
+      "denominator": 3656,
+      "lower": 0.8755131024649808,
+      "numerator": 3240,
+      "rate": 0.8862144420131292,
+      "upper": 0.8961050213730869
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "lythaus-wp007k-validation-summary-v1",
+  "workPackage": "WP007K",
+  "parentSha": "d6eb253b8e219d1920196fda037bae6b2e3caf4c",
+  "scientificRuns": {
+    "safeARepresentationAndBaseline": "COMPLETED_REPLAYED",
+    "jpegLaboratory": "COMPLETED_REAL_MEDIA",
+    "phaseDctValidation": "COMPLETED_REAL_MEDIA",
+    "jpegInspectorMatrix": "COMPLETED_3656_ROWS",
+    "cesE": "COMPLETED_NEGATIVE_LIMITED",
+    "cesS": "COMPLETED_NEGATIVE_NOT_QUALIFIED",
+    "encoderLeaveOneOut": "COMPLETED_ENCODER_GENERALIZATION_FAILED",
+    "generatorLeaveOneOut": "COMPLETED_GENERATOR_TRANSFER_WEAK",
+    "hardNegativeAnalysis": "COMPLETED",
+    "uniqueRescueAndCorrelation": "COMPLETED",
+    "runtime": "COMPLETED_CPU_FEASIBLE",
+    "flux1": "COMPLETED_POSTHOC_ONLY",
+    "flux2": "SEALED_ZERO_ACCESS"
+  },
+  "tests": {
+    "wp007kFocused": {"passed": 9, "failed": 0, "status": "PASS"},
+    "fullAuthenticity": {"passed": 362, "failed": 0, "status": "PASS"},
+    "nativeTypecheck": "PASS",
+    "nativeScope": "PASS",
+    "workflowActionPins": "PASS",
+    "jsonParse": "PASS",
+    "pythonSyntax": "PASS",
+    "nodeSyntax": "PASS",
+    "privatePathAndSecretScan": "PASS",
+    "gitDiffCheck": "PASS_WITH_INHERITED_EOL_WARNING",
+    "nativeArchitecture": {
+      "passed": 255,
+      "failed": 1,
+      "status": "ONE_UNCHANGED_BASELINE_FAILURE",
+      "failure": "canonical manifest finalizes VERIFIED or BLOCKED after production smoke",
+      "isolation": "The failing production-workflow expectation is unchanged from the parent and no production file was modified by WP007K."
+    },
+    "retiredProviderDependencyCheck": {
+      "status": "ONE_UNCHANGED_HISTORICAL_REPORT_FAILURE",
+      "failure": "research/wp007j-r1/completion-self-audit.md contains the retired brand in inherited active content",
+      "isolation": "The file is identical to HEAD and was not modified by WP007K; historical reports were not rewritten."
+    }
+  },
+  "reproducibility": {
+    "cesSIndependentReplay": {"maxAbsoluteScoreDelta": 0.0, "thresholdMismatches": 0, "pass": true},
+    "jpegInspectorIndependentCrossCheck": {"rows": 3656, "mismatches": 0, "pass": true},
+    "safeAIdentity": {
+      "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+      "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+      "threshold": 0.5864923000335693,
+      "weightsModified": false,
+      "preprocessingModified": false
+    }
+  },
+  "boundaries": {
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "futureReserveOpened": false,
+    "productionChanged": false,
+    "safeAChanged": false,
+    "newPaidServices": false,
+    "gpuUsed": false
+  },
+  "status": "VALIDATED_WITH_EXPLICIT_UNCHANGED_BASELINE_FAILURES"
+}

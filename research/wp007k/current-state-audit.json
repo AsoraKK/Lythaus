@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "lythaus-wp007k-current-state-audit-v1",
+  "workPackage": "WP007K",
+  "parentSha": "d6eb253b8e219d1920196fda037bae6b2e3caf4c",
+  "parentPr": 851,
+  "parentHeadExpected": "d6eb253b8e219d1920196fda037bae6b2e3caf4c",
+  "originMainObserved": "8e3b3ebad2f846e61db2bfe819376723da7e9863",
+  "branch": "agent/wp007k-codec-specialist",
+  "historicalResearchPrs": [844, 845, 847, 848, 849, 850, 851],
+  "ancestryVerified": true,
+  "safe": {
+    "status": "FROZEN_REFERENCE_REUSED",
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "threshold": 0.5864923000335693,
+    "preprocessing": "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1",
+    "role": "PRIMARY_POSITIVE_EF3_SPECIALIST",
+    "modificationAllowed": false,
+    "deploymentStatus": "RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED"
+  },
+  "approvedCaches": {
+    "wp007jR1JpegLab": "EXTERNAL_APPROVED_CACHE_lythaus-wp007jr1-jpeg-lab",
+    "wp007jR1DomainGap": "EXTERNAL_APPROVED_CACHE_lythaus-wp007jr1-jpeg-domain-gap",
+    "wp007hModern": "EXTERNAL_APPROVED_CACHE_lythaus-wp007h-modern-corpus",
+    "wp007iMedia": "EXTERNAL_APPROVED_CACHE_lythaus-wp007i-media",
+    "wp007eControlledDigital": "EXTERNAL_APPROVED_CACHE_lythaus-wp007e-controlled-digital",
+    "safeRuntime": "EXTERNAL_APPROVED_CACHE_wp007g-SAFE",
+    "pythonRuntime": "EXTERNAL_APPROVED_RUNTIME_lythaus-wp007e-venv-site-packages"
+  },
+  "sealedData": {
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "flux2Status": "SEALED",
+    "futureReserveOpened": false,
+    "ef2FutureReserveOpened": false
+  },
+  "resourceAudit": {
+    "cpuClass": "Ryzen-7-class",
+    "ramClass": "16GB",
+    "gpu": "NONE",
+    "freeDiskAtAuditBytesApprox": 16154689536,
+    "executionMode": "BOUNDED_CPU_ONLY",
+    "newPaidServices": false,
+    "productionChanges": false
+  },
+  "preExistingUnrelatedWorktreeChange": "tools/openapi/oasdiff/bin/oasdiff.js is inherited and remains unstaged"
+}

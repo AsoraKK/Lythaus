@@ -1,0 +1,143 @@
+{
+  "conclusion": "No codec-resilient CES-S qualification; the Sharp-trained candidate is unsafe on source-level FPR and the Pillow-trained candidate is low-recall.",
+  "experiments": [
+    {
+      "heldOutEncoder": "SHARP_LIBVIPS",
+      "heldOutMetrics": {
+        "auprc": 0.884188987065698,
+        "auroc": 0.8535513392857144,
+        "fn": 534,
+        "fp": 0,
+        "fpr": {
+          "denominator": 640,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.005966467005294152
+        },
+        "recall": {
+          "denominator": 700,
+          "lower": 0.2071225063628403,
+          "numerator": 166,
+          "rate": 0.23714285714285716,
+          "upper": 0.27003247593019747
+        },
+        "recordCount": 1340,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 160,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.02344619517150519
+        },
+        "tn": 640,
+        "tp": 166
+      },
+      "id": "E1",
+      "modelSha256": "56c84f3becf5aa7139b81d95ad4ecc9cc049e3bae9ac7455963fb4e8dd74674c",
+      "result": "LOW_RECALL_ON_HELD_OUT_ENCODER_AT_SPECIFICITY_FIRST_THRESHOLD",
+      "trainingEncoder": "PILLOW_LIBJPEG"
+    },
+    {
+      "heldOutEncoder": "PILLOW_LIBJPEG",
+      "heldOutMetrics": {
+        "auprc": 0.884188987065698,
+        "auroc": 0.8535513392857144,
+        "fn": 534,
+        "fp": 0,
+        "fpr": {
+          "denominator": 640,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.005966467005294152
+        },
+        "recall": {
+          "denominator": 700,
+          "lower": 0.2071225063628403,
+          "numerator": 166,
+          "rate": 0.23714285714285716,
+          "upper": 0.27003247593019747
+        },
+        "recordCount": 1340,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 160,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.02344619517150519
+        },
+        "tn": 640,
+        "tp": 166
+      },
+      "id": "E2",
+      "modelSha256": "6e417b327dde4dab5baa026a6dfa893237fa3535dae1dd1c4a02e986161fd036",
+      "result": "SOURCE_LEVEL_FPR_EXCEEDS_PREDECLARED_GATE",
+      "trainingEncoder": "SHARP_LIBVIPS"
+    }
+  ],
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "pillowAllConfirmation": {
+    "auprc": 0.7614867204526456,
+    "auroc": 0.8158952814671151,
+    "fn": 1373,
+    "fp": 7,
+    "fpr": {
+      "denominator": 2116,
+      "lower": 0.0016033807356958343,
+      "numerator": 7,
+      "rate": 0.0033081285444234404,
+      "upper": 0.006813031136265406
+    },
+    "recall": {
+      "denominator": 1540,
+      "lower": 0.0938750060711983,
+      "numerator": 167,
+      "rate": 0.10844155844155844,
+      "upper": 0.12495669901771904
+    },
+    "recordCount": 3656,
+    "sourceLevelWorstCaseFpr": {
+      "denominator": 836,
+      "lower": 0.004061790132251281,
+      "numerator": 7,
+      "rate": 0.008373205741626795,
+      "upper": 0.01718205134914821
+    },
+    "tn": 2109,
+    "tp": 167
+  },
+  "schemaVersion": "lythaus-wp007k-encoder-leave-one-out-v1",
+  "sharpAllConfirmation": {
+    "auprc": 0.7934847279328007,
+    "auroc": 0.8369037389831341,
+    "fn": 1158,
+    "fp": 40,
+    "fpr": {
+      "denominator": 2116,
+      "lower": 0.013912939164445779,
+      "numerator": 40,
+      "rate": 0.01890359168241966,
+      "upper": 0.025637876521240752
+    },
+    "recall": {
+      "denominator": 1540,
+      "lower": 0.22712644972473475,
+      "numerator": 382,
+      "rate": 0.24805194805194805,
+      "upper": 0.2702312643291623
+    },
+    "recordCount": 3656,
+    "sourceLevelWorstCaseFpr": {
+      "denominator": 836,
+      "lower": 0.03533222242661822,
+      "numerator": 40,
+      "rate": 0.04784688995215311,
+      "upper": 0.0644978799577346
+    },
+    "tn": 2076,
+    "tp": 382
+  },
+  "thirdEncoder": "NOT_AVAILABLE_WITHOUT_UNBOUNDED_INSTALLATION"
+}

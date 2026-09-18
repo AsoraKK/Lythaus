@@ -1,0 +1,525 @@
+{
+  "byGeneratorFamily": {
+    "FLUX.1_CLOUDFLARE": {
+      "cesS": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 38,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.013820667386148344,
+          "numerator": 2,
+          "rate": 0.05,
+          "upper": 0.16503877369140962
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 2
+      },
+      "count": 40,
+      "safeA": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 40,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.08762160119728664
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 0
+      }
+    },
+    "FLUX.1_PUBLIC_PROCESSED": {
+      "cesS": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 111,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 120,
+        "recall": {
+          "denominator": 120,
+          "lower": 0.03995711539596028,
+          "numerator": 9,
+          "rate": 0.075,
+          "upper": 0.1364091760599377
+        },
+        "recordCount": 120,
+        "scoredRecordCount": 120,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 9
+      },
+      "count": 120,
+      "safeA": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 15,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 120,
+        "recall": {
+          "denominator": 120,
+          "lower": 0.8039705979199262,
+          "numerator": 105,
+          "rate": 0.875,
+          "upper": 0.9227650272660463
+        },
+        "recordCount": 120,
+        "scoredRecordCount": 120,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 105
+      }
+    }
+  },
+  "cloudflareFlux1Tuning": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "independentReplay": {
+    "featureCount": 160,
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "maxAbsoluteScoreDelta": 0.0,
+    "missingStoredRecords": [],
+    "modelSha256": "611c00be2a1cb641b5bde3844b6242fd4a2eb014c4fdafcc82ea3fe502a8f5ac",
+    "pass": true,
+    "replayedRecordCount": 160,
+    "schemaVersion": "lythaus-wp007k-ces-s-independent-replay-v1",
+    "storedRecordCount": 160,
+    "thresholdMismatchCount": 0,
+    "thresholdMismatches": []
+  },
+  "manifestSha256": "6fe3bab54b635b8bdfb9baae2ef209a4f83200af6c8260880757931cde60473d",
+  "modelSha256": "611c00be2a1cb641b5bde3844b6242fd4a2eb014c4fdafcc82ea3fe502a8f5ac",
+  "modelThreshold": 0.7373818778920678,
+  "negativeCount": 0,
+  "overall": {
+    "cesS": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 149,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "negativeCount": 0,
+      "negativeSourceCount": 0,
+      "positiveCount": 160,
+      "recall": {
+        "denominator": 160,
+        "lower": 0.03881942091091279,
+        "numerator": 11,
+        "rate": 0.06875,
+        "upper": 0.11890292242451045
+      },
+      "recordCount": 160,
+      "scoredRecordCount": 160,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 11
+    },
+    "safeA": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 55,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "negativeCount": 0,
+      "negativeSourceCount": 0,
+      "positiveCount": 160,
+      "recall": {
+        "denominator": 160,
+        "lower": 0.579767901721218,
+        "numerator": 105,
+        "rate": 0.65625,
+        "upper": 0.7254051622876866
+      },
+      "recordCount": 160,
+      "scoredRecordCount": 160,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 105
+    }
+  },
+  "recordCount": 160,
+  "role": "POST_HOC_DIAGNOSTIC_ONLY",
+  "schemaVersion": "lythaus-wp007k-posthoc-ces-s-diagnostic-v1",
+  "syntheticByOperation": {
+    "CLOUDFLARE_BASELINE": {
+      "cesS": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 38,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.013820667386148344,
+          "numerator": 2,
+          "rate": 0.05,
+          "upper": 0.16503877369140962
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 2
+      },
+      "safeA": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 40,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.08762160119728664
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 0
+      }
+    },
+    "COMBINED_MEASURABLE_APPROXIMATION": {
+      "cesS": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 38,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.013820667386148344,
+          "numerator": 2,
+          "rate": 0.05,
+          "upper": 0.16503877369140962
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 2
+      },
+      "safeA": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 7,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.6805000966821229,
+          "numerator": 33,
+          "rate": 0.825,
+          "upper": 0.9125458625396408
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 33
+      }
+    },
+    "DIMENSION_MATCH_ONLY": {
+      "cesS": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 38,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.013820667386148344,
+          "numerator": 2,
+          "rate": 0.05,
+          "upper": 0.16503877369140962
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 2
+      },
+      "safeA": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 7,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.6805000966821229,
+          "numerator": 33,
+          "rate": 0.825,
+          "upper": 0.9125458625396408
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 33
+      }
+    },
+    "METADATA_STRIP_ONLY": {
+      "cesS": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 35,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.054595002509454024,
+          "numerator": 5,
+          "rate": 0.125,
+          "upper": 0.26112119838851094
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 5
+      },
+      "safeA": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 1,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 40,
+        "recall": {
+          "denominator": 40,
+          "lower": 0.8711863103652591,
+          "numerator": 39,
+          "rate": 0.975,
+          "upper": 0.9955731684973186
+        },
+        "recordCount": 40,
+        "scoredRecordCount": 40,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 39
+      }
+    }
+  },
+  "syntheticCount": 160,
+  "usesForFit": false,
+  "usesForThreshold": false
+}

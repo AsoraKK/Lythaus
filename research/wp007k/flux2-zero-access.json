@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "lythaus-wp007k-flux2-zero-access-v1",
+  "status": "SEALED",
+  "pixelAccess": false,
+  "thumbnailAccess": false,
+  "decodeAccess": false,
+  "featureExtraction": false,
+  "safeScoring": false,
+  "cesEScoring": false,
+  "cesSScoring": false,
+  "providerCalls": 0,
+  "futureReserveOpened": false,
+  "allowedMetadataOnly": ["identifiers", "hashes", "counts", "family-provenance", "freeze-metadata"],
+  "assertion": "WP007K does not access, regenerate, transform, score, preview or decode FLUX.2."
+}

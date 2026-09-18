@@ -1,0 +1,82 @@
+{
+  "byOperation": {
+    "DOUBLE_Q95_Q85": {
+      "eligibleOriginalSafeHigh": 270,
+      "falseDowngradeOnRetainedSignal": 0,
+      "gateCaughtDestroyed": 270,
+      "gateUnsupported": 270,
+      "signalDestroyed": 270
+    },
+    "Q75_420": {
+      "eligibleOriginalSafeHigh": 270,
+      "falseDowngradeOnRetainedSignal": 6,
+      "gateCaughtDestroyed": 264,
+      "gateUnsupported": 270,
+      "signalDestroyed": 264
+    },
+    "Q85_420": {
+      "eligibleOriginalSafeHigh": 270,
+      "falseDowngradeOnRetainedSignal": 2,
+      "gateCaughtDestroyed": 268,
+      "gateUnsupported": 270,
+      "signalDestroyed": 268
+    },
+    "Q95_420": {
+      "eligibleOriginalSafeHigh": 270,
+      "falseDowngradeOnRetainedSignal": 0,
+      "gateCaughtDestroyed": 270,
+      "gateUnsupported": 270,
+      "signalDestroyed": 270
+    },
+    "Q95_444": {
+      "eligibleOriginalSafeHigh": 270,
+      "falseDowngradeOnRetainedSignal": 2,
+      "gateCaughtDestroyed": 268,
+      "gateUnsupported": 270,
+      "signalDestroyed": 268
+    }
+  },
+  "controlledSyntheticDescendantsFromStrongParents": 1350,
+  "falseDowngradeOnRetainedSafeSignal": {
+    "denominator": 10,
+    "lower": 0.7224672001371107,
+    "numerator": 10,
+    "rate": 1.0,
+    "upper": 0.9999999999999999
+  },
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "frozenRuleSource": "WP007K CES-E specification frozen before confirmation scoring",
+  "interpretation": "CES-E identifies a conservative current-byte regime, not authorship; controlled lineage supplies the degradation target for this validation.",
+  "nativeOriginalApplicabilityCoverage": {
+    "states": {
+      "LIMITED": 416,
+      "UNSUPPORTED": 560
+    },
+    "supportedOrLimited": 416,
+    "total": 976
+  },
+  "originalStateCounts": {
+    "LIMITED": 416,
+    "UNSUPPORTED": 560
+  },
+  "schemaVersion": "lythaus-wp007k-ces-e-applicability-analysis-v1",
+  "signalDestroyed": 1340,
+  "signalDestroyedDetection": {
+    "caughtByLimitedOrUnsupported": {
+      "denominator": 1340,
+      "lower": 0.997141434508156,
+      "numerator": 1340,
+      "rate": 1.0,
+      "upper": 1.0
+    },
+    "caughtByUnsupported": {
+      "denominator": 1340,
+      "lower": 0.997141434508156,
+      "numerator": 1340,
+      "rate": 1.0,
+      "upper": 1.0
+    }
+  },
+  "syntheticOriginalHighParentCount": 135
+}

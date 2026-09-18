@@ -1,0 +1,221 @@
+{
+  "confirmationUntuned": true,
+  "featureSha256": "dfd28891969656a94a1c13a5d9dbbe5376bff71c0184e265499f0da03637ca25",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "groups": {
+    "ORIGINAL_SOURCE": {
+      "auprc": 0.4977666809576607,
+      "auroc": 0.8644565960355435,
+      "fn": 90,
+      "fp": 40,
+      "fpr": {
+        "denominator": 836,
+        "lower": 0.03533222242661822,
+        "numerator": 40,
+        "rate": 0.04784688995215311,
+        "upper": 0.0644978799577346
+      },
+      "recall": {
+        "denominator": 140,
+        "lower": 0.2825610827114282,
+        "numerator": 50,
+        "rate": 0.35714285714285715,
+        "upper": 0.4393549745369755
+      },
+      "recordCount": 976,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 836,
+        "lower": 0.03533222242661822,
+        "numerator": 40,
+        "rate": 0.04784688995215311,
+        "upper": 0.0644978799577346
+      },
+      "tn": 796,
+      "tp": 50
+    },
+    "PILLOW_LIBJPEG": {
+      "auprc": 0.884188987065698,
+      "auroc": 0.8535513392857144,
+      "fn": 534,
+      "fp": 0,
+      "fpr": {
+        "denominator": 640,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.005966467005294152
+      },
+      "recall": {
+        "denominator": 700,
+        "lower": 0.2071225063628403,
+        "numerator": 166,
+        "rate": 0.23714285714285716,
+        "upper": 0.27003247593019747
+      },
+      "recordCount": 1340,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 160,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.02344619517150519
+      },
+      "tn": 640,
+      "tp": 166
+    },
+    "SHARP_LIBVIPS": {
+      "auprc": 0.884188987065698,
+      "auroc": 0.8535513392857144,
+      "fn": 534,
+      "fp": 0,
+      "fpr": {
+        "denominator": 640,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.005966467005294152
+      },
+      "recall": {
+        "denominator": 700,
+        "lower": 0.2071225063628403,
+        "numerator": 166,
+        "rate": 0.23714285714285716,
+        "upper": 0.27003247593019747
+      },
+      "recordCount": 1340,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 160,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.02344619517150519
+      },
+      "tn": 640,
+      "tp": 166
+    }
+  },
+  "model": {
+    "coefficients": [
+      0.11980065068260044,
+      -0.1414150150883304,
+      -0.08101827618213941,
+      0.1883217784566531,
+      -0.28214137585609017,
+      0.2688324193951567,
+      0.13601994246298368,
+      0.07465149120323523,
+      0.09837909861282597,
+      0.06043940103081644,
+      -0.13545372717877854,
+      -0.33254070443574074,
+      -0.23433228896859584,
+      0.2717825914914466
+    ],
+    "devRecordCount": 44,
+    "devSourceFamilyCount": 22,
+    "developmentSourceSha256": "f41cf4e1f252ccfc465e5aaa2076527eae7c684ebbe234e7363904940028b99f",
+    "encoderTrainingRole": "SHARP_LIBVIPS",
+    "featureNames": [
+      "fftLogMagnitudeMean",
+      "fftHighFrequencyEnergyRatio",
+      "fftPhaseCircularCoherence",
+      "fftPhaseMeanAbsolute",
+      "dctDcMean",
+      "dctDcStd",
+      "dctAcL1Mean",
+      "dctAcEnergy",
+      "dctLowFrequencyEnergy",
+      "dctHighFrequencyEnergy",
+      "dctHighToLowEnergyRatio",
+      "dctAcZeroRate",
+      "blockBoundaryRatio",
+      "pixelStd"
+    ],
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "intercept": 0.10963107850958123,
+    "mean": [
+      1.951610318896145,
+      0.054851504667850846,
+      0.01449250874769326,
+      1.5715697394072836,
+      3.3675804618465395,
+      1.359067954937921,
+      0.026606044816604616,
+      0.008007733792282881,
+      0.04388782945799486,
+      0.00053626489065276,
+      0.029996459592519117,
+      0.426238529265873,
+      1.0824550981842063,
+      0.1913174137070117
+    ],
+    "modelId": "CES_S_LINEAR_CONTENT_ONLY",
+    "rightsClass": "RESEARCH_ONLY_NOT_DEPLOYABLE",
+    "safeAUnchanged": true,
+    "scale": [
+      0.3958567246453951,
+      0.10847486518255135,
+      0.015557898129576777,
+      0.03187100324545338,
+      1.4318950069800889,
+      0.49440731947534433,
+      0.01663593970786728,
+      0.006629795383836785,
+      0.036352384227335825,
+      0.0004750640795263445,
+      0.07584284704564796,
+      0.29890373127558195,
+      0.20177261347704536,
+      0.06292864935300833
+    ],
+    "schemaVersion": "lythaus-wp007k-ces-s-linear-model-v1",
+    "threshold": 0.7887192893860979,
+    "thresholdRule": "max(0.5, maximum TRAIN/DEV development-negative probability + epsilon); no confirmation exposure",
+    "trainRecordCount": 76,
+    "trainSourceFamilyCount": 38
+  },
+  "modelSha256": "6e417b327dde4dab5baa026a6dfa893237fa3535dae1dd1c4a02e986161fd036",
+  "overall": {
+    "auprc": 0.7934847279328007,
+    "auroc": 0.8369037389831341,
+    "fn": 1158,
+    "fp": 40,
+    "fpr": {
+      "denominator": 2116,
+      "lower": 0.013912939164445779,
+      "numerator": 40,
+      "rate": 0.01890359168241966,
+      "upper": 0.025637876521240752
+    },
+    "recall": {
+      "denominator": 1540,
+      "lower": 0.22712644972473475,
+      "numerator": 382,
+      "rate": 0.24805194805194805,
+      "upper": 0.2702312643291623
+    },
+    "recordCount": 3656,
+    "sourceLevelWorstCaseFpr": {
+      "denominator": 836,
+      "lower": 0.03533222242661822,
+      "numerator": 40,
+      "rate": 0.04784688995215311,
+      "upper": 0.0644978799577346
+    },
+    "tn": 2076,
+    "tp": 382
+  },
+  "recordCount": 3656,
+  "records": [],
+  "schemaVersion": "lythaus-wp007k-ces-s-evaluation-v1",
+  "uniqueRescue": {
+    "bothCorrect": 48,
+    "bothWrong": 1061,
+    "cesSFalsePositiveSafeNegative": 39,
+    "cesSUniqueCorrect": 334,
+    "safeCorrectCesSWrong": 97,
+    "safeFalsePositiveCesSNegative": 376
+  }
+}

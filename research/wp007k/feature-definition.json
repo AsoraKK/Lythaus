@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "lythaus-wp007k-feature-definition-v1",
+  "ownership": "LYTHAUS_OWNED_DETERMINISTIC_FEATURES",
+  "role": "CES-S_CONTENT_DERIVED_FORENSIC_FEATURES",
+  "featureGroups": {
+    "pixel": ["pixelStd"],
+    "dct": ["dctDcMean", "dctDcStd", "dctAcL1Mean", "dctAcEnergy", "dctLowFrequencyEnergy", "dctHighFrequencyEnergy", "dctHighToLowEnergyRatio", "dctAcZeroRate", "blockBoundaryRatio"],
+    "fft": ["fftLogMagnitudeMean", "fftHighFrequencyEnergyRatio"],
+    "phase": ["fftPhaseCircularCoherence", "fftPhaseMeanAbsolute"]
+  },
+  "primaryCandidate": "CES_S_LINEAR_CONTENT_ONLY",
+  "codecFeaturesNotInPrimaryCandidate": true,
+  "codecFeaturesRole": "CES-E_CONTEXT_ONLY_UNLESS_FUTURE_CROSS_ENCODER_EVIDENCE_JUSTIFIES_NORMALIZATION",
+  "featureSelection": "Predeclared groups; no confirmation-informed feature cherry-picking.",
+  "normalization": "TRAIN-only mean/std for the linear candidate.",
+  "safeAOutputUsedAsTrainingTarget": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

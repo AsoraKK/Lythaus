@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "lythaus-wp007k-protocol-hash-v1",
+  "workPackage": "WP007K",
+  "parentSha": "d6eb253b8e219d1920196fda037bae6b2e3caf4c",
+  "canonicalization": "UTF-8 lines of relativePath=lowercase SHA-256, ordered as listed, terminated by LF",
+  "protocolSha256": "6159133ee2ce386131723d68d52a1e2f76b9b3d0cb493d11caf312add0758fd6",
+  "inputs": [
+    {"path": "research/wp007k/experiment-plan.json", "sha256": "ecb276260e644ff3813c19e049f13ad5e30653b8d88b93bc2e3abda0a5497844"},
+    {"path": "research/wp007k/encoder-regime-freeze.json", "sha256": "cc71a155542c3aa34e3624d64cb2b85d2f118b5984fc39a0de3344f3dc144264"},
+    {"path": "research/wp007k/confirmation-cohort-freeze.json", "sha256": "82fd08981df7e04342591b12347dea344d44e148ff0801de1a383e160f491de0"},
+    {"path": "research/wp007k/development-cohort-freeze.json", "sha256": "f0f50bb95c12069aa7e912dbeb03343b8526d9967d5051e03ed5482e482403bb"},
+    {"path": "research/wp007k/rights-training-manifest.json", "sha256": "6e4fdc41dc55e469592d5f54e4637cd6446ffcf4d7013cc9d10906feee56f3ad"},
+    {"path": "research/wp007k/ces-e-specification.json", "sha256": "e425fde720d30409cadecc99ae1285189842072a439390cc6d8e262ec866a2a7"},
+    {"path": "research/wp007k/feature-definition.json", "sha256": "69b9b0763a222c203b6d01a9ed2f77f2d42be3680fec6b432c8f13762d666c2f"}
+  ],
+  "freezeMeaning": "No confirmation, reserve, SAFE-A, FLUX.1 diagnostic or production control was changed after this protocol was frozen.",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

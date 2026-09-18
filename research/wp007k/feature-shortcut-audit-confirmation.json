@@ -1,0 +1,345 @@
+{
+  "categoricalAssociations": {
+    "encoder": {
+      "ORIGINAL_SOURCE": {
+        "count": 976,
+        "positiveRate": 0.14344262295081966
+      },
+      "PILLOW_LIBJPEG": {
+        "count": 1340,
+        "positiveRate": 0.5223880597014925
+      },
+      "SHARP_LIBVIPS": {
+        "count": 1340,
+        "positiveRate": 0.5223880597014925
+      }
+    },
+    "encoderRole": {
+      "None": {
+        "count": 3656,
+        "positiveRate": 0.4212253829321663
+      }
+    },
+    "generatorFamily": {
+      "BLIP3o-8B": {
+        "count": 220,
+        "positiveRate": 1.0
+      },
+      "Infinity-8B": {
+        "count": 220,
+        "positiveRate": 1.0
+      },
+      "Janus-Pro-7B": {
+        "count": 220,
+        "positiveRate": 1.0
+      },
+      "LongCat-Image": {
+        "count": 220,
+        "positiveRate": 1.0
+      },
+      "None": {
+        "count": 2116,
+        "positiveRate": 0.0
+      },
+      "OmniGen2-7B": {
+        "count": 220,
+        "positiveRate": 1.0
+      },
+      "PixArt-Alpha": {
+        "count": 220,
+        "positiveRate": 1.0
+      },
+      "Qwen-Image-2512": {
+        "count": 220,
+        "positiveRate": 1.0
+      }
+    },
+    "operation": {
+      "DOUBLE_Q95_Q85": {
+        "count": 280,
+        "positiveRate": 1.0
+      },
+      "ORIGINAL": {
+        "count": 976,
+        "positiveRate": 0.14344262295081966
+      },
+      "Q75_420": {
+        "count": 600,
+        "positiveRate": 0.4666666666666667
+      },
+      "Q85_420": {
+        "count": 600,
+        "positiveRate": 0.4666666666666667
+      },
+      "Q95_420": {
+        "count": 600,
+        "positiveRate": 0.4666666666666667
+      },
+      "Q95_444": {
+        "count": 600,
+        "positiveRate": 0.4666666666666667
+      }
+    },
+    "requestedQuality": {
+      "75": {
+        "count": 600,
+        "positiveRate": 0.4666666666666667
+      },
+      "85": {
+        "count": 880,
+        "positiveRate": 0.6363636363636364
+      },
+      "95": {
+        "count": 1200,
+        "positiveRate": 0.4666666666666667
+      },
+      "None": {
+        "count": 976,
+        "positiveRate": 0.14344262295081966
+      }
+    },
+    "requestedSubsampling": {
+      "4:2:0": {
+        "count": 2080,
+        "positiveRate": 0.5384615384615384
+      },
+      "4:4:4": {
+        "count": 600,
+        "positiveRate": 0.4666666666666667
+      },
+      "None": {
+        "count": 976,
+        "positiveRate": 0.14344262295081966
+      }
+    },
+    "sourceSubtype": {
+      "CAMERA_NATIVE": {
+        "count": 560,
+        "positiveRate": 0.0
+      },
+      "CGI": {
+        "count": 135,
+        "positiveRate": 0.0
+      },
+      "CHART": {
+        "count": 169,
+        "positiveRate": 0.0
+      },
+      "COMPOSITE": {
+        "count": 126,
+        "positiveRate": 0.0
+      },
+      "DIAGRAM": {
+        "count": 142,
+        "positiveRate": 0.0
+      },
+      "DIGITAL_ILLUSTRATION": {
+        "count": 144,
+        "positiveRate": 0.0
+      },
+      "GAME_SCREENSHOT": {
+        "count": 135,
+        "positiveRate": 0.0
+      },
+      "MEME": {
+        "count": 126,
+        "positiveRate": 0.0
+      },
+      "MODERN_GENERATED": {
+        "count": 1540,
+        "positiveRate": 1.0
+      },
+      "OTHER_DIGITAL_NON_AI": {
+        "count": 16,
+        "positiveRate": 0.0
+      },
+      "PROCEDURAL_PATTERN": {
+        "count": 126,
+        "positiveRate": 0.0
+      },
+      "TEXT_GRAPHIC": {
+        "count": 142,
+        "positiveRate": 0.0
+      },
+      "THREE_D_RENDER": {
+        "count": 126,
+        "positiveRate": 0.0
+      },
+      "UI_CAPTURE": {
+        "count": 16,
+        "positiveRate": 0.0
+      },
+      "UI_SCREENSHOT": {
+        "count": 121,
+        "positiveRate": 0.0
+      },
+      "VECTOR_GRAPHIC": {
+        "count": 16,
+        "positiveRate": 0.0
+      },
+      "VECTOR_LIKE": {
+        "count": 16,
+        "positiveRate": 0.0
+      }
+    }
+  },
+  "features": {
+    "blockBoundaryRatio": {
+      "meanByLabel": {
+        "0": 1.346027047669072,
+        "1": 1.0751928886104483
+      },
+      "stdByLabel": {
+        "0": 0.6496964051704079,
+        "1": 0.14473790339523904
+      },
+      "truthPearson": -0.25687518671844967
+    },
+    "dctAcEnergy": {
+      "meanByLabel": {
+        "0": 0.009514586396034112,
+        "1": 0.011012263924322186
+      },
+      "stdByLabel": {
+        "0": 0.0120658465095115,
+        "1": 0.008588710848926652
+      },
+      "truthPearson": 0.06869525837383109
+    },
+    "dctAcL1Mean": {
+      "meanByLabel": {
+        "0": 0.018099715051087685,
+        "1": 0.02976500084928333
+      },
+      "stdByLabel": {
+        "0": 0.016702040992531156,
+        "1": 0.018327323942131105
+      },
+      "truthPearson": 0.31416911074571147
+    },
+    "dctAcZeroRate": {
+      "meanByLabel": {
+        "0": 0.7493787003124344,
+        "1": 0.4417227923366316
+      },
+      "stdByLabel": {
+        "0": 0.28900358809635424,
+        "1": 0.17558705601451027
+      },
+      "truthPearson": -0.5228741798849589
+    },
+    "dctDcMean": {
+      "meanByLabel": {
+        "0": 4.447289530492756,
+        "1": 3.583271296311494
+      },
+      "stdByLabel": {
+        "0": 1.9557628058331047,
+        "1": 1.4432496036394442
+      },
+      "truthPearson": -0.2358020317153256
+    },
+    "dctDcStd": {
+      "meanByLabel": {
+        "0": 1.295993050370323,
+        "1": 1.570212893280767
+      },
+      "stdByLabel": {
+        "0": 0.5788853054847267,
+        "1": 0.5003345783986455
+      },
+      "truthPearson": 0.24020411360088412
+    },
+    "dctHighFrequencyEnergy": {
+      "meanByLabel": {
+        "0": 0.000574441461062335,
+        "1": 0.0009598325189200998
+      },
+      "stdByLabel": {
+        "0": 0.0008141260161656572,
+        "1": 0.0014910252754159019
+      },
+      "truthPearson": 0.16339553898770978
+    },
+    "dctHighToLowEnergyRatio": {
+      "meanByLabel": {
+        "0": 0.022048634219985087,
+        "1": 0.016107260085392826
+      },
+      "stdByLabel": {
+        "0": 0.05836364634198505,
+        "1": 0.021596589821045925
+      },
+      "truthPearson": -0.0628801583188727
+    },
+    "dctLowFrequencyEnergy": {
+      "meanByLabel": {
+        "0": 0.05120038708135503,
+        "1": 0.06052783706245102
+      },
+      "stdByLabel": {
+        "0": 0.06422545404548373,
+        "1": 0.04723926340454643
+      },
+      "truthPearson": 0.07958735917002284
+    },
+    "fftHighFrequencyEnergyRatio": {
+      "meanByLabel": {
+        "0": 0.054956453070209715,
+        "1": 0.03566324650445113
+      },
+      "stdByLabel": {
+        "0": 0.07591090940253356,
+        "1": 0.033708542485770716
+      },
+      "truthPearson": -0.15245141706734835
+    },
+    "fftLogMagnitudeMean": {
+      "meanByLabel": {
+        "0": 1.6110851821031067,
+        "1": 2.05016240287231
+      },
+      "stdByLabel": {
+        "0": 0.6301620237057513,
+        "1": 0.5319627288543455
+      },
+      "truthPearson": 0.3444975989012565
+    },
+    "fftPhaseCircularCoherence": {
+      "meanByLabel": {
+        "0": 0.03884923035421806,
+        "1": 0.013978271788548791
+      },
+      "stdByLabel": {
+        "0": 0.1086422742006961,
+        "1": 0.014602856841039739
+      },
+      "truthPearson": -0.1460272228966924
+    },
+    "fftPhaseMeanAbsolute": {
+      "meanByLabel": {
+        "0": 1.4614021412577034,
+        "1": 1.5734301542118985
+      },
+      "stdByLabel": {
+        "0": 0.39483762292710595,
+        "1": 0.046055772542741395
+      },
+      "truthPearson": 0.1802412198016119
+    },
+    "pixelStd": {
+      "meanByLabel": {
+        "0": 0.1876169728148831,
+        "1": 0.22109790183863168
+      },
+      "stdByLabel": {
+        "0": 0.07513705219654773,
+        "1": 0.06627143369817107
+      },
+      "truthPearson": 0.22515599839184455
+    }
+  },
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "schemaVersion": "lythaus-wp007k-feature-shortcut-audit-v1"
+}

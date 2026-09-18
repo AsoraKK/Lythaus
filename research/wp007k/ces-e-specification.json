@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "lythaus-wp007k-ces-e-specification-v1",
+  "component": "CES-E",
+  "role": "EF1_EF4_INPUT_REGIME_CONTEXT",
+  "outputs": [
+    "contentHash",
+    "format",
+    "dimensions",
+    "quantizationTableHash",
+    "quantizationTableStatistics",
+    "sampling",
+    "progressiveOrBaseline",
+    "metadataMarkers",
+    "jpegGridFacts",
+    "knownLineage",
+    "missingness",
+    "toolVersion",
+    "parserVersion",
+    "safeApplicability",
+    "applicabilityReasons"
+  ],
+  "applicabilityStates": ["SUPPORTED", "LIMITED", "UNSUPPORTED", "UNKNOWN"],
+  "frozenRuleVersion": "CES_E_CONSERVATIVE_DQT_BOUNDARY_V1",
+  "frozenRule": {
+    "jpegEstimatedQualityAtOrBelow": 97,
+    "jpegAtOrBelowState": "UNSUPPORTED",
+    "jpegAboveBoundaryState": "LIMITED",
+    "pngState": "LIMITED",
+    "otherState": "UNKNOWN",
+    "qualityEstimateCaveat": "Standard-table-equivalent estimate; not a universal encoder quality number.",
+    "historyCaveat": "Final bytes do not prove first encode, absence of prior JPEG, or complete edit history."
+  },
+  "rules": [
+    "CES-E facts are not authenticity evidence.",
+    "CES-E must not output AI probability, Human-authored, or synthetic truth.",
+    "Codec evidence may reduce SAFE-A authority but may not increase synthetic evidence by itself.",
+    "Missing metadata, JPEG, PNG, double-compression suspicion and sampling do not determine origin.",
+    "SAFE low on unsupported input is INCONCLUSIVE, never HUMAN."
+  ],
+  "developmentOutcomeDefinition": "SAFE_SIGNAL_DESTROYED means an original synthetic parent passed frozen SAFE-A threshold and the controlled descendant does not pass it; genuine instability is tracked separately.",
+  "usesGroundTruthForRuntimeDecision": false,
+  "usesSafeScoreForRuntimeDecision": false,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}
