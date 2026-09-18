@@ -1,0 +1,29 @@
+{
+  "contingency": {
+    "negative|safe_high|ces_high": 1,
+    "negative|safe_high|ces_low": 376,
+    "negative|safe_low|ces_high": 6,
+    "negative|safe_low|ces_low": 1733,
+    "synthetic|safe_high|ces_high": 21,
+    "synthetic|safe_high|ces_low": 124,
+    "synthetic|safe_low|ces_high": 142,
+    "synthetic|safe_low|ces_low": 1253
+  },
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "negativeCount": 2116,
+  "positiveCount": 1540,
+  "schemaVersion": "lythaus-wp007k-error-correlation-v1",
+  "thresholds": {
+    "cesS": 0.7373818778920678,
+    "safeA": 0.5864923000335693
+  },
+  "uniqueRescue": {
+    "bothCorrect": 21,
+    "bothWrong": 1253,
+    "cesSFalsePositiveSafeNegative": 6,
+    "cesSUniqueCorrect": 142,
+    "safeCorrectCesSWrong": 124,
+    "safeFalsePositiveCesSNegative": 376
+  }
+}

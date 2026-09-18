@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "lythaus-wp007k-run-manifest-v1",
+  "workPackage": "WP007K",
+  "parentSha": "d6eb253b8e219d1920196fda037bae6b2e3caf4c",
+  "branch": "agent/wp007k-codec-specialist",
+  "environment": {
+    "os": "Windows",
+    "cpuClass": "Ryzen-7-class",
+    "ramClass": "16GB",
+    "gpu": "NONE",
+    "python": "C:\\Python313\\python.exe 3.13.5",
+    "pythonPath": "EXTERNAL_APPROVED_RUNTIME_lythaus-wp007e-venv-site-packages",
+    "torch": "2.14.0+cpu",
+    "pillow": "12.3.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1",
+    "scikitLearn": "1.9.1",
+    "sharp": "0.35.4",
+    "libvips": "8.18.6",
+    "nodeInstall": "npm ci --ignore-scripts --no-audit --no-fund"
+  },
+  "safeA": {
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "threshold": 0.5864923000335693,
+    "changed": false
+  },
+  "inputs": {
+    "confirmationBaseRecords": 2316,
+    "materializedRecords": 3656,
+    "materializationSha256": "e5789261e3647e7e26083c4c725daef78ecc34e30dce5e5c38d6c1c385890132",
+    "featureRecords": 3656,
+    "featureExtractionSeconds": 224.41086449997965,
+    "safeEmbeddingRecords": 1080,
+    "jpegLabParents": 100,
+    "jpegLabDescendants": 2140,
+    "flux1PublicDiagnostic": 120,
+    "flux1CloudflareDiagnostic": 40
+  },
+  "outputs": {
+    "safeEmbeddingSha256": "1f7ba38e496e695231a86abfd4c76cbd86338717454c40b8da9b2d3056f2019d",
+    "cesSReplay": "research/wp007k/ces-s-independent-replay.json",
+    "jpegInspectorRows": 3656,
+    "jpegInspectorMismatches": 0,
+    "runtimeP95Ms": 31.6267,
+    "cesSModelBytes": 2239
+  },
+  "commands": [
+    "npm ci --ignore-scripts --no-audit --no-fund",
+    "python scripts/authenticity/wp007k_codec_specialist.py",
+    "node scripts/authenticity/wp007k_materialize.mjs",
+    "python scripts/authenticity/wp007k_analyze.py",
+    "node scripts/authenticity/wp007k_inspector_crosscheck.mjs",
+    "python scripts/authenticity/wp007k_runtime_benchmark.py",
+    "npm test -- packages/authenticity/tests/wp007k.test.mjs",
+    "npm run test:authenticity"
+  ],
+  "controls": {
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "futureReserveOpened": false,
+    "productionChanged": false,
+    "newPaidServices": false,
+    "gpuUsed": false
+  }
+}

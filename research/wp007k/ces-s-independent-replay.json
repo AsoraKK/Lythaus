@@ -1,0 +1,14 @@
+{
+  "featureCount": 3656,
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "maxAbsoluteScoreDelta": 0.0,
+  "missingStoredRecords": [],
+  "modelSha256": "611c00be2a1cb641b5bde3844b6242fd4a2eb014c4fdafcc82ea3fe502a8f5ac",
+  "pass": true,
+  "replayedRecordCount": 3656,
+  "schemaVersion": "lythaus-wp007k-ces-s-independent-replay-v1",
+  "storedRecordCount": 3656,
+  "thresholdMismatchCount": 0,
+  "thresholdMismatches": []
+}

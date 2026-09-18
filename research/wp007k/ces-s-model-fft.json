@@ -1,0 +1,41 @@
+{
+  "coefficients": [
+    0.4790534749683939,
+    -0.4519966905563305,
+    -0.0445907492069138,
+    0.05685095088053458
+  ],
+  "devRecordCount": 728,
+  "devSourceFamilyCount": 30,
+  "developmentSourceSha256": "f41cf4e1f252ccfc465e5aaa2076527eae7c684ebbe234e7363904940028b99f",
+  "encoderTrainingRole": "MIXED_DEVELOPMENT",
+  "featureNames": [
+    "fftLogMagnitudeMean",
+    "fftHighFrequencyEnergyRatio",
+    "fftPhaseCircularCoherence",
+    "fftPhaseMeanAbsolute"
+  ],
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "intercept": -0.9276473283961587,
+  "mean": [
+    1.8420996586260132,
+    0.07444190233424831,
+    0.0168827211037868,
+    1.5440975953548923
+  ],
+  "modelId": "CES_S_LINEAR_CODEC_AUGMENTED",
+  "rightsClass": "RESEARCH_ONLY_NOT_DEPLOYABLE",
+  "safeAUnchanged": true,
+  "scale": [
+    0.5580328773123322,
+    0.12469526136761401,
+    0.03135649368825492,
+    0.21358878173703585
+  ],
+  "schemaVersion": "lythaus-wp007k-ces-s-linear-model-v1",
+  "threshold": 0.5,
+  "thresholdRule": "max(0.5, maximum TRAIN/DEV development-negative probability + epsilon); no confirmation exposure",
+  "trainRecordCount": 1512,
+  "trainSourceFamilyCount": 70
+}

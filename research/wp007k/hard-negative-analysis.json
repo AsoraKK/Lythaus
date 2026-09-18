@@ -1,0 +1,826 @@
+{
+  "bySubtype": {
+    "CAMERA_NATIVE": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 7,
+      "fpr": {
+        "denominator": 560,
+        "lower": 0.006067911101262376,
+        "numerator": 7,
+        "rate": 0.0125,
+        "upper": 0.02557477593705959
+      },
+      "negativeCount": 560,
+      "negativeSourceCount": 560,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 560,
+      "scoredRecordCount": 560,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 560,
+        "lower": 0.006067911101262376,
+        "numerator": 7,
+        "rate": 0.0125,
+        "upper": 0.02557477593705959
+      },
+      "tn": 553,
+      "tp": 0
+    },
+    "CGI": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 135,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.02766795201752491
+      },
+      "negativeCount": 135,
+      "negativeSourceCount": 15,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 135,
+      "scoredRecordCount": 135,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 15,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.20388330103584862
+      },
+      "tn": 135,
+      "tp": 0
+    },
+    "CHART": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 169,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.022225332087015413
+      },
+      "negativeCount": 169,
+      "negativeSourceCount": 33,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 169,
+      "scoredRecordCount": 169,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 33,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.10426999754245206
+      },
+      "tn": 169,
+      "tp": 0
+    },
+    "COMPOSITE": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 126,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.029585764482198452
+      },
+      "negativeCount": 126,
+      "negativeSourceCount": 14,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 126,
+      "scoredRecordCount": 126,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 14,
+        "lower": 1.3877787807814457e-17,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.2153108027376358
+      },
+      "tn": 126,
+      "tp": 0
+    },
+    "DIAGRAM": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 142,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.02633996431300811
+      },
+      "negativeCount": 142,
+      "negativeSourceCount": 30,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 142,
+      "scoredRecordCount": 142,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 30,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.11351339317396876
+      },
+      "tn": 142,
+      "tp": 0
+    },
+    "DIGITAL_ILLUSTRATION": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 144,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.025983637143036746
+      },
+      "negativeCount": 144,
+      "negativeSourceCount": 16,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 144,
+      "scoredRecordCount": 144,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "tn": 144,
+      "tp": 0
+    },
+    "GAME_SCREENSHOT": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 135,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.02766795201752491
+      },
+      "negativeCount": 135,
+      "negativeSourceCount": 15,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 135,
+      "scoredRecordCount": 135,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 15,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.20388330103584862
+      },
+      "tn": 135,
+      "tp": 0
+    },
+    "MEME": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 126,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.029585764482198452
+      },
+      "negativeCount": 126,
+      "negativeSourceCount": 14,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 126,
+      "scoredRecordCount": 126,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 14,
+        "lower": 1.3877787807814457e-17,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.2153108027376358
+      },
+      "tn": 126,
+      "tp": 0
+    },
+    "OTHER_DIGITAL_NON_AI": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "negativeCount": 16,
+      "negativeSourceCount": 16,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 16,
+      "scoredRecordCount": 16,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "tn": 16,
+      "tp": 0
+    },
+    "PROCEDURAL_PATTERN": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 126,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.029585764482198452
+      },
+      "negativeCount": 126,
+      "negativeSourceCount": 14,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 126,
+      "scoredRecordCount": 126,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 14,
+        "lower": 1.3877787807814457e-17,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.2153108027376358
+      },
+      "tn": 126,
+      "tp": 0
+    },
+    "TEXT_GRAPHIC": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 142,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.02633996431300811
+      },
+      "negativeCount": 142,
+      "negativeSourceCount": 30,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 142,
+      "scoredRecordCount": 142,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 30,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.11351339317396876
+      },
+      "tn": 142,
+      "tp": 0
+    },
+    "THREE_D_RENDER": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 126,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.029585764482198452
+      },
+      "negativeCount": 126,
+      "negativeSourceCount": 14,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 126,
+      "scoredRecordCount": 126,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 14,
+        "lower": 1.3877787807814457e-17,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.2153108027376358
+      },
+      "tn": 126,
+      "tp": 0
+    },
+    "UI_CAPTURE": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "negativeCount": 16,
+      "negativeSourceCount": 16,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 16,
+      "scoredRecordCount": 16,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "tn": 16,
+      "tp": 0
+    },
+    "UI_SCREENSHOT": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 121,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.03077069794747827
+      },
+      "negativeCount": 121,
+      "negativeSourceCount": 17,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 121,
+      "scoredRecordCount": 121,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 17,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1843181350088518
+      },
+      "tn": 121,
+      "tp": 0
+    },
+    "VECTOR_GRAPHIC": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "negativeCount": 16,
+      "negativeSourceCount": 16,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 16,
+      "scoredRecordCount": 16,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "tn": 16,
+      "tp": 0
+    },
+    "VECTOR_LIKE": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 0,
+      "fpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "negativeCount": 16,
+      "negativeSourceCount": 16,
+      "positiveCount": 0,
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 16,
+      "scoredRecordCount": 16,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 16,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.1936076805344365
+      },
+      "tn": 16,
+      "tp": 0
+    }
+  },
+  "falsePositiveRecords": [
+    {
+      "cesSScore": 0.7868393917919971,
+      "codecFacts": {
+        "dqtMax": 27.0,
+        "dqtMean": 15.9140625,
+        "dqtStd": 7.54261574296966,
+        "estimatedQuality": 89,
+        "format": "JPEG",
+        "height": 5569,
+        "metadataMarkers": [
+          "dpi",
+          "icc_profile",
+          "jfif",
+          "jfif_density",
+          "jfif_unit",
+          "jfif_version",
+          "progression",
+          "progressive"
+        ],
+        "progressive": true,
+        "qualityMatchError": 0.0,
+        "quantizationTableCount": 2,
+        "quantizationTableHash": "6b3cde706c8cd310c2243f4dd504cf45de72251064bda0d064df685c3673d021",
+        "sampling": "4:2:0",
+        "width": 3661
+      },
+      "encoder": "ORIGINAL_SOURCE",
+      "operation": "ORIGINAL",
+      "parentSampleId": "UNSPLASH_5QPvy1JG9h8",
+      "recordId": "UNSPLASH_5QPvy1JG9h8__ORIGINAL",
+      "safeRawScore": 0.051198408007621765,
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_5QPvy1JG9h8",
+      "sourceSubtype": "CAMERA_NATIVE"
+    },
+    {
+      "cesSScore": 0.8006205731756199,
+      "codecFacts": {
+        "dqtMax": 27.0,
+        "dqtMean": 15.9140625,
+        "dqtStd": 7.54261574296966,
+        "estimatedQuality": 89,
+        "format": "JPEG",
+        "height": 4032,
+        "metadataMarkers": [
+          "dpi",
+          "icc_profile",
+          "jfif",
+          "jfif_density",
+          "jfif_unit",
+          "jfif_version",
+          "progression",
+          "progressive"
+        ],
+        "progressive": true,
+        "qualityMatchError": 0.0,
+        "quantizationTableCount": 2,
+        "quantizationTableHash": "6b3cde706c8cd310c2243f4dd504cf45de72251064bda0d064df685c3673d021",
+        "sampling": "4:2:0",
+        "width": 3024
+      },
+      "encoder": "ORIGINAL_SOURCE",
+      "operation": "ORIGINAL",
+      "parentSampleId": "UNSPLASH_Qf9llMfx9ik",
+      "recordId": "UNSPLASH_Qf9llMfx9ik__ORIGINAL",
+      "safeRawScore": 0.06155039370059967,
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Qf9llMfx9ik",
+      "sourceSubtype": "CAMERA_NATIVE"
+    },
+    {
+      "cesSScore": 0.9356594063984232,
+      "codecFacts": {
+        "dqtMax": 27.0,
+        "dqtMean": 15.9140625,
+        "dqtStd": 7.54261574296966,
+        "estimatedQuality": 89,
+        "format": "JPEG",
+        "height": 4872,
+        "metadataMarkers": [
+          "dpi",
+          "icc_profile",
+          "jfif",
+          "jfif_density",
+          "jfif_unit",
+          "jfif_version",
+          "progression",
+          "progressive"
+        ],
+        "progressive": true,
+        "qualityMatchError": 0.0,
+        "quantizationTableCount": 2,
+        "quantizationTableHash": "6b3cde706c8cd310c2243f4dd504cf45de72251064bda0d064df685c3673d021",
+        "sampling": "4:2:0",
+        "width": 3248
+      },
+      "encoder": "ORIGINAL_SOURCE",
+      "operation": "ORIGINAL",
+      "parentSampleId": "UNSPLASH_RIrYF6_HwOY",
+      "recordId": "UNSPLASH_RIrYF6_HwOY__ORIGINAL",
+      "safeRawScore": 0.021058283746242523,
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_RIrYF6_HwOY",
+      "sourceSubtype": "CAMERA_NATIVE"
+    },
+    {
+      "cesSScore": 0.8150423386043427,
+      "codecFacts": {
+        "dqtMax": 27.0,
+        "dqtMean": 15.9140625,
+        "dqtStd": 7.54261574296966,
+        "estimatedQuality": 89,
+        "format": "JPEG",
+        "height": 4443,
+        "metadataMarkers": [
+          "dpi",
+          "icc_profile",
+          "jfif",
+          "jfif_density",
+          "jfif_unit",
+          "jfif_version",
+          "progression",
+          "progressive"
+        ],
+        "progressive": true,
+        "qualityMatchError": 0.0,
+        "quantizationTableCount": 2,
+        "quantizationTableHash": "6b3cde706c8cd310c2243f4dd504cf45de72251064bda0d064df685c3673d021",
+        "sampling": "4:2:0",
+        "width": 2962
+      },
+      "encoder": "ORIGINAL_SOURCE",
+      "operation": "ORIGINAL",
+      "parentSampleId": "UNSPLASH_Y1SfXGHC7ys",
+      "recordId": "UNSPLASH_Y1SfXGHC7ys__ORIGINAL",
+      "safeRawScore": 0.023091085255146027,
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Y1SfXGHC7ys",
+      "sourceSubtype": "CAMERA_NATIVE"
+    },
+    {
+      "cesSScore": 0.7662811816905728,
+      "codecFacts": {
+        "dqtMax": 27.0,
+        "dqtMean": 15.9140625,
+        "dqtStd": 7.54261574296966,
+        "estimatedQuality": 89,
+        "format": "JPEG",
+        "height": 8192,
+        "metadataMarkers": [
+          "dpi",
+          "icc_profile",
+          "jfif",
+          "jfif_density",
+          "jfif_unit",
+          "jfif_version",
+          "progression",
+          "progressive"
+        ],
+        "progressive": true,
+        "qualityMatchError": 0.0,
+        "quantizationTableCount": 2,
+        "quantizationTableHash": "6b3cde706c8cd310c2243f4dd504cf45de72251064bda0d064df685c3673d021",
+        "sampling": "4:2:0",
+        "width": 5464
+      },
+      "encoder": "ORIGINAL_SOURCE",
+      "operation": "ORIGINAL",
+      "parentSampleId": "UNSPLASH__iDp2FgwJ_c",
+      "recordId": "UNSPLASH__iDp2FgwJ_c__ORIGINAL",
+      "safeRawScore": 0.02739761210978031,
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__iDp2FgwJ_c",
+      "sourceSubtype": "CAMERA_NATIVE"
+    },
+    {
+      "cesSScore": 0.7620821262201983,
+      "codecFacts": {
+        "dqtMax": 27.0,
+        "dqtMean": 15.9140625,
+        "dqtStd": 7.54261574296966,
+        "estimatedQuality": 89,
+        "format": "JPEG",
+        "height": 3804,
+        "metadataMarkers": [
+          "dpi",
+          "icc_profile",
+          "jfif",
+          "jfif_density",
+          "jfif_unit",
+          "jfif_version",
+          "progression",
+          "progressive"
+        ],
+        "progressive": true,
+        "qualityMatchError": 0.0,
+        "quantizationTableCount": 2,
+        "quantizationTableHash": "6b3cde706c8cd310c2243f4dd504cf45de72251064bda0d064df685c3673d021",
+        "sampling": "4:2:0",
+        "width": 2139
+      },
+      "encoder": "ORIGINAL_SOURCE",
+      "operation": "ORIGINAL",
+      "parentSampleId": "UNSPLASH_aOzBoVjtoYE",
+      "recordId": "UNSPLASH_aOzBoVjtoYE__ORIGINAL",
+      "safeRawScore": 0.03283032402396202,
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_aOzBoVjtoYE",
+      "sourceSubtype": "CAMERA_NATIVE"
+    },
+    {
+      "cesSScore": 0.8014183042952867,
+      "codecFacts": {
+        "dqtMax": 27.0,
+        "dqtMean": 15.9140625,
+        "dqtStd": 7.54261574296966,
+        "estimatedQuality": 89,
+        "format": "JPEG",
+        "height": 3264,
+        "metadataMarkers": [
+          "dpi",
+          "icc_profile",
+          "jfif",
+          "jfif_density",
+          "jfif_unit",
+          "jfif_version",
+          "progression",
+          "progressive"
+        ],
+        "progressive": true,
+        "qualityMatchError": 0.0,
+        "quantizationTableCount": 2,
+        "quantizationTableHash": "6b3cde706c8cd310c2243f4dd504cf45de72251064bda0d064df685c3673d021",
+        "sampling": "4:2:0",
+        "width": 4912
+      },
+      "encoder": "ORIGINAL_SOURCE",
+      "operation": "ORIGINAL",
+      "parentSampleId": "UNSPLASH_eMcMZGw2fcQ",
+      "recordId": "UNSPLASH_eMcMZGw2fcQ__ORIGINAL",
+      "safeRawScore": 0.7979731559753418,
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_eMcMZGw2fcQ",
+      "sourceSubtype": "CAMERA_NATIVE"
+    }
+  ],
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "interpretation": "All false positives remain in the denominator; no visual or score-based exclusions were applied.",
+  "overall": {
+    "auprc": null,
+    "auroc": null,
+    "fn": 0,
+    "fp": 7,
+    "fpr": {
+      "denominator": 2116,
+      "lower": 0.0016033807356958343,
+      "numerator": 7,
+      "rate": 0.0033081285444234404,
+      "upper": 0.006813031136265406
+    },
+    "negativeCount": 2116,
+    "negativeSourceCount": 836,
+    "positiveCount": 0,
+    "recall": {
+      "denominator": 0,
+      "lower": null,
+      "numerator": 0,
+      "rate": null,
+      "upper": null
+    },
+    "recordCount": 2116,
+    "scoredRecordCount": 2116,
+    "sourceLevelWorstCaseFpr": {
+      "denominator": 836,
+      "lower": 0.004061790132251281,
+      "numerator": 7,
+      "rate": 0.008373205741626795,
+      "upper": 0.01718205134914821
+    },
+    "tn": 2109,
+    "tp": 0
+  },
+  "schemaVersion": "lythaus-wp007k-hard-negative-analysis-v1"
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "lythaus-wp007k-rights-training-manifest-v1",
+  "modelArtifactRightsDefault": "RESEARCH_ONLY_NOT_DEPLOYABLE",
+  "tracks": {
+    "research": {
+      "allowed": true,
+      "sources": [
+        {
+          "source": "WP007J-R1 development media",
+          "rightsClass": "INHERITED_RESEARCH_EVALUATION; NOT_FRESH_CONFIRMATION",
+          "trainingAllowed": "bounded research fitting permitted by prior package role",
+          "commercialTraining": "NOT_ESTABLISHED"
+        },
+        {
+          "source": "T2I-CoReBench historical individual files used in WP007H",
+          "rightsClass": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+          "trainingAllowed": "research evaluation/fitting only under package controls",
+          "commercialTraining": "NOT_ESTABLISHED"
+        },
+        {
+          "source": "Lythaus programmatic controlled digital negatives",
+          "rightsClass": "LYTHAUS_CONTROLLED",
+          "trainingAllowed": "TRAINING_ALLOWED_EXPLICIT",
+          "commercialTraining": "OWNER_CONTROLLED"
+        }
+      ]
+    },
+    "commercialPath": {
+      "allowed": false,
+      "reason": "T2I output-use and SAFE checkpoint deployment rights remain unresolved; any trained CES-S is research-only until owner/legal review establishes a deployment path."
+    }
+  },
+  "safeA": {
+    "code": "Apache-2.0 as inherited audit",
+    "checkpoint": "RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED",
+    "trainingOrDistillation": "NOT_AUTHORIZED_IN_WP007K"
+  },
+  "mediaHandling": {
+    "sourceMediaInGit": false,
+    "redistribution": "NOT_AUTHORIZED",
+    "bulkTensorInGit": false,
+    "rightsReviewBeforeTraining": true
+  }
+}

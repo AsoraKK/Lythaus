@@ -1,0 +1,315 @@
+{
+  "confirmationUntuned": true,
+  "familyHeldOut": {
+    "fitFamilies": [
+      "Gemini-2.0-Flash",
+      "GoT-R1-7B",
+      "Nano-Banana",
+      "SD-3.5-Large"
+    ],
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "heldOutFamilies": [
+      "BLIP3o-8B",
+      "Infinity-8B",
+      "Janus-Pro-7B",
+      "LongCat-Image",
+      "OmniGen2-7B",
+      "PixArt-Alpha",
+      "Qwen-Image-2512"
+    ],
+    "heldOutFamilyInterpretation": "All seven WP007H non-FLUX confirmation families were excluded from CES-S fitting; this is a family-held-out confirmation panel, not seven refits that expose confirmation data.",
+    "macroRecall": 0.10584415584415584,
+    "minimumRecall": 0.0,
+    "perFamily": {
+      "BLIP3o-8B": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 190,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 220,
+        "recall": {
+          "denominator": 220,
+          "lower": 0.09721661085910067,
+          "numerator": 30,
+          "rate": 0.13636363636363635,
+          "upper": 0.1879917645555434
+        },
+        "recordCount": 220,
+        "scoredRecordCount": 220,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 30
+      },
+      "Infinity-8B": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 191,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 220,
+        "recall": {
+          "denominator": 220,
+          "lower": 0.0933715195411752,
+          "numerator": 29,
+          "rate": 0.1318181818181818,
+          "upper": 0.1829019605661519
+        },
+        "recordCount": 220,
+        "scoredRecordCount": 220,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 29
+      },
+      "Janus-Pro-7B": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 220,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 220,
+        "recall": {
+          "denominator": 220,
+          "lower": 0.0,
+          "numerator": 0,
+          "rate": 0.0,
+          "upper": 0.01716151619513562
+        },
+        "recordCount": 220,
+        "scoredRecordCount": 220,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 0
+      },
+      "LongCat-Image": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 188,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 220,
+        "recall": {
+          "denominator": 220,
+          "lower": 0.10495415507478015,
+          "numerator": 32,
+          "rate": 0.14545454545454545,
+          "upper": 0.1981240109544978
+        },
+        "recordCount": 220,
+        "scoredRecordCount": 220,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 32
+      },
+      "OmniGen2-7B": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 176,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 220,
+        "recall": {
+          "denominator": 220,
+          "lower": 0.1524953525885687,
+          "numerator": 44,
+          "rate": 0.2,
+          "upper": 0.2578015571285127
+        },
+        "recordCount": 220,
+        "scoredRecordCount": 220,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 44
+      },
+      "PixArt-Alpha": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 204,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 220,
+        "recall": {
+          "denominator": 220,
+          "lower": 0.04525896745118634,
+          "numerator": 16,
+          "rate": 0.07272727272727272,
+          "upper": 0.11486087366102044
+        },
+        "recordCount": 220,
+        "scoredRecordCount": 220,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 16
+      },
+      "Qwen-Image-2512": {
+        "auprc": null,
+        "auroc": null,
+        "fn": 208,
+        "fp": 0,
+        "fpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "negativeCount": 0,
+        "negativeSourceCount": 0,
+        "positiveCount": 220,
+        "recall": {
+          "denominator": 220,
+          "lower": 0.03147425933660221,
+          "numerator": 12,
+          "rate": 0.05454545454545454,
+          "upper": 0.0929060005463368
+        },
+        "recordCount": 220,
+        "scoredRecordCount": 220,
+        "sourceLevelWorstCaseFpr": {
+          "denominator": 0,
+          "lower": null,
+          "numerator": 0,
+          "rate": null,
+          "upper": null
+        },
+        "tn": 0,
+        "tp": 12
+      }
+    },
+    "schemaVersion": "lythaus-wp007k-generator-held-out-v1",
+    "zeroRecallFamilyCount": 1
+  },
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "overall": {
+    "auprc": 0.763186550436201,
+    "auroc": 0.8176094935310436,
+    "fn": 1377,
+    "fp": 7,
+    "fpr": {
+      "denominator": 2116,
+      "lower": 0.0016033807356958343,
+      "numerator": 7,
+      "rate": 0.0033081285444234404,
+      "upper": 0.006813031136265406
+    },
+    "negativeCount": 2116,
+    "negativeSourceCount": 836,
+    "positiveCount": 1540,
+    "recall": {
+      "denominator": 1540,
+      "lower": 0.09144790120300464,
+      "numerator": 163,
+      "rate": 0.10584415584415584,
+      "upper": 0.12220192464935495
+    },
+    "recordCount": 3656,
+    "scoredRecordCount": 3656,
+    "sourceLevelWorstCaseFpr": {
+      "denominator": 836,
+      "lower": 0.004061790132251281,
+      "numerator": 7,
+      "rate": 0.008373205741626795,
+      "upper": 0.01718205134914821
+    },
+    "tn": 2109,
+    "tp": 163
+  },
+  "qualificationDisposition": "CES_S_CODEC_SPECIALIST_NOT_QUALIFIED",
+  "schemaVersion": "lythaus-wp007k-ces-s-confirmation-summary-v1",
+  "source": "ces-s-confirmation-results-v2.json",
+  "sourceSha256": "022644546335180354eaa641056a71ffb69b00034e84310ad3ba7c1d1ef5ef34",
+  "uniqueRescue": {
+    "bothCorrect": 21,
+    "bothWrong": 1253,
+    "cesSFalsePositiveSafeNegative": 6,
+    "cesSUniqueCorrect": 142,
+    "safeCorrectCesSWrong": 124,
+    "safeFalsePositiveCesSNegative": 376
+  }
+}

@@ -1,0 +1,32 @@
+# WP007K 110% Completion Self-Audit
+
+Parent: `d6eb253b8e219d1920196fda037bae6b2e3caf4c`
+SAFE-A: frozen; upstream `4e998724651b227def64f5be0cd60c0aa1552c35`; checkpoint `b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e`; threshold `0.5864923000335693`.
+
+`110%` means the primary experiment ran, rights/leakage controls passed, the result was independently checked or replayed, and the final report cites the result. A negative result is complete when those conditions are met.
+
+| Achievable | Core experiment | Independent validation | Shortcut audit | Rights checked | 110% | Evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| Repository/runtime | Exact parent/PR lineage, approved CPU runtime, caches and SAFE-A identity audited | Git/PR metadata, checkpoint hash and runtime import checks | N/A | Approved runtime/media inventory recorded | YES | `current-state-audit.json`, `run-manifest.json` |
+| CES-E | Deterministic codec facts and applicability states run on 3,656 real-media rows | Inspector cross-check: 3,656 rows, 0 mismatches | CES-E emits no authenticity label | Dataset/parser roles recorded | YES | `ces-e-specification.json`, `ces-e-confirmation-analysis.json`, `jpeg-inspector-validation-wp007k.json` |
+| Dataset rights | TRAIN/DEV/CONFIRM/RESERVE and model rights roles frozen | Manifest/hash/disjointness checks | Training candidate separated from codec metadata | Research-only CES-S status explicit | YES | `rights-training-manifest.json`, `protocol-hash.json`, `confirmation-cohort-freeze.json` |
+| Feature extraction | Pixel/DCT/FFT/phase features computed on real media | Repeated deterministic replay and finite-value checks | Feature associations and ablations recorded | Lythaus-owned deterministic implementation | YES | `feature-definition.json`, `development-features.json`, `phase-dct-validation.json` |
+| Shortcut audit | Codec/content association audit and removal ablations run | Independent grouped summaries and unseen-encoder tests | Encoder identity/format/quality risk measured; candidate rejected for cross-encoder weakness | No proprietary checkpoint used | YES | `feature-shortcut-audit-development.json`, `feature-shortcut-audit-confirmation.json`, `encoder-leave-one-out.json` |
+| CES-S training | Low-capacity source-family-weighted logistic candidate fit from TRAIN/DEV only | Frozen model replay: max score delta 0, threshold mismatches 0 | No SAFE target, no generic ensemble, no confirmation fitting | Model card labels `RESEARCH_ONLY_NOT_DEPLOYABLE` | YES | `ces-s-training-manifest.json`, `ces-s-model-card.json`, `ces-s-independent-replay.json` |
+| Source-family split | Descendants kept within one role; source-level denominator used | Confirmation manifest and source-level aggregation | Same-parent leakage checks passed | Provenance/rights roles preserved | YES | `development-cohort-freeze.json`, `confirmation-cohort-freeze.json`, `hard-negative-analysis.json` |
+| Encoder leave-one-out | Pillow↔Sharp held-out evaluation completed | Per-encoder output files and aggregate replay | Sharp-trained model reached 4.78% source FPR on Pillow group; codec-resilient qualification rejected | Both local paths recorded | YES | `encoder-leave-one-out.json`, `encoder-loo-pillow-to-confirm-v2.json`, `encoder-loo-sharp-to-confirm-v2.json` |
+| Generator leave-one-out | Seven-family confirmation and family-held-out summaries completed | Per-family recalls and post-hoc challenge read separately | Seedream-4/Imagen-4 gaps retained; no memorization claim | Generator roles recorded | YES | `generator-leave-one-out.json`, `posthoc-challenge-result.json` |
+| Hard negatives | 836 negative source families, camera and digital/hard strata evaluated | Wilson intervals and structured FP analysis | No post-score exclusions | Rights/source subtype inventory recorded | YES | `hard-negative-analysis.json`, `ces-s-confirmation-results.json` |
+| Unique rescue | SAFE-A/CES-S contingency, transformation and generator rescue measured | Independent aggregate and exact replay | No averaging/voting; induced FPs reported | Model rights class retained | YES | `safe-vs-ces-unique-rescue.json`, `error-correlation.json`, `posthoc-challenge-result.json` |
+| Runtime | CES-E, feature extraction and CES-S inference benchmarked on CPU | Repeated timing with p50/p95/max | No uncontrolled concurrency | Local-only, no paid compute | YES | `runtime-benchmark.json`, `run-manifest.json` |
+| Evidence-grade policy | Native, re-encoded, compound and PNG-related regimes mapped | Frozen CES-E application and held-out source-family analysis | Codec facts never mapped to authorship | Production boundary unchanged | YES | `eligibility-analysis.json`, `final-report.md` |
+| FLUX.1 diagnostic | Frozen candidate scored on consumed public/provider diagnostics only | Separate post-hoc manifest/result recomputation | No fitting or threshold changes after exposure | Consumed diagnostic role preserved | YES | `flux1-diagnostic-manifest.json`, `flux1-diagnostic-result.json` |
+| FLUX.2 zero access | Sealed reserve preserved throughout | Manifest and run controls assert zero pixels/calls | No reserve path in scripts | Sealed status retained | YES | `flux2-zero-access.json`, `validation-summary.json` |
+| Regression validation | Focused and historical authenticity suites plus static checks run | 362/362 authenticity; focused 9/9; syntax/schema/scans pass | Two unrelated inherited failures isolated and not changed | No production files changed | YES | `validation-summary.json` |
+| PR creation | Dedicated branch/commit and unmerged PR from verified parent | GitHub metadata and final head check | No merge, no rebase, no production mutation | Review-only publication | IN PROGRESS | Will be completed by the final PR and updated ledger |
+
+## Honest completion boundary
+
+The CES-S candidate is not promoted. Its observed confirmation source-level FPR was 7/836 (0.837%; Wilson 0.406%–1.718%), while recall was 163/1,540 (10.58%). It provided 142 unique correct positives in the full materialized matrix but failed cross-encoder and generator-transfer requirements. The scientific conclusion is therefore a validated negative qualification, not a product launch.
+
+The two repository checks that remain red are unchanged baseline conditions: one native-architecture production-workflow expectation and one retired-provider scan of the inherited WP007J-R1 report. They are documented in `validation-summary.json`; historical research reports and production code were not rewritten.

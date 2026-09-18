@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "lythaus-wp007k-experiment-plan-v1",
+  "workPackage": "WP007K",
+  "objective": "Qualify deterministic codec applicability evidence and, only if justified, a small Lythaus-owned codec-resilient synthetic specialist without modifying SAFE-A.",
+  "hypotheses": [
+    "H1: current-byte codec facts can identify some regimes in which SAFE-A synthetic evidence is materially degraded, but they cannot prove origin.",
+    "H2: a small content-derived specialist may rescue some SAFE-A JPEG misses without learning encoder identity.",
+    "H3: source-family and encoder-held-out performance will determine whether any rescue is genuine rather than a codec shortcut.",
+    "H4: Seedream-4 and Imagen-4 may remain a separate generator-domain problem even if JPEG rescue succeeds."
+  ],
+  "roles": {
+    "development": "WP007J-R1 real-media JPEG laboratory; score/feature-inspected and never described as independent confirmation.",
+    "confirmation": "Seven non-FLUX WP007H generator families plus score-blind negative families; no threshold or feature selection after opening.",
+    "futureReserve": "WP007H SD-3-Medium and Seedream-4.5 remain unopened; FLUX.2 remains sealed.",
+    "diagnostic": "Previously consumed FLUX.1 public/provider material only after candidate freeze; no tuning."
+  },
+  "modelRules": {
+    "safeA": "Frozen weights, preprocessing and threshold.",
+    "cesE": "Deterministic codec/file facts only; cannot emit AI/authorship labels.",
+    "cesS": "Lythaus-owned low-capacity linear specialist only if TRAIN/DEV supports it; no ensemble, vote or average.",
+    "threshold": "Select only from TRAIN/DEV using a specificity-first rule; CONFIRM is single-use.",
+    "featureSelection": "Predeclared content features and TRAIN/DEV stability; no confirmation-informed cherry-picking."
+  },
+  "gates": {
+    "minimumEncoderPaths": 2,
+    "minimumConfirmationGeneratorFamilies": 6,
+    "sourceFamilyDisjointnessRequired": true,
+    "encoderLeaveOneOutRequired": true,
+    "generatorLeaveOneOutRequired": true,
+    "sourceLevelFprTarget": 0.01,
+    "subgroupFprWarning": 0.02,
+    "runtimeCeilingMsP95": 5000,
+    "minimumUniqueSafeRescueForSupportCandidate": "material and repeated across held-out families/encoders; no fixed percentage substituted for evidence",
+    "catastrophicShortcutStop": "If content features cannot survive removal of encoder/format/quality cues or held-out encoder performance collapses, reject CES-S as a codec specialist."
+  },
+  "plannedExperiments": [
+    "Deterministic CES-E extraction and controlled applicability evaluation.",
+    "Lythaus-owned content feature extraction on R1 development and fresh confirmation media.",
+    "Linear CES-S development with source-family weighting and shortcut ablations.",
+    "Encoder leave-one-out and generator leave-one-out confirmation.",
+    "SAFE-A versus CES-S unique rescue and error-correlation analysis.",
+    "CPU runtime, reproducibility, rights and evidence-snapshot validation.",
+    "Post-freeze FLUX.1 diagnostic only."
+  ],
+  "prohibitions": [
+    "No SAFE-A modification or retuning.",
+    "No generic ensemble or meta-calibrator.",
+    "No FLUX.2 bytes, pixels, transforms, features, scoring or provider calls.",
+    "No production routes, labels, enforcement, database or Safety/Judge changes.",
+    "No source media, weights or bulk tensors in Git."
+  ],
+  "status": "FROZEN_BEFORE_NEW_FEATURE_SELECTION"
+}

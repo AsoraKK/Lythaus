@@ -1,0 +1,1306 @@
+{
+  "byOperationEncoder": {
+    "DOUBLE_Q95_Q85|PILLOW_LIBJPEG": {
+      "blockBoundaryRatio": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 1.1006721099077923,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.08212608676548894,
+        "syntheticToNegativeDelta": null
+      },
+      "dctAcEnergy": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.010972673950360801,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 5.000867326991013e-05,
+        "syntheticToNegativeDelta": null
+      },
+      "dctAcL1Mean": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.028978283433858203,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0030267168953392078,
+        "syntheticToNegativeDelta": null
+      },
+      "dctAcZeroRate": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.4974456579506803,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.3113684275793651,
+        "syntheticToNegativeDelta": null
+      },
+      "dctDcMean": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 3.5836283263305324,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0008341471354162966,
+        "syntheticToNegativeDelta": null
+      },
+      "dctDcStd": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 1.5693706389524391,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.001179467791421085,
+        "syntheticToNegativeDelta": null
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.0009730537457760339,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 2.3701210788029618e-05,
+        "syntheticToNegativeDelta": null
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.016259406945234995,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0006053490889178705,
+        "syntheticToNegativeDelta": null
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.06029345520453655,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0001941523279447334,
+        "syntheticToNegativeDelta": null
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.0357117053973943,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.000303747604529368,
+        "syntheticToNegativeDelta": null
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 2.052802723616387,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.018686753845754467,
+        "syntheticToNegativeDelta": null
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.014021230344912297,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0002948660462175484,
+        "syntheticToNegativeDelta": null
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 1.573498331966743,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.002766754226077972,
+        "syntheticToNegativeDelta": null
+      },
+      "pixelStd": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.22092813807281073,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.00023612443393201954,
+        "syntheticToNegativeDelta": null
+      }
+    },
+    "DOUBLE_Q95_Q85|SHARP_LIBVIPS": {
+      "blockBoundaryRatio": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 1.1006721099077923,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.08212608676548894,
+        "syntheticToNegativeDelta": null
+      },
+      "dctAcEnergy": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.010972673950360801,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 5.000867326991013e-05,
+        "syntheticToNegativeDelta": null
+      },
+      "dctAcL1Mean": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.028978283433858203,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0030267168953392078,
+        "syntheticToNegativeDelta": null
+      },
+      "dctAcZeroRate": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.4974456579506803,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.3113684275793651,
+        "syntheticToNegativeDelta": null
+      },
+      "dctDcMean": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 3.5836283263305324,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0008341471354162966,
+        "syntheticToNegativeDelta": null
+      },
+      "dctDcStd": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 1.5693706389524391,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.001179467791421085,
+        "syntheticToNegativeDelta": null
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.0009730537457760339,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 2.3701210788029618e-05,
+        "syntheticToNegativeDelta": null
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.016259406945234995,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0006053490889178705,
+        "syntheticToNegativeDelta": null
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.06029345520453655,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0001941523279447334,
+        "syntheticToNegativeDelta": null
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.0357117053973943,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.000303747604529368,
+        "syntheticToNegativeDelta": null
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 2.052802723616387,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.018686753845754467,
+        "syntheticToNegativeDelta": null
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.014021230344912297,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.0002948660462175484,
+        "syntheticToNegativeDelta": null
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 1.573498331966743,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.002766754226077972,
+        "syntheticToNegativeDelta": null
+      },
+      "pixelStd": {
+        "auprc": null,
+        "auroc": null,
+        "meanNegative": null,
+        "meanSynthetic": 0.22092813807281073,
+        "medianAbsoluteParentDeltaNegative": null,
+        "medianAbsoluteParentDeltaSynthetic": 0.00023612443393201954,
+        "syntheticToNegativeDelta": null
+      }
+    },
+    "Q75_420|PILLOW_LIBJPEG": {
+      "blockBoundaryRatio": {
+        "auprc": 0.38008144730502647,
+        "auroc": 0.3995089285714286,
+        "meanNegative": 1.3433061856421697,
+        "meanSynthetic": 1.1658857987184443,
+        "medianAbsoluteParentDeltaNegative": 0.13073543353947248,
+        "medianAbsoluteParentDeltaSynthetic": 0.13658897348619087,
+        "syntheticToNegativeDelta": -0.17742038692372541
+      },
+      "dctAcEnergy": {
+        "auprc": 0.49515887407887427,
+        "auroc": 0.5719196428571429,
+        "meanNegative": 0.011783652780668012,
+        "meanSynthetic": 0.010967532017657964,
+        "medianAbsoluteParentDeltaNegative": 5.7873765495866734e-05,
+        "medianAbsoluteParentDeltaSynthetic": 4.8839954861301747e-05,
+        "syntheticToNegativeDelta": -0.0008161207630100475
+      },
+      "dctAcL1Mean": {
+        "auprc": 0.661979532734818,
+        "auroc": 0.7139285714285715,
+        "meanNegative": 0.016584477073858045,
+        "meanSynthetic": 0.02741659480614243,
+        "medianAbsoluteParentDeltaNegative": 0.0006111201551609931,
+        "medianAbsoluteParentDeltaSynthetic": 0.004310222580271536,
+        "syntheticToNegativeDelta": 0.010832117732284385
+      },
+      "dctAcZeroRate": {
+        "auprc": 0.29164064222271574,
+        "auroc": 0.06464285714285715,
+        "meanNegative": 0.8946433415488592,
+        "meanSynthetic": 0.5536810427295918,
+        "medianAbsoluteParentDeltaNegative": 0.004247271825396803,
+        "medianAbsoluteParentDeltaSynthetic": 0.365753658234127,
+        "syntheticToNegativeDelta": -0.3409622988192673
+      },
+      "dctDcMean": {
+        "auprc": 0.3606683620694012,
+        "auroc": 0.3243303571428572,
+        "meanNegative": 4.656732743207146,
+        "meanSynthetic": 3.5835819259344364,
+        "medianAbsoluteParentDeltaNegative": 0.001035922181372495,
+        "medianAbsoluteParentDeltaSynthetic": 0.0008161956188723618,
+        "syntheticToNegativeDelta": -1.07315081727271
+      },
+      "dctDcStd": {
+        "auprc": 0.5211801212787559,
+        "auroc": 0.5673660714285714,
+        "meanNegative": 1.4542209956402743,
+        "meanSynthetic": 1.569348548108533,
+        "medianAbsoluteParentDeltaNegative": 0.00043496424372579945,
+        "medianAbsoluteParentDeltaSynthetic": 0.0012643569003841781,
+        "syntheticToNegativeDelta": 0.11512755246825868
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": 0.5448815908581001,
+        "auroc": 0.48638392857142854,
+        "meanNegative": 0.0006086235565509284,
+        "meanSynthetic": 0.0009365042264104546,
+        "medianAbsoluteParentDeltaNegative": 2.750280691284459e-05,
+        "medianAbsoluteParentDeltaSynthetic": 4.530539150625694e-05,
+        "syntheticToNegativeDelta": 0.00032788066985952626
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": 0.47415882672331366,
+        "auroc": 0.3967857142857143,
+        "meanNegative": 0.015181615425987338,
+        "meanSynthetic": 0.01536918282639053,
+        "medianAbsoluteParentDeltaNegative": 0.0008080878333790384,
+        "medianAbsoluteParentDeltaSynthetic": 0.001014539706401858,
+        "syntheticToNegativeDelta": 0.0001875674004031911
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": 0.4950077192171964,
+        "auroc": 0.5755803571428572,
+        "meanNegative": 0.06390813650265358,
+        "meanSynthetic": 0.060238826588770965,
+        "medianAbsoluteParentDeltaNegative": 0.00033840000213284684,
+        "medianAbsoluteParentDeltaSynthetic": 0.00026757826830670593,
+        "syntheticToNegativeDelta": -0.003669309913882611
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": 0.4072272970481133,
+        "auroc": 0.40482142857142855,
+        "meanNegative": 0.05184739450517285,
+        "meanSynthetic": 0.035725821368924646,
+        "medianAbsoluteParentDeltaNegative": 0.0004267080283275066,
+        "medianAbsoluteParentDeltaSynthetic": 0.00035134220046628434,
+        "syntheticToNegativeDelta": -0.016121573136248207
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": 0.7143666867552804,
+        "auroc": 0.6684374999999999,
+        "meanNegative": 1.678011220450325,
+        "meanSynthetic": 2.0433047939070312,
+        "medianAbsoluteParentDeltaNegative": 0.03813568370381082,
+        "medianAbsoluteParentDeltaSynthetic": 0.016893756112974945,
+        "syntheticToNegativeDelta": 0.3652935734567062
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": 0.39233070792293445,
+        "auroc": 0.358125,
+        "meanNegative": 0.04833041098163928,
+        "meanSynthetic": 0.01409505515106583,
+        "medianAbsoluteParentDeltaNegative": 0.0002695334471748759,
+        "medianAbsoluteParentDeltaSynthetic": 0.0003683666212551584,
+        "syntheticToNegativeDelta": -0.03423535583057345
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": 0.5604832565180902,
+        "auroc": 0.5853571428571429,
+        "meanNegative": 1.410422906030718,
+        "meanSynthetic": 1.5726859057158933,
+        "medianAbsoluteParentDeltaNegative": 0.001711011069498114,
+        "medianAbsoluteParentDeltaSynthetic": 0.002432139640620057,
+        "syntheticToNegativeDelta": 0.1622629996851752
+      },
+      "pixelStd": {
+        "auprc": 0.5211807213590356,
+        "auroc": 0.5327678571428571,
+        "meanNegative": 0.2119363520640826,
+        "meanSynthetic": 0.2209132042072865,
+        "medianAbsoluteParentDeltaNegative": 0.00015451915890696277,
+        "medianAbsoluteParentDeltaSynthetic": 0.00024777192370410706,
+        "syntheticToNegativeDelta": 0.0089768521432039
+      }
+    },
+    "Q75_420|SHARP_LIBVIPS": {
+      "blockBoundaryRatio": {
+        "auprc": 0.38008144730502647,
+        "auroc": 0.3995089285714286,
+        "meanNegative": 1.3433061856421697,
+        "meanSynthetic": 1.1658857987184443,
+        "medianAbsoluteParentDeltaNegative": 0.13073543353947248,
+        "medianAbsoluteParentDeltaSynthetic": 0.13658897348619087,
+        "syntheticToNegativeDelta": -0.17742038692372541
+      },
+      "dctAcEnergy": {
+        "auprc": 0.49515887407887427,
+        "auroc": 0.5719196428571429,
+        "meanNegative": 0.011783652780668012,
+        "meanSynthetic": 0.010967532017657964,
+        "medianAbsoluteParentDeltaNegative": 5.7873765495866734e-05,
+        "medianAbsoluteParentDeltaSynthetic": 4.8839954861301747e-05,
+        "syntheticToNegativeDelta": -0.0008161207630100475
+      },
+      "dctAcL1Mean": {
+        "auprc": 0.661979532734818,
+        "auroc": 0.7139285714285715,
+        "meanNegative": 0.016584477073858045,
+        "meanSynthetic": 0.02741659480614243,
+        "medianAbsoluteParentDeltaNegative": 0.0006111201551609931,
+        "medianAbsoluteParentDeltaSynthetic": 0.004310222580271536,
+        "syntheticToNegativeDelta": 0.010832117732284385
+      },
+      "dctAcZeroRate": {
+        "auprc": 0.29164064222271574,
+        "auroc": 0.06464285714285715,
+        "meanNegative": 0.8946433415488592,
+        "meanSynthetic": 0.5536810427295918,
+        "medianAbsoluteParentDeltaNegative": 0.004247271825396803,
+        "medianAbsoluteParentDeltaSynthetic": 0.365753658234127,
+        "syntheticToNegativeDelta": -0.3409622988192673
+      },
+      "dctDcMean": {
+        "auprc": 0.3606683620694012,
+        "auroc": 0.3243303571428572,
+        "meanNegative": 4.656732743207146,
+        "meanSynthetic": 3.5835819259344364,
+        "medianAbsoluteParentDeltaNegative": 0.001035922181372495,
+        "medianAbsoluteParentDeltaSynthetic": 0.0008161956188723618,
+        "syntheticToNegativeDelta": -1.07315081727271
+      },
+      "dctDcStd": {
+        "auprc": 0.5211801212787559,
+        "auroc": 0.5673660714285714,
+        "meanNegative": 1.4542209956402743,
+        "meanSynthetic": 1.569348548108533,
+        "medianAbsoluteParentDeltaNegative": 0.00043496424372579945,
+        "medianAbsoluteParentDeltaSynthetic": 0.0012643569003841781,
+        "syntheticToNegativeDelta": 0.11512755246825868
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": 0.5448815908581001,
+        "auroc": 0.48638392857142854,
+        "meanNegative": 0.0006086235565509284,
+        "meanSynthetic": 0.0009365042264104546,
+        "medianAbsoluteParentDeltaNegative": 2.750280691284459e-05,
+        "medianAbsoluteParentDeltaSynthetic": 4.530539150625694e-05,
+        "syntheticToNegativeDelta": 0.00032788066985952626
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": 0.47415882672331366,
+        "auroc": 0.3967857142857143,
+        "meanNegative": 0.015181615425987338,
+        "meanSynthetic": 0.01536918282639053,
+        "medianAbsoluteParentDeltaNegative": 0.0008080878333790384,
+        "medianAbsoluteParentDeltaSynthetic": 0.001014539706401858,
+        "syntheticToNegativeDelta": 0.0001875674004031911
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": 0.4950077192171964,
+        "auroc": 0.5755803571428572,
+        "meanNegative": 0.06390813650265358,
+        "meanSynthetic": 0.060238826588770965,
+        "medianAbsoluteParentDeltaNegative": 0.00033840000213284684,
+        "medianAbsoluteParentDeltaSynthetic": 0.00026757826830670593,
+        "syntheticToNegativeDelta": -0.003669309913882611
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": 0.4072272970481133,
+        "auroc": 0.40482142857142855,
+        "meanNegative": 0.05184739450517285,
+        "meanSynthetic": 0.035725821368924646,
+        "medianAbsoluteParentDeltaNegative": 0.0004267080283275066,
+        "medianAbsoluteParentDeltaSynthetic": 0.00035134220046628434,
+        "syntheticToNegativeDelta": -0.016121573136248207
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": 0.7143666867552804,
+        "auroc": 0.6684374999999999,
+        "meanNegative": 1.678011220450325,
+        "meanSynthetic": 2.0433047939070312,
+        "medianAbsoluteParentDeltaNegative": 0.03813568370381082,
+        "medianAbsoluteParentDeltaSynthetic": 0.016893756112974945,
+        "syntheticToNegativeDelta": 0.3652935734567062
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": 0.39233070792293445,
+        "auroc": 0.358125,
+        "meanNegative": 0.04833041098163928,
+        "meanSynthetic": 0.01409505515106583,
+        "medianAbsoluteParentDeltaNegative": 0.0002695334471748759,
+        "medianAbsoluteParentDeltaSynthetic": 0.0003683666212551584,
+        "syntheticToNegativeDelta": -0.03423535583057345
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": 0.5604832565180902,
+        "auroc": 0.5853571428571429,
+        "meanNegative": 1.410422906030718,
+        "meanSynthetic": 1.5726859057158933,
+        "medianAbsoluteParentDeltaNegative": 0.001711011069498114,
+        "medianAbsoluteParentDeltaSynthetic": 0.002432139640620057,
+        "syntheticToNegativeDelta": 0.1622629996851752
+      },
+      "pixelStd": {
+        "auprc": 0.5211807213590356,
+        "auroc": 0.5327678571428571,
+        "meanNegative": 0.2119363520640826,
+        "meanSynthetic": 0.2209132042072865,
+        "medianAbsoluteParentDeltaNegative": 0.00015451915890696277,
+        "medianAbsoluteParentDeltaSynthetic": 0.00024777192370410706,
+        "syntheticToNegativeDelta": 0.0089768521432039
+      }
+    },
+    "Q85_420|PILLOW_LIBJPEG": {
+      "blockBoundaryRatio": {
+        "auprc": 0.35494763175529315,
+        "auroc": 0.33013392857142854,
+        "meanNegative": 1.3595672853340317,
+        "meanSynthetic": 1.0988946153972072,
+        "medianAbsoluteParentDeltaNegative": 0.09688509892200758,
+        "medianAbsoluteParentDeltaSynthetic": 0.07926188797379052,
+        "syntheticToNegativeDelta": -0.2606726699368245
+      },
+      "dctAcEnergy": {
+        "auprc": 0.4948464202309184,
+        "auroc": 0.5717410714285713,
+        "meanNegative": 0.01182848220659164,
+        "meanSynthetic": 0.011007397055672165,
+        "medianAbsoluteParentDeltaNegative": 3.0170807866056106e-05,
+        "medianAbsoluteParentDeltaSynthetic": 3.6107841286790406e-05,
+        "syntheticToNegativeDelta": -0.000821085150919474
+      },
+      "dctAcL1Mean": {
+        "auprc": 0.6715929735616473,
+        "auroc": 0.7236160714285713,
+        "meanNegative": 0.01714825310354897,
+        "meanSynthetic": 0.02902902149157652,
+        "medianAbsoluteParentDeltaNegative": 0.00026265450695312203,
+        "medianAbsoluteParentDeltaSynthetic": 0.0029709872253198856,
+        "syntheticToNegativeDelta": 0.011880768388027551
+      },
+      "dctAcZeroRate": {
+        "auprc": 0.28834848250339223,
+        "auroc": 0.04370535714285715,
+        "meanNegative": 0.8942306276351687,
+        "meanSynthetic": 0.4988883574263038,
+        "medianAbsoluteParentDeltaNegative": 0.004154265873015817,
+        "medianAbsoluteParentDeltaSynthetic": 0.3130967881944444,
+        "syntheticToNegativeDelta": -0.3953422702088649
+      },
+      "dctDcMean": {
+        "auprc": 0.3606365076502666,
+        "auroc": 0.3242410714285714,
+        "meanNegative": 4.657149353027345,
+        "meanSynthetic": 3.583445302925859,
+        "medianAbsoluteParentDeltaNegative": 0.0008762733609062323,
+        "medianAbsoluteParentDeltaSynthetic": 0.0006060431985297488,
+        "syntheticToNegativeDelta": -1.0737040501014858
+      },
+      "dctDcStd": {
+        "auprc": 0.5213247790850837,
+        "auroc": 0.5674107142857143,
+        "meanNegative": 1.4542963593846252,
+        "meanSynthetic": 1.5699048305199903,
+        "medianAbsoluteParentDeltaNegative": 0.000489302488238752,
+        "medianAbsoluteParentDeltaSynthetic": 0.0009135471013400065,
+        "syntheticToNegativeDelta": 0.1156084711353651
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": 0.5518733635668855,
+        "auroc": 0.5040178571428572,
+        "meanNegative": 0.0006314819534936682,
+        "meanSynthetic": 0.0009757450230919832,
+        "medianAbsoluteParentDeltaNegative": 2.437350637077404e-05,
+        "medianAbsoluteParentDeltaSynthetic": 2.2519881921448257e-05,
+        "syntheticToNegativeDelta": 0.000344263069598315
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": 0.4926187840631447,
+        "auroc": 0.41058035714285707,
+        "meanNegative": 0.015251767241820152,
+        "meanSynthetic": 0.016277084086430398,
+        "medianAbsoluteParentDeltaNegative": 0.0008568171756355445,
+        "medianAbsoluteParentDeltaSynthetic": 0.0005800721082585647,
+        "syntheticToNegativeDelta": 0.0010253168446102464
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": 0.4946627296594751,
+        "auroc": 0.5750892857142857,
+        "meanNegative": 0.06418816118431606,
+        "meanSynthetic": 0.060445113983804255,
+        "medianAbsoluteParentDeltaNegative": 0.0001572252732090374,
+        "medianAbsoluteParentDeltaSynthetic": 0.00018123141440103824,
+        "syntheticToNegativeDelta": -0.003743047200511801
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": 0.4086363554488239,
+        "auroc": 0.4088839285714285,
+        "meanNegative": 0.05184624438431192,
+        "meanSynthetic": 0.03583121291268014,
+        "medianAbsoluteParentDeltaNegative": 0.00039012056732948275,
+        "medianAbsoluteParentDeltaSynthetic": 0.0003360291380679198,
+        "syntheticToNegativeDelta": -0.01601503147163178
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": 0.7282424258385443,
+        "auroc": 0.6829017857142857,
+        "meanNegative": 1.66576903561212,
+        "meanSynthetic": 2.053436025858954,
+        "medianAbsoluteParentDeltaNegative": 0.034716729339899444,
+        "medianAbsoluteParentDeltaSynthetic": 0.01905155322780705,
+        "syntheticToNegativeDelta": 0.38766699024683415
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": 0.39054424486663925,
+        "auroc": 0.3537053571428571,
+        "meanNegative": 0.0482475840028321,
+        "meanSynthetic": 0.013978894336908496,
+        "medianAbsoluteParentDeltaNegative": 0.00019262636225863584,
+        "medianAbsoluteParentDeltaSynthetic": 0.00025248336714784204,
+        "syntheticToNegativeDelta": -0.0342686896659236
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": 0.5645667304805358,
+        "auroc": 0.5807589285714285,
+        "meanNegative": 1.4106710410396477,
+        "meanSynthetic": 1.573482020486933,
+        "medianAbsoluteParentDeltaNegative": 0.0013307475164878735,
+        "medianAbsoluteParentDeltaSynthetic": 0.002494332706882707,
+        "syntheticToNegativeDelta": 0.1628109794472854
+      },
+      "pixelStd": {
+        "auprc": 0.5215765340370127,
+        "auroc": 0.5329017857142858,
+        "meanNegative": 0.21203616370727074,
+        "meanSynthetic": 0.22105507037677882,
+        "medianAbsoluteParentDeltaNegative": 9.35137221536389e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.00016844177839543673,
+        "syntheticToNegativeDelta": 0.009018906669508081
+      }
+    },
+    "Q85_420|SHARP_LIBVIPS": {
+      "blockBoundaryRatio": {
+        "auprc": 0.35494763175529315,
+        "auroc": 0.33013392857142854,
+        "meanNegative": 1.3595672853340317,
+        "meanSynthetic": 1.0988946153972072,
+        "medianAbsoluteParentDeltaNegative": 0.09688509892200758,
+        "medianAbsoluteParentDeltaSynthetic": 0.07926188797379052,
+        "syntheticToNegativeDelta": -0.2606726699368245
+      },
+      "dctAcEnergy": {
+        "auprc": 0.4948464202309184,
+        "auroc": 0.5717410714285713,
+        "meanNegative": 0.01182848220659164,
+        "meanSynthetic": 0.011007397055672165,
+        "medianAbsoluteParentDeltaNegative": 3.0170807866056106e-05,
+        "medianAbsoluteParentDeltaSynthetic": 3.6107841286790406e-05,
+        "syntheticToNegativeDelta": -0.000821085150919474
+      },
+      "dctAcL1Mean": {
+        "auprc": 0.6715929735616473,
+        "auroc": 0.7236160714285713,
+        "meanNegative": 0.01714825310354897,
+        "meanSynthetic": 0.02902902149157652,
+        "medianAbsoluteParentDeltaNegative": 0.00026265450695312203,
+        "medianAbsoluteParentDeltaSynthetic": 0.0029709872253198856,
+        "syntheticToNegativeDelta": 0.011880768388027551
+      },
+      "dctAcZeroRate": {
+        "auprc": 0.28834848250339223,
+        "auroc": 0.04370535714285715,
+        "meanNegative": 0.8942306276351687,
+        "meanSynthetic": 0.4988883574263038,
+        "medianAbsoluteParentDeltaNegative": 0.004154265873015817,
+        "medianAbsoluteParentDeltaSynthetic": 0.3130967881944444,
+        "syntheticToNegativeDelta": -0.3953422702088649
+      },
+      "dctDcMean": {
+        "auprc": 0.3606365076502666,
+        "auroc": 0.3242410714285714,
+        "meanNegative": 4.657149353027345,
+        "meanSynthetic": 3.583445302925859,
+        "medianAbsoluteParentDeltaNegative": 0.0008762733609062323,
+        "medianAbsoluteParentDeltaSynthetic": 0.0006060431985297488,
+        "syntheticToNegativeDelta": -1.0737040501014858
+      },
+      "dctDcStd": {
+        "auprc": 0.5213247790850837,
+        "auroc": 0.5674107142857143,
+        "meanNegative": 1.4542963593846252,
+        "meanSynthetic": 1.5699048305199903,
+        "medianAbsoluteParentDeltaNegative": 0.000489302488238752,
+        "medianAbsoluteParentDeltaSynthetic": 0.0009135471013400065,
+        "syntheticToNegativeDelta": 0.1156084711353651
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": 0.5518733635668855,
+        "auroc": 0.5040178571428572,
+        "meanNegative": 0.0006314819534936682,
+        "meanSynthetic": 0.0009757450230919832,
+        "medianAbsoluteParentDeltaNegative": 2.437350637077404e-05,
+        "medianAbsoluteParentDeltaSynthetic": 2.2519881921448257e-05,
+        "syntheticToNegativeDelta": 0.000344263069598315
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": 0.4926187840631447,
+        "auroc": 0.41058035714285707,
+        "meanNegative": 0.015251767241820152,
+        "meanSynthetic": 0.016277084086430398,
+        "medianAbsoluteParentDeltaNegative": 0.0008568171756355445,
+        "medianAbsoluteParentDeltaSynthetic": 0.0005800721082585647,
+        "syntheticToNegativeDelta": 0.0010253168446102464
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": 0.4946627296594751,
+        "auroc": 0.5750892857142857,
+        "meanNegative": 0.06418816118431606,
+        "meanSynthetic": 0.060445113983804255,
+        "medianAbsoluteParentDeltaNegative": 0.0001572252732090374,
+        "medianAbsoluteParentDeltaSynthetic": 0.00018123141440103824,
+        "syntheticToNegativeDelta": -0.003743047200511801
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": 0.4086363554488239,
+        "auroc": 0.4088839285714285,
+        "meanNegative": 0.05184624438431192,
+        "meanSynthetic": 0.03583121291268014,
+        "medianAbsoluteParentDeltaNegative": 0.00039012056732948275,
+        "medianAbsoluteParentDeltaSynthetic": 0.0003360291380679198,
+        "syntheticToNegativeDelta": -0.01601503147163178
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": 0.7282424258385443,
+        "auroc": 0.6829017857142857,
+        "meanNegative": 1.66576903561212,
+        "meanSynthetic": 2.053436025858954,
+        "medianAbsoluteParentDeltaNegative": 0.034716729339899444,
+        "medianAbsoluteParentDeltaSynthetic": 0.01905155322780705,
+        "syntheticToNegativeDelta": 0.38766699024683415
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": 0.39054424486663925,
+        "auroc": 0.3537053571428571,
+        "meanNegative": 0.0482475840028321,
+        "meanSynthetic": 0.013978894336908496,
+        "medianAbsoluteParentDeltaNegative": 0.00019262636225863584,
+        "medianAbsoluteParentDeltaSynthetic": 0.00025248336714784204,
+        "syntheticToNegativeDelta": -0.0342686896659236
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": 0.5645667304805358,
+        "auroc": 0.5807589285714285,
+        "meanNegative": 1.4106710410396477,
+        "meanSynthetic": 1.573482020486933,
+        "medianAbsoluteParentDeltaNegative": 0.0013307475164878735,
+        "medianAbsoluteParentDeltaSynthetic": 0.002494332706882707,
+        "syntheticToNegativeDelta": 0.1628109794472854
+      },
+      "pixelStd": {
+        "auprc": 0.5215765340370127,
+        "auroc": 0.5329017857142858,
+        "meanNegative": 0.21203616370727074,
+        "meanSynthetic": 0.22105507037677882,
+        "medianAbsoluteParentDeltaNegative": 9.35137221536389e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.00016844177839543673,
+        "syntheticToNegativeDelta": 0.009018906669508081
+      }
+    },
+    "Q95_420|PILLOW_LIBJPEG": {
+      "blockBoundaryRatio": {
+        "auprc": 0.3411213306450956,
+        "auroc": 0.26879464285714283,
+        "meanNegative": 1.4322937270828144,
+        "meanSynthetic": 1.0258905261920188,
+        "medianAbsoluteParentDeltaNegative": 0.04240784597240044,
+        "medianAbsoluteParentDeltaSynthetic": 0.019079100751987765,
+        "syntheticToNegativeDelta": -0.4064032008907956
+      },
+      "dctAcEnergy": {
+        "auprc": 0.49542551892659126,
+        "auroc": 0.5726339285714286,
+        "meanNegative": 0.011836506993238526,
+        "meanSynthetic": 0.011023176214855922,
+        "medianAbsoluteParentDeltaNegative": 1.5370645690278815e-05,
+        "medianAbsoluteParentDeltaSynthetic": 2.1319359981616243e-05,
+        "syntheticToNegativeDelta": -0.0008133307783826042
+      },
+      "dctAcL1Mean": {
+        "auprc": 0.6913664575249485,
+        "auroc": 0.744642857142857,
+        "meanNegative": 0.017530099266577746,
+        "meanSynthetic": 0.031108163252260658,
+        "medianAbsoluteParentDeltaNegative": 3.426489804349807e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.000937050840082959,
+        "syntheticToNegativeDelta": 0.013578063985682912
+      },
+      "dctAcZeroRate": {
+        "auprc": 0.28497279938319237,
+        "auroc": 0.023705357142857143,
+        "meanNegative": 0.8884008014012899,
+        "meanSynthetic": 0.38933908198696143,
+        "medianAbsoluteParentDeltaNegative": 0.0017671130952381375,
+        "medianAbsoluteParentDeltaSynthetic": 0.20951140873015872,
+        "syntheticToNegativeDelta": -0.4990617194143284
+      },
+      "dctDcMean": {
+        "auprc": 0.36063786345044535,
+        "auroc": 0.3242410714285714,
+        "meanNegative": 4.658072719199986,
+        "meanSynthetic": 3.583067808177959,
+        "medianAbsoluteParentDeltaNegative": 0.00026257084865211056,
+        "medianAbsoluteParentDeltaSynthetic": 0.0003044577205879584,
+        "syntheticToNegativeDelta": -1.0750049110220266
+      },
+      "dctDcStd": {
+        "auprc": 0.5215112729440904,
+        "auroc": 0.5675000000000001,
+        "meanNegative": 1.4544230833916973,
+        "meanSynthetic": 1.5706722733203877,
+        "medianAbsoluteParentDeltaNegative": 0.0001247290952834379,
+        "medianAbsoluteParentDeltaSynthetic": 0.00039788027000442483,
+        "syntheticToNegativeDelta": 0.11624918992869038
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": 0.5693557651738036,
+        "auroc": 0.5307142857142857,
+        "meanNegative": 0.0005861697669451986,
+        "meanSynthetic": 0.0009583800880760206,
+        "medianAbsoluteParentDeltaNegative": 6.665068841259751e-06,
+        "medianAbsoluteParentDeltaSynthetic": 1.079509562249375e-05,
+        "syntheticToNegativeDelta": 0.000372210321130822
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": 0.5070048732178871,
+        "auroc": 0.43781250000000005,
+        "meanNegative": 0.014259001262146714,
+        "meanSynthetic": 0.016320296717621297,
+        "medianAbsoluteParentDeltaNegative": 0.00025681584792712746,
+        "medianAbsoluteParentDeltaSynthetic": 0.0002532343407270869,
+        "syntheticToNegativeDelta": 0.002061295455474583
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": 0.4946075458328491,
+        "auroc": 0.5752232142857143,
+        "meanNegative": 0.06436243853754305,
+        "meanSynthetic": 0.06065517261104321,
+        "medianAbsoluteParentDeltaNegative": 5.6493618107952316e-05,
+        "medianAbsoluteParentDeltaSynthetic": 7.521863696391407e-05,
+        "syntheticToNegativeDelta": -0.0037072659264998364
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": 0.4105227600396185,
+        "auroc": 0.4133482142857143,
+        "meanNegative": 0.05128807369928503,
+        "meanSynthetic": 0.035499671777212014,
+        "medianAbsoluteParentDeltaNegative": 0.00022440823371368442,
+        "medianAbsoluteParentDeltaSynthetic": 0.00019525463556576902,
+        "syntheticToNegativeDelta": -0.015788401922073016
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": 0.7488331744062161,
+        "auroc": 0.7075892857142857,
+        "meanNegative": 1.6309760114415688,
+        "meanSynthetic": 2.0518280409536835,
+        "medianAbsoluteParentDeltaNegative": 0.005121529285104565,
+        "medianAbsoluteParentDeltaSynthetic": 0.011043720959193815,
+        "syntheticToNegativeDelta": 0.42085202951211476
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": 0.3878882374982283,
+        "auroc": 0.34897321428571426,
+        "meanNegative": 0.04840765445002673,
+        "meanSynthetic": 0.013906832066552811,
+        "medianAbsoluteParentDeltaNegative": 5.521612514685758e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.0001351035132435537,
+        "syntheticToNegativeDelta": -0.03450082238347392
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": 0.5668520670066794,
+        "auroc": 0.5899553571428572,
+        "meanNegative": 1.410575419686467,
+        "meanSynthetic": 1.573681857147488,
+        "medianAbsoluteParentDeltaNegative": 0.000723501657847514,
+        "medianAbsoluteParentDeltaSynthetic": 0.0014865180194550964,
+        "syntheticToNegativeDelta": 0.16310643746102094
+      },
+      "pixelStd": {
+        "auprc": 0.5214025545139257,
+        "auroc": 0.5329910714285715,
+        "meanNegative": 0.21207228340568657,
+        "meanSynthetic": 0.22116984165903775,
+        "medianAbsoluteParentDeltaNegative": 5.196644910868131e-05,
+        "medianAbsoluteParentDeltaSynthetic": 7.785230718012487e-05,
+        "syntheticToNegativeDelta": 0.009097558253351179
+      }
+    },
+    "Q95_420|SHARP_LIBVIPS": {
+      "blockBoundaryRatio": {
+        "auprc": 0.3411213306450956,
+        "auroc": 0.26879464285714283,
+        "meanNegative": 1.4322937270828144,
+        "meanSynthetic": 1.0258905261920188,
+        "medianAbsoluteParentDeltaNegative": 0.04240784597240044,
+        "medianAbsoluteParentDeltaSynthetic": 0.019079100751987765,
+        "syntheticToNegativeDelta": -0.4064032008907956
+      },
+      "dctAcEnergy": {
+        "auprc": 0.49542551892659126,
+        "auroc": 0.5726339285714286,
+        "meanNegative": 0.011836506993238526,
+        "meanSynthetic": 0.011023176214855922,
+        "medianAbsoluteParentDeltaNegative": 1.5370645690278815e-05,
+        "medianAbsoluteParentDeltaSynthetic": 2.1319359981616243e-05,
+        "syntheticToNegativeDelta": -0.0008133307783826042
+      },
+      "dctAcL1Mean": {
+        "auprc": 0.6913664575249485,
+        "auroc": 0.744642857142857,
+        "meanNegative": 0.017530099266577746,
+        "meanSynthetic": 0.031108163252260658,
+        "medianAbsoluteParentDeltaNegative": 3.426489804349807e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.000937050840082959,
+        "syntheticToNegativeDelta": 0.013578063985682912
+      },
+      "dctAcZeroRate": {
+        "auprc": 0.28497279938319237,
+        "auroc": 0.023705357142857143,
+        "meanNegative": 0.8884008014012899,
+        "meanSynthetic": 0.38933908198696143,
+        "medianAbsoluteParentDeltaNegative": 0.0017671130952381375,
+        "medianAbsoluteParentDeltaSynthetic": 0.20951140873015872,
+        "syntheticToNegativeDelta": -0.4990617194143284
+      },
+      "dctDcMean": {
+        "auprc": 0.36063786345044535,
+        "auroc": 0.3242410714285714,
+        "meanNegative": 4.658072719199986,
+        "meanSynthetic": 3.583067808177959,
+        "medianAbsoluteParentDeltaNegative": 0.00026257084865211056,
+        "medianAbsoluteParentDeltaSynthetic": 0.0003044577205879584,
+        "syntheticToNegativeDelta": -1.0750049110220266
+      },
+      "dctDcStd": {
+        "auprc": 0.5215112729440904,
+        "auroc": 0.5675000000000001,
+        "meanNegative": 1.4544230833916973,
+        "meanSynthetic": 1.5706722733203877,
+        "medianAbsoluteParentDeltaNegative": 0.0001247290952834379,
+        "medianAbsoluteParentDeltaSynthetic": 0.00039788027000442483,
+        "syntheticToNegativeDelta": 0.11624918992869038
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": 0.5693557651738036,
+        "auroc": 0.5307142857142857,
+        "meanNegative": 0.0005861697669451986,
+        "meanSynthetic": 0.0009583800880760206,
+        "medianAbsoluteParentDeltaNegative": 6.665068841259751e-06,
+        "medianAbsoluteParentDeltaSynthetic": 1.079509562249375e-05,
+        "syntheticToNegativeDelta": 0.000372210321130822
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": 0.5070048732178871,
+        "auroc": 0.43781250000000005,
+        "meanNegative": 0.014259001262146714,
+        "meanSynthetic": 0.016320296717621297,
+        "medianAbsoluteParentDeltaNegative": 0.00025681584792712746,
+        "medianAbsoluteParentDeltaSynthetic": 0.0002532343407270869,
+        "syntheticToNegativeDelta": 0.002061295455474583
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": 0.4946075458328491,
+        "auroc": 0.5752232142857143,
+        "meanNegative": 0.06436243853754305,
+        "meanSynthetic": 0.06065517261104321,
+        "medianAbsoluteParentDeltaNegative": 5.6493618107952316e-05,
+        "medianAbsoluteParentDeltaSynthetic": 7.521863696391407e-05,
+        "syntheticToNegativeDelta": -0.0037072659264998364
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": 0.4105227600396185,
+        "auroc": 0.4133482142857143,
+        "meanNegative": 0.05128807369928503,
+        "meanSynthetic": 0.035499671777212014,
+        "medianAbsoluteParentDeltaNegative": 0.00022440823371368442,
+        "medianAbsoluteParentDeltaSynthetic": 0.00019525463556576902,
+        "syntheticToNegativeDelta": -0.015788401922073016
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": 0.7488331744062161,
+        "auroc": 0.7075892857142857,
+        "meanNegative": 1.6309760114415688,
+        "meanSynthetic": 2.0518280409536835,
+        "medianAbsoluteParentDeltaNegative": 0.005121529285104565,
+        "medianAbsoluteParentDeltaSynthetic": 0.011043720959193815,
+        "syntheticToNegativeDelta": 0.42085202951211476
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": 0.3878882374982283,
+        "auroc": 0.34897321428571426,
+        "meanNegative": 0.04840765445002673,
+        "meanSynthetic": 0.013906832066552811,
+        "medianAbsoluteParentDeltaNegative": 5.521612514685758e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.0001351035132435537,
+        "syntheticToNegativeDelta": -0.03450082238347392
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": 0.5668520670066794,
+        "auroc": 0.5899553571428572,
+        "meanNegative": 1.410575419686467,
+        "meanSynthetic": 1.573681857147488,
+        "medianAbsoluteParentDeltaNegative": 0.000723501657847514,
+        "medianAbsoluteParentDeltaSynthetic": 0.0014865180194550964,
+        "syntheticToNegativeDelta": 0.16310643746102094
+      },
+      "pixelStd": {
+        "auprc": 0.5214025545139257,
+        "auroc": 0.5329910714285715,
+        "meanNegative": 0.21207228340568657,
+        "meanSynthetic": 0.22116984165903775,
+        "medianAbsoluteParentDeltaNegative": 5.196644910868131e-05,
+        "medianAbsoluteParentDeltaSynthetic": 7.785230718012487e-05,
+        "syntheticToNegativeDelta": 0.009097558253351179
+      }
+    },
+    "Q95_444|PILLOW_LIBJPEG": {
+      "blockBoundaryRatio": {
+        "auprc": 0.34146441457594023,
+        "auroc": 0.26999999999999996,
+        "meanNegative": 1.431039794733306,
+        "meanSynthetic": 1.0260312111192584,
+        "medianAbsoluteParentDeltaNegative": 0.04481377333665759,
+        "medianAbsoluteParentDeltaSynthetic": 0.018952883729919545,
+        "syntheticToNegativeDelta": -0.40500858361404757
+      },
+      "dctAcEnergy": {
+        "auprc": 0.4950009350089324,
+        "auroc": 0.5720089285714285,
+        "meanNegative": 0.011899507186201592,
+        "meanSynthetic": 0.011067298205711897,
+        "medianAbsoluteParentDeltaNegative": 9.556250236598344e-06,
+        "medianAbsoluteParentDeltaSynthetic": 1.5664231857725162e-05,
+        "syntheticToNegativeDelta": -0.0008322089804896956
+      },
+      "dctAcL1Mean": {
+        "auprc": 0.6892950232149273,
+        "auroc": 0.7439732142857143,
+        "meanNegative": 0.01763534811977147,
+        "meanSynthetic": 0.031173684732557754,
+        "medianAbsoluteParentDeltaNegative": 1.1441052573886272e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.0008480931660196887,
+        "syntheticToNegativeDelta": 0.013538336612786285
+      },
+      "dctAcZeroRate": {
+        "auprc": 0.2842538246290422,
+        "auroc": 0.018214285714285714,
+        "meanNegative": 0.894383312406994,
+        "meanSynthetic": 0.39420517555980733,
+        "medianAbsoluteParentDeltaNegative": 0.0022941468253968034,
+        "medianAbsoluteParentDeltaSynthetic": 0.21564205109126985,
+        "syntheticToNegativeDelta": -0.5001781368471867
+      },
+      "dctDcMean": {
+        "auprc": 0.3605913734542087,
+        "auroc": 0.3241071428571428,
+        "meanNegative": 4.6590065092199,
+        "meanSynthetic": 3.582895429167761,
+        "medianAbsoluteParentDeltaNegative": 9.885301776979549e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.00017592486213158232,
+        "syntheticToNegativeDelta": -1.0761110800521387
+      },
+      "dctDcStd": {
+        "auprc": 0.5215225911192126,
+        "auroc": 0.5675,
+        "meanNegative": 1.454631534587647,
+        "meanSynthetic": 1.5711599216093468,
+        "medianAbsoluteParentDeltaNegative": 0.00011296371989422127,
+        "medianAbsoluteParentDeltaSynthetic": 0.00016681749509050992,
+        "syntheticToNegativeDelta": 0.11652838702169976
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": 0.5624381068482087,
+        "auroc": 0.5253571428571429,
+        "meanNegative": 0.0006094971478230644,
+        "meanSynthetic": 0.0009644303004443094,
+        "medianAbsoluteParentDeltaNegative": 7.706996770181866e-06,
+        "medianAbsoluteParentDeltaSynthetic": 1.3401788758837124e-05,
+        "syntheticToNegativeDelta": 0.00035493315262124495
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": 0.5039176775472936,
+        "auroc": 0.4301339285714286,
+        "meanNegative": 0.01456073209293034,
+        "meanSynthetic": 0.016366811831616573,
+        "medianAbsoluteParentDeltaNegative": 0.00024183055983746562,
+        "medianAbsoluteParentDeltaSynthetic": 0.0002996219728051137,
+        "syntheticToNegativeDelta": 0.0018060797386862323
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": 0.4949342081356113,
+        "auroc": 0.5756696428571428,
+        "meanNegative": 0.06456575738728154,
+        "meanSynthetic": 0.06083156190509846,
+        "medianAbsoluteParentDeltaNegative": 2.569363074832881e-05,
+        "medianAbsoluteParentDeltaSynthetic": 3.719623583551407e-05,
+        "syntheticToNegativeDelta": -0.003734195482183081
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": 0.40946035739388,
+        "auroc": 0.41169642857142863,
+        "meanNegative": 0.05176277802027607,
+        "meanSynthetic": 0.03569541988599068,
+        "medianAbsoluteParentDeltaNegative": 0.00012981888438669265,
+        "medianAbsoluteParentDeltaSynthetic": 0.00024247988317370808,
+        "syntheticToNegativeDelta": -0.016067358134285385
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": 0.7455073924893705,
+        "auroc": 0.7039732142857142,
+        "meanNegative": 1.636828082561702,
+        "meanSynthetic": 2.0539079236193403,
+        "medianAbsoluteParentDeltaNegative": 0.008102477616973802,
+        "medianAbsoluteParentDeltaSynthetic": 0.011967430629480136,
+        "syntheticToNegativeDelta": 0.4170798410576382
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": 0.3887037321537341,
+        "auroc": 0.3503571428571428,
+        "meanNegative": 0.04833816989037777,
+        "meanSynthetic": 0.013881432420880127,
+        "medianAbsoluteParentDeltaNegative": 5.361327563397321e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.00013172793090073052,
+        "syntheticToNegativeDelta": -0.03445673746949764
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": 0.5698424756718605,
+        "auroc": 0.5941964285714286,
+        "meanNegative": 1.4104010549544483,
+        "meanSynthetic": 1.573728886778836,
+        "medianAbsoluteParentDeltaNegative": 0.0006200388966380865,
+        "medianAbsoluteParentDeltaSynthetic": 0.0014811048591324427,
+        "syntheticToNegativeDelta": 0.1633278318243876
+      },
+      "pixelStd": {
+        "auprc": 0.5211321847902114,
+        "auroc": 0.5327232142857143,
+        "meanNegative": 0.21222034236109805,
+        "meanSynthetic": 0.22131322760578642,
+        "medianAbsoluteParentDeltaNegative": 3.728017266077521e-05,
+        "medianAbsoluteParentDeltaSynthetic": 5.074796543969029e-05,
+        "syntheticToNegativeDelta": 0.009092885244688376
+      }
+    },
+    "Q95_444|SHARP_LIBVIPS": {
+      "blockBoundaryRatio": {
+        "auprc": 0.34146441457594023,
+        "auroc": 0.26999999999999996,
+        "meanNegative": 1.431039794733306,
+        "meanSynthetic": 1.0260312111192584,
+        "medianAbsoluteParentDeltaNegative": 0.04481377333665759,
+        "medianAbsoluteParentDeltaSynthetic": 0.018952883729919545,
+        "syntheticToNegativeDelta": -0.40500858361404757
+      },
+      "dctAcEnergy": {
+        "auprc": 0.4950009350089324,
+        "auroc": 0.5720089285714285,
+        "meanNegative": 0.011899507186201592,
+        "meanSynthetic": 0.011067298205711897,
+        "medianAbsoluteParentDeltaNegative": 9.556250236598344e-06,
+        "medianAbsoluteParentDeltaSynthetic": 1.5664231857725162e-05,
+        "syntheticToNegativeDelta": -0.0008322089804896956
+      },
+      "dctAcL1Mean": {
+        "auprc": 0.6892950232149273,
+        "auroc": 0.7439732142857143,
+        "meanNegative": 0.01763534811977147,
+        "meanSynthetic": 0.031173684732557754,
+        "medianAbsoluteParentDeltaNegative": 1.1441052573886272e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.0008480931660196887,
+        "syntheticToNegativeDelta": 0.013538336612786285
+      },
+      "dctAcZeroRate": {
+        "auprc": 0.2842538246290422,
+        "auroc": 0.018214285714285714,
+        "meanNegative": 0.894383312406994,
+        "meanSynthetic": 0.39420517555980733,
+        "medianAbsoluteParentDeltaNegative": 0.0022941468253968034,
+        "medianAbsoluteParentDeltaSynthetic": 0.21564205109126985,
+        "syntheticToNegativeDelta": -0.5001781368471867
+      },
+      "dctDcMean": {
+        "auprc": 0.3605913734542087,
+        "auroc": 0.3241071428571428,
+        "meanNegative": 4.6590065092199,
+        "meanSynthetic": 3.582895429167761,
+        "medianAbsoluteParentDeltaNegative": 9.885301776979549e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.00017592486213158232,
+        "syntheticToNegativeDelta": -1.0761110800521387
+      },
+      "dctDcStd": {
+        "auprc": 0.5215225911192126,
+        "auroc": 0.5675,
+        "meanNegative": 1.454631534587647,
+        "meanSynthetic": 1.5711599216093468,
+        "medianAbsoluteParentDeltaNegative": 0.00011296371989422127,
+        "medianAbsoluteParentDeltaSynthetic": 0.00016681749509050992,
+        "syntheticToNegativeDelta": 0.11652838702169976
+      },
+      "dctHighFrequencyEnergy": {
+        "auprc": 0.5624381068482087,
+        "auroc": 0.5253571428571429,
+        "meanNegative": 0.0006094971478230644,
+        "meanSynthetic": 0.0009644303004443094,
+        "medianAbsoluteParentDeltaNegative": 7.706996770181866e-06,
+        "medianAbsoluteParentDeltaSynthetic": 1.3401788758837124e-05,
+        "syntheticToNegativeDelta": 0.00035493315262124495
+      },
+      "dctHighToLowEnergyRatio": {
+        "auprc": 0.5039176775472936,
+        "auroc": 0.4301339285714286,
+        "meanNegative": 0.01456073209293034,
+        "meanSynthetic": 0.016366811831616573,
+        "medianAbsoluteParentDeltaNegative": 0.00024183055983746562,
+        "medianAbsoluteParentDeltaSynthetic": 0.0002996219728051137,
+        "syntheticToNegativeDelta": 0.0018060797386862323
+      },
+      "dctLowFrequencyEnergy": {
+        "auprc": 0.4949342081356113,
+        "auroc": 0.5756696428571428,
+        "meanNegative": 0.06456575738728154,
+        "meanSynthetic": 0.06083156190509846,
+        "medianAbsoluteParentDeltaNegative": 2.569363074832881e-05,
+        "medianAbsoluteParentDeltaSynthetic": 3.719623583551407e-05,
+        "syntheticToNegativeDelta": -0.003734195482183081
+      },
+      "fftHighFrequencyEnergyRatio": {
+        "auprc": 0.40946035739388,
+        "auroc": 0.41169642857142863,
+        "meanNegative": 0.05176277802027607,
+        "meanSynthetic": 0.03569541988599068,
+        "medianAbsoluteParentDeltaNegative": 0.00012981888438669265,
+        "medianAbsoluteParentDeltaSynthetic": 0.00024247988317370808,
+        "syntheticToNegativeDelta": -0.016067358134285385
+      },
+      "fftLogMagnitudeMean": {
+        "auprc": 0.7455073924893705,
+        "auroc": 0.7039732142857142,
+        "meanNegative": 1.636828082561702,
+        "meanSynthetic": 2.0539079236193403,
+        "medianAbsoluteParentDeltaNegative": 0.008102477616973802,
+        "medianAbsoluteParentDeltaSynthetic": 0.011967430629480136,
+        "syntheticToNegativeDelta": 0.4170798410576382
+      },
+      "fftPhaseCircularCoherence": {
+        "auprc": 0.3887037321537341,
+        "auroc": 0.3503571428571428,
+        "meanNegative": 0.04833816989037777,
+        "meanSynthetic": 0.013881432420880127,
+        "medianAbsoluteParentDeltaNegative": 5.361327563397321e-05,
+        "medianAbsoluteParentDeltaSynthetic": 0.00013172793090073052,
+        "syntheticToNegativeDelta": -0.03445673746949764
+      },
+      "fftPhaseMeanAbsolute": {
+        "auprc": 0.5698424756718605,
+        "auroc": 0.5941964285714286,
+        "meanNegative": 1.4104010549544483,
+        "meanSynthetic": 1.573728886778836,
+        "medianAbsoluteParentDeltaNegative": 0.0006200388966380865,
+        "medianAbsoluteParentDeltaSynthetic": 0.0014811048591324427,
+        "syntheticToNegativeDelta": 0.1633278318243876
+      },
+      "pixelStd": {
+        "auprc": 0.5211321847902114,
+        "auroc": 0.5327232142857143,
+        "meanNegative": 0.21222034236109805,
+        "meanSynthetic": 0.22131322760578642,
+        "medianAbsoluteParentDeltaNegative": 3.728017266077521e-05,
+        "medianAbsoluteParentDeltaSynthetic": 5.074796543969029e-05,
+        "syntheticToNegativeDelta": 0.009092885244688376
+      }
+    }
+  },
+  "featureNames": [
+    "blockBoundaryRatio",
+    "dctAcEnergy",
+    "dctAcL1Mean",
+    "dctAcZeroRate",
+    "dctDcMean",
+    "dctDcStd",
+    "dctHighFrequencyEnergy",
+    "dctHighToLowEnergyRatio",
+    "dctLowFrequencyEnergy",
+    "fftHighFrequencyEnergyRatio",
+    "fftLogMagnitudeMean",
+    "fftPhaseCircularCoherence",
+    "fftPhaseMeanAbsolute",
+    "pixelStd"
+  ],
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "interpretation": "Feature stability is not authenticity evidence; discrimination and stability are reported separately.",
+  "originalParentCount": 976,
+  "schemaVersion": "lythaus-wp007k-phase-dct-validation-v1",
+  "transformedRecordCount": 2680
+}

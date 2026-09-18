@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "lythaus-wp007k-encoder-regime-freeze-v1",
+  "status": "FROZEN_BEFORE_CES_S_FITTING",
+  "encoderPaths": [
+    {
+      "id": "PILLOW_LIBJPEG",
+      "implementation": "Pillow 12.3.0 backed by libjpeg in approved runtime",
+      "role": "development_and_held_out_confirmation",
+      "qualityRequests": [100, 99, 98, 97, 96, 95, 92, 90, 85, 80, 75, 65, 50],
+      "subsampling": ["4:4:4", "4:2:2", "4:2:0"]
+    },
+    {
+      "id": "SHARP_LIBVIPS",
+      "implementation": "Sharp 0.35.4 / libvips 8.18.6 approved local runtime",
+      "role": "independent_encoder_confirmation",
+      "qualityRequests": [95, 85, 75],
+      "subsampling": ["4:4:4", "4:2:0"],
+      "limitation": "4:2:2 not emitted in the approved Sharp path; no unsupported claim made."
+    }
+  ],
+  "leaveOneOut": [
+    "fit/develop using Pillow; confirm on Sharp",
+    "fit/develop using Sharp where sample size permits; confirm on Pillow"
+  ],
+  "qualityHoldout": {
+    "development": [100, 95, 85, 75],
+    "confirmation": [99, 97, 92, 80, 65]
+  },
+  "shortcutControls": [
+    "content-only features",
+    "remove DQT-derived features",
+    "remove encoder identity",
+    "report format/sampling associations"
+  ],
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

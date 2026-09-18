@@ -1,0 +1,327 @@
+{
+  "confirmationUntuned": true,
+  "featureSha256": "dfd28891969656a94a1c13a5d9dbbe5376bff71c0184e265499f0da03637ca25",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "groups": {
+    "BLIP3o-8B": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 187,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recall": {
+        "denominator": 220,
+        "lower": 0.1088454055168659,
+        "numerator": 33,
+        "rate": 0.15,
+        "upper": 0.203167655819729
+      },
+      "recordCount": 220,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 33
+    },
+    "Infinity-8B": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 193,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recall": {
+        "denominator": 220,
+        "lower": 0.08573208873076284,
+        "numerator": 27,
+        "rate": 0.12272727272727273,
+        "upper": 0.17267160076193044
+      },
+      "recordCount": 220,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 27
+    },
+    "Janus-Pro-7B": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 220,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recall": {
+        "denominator": 220,
+        "lower": 0.0,
+        "numerator": 0,
+        "rate": 0.0,
+        "upper": 0.01716151619513562
+      },
+      "recordCount": 220,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 0
+    },
+    "LongCat-Image": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 187,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recall": {
+        "denominator": 220,
+        "lower": 0.1088454055168659,
+        "numerator": 33,
+        "rate": 0.15,
+        "upper": 0.203167655819729
+      },
+      "recordCount": 220,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 33
+    },
+    "OmniGen2-7B": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 176,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recall": {
+        "denominator": 220,
+        "lower": 0.1524953525885687,
+        "numerator": 44,
+        "rate": 0.2,
+        "upper": 0.2578015571285127
+      },
+      "recordCount": 220,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 44
+    },
+    "PixArt-Alpha": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 193,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recall": {
+        "denominator": 220,
+        "lower": 0.08573208873076284,
+        "numerator": 27,
+        "rate": 0.12272727272727273,
+        "upper": 0.17267160076193044
+      },
+      "recordCount": 220,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 27
+    },
+    "Qwen-Image-2512": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 209,
+      "fp": 0,
+      "fpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recall": {
+        "denominator": 220,
+        "lower": 0.028145464011113473,
+        "numerator": 11,
+        "rate": 0.05,
+        "upper": 0.08729990056450859
+      },
+      "recordCount": 220,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "tn": 0,
+      "tp": 11
+    },
+    "UNKNOWN": {
+      "auprc": null,
+      "auroc": null,
+      "fn": 0,
+      "fp": 138,
+      "fpr": {
+        "denominator": 2116,
+        "lower": 0.05546504817428684,
+        "numerator": 138,
+        "rate": 0.06521739130434782,
+        "upper": 0.07654551217034146
+      },
+      "recall": {
+        "denominator": 0,
+        "lower": null,
+        "numerator": 0,
+        "rate": null,
+        "upper": null
+      },
+      "recordCount": 2116,
+      "sourceLevelWorstCaseFpr": {
+        "denominator": 836,
+        "lower": 0.021310822110346114,
+        "numerator": 26,
+        "rate": 0.03110047846889952,
+        "upper": 0.04517965443639013
+      },
+      "tn": 1978,
+      "tp": 0
+    }
+  },
+  "model": {
+    "coefficients": [
+      0.48536488588840315,
+      -0.3450087077502288,
+      0.45265279444624823
+    ],
+    "devRecordCount": 728,
+    "devSourceFamilyCount": 30,
+    "developmentSourceSha256": "f41cf4e1f252ccfc465e5aaa2076527eae7c684ebbe234e7363904940028b99f",
+    "encoderTrainingRole": "MIXED_DEVELOPMENT",
+    "featureNames": [
+      "pixelStd",
+      "dctDcMean",
+      "dctDcStd"
+    ],
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "intercept": -0.9609798232536374,
+    "mean": [
+      0.1717773400532159,
+      3.477365250027967,
+      1.1833393965084409
+    ],
+    "modelId": "CES_S_LINEAR_CODEC_AUGMENTED",
+    "rightsClass": "RESEARCH_ONLY_NOT_DEPLOYABLE",
+    "safeAUnchanged": true,
+    "scale": [
+      0.07500888534047408,
+      1.5746783141278013,
+      0.5898904042640086
+    ],
+    "schemaVersion": "lythaus-wp007k-ces-s-linear-model-v1",
+    "threshold": 0.622833926828531,
+    "thresholdRule": "max(0.5, maximum TRAIN/DEV development-negative probability + epsilon); no confirmation exposure",
+    "trainRecordCount": 1512,
+    "trainSourceFamilyCount": 70
+  },
+  "modelSha256": "148e840c555d20b86b174f1f4e8432cba15f9869ce20469e9f04066f72410a28",
+  "overall": {
+    "auprc": 0.5845331888156117,
+    "auroc": 0.699652922691675,
+    "fn": 1365,
+    "fp": 138,
+    "fpr": {
+      "denominator": 2116,
+      "lower": 0.05546504817428684,
+      "numerator": 138,
+      "rate": 0.06521739130434782,
+      "upper": 0.07654551217034146
+    },
+    "recall": {
+      "denominator": 1540,
+      "lower": 0.09873745822993815,
+      "numerator": 175,
+      "rate": 0.11363636363636363,
+      "upper": 0.1304580053320947
+    },
+    "recordCount": 3656,
+    "sourceLevelWorstCaseFpr": {
+      "denominator": 836,
+      "lower": 0.021310822110346114,
+      "numerator": 26,
+      "rate": 0.03110047846889952,
+      "upper": 0.04517965443639013
+    },
+    "tn": 1978,
+    "tp": 175
+  },
+  "recordCount": 3656,
+  "records": [],
+  "schemaVersion": "lythaus-wp007k-ces-s-evaluation-v1",
+  "uniqueRescue": {
+    "bothCorrect": 18,
+    "bothWrong": 1238,
+    "cesSFalsePositiveSafeNegative": 109,
+    "cesSUniqueCorrect": 157,
+    "safeCorrectCesSWrong": 127,
+    "safeFalsePositiveCesSNegative": 348
+  }
+}

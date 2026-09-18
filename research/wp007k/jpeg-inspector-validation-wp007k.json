@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "lythaus-wp007k-jpeg-inspector-crosscheck-v1",
+  "manifestSha256": "5972523b27d327a63f40b84310e652290ca69c475e91bcf102930e08351dc3b7",
+  "featureSha256": "dfd28891969656a94a1c13a5d9dbbe5376bff71c0184e265499f0da03637ca25",
+  "inspector": "wp007j_jpeg_inspector.mjs",
+  "independentDecoder": "sharp-0.35.4 / libvips-8.18.6",
+  "recordCount": 3656,
+  "counters": {
+    "valid": 3656,
+    "formatMatch": 3656,
+    "dimensionMatch": 3656,
+    "samplingMatch": 3656,
+    "qualityMatch": 3656,
+    "sha256Match": 3656,
+    "independentFormatMatch": 3656,
+    "independentDimensionMatch": 3656,
+    "independentSamplingAgreement": 3656,
+    "progressiveAgreement": 3656
+  },
+  "mismatchCount": 0,
+  "mismatches": [],
+  "currentByteFactsOnly": true,
+  "previousJpegHistory": "UNDETERMINED_FROM_FINAL_BYTES",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}
