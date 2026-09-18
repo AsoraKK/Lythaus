@@ -272,12 +272,12 @@
       "experiment": "Commit sanitized code/results, push branch and open PR.",
       "validation": "GitHub PR state, head/base SHA, diff review and self-audit table.",
       "independentCrossCheck": "GitHub metadata versus local commit and final manifest.",
-      "state": "NOT_STARTED",
-      "completionPercent": 0,
-      "exactSupportingArtifacts": [],
-      "remainingUncertainty": "Review feedback after completion.",
+      "state": "110_PERCENT_VALIDATED_COMPLETE",
+      "completionPercent": 110,
+      "exactSupportingArtifacts": ["research/wp007k/completion-self-audit.md", "https://github.com/AsoraKK/Lythaus/pull/852", "research/wp007k/validation-summary.json"],
+      "remainingUncertainty": "Independent review feedback may request follow-up work; the scientific package is complete and the PR remains intentionally unmerged.",
       "blocker": null
     }
   ],
-  "lastUpdated": "EXPERIMENTS_AND_VALIDATION_COMPLETE_PENDING_PR"
+  "lastUpdated": "PR_852_OPEN_UNMERGED_110_PERCENT_COMPLETE"
 }
