@@ -13,7 +13,7 @@
 | Runtime | Attended single-worker measurements; resource stops resumed | Scoped process-memory counter and per-row timing | No lowered RAM guard, paid services, training or downloads | 110_PERCENT_VALIDATED_COMPLETE | runtime-benchmark.json; positive-case-independent-check.json; safe-enrichment-run.json |
 | Reserves/boundaries | Only positive allowlisted media accessed | Path/reserve unit tests and run accounting | Not an OS-wide access audit; no reserve read to verify seal | 110_PERCENT_VALIDATED_COMPLETE | flux2-zero-access.json; test_wp007m_probe.py |
 | Regression validation | Full authenticity/native and focused tests run | Parent reproductions for inherited failures; adversarial lineage tests | Failure results preserved, no test weakening or dependency-version changes | 110_PERCENT_VALIDATED_COMPLETE | validation-summary.json; reproduction.md |
-| Report and PR | Evidence-linked negative report; PR pending | Final branch/head/base verification pending | No production integration; no parent merge | IN_PROGRESS | final-report.md; WP007M_GOAL_AND_COMPLETION_LEDGER.json |
+| Report and PR | Evidence-linked negative report; unmerged stacked PR854 | Live base/head/state verified; fresh Windows checkout produces identical aggregate result hash | No production integration; no parent merge | 110_PERCENT_VALIDATED_COMPLETE | final-report.md; pr-delivery.json; fresh-checkout-crosscheck.json; WP007M_GOAL_AND_COMPLETION_LEDGER.json |
 
 ## Not demonstrated, and not claimed complete
 

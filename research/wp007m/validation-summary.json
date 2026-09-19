@@ -48,8 +48,8 @@
         "packages\\authenticity\\tests\\wp007m.test.mjs"
       ],
       "cwdRole": "WP007M",
-      "seconds": 6.954352855682373,
-      "logSha256": "ccf6c54280c04c487bb6b83791c4d46783615511725a14215f34e5ce3f18b89c",
+      "seconds": 6.7391698360443115,
+      "logSha256": "7c633c00f0bf52d7b6597259c2be9062eedf1dd53ff0b35b82c4eaf0c6f8fdda",
       "logicalLog": "external/wp007m/validation/authenticity-full.log",
       "tapSummary": [
         "# tests 380",
@@ -69,7 +69,7 @@
         "--noEmit"
       ],
       "cwdRole": "WP007M",
-      "seconds": 3.6692910194396973,
+      "seconds": 3.1118881702423096,
       "logSha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
       "logicalLog": "external/wp007m/validation/typecheck-native.log",
       "tapSummary": [],
@@ -82,7 +82,7 @@
         "scripts/validate-native-scope.mjs"
       ],
       "cwdRole": "WP007M",
-      "seconds": 0.06538009643554688,
+      "seconds": 0.06563067436218262,
       "logSha256": "7ae7abc1f454a12a21bbc8ffe3da8abba03933494b727577e39abdbf5639a803",
       "logicalLog": "external/wp007m/validation/validate-native-scope.log",
       "tapSummary": [],
@@ -95,7 +95,7 @@
         "scripts/validate-workflow-action-pins.mjs"
       ],
       "cwdRole": "WP007M",
-      "seconds": 0.08373641967773438,
+      "seconds": 0.0814054012298584,
       "logSha256": "e8dcd159e940abdcff65ba433e48a9a59192b6f5971486699f906fc0a947f673",
       "logicalLog": "external/wp007m/validation/validate-workflow-action-pins.log",
       "tapSummary": [],
@@ -108,7 +108,7 @@
         "scripts/validate-no-retired-provider-dependencies.mjs"
       ],
       "cwdRole": "WP007M",
-      "seconds": 1.4618442058563232,
+      "seconds": 1.426957368850708,
       "logSha256": "067a7699f817e7118393c51e2e79e602e5f7871a78ed64d9cf299e8b0f39668b",
       "logicalLog": "external/wp007m/validation/validate-no-retired-provider-dependencies.log",
       "tapSummary": [],
@@ -121,7 +121,7 @@
         "scripts/validate-no-retired-provider-dependencies.mjs"
       ],
       "cwdRole": "UNCHANGED_PARENT",
-      "seconds": 1.4747047424316406,
+      "seconds": 1.4605672359466553,
       "logSha256": "067a7699f817e7118393c51e2e79e602e5f7871a78ed64d9cf299e8b0f39668b",
       "logicalLog": "external/wp007m/validation/parent-validate-no-retired-provider-dependencies.log",
       "tapSummary": [],
@@ -169,8 +169,8 @@
         "apps/lythaus-admin-api/tests/waitlist-handler.test.mjs"
       ],
       "cwdRole": "WP007M",
-      "seconds": 4.443960905075073,
-      "logSha256": "a3308d5710bf5ee14c5b43535f304f92612373e2ec304a162fac051f555aac95",
+      "seconds": 4.3967125415802,
+      "logSha256": "1c28d929287a939070dbe4c1759d96a772c4945e9b439adbe051cd6960c85df7",
       "logicalLog": "external/wp007m/validation/test-native-architecture.log",
       "tapSummary": [
         "# tests 256",
@@ -224,8 +224,8 @@
         "apps/lythaus-admin-api/tests/waitlist-handler.test.mjs"
       ],
       "cwdRole": "UNCHANGED_PARENT",
-      "seconds": 3.9525105953216553,
-      "logSha256": "3a031fa32633091befc3778f914953cc407ba1b35f9cd2809e6e2a7f8a8f5157",
+      "seconds": 3.9198405742645264,
+      "logSha256": "99b9ef1904d8c69194c5e976cad316bdc10c2b584a425403e9ef2554c888a5f3",
       "logicalLog": "external/wp007m/validation/parent-test-native-architecture.log",
       "tapSummary": [
         "# tests 228",
@@ -251,8 +251,8 @@
         "63d5daf05243673ad65f2b59dbdb81e94290180b"
       ],
       "cwdRole": "WP007M",
-      "seconds": 0.06714415550231934,
-      "logSha256": "d599d6a9b7ffd2c4ddcec8bf91eed2c235e1ce6b43eabe6a03357c8b85e63143",
+      "seconds": 0.06954216957092285,
+      "logSha256": "0eb9b2670b1a79a21d74f15c611a0868682da32258b9ecb97692361115b98bba",
       "logicalLog": "external/wp007m/validation/diff-check.log",
       "tapSummary": [],
       "failures": []
@@ -265,7 +265,7 @@
         "scripts/authenticity/wp007m_sharp.cjs"
       ],
       "cwdRole": "WP007M",
-      "seconds": 0.04903411865234375,
+      "seconds": 0.05021166801452637,
       "logSha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
       "logicalLog": "external/wp007m/validation/node-syntax.log",
       "tapSummary": [],
@@ -278,8 +278,8 @@
         "scripts/authenticity/test_wp007m_probe.py"
       ],
       "cwdRole": "WP007M",
-      "seconds": 1.5983014106750488,
-      "logSha256": "658e3186aa7bded68e186a1201e9d69d701a4d0dbeab9cf57167e512fcea9a5d",
+      "seconds": 1.6349549293518066,
+      "logSha256": "4b811eedd6b4de8b29b5302488dc6046bce4e46aedf13dd549c8544413e2fa38",
       "logicalLog": "external/wp007m/validation/python-focused.log",
       "tapSummary": [],
       "failures": []
@@ -291,7 +291,7 @@
   },
   "jsonParse": {
     "pass": true,
-    "files": 23
+    "files": 26
   },
   "privacySecretScan": {
     "pass": true,
@@ -299,5 +299,5 @@
     "scope": "WP007M artifacts and changed Python/test source; no sensitive source metadata written"
   },
   "dependencies": "Reused previous locked node_modules through root junction and worktree-local declared npm workspace junctions; no package version, install or lockfile mutation",
-  "createdUnix": 1789825934.6582353
+  "createdUnix": 1789826287.4855692
 }
