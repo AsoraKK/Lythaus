@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "lythaus-wp007l-camera-source-inventory-v1",
+  "development": {"fileCount": 36, "deviceFamilyCount": 14, "source": "WP006E/CSAFE approved local originals", "role": "DEVELOPMENT", "rights": "CC BY 4.0 research evaluation; no media committed", "sealed": false},
+  "confirmation": {"fileCount": 24, "sourceFamilyCount": 24, "source": "WP007I previously consumed camera-claimed source records", "role": "INDEPENDENT_SOURCE_FAMILY_CONFIRMATION", "caveat": "not fresh acquisition and not device-instance ground truth", "rights": "bounded research evaluation; no redistribution", "sealed": false},
+  "sealed": {"futureEf2DeviceReservesOpened": false, "futureGeneratorReservesOpened": false, "flux2Opened": false},
+  "privacy": {"rawGpsPersisted": false, "rawSerialPersisted": false, "rawOwnerNamesPersisted": false, "committedArtifactsContainOnlyHashesAndAggregateFields": true},
+  "limitations": ["The confirmation source set is not a newly acquired physical-device panel.", "Many confirmation records are camera-claimed historical media rather than verified native originals.", "No device-level PRNU confirmation is possible from this bounded source inventory."]
+}

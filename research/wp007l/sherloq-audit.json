@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "lythaus-wp007l-sherloq-audit-v1",
+  "repo": "GuidoBartoli/sherloq",
+  "commit": "3fe95fcb56037e47e2eefbc2d3785804a31a74f5",
+  "license": "GPL-3.0",
+  "claimedModules": ["metadata", "thumbnail", "PRNU", "JPEG quality", "multiple compression", "JPEG ghost", "resampling", "noise/frequency"],
+  "localExecution": "NOT_RUN_GUI_ORACLE",
+  "reason": "The repository is an educational/research Qt/Python workbench rather than a narrow headless runtime; its modules are useful for comparative review but GPL source cannot enter Lythaus-owned code.",
+  "decision": "RESEARCH_ORACLE",
+  "scientificUse": "Use published method references and external outputs only after fixture-level validation.",
+  "flux2PixelAccess": false
+}

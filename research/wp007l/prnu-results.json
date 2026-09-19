@@ -1,0 +1,27 @@
+{
+  "differentDevice": {
+    "max": 0.014698831937466992,
+    "mean": 0.00012395503861073866,
+    "median": 0.00011197035371023257,
+    "min": -0.01761326406516387,
+    "n": 566
+  },
+  "differentDevicePairs": 566,
+  "flux2PixelAccess": false,
+  "interpretation": "EXPLORATORY_SENSOR_RESIDUAL_CORRELATION; not a device identity claim",
+  "knownLimitations": [
+    "content residual leakage",
+    "JPEG compression",
+    "small within-device sample counts",
+    "no RAW reference"
+  ],
+  "sameDevice": {
+    "max": 0.013176762494593692,
+    "mean": -0.0002418642538368278,
+    "median": 2.461589847235869e-05,
+    "min": -0.007708908649715488,
+    "n": 64
+  },
+  "sameDevicePairs": 64,
+  "schemaVersion": "lythaus-wp007l-prnu-results-v1"
+}

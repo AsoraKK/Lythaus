@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "lythaus-wp007l-validation-summary-v1",
+  "parentSha": "8a5188c1bc41a2a6208860ae63b3d871ecebf387",
+  "focused": {
+    "wp007l": {"command": "node --experimental-strip-types --test packages/authenticity/tests/wp007l.test.mjs", "status": "PASS", "tests": 12, "passed": 12, "failed": 0},
+    "historicalWp007": {"command": "node --experimental-strip-types --test wp007h-safe.test.mjs wp007i.test.mjs wp007j-reconnaissance.test.mjs wp007jr1.test.mjs wp007k.test.mjs", "status": "PASS", "tests": 35, "passed": 35, "failed": 0},
+    "allAuthenticity": {"command": "node --experimental-strip-types --test packages/authenticity/tests/*.test.mjs", "status": "PASS", "tests": 374, "passed": 374, "failed": 0}
+  },
+  "static": {
+    "pythonSyntax": "PASS",
+    "jsonParse": "PASS",
+    "privatePathAndSecretScan": "PASS",
+    "gitDiffCheck": "PASS",
+    "nativeScope": "PASS",
+    "workflowActionPins": "PASS",
+    "nativeTypecheck": "PASS"
+  },
+  "environmentRepair": {
+    "command": "npm ci --ignore-scripts --no-audit --no-fund",
+    "status": "PASS",
+    "lockfileChanged": false,
+    "packagesAdded": 729,
+    "purpose": "Hydrated repository-locked dependencies; no package versions were added or changed."
+  },
+  "baselineUnrelated": {
+    "retiredProviderDependencyValidation": {"status": "BASELINE_FAIL", "reason": "Existing WP007J-R1/WP007K artifacts contain retired-brand text; no WP007L artifact is flagged and those files are untouched."},
+    "nativeArchitecture": {"status": "BASELINE_FAIL", "tests": 256, "passed": 255, "failed": 1, "failingTest": "canonical manifest finalizes VERIFIED or BLOCKED after production smoke", "reason": "Existing auth acceptance observer access service token incomplete fixture; unrelated to WP007L."}
+  },
+  "researchControls": {
+    "safeAChanged": false,
+    "productionChanged": false,
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0,
+    "sealedEf2ReserveOpened": false,
+    "gplAgplCopiedIntoLythaus": false,
+    "rawMediaCommitted": false
+  }
+}

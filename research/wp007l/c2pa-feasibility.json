@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "lythaus-wp007l-c2pa-feasibility-v1",
+  "repo": "contentauth/c2pa-rs",
+  "commit": "0f08bfaef65437012ebc8bf49f9bf4ceda7efc15",
+  "license": "MIT and Apache-2.0 license files",
+  "role": "EF1_PROVENANCE_VALIDATION_ONLY",
+  "capabilitiesAudited": ["manifest parsing", "hard binding validation", "claims/actions", "signer/trust context", "C FFI"],
+  "executionStatus": "SOURCE_AUDITED_NO_SIGNED_FIXTURE_EXECUTED",
+  "reason": "No approved signed fixture and no cargo runtime was available in the bounded Windows environment. The SDK is not needed to answer current-byte JPEG questions.",
+  "adoptionDecision": "ADOPT_CANDIDATE_FOR_LATER_EF1_INTEGRATION",
+  "semanticBoundary": "Valid provenance is independent evidence; absent provenance is NO_PROVENANCE_EVIDENCE, not fake or human.",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

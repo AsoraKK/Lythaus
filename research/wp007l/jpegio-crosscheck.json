@@ -1,0 +1,39 @@
+{
+  "checks": {
+    "dimensions": {
+      "matches": 60,
+      "n": 60
+    },
+    "lumaCoefficientShapes": {
+      "matches": 60,
+      "n": 60
+    },
+    "quantizationTables": {
+      "matches": 60,
+      "n": 60
+    },
+    "samplingFactors": {
+      "matches": 60,
+      "n": 60
+    }
+  },
+  "errors": [],
+  "featureRecordsSha256": "ef0232bda0254865fcf84cb8db1e5e8ec674ac59ed02718cab8a0fc2cdaad0e0",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "interpretation": "Independent current-byte cross-check only; neither oracle establishes acquisition or authorship.",
+  "libraries": {
+    "jpegio": {
+      "commit": "3c01f1591481399be6d7395f342ae2f2649a2fb8",
+      "license": "Apache-2.0",
+      "version": "0.3.0"
+    },
+    "jpeglib": {
+      "commit": "039804ffb96d30cae7c00d76c4c029f4caa73af1",
+      "license": "MPL-2.0",
+      "version": "1.0.2"
+    }
+  },
+  "sampleCount": 60,
+  "schemaVersion": "lythaus-wp007l-jpegio-crosscheck-v2"
+}

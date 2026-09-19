@@ -1,0 +1,11 @@
+{
+  "capturedOutput": "main grid found: #0 (0,0) log(nfa) = -137124\n\nNo suspicious traces found in the image with the performed analysis.\n",
+  "commit": "f0fd24d58e51f69297f9981b6aa7d584e0d8ddcf",
+  "copiedSource": false,
+  "decision": "RESEARCH_ORACLE_ONLY",
+  "execution": "compiled under existing WSL Ubuntu GCC/libjpeg/libpng/libtiff toolchain; one controlled native camera source and Q95 descendant",
+  "flux2PixelAccess": false,
+  "license": "AGPL-3.0",
+  "repo": "tinankh/ZERO",
+  "schemaVersion": "lythaus-wp007l-zero-oracle-results-v1"
+}

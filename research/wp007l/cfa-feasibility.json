@@ -1,0 +1,15 @@
+{
+  "deviceCount": 8,
+  "features": [
+    "rgbChannelCorrelation",
+    "residualParity"
+  ],
+  "interpretation": "No CFA classifier fitted; these are sensor/ISP context candidates only.",
+  "limitations": [
+    "JPEG and ISP processing can erase or reshape CFA evidence",
+    "no RAW ground truth",
+    "no production camera identity"
+  ],
+  "rows": 36,
+  "status": "EXPLORATORY_MEASUREMENT"
+}

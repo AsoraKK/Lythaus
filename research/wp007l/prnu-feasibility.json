@@ -1,0 +1,15 @@
+{
+  "deviceFamilies": 8,
+  "flux2PixelAccess": false,
+  "groundTruth": "JPEG device-controlled development subset; not RAW",
+  "limitations": [
+    "small per-device counts",
+    "JPEG/ISP dependence",
+    "no independent sealed device confirmation opened"
+  ],
+  "privacy": "no device fingerprint persisted; aggregate correlations only",
+  "productionIdentity": false,
+  "referenceImages": 36,
+  "schemaVersion": "lythaus-wp007l-prnu-feasibility-v1",
+  "status": "EXPLORATORY_CPU_RESIDUAL_EXECUTED"
+}

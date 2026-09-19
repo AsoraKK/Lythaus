@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "lythaus-wp007l-zero-tool-audit-v1",
+  "repo": "tinankh/ZERO",
+  "commit": "f0fd24d58e51f69297f9981b6aa7d584e0d8ddcf",
+  "license": "AGPL-3.0",
+  "implementation": "C core plus Python binding; DCT-zero JPEG-grid origin and localized anomaly detection",
+  "build": "Compiled with existing WSL Ubuntu GCC and system libjpeg/libpng/libtiff; Windows native make was unavailable.",
+  "controlledRun": "One real controlled camera source and its Pillow Q95 JPEG descendant; output captured separately.",
+  "decision": "REFERENCE_FOR_REIMPLEMENTATION",
+  "sourceCopied": false,
+  "productionDependency": false,
+  "limitations": ["A single pair is an oracle smoke test, not qualification.", "Grid findings are manipulation/context evidence, not authorship.", "Non-8-pixel crop has changed dimensions and cannot be compared by ZERO's two-image command without a matched pre-crop source."]
+}

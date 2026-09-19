@@ -1,0 +1,289 @@
+{
+  "conclusion": "Static profile consistency is contextual and spoofable; it cannot earn SUPPORTED alone.",
+  "flux2PixelAccess": false,
+  "profileOnlyCanBeCopied": true,
+  "rows": [
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__000",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__001",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__002",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__003",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__004",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__005",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__006",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__007",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__008",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__009",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__010",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__011",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__012",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__013",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__014",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__015",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__016",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__017",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__018",
+      "syntheticTruthPreserved": true
+    },
+    {
+      "originInferenceForbidden": true,
+      "profileMatch": {
+        "dqt": true,
+        "huffman": false,
+        "markerSequence": false,
+        "metadataOverlap": [
+          "EXIF"
+        ],
+        "sampling": true
+      },
+      "sampleId": "SYNTHETIC_SPOOF__019",
+      "syntheticTruthPreserved": true
+    }
+  ],
+  "schemaVersion": "lythaus-wp007l-spoof-challenge-results-v1",
+  "syntheticProfileSpoofCount": 20
+}

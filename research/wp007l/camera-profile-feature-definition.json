@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "lythaus-wp007l-camera-profile-feature-definition-v1",
+  "originInference": "FORBIDDEN",
+  "groups": {
+    "jpegBitstream": ["marker sequence", "SOF variant", "DQT hash and normalized statistics", "DHT hash", "component ordering", "sampling", "DRI", "progressive state", "scan count", "ICC/Adobe/JFIF/EXIF marker presence", "trailing bytes"],
+    "codecHistoryContext": ["DQT change from controlled parent", "marker change", "dimension change", "sampling change", "grid proxy", "DCT zero/coefficient summaries where available"],
+    "metadataConsistency": ["privacy-safe EXIF tag-set hash", "orientation/dimension consistency flags", "software/marker context", "thumbnail offset/presence"],
+    "physicalAcquisitionExploration": ["RGB channel correlation", "residual parity", "PRNU-like residual correlation", "CFA/demosaic candidate statistics"],
+    "provenance": ["C2PA manifest state", "hard-binding state", "claim/action state", "signer/trust state"]
+  },
+  "semanticContract": "Measurements describe current bytes, acquisition consistency, provenance, or applicability. They never directly emit AI, human, or authorship truth.",
+  "missingness": "Every unavailable parser, oracle, or provenance result is explicit missingness rather than a negative authenticity result."
+}

@@ -1,0 +1,9 @@
+{
+  "bulkFeatureRecordsSha256": "ef0232bda0254865fcf84cb8db1e5e8ec674ac59ed02718cab8a0fc2cdaad0e0",
+  "featureRuntimeSeconds": 1031.6244743000134,
+  "flux2PixelAccess": false,
+  "hardwarePolicy": "CPU bounded; no GPU; no paid service",
+  "perRecordMs": 706.5921056849406,
+  "records": 1460,
+  "schemaVersion": "lythaus-wp007l-runtime-benchmark-v1"
+}

@@ -1,0 +1,207 @@
+{
+  "flux2PixelAccess": false,
+  "primaryUnit": "source parent",
+  "rows": [
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "ALIGNED8_CROP_TO_JPEG95",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "CAMERA_PROFILE_SELF_REENCODE",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG100_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG50_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG65_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG75_PILLOW_420",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG75_TO_JPEG95",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG80_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG85_PILLOW_420",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG85_TO_JPEG95",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG90_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG92_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG95_PILLOW_420",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 180,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG95_PILLOW_SUBSAMPLING",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG95_TO_JPEG85",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG96_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG97_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG98_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 36,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG99_PILLOW_420",
+      "sourceParents": 36,
+      "sourceParentsWithCurrentByteChange": 36
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "JPEG_TO_PNG",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "METADATA_STRIP_REENCODE95",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "NON8_CROP_TO_JPEG95",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "RESIZE50_TO_JPEG95",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "RESIZE75_TO_JPEG95",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    },
+    {
+      "currentByteChangeRate": 1.0,
+      "descendants": 60,
+      "interpretation": "current-byte evidence only; not complete edit-history proof",
+      "operation": "SCREENSHOT_STYLE_TO_JPEG95",
+      "sourceParents": 60,
+      "sourceParentsWithCurrentByteChange": 60
+    }
+  ],
+  "schemaVersion": "lythaus-wp007l-source-level-operation-summary-v1"
+}

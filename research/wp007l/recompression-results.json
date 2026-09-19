@@ -1,0 +1,283 @@
+{
+  "flux2PixelAccess": false,
+  "historyClaim": "FINAL_BYTES_DO_NOT_PROVE_COMPLETE_EDIT_HISTORY",
+  "rows": [
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 1.0,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "ALIGNED8_CROP_TO_JPEG95",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 0.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "CAMERA_PROFILE_SELF_REENCODE",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG100_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG50_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG65_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "JPEG75_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "JPEG75_TO_JPEG95",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG80_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "JPEG85_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "JPEG85_TO_JPEG95",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG90_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG92_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "JPEG95_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 180,
+      "operation": "JPEG95_PILLOW_SUBSAMPLING",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.6666666666666666,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "JPEG95_TO_JPEG85",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG96_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG97_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG98_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.9722222222222222,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 36,
+      "operation": "JPEG99_PILLOW_420",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 8
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 1.0,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "JPEG_TO_PNG",
+      "pngOutputRate": 1.0,
+      "samplingChangedRate": 1.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 0.5833333333333334,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "METADATA_STRIP_REENCODE95",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 1.0,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "NON8_CROP_TO_JPEG95",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 1.0,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "RESIZE50_TO_JPEG95",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 1.0,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "RESIZE75_TO_JPEG95",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    },
+    {
+      "deterministicInterpretation": "MEASUREMENT_ONLY; differences are evidence of changed current bytes, not complete history",
+      "dimensionChangedRate": 1.0,
+      "dqtChangedRate": 1.0,
+      "markerSequenceChangedRate": 1.0,
+      "nDescendants": 60,
+      "operation": "SCREENSHOT_STYLE_TO_JPEG95",
+      "pngOutputRate": 0.0,
+      "samplingChangedRate": 0.0,
+      "sourceFamilies": 32
+    }
+  ],
+  "schemaVersion": "lythaus-wp007l-recompression-results-v1",
+  "sourceLevelPrimaryUnit": "sourceFamilyId"
+}
