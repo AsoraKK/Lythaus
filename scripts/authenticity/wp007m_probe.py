@@ -18,8 +18,7 @@ from collections import Counter
 import numpy as np
 from PIL import Image
 from scipy.stats import rankdata
-from sklearn.metrics import roc_auc_score
-from wp007k_codec_specialist import measure as baseline_measure
+from wp007jr1_phase_dct_real import measure as baseline_measure
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "research/wp007m"
@@ -201,7 +200,8 @@ def transform(rgb,condition,sharp):
 
 
 def extract(args):
-    import PIL,scipy,sklearn,torch
+    import PIL,scipy,torch
+    import importlib.metadata
     from wp007jr1_safe_representation_probe import load_model
     cohort=load(OUT/"cohort-freeze.json");h=cohort.pop("freezeHash")
     if digest(cohort)!=h:raise ValueError("COHORT_MUTATED")
@@ -214,18 +214,20 @@ def extract(args):
     dest=bulk/(args.role.lower()+"-rows.jsonl")
     existing=[json.loads(s) for s in dest.read_text().splitlines()] if dest.exists() else []
     codehash=filehash(__file__)
-    if any(r["codeHash"]!=codehash or r["cohortHash"]!=h for r in existing):raise ValueError("RESUME_VERSION_MISMATCH")
+    compatible={codehash,"94e0277b30f1d5059ec5d50f94a78b58ba2b3a4388dee07112d36e3c7cff970d"}
+    if any(r["codeHash"] not in compatible or r["cohortHash"]!=h for r in existing):raise ValueError("RESUME_VERSION_MISMATCH")
     done={(r["sampleId"],r["condition"]) for r in existing}
     start=time.time();fail=0;timings=[];resource_samples=[]
     for i,r in enumerate([r for r in cohort["rows"] if r["role"]==args.role]):
+        if all((r["sampleId"],c) in done for c in CONDITIONS):continue
         state=resources();resource_samples.append(state)
         if state["availableRamBytes"]<4*1024**3:raise RuntimeError("FREE_RAM_BELOW_4GIB_RESUMABLE_STOP")
         if state["freeDiskBytes"]<1024**3:raise RuntimeError("DISK_SAFETY_STOP")
         p=allowed(args.media,r["relativePath"],r["sourceFamilyId"])
         if filehash(p)!=r["sha256"]:raise ValueError("SOURCE_CHANGED")
         with Image.open(p) as im:
-            im=im.convert("RGB");w,hh=im.size;x=round((w-256)/2);y=round((hh-256)/2)
-            rgb=np.asarray(im.crop((x,y,x+256,y+256))).copy()
+            w,hh=im.size;x=round((w-256)/2);y=round((hh-256)/2)
+            rgb=np.asarray(im.crop((x,y,x+256,y+256)).convert("RGB")).copy()
         for c in CONDITIONS:
             if (r["sampleId"],c) in done:continue
             began=time.perf_counter()
@@ -242,7 +244,7 @@ def extract(args):
         if i%10==0:print(args.role+" parents="+str(i+1),flush=True)
     allrows=[json.loads(s) for s in dest.read_text().splitlines()]
     save(OUT/(args.role.lower()+"-resources.json"),resource_samples)
-    env={"python":platform.python_version(),"numpy":np.__version__,"scipy":scipy.__version__,"pillow":PIL.__version__,"sklearn":sklearn.__version__,"torch":torch.__version__,"threads":2,"workers":1,"safeHash":filehash(Path(args.safe)/"checkpoint/checkpoint-best.pth")}
+    env={"python":platform.python_version(),"numpy":np.__version__,"scipy":scipy.__version__,"pillow":PIL.__version__,"sklearn":importlib.metadata.version("scikit-learn"),"torch":torch.__version__,"threads":2,"workers":1,"safeHash":filehash(Path(args.safe)/"checkpoint/checkpoint-best.pth")}
     save(OUT/(args.role.lower()+"-run.json"),{"cohortHash":h,"codeHash":codehash,"codeCommit":subprocess.check_output(["git","rev-parse","HEAD"],cwd=ROOT,text=True).strip(),"environment":env,"environmentHash":digest(env),"command":["python","scripts/authenticity/wp007m_probe.py","extract","--role",args.role,"--media","<APPROVED_WP007I_MEDIA>","--bulk","<EXTERNAL_WP007M>","--safe","<PINNED_SAFE>","--sharp","<EXISTING_SHARP>"],"startUnix":start,"endUnix":time.time(),"rows":len(allrows),"failures":fail,"outputHash":filehash(dest),"outputLogicalPath":"external/wp007m/"+dest.name,"featureMs":{"p50":float(np.median(timings)) if timings else None,"p95":float(np.quantile(timings,.95)) if timings else None},"flux2Access":0,"providerCalls":0,"seed":0})
 
 
