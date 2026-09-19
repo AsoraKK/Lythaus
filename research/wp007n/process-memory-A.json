@@ -1,0 +1,236 @@
+{
+  "arm": "A",
+  "observations": [
+    {
+      "timeUnix": 1789845533.6257863,
+      "workingSetBytes": 1946988544,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845543.6348808,
+      "workingSetBytes": 1903542272,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845553.6455755,
+      "workingSetBytes": 2001453056,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845563.6482668,
+      "workingSetBytes": 1785384960,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845573.6585834,
+      "workingSetBytes": 1827958784,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845583.6681197,
+      "workingSetBytes": 1820045312,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845593.676373,
+      "workingSetBytes": 1790033920,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845603.6998386,
+      "workingSetBytes": 1884377088,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845613.784281,
+      "workingSetBytes": 1865506816,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845623.806678,
+      "workingSetBytes": 1921679360,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845633.8181283,
+      "workingSetBytes": 1921871872,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845643.8278196,
+      "workingSetBytes": 1842917376,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845653.8617668,
+      "workingSetBytes": 1846587392,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845663.8769088,
+      "workingSetBytes": 1886257152,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845673.8868747,
+      "workingSetBytes": 1890009088,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845683.902502,
+      "workingSetBytes": 1640865792,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845693.930979,
+      "workingSetBytes": 1640546304,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845703.9436357,
+      "workingSetBytes": 1639555072,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845713.9533978,
+      "workingSetBytes": 1645682688,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845723.9725897,
+      "workingSetBytes": 1636782080,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845733.9890418,
+      "workingSetBytes": 1637421056,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845743.9992042,
+      "workingSetBytes": 1644224512,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845754.010197,
+      "workingSetBytes": 1638420480,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845764.030638,
+      "workingSetBytes": 1643474944,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845774.121,
+      "workingSetBytes": 1648324608,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845784.1423295,
+      "workingSetBytes": 1640660992,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845794.153889,
+      "workingSetBytes": 1644462080,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845804.1674023,
+      "workingSetBytes": 1638236160,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845814.20021,
+      "workingSetBytes": 1643376640,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845824.27189,
+      "workingSetBytes": 1640886272,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845834.2932117,
+      "workingSetBytes": 1641209856,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845844.3044622,
+      "workingSetBytes": 1647370240,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845854.3220515,
+      "workingSetBytes": 1645862912,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845864.364754,
+      "workingSetBytes": 1642221568,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845874.3832152,
+      "workingSetBytes": 1641709568,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845884.3936172,
+      "workingSetBytes": 1645477888,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845894.4106314,
+      "workingSetBytes": 1643974656,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    },
+    {
+      "timeUnix": 1789845904.4887073,
+      "workingSetBytes": 1642008576,
+      "processPeakWorkingSetBytes": 2817155072,
+      "processPeakCommitBytes": 3671314432
+    }
+  ],
+  "scope": "OS process high-water marks include initialization; observer started after process launch; system-free guard separately recorded",
+  "peakWorkingSetBytes": 2817155072,
+  "peakCommitBytes": 3671314432
+}
