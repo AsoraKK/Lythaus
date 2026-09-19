@@ -1,0 +1,55 @@
+{
+  "boundedResearchEstimate": "Not a customer-traffic estimate; no broad SUPPORTED percentage is reported.",
+  "currentByteMeasurements": {
+    "confirmationSourceFamilies": 24,
+    "developmentOriginals": 36,
+    "knownOperationSummary": "source-level-operation-summary.json"
+  },
+  "disposition": "NATIVE_CAMERA_SUPPORTED_ROUTE_NOT_DEMONSTRATED",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "notAuthenticity": [
+    "camera-looking profile is not human",
+    "JPEG is not AI",
+    "PNG is not a lossless-history proof",
+    "metadata presence/absence is not authorship"
+  ],
+  "profileSpoof": {
+    "dqtMatch": {
+      "denominator": 20,
+      "lower95": 0.8388748419471806,
+      "numerator": 20,
+      "observed": 1.0,
+      "upper95": 1.0
+    },
+    "safeHigh": {
+      "denominator": 20,
+      "lower95": 0.0,
+      "numerator": 0,
+      "observed": 0.0,
+      "upper95": 0.16112515805281938
+    },
+    "samplingMatch": {
+      "denominator": 20,
+      "lower95": 0.8388748419471806,
+      "numerator": 20,
+      "observed": 1.0,
+      "upper95": 1.0
+    },
+    "syntheticSpoofs": 20
+  },
+  "researchStates": {
+    "ACQUISITION_CONSISTENT": "CONTEXT_ONLY_WHEN_CURRENT_BYTE_FACTS_AND_KNOWN_LINEAGE_AGREE",
+    "EVIDENCE_GRADE": "NOT_DEMONSTRATED",
+    "LIMITED_FORENSIC_QUALITY": "AVAILABLE_FOR_KNOWN_CONTROLLED_DESCENDANTS",
+    "UNKNOWN": "REQUIRED_WHEN_PARSER_OR_PROVENANCE_EVIDENCE_IS_MISSING",
+    "UNSUPPORTED_FOR_CERTIFICATION": "REQUIRED_WHEN_HISTORY_OR_APPLICABILITY_IS_UNKNOWN_OR_DESTRUCTIVE_EVIDENCE_IS_PRESENT"
+  },
+  "schemaVersion": "lythaus-wp007l-eligibility-boundary-analysis-v1",
+  "whyBroadSupportedNotEarned": [
+    "confirmation is historical camera-claimed media, not a fresh physical-device panel",
+    "static DQT/sampling/metadata profile can be copied in the controlled synthetic spoof",
+    "no validated PRNU/device-level route exists",
+    "C2PA signed-fixture validation was not executed"
+  ]
+}

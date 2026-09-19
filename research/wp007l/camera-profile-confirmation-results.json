@@ -1,0 +1,206 @@
+{
+  "cameraModels": {
+    "UNSPLASH:Apple:iPhone 6s Plus": 1,
+    "UNSPLASH:Canon:1300D": 1,
+    "UNSPLASH:Canon:Canon EOS 1000D": 1,
+    "UNSPLASH:Canon:Canon EOS 6D": 2,
+    "UNSPLASH:Canon:Canon EOS 7D Mark II": 1,
+    "UNSPLASH:Canon:Canon EOS Rebel T6s": 1,
+    "UNSPLASH:DJI:FC220": 1,
+    "UNSPLASH:FUJIFILM:X100S": 1,
+    "UNSPLASH:Leica Camera AG:LEICA M (Typ 262)": 1,
+    "UNSPLASH:NIKON CORPORATION:NIKON 1 V1": 1,
+    "UNSPLASH:NIKON CORPORATION:NIKON D5100": 1,
+    "UNSPLASH:NIKON CORPORATION:NIKON D5200": 3,
+    "UNSPLASH:NIKON CORPORATION:NIKON D610": 1,
+    "UNSPLASH:NIKON CORPORATION:NIKON D7000": 1,
+    "UNSPLASH:NIKON CORPORATION:NIKON D750": 1,
+    "UNSPLASH:SONY:ILCA-68": 1,
+    "UNSPLASH:SONY:ILCE-5100": 1,
+    "UNSPLASH:SONY:ILCE-7M2": 1,
+    "UNSPLASH:SONY:ILCE-7RM3": 1,
+    "UNSPLASH:SONY:ILCE-7SM2": 1,
+    "UNSPLASH:ZWO:ASI294MC-Pro": 1
+  },
+  "caveat": "Previously consumed project media, not a fresh project acquisition; independent from WP007L profile fitting and not device-instance ground truth.",
+  "cfa": {
+    "deviceCount": 8,
+    "features": [
+      "rgbChannelCorrelation",
+      "residualParity"
+    ],
+    "interpretation": "No CFA classifier fitted; these are sensor/ISP context candidates only.",
+    "limitations": [
+      "JPEG and ISP processing can erase or reshape CFA evidence",
+      "no RAW ground truth",
+      "no production camera identity"
+    ],
+    "rows": 36,
+    "status": "EXPLORATORY_MEASUREMENT"
+  },
+  "dctOracleRecordCount": 60,
+  "dctOracleStatus": {
+    "jpegio:OK": 60,
+    "jpegio:SKIPPED_BOUNDED_CROSSCHECK": 1400,
+    "jpeglib:OK": 60,
+    "jpeglib:SKIPPED_BOUNDED_CROSSCHECK": 1400
+  },
+  "descendantCount": 1380,
+  "featureRecordsLogicalKey": "WP007L_EXTERNAL_FEATURE_RECORDS",
+  "featureRecordsSha256": "ef0232bda0254865fcf84cb8db1e5e8ec674ac59ed02718cab8a0fc2cdaad0e0",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "originalCount": 60,
+  "prnu": {
+    "differentDevice": {
+      "max": 0.014698831937466992,
+      "mean": 0.00012395503861073866,
+      "median": 0.00011197035371023257,
+      "min": -0.01761326406516387,
+      "n": 566
+    },
+    "differentDevicePairs": 566,
+    "flux2PixelAccess": false,
+    "interpretation": "EXPLORATORY_SENSOR_RESIDUAL_CORRELATION; not a device identity claim",
+    "knownLimitations": [
+      "content residual leakage",
+      "JPEG compression",
+      "small within-device sample counts",
+      "no RAW reference"
+    ],
+    "sameDevice": {
+      "max": 0.013176762494593692,
+      "mean": -0.0002418642538368278,
+      "median": 2.461589847235869e-05,
+      "min": -0.007708908649715488,
+      "n": 64
+    },
+    "sameDevicePairs": 64,
+    "schemaVersion": "lythaus-wp007l-prnu-results-v1"
+  },
+  "profileStability": {
+    "byDevice": {
+      "iPhone11_1": {
+        "cameraModel": "iPhone11",
+        "dhtUnique": 1,
+        "dimensionsUnique": 2,
+        "dqtUnique": 3,
+        "markerSequenceUnique": 1,
+        "metadataTagSetUnique": 1,
+        "n": 5,
+        "samplingUnique": 1
+      },
+      "iPhone11_3": {
+        "cameraModel": "iPhone11",
+        "dhtUnique": 1,
+        "dimensionsUnique": 3,
+        "dqtUnique": 3,
+        "markerSequenceUnique": 1,
+        "metadataTagSetUnique": 1,
+        "n": 4,
+        "samplingUnique": 1
+      },
+      "iPhone12_1": {
+        "cameraModel": "iPhone12",
+        "dhtUnique": 1,
+        "dimensionsUnique": 2,
+        "dqtUnique": 3,
+        "markerSequenceUnique": 1,
+        "metadataTagSetUnique": 1,
+        "n": 4,
+        "samplingUnique": 1
+      },
+      "iPhone12_3": {
+        "cameraModel": "iPhone12",
+        "dhtUnique": 1,
+        "dimensionsUnique": 2,
+        "dqtUnique": 2,
+        "markerSequenceUnique": 2,
+        "metadataTagSetUnique": 1,
+        "n": 5,
+        "samplingUnique": 1
+      },
+      "iPhone14_1": {
+        "cameraModel": "iPhone14",
+        "dhtUnique": 1,
+        "dimensionsUnique": 2,
+        "dqtUnique": 2,
+        "markerSequenceUnique": 1,
+        "metadataTagSetUnique": 1,
+        "n": 4,
+        "samplingUnique": 1
+      },
+      "iPhone14_3": {
+        "cameraModel": "iPhone14",
+        "dhtUnique": 1,
+        "dimensionsUnique": 1,
+        "dqtUnique": 1,
+        "markerSequenceUnique": 1,
+        "metadataTagSetUnique": 1,
+        "n": 5,
+        "samplingUnique": 1
+      },
+      "note10_1": {
+        "cameraModel": "note10",
+        "dhtUnique": 1,
+        "dimensionsUnique": 3,
+        "dqtUnique": 5,
+        "markerSequenceUnique": 2,
+        "metadataTagSetUnique": 1,
+        "n": 5,
+        "samplingUnique": 1
+      },
+      "note10_3": {
+        "cameraModel": "note10",
+        "dhtUnique": 1,
+        "dimensionsUnique": 3,
+        "dqtUnique": 4,
+        "markerSequenceUnique": 1,
+        "metadataTagSetUnique": 1,
+        "n": 4,
+        "samplingUnique": 1
+      }
+    },
+    "byModel": {
+      "iPhone11": {
+        "devices": 2,
+        "dhtUnique": 1,
+        "dqtUnique": 3,
+        "markerSequenceUnique": 1,
+        "n": 9,
+        "samplingUnique": 1
+      },
+      "iPhone12": {
+        "devices": 2,
+        "dhtUnique": 1,
+        "dqtUnique": 3,
+        "markerSequenceUnique": 2,
+        "n": 9,
+        "samplingUnique": 1
+      },
+      "iPhone14": {
+        "devices": 2,
+        "dhtUnique": 1,
+        "dqtUnique": 2,
+        "markerSequenceUnique": 1,
+        "n": 9,
+        "samplingUnique": 1
+      },
+      "note10": {
+        "devices": 2,
+        "dhtUnique": 1,
+        "dqtUnique": 8,
+        "markerSequenceUnique": 2,
+        "n": 9,
+        "samplingUnique": 1
+      }
+    }
+  },
+  "recordCount": 1460,
+  "records": 24,
+  "role": "INDEPENDENT_SOURCE_FAMILY_CONFIRMATION",
+  "runtimeSeconds": 1031.6244743000134,
+  "schemaVersion": "lythaus-wp007l-analysis-v1",
+  "spoofCount": 20,
+  "validCount": 1460
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "lythaus-wp007l-experiment-plan-v1",
+  "workPackage": "WP007L",
+  "parentSha": "8a5188c1bc41a2a6208860ae63b3d871ecebf387",
+  "objective": "Qualify narrow forensic instruments for current-byte codec structure, controlled recompression/resampling context, camera-acquisition consistency, provenance, and spoof resistance.",
+  "hypotheses": [
+    "Static JPEG/metadata profiles are measurable and stable enough for context but are not authorship proof.",
+    "Controlled descendants expose some recompression/grid/resampling evidence, but complete edit history remains unknowable from final bytes alone.",
+    "Physical-device evidence requires repeated same-device references and cannot be inferred from one native-looking JPEG.",
+    "C2PA is a separate provenance evidence family, not an AI detector."
+  ],
+  "roles": {
+    "development": "36 approved CSAFE/local originals across 14 device families",
+    "confirmation": "24 previously consumed camera-claimed source families; not fresh acquisition and not device-instance ground truth",
+    "sealed": ["FLUX.2", "EF2 future-device reserves", "future generator reserves"]
+  },
+  "controlledOperations": ["DIRECT_COPY", "JPEG100/99/98/97/96/95/92/90/85/80/75/65/50", "4:4:4/4:2:2/4:2:0", "same-Q and different-Q double JPEG", "aligned/non-aligned crop", "resize75/resize50", "screenshot-style", "JPEG_TO_PNG", "metadata strip", "camera-profile qtable/exif attempt", "synthetic camera-profile spoof"],
+  "primaryUnit": "source parent/source family, not descendant count",
+  "independentCrossChecks": ["jpegio", "jpeglib", "ExifTool oracle via pinned Sherloq bundle", "ZERO external grid oracle", "Pillow decode and Lythaus parser"],
+  "qualificationGates": ["unique sample IDs and parent-linked descendants", "no source-family/device leakage", "privacy-safe artifacts", "no authorship claim from codec facts", "spoof attempt included", "GPL/AGPL source not copied", "SAFE-A immutable", "FLUX.2 access zero"],
+  "stopRules": ["unsafe RAM/disk/thermal state", "rights failure", "sealed-data access", "non-reproducible transform", "unexpected paid resource", "material split leakage"],
+  "productionAuthorization": "NO",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0
+}

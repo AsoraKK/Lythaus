@@ -1,0 +1,305 @@
+{
+  "dimensionMatches": 36,
+  "exiftoolVersion": "13.55",
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "formatMatches": 36,
+  "interpretation": "Independent metadata/container cross-check only; values were not persisted and no authorship inference is permitted.",
+  "oracleFileCount": 36,
+  "rawMetadataPersisted": false,
+  "rawOracleSha256": "a6e65f078e96b65a7f15152b264105ba83138ee9fe894d67d560cbb896d49c5c",
+  "records": [
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_02"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_03"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_07"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_08"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_10"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_3_02"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_3_03"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_3_06"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_3_07"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_1_02"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_1_03"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_1_05"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_1_08"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_01"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_03"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_04"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_06"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_09"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_1_02"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_1_04"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_1_09"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_1_12"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_04"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_07"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_08"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_10"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_11"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_01"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_06"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_08"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_09"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_11"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_3_02"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_3_04"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_3_05"
+    },
+    {
+      "dimensionMatch": true,
+      "formatMatch": true,
+      "makePresent": false,
+      "modelPresent": false,
+      "oraclePresent": true,
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_3_07"
+    }
+  ],
+  "repo": "exiftool/exiftool via pinned Sherloq bundle",
+  "sampleCount": 36,
+  "schemaVersion": "lythaus-wp007l-exiftool-crosscheck-v2",
+  "sherloqCommit": "3fe95fcb56037e47e2eefbc2d3785804a31a74f5"
+}

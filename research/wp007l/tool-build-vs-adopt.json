@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "lythaus-wp007l-tool-build-vs-adopt-v1",
+  "decisions": [
+    {"family": "JPEG marker/DQT/DHT parser", "decision": "LYTHAUS_OWNED", "reason": "small deterministic current-byte contract already exists and is easy to audit; cross-check against jpegio/jpeglib"},
+    {"family": "JPEG coefficient access", "decision": "THIRD_PARTY_VALIDATION_ONLY_PENDING_RELEASE_REVIEW", "candidate": "jpegio/jpeglib", "reason": "mature C-backed access, but binary/notice/runtime pinning is required"},
+    {"family": "JPEG grid origin", "decision": "REFERENCE_FOR_REIMPLEMENTATION", "candidate": "ZERO", "reason": "scientifically targeted but AGPL; validate algorithm and reimplement independently only if later justified"},
+    {"family": "metadata oracle", "decision": "THIRD_PARTY_VALIDATION_ONLY", "candidate": "ExifTool", "reason": "broad independent coverage but current runtime is unavailable and license surface is dual"},
+    {"family": "provenance validation", "decision": "ADOPT_CANDIDATE", "candidate": "c2pa-rs", "reason": "standards-based, permissively licensed, separate from pixel/authorship inference"},
+    {"family": "PRNU", "decision": "FUTURE_RESEARCH", "reason": "current source/device cohort cannot validate device identity"},
+    {"family": "CFA/demosaicing", "decision": "FUTURE_RESEARCH", "reason": "current JPEG-only data lacks RAW/device ground truth"},
+    {"family": "Sherloq GUI modules", "decision": "RESEARCH_ORACLE", "reason": "GPL-3.0 and broad educational toolkit; no production dependency"}
+  ],
+  "productionPath": "Production path is not authorized by WP007L."
+}

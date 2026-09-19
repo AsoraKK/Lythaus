@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "lythaus-wp007l-current-state-audit-v1",
+  "researchDate": "2026-09-19",
+  "parentSha": "8a5188c1bc41a2a6208860ae63b3d871ecebf387",
+  "branch": "agent/wp007l-forensic-tool-forge",
+  "pr": {"number": 852, "state": "OPEN", "merged": false, "headSha": "8a5188c1bc41a2a6208860ae63b3d871ecebf387", "url": "https://github.com/AsoraKK/Lythaus/pull/852"},
+  "originMainAtAudit": "8e3b3ebad2f846e61db2bfe819376723da7e9863",
+  "newerAuthenticitySupersederFound": false,
+  "safeA": {
+    "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+    "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "threshold": 0.5864923000335693,
+    "weightsModified": false,
+    "preprocessingModified": false
+  },
+  "inheritedAudit": {"artifact": "research/wp007l/wp007k-inherited-artifact-audit.json", "status": "CANONICAL_ARTIFACT_IDENTIFIED", "sha256": "1e4351584a0e08f127ed83e8a43c9db5f9d0691a254cd4db5a33e55631547f62"},
+  "runtime": {
+    "python": "3.13.5",
+    "torch": "2.14.0+cpu",
+    "pillow": "12.3.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1",
+    "oracles": {"jpegio": "0.3.0", "jpeglib": "1.0.2"},
+    "compute": "Ryzen 7-class CPU; no GPU; bounded workers",
+    "externalPaidServices": false
+  },
+  "mediaRoles": {
+    "developmentNativeCameraFiles": 36,
+    "developmentDeviceFamilies": 14,
+    "confirmationCameraSourceFamilies": 24,
+    "confirmationStatus": "previously consumed project media; independent from WP007L profile fitting, not fresh acquisition",
+    "sealedEf2FutureDeviceReservesOpened": false,
+    "flux2PixelsAccessed": false,
+    "flux2ProviderCalls": 0,
+    "mediaCommittedToGit": false
+  },
+  "productionBoundary": {"productionChanges": false, "productionAuthorization": "NO", "safeAChanged": false, "cesSPromoted": false}
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "lythaus-wp007l-external-tool-rights-v1",
+  "entries": [
+    {"repo": "dwgoon/jpegio", "license": "Apache-2.0", "bundledComponents": ["libjpeg-turbo; inspect notices"], "use": "ADOPT_CANDIDATE", "copyingIntoLythaus": "not yet authorized; use pinned package/oracle"},
+    {"repo": "martinbenes1996/jpeglib", "license": "MPL-2.0", "bundledComponents": ["multiple JPEG codec sources; inspect notices"], "use": "ADOPT_CANDIDATE", "copyingIntoLythaus": "not yet authorized"},
+    {"repo": "GuidoBartoli/sherloq", "license": "GPL-3.0", "use": "RESEARCH_ORACLE", "copyingIntoLythaus": "FORBIDDEN_BY_WP007L_LICENSE_FIREWALL"},
+    {"repo": "tinankh/ZERO", "license": "AGPL-3.0", "use": "RESEARCH_ORACLE_OR_REIMPLEMENT_FROM_PAPER", "copyingIntoLythaus": "FORBIDDEN_BY_WP007L_LICENSE_FIREWALL"},
+    {"repo": "DIFLabUnisa/PNU-Matlab", "license": "MIT", "use": "REFERENCE_FOR_REIMPLEMENTATION", "copyingIntoLythaus": "possible after source/notice review"},
+    {"repo": "exiftool/exiftool", "license": "Perl Artistic License / GPL-1.0-or-later", "use": "VALIDATION_ORACLE", "copyingIntoLythaus": "not planned"},
+    {"repo": "contentauth/c2pa-rs", "license": "MIT and Apache-2.0", "use": "PROVENANCE_ADOPT_CANDIDATE", "copyingIntoLythaus": "requires dependency and notice review"},
+    {"repo": "contentauth/c2patool", "license": "Apache-2.0 and MIT", "use": "ARCHIVED_REFERENCE_ONLY", "copyingIntoLythaus": "not planned"},
+    {"repo": "csjinxie/Double-JPEG-compression-detection", "license": "NOASSERTION", "use": "RESEARCH_REFERENCE", "copyingIntoLythaus": "not permitted without licence clarification"},
+    {"repo": "btlorch/reliable-jpeg-forensics", "license": "NOASSERTION", "use": "RESEARCH_REFERENCE", "copyingIntoLythaus": "not permitted without licence clarification"}
+  ],
+  "modelWeights": "none used",
+  "datasets": "no external dataset media committed or redistributed",
+  "deploymentConclusion": "No external forensic tool is production-authorized by WP007L. c2pa-rs and jpegio/jpeglib remain candidates subject to later release review."
+}

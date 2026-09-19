@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "lythaus-wp007l-flux2-zero-access-v1",
+  "pixelAccess": false,
+  "thumbnailAccess": false,
+  "metadataInspection": false,
+  "featureExtraction": false,
+  "safeInference": false,
+  "prnuInference": false,
+  "c2paInspection": false,
+  "providerCalls": 0,
+  "familiesEnumeratedForPixels": [],
+  "sealedReserveFilesOpened": false,
+  "assertion": "FLUX.2 remains completely sealed; no bytes, pixels, thumbnails, metadata, features, detector calls, or provider calls were made.",
+  "decision": "REMAIN_SEALED"
+}

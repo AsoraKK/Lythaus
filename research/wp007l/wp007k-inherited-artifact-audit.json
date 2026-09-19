@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "lythaus-wp007l-inherited-artifact-audit-v1",
+  "workPackage": "WP007L",
+  "auditedParent": "8a5188c1bc41a2a6208860ae63b3d871ecebf387",
+  "scope": "Reconcile WP007K encoder leave-one-out summaries before any WP007L scientific media experiment.",
+  "finding": "E1 aggregate discrepancy confirmed; the canonical held-out encoder value is 73/700, not 166/700.",
+  "canonicalInterpretation": {
+    "E1": {
+      "trainingEncoder": "PILLOW_LIBJPEG",
+      "heldOutEncoder": "SHARP_LIBVIPS",
+      "modelArtifact": "research/wp007k/ces-s-model-pillow-train-v2.json",
+      "modelSha256": "56c84f3becf5aa7139b81d95ad4ecc9cc049e3bae9ac7455963fb4e8dd74674c",
+      "threshold": 0.7346028652586637,
+      "heldOutSyntheticHigh": {"numerator": 73, "denominator": 700, "rate": 0.10428571428571429},
+      "heldOutNegativeHigh": {"numerator": 0, "denominator": 640, "rate": 0.0},
+      "heldOutNegativeSourceFp": {"numerator": 0, "denominator": 160, "rate": 0.0},
+      "recordIdsSha256": "a7ec692a99294f194c4f56c8044eeff859586d9864c09894ab4a9edbb712f679",
+      "scoreRowsSha256": "fdf6f575910a41f336130a2fcbd747c1a26d5d4882ae794261312d76e52b3f11"
+    },
+    "E2": {
+      "trainingEncoder": "SHARP_LIBVIPS",
+      "heldOutEncoder": "PILLOW_LIBJPEG",
+      "modelArtifact": "research/wp007k/ces-s-model-sharp-train-v2.json",
+      "modelSha256": "6e417b327dde4dab5baa026a6dfa893237fa3535dae1dd1c4a02e986161fd036",
+      "threshold": 0.7887192893860979,
+      "heldOutSyntheticHigh": {"numerator": 166, "denominator": 700, "rate": 0.23714285714285716},
+      "heldOutNegativeHigh": {"numerator": 0, "denominator": 640, "rate": 0.0},
+      "heldOutNegativeSourceFp": {"numerator": 0, "denominator": 160, "rate": 0.0},
+      "recordIdsSha256": "69023d312455b0b3ccd05167ea77a893768e0546088d78a97dc33e8f5503e3ea",
+      "scoreRowsSha256": "8d921c24bf9ba0f25fd76327038c732740c8e22cbc8f28447450833e8ddff08b"
+    }
+  },
+  "artifactComparison": {
+    "encoderLeaveOneOutJsonSha256": "cea291fea16f19040041920b2ceeda5bf4212f36faabdf892c8dccccb377de1f",
+    "encoderLeaveOneOutE1ReportedHeldOutSyntheticHigh": "166/700",
+    "encoderLeaveOneOutE2ReportedHeldOutSyntheticHigh": "166/700",
+    "encoderLooPillowByEncoderE1ObservedSharpSlice": "73/700",
+    "encoderLooSharpByEncoderE2ObservedPillowSlice": "166/700",
+    "pillowToConfirmV2JsonSha256": "58d56709480c47393db68ee571c2f1f84db3c0faaef980e27121302c1343955b",
+    "sharpToConfirmV2JsonSha256": "7ef8c95b6785a06aad45047853038cc0690d59c0cc1efbf74223014cd715d8f8",
+    "rawSliceCrossCheck": "The by-encoder and v2 raw-record paths agree exactly on record-ID and score-row hashes for both held-out slices."
+  },
+  "canonicalArtifactForFutureUse": "The raw v2 records grouped by their explicit encoder field, cross-checked against the by-encoder files; the compact encoder-leave-one-out E1 held-out metric is stale/mis-associated and must not be used for new claims.",
+  "historicalHandling": "WP007K files are not rewritten. WP007L reports this inherited correction explicitly and uses only the canonical values.",
+  "independentChecks": [
+    "Model artifact SHA-256 matched the modelSha256 embedded in the compact aggregate.",
+    "Pillow-trained raw records grouped by SHARP_LIBVIPS independently recomputed 73/700.",
+    "Sharp-trained raw records grouped by PILLOW_LIBJPEG independently recomputed 166/700.",
+    "Record-ID and score-row hashes matched across the compact and v2 raw paths.",
+    "All held-out negative slices had 0/640 record positives and 0/160 source-level false-positive sources."
+  ],
+  "flux2PixelAccess": false,
+  "flux2ProviderCalls": 0,
+  "completion": {
+    "state": "110_PERCENT_VALIDATED_COMPLETE",
+    "completionPercent": 110,
+    "remainingUncertainty": "The stale compact artifact’s generation bug is not reconstructed beyond the observed metric association; canonical raw slices are independently verified."
+  }
+}
