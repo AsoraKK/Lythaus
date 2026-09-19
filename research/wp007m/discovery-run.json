@@ -1,0 +1,45 @@
+{
+  "codeCommit": "dbea87c54dfb611bb2827e5fa2960574e1b627ac",
+  "codeHash": "94e0277b30f1d5059ec5d50f94a78b58ba2b3a4388dee07112d36e3c7cff970d",
+  "cohortHash": "a4ab896818600e39542e09eb6fb75d94e4f6fc25ce30aef3c060e76e625df060",
+  "command": [
+    "python",
+    "scripts/authenticity/wp007m_probe.py",
+    "extract",
+    "--role",
+    "DISCOVERY",
+    "--media",
+    "<APPROVED_WP007I_MEDIA>",
+    "--bulk",
+    "<EXTERNAL_WP007M>",
+    "--safe",
+    "<PINNED_SAFE>",
+    "--sharp",
+    "<EXISTING_SHARP>"
+  ],
+  "endUnix": 1789803477.1406884,
+  "environment": {
+    "numpy": "2.5.2",
+    "pillow": "12.3.0",
+    "python": "3.13.5",
+    "safeHash": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "scipy": "1.18.1",
+    "sklearn": "1.9.1",
+    "threads": 2,
+    "torch": "2.14.0+cpu",
+    "workers": 1
+  },
+  "environmentHash": "91ce5043f6028c73b31f38643f51d5bd46a6afc7003157df6a06d74485dfea44",
+  "failures": 0,
+  "featureMs": {
+    "p50": 40.36144999554381,
+    "p95": 124.47185000637536
+  },
+  "flux2Access": 0,
+  "outputHash": "41369a382a2d0cfd252f4b3fe325e399c3c82c195a29e099a7ebb09db53a10d8",
+  "outputLogicalPath": "external/wp007m/discovery-rows.jsonl",
+  "providerCalls": 0,
+  "rows": 792,
+  "seed": 0,
+  "startUnix": 1789803339.2860405
+}
