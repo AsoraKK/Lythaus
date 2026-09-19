@@ -26,7 +26,7 @@ The unit of completion is the scientific question, not the number of files. `BLO
 | Role/privacy contracts | Yes | WP007L and historical authenticity tests | Codec spoof and contradiction cases | Yes/privacy | `110_PERCENT_VALIDATED_COMPLETE` | `packages/authenticity/tests/wp007l.test.mjs`, `validation-summary.json` |
 | FLUX.2 reserve | No access by design | Manifest/assertion and code-path tests | N/A | N/A | `110_PERCENT_VALIDATED_COMPLETE` | `flux2-zero-access.json` |
 | Regression validation | Yes | Focused, historical, JSON, syntax, scope and diff checks | N/A | N/A | `110_PERCENT_VALIDATED_COMPLETE` | `validation-summary.json` |
-| Unmerged PR | To be created only after final validation | GitHub PR head/base and diff review | N/A | N/A | `IN_PROGRESS` until PR exists | PR URL and final head |
+| Unmerged PR | PR #853 opened from the verified parent | GitHub PR/base/head and local diff review | N/A | N/A | `110_PERCENT_VALIDATED_COMPLETE` | `https://github.com/AsoraKK/Lythaus/pull/853`, initial head `0d491ea1` |
 
 ## Validated blockers
 

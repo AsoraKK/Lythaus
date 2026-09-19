@@ -342,8 +342,8 @@
       "state": "110_PERCENT_VALIDATED_COMPLETE",
       "completionPercent": 110,
       "evidenceArtifact": "research/wp007l/completion-self-audit.md",
-      "remainingUncertainty": "CI/reviewer feedback after publication remains outside the local completion audit."
+      "remainingUncertainty": "CI/reviewer feedback after publication remains outside the local completion audit; PR #853 is intentionally open and unmerged."
     }
   ],
-  "lastUpdated": "WP007L_EMPIRICAL_TOOLFORGE_AND_SPOOF_AUDIT_COMPLETE_BEFORE_VALIDATION"
+  "lastUpdated": "WP007L_PR_853_OPEN_UNMERGED_VALIDATION_COMPLETE"
 }

@@ -3,6 +3,7 @@
   "researchDate": "2026-09-19",
   "parentSha": "8a5188c1bc41a2a6208860ae63b3d871ecebf387",
   "branch": "agent/wp007l-forensic-tool-forge",
+  "finalPr": {"number": 853, "state": "OPEN", "merged": false, "initialHeadSha": "0d491ea1", "url": "https://github.com/AsoraKK/Lythaus/pull/853"},
   "pr": {"number": 852, "state": "OPEN", "merged": false, "headSha": "8a5188c1bc41a2a6208860ae63b3d871ecebf387", "url": "https://github.com/AsoraKK/Lythaus/pull/852"},
   "originMainAtAudit": "8e3b3ebad2f846e61db2bfe819376723da7e9863",
   "newerAuthenticitySupersederFound": false,
