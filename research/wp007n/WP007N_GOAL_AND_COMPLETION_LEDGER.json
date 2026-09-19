@@ -1,0 +1,15 @@
+{
+  "schemaVersion":"wp007n-completion-ledger-v1",
+  "parent":"e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+  "qualityLabelMeaning":"110 means independently checked completed work, not detector quality. Blocked experiments are not negative results.",
+  "productionAuthorization":"NO",
+  "objectives":[
+    {"id":"audit","question":"Are lineage, primary sources, model/data rights and resources admissible?","experiment":"Live GitHub and registry/cache audit","crossCheck":"Pinned authoritative code/model cards and local hashes","executionStatus":"RUNNING","scientificDisposition":"UNDETERMINED","qualityPercent":0,"evidence":[],"limitations":[]},
+    {"id":"engineering","question":"Do both frozen loaders and the RIGID arithmetic agree with upstream safely?","experiment":"8-12 non-evaluation fixtures, zero noise, replay, dimensions, runtime","crossCheck":"Independent upstream arithmetic and loader equivalence","executionStatus":"NOT_STARTED","scientificDisposition":"UNDETERMINED","qualityPercent":0,"evidence":[],"limitations":[]},
+    {"id":"data","question":"Can source/family-separated fitting, calibration and evaluation roles be supported?","experiment":"Score-blind freeze with rights, source/prompt/duplicate and reserve controls","crossCheck":"Independent metadata/identity review","executionStatus":"RUNNING","scientificDisposition":"UNDETERMINED","qualityPercent":0,"evidence":[],"limitations":[]},
+    {"id":"armA","question":"Does frozen response recover useful evidence; does it exceed a legitimate A0?","experiment":"Single fixed seed and three-draw mean across declared conditions","crossCheck":"Seed/resume equivalence, same-tensor reference and independent row metrics","executionStatus":"NOT_STARTED","scientificDisposition":"UNDETERMINED","qualityPercent":0,"evidence":[],"limitations":[]},
+    {"id":"armB","question":"Do modern frozen features and rights-permitted clean/augmented heads improve the tradeoff?","experiment":"One PE identity; conditional B0/B1 fitting; otherwise extraction and fixed descriptive analysis only","crossCheck":"Train-only standardization, permutation and independent metrics where fitting permitted","executionStatus":"NOT_STARTED","scientificDisposition":"UNDETERMINED","qualityPercent":0,"evidence":[],"limitations":[]},
+    {"id":"falsification","question":"Do findings survive negatives, nuisance, generator, seed, codec and input controls?","experiment":"Frozen matched views, transformations, separate negative strata and source-worst outcomes","crossCheck":"Independent principal counts and positive-case/negative-panel replay","executionStatus":"NOT_STARTED","scientificDisposition":"UNDETERMINED","qualityPercent":0,"evidence":[],"limitations":[]},
+    {"id":"delivery","question":"Are results reproducible and correctly bounded in an unmerged stacked PR?","experiment":"H-M regressions, numerical/contract tests, final report and PR","crossCheck":"Separate audit, fresh checkout and live PR lineage","executionStatus":"NOT_STARTED","scientificDisposition":"UNDETERMINED","qualityPercent":0,"evidence":[],"limitations":[]}
+  ]
+}

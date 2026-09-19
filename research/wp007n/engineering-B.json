@@ -1,0 +1,253 @@
+{
+  "arm": "B",
+  "checkpointAfter": "0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce",
+  "checkpointUnchanged": true,
+  "codeHash": "db651c2548950842d64a30f1ceb9d3c457f0274549077a9c3590f9113811260c",
+  "command": "python wp007n_core.py engineering B",
+  "endedUnix": 1789842722.1356492,
+  "estimatedForwardP95Seconds": 0.39581346750152685,
+  "fixtures": [
+    {
+      "cosineArithmeticError": 0.0,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 0,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7699128320,
+        "freeDiskBytes": 1901256704
+      },
+      "response": 0.10968852043151855,
+      "sixForwardsSeconds": 2.285865400044713,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 5.960464477539063e-08,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 1,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7696789504,
+        "freeDiskBytes": 1901252608
+      },
+      "response": 0.14348351955413818,
+      "sixForwardsSeconds": 1.9913793999585323,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 0.0,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 2,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7693512704,
+        "freeDiskBytes": 1901268992
+      },
+      "response": 0.12780100107192993,
+      "sixForwardsSeconds": 2.2459931999910623,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 0.0,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 3,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7694458880,
+        "freeDiskBytes": 1901268992
+      },
+      "response": 0.17409592866897583,
+      "sixForwardsSeconds": 2.235359799989965,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 0.0,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 4,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7692869632,
+        "freeDiskBytes": 1901268992
+      },
+      "response": 0.1521761417388916,
+      "sixForwardsSeconds": 2.247200099984184,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 0.0,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 5,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7694573568,
+        "freeDiskBytes": 1901268992
+      },
+      "response": 0.186751127243042,
+      "sixForwardsSeconds": 2.253788500034716,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 5.960464477539063e-08,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 6,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7691190272,
+        "freeDiskBytes": 1901268992
+      },
+      "response": 0.00022602081298828125,
+      "sixForwardsSeconds": 2.284605900000315,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 1.7881393432617188e-07,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 7,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7660765184,
+        "freeDiskBytes": 1901268992
+      },
+      "response": 0.00037544965744018555,
+      "sixForwardsSeconds": 2.251388299977407,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 1.1920928955078125e-07,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 8,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7686234112,
+        "freeDiskBytes": 1901248512
+      },
+      "response": 0.000642240047454834,
+      "sixForwardsSeconds": 2.425156200013589,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 5.960464477539063e-08,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 9,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 7688368128,
+        "freeDiskBytes": 1901248512
+      },
+      "response": 0.0003464221954345703,
+      "sixForwardsSeconds": 2.313433100003749,
+      "zeroNoiseMaxAbs": 0.0
+    }
+  ],
+  "identity": {
+    "checkpointBytes": 1790786632,
+    "checkpointSha256": "0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce",
+    "initializationSeconds": 4.155184299976099,
+    "parameters": 93672960,
+    "preprocessing": {
+      "arm": "B",
+      "geometry": [
+        224,
+        224
+      ],
+      "icc": "NO_PROFILE_CONVERSION_PIL_RGB_VALUES",
+      "mean": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "orientation": "EXIF_TRANSPOSE_BEFORE_RGB",
+      "pooling": "official_attention_pool_projected_1024",
+      "precision": "float32",
+      "resize": "PIL_BILINEAR_SQUASH_ANTIALIAS_TRUE",
+      "std": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  },
+  "officialVisionLoaderAndClipEncodeErrors": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "productionAuthorization": "NO",
+  "startedUnix": 1789842667.6465192
+}

@@ -1,0 +1,242 @@
+{
+  "arm": "A",
+  "checkpointAfter": "d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428",
+  "checkpointUnchanged": true,
+  "codeHash": "db651c2548950842d64a30f1ceb9d3c457f0274549077a9c3590f9113811260c",
+  "command": "python wp007n_core.py engineering A",
+  "endedUnix": 1789842515.3770506,
+  "estimatedForwardP95Seconds": 3.1096747833299254,
+  "fixtures": [
+    {
+      "cosineArithmeticError": 0.0,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 0,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6561120256,
+        "freeDiskBytes": 1904590848
+      },
+      "response": 0.4788306951522827,
+      "sixForwardsSeconds": 10.67271489999257,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 0.0,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 1,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6683045888,
+        "freeDiskBytes": 1904586752
+      },
+      "response": 0.568739652633667,
+      "sixForwardsSeconds": 13.351078399980906,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 2.9802322387695312e-08,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 2,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6751174656,
+        "freeDiskBytes": 1904545792
+      },
+      "response": 0.6199036836624146,
+      "sixForwardsSeconds": 19.122037399967667,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 1.1920928955078125e-07,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 3,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6775418880,
+        "freeDiskBytes": 1904545792
+      },
+      "response": 0.3345832824707031,
+      "sixForwardsSeconds": 9.855060199974105,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 5.960464477539063e-08,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 4,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6807588864,
+        "freeDiskBytes": 1904529408
+      },
+      "response": 0.38774895668029785,
+      "sixForwardsSeconds": 15.128001699980814,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 1.1920928955078125e-07,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 5,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6830215168,
+        "freeDiskBytes": 1904508928
+      },
+      "response": 0.3428843021392822,
+      "sixForwardsSeconds": 16.185148200020194,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 1.1920928955078125e-07,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 6,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6830538752,
+        "freeDiskBytes": 1903460352
+      },
+      "response": 0.0004126429557800293,
+      "sixForwardsSeconds": 10.067472100025043,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 0.0,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 7,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6830559232,
+        "freeDiskBytes": 1903456256
+      },
+      "response": 9.268522262573242e-05,
+      "sixForwardsSeconds": 15.733480499999132,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 5.960464477539063e-08,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 8,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6819221504,
+        "freeDiskBytes": 1903390720
+      },
+      "response": 0.00034332275390625,
+      "sixForwardsSeconds": 18.090951399994083,
+      "zeroNoiseMaxAbs": 0.0
+    },
+    {
+      "cosineArithmeticError": 1.1920928955078125e-07,
+      "dimension": [
+        1,
+        1024
+      ],
+      "engineeringOnly": true,
+      "finite": true,
+      "fixture": 9,
+      "noiseReplayMaxAbs": 0.0,
+      "referenceFeatureMaxAbs": 0.0,
+      "repeatMaxAbs": 0.0,
+      "resources": {
+        "availableBytes": 6815354880,
+        "freeDiskBytes": 1903390720
+      },
+      "response": 0.004328310489654541,
+      "sixForwardsSeconds": 9.913160800002515,
+      "zeroNoiseMaxAbs": 0.0
+    }
+  ],
+  "identity": {
+    "checkpointBytes": 1217586395,
+    "checkpointSha256": "d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428",
+    "initializationSeconds": 7.6079137999913655,
+    "parameters": 304368640,
+    "preprocessing": {
+      "arm": "A",
+      "geometry": [
+        224,
+        224
+      ],
+      "icc": "NO_PROFILE_CONVERSION_PIL_RGB_VALUES",
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "orientation": "EXIF_TRANSPOSE_BEFORE_RGB",
+      "pooling": "x_norm_clstoken_1024",
+      "precision": "float32",
+      "resize": "PIL_BILINEAR_SQUASH_ANTIALIAS_TRUE",
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    }
+  },
+  "officialVisionLoaderAndClipEncodeErrors": [],
+  "productionAuthorization": "NO",
+  "startedUnix": 1789842367.406467
+}

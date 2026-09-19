@@ -1,0 +1,27 @@
+{
+  "forwards": 148,
+  "runs": [
+    {
+      "ambiguousForwardCharged": false,
+      "cachedParents": 0,
+      "codeCommit": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+      "codeHash": "c7996b9a485518622ff87eaf2bd5915b761ac7d36d4ac5eb1dee1b38abba0a1d",
+      "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+      "command": "python wp007n_extract.py B --roles FIT,DEV,CALIBRATION",
+      "endedUnix": 1789844493.489151,
+      "failure": null,
+      "forwards": 148,
+      "minimumAvailableBytes": 7393361920,
+      "newParents": 44,
+      "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+      "roles": [
+        "FIT",
+        "DEV",
+        "CALIBRATION"
+      ],
+      "seconds": 121.41367197036743,
+      "startedUnix": 1789844372.129372
+    }
+  ],
+  "seconds": 121.41230940818787
+}

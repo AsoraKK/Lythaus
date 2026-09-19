@@ -1,0 +1,30 @@
+{
+  "candidate": "B1_PERMUTED",
+  "codeHash": "d1a88f66f5bda84a6a04d0a93f57242b5fe236b6b9e13b7ce1797fcff896e5a6",
+  "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+  "comparison": "STRICT_GREATER",
+  "fprTargetDemonstrated": false,
+  "freezeHash": "e998f37a9a3a425f04882050bc618a68fc63fcbb8338f36335cc533c3f624ddc",
+  "frozenBeforeEvaluation": true,
+  "headHash": "3e79c65ef503a2deb41dad1b3ab5589eb1a3e1091d36395277c1381308eeca33",
+  "originalThreshold": 0.7761767746750107,
+  "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+  "rankResolution": 0.125,
+  "roles": [
+    "CALIBRATION"
+  ],
+  "schemaVersion": "wp007n-calibration-v1",
+  "sourceCount": 8,
+  "sourceWorstScores": {
+    "CSAFE_WP006E_iPhone12_1_03": 0.6241246574263356,
+    "CSAFE_WP006E_iPhone12_1_05": 0.7864608569301789,
+    "CSAFE_WP006E_iPhone12_1_08": 0.6093852639141523,
+    "CSAFE_WP006E_note10_1_01": 0.47391532571413764,
+    "CSAFE_WP006E_note10_1_05": 0.6973471508820844,
+    "CSAFE_WP006E_note10_3_01": 0.6908171971856694,
+    "CSAFE_WP006E_note10_3_03": 0.41639786771185183,
+    "CSAFE_WP006E_note10_3_06": 0.6968828055865538
+  },
+  "targetFpr": 0.01,
+  "worstThreshold": 0.7864608569301789
+}
