@@ -74,6 +74,8 @@ The sole false-positive source is an Unsplash photograph after RESIZE75, candida
 
 Evidence: [falsification-results.json](falsification-results.json), [independent audit](final-independent-audit.json), [24-media crosscheck](real-media-crosscheck.json), [positive-case crosscheck](positive-case-independent-check.json), [integrity tests](../../scripts/authenticity/test_wp007m_probe.py). Remaining alternatives: content/texture, unknown ISP/edit history, procedural-template bias, crop choice, and finite/historically exposed family coverage. Low correlation with selected old features does not prove useful independence from SAFE.
 
+A [fresh Windows Git checkout](fresh-checkout-crosscheck.json) additionally passes 14 Python and six Node tests and reaggregates all 1,984 rows plus the 720-row SAFE supplement into the **identical empirical-result byte hash**. Narrow line-ending attributes preserve frozen protocol/source identities. This is reproducibility, not a new independent population.
+
 ## Resources, ownership and validation
 
 One CPU worker, Torch two threads, no model/data download, paid execution or provider calls. The stricter 4 GiB available-RAM inference guard stopped combined workers; completed rows were preserved. Separate feature-only and lean SAFE-only passes completed the missing 720 SAFE values with exact regenerated pixel-hash checks. No guard was weakened and no missing score became a negative. No training occurred; ECO-TRAIN admission is not claimed passed.
