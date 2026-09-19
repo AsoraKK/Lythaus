@@ -1,0 +1,20 @@
+{
+  "schemaVersion":"wp007m-current-state-v1",
+  "date":"2026-09-19",
+  "WP007M_PARENT_SHA":"63d5daf05243673ad65f2b59dbdb81e94290180b",
+  "originMain":"8e3b3ebad2f846e61db2bfe819376723da7e9863",
+  "parentPr":{"number":853,"state":"OPEN","merged":false,"branch":"agent/wp007l-forensic-tool-forge"},
+  "newerResearchPrFound":false,
+  "workingBranch":"agent/wp007m-independent-discovery",
+  "isolation":"New clean stacked worktree; primary untracked files untouched",
+  "inheritedKCorrection":"WP007L canonical E1 73/700; E2 166/700, not stale K E1 166/700",
+  "inheritedLLimit":"Profile-only spoofable; ZERO smoke and residual experiment do not qualify grid/PRNU. L inventory's 14-device count conflicts with final 8-device analysis; M does not inherit that N.",
+  "safe":{"upstream":"4e998724651b227def64f5be0cd60c0aa1552c35","checkpoint":"b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e","threshold":0.5864923000335693,"rights":"RESEARCH_EVALUATION_ELIGIBLE_DEPLOYMENT_REVIEW_REQUIRED"},
+  "runtime":{"python":"3.13.5","numpy":"2.5.2","scipy":"1.18.1","pillow":"12.3.0","sklearn":"1.9.1","existingEnvironment":"WP007E_SAFE_REUSED","newDependencies":0,"workers":1,"torchThreads":2},
+  "resources":{"diskGiBBeforeWorktree":2.34,"diskGiBAfterWorktree":2.20,"freeRamKiB":4656768,"bulkBudgetMiB":100,"newModelDownloads":0},
+  "executionScope":"Short attended CPU benchmark/measurement per docs/runbooks/local-ml-development.md; no ECO-TRAIN or unattended training launched. Its 80GiB free-disk admission gate is not claimed passed. Preserve 4GiB available-RAM boundary during inference; keep bounded rows resumable.",
+  "rightsReferences":["research/wp007i/rights-status-update.json","research/wp007h/safe-artifact-rights.json","research/wp007i/negative-data-freeze.json","research/wp007i/fresh-synthetic-freeze.json"],
+  "datasetRoles":{"unsplash":"Previously consumed photographic diversity; not pristine native ground truth; internal evaluation no redistribution","procedural":"Owned procedural templates, not representative human digital art/game/CGI corpus","T2I":"Previously consumed private research evaluation only; no training; family/prompt controls","CSAFE":"Registered available L consumed cohort, optional diagnostic only; physical-device reserve prohibited"},
+  "reserves":{"access":0,"policy":"Positive per-record allowlist only; deny reserve markers and path escape before byte access; no recursive cache scan"},
+  "productionAuthorization":"NO"
+}
