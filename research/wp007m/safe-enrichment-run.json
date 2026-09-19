@@ -1,0 +1,15 @@
+{
+  "inputRowsHash": "b59b49ee6e15d03a72b7c2b9039f48a0f43f785a13cc67132a01241f3a978371",
+  "outputRowsHash": "620c54e5503b36f7d7bf01b618a31b5f645395a9393d69de028c87eaacce89b9",
+  "codeHash": "24b8e8019e036b0dda8c9759e22658a5d04ab48e8177b4c439a7c45da3a94aa1",
+  "safeHash": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+  "cohortHash": "a4ab896818600e39542e09eb6fb75d94e4f6fc25ce30aef3c060e76e625df060",
+  "rows": 720,
+  "pixelHashesMatched": 720,
+  "startUnix": 1789821855.3034017,
+  "endUnix": 1789821922.3106642,
+  "minimumObservedAvailableRam": 4401389568,
+  "command": "python scripts/authenticity/wp007m_safe_only.py --media <WP007I_MEDIA> --bulk <EXTERNAL_WP007M> --safe <PINNED_SAFE> --sharp <EXISTING_SHARP>",
+  "environment": "Same frozen runtime; Torch2 threads; no SciPy/sklearn imports; no weights/preprocessing/threshold changes",
+  "flux2Access": 0
+}

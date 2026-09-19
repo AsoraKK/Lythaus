@@ -1,0 +1,1378 @@
+{
+  "DISCOVERY": {
+    "JPEG75": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": -0.0821235710779157,
+        "dctAcEnergy": -0.26658123418064505,
+        "dctAcL1Mean": -0.23353033809587562,
+        "dctAcZeroRate": 0.004979311312153727,
+        "dctDcMean": -0.08662471549069485,
+        "dctDcStd": -0.16839763084240256,
+        "dctHighFrequencyEnergy": -0.3413410350081925,
+        "dctHighToLowEnergyRatio": -0.26418402412511394,
+        "dctLowFrequencyEnergy": -0.25145840904309236,
+        "fftHighFrequencyEnergyRatio": -0.23265051100102643,
+        "fftLogMagnitudeMean": -0.24322118725653333,
+        "fftPhaseCircularCoherence": -0.008830148741783497,
+        "fftPhaseMeanAbsolute": 0.17949110290789225,
+        "haarMarginalEnergyRatio": -0.3255806540048071,
+        "pixelStd": -0.24045419479881922
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.04452324109944694,
+          "nullMedian": 0.013289827467776523
+        },
+        "PHOTO": {
+          "candidateMedian": 0.07920120794392968,
+          "nullMedian": 0.014315655203800855
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.058609676225067964,
+          "nullMedian": 0.011864814155734905
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.04561454677561244,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.6094182825484764,
+            "available": 38,
+            "averagePrecision": 0.5367483855240447,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.21883656509695282
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.9501044716710746,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.7368421052631579,
+          "pairs": 19
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.40368178829717294,
+            "available": 78,
+            "averagePrecision": 0.41901628652258877,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.19263642340565412
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.3113492499227386,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.38461538461538464,
+          "pairs": 39
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.4563233376792699,
+        "available": 98,
+        "averagePrecision": 0.4119127684550939,
+        "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+        "rankBiserial": -0.08735332464146017
+      }
+    },
+    "JPEG85": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": -0.055843518288290005,
+        "dctAcEnergy": -0.19893655681579098,
+        "dctAcL1Mean": -0.2498390171438772,
+        "dctAcZeroRate": 0.08985074817180853,
+        "dctDcMean": 0.06636319007453027,
+        "dctDcStd": -0.03619404650332485,
+        "dctHighFrequencyEnergy": -0.2967121243999005,
+        "dctHighToLowEnergyRatio": -0.1485186389457376,
+        "dctLowFrequencyEnergy": -0.19855402329629132,
+        "fftHighFrequencyEnergyRatio": -0.20416451491561946,
+        "fftLogMagnitudeMean": -0.18737129340958497,
+        "fftPhaseCircularCoherence": 0.009633469132732754,
+        "fftPhaseMeanAbsolute": 0.2582547545728694,
+        "haarMarginalEnergyRatio": -0.19349182972157933,
+        "pixelStd": -0.11583752526315116
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.035689467680786846,
+          "nullMedian": 0.012822182276288563
+        },
+        "PHOTO": {
+          "candidateMedian": 0.06972167055051214,
+          "nullMedian": 0.011861576570529057
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.05654092381866571,
+          "nullMedian": 0.009812795970955338
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.04114918410093396,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.554016620498615,
+            "available": 38,
+            "averagePrecision": 0.506292144633723,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.10803324099723
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.8979766474393122,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.47368421052631576,
+          "pairs": 19
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.4168310322156476,
+            "available": 78,
+            "averagePrecision": 0.4366155508795673,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.1663379355687048
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.2010120430562852,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.38461538461538464,
+          "pairs": 39
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.5141242937853107,
+        "available": 98,
+        "averagePrecision": 0.43455081487277236,
+        "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+        "rankBiserial": 0.02824858757062132
+      }
+    },
+    "JPEG95": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.2564058425619545,
+        "dctAcEnergy": -0.10865864621387446,
+        "dctAcL1Mean": -0.2867152484236431,
+        "dctAcZeroRate": 0.4351255028721891,
+        "dctDcMean": 0.34633947299632123,
+        "dctDcStd": -0.004839049021670523,
+        "dctHighFrequencyEnergy": -0.16744129704365343,
+        "dctHighToLowEnergyRatio": -0.11583752526315116,
+        "dctLowFrequencyEnergy": -0.10663121856052636,
+        "fftHighFrequencyEnergyRatio": -0.06422100236533226,
+        "fftLogMagnitudeMean": -0.14076595961721144,
+        "fftPhaseCircularCoherence": 0.060306409349119204,
+        "fftPhaseMeanAbsolute": 0.11671735235800035,
+        "haarMarginalEnergyRatio": -0.016646583656892932,
+        "pixelStd": -0.044839304044016856
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.09106677740303226,
+          "nullMedian": 0.021440907471333242
+        },
+        "PHOTO": {
+          "candidateMedian": 0.07135859123728214,
+          "nullMedian": 0.01286543745240115
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.03543086488504249,
+          "nullMedian": 0.01067642172209548
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.03827925224506751,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.19113573407202217,
+            "available": 38,
+            "averagePrecision": 0.3581103456166487,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.6177285318559557
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.9420872527639285,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.15789473684210525,
+          "pairs": 19
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.33793556870479946,
+            "available": 78,
+            "averagePrecision": 0.39520808384904826,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.3241288625904011
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.1978612919353655,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.28205128205128205,
+          "pairs": 39
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.45849630595393304,
+        "available": 98,
+        "averagePrecision": 0.4005737527639186,
+        "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+        "rankBiserial": -0.08300738809213393
+      }
+    },
+    "ORIGINAL": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.3000784193714974,
+        "dctAcEnergy": -0.008855650976416806,
+        "dctAcL1Mean": -0.24944373250706092,
+        "dctAcZeroRate": 0.4720988724812557,
+        "dctDcMean": 0.3137221149003181,
+        "dctDcStd": -0.0013324917595904338,
+        "dctHighFrequencyEnergy": -0.13206969760725282,
+        "dctHighToLowEnergyRatio": -0.18757531128665145,
+        "dctLowFrequencyEnergy": 0.011099847624148066,
+        "fftHighFrequencyEnergyRatio": -0.08617842638461196,
+        "fftLogMagnitudeMean": -0.16185630765895861,
+        "fftPhaseCircularCoherence": 0.1288564160434558,
+        "fftPhaseMeanAbsolute": 0.06771480851009569,
+        "haarMarginalEnergyRatio": -0.012757492875313197,
+        "pixelStd": -0.00919993114396649
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.09820353121371933,
+          "nullMedian": 0.006916442796864325
+        },
+        "PHOTO": {
+          "candidateMedian": 0.06407241383525003,
+          "nullMedian": 0.011602459487527732
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.04670434361704345,
+          "nullMedian": 0.009853763414376363
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.052368801786327454,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.10249307479224377,
+            "available": 38,
+            "averagePrecision": 0.33636581108193553,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.7950138504155124
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.949432003725983,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.05263157894736842,
+          "pairs": 19
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.38527284681130836,
+            "available": 78,
+            "averagePrecision": 0.4137859081941391,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.2294543063773833
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.1915335346581686,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.4358974358974359,
+          "pairs": 39
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.4637114298131247,
+        "available": 98,
+        "averagePrecision": 0.43839825925598824,
+        "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+        "rankBiserial": -0.07257714037375063
+      }
+    },
+    "PNG_STRIP": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.3000784193714974,
+        "dctAcEnergy": -0.008855650976416806,
+        "dctAcL1Mean": -0.24944373250706092,
+        "dctAcZeroRate": 0.4720988724812557,
+        "dctDcMean": 0.3137221149003181,
+        "dctDcStd": -0.0013324917595904338,
+        "dctHighFrequencyEnergy": -0.13206969760725282,
+        "dctHighToLowEnergyRatio": -0.18757531128665145,
+        "dctLowFrequencyEnergy": 0.011099847624148066,
+        "fftHighFrequencyEnergyRatio": -0.08617842638461196,
+        "fftLogMagnitudeMean": -0.16185630765895861,
+        "fftPhaseCircularCoherence": 0.1288564160434558,
+        "fftPhaseMeanAbsolute": 0.06771480851009569,
+        "haarMarginalEnergyRatio": -0.012757492875313197,
+        "pixelStd": -0.00919993114396649
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.09820353121371933,
+          "nullMedian": 0.006916442796864325
+        },
+        "PHOTO": {
+          "candidateMedian": 0.06407241383525003,
+          "nullMedian": 0.011602459487527732
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.04670434361704345,
+          "nullMedian": 0.009853763414376363
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.052368801786327454,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.10249307479224377,
+            "available": 38,
+            "averagePrecision": 0.33636581108193553,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.7950138504155124
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.949432003725983,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.05263157894736842,
+          "pairs": 19
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.38527284681130836,
+            "available": 78,
+            "averagePrecision": 0.4137859081941391,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.2294543063773833
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.1915335346581686,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.4358974358974359,
+          "pairs": 39
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.4637114298131247,
+        "available": 98,
+        "averagePrecision": 0.43839825925598824,
+        "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+        "rankBiserial": -0.07257714037375063
+      }
+    },
+    "RESIZE75": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.1111323629733055,
+        "dctAcEnergy": 0.07780094230756969,
+        "dctAcL1Mean": 0.1681298573787528,
+        "dctAcZeroRate": -0.09627792512691852,
+        "dctDcMean": 0.1390190565448297,
+        "dctDcStd": -0.12149902135174594,
+        "dctHighFrequencyEnergy": -0.028619882817231858,
+        "dctHighToLowEnergyRatio": -0.10174754062824755,
+        "dctLowFrequencyEnergy": 0.07525071884423873,
+        "fftHighFrequencyEnergyRatio": 0.172261219389349,
+        "fftLogMagnitudeMean": -0.016187543433493358,
+        "fftPhaseCircularCoherence": 0.07840024482145246,
+        "fftPhaseMeanAbsolute": 0.08299064705544823,
+        "haarMarginalEnergyRatio": 0.045808388960082616,
+        "pixelStd": -0.06572563420869754
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.09427800821771026,
+          "nullMedian": 0.01799531456899534
+        },
+        "PHOTO": {
+          "candidateMedian": 0.09430730098481616,
+          "nullMedian": 0.010385583695951928
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.08767494306448043,
+          "nullMedian": 0.011949931448053484
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.07125879422340159,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.4903047091412742,
+            "available": 38,
+            "averagePrecision": 0.48148185914233294,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.01939058171745156
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.7386249013988075,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.42105263157894735,
+          "pairs": 19
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.44181459566074954,
+            "available": 78,
+            "averagePrecision": 0.44830086235864913,
+            "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+            "rankBiserial": -0.11637080867850091
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.2451422364239921,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.48717948717948717,
+          "pairs": 39
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.4776184267709691,
+        "available": 98,
+        "averagePrecision": 0.4657074162681045,
+        "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+        "rankBiserial": -0.04476314645806179
+      }
+    },
+    "RESIZE75_JPEG95": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": -0.0498249909148289,
+        "dctAcEnergy": -0.05752666577408844,
+        "dctAcL1Mean": -0.042505849575069005,
+        "dctAcZeroRate": 0.01412186242819527,
+        "dctDcMean": 0.10508833336521112,
+        "dctDcStd": -0.08712200906604439,
+        "dctHighFrequencyEnergy": -0.08906017889817594,
+        "dctHighToLowEnergyRatio": 0.00014663784914153101,
+        "dctLowFrequencyEnergy": -0.06169628113663459,
+        "fftHighFrequencyEnergyRatio": 0.08055518364796715,
+        "fftLogMagnitudeMean": 0.008638881982033676,
+        "fftPhaseCircularCoherence": -0.04001938169832131,
+        "fftPhaseMeanAbsolute": 0.19599104871564366,
+        "haarMarginalEnergyRatio": -0.0007076870110743452,
+        "pixelStd": -0.10034491772341551
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.06850656608135397,
+          "nullMedian": 0.01988834805227896
+        },
+        "PHOTO": {
+          "candidateMedian": 0.0797778720950916,
+          "nullMedian": 0.009942058650835747
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.06854349266409299,
+          "nullMedian": 0.007529543153565318
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.06001645609643387,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.4210526315789474,
+            "available": 38,
+            "averagePrecision": 0.4442964272845772,
+            "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+            "rankBiserial": -0.1578947368421052
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.7776232782091089,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.5789473684210527,
+          "pairs": 19
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.4339250493096647,
+            "available": 78,
+            "averagePrecision": 0.448720899374605,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.13214990138067062
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.267076693969621,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.4358974358974359,
+          "pairs": 39
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.46240764884832675,
+        "available": 98,
+        "averagePrecision": 0.41532214762782976,
+        "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+        "rankBiserial": -0.0751847023033465
+      }
+    },
+    "SHARP95": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.2564058425619545,
+        "dctAcEnergy": -0.10865864621387446,
+        "dctAcL1Mean": -0.2867152484236431,
+        "dctAcZeroRate": 0.4351255028721891,
+        "dctDcMean": 0.34633947299632123,
+        "dctDcStd": -0.004839049021670523,
+        "dctHighFrequencyEnergy": -0.16744129704365343,
+        "dctHighToLowEnergyRatio": -0.11583752526315116,
+        "dctLowFrequencyEnergy": -0.10663121856052636,
+        "fftHighFrequencyEnergyRatio": -0.06422100236533226,
+        "fftLogMagnitudeMean": -0.14076595961721144,
+        "fftPhaseCircularCoherence": 0.060306409349119204,
+        "fftPhaseMeanAbsolute": 0.11671735235800035,
+        "haarMarginalEnergyRatio": -0.016646583656892932,
+        "pixelStd": -0.044839304044016856
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.09106677740303226,
+          "nullMedian": 0.021440907471333242
+        },
+        "PHOTO": {
+          "candidateMedian": 0.07135859123728214,
+          "nullMedian": 0.01286543745240115
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.03543086488504249,
+          "nullMedian": 0.01067642172209548
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.03827925224506751,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.19113573407202217,
+            "available": 38,
+            "averagePrecision": 0.3581103456166487,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.6177285318559557
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.9420872527639285,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.15789473684210525,
+          "pairs": 19
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.33793556870479946,
+            "available": 78,
+            "averagePrecision": 0.39520808384904826,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.3241288625904011
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.1978612919353655,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.28205128205128205,
+          "pairs": 39
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.45849630595393304,
+        "available": 98,
+        "averagePrecision": 0.4005737527639186,
+        "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+        "rankBiserial": -0.08300738809213393
+      }
+    }
+  },
+  "HELDOUT": {
+    "JPEG75": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.04640304734264465,
+        "dctAcEnergy": -0.06603664066751316,
+        "dctAcL1Mean": 0.011837475058951571,
+        "dctAcZeroRate": -0.17124251768547072,
+        "dctDcMean": -0.08191184473063667,
+        "dctDcStd": -0.26634137493197896,
+        "dctHighFrequencyEnergy": -0.22730686212450052,
+        "dctHighToLowEnergyRatio": -0.19763101093421684,
+        "dctLowFrequencyEnergy": -0.05186649736985307,
+        "fftHighFrequencyEnergyRatio": 0.03187012515871576,
+        "fftLogMagnitudeMean": -0.19275893343007436,
+        "fftPhaseCircularCoherence": -0.0850389987302739,
+        "fftPhaseMeanAbsolute": 0.08729185561400328,
+        "haarMarginalEnergyRatio": -0.14699074913840013,
+        "pixelStd": -0.22248866315980412
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.041606290284114056,
+          "nullMedian": 0.01872209822466924
+        },
+        "PHOTO": {
+          "candidateMedian": 0.046913163955534576,
+          "nullMedian": 0.009456409305061489
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.04876524239856184,
+          "nullMedian": 0.011954951905788935
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.034479826301255116,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.5311111111111111,
+            "available": 60,
+            "averagePrecision": 0.5334880442850745,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.06222222222222218
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.0726267823362274,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.5,
+          "pairs": 30
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.4829072105716748,
+            "available": 118,
+            "averagePrecision": 0.47052129678281185,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.03418557885665041
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.05069505904333,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.5084745762711864,
+          "pairs": 59
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.48983050847457626,
+        "available": 149,
+        "averagePrecision": 0.3887430672317152,
+        "pairwiseCrosscheckDelta": 0.0,
+        "rankBiserial": -0.02033898305084747
+      }
+    },
+    "JPEG85": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.041095592236531836,
+        "dctAcEnergy": 0.019430437148557956,
+        "dctAcL1Mean": -0.023206965354616364,
+        "dctAcZeroRate": 0.07070197714493016,
+        "dctDcMean": 0.0980954108470887,
+        "dctDcStd": -0.09237076002176674,
+        "dctHighFrequencyEnergy": -0.2875909231549338,
+        "dctHighToLowEnergyRatio": -0.3341725771015405,
+        "dctLowFrequencyEnergy": 0.0412298204244513,
+        "fftHighFrequencyEnergyRatio": -0.09103210593143479,
+        "fftLogMagnitudeMean": -0.2814039542898603,
+        "fftPhaseCircularCoherence": -0.00591692363504444,
+        "fftPhaseMeanAbsolute": -0.036742245601306005,
+        "haarMarginalEnergyRatio": -0.08261926355886089,
+        "pixelStd": 0.005028115363685834
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.056295359315288895,
+          "nullMedian": 0.021787986459063546
+        },
+        "PHOTO": {
+          "candidateMedian": 0.04544194276256953,
+          "nullMedian": 0.00946780482956544
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.047029697014482785,
+          "nullMedian": 0.01071820992980799
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.036000541247110815,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.5144444444444445,
+            "available": 60,
+            "averagePrecision": 0.5345176213777353,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.028888888888888964
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.9522222379059434,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.6333333333333333,
+          "pairs": 30
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.5682275208273484,
+            "available": 118,
+            "averagePrecision": 0.6408690667440089,
+            "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+            "rankBiserial": 0.1364550416546968
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.1080850135871965,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.6271186440677966,
+          "pairs": 59
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.49491525423728816,
+        "available": 149,
+        "averagePrecision": 0.3959930238955661,
+        "pairwiseCrosscheckDelta": 0.0,
+        "rankBiserial": -0.01016949152542368
+      }
+    },
+    "JPEG95": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.06977695426898776,
+        "dctAcEnergy": -0.0010520587701795757,
+        "dctAcL1Mean": -0.1278686740431707,
+        "dctAcZeroRate": 0.1812951206239797,
+        "dctDcMean": -0.015643025575911483,
+        "dctDcStd": 0.07748594231815709,
+        "dctHighFrequencyEnergy": -0.09867764698969636,
+        "dctHighToLowEnergyRatio": -0.2283734513971098,
+        "dctLowFrequencyEnergy": 0.022553963359332487,
+        "fftHighFrequencyEnergyRatio": -0.18409577362597496,
+        "fftLogMagnitudeMean": -0.12388173408307637,
+        "fftPhaseCircularCoherence": 0.04210774532922184,
+        "fftPhaseMeanAbsolute": 0.01604208235080718,
+        "haarMarginalEnergyRatio": -0.11996734990023582,
+        "pixelStd": 0.07031017594775985
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.08069578198029748,
+          "nullMedian": 0.0325169319750785
+        },
+        "PHOTO": {
+          "candidateMedian": 0.03880312965899509,
+          "nullMedian": 0.009266465396056845
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.05581073769461864,
+          "nullMedian": 0.015188129020120927
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.032840699999668724,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.3622222222222222,
+            "available": 60,
+            "averagePrecision": 0.5270741013261356,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.27555555555555555
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.1184699789613441,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.43333333333333335,
+          "pairs": 30
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.5748348175811548,
+            "available": 118,
+            "averagePrecision": 0.6432739285574514,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.1496696351623097
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.0562279083286303,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.5423728813559322,
+          "pairs": 59
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.5073446327683615,
+        "available": 149,
+        "averagePrecision": 0.3835952809488614,
+        "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+        "rankBiserial": 0.014689265536723006
+      }
+    },
+    "ORIGINAL": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.05346277295737094,
+        "dctAcEnergy": -0.006421186286958099,
+        "dctAcL1Mean": -0.1852856883729367,
+        "dctAcZeroRate": 0.38787592962089606,
+        "dctDcMean": -0.16079085797206602,
+        "dctDcStd": 0.14674043170687467,
+        "dctHighFrequencyEnergy": -0.056130167434727284,
+        "dctHighToLowEnergyRatio": -0.14815432896195663,
+        "dctLowFrequencyEnergy": 0.005764556502811537,
+        "fftHighFrequencyEnergyRatio": -0.18030110647560313,
+        "fftLogMagnitudeMean": -0.06793034645383639,
+        "fftPhaseCircularCoherence": 0.06123707600217668,
+        "fftPhaseMeanAbsolute": -0.012628333031017593,
+        "haarMarginalEnergyRatio": -0.04736803918011972,
+        "pixelStd": 0.14132414293488121
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.09972133149784296,
+          "nullMedian": 0.022643974465577178
+        },
+        "PHOTO": {
+          "candidateMedian": 0.03871661010892384,
+          "nullMedian": 0.010448164585770206
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.057294746655177475,
+          "nullMedian": 0.013234221618234855
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.039455225197412236,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.3466666666666667,
+            "available": 60,
+            "averagePrecision": 0.5365876169410574,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.30666666666666664
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.0885598342986875,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.3333333333333333,
+          "pairs": 30
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.6299913817868429,
+            "available": 118,
+            "averagePrecision": 0.6784740032457217,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.25998276357368577
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.058535439991596,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.6779661016949152,
+          "pairs": 59
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.5073446327683616,
+        "available": 149,
+        "averagePrecision": 0.40073593297015253,
+        "pairwiseCrosscheckDelta": 0.0,
+        "rankBiserial": 0.014689265536723228
+      }
+    },
+    "PNG_STRIP": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.05346277295737094,
+        "dctAcEnergy": -0.006421186286958099,
+        "dctAcL1Mean": -0.1852856883729367,
+        "dctAcZeroRate": 0.38787592962089606,
+        "dctDcMean": -0.16079085797206602,
+        "dctDcStd": 0.14674043170687467,
+        "dctHighFrequencyEnergy": -0.056130167434727284,
+        "dctHighToLowEnergyRatio": -0.14815432896195663,
+        "dctLowFrequencyEnergy": 0.005764556502811537,
+        "fftHighFrequencyEnergyRatio": -0.18030110647560313,
+        "fftLogMagnitudeMean": -0.06793034645383639,
+        "fftPhaseCircularCoherence": 0.06123707600217668,
+        "fftPhaseMeanAbsolute": -0.012628333031017593,
+        "haarMarginalEnergyRatio": -0.04736803918011972,
+        "pixelStd": 0.14132414293488121
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.09972133149784296,
+          "nullMedian": 0.022643974465577178
+        },
+        "PHOTO": {
+          "candidateMedian": 0.03871661010892384,
+          "nullMedian": 0.010448164585770206
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.057294746655177475,
+          "nullMedian": 0.013234221618234855
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.039455225197412236,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.3466666666666667,
+            "available": 60,
+            "averagePrecision": 0.5365876169410574,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.30666666666666664
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.0885598342986875,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.3333333333333333,
+          "pairs": 30
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.6299913817868429,
+            "available": 118,
+            "averagePrecision": 0.6784740032457217,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.25998276357368577
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.058535439991596,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.6779661016949152,
+          "pairs": 59
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.5073446327683616,
+        "available": 149,
+        "averagePrecision": 0.40073593297015253,
+        "pairwiseCrosscheckDelta": 0.0,
+        "rankBiserial": 0.014689265536723228
+      }
+    },
+    "RESIZE75": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": -0.18500272084164704,
+        "dctAcEnergy": 0.09694540177761654,
+        "dctAcL1Mean": 0.13463812806094685,
+        "dctAcZeroRate": -0.18215160919966336,
+        "dctDcMean": -0.021483765644839472,
+        "dctDcStd": -0.1011064756031199,
+        "dctHighFrequencyEnergy": 0.08487365997514508,
+        "dctHighToLowEnergyRatio": 0.06116925756960552,
+        "dctLowFrequencyEnergy": 0.09818610556865592,
+        "fftHighFrequencyEnergyRatio": 0.1557953927081444,
+        "fftLogMagnitudeMean": 0.11602031561763106,
+        "fftPhaseCircularCoherence": -0.19329947397061492,
+        "fftPhaseMeanAbsolute": 0.05792853255940505,
+        "haarMarginalEnergyRatio": 0.018556140032650104,
+        "pixelStd": -0.04962452385271177
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.054781638240649244,
+          "nullMedian": 0.01617588943322778
+        },
+        "PHOTO": {
+          "candidateMedian": 0.06408171823512376,
+          "nullMedian": 0.00938456145636598
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.05969392631309928,
+          "nullMedian": 0.012757879136098865
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.044545668094661366,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.4611111111111111,
+            "available": 60,
+            "averagePrecision": 0.5903616124405447,
+            "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+            "rankBiserial": -0.07777777777777783
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.832331423977776,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.4666666666666667,
+          "pairs": 30
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.5004309106578569,
+            "available": 118,
+            "averagePrecision": 0.5172108642707789,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.0008618213157138843
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.0362705510870176,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.5084745762711864,
+          "pairs": 59
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.49397363465160077,
+        "available": 149,
+        "averagePrecision": 0.38882351086759104,
+        "pairwiseCrosscheckDelta": 0.0,
+        "rankBiserial": -0.012052730696798464
+      }
+    },
+    "RESIZE75_JPEG95": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": -0.2288808271358607,
+        "dctAcEnergy": 0.1780663885361872,
+        "dctAcL1Mean": 0.13493923453655,
+        "dctAcZeroRate": -0.13569055602414465,
+        "dctDcMean": -0.017551242517685472,
+        "dctDcStd": 0.016832940322873212,
+        "dctHighFrequencyEnergy": 0.031101598075098043,
+        "dctHighToLowEnergyRatio": -0.1843131564452766,
+        "dctLowFrequencyEnergy": 0.18892436060221293,
+        "fftHighFrequencyEnergyRatio": 0.0152693633230546,
+        "fftLogMagnitudeMean": 0.05373480863413749,
+        "fftPhaseCircularCoherence": -0.07872664610919644,
+        "fftPhaseMeanAbsolute": 0.0557917649192817,
+        "haarMarginalEnergyRatio": -0.148202430618538,
+        "pixelStd": 0.059259931072011614
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.06615600670356797,
+          "nullMedian": 0.026187313126623604
+        },
+        "PHOTO": {
+          "candidateMedian": 0.05507211115692927,
+          "nullMedian": 0.01029595778343342
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.059348923835694845,
+          "nullMedian": 0.010672565004879335
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.04230363889703066,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.4633333333333334,
+            "available": 60,
+            "averagePrecision": 0.5094084707886608,
+            "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+            "rankBiserial": -0.07333333333333325
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 0.8481203377555537,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.4666666666666667,
+          "pairs": 30
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.5538638322321172,
+            "available": 118,
+            "averagePrecision": 0.5724885166000236,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.10772766446423443
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.027369330120455,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.576271186440678,
+          "pairs": 59
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.4610169491525424,
+        "available": 149,
+        "averagePrecision": 0.36872388338611606,
+        "pairwiseCrosscheckDelta": 0.0,
+        "rankBiserial": -0.07796610169491525
+      }
+    },
+    "SHARP95": {
+      "baselineSpearman": {
+        "blockBoundaryRatio": 0.06977695426898776,
+        "dctAcEnergy": -0.0010520587701795757,
+        "dctAcL1Mean": -0.1278686740431707,
+        "dctAcZeroRate": 0.1812951206239797,
+        "dctDcMean": -0.015643025575911483,
+        "dctDcStd": 0.07748594231815709,
+        "dctHighFrequencyEnergy": -0.09867764698969636,
+        "dctHighToLowEnergyRatio": -0.2283734513971098,
+        "dctLowFrequencyEnergy": 0.022553963359332487,
+        "fftHighFrequencyEnergyRatio": -0.18409577362597496,
+        "fftLogMagnitudeMean": -0.12388173408307637,
+        "fftPhaseCircularCoherence": 0.04210774532922184,
+        "fftPhaseMeanAbsolute": 0.01604208235080718,
+        "haarMarginalEnergyRatio": -0.11996734990023582,
+        "pixelStd": 0.07031017594775985
+      },
+      "byKind": {
+        "HARD": {
+          "candidateMedian": 0.08069578198029748,
+          "nullMedian": 0.0325169319750785
+        },
+        "PHOTO": {
+          "candidateMedian": 0.03880312965899509,
+          "nullMedian": 0.009266465396056845
+        },
+        "SYNTHETIC": {
+          "candidateMedian": 0.05581073769461864,
+          "nullMedian": 0.015188129020120927
+        }
+      },
+      "medianObservedMinusShiftedNull": 0.032840699999668724,
+      "nuisanceMatched": {
+        "HARD": {
+          "candidate": {
+            "auc": 0.3622222222222222,
+            "available": 60,
+            "averagePrecision": 0.5270741013261356,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": -0.27555555555555555
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.1184699789613441,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.43333333333333335,
+          "pairs": 30
+        },
+        "PHOTO": {
+          "candidate": {
+            "auc": 0.5748348175811548,
+            "available": 118,
+            "averagePrecision": 0.6432739285574514,
+            "pairwiseCrosscheckDelta": 0.0,
+            "rankBiserial": 0.1496696351623097
+          },
+          "caveat": "Matching observed marginals is not same-scene matching; poor distances mean residual confounding remains.",
+          "matchingFeatures": [
+            "pixelStd",
+            "dctDcStd",
+            "fftLogMagnitudeMean",
+            "haarMarginalEnergyRatio"
+          ],
+          "medianStandardizedDistance": 1.0562279083286303,
+          "noReplacement": true,
+          "pairedProbabilityHigher": 0.5423728813559322,
+          "pairs": 59
+        }
+      },
+      "spatialNullDiscrimination": {
+        "auc": 0.5073446327683615,
+        "available": 149,
+        "averagePrecision": 0.3835952809488614,
+        "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+        "rankBiserial": 0.014689265536723006
+      }
+    }
+  },
+  "metadataRoundtripN": 248,
+  "metadataRoundtripPixelEqual": 248,
+  "transformDeltas": {
+    "JPEG75": {
+      "HARD": -0.049832641485080986,
+      "PHOTO": 0.006807246203937939,
+      "SYNTHETIC": 0.01575762813118542
+    },
+    "JPEG85": {
+      "HARD": -0.04716351239129768,
+      "PHOTO": 0.0021538272525283564,
+      "SYNTHETIC": 0.011604305589665687
+    },
+    "JPEG95": {
+      "HARD": -0.01366885113016214,
+      "PHOTO": 0.0003764989122378784,
+      "SYNTHETIC": -0.000631582614229742
+    },
+    "ORIGINAL": {
+      "HARD": 0.0,
+      "PHOTO": 0.0,
+      "SYNTHETIC": 0.0
+    },
+    "PNG_STRIP": {
+      "HARD": 0.0,
+      "PHOTO": 0.0,
+      "SYNTHETIC": 0.0
+    },
+    "RESIZE75": {
+      "HARD": -0.03517662901796992,
+      "PHOTO": 0.032172686322063104,
+      "SYNTHETIC": 0.012990897164091186
+    },
+    "RESIZE75_JPEG95": {
+      "HARD": -0.017974161406856592,
+      "PHOTO": 0.013888004635616596,
+      "SYNTHETIC": 0.01874495034616247
+    },
+    "SHARP95": {
+      "HARD": -0.01366885113016214,
+      "PHOTO": 0.0003764989122378784,
+      "SYNTHETIC": -0.000631582614229742
+    }
+  }
+}

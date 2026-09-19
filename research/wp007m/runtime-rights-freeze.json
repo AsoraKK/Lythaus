@@ -1,0 +1,138 @@
+{
+  "packages": [
+    {
+      "name": "numpy",
+      "version": "2.5.2",
+      "licenseExpression": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+      "licenseField": "NOT_STATED",
+      "recordHash": "7f84d6b04951ea3fd9ea8e36ceeb2347b6634aaf299f2f130ca8322a4e5c981e",
+      "source": [
+        "homepage, https://numpy.org",
+        "documentation, https://numpy.org/doc/",
+        "source, https://github.com/numpy/numpy",
+        "download, https://pypi.org/project/numpy/#files",
+        "tracker, https://github.com/numpy/numpy/issues",
+        "release notes, https://numpy.org/doc/stable/release"
+      ],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "scipy",
+      "version": "1.18.1",
+      "licenseExpression": null,
+      "licenseField": "Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.\n All rights reserved.\n\n Redistribution and use in source and binary forms, with or without\n modification, are permitted provided that the following conditions\n are met:\n\n 1. Redistributions of source code must retain the above copyright\n    notice, this list of conditions and the following disclaimer.\n\n 2. Redistributions in binary form must reproduce the above\n    copyright notice, this list of conditions and the following\n    disc",
+      "recordHash": "3a8419cc8ebfe34c7db81a05638274eccc57f0e9899998eee7fcf53a61f29c06",
+      "source": [
+        "homepage, https://scipy.org/",
+        "documentation, https://docs.scipy.org/doc/scipy/",
+        "source, https://github.com/scipy/scipy",
+        "download, https://github.com/scipy/scipy/releases",
+        "tracker, https://github.com/scipy/scipy/issues"
+      ],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "Pillow",
+      "version": "12.3.0",
+      "licenseExpression": "MIT-CMU",
+      "licenseField": "NOT_STATED",
+      "recordHash": "d8316e04515627eb6005335704818ff59d07867874f30fc4ecd3d4998d6cb1bb",
+      "source": [
+        "Release notes, https://pillow.readthedocs.io/en/stable/releasenotes/index.html",
+        "Changelog, https://github.com/python-pillow/Pillow/releases",
+        "Documentation, https://pillow.readthedocs.io",
+        "Funding, https://tidelift.com/subscription/pkg/pypi-pillow?utm_source=pypi-pillow&utm_medium=pypi",
+        "Homepage, https://python-pillow.github.io",
+        "Mastodon, https://fosstodon.org/@pillow",
+        "Source, https://github.com/python-pillow/Pillow"
+      ],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "scikit-learn",
+      "version": "1.9.1",
+      "licenseExpression": "BSD-3-Clause",
+      "licenseField": "NOT_STATED",
+      "recordHash": "69d8c9f6e94093f13067b343a89618fafa0f8b7c7662cf10a66aa76b2858a6bd",
+      "source": [
+        "homepage, https://scikit-learn.org",
+        "source, https://github.com/scikit-learn/scikit-learn",
+        "download, https://pypi.org/project/scikit-learn/#files",
+        "tracker, https://github.com/scikit-learn/scikit-learn/issues",
+        "release notes, https://scikit-learn.org/stable/whats_new"
+      ],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "PyWavelets",
+      "version": "1.10.0",
+      "licenseExpression": "MIT AND BSD-3-Clause",
+      "licenseField": "NOT_STATED",
+      "recordHash": "bd0ee088d079208e605123fc91c456a3ca42c551a4ee922f4fa0e1cdc995262c",
+      "source": [
+        "homepage, https://github.com/PyWavelets/pywt",
+        "source, https://github.com/PyWavelets/pywt",
+        "documentation, https://pywavelets.readthedocs.io/"
+      ],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "torch",
+      "version": "2.14.0+cpu",
+      "licenseExpression": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
+      "licenseField": "NOT_STATED",
+      "recordHash": "cf3b100133e4a0aba2b2d57815a9af301416ee0ae7e231143b7644c8465bcd3c",
+      "source": [
+        "Homepage, https://pytorch.org",
+        "Repository, https://github.com/pytorch/pytorch",
+        "Documentation, https://pytorch.org/docs",
+        "Issue Tracker, https://github.com/pytorch/pytorch/issues",
+        "Forum, https://discuss.pytorch.org"
+      ],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "torchvision",
+      "version": "0.29.0+cpu",
+      "licenseExpression": null,
+      "licenseField": "BSD",
+      "recordHash": "5f62293a0508f35355e215ee5632b2c1215ff27f5d5740e8c73ef62ac6c28b15",
+      "source": [],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "kornia",
+      "version": "0.7.2",
+      "licenseExpression": null,
+      "licenseField": "Apache-2.0",
+      "recordHash": "be4b426ed601e623e553ebe826dfa1043f9095642a54349c46378e701c694741",
+      "source": [
+        "Bug Tracker, https://github.com/kornia/kornia/issues",
+        "Documentation, https://kornia.readthedocs.io/en/latest",
+        "Download, https://github.com/kornia/kornia",
+        "Homepage, https://www.kornia.org",
+        "Source Code, https://github.com/kornia/kornia"
+      ],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "pytorch-wavelets",
+      "version": "1.3.0",
+      "licenseExpression": null,
+      "licenseField": "Free To Use",
+      "recordHash": "c33b3508b0b29cc211f6a8055a2458d28f866c2e0a4d6d8940510f80e901e1da",
+      "source": [],
+      "use": "EXISTING_LOCAL_RUNTIME_NO_NEW_DOWNLOAD"
+    },
+    {
+      "name": "sharp",
+      "version": "0.35.4",
+      "license": "Apache-2.0",
+      "packageHash": "27b5a6c6e1e1f27c527b09a963c932979403837d0f5f013ab5bdfb4a0ef2269a",
+      "repositoryLockHash": "6fba42cb7869cb807ecefc422a1881ba96125b3a9b261e691609f15103855a69"
+    }
+  ],
+  "sourceCopying": "No third-party method code copied; algebra implemented locally; no GPL/AGPL code imported",
+  "deployment": "SAFE checkpoint and dataset output rights remain separate, no commercial clearance",
+  "codeHash": "41e3ac4f81744f8ea54e16e8ff9bf7fbf005cfe250fd959c3bbbe7807e14b1cd"
+}

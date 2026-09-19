@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "wp007m-final-validation-notes-v1",
+  "independentDiagnosticAggregation": {"method":"PowerShell Group-Object on external diagnostic rows, independent of Python aggregator","CSAFE":{"parents":36,"physicalDevices":8,"conditions":3,"highEachCondition":0},"consumedCloudflareFlux1":{"parents":10,"conditions":3,"highEachCondition":0}},
+  "postReviewRepairs": ["Reject authoritative generator/subtype/source/rights metadata override","Require low-memory runner and SAFE-supplement code hashes","Reject malformed supplement schema","Correct validation AST file-count variable shadowing"],
+  "measurementRetuned": false,
+  "environmentRerun": "Final rerun found missing worktree dependency junctions. Recreated root link to existing locked parent installation and 77 local declared-workspace links. No version or lockfile change. Subsequent full rerun is canonical; failed interim attempt is not a pass.",
+  "lineEndingReproducibility": "Pin only WP007M Markdown/code to LF and JSON to original generated CRLF. This preserves plan, measurement-source and serialized-artifact byte hashes under Windows checkout, without altering historical files.",
+  "inheritedFailures": [
+    {"check":"native architecture","result":"255/256 pass; one pre-existing release-workflow regex expects LF against CRLF source","test":"canonical manifest finalizes VERIFIED or BLOCKED after production smoke","parentReproduction":true,"workflowAndTestUnchanged":true},
+    {"check":"retired-provider validator","result":"Existing J-R1/K/L research wording flagged; no WP007M flag","parentAndCurrentLogSha256":"067a7699f817e7118393c51e2e79e602e5f7871a78ed64d9cf299e8b0f39668b"}
+  ],
+  "storageSnapshot":{"externalResultFiles":16,"externalResultBytes":7125407,"freeDiskBytes":2610884608,"freeRamKiB":4640996,"deletedMaterial":false},
+  "incrementalProviderCostUSD":0,
+  "newModelDownloads":0,
+  "newDatasetDownloads":0,
+  "newDependenciesInstalled":0,
+  "productionAuthorization":"NO"
+}

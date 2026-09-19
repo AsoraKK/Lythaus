@@ -1,0 +1,205 @@
+{
+  "codeHash": "9d385d0c9a14080a8de67d51a70c4252fe8d0bab30c6e22396805b160bee0521",
+  "completedUnix": 1789821264.2622325,
+  "inputRowsHash": "41369a382a2d0cfd252f4b3fe325e399c3c82c195a29e099a7ebb09db53a10d8",
+  "maxBaselineDelta": 0.0,
+  "maxIndependentDelta": 0.0355158046688232,
+  "maxRepeatFeatureDelta": 0.0,
+  "measurementCodeHash": "dc0b7099131b1bb7f6aca5f08ab530cd6ada7429ba4f4b21b6a53955addb34b6",
+  "n": 24,
+  "note": "PyWavelets floating operation order can perturb near-tie ranks; report discrepancy, not fabricated exact agreement.",
+  "rows": [
+    {
+      "baselineDelta": 0.0,
+      "kind": "PHOTO",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 2.1504784755932427e-05,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "UNSPLASH_1ts13gEKEww"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "PHOTO",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.00012030499707433922,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "UNSPLASH_2wbG8ZbWjEs"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "PHOTO",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 7.083160576404346e-07,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "UNSPLASH_BvAoCypqRXU"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "PHOTO",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.0003741334701006238,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "UNSPLASH_xut4U8rHXm8"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "PHOTO",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.00022837690281196643,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "UNSPLASH_u26M0jqr-QA"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "PHOTO",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 3.972095475732185e-05,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "UNSPLASH_uXiXPE5sJGA"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "PHOTO",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.00046105203661989114,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "UNSPLASH_nJW1RzBXZcI"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "PHOTO",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 7.689591625670289e-07,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "UNSPLASH_vwcxco7o564"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "HARD",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.006962676935986067,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "LYTHAUS_PROC_HN_CGI_132"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "HARD",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.009652650746336255,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "LYTHAUS_PROC_HN_CGI_168"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "HARD",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.014023113897172257,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "LYTHAUS_PROC_HN_CGI_060"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "HARD",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 1.5913664677347228e-05,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "LYTHAUS_PROC_HN_CGI_108"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "HARD",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0,
+      "repeatFeatureDelta": 0,
+      "sampleId": "LYTHAUS_PROC_HN_CGI_036"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "HARD",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.03341336558126107,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "LYTHAUS_PROC_HN_CHART_088"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "HARD",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.0355158046688232,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "LYTHAUS_PROC_HN_CHART_136"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "HARD",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.02344421621743764,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "LYTHAUS_PROC_HN_CHART_064"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "SYNTHETIC",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 2.395214242301158e-05,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "SD-3.5-Large__R-GR-056-0"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "SYNTHETIC",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 1.5566018939927595e-06,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "SD-3.5-Large__R-GR-060-2"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "SYNTHETIC",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 2.889995550925395e-06,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "SYNTHETIC",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 1.6208284246976845e-06,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "SD-3.5-Large__R-GR-066-3"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "SYNTHETIC",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 1.2790151669217487e-05,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "SD-3.5-Large__R-GR-015-3"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "SYNTHETIC",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 0.00011524896681502916,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "SD-3.5-Large__R-GR-022-2"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "SYNTHETIC",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 4.145508685104993e-06,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "SD-3.5-Large__R-GR-054-1"
+    },
+    {
+      "baselineDelta": 0.0,
+      "kind": "SYNTHETIC",
+      "pixelEqual": true,
+      "pywaveletsScipyDelta": 9.571958809462267e-07,
+      "repeatFeatureDelta": 0.0,
+      "sampleId": "SD-3.5-Large__R-GR-048-1"
+    }
+  ]
+}

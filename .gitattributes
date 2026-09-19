@@ -4,3 +4,9 @@
 # Wrangler emits a small number of intentional trailing-space type stubs.
 apps/lythaus-*/src/worker-configuration.d.ts whitespace=-trailing-space
 
+research/wp007m/*.md text eol=lf
+research/wp007m/*.json text eol=crlf
+scripts/authenticity/*wp007m*.py text eol=lf
+scripts/authenticity/wp007m_sharp.cjs text eol=lf
+packages/authenticity/tests/wp007m.test.mjs text eol=lf
+

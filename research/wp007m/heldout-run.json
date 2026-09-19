@@ -1,0 +1,385 @@
+{
+  "codeCommit": "a4774b1bbef24304c492c9bff996bda7ae7c6f13",
+  "codeHash": "8577ef1bc10c749433146f526cf2f00035205a0fcdc0915341c7ec7c77f957ae",
+  "cohortHash": "a4ab896818600e39542e09eb6fb75d94e4f6fc25ce30aef3c060e76e625df060",
+  "command": "python scripts/authenticity/wp007m_low_memory.py --media <WP007I_MEDIA> --bulk <EXTERNAL_WP007M> --sharp <EXISTING_SHARP>",
+  "continuation": "FEATURE_ONLY_AFTER_COMBINED_PROCESS_HIT_4GIB_GUARD",
+  "endUnix": 1789821774.5189319,
+  "environmentReference": "discovery-run.json; same approved runtime, no torch imported for continuation",
+  "featureCodeHash": "dc0b7099131b1bb7f6aca5f08ab530cd6ada7429ba4f4b21b6a53955addb34b6",
+  "flux2Access": 0,
+  "outputHash": "b59b49ee6e15d03a72b7c2b9039f48a0f43f785a13cc67132a01241f3a978371",
+  "outputLogicalPath": "external/wp007m/heldout-rows.jsonl",
+  "parents": 149,
+  "providerCalls": 0,
+  "resourceSamples": [
+    {
+      "availableRamBytes": 4512284672,
+      "freeDiskBytes": 2485731328
+    },
+    {
+      "availableRamBytes": 4620935168,
+      "freeDiskBytes": 2485714944
+    },
+    {
+      "availableRamBytes": 4645158912,
+      "freeDiskBytes": 2485694464
+    },
+    {
+      "availableRamBytes": 4643659776,
+      "freeDiskBytes": 2485678080
+    },
+    {
+      "availableRamBytes": 4644118528,
+      "freeDiskBytes": 2485661696
+    },
+    {
+      "availableRamBytes": 4642840576,
+      "freeDiskBytes": 2485641216
+    },
+    {
+      "availableRamBytes": 4641492992,
+      "freeDiskBytes": 2485624832
+    },
+    {
+      "availableRamBytes": 4642672640,
+      "freeDiskBytes": 2485604352
+    },
+    {
+      "availableRamBytes": 4642095104,
+      "freeDiskBytes": 2485587968
+    },
+    {
+      "availableRamBytes": 4640681984,
+      "freeDiskBytes": 2485571584
+    },
+    {
+      "availableRamBytes": 4640428032,
+      "freeDiskBytes": 2485551104
+    },
+    {
+      "availableRamBytes": 4642332672,
+      "freeDiskBytes": 2485534720
+    },
+    {
+      "availableRamBytes": 4642701312,
+      "freeDiskBytes": 2485514240
+    },
+    {
+      "availableRamBytes": 4640657408,
+      "freeDiskBytes": 2485497856
+    },
+    {
+      "availableRamBytes": 4641763328,
+      "freeDiskBytes": 2485477376
+    },
+    {
+      "availableRamBytes": 4641378304,
+      "freeDiskBytes": 2485460992
+    },
+    {
+      "availableRamBytes": 4639084544,
+      "freeDiskBytes": 2485444608
+    },
+    {
+      "availableRamBytes": 4639318016,
+      "freeDiskBytes": 2485424128
+    },
+    {
+      "availableRamBytes": 4637966336,
+      "freeDiskBytes": 2485407744
+    },
+    {
+      "availableRamBytes": 4636454912,
+      "freeDiskBytes": 2485403648
+    },
+    {
+      "availableRamBytes": 4636610560,
+      "freeDiskBytes": 2485383168
+    },
+    {
+      "availableRamBytes": 4637216768,
+      "freeDiskBytes": 2485366784
+    },
+    {
+      "availableRamBytes": 4640452608,
+      "freeDiskBytes": 2485350400
+    },
+    {
+      "availableRamBytes": 4638310400,
+      "freeDiskBytes": 2485329920
+    },
+    {
+      "availableRamBytes": 4638044160,
+      "freeDiskBytes": 2485313536
+    },
+    {
+      "availableRamBytes": 4638392320,
+      "freeDiskBytes": 2485293056
+    },
+    {
+      "availableRamBytes": 4638486528,
+      "freeDiskBytes": 2485276672
+    },
+    {
+      "availableRamBytes": 4638732288,
+      "freeDiskBytes": 2485260288
+    },
+    {
+      "availableRamBytes": 4633522176,
+      "freeDiskBytes": 2485235712
+    },
+    {
+      "availableRamBytes": 4633341952,
+      "freeDiskBytes": 2485219328
+    },
+    {
+      "availableRamBytes": 4637106176,
+      "freeDiskBytes": 2485198848
+    },
+    {
+      "availableRamBytes": 4636413952,
+      "freeDiskBytes": 2485182464
+    },
+    {
+      "availableRamBytes": 4622331904,
+      "freeDiskBytes": 2485161984
+    },
+    {
+      "availableRamBytes": 4623175680,
+      "freeDiskBytes": 2485145600
+    },
+    {
+      "availableRamBytes": 4623585280,
+      "freeDiskBytes": 2485129216
+    },
+    {
+      "availableRamBytes": 4622368768,
+      "freeDiskBytes": 2485108736
+    },
+    {
+      "availableRamBytes": 4623470592,
+      "freeDiskBytes": 2485092352
+    },
+    {
+      "availableRamBytes": 4622495744,
+      "freeDiskBytes": 2485071872
+    },
+    {
+      "availableRamBytes": 4620099584,
+      "freeDiskBytes": 2485055488
+    },
+    {
+      "availableRamBytes": 4621295616,
+      "freeDiskBytes": 2485039104
+    },
+    {
+      "availableRamBytes": 4620414976,
+      "freeDiskBytes": 2485018624
+    },
+    {
+      "availableRamBytes": 4622229504,
+      "freeDiskBytes": 2485002240
+    },
+    {
+      "availableRamBytes": 4618469376,
+      "freeDiskBytes": 2484981760
+    },
+    {
+      "availableRamBytes": 4618244096,
+      "freeDiskBytes": 2484965376
+    },
+    {
+      "availableRamBytes": 4619182080,
+      "freeDiskBytes": 2484948992
+    },
+    {
+      "availableRamBytes": 4623581184,
+      "freeDiskBytes": 2484928512
+    },
+    {
+      "availableRamBytes": 4622045184,
+      "freeDiskBytes": 2484912128
+    },
+    {
+      "availableRamBytes": 4639113216,
+      "freeDiskBytes": 2484891648
+    },
+    {
+      "availableRamBytes": 4638695424,
+      "freeDiskBytes": 2484875264
+    },
+    {
+      "availableRamBytes": 4640202752,
+      "freeDiskBytes": 2484858880
+    },
+    {
+      "availableRamBytes": 4638986240,
+      "freeDiskBytes": 2484838400
+    },
+    {
+      "availableRamBytes": 4640030720,
+      "freeDiskBytes": 2484822016
+    },
+    {
+      "availableRamBytes": 4639633408,
+      "freeDiskBytes": 2484801536
+    },
+    {
+      "availableRamBytes": 4638801920,
+      "freeDiskBytes": 2484785152
+    },
+    {
+      "availableRamBytes": 4637659136,
+      "freeDiskBytes": 2484768768
+    },
+    {
+      "availableRamBytes": 4637409280,
+      "freeDiskBytes": 2484748288
+    },
+    {
+      "availableRamBytes": 4632629248,
+      "freeDiskBytes": 2484731904
+    },
+    {
+      "availableRamBytes": 4625903616,
+      "freeDiskBytes": 2484715520
+    },
+    {
+      "availableRamBytes": 4616450048,
+      "freeDiskBytes": 2484695040
+    },
+    {
+      "availableRamBytes": 4617764864,
+      "freeDiskBytes": 2484678656
+    },
+    {
+      "availableRamBytes": 4611543040,
+      "freeDiskBytes": 2484658176
+    },
+    {
+      "availableRamBytes": 4610183168,
+      "freeDiskBytes": 2484641792
+    },
+    {
+      "availableRamBytes": 4613283840,
+      "freeDiskBytes": 2484625408
+    },
+    {
+      "availableRamBytes": 4612186112,
+      "freeDiskBytes": 2484604928
+    },
+    {
+      "availableRamBytes": 4611829760,
+      "freeDiskBytes": 2484588544
+    },
+    {
+      "availableRamBytes": 4612870144,
+      "freeDiskBytes": 2484568064
+    },
+    {
+      "availableRamBytes": 4611096576,
+      "freeDiskBytes": 2484551680
+    },
+    {
+      "availableRamBytes": 4606889984,
+      "freeDiskBytes": 2484535296
+    },
+    {
+      "availableRamBytes": 4610879488,
+      "freeDiskBytes": 2484514816
+    },
+    {
+      "availableRamBytes": 4608823296,
+      "freeDiskBytes": 2484498432
+    },
+    {
+      "availableRamBytes": 4608458752,
+      "freeDiskBytes": 2484477952
+    },
+    {
+      "availableRamBytes": 4606820352,
+      "freeDiskBytes": 2484330496
+    },
+    {
+      "availableRamBytes": 4604825600,
+      "freeDiskBytes": 2484183040
+    },
+    {
+      "availableRamBytes": 4601503744,
+      "freeDiskBytes": 2484162560
+    },
+    {
+      "availableRamBytes": 4604993536,
+      "freeDiskBytes": 2484146176
+    },
+    {
+      "availableRamBytes": 4602654720,
+      "freeDiskBytes": 2484125696
+    },
+    {
+      "availableRamBytes": 4605071360,
+      "freeDiskBytes": 2484109312
+    },
+    {
+      "availableRamBytes": 4607262720,
+      "freeDiskBytes": 2484092928
+    },
+    {
+      "availableRamBytes": 4605632512,
+      "freeDiskBytes": 2484072448
+    },
+    {
+      "availableRamBytes": 4602880000,
+      "freeDiskBytes": 2484056064
+    },
+    {
+      "availableRamBytes": 4605792256,
+      "freeDiskBytes": 2484035584
+    },
+    {
+      "availableRamBytes": 4605038592,
+      "freeDiskBytes": 2484019200
+    },
+    {
+      "availableRamBytes": 4603265024,
+      "freeDiskBytes": 2484002816
+    },
+    {
+      "availableRamBytes": 4608909312,
+      "freeDiskBytes": 2483982336
+    },
+    {
+      "availableRamBytes": 4607508480,
+      "freeDiskBytes": 2483965952
+    },
+    {
+      "availableRamBytes": 4607275008,
+      "freeDiskBytes": 2483945472
+    },
+    {
+      "availableRamBytes": 4606537728,
+      "freeDiskBytes": 2483929088
+    },
+    {
+      "availableRamBytes": 4605779968,
+      "freeDiskBytes": 2483912704
+    },
+    {
+      "availableRamBytes": 4603613184,
+      "freeDiskBytes": 2483892224
+    },
+    {
+      "availableRamBytes": 4605988864,
+      "freeDiskBytes": 2483875840
+    }
+  ],
+  "resourceStopsBeforeContinuation": 4,
+  "role": "HELDOUT",
+  "rows": 1192,
+  "ruleHash": "df617e4b2fb7a7c9c6ed427c53c780b3bf92f73e7cc1dea64c814093c55bc237",
+  "safeAvailable": 472,
+  "safeMissing": 720,
+  "seed": 0,
+  "startUnix": 1789821736.8734357
+}

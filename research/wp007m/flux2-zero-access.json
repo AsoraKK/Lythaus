@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "wp007m-reserve-access-accounting-v1",
+  "disposition": "REMAIN_SEALED",
+  "flux2": {"bytes":0,"pixels":0,"thumbnails":0,"metadataInspection":0,"decodes":0,"transforms":0,"features":0,"inference":0,"providerCalls":0},
+  "sealedEf2DeviceAccess": 0,
+  "otherFutureReserveAccess": 0,
+  "method": "Individually frozen positive allowlists and source hashes; reserve/path-escape rejection before opening; consumed CSAFE and exact consumed FLUX1 diagnostic paths only",
+  "evidence": ["cohort-freeze.json","diagnostic-cohort-freeze.json","discovery-run.json","heldout-run.json","safe-enrichment-run.json","diagnostic-results.json","../../scripts/authenticity/test_wp007m_probe.py"],
+  "assuranceLimit": "Execution accounting and code/manifest controls, not an operating-system-wide file-access audit. No reserve file was opened to prove its continued seal.",
+  "reserveConsumptionJustified": false,
+  "reason": "No qualified final candidate; no need for reserve data in this development package",
+  "productionAuthorization": "NO"
+}
