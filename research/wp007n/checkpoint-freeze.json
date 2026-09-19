@@ -1,0 +1,4 @@
+{
+  "A": {"model":"dinov2_vitl14","sha256":"d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428","bytes":1217586395,"source":"official Meta public URL in resource-admission.json","codeCommit":"7764ea0f912e53c92e82eb78a2a1631e92725fc8"},
+  "B": {"model":"PE-Core-B16-224","sha256":"0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce","bytes":1790786632,"revision":"a16450b46fef32363459920c2685a1b4ef13dcd9","source":"official facebook Hugging Face artifact; LFS hash independently declared upstream","codeCommit":"3e352cca660658d4b5c90f42a7808b11469e4c66"}
+}

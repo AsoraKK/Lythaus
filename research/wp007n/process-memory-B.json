@@ -1,0 +1,80 @@
+{
+  "arm": "B",
+  "observations": [
+    {
+      "timeUnix": 1789846583.3407447,
+      "workingSetBytes": 1043468288,
+      "processPeakWorkingSetBytes": 1166397440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846593.3419611,
+      "workingSetBytes": 1013960704,
+      "processPeakWorkingSetBytes": 1166397440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846603.3440046,
+      "workingSetBytes": 896270336,
+      "processPeakWorkingSetBytes": 1166397440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846613.3466783,
+      "workingSetBytes": 1114542080,
+      "processPeakWorkingSetBytes": 1421615104,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846623.3517559,
+      "workingSetBytes": 1147674624,
+      "processPeakWorkingSetBytes": 1434722304,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846633.3538873,
+      "workingSetBytes": 1004363776,
+      "processPeakWorkingSetBytes": 1459773440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846643.3554997,
+      "workingSetBytes": 853987328,
+      "processPeakWorkingSetBytes": 1459773440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846653.3575144,
+      "workingSetBytes": 846176256,
+      "processPeakWorkingSetBytes": 1459773440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846663.3660014,
+      "workingSetBytes": 846213120,
+      "processPeakWorkingSetBytes": 1459773440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846673.3794487,
+      "workingSetBytes": 855998464,
+      "processPeakWorkingSetBytes": 1459773440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846683.381239,
+      "workingSetBytes": 854913024,
+      "processPeakWorkingSetBytes": 1459773440,
+      "processPeakCommitBytes": 2642628608
+    },
+    {
+      "timeUnix": 1789846693.3831866,
+      "workingSetBytes": 851623936,
+      "processPeakWorkingSetBytes": 1459773440,
+      "processPeakCommitBytes": 2642628608
+    }
+  ],
+  "scope": "OS process high-water marks include initialization; observer started after process launch; system-free guard separately recorded",
+  "peakWorkingSetBytes": 1459773440,
+  "peakCommitBytes": 2642628608
+}

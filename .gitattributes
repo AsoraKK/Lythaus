@@ -10,3 +10,8 @@ scripts/authenticity/*wp007m*.py text eol=lf
 scripts/authenticity/wp007m_sharp.cjs text eol=lf
 packages/authenticity/tests/wp007m.test.mjs text eol=lf
 
+research/wp007n/* text eol=lf
+scripts/authenticity/*wp007n*.py text eol=lf
+scripts/authenticity/*wp007n*.cjs text eol=lf
+packages/authenticity/tests/wp007n.test.mjs text eol=lf
+

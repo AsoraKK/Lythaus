@@ -1,0 +1,7 @@
+{
+  "canonicalProtocolHash":"6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+  "canonicalization":"UTF8 json.dumps sort_keys=True separators comma-colon allow_nan=False",
+  "cohortHash":"1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+  "frozenBeforeAnyScientificExtraction":true,
+  "parameterChangesAfterEvaluationAllowed":false
+}

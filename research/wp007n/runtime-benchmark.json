@@ -1,0 +1,187 @@
+{
+  "SAFE": {
+    "checkpointHash": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+    "codeHash": "fa334dc0106a2a365d5ba8af5dd9e52ac331c5d1e163aca9e2cd3fd5eb37c325",
+    "command": "python scripts/authenticity/wp007n_safe_reference.py",
+    "end": 1789846767.0529704,
+    "failure": null,
+    "initializationSeconds": 0.7094743251800537,
+    "minimumAvailableBytes": 7268352000,
+    "parameterStateHash": "53330cc7f5abcfdda3afcc50dfe4b7a8056e4443cb5b9186518f94325562c3a9",
+    "reusedHistoricalScores": false,
+    "rows": 152,
+    "seconds": 52.25017428398132,
+    "start": 1789846714.802797,
+    "threshold": 0.5864923000335693
+  },
+  "batch": 1,
+  "codeHash": "70c75f48fbae144b7fd27b09fb364e7ba12fc5c0f03ad434e89ae6a0505776a3",
+  "extraction": {
+    "A": {
+      "max": 20.98867659998359,
+      "measuredCalls": 140,
+      "p50": 6.764230650005629,
+      "p95": 17.788266679999637,
+      "run": {
+        "forwards": 781,
+        "runs": [
+          {
+            "cachedParents": 0,
+            "codeCommit": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+            "codeHash": "d2dfecb6db05e5ccb70e4de57c6a045848333885d7df099142ebda886678454e",
+            "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+            "command": "python wp007n_extract.py A --roles FIT,DEV,CALIBRATION",
+            "endedUnix": 1789843644.8799396,
+            "failure": null,
+            "forwards": 196,
+            "minimumAvailableBytes": 6067781632,
+            "newParents": 44,
+            "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+            "roles": [
+              "FIT",
+              "DEV",
+              "CALIBRATION"
+            ],
+            "seconds": 473.63323187828064,
+            "startedUnix": 1789843171.2467053
+          },
+          {
+            "ambiguousForwardCharged": false,
+            "codeHash": "1c2972b6284c6a53558cabf4d61f6c61a43d24b629b9ab266531e8cc143958ba",
+            "command": "python wp007n_replay.py",
+            "endedUnix": 1789844318.4398437,
+            "failure": null,
+            "forwards": 20,
+            "roles": [
+              "CALIBRATION_REPLAY"
+            ],
+            "seconds": 55.66946077346802,
+            "startedUnix": 1789844262.7741697
+          },
+          {
+            "ambiguousForwardCharged": true,
+            "cachedParents": 0,
+            "codeCommit": "a008acae6250fd39e552466fd8a0b4d0929ac095",
+            "codeHash": "d41acb2b93fa9967903780f98202daec84b052aaac78a934db6799dc4cbc7d45",
+            "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+            "command": "python wp007n_extract.py A --roles EVAL_N,HISTORICAL_CHALLENGE",
+            "endedUnix": 1789846034.6830938,
+            "failure": "PermissionError:[WinError 5] Access is denied: 'external/wp007n\\\\budget-A.json.partial' -> 'external/wp007n\\\\budget-A.json'",
+            "forwards": 377,
+            "minimumAvailableBytes": 5957705728,
+            "newParents": 30,
+            "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+            "roles": [
+              "EVAL_N",
+              "HISTORICAL_CHALLENGE"
+            ],
+            "seconds": 920.7813754081726,
+            "startedUnix": 1789845113.952977
+          },
+          {
+            "ambiguousForwardCharged": false,
+            "cachedParents": 30,
+            "codeCommit": "0fb918872b1a81f483b004701143178e72a62748",
+            "codeHash": "d41acb2b93fa9967903780f98202daec84b052aaac78a934db6799dc4cbc7d45",
+            "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+            "command": "python wp007n_extract.py A --roles EVAL_N,HISTORICAL_CHALLENGE",
+            "endedUnix": 1789846558.3973968,
+            "failure": null,
+            "forwards": 188,
+            "minimumAvailableBytes": 6646427648,
+            "newParents": 18,
+            "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+            "roles": [
+              "EVAL_N",
+              "HISTORICAL_CHALLENGE"
+            ],
+            "seconds": 441.8677005767822,
+            "startedUnix": 1789846116.5785062
+          }
+        ],
+        "seconds": 1891.9484372138977
+      },
+      "unit": "A clean plus3 noise forwards; B one vision forward; excludes decode/preprocessing"
+    },
+    "B": {
+      "max": 3.5526569999638014,
+      "measuredCalls": 140,
+      "p50": 0.382153600017773,
+      "p95": 1.3114614150021218,
+      "run": {
+        "forwards": 288,
+        "runs": [
+          {
+            "ambiguousForwardCharged": false,
+            "cachedParents": 0,
+            "codeCommit": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+            "codeHash": "c7996b9a485518622ff87eaf2bd5915b761ac7d36d4ac5eb1dee1b38abba0a1d",
+            "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+            "command": "python wp007n_extract.py B --roles FIT,DEV,CALIBRATION",
+            "endedUnix": 1789844493.489151,
+            "failure": null,
+            "forwards": 148,
+            "minimumAvailableBytes": 7393361920,
+            "newParents": 44,
+            "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+            "roles": [
+              "FIT",
+              "DEV",
+              "CALIBRATION"
+            ],
+            "seconds": 121.41367197036743,
+            "startedUnix": 1789844372.129372
+          },
+          {
+            "ambiguousForwardCharged": false,
+            "cachedParents": 0,
+            "codeCommit": "0fb918872b1a81f483b004701143178e72a62748",
+            "codeHash": "d41acb2b93fa9967903780f98202daec84b052aaac78a934db6799dc4cbc7d45",
+            "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+            "command": "python wp007n_extract.py B --roles EVAL_N,HISTORICAL_CHALLENGE",
+            "endedUnix": 1789846694.028438,
+            "failure": null,
+            "forwards": 140,
+            "minimumAvailableBytes": 7084748800,
+            "newParents": 48,
+            "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+            "roles": [
+              "EVAL_N",
+              "HISTORICAL_CHALLENGE"
+            ],
+            "seconds": 117.44859600067139,
+            "startedUnix": 1789846576.6920702
+          }
+        ],
+        "seconds": 238.85837697982788
+      },
+      "unit": "A clean plus3 noise forwards; B one vision forward; excludes decode/preprocessing"
+    }
+  },
+  "headOnly": {
+    "A0": {
+      "maxSeconds": 0.0002098999684676528,
+      "notFullSystemCost": true,
+      "p50Seconds": 0.00010659999679774046,
+      "p95Seconds": 0.00011557000689208507
+    },
+    "B0": {
+      "maxSeconds": 0.00014700001338496804,
+      "notFullSystemCost": true,
+      "p50Seconds": 0.00010689999908208847,
+      "p95Seconds": 0.00011464999988675117
+    },
+    "B1": {
+      "maxSeconds": 0.00014030002057552338,
+      "notFullSystemCost": true,
+      "p50Seconds": 0.00010720000136643648,
+      "p95Seconds": 0.00011989503691438584
+    }
+  },
+  "modelsBytes": 3008373027,
+  "outputRows": 1520,
+  "precision": "CPU float32",
+  "threads": 2,
+  "totalCostNewPaidServices": 0,
+  "workerCount": 1
+}

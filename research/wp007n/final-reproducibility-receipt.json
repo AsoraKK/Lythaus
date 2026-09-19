@@ -1,0 +1,26 @@
+{
+  "ASTAndJSONPass": true,
+  "SAFEhashAfter": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+  "SAFEthreshold": 0.5864923000335693,
+  "architectureFailure": "Same named CRLF-sensitive production workflow regex failure on unchanged parent;255/256 both",
+  "codeCommit": "9a59562d1ee7ded7e6de475cfeeca315ec157b9b",
+  "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+  "derivedFeatureBytes": 4476965,
+  "diffCheckPass": true,
+  "environmentHash": "6b9f116bf7b46118809bb91e149b71051f5ef5fc9013d3a3dcf0257157ad6480",
+  "executionSignature": "93fabf99d531b71788ec6b65e8d6fccd46ed7328e50364f57f9755f23cb469c0",
+  "jsonFiles": 55,
+  "modelHashesAfter": {
+    "A": "d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428",
+    "B": "0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce"
+  },
+  "privacySecretsPass": true,
+  "productionAuthorization": "NO",
+  "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+  "resourcesAfter": {
+    "availableBytes": 7352270848,
+    "freeDiskBytes": 1873616896
+  },
+  "retiredCheckIdenticalParentLog": true,
+  "timeUnix": 1789848191.4051478
+}

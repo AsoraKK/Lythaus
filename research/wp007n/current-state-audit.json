@@ -1,0 +1,36 @@
+{
+  "repository":"Lythaus; authenticated origin verified against the owner's expected repository",
+  "originMain":"8e3b3ebad2f846e61db2bfe819376723da7e9863",
+  "parentPR":854,
+  "parentState":"OPEN_UNMERGED",
+  "parentBranch":"agent/wp007m-independent-discovery",
+  "WP007N_PARENT_SHA":"e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+  "branch":"agent/wp007n-two-arm",
+  "preEvaluationCommit":"a008acae",
+  "verification":"git fetch origin; gh pr view854 state/head/mergedAt; latest PR inventory854/853/852; git merge-base ancestry. Repeated immediately before evaluation work. No superseder or concurrent N found.",
+  "worktree":"Dedicated clean isolated temporary worktree; unrelated main-checkout changes preserved",
+  "historicalInterpretation":{
+    "M":"Rejected its selected wavelet scalar. RIGID was recommended, not executed or disproven.",
+    "K":"Handcrafted CES-S did not qualify; this does not reject richer frozen visual representations.",
+    "J_R1":"Centroid-distance admission rejected SAFE-B; no head was fitted. No SAFE-B experiment reopened in N.",
+    "L":"Camera-like profiles do not prove physical origin; no camera-acquisition/C2PA detour in N.",
+    "hardNegatives":"Prior procedural categories are not representative human artwork/CGI/game controls.",
+    "encoders":"Pillow and Sharp wrappers share libjpeg-turbo lineage; engineering decoded-equivalence checked explicitly."
+  },
+  "selectedSources":{
+    "CSAFE":38,
+    "DiffusionDB":18,
+    "Unsplash":8,
+    "T2IHistorical":15,
+    "CloudflareFLUX1Consumed":5,
+    "proceduralSupplement":8,
+    "actualHumanDigitalWorks":0,
+    "totalParents":92,
+    "screenParents":48
+  },
+  "runtime":"Existing approved E Python runtime with isolated small timm/einops overlay; source/runtime/checkpoint hashes in runtime-freeze and checkpoint-freeze",
+  "resourceEvidence":["resource-admission.json","engineering-A.json","engineering-B.json","runtime-freeze.json","run-A.json","run-B.json"],
+  "budgetPrecedence":"resource-admission is the earlier engineering admission; the later frozen protocol reduces scientific limits to A900/B450 forwards and2700seconds each. Earlier3200 estimate is not an active limit.",
+  "reservePolicy":"Exact already-consumed allowlisted records only. No sealed media inventory, pixel access, metadata inspection or provider calls.",
+  "productionAuthorization":"NO"
+}

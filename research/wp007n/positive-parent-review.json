@@ -1,0 +1,5181 @@
+{
+  "review": "Structured row/input identity and inference audit; not visual origin adjudication",
+  "rows": [
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_QNwET9cMlJU",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_QNwET9cMlJU"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_QNwET9cMlJU",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_QNwET9cMlJU"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_QNwET9cMlJU",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_QNwET9cMlJU"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "A0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-062-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-062-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_Etobk5T7C_s",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Etobk5T7C_s"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-062-3",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-062-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_Etobk5T7C_s",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Etobk5T7C_s"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-062-3",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-062-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_Etobk5T7C_s",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Etobk5T7C_s"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B0",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-062-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-062-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_Etobk5T7C_s",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Etobk5T7C_s"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "original",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "jpeg75",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-062-3",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-062-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_Etobk5T7C_s",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Etobk5T7C_s"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "jpeg75",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "jpeg75",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "jpeg75",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-062-3",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-062-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_Etobk5T7C_s",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Etobk5T7C_s"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-027-1",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "imagen-4__R-GR-046-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-061-3",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-075-0",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "B1",
+      "candidatePositive": true,
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "jpeg75",
+        "original"
+      ],
+      "sampleId": "imagen-4__R-GR-083-2",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "CSAFE_WP006E_s21_4_14",
+      "scope": "original",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_4-14"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "scope": "original",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "scope": "original",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "scope": "original",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original",
+        "png_roundtrip",
+        "resize75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original",
+        "png_roundtrip",
+        "resize75"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "jpeg95",
+        "original",
+        "png_roundtrip",
+        "resize75",
+        "resize75_jpeg95"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": true,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE",
+      "candidatePositive": true,
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "scope": "ALL_DECLARED_WORST",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+    },
+    {
+      "SAFEauthority": "RAW_UNQUALIFIED_REGIME_REFERENCE",
+      "SAFEpositive": false,
+      "candidate": "NUISANCE_PERMUTED",
+      "candidatePositive": true,
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "positiveConditions": [
+        "original"
+      ],
+      "sampleId": "CSAFE_WP006E_s21_4_13",
+      "scope": "original",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_4-13"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "wp007n-resource-admission-v1",
+  "parent": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+  "stage": "PRE_SCIENTIFIC_ENGINEERING_ONLY",
+  "authorization": "WP007N permits bounded public artifact retrieval after rights and storage admission; no paid or gated access",
+  "newPrimaryBackbonesMaximum": 2,
+  "choices": [
+    {"arm":"A","model":"dinov2_vitl14","codeCommit":"7764ea0f912e53c92e82eb78a2a1631e92725fc8","url":"https://dl.fbaipublicfiles.com/dinov2/dinov2_vitl14/dinov2_vitl14_pretrain.pth","expectedBytes":1217586395,"rights":"Apache-2.0 explicitly covers models in official MODEL_CARD.md","sha256":"TO_BE_VERIFIED_BEFORE_LOADING"},
+    {"arm":"B","model":"PE-Core-B16-224","codeCommit":"3e352cca660658d4b5c90f42a7808b11469e4c66","revision":"a16450b46fef32363459920c2685a1b4ef13dcd9","expectedBytes":1790786632,"sha256":"0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce","rights":"Apache-2.0 LICENSE.PE and explicit selected checkpoint model card","loading":"Official VisionTransformer vision-only path; compare to CLIP.encode_image arithmetic on engineering fixtures"}
+  ],
+  "limits": {"checkpointBytes":3010000000,"sourceAndDependencyBytes":50000000,"derivedBytes":100000000,"freeDiskFloorBytes":1073741824,"freeMemoryFloorBytes":4294967296,"workerCount":1,"batchSize":1,"torchThreads":2,"engineeringFixtures":10,"noiseDraws":3,"scientificForwardPassesPerArm":3200,"scientificSecondsPerArm":2700},
+  "observedBeforeRetrieval": {"freeDiskBytes":4937633792,"availableMemoryKiB":8086792,"cpu":"AMD Ryzen 7 7730U"},
+  "policy": "Attended bounded CPU extraction only. ECO-TRAIN unattended disk/telemetry prerequisites are not satisfied and no unattended training is authorized. Recheck memory before every model and parent; never close owner applications or delete caches. Engineering throughput determines the final smaller pilot if necessary before scientific outcomes.",
+  "reserves": "NO_ACCESS",
+  "productionAuthorization": "NO"
+}

@@ -1,0 +1,12 @@
+{
+  "files": {
+    "scripts/authenticity/wp007n_analysis.py": "542e7244fbfd69dfd19c7b18121f38d8521df48c82a9d264cfb95ac24eec20e0",
+    "scripts/authenticity/wp007n_core.py": "cf8ad0822bf0d51dc926c98411f2142716e15b0e5e718933bd862ae80be505be",
+    "scripts/authenticity/wp007n_extract.py": "d41acb2b93fa9967903780f98202daec84b052aaac78a934db6799dc4cbc7d45",
+    "scripts/authenticity/wp007n_freeze.py": "73f574c03de9a5a282b3f60f6473130ab38536b5ed0d4210755edaa689bba9df",
+    "scripts/authenticity/wp007n_guards.py": "5ed667c0aded40e68603ad1a9030ebf5b9217249eb2e52cb3997a09db1d3a6a3"
+  },
+  "hardeningBeforeEvaluation": true,
+  "protocolUnchanged": true,
+  "signature": "93fabf99d531b71788ec6b65e8d6fccd46ed7328e50364f57f9755f23cb469c0"
+}

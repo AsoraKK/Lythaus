@@ -1,0 +1,2837 @@
+{
+  "actualHumanDigitalWorks": 0,
+  "codeHash": "f824fbbfd1b7c8d9a1c5524c0e7756cb9faa28be547aae10344d0cf9406cf0ec",
+  "counts": {
+    "CALIBRATION": 8,
+    "DEV": 12,
+    "EVAL_N": 28,
+    "FIT": 24,
+    "HISTORICAL_CHALLENGE": 20
+  },
+  "freezeHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+  "fullMatrixScreenParents": 12,
+  "manifestReferences": [
+    "research/wp007e/data-role-freeze.json",
+    "research/wp007a/ef3-synthetic-manifest.json",
+    "research/wp007i/negative-data-freeze.json",
+    "research/wp007i/fresh-synthetic-freeze.json",
+    "research/wp007m/diagnostic-cohort-freeze.json"
+  ],
+  "nearDuplicateCandidates": [
+    {
+      "a": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "b": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "crossRole": false,
+      "distance": 2
+    }
+  ],
+  "nearDuplicateLimit": "Perceptual hash is not exhaustive scene deduplication. Cross-device scenes and unknown Unsplash photographer links remain uncertain; intervals are nominal parent intervals.",
+  "newProgrammeConfirmation": false,
+  "physicalDeviceRoles": {
+    "iPhone11_1": "FIT",
+    "iPhone11_3": "EVAL_N",
+    "iPhone12_1": "CALIBRATION",
+    "iPhone12_3": "EVAL_N",
+    "iPhone14_1": "FIT",
+    "iPhone14_3": "DEV",
+    "note10_1": "CALIBRATION",
+    "note10_3": "CALIBRATION",
+    "s20_1": "EVAL_N",
+    "s20_3": "EVAL_N",
+    "s20_4": "EVAL_N",
+    "s21_1": "DEV",
+    "s21_3": "FIT",
+    "s21_4": "EVAL_N"
+  },
+  "rows": [
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "6057486f8379d6b3d191aa99a27b30dcb6cee5d36f43d1cb971f6d1dbc307e0a",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x38600e68676666ef",
+      "physicalDevice": "iPhone11_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone11_1/0006.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone11_1_07",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "fa3020ab73a9b96d1d24217df6837dcc7efff5c3723767acad4c0927ba933c2a",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-07",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:iPhone11_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "724d4b24c644e9416df09b1619d976e4ccb49b441833932755b7a4e3ed39d169",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x74c251a4a1b1fe4b",
+      "physicalDevice": "iPhone14_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone14_1/0004.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone14_1_05",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "40b20c4f3cc6a012018c26f1e91fdc12f8784b56e4f70e495a7aa23c89e48bf5",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone14_1-05",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone14_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "5a783ddf1e027f02cac86285661937b8961ffe0e74543b9b9b31381f2a86b464",
+      "dimensions": [
+        2208,
+        2944
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x465cabdb22b7540a",
+      "physicalDevice": "s21_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s21_3/0000.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_3_01",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "8708486c3e56c2450397f7d5cb0c4b988310528946998f939c96336862eae7b2",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_3-01",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "66a6cc123364328b6f4d3526ba035d3e0db3592493c560a3484bdce27ee5228e",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x7b421cb9637ca981",
+      "physicalDevice": "iPhone11_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone11_1/0009.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone11_1_10",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "d5a6d4098ddcfc4818b21d9fcb29e9282f662f1d636d1cd6ecf7f3288f7ee153",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-10",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:iPhone11_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "38437ab4b1c5b31674faa6315ffe4af06540f6f07cc7d8b3d97c06f5928aacba",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x338d241b319f394e",
+      "physicalDevice": "iPhone14_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone14_1/0003.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone14_1_04",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "4d5380408988c03b9630f686a23f5ae859a01f9acc521feab219fb6336cae364",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone14_1-04",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone14_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "fa572a6657f8f29c7accc670fbcf2c31e7d37cf480cbf61e1572c03140280cae",
+      "dimensions": [
+        3000,
+        4000
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x6b953f05694ba036",
+      "physicalDevice": "s21_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s21_3/0003.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_3_04",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "44eb3ddaaf44978c31f727205c1ea39db43cbf498f61c73ae43cfd79626ca614",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_3-04",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "6a6f18105b7b303a4895423806c33b1c89a00d794fa98b56e7607a79b2fd5984",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x55fb7172fa0e0484",
+      "physicalDevice": "iPhone11_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone11_1/0005.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone11_1_06",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "0a90154db1fc031c1d8f1e307786dd99d6cdcc76e8e5697b9fe9566a5cb15ae1",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-06",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:iPhone11_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "d7f410edc3956ee3bcc21b8609035d5507474021ba1c4535394919be4c99bf0d",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x76c4291054adafce",
+      "physicalDevice": "iPhone14_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone14_1/0008.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone14_1_09",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "608fdf60bac140d8a8666b31b1c165fed65a0b36ae4e449246457983b6412f2a",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone14_1-09",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone14_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "d4aa4c2ac88f88d2a23f2fb6b8aef8d59319ec88901464c6b57a0258134f8ea1",
+      "dimensions": [
+        2208,
+        2944
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x113792858debc5c5",
+      "physicalDevice": "s21_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s21_3/0002.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_3_03",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "e1dc3346c2e804fbac9bf8882e5a2f9b95fc8828d864a89b616479abdadf0f5c",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_3-03",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "048579ed9b9ea23c1d83c5f5eec245703580cd2bba133f4b981377705188366f",
+      "dimensions": [
+        2316,
+        3088
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x37fa4a8c35495e5",
+      "physicalDevice": "iPhone11_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone11_1/0002.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone11_1_03",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "64646d65913801f6de8b1b30a637d1b208a70330e68b36586db5eeb1abb49bbe",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:iPhone11_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "594ec31220c10e778199b768362238db972b5c1ad35383ee9d9d0e02bc59b8a7",
+      "dimensions": [
+        2316,
+        3088
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x4233fdc10985e69e",
+      "physicalDevice": "iPhone14_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone14_1/0000.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "50d6cbedf25aa534449b1d4cc380272a4ee72ad5f13c42a64f5b1d70951fa2c6",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone14_1-01",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone14_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "45ead8e0c6cee15b922afdee4d39c0d5c12c46c2693ea9fca63eddb67d0d4dfe",
+      "dimensions": [
+        3000,
+        4000
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x5492c5e82deab2d2",
+      "physicalDevice": "s21_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s21_3/0005.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "FIT",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_3_06",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "c89ec4ea88b49286c0dcd360db2b3245f2ea5b147a224f0e76fdc1d4179dfa78",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_3-06",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "12766a0fdfeb3eab762644d519b4c5362c0d76f1c86aed3acd6467042fc7986c",
+      "dimensions": [
+        2316,
+        3088
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x39a62ce3ce478658",
+      "physicalDevice": "iPhone14_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/iPhone14_3/0002.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "DEV",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone14_3_03",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "1be2b457aef12afd9c0bc3b31adc278dea0997518ba654021ff03a966dc58f85",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone14_3-03",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone14_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "80d42974d16cf0f8b4bb0d05659c88e11f6f6362f8b52edd4a34d40542178f48",
+      "dimensions": [
+        2944,
+        2208
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x2c2baea9ab2aaaa8",
+      "physicalDevice": "s21_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/s21_1/0000.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "DEV",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_1_01",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "f6bab60feb544d2efca36658b8360535868df65319c7b47f1a44c6d14a56a37c",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_1-01",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "0273113489d3351ba4031d9d991dca45416383f341c812329d6373fd42e0447d",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x246686882fff7e01",
+      "physicalDevice": "iPhone14_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/iPhone14_3/0007.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "DEV",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone14_3_08",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "15ab86cb09f5dd33e19a69d2fd6d512c532ef2683cb122a8f9b224832b79226b",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone14_3-08",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone14_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "9a5258598f281e10100328910a339bbf4b91027652b37df17bfe82ab6e982ca5",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x3fb03b888b788d7",
+      "physicalDevice": "s21_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/s21_1/0006.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "DEV",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_1_07",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "ab49fd463a9394115f57eb66346d3793bcd47bd9442641f585b193cee519aa82",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_1-07",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "713177af9b7a3a7867d8f905d4f0a1f62bf04a15d6e0429c1e5036e03434748b",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x508c07a57753da9a",
+      "physicalDevice": "iPhone14_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/iPhone14_3/0005.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "DEV",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone14_3_06",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "ba0adbc35e05b7ba309166934f57aa36dbefba4eba2d2f13a2662095a6738800",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone14_3-06",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone14_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "da37cac8b3007f52ecd6b16591e011826d63312e49cb3b144adaf4b0309c8135",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x4c0cba834be1b69e",
+      "physicalDevice": "s21_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/s21_1/0004.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "DEV",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_1_05",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "4f6153dd60bf31521dc2d01eda50f82da99b5b9da4b41a24fbea3d0486421ffe",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_1-05",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "e438011249071c0d058ac60945b8e9836dc95a622564cd44d67975203ee61755",
+      "dimensions": [
+        2944,
+        2208
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x7e7e66501480d4f5",
+      "physicalDevice": "note10_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/note10_3/0002.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "CALIBRATION",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_note10_3_03",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "e6ea6f11512be6d4e7f833088495ae690b42f799e9883702d19d7a875358c9a4",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-note10_3-03",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:note10_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "319a4d208fbcf5e0ff3e2af3e483020ea6df3ddf98f16ef1b646015fe8555ecd",
+      "dimensions": [
+        2316,
+        3088
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x521a5cce54c49fc5",
+      "physicalDevice": "iPhone12_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone12_1/0002.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "CALIBRATION",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone12_1_03",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "699889b0a7bfc0fe2e4e4d8be68d41a9100ce45f4732478209712cb4c5815c2f",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone12_1-03",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone12_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "4d46ff632372d40bf23b8bb6a59e5915ee0f411cf12353d848973155da615c52",
+      "dimensions": [
+        2208,
+        2944
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x482593de6c15a72b",
+      "physicalDevice": "note10_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/note10_1/0000.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "CALIBRATION",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_note10_1_01",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "9f07266cf96d0714717a545b46b98f12cfb45352dcba4bfe6a0d0b07edc6adb9",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-note10_1-01",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:note10_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "ab7c96719c26a732a8b77ffca5d3ff9ebeb6cdffa1b80010382a68a644d6b7b8",
+      "dimensions": [
+        2208,
+        2944
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x5d2bb4592b626499",
+      "physicalDevice": "note10_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/note10_3/0000.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "CALIBRATION",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_note10_3_01",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "d2b83653088ee585fcc2bc5c9824d651b81a4d9e5c65986a302f20509d73ce07",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-note10_3-01",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:note10_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "b3f3997e60e8e5161d3542827263c37a8d08fc50949f512946ac63f4a82e619d",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x1713d3da4b9949a4",
+      "physicalDevice": "iPhone12_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone12_1/0007.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "CALIBRATION",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone12_1_08",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "865f57c97d4060c817a4943037907fb7df6caaa0c03aeedd0861a30b52854dc2",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone12_1-08",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone12_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "d3d183c097c327763db10d60e3138895f6fc2dbe3ca1c6842b7a963a49dadba6",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x56622717156a7731",
+      "physicalDevice": "note10_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/note10_1/0004.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "CALIBRATION",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_note10_1_05",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "7d61b91f831b04d5785e3da0530db2a3b35a19dcea8b7100beeb442999d5675b",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-note10_1-05",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:note10_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "6e6810bca754fa66e9dd815e1b6a71033ea949d80a92dc353ab0bc62d9ef7cb7",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x70f567efca86830",
+      "physicalDevice": "note10_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/note10_3/0005.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "CALIBRATION",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_note10_3_06",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "4636fd72c1df7f30f8c0a51ae07f121c0a1bd91dbccc88e042902cdab595ecd8",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-note10_3-06",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:note10_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "4b4cc4247db44c25d712e44f68fadc6c344f11a4dfbbf2499543b287415ab7a1",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x3ba03068f05be976",
+      "physicalDevice": "iPhone12_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/iPhone12_1/0004.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "CALIBRATION",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone12_1_05",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "c4a34d60e3003c65715b43d3bc783dae485f0462347559c694ba208c8040da9e",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone12_1-05",
+      "sourceFormat": "MPO",
+      "splitGroup": "device:iPhone12_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "46a2c0a3d39452c7a5c058a4f866290f66cd87d2872b008a35801b75312da9ea",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0xabf63c2b5074aca",
+      "physicalDevice": "s20_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s20_3/0003.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s20_3_04",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "0a4dac481c28907499ece3f0734fa7b48818b70b3bd9bf7e2ba80356cc4ab46d",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s20_3-04",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s20_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "f8f42d710585401499940e18beb30000006464ca752e61c448d3ecf688973e8f",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0xfa364b33a13a84f",
+      "physicalDevice": "s20_4",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s20_4/0015.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s20_4_16",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "b6d23930b2de91b1186be8d4c60d5359fe8a92eea6bfe7bdc9492f5d782734ec",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s20_4-16",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s20_4",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "cc8bdda57ef280e3a82221082c1a2d34388ca9f1ea9fef7d300123f465f684cf",
+      "dimensions": [
+        2208,
+        2944
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x60c3d7363009fd8b",
+      "physicalDevice": "s20_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/s20_1/0000.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s20_1_01",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "c7ebb9bb94e8f40f40629321fb628a72981d7d4cf60b432beefd7232b04fc0b7",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s20_1-01",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s20_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "126351189b153b2182a4d6fc433359d68cd11553f5c9b37d2f6a90971e2bc9c0",
+      "dimensions": [
+        2208,
+        2944
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x4be49443b3b92cd4",
+      "physicalDevice": "s21_4",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s21_4/0013.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_4_14",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "a0dccf197291b3e6d3def15a209ae7cacf829f1edc36382d89c6f3d32ebb70f7",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_4-14",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_4",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "235d987be7286322df7abbebe72a5a0a3e4f4d16d25e70cc2f4bde4fc934036a",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x181152dafaf94574",
+      "physicalDevice": "iPhone12_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/iPhone12_3/0009.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone12_3_10",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "b25cb013395ce3737d128dd5dbd26670f67dcd56b0e39acbaf7be13950bc8c8a",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone12_3-10",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:iPhone12_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "93f583b536effd8f5109b74ed8e3e24e71556f42f8bee016e8125c69c4c802b6",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x25cbdc0a152ba5da",
+      "physicalDevice": "iPhone11_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/iPhone11_3/0006.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone11_3_07",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "5ec1a92cfc5dd47b762b998edfd0a6047e98badd6f06683d994b6cc3acb82470",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_3-07",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:iPhone11_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "b5312d20edab61bbb21f1a2954be8bd844bf5c3a9360ea8525e0b52913f40baf",
+      "dimensions": [
+        3000,
+        4000
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0xf236ce81c13af47",
+      "physicalDevice": "s20_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s20_3/0006.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s20_3_07",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "7e7beba659b480686a9ac1ff94b5447a61a9b0f242b7e6a58281e3eda1ce49aa",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s20_3-07",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s20_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "1aae38d8a0c57fe5e776d0efa67ec3a1a8655a7e9615d69a90011965c0507777",
+      "dimensions": [
+        2208,
+        2944
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x44fabb0d46ef0494",
+      "physicalDevice": "s20_4",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s20_4/0012.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s20_4_13",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "ea7a4f2e5834203da7d65d66b60ddceac9dbe317090714a0e7a733e31dc8b00c",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s20_4-13",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s20_4",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "823528d6526d5b1186f1e265e71213847f75cddfe1c996888da72a6c5b38c0d8",
+      "dimensions": [
+        3000,
+        4000
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x7a7c91831dfb161",
+      "physicalDevice": "s20_1",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "historical/s20_1/0006.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s20_1_07",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "8befbb2ce83b2723473dc2d1203a8be2ecd502bc81231f3c01d702e2fcc0167b",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s20_1-07",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s20_1",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "f6d3fcc26c2ce841ee0b6a7894269363403f3ef145443dfa99a990b197a1e0de",
+      "dimensions": [
+        2208,
+        2944
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x4f5be825ac533095",
+      "physicalDevice": "s21_4",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/s21_4/0012.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_s21_4_13",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "82a3c53a6849938a2a0612f769b398cbb2be8b01929ed48ec99f109be2991a59",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-s21_4-13",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:s21_4",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "9849c1fed21dbb7681ba11beddc63803aa0391846a3ae7df29926f926e50579b",
+      "dimensions": [
+        2316,
+        3088
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x38e71bf00da96e9",
+      "physicalDevice": "iPhone12_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/iPhone12_3/0000.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone12_3_01",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "5d6ae870026e7aeb850d585333e8350158a092adabaaa242d17791e7532ab10e",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone12_3-01",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:iPhone12_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "7ebc5f7998b748baccd3ed38737c7eb05b712d5f53796521ebf4ba9a5dd00436",
+      "dimensions": [
+        3024,
+        4032
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_CSAFE",
+      "label": 0,
+      "nearDuplicateHash": "0x5ddaa144c221ac7f",
+      "physicalDevice": "iPhone11_3",
+      "programmeExposure": "CONSUMED_E_AND_LATER",
+      "relativePath": "new/iPhone11_3/0005.jpg",
+      "rights": "CC_BY_4.0_WITH_ATTRIBUTION",
+      "role": "EVAL_N",
+      "rootKey": "CSAFE",
+      "sampleId": "CSAFE_WP006E_iPhone11_3_06",
+      "sceneIdentity": "UNKNOWN_CROSS_DEVICE_SCENE_LINKAGE_NOT_PROVEN",
+      "sealed": false,
+      "sha256": "766f89fc3a67dd689139724f6634239255d6df4adba430653eae3e767fdaee4a",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_3-06",
+      "sourceFormat": "JPEG",
+      "splitGroup": "device:iPhone11_3",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "a6d08621360e2a54d1d472fa484a94955397057b3015fe0a51ffbfb941c59f80",
+      "dimensions": [
+        640,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x59e4fb653a9b484",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_35dcea489a5762a1",
+      "relativePath": "selected/DDB_0024.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0024",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "7ae40ebf4da1388aba4e413d4225c65f549c566534c5b0d8f4420b37c27dddbb",
+      "sourceFamilyId": "DDB-FAMILY-2e87de3ab6e3962ffd989bce",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-2e87de3ab6e3962ffd989bce",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "a0e6c6be98283a64efe33eb24ad7905dcb3157537604cb76a46bece849e8e911",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x2ed9a669962154b9",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_37587a009a3e03ba",
+      "relativePath": "selected/DDB_0037.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0037",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "53dd7d21465459b1b0a006be6768afc94bd7fa8cdf57acbb0e99d7ddb84b51c8",
+      "sourceFamilyId": "DDB-FAMILY-883810b654a3f7ba115bec8d",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-883810b654a3f7ba115bec8d",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "d04d845ef3faf3b4f676ba8fb0ed96fa377a76e554d70de457f98b9885126dad",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x4825a63318c9df6d",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_0b5f74d191aea4cf",
+      "relativePath": "selected/DDB_0088.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0088",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "2574780f7b18c56e55c6cdb4dab447c98c396e7c73c3ab6ba189db644d6332f2",
+      "sourceFamilyId": "DDB-FAMILY-217d215159774ab0f96b308b",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-217d215159774ab0f96b308b",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "5ccb66f1f6fc7a8aac35aeb66881660c772e048475c0734be17240adc9661056",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x33262447559ecbc9",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_1d0c8118129ced45",
+      "relativePath": "selected/DDB_0132.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0132",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "28656f16b5ee557835b3700e0c71dec31e21d64cee944d78218b534e416c4b40",
+      "sourceFamilyId": "DDB-FAMILY-3b68908314439c814330b06e",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-3b68908314439c814330b06e",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "29ea1fbf54f1848552ba6cee4b9ac0074df31ce56386146d7900fb58cedc6813",
+      "dimensions": [
+        512,
+        768
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x56565ec4768d4196",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_1e1c3480567b37ad",
+      "relativePath": "selected/DDB_0011.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0011",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "87d094e949094c75c088c1deb208b7d5711c2a8925e64dbbee6a28b771f03d75",
+      "sourceFamilyId": "DDB-FAMILY-d8dd2e748908ec4764f314d4",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-d8dd2e748908ec4764f314d4",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "41e52e6e08e01141d51d1769ac7b74a850ce14800937ad83896c48abc2213c13",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x5081fde8add4428f",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_04f4b9a73ff07474",
+      "relativePath": "selected/DDB_0119.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0119",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "ba855f83d293698d8ca0347ed42e2dadf750695db864431d6d498471886aeb78",
+      "sourceFamilyId": "DDB-FAMILY-caf379e8dff8a03a7a9fbb74",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-caf379e8dff8a03a7a9fbb74",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "6ec7381d6484e067e8a694732245465343a0af2c6520b35a577a85ae4e7537f7",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x440e6898f66ef85a",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_578f2686756b9c7e",
+      "relativePath": "selected/DDB_0066.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0066",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "674e37724f89af7d65a2b46c2f06fac18c8bd334834514e13ef35530591e8259",
+      "sourceFamilyId": "DDB-FAMILY-30243f3e7dc645dc663e3bcc",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-30243f3e7dc645dc663e3bcc",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "9a4ecea02c411d987387b636a44aee4a1d63b1717ee754c8cc9e911e16fca8f8",
+      "dimensions": [
+        768,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x4e6ccb53802ab3b6",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_e842cd0d821fd448",
+      "relativePath": "selected/DDB_0093.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0093",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "8dc4bcfeb3dfb5ceb8cf746fe9f93404998c30f0633c62962075f4dc8da82a72",
+      "sourceFamilyId": "DDB-FAMILY-764b368df28f703cfac504dd",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-764b368df28f703cfac504dd",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "9cd02c3dc6338f6576e2cadfa9c000c1886b7a0e3229877e379223816cd70e96",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x66816f0b7fe0f044",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_58159397250025f7",
+      "relativePath": "selected/DDB_0044.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0044",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "8d5eee259d03635e5b0f872a73ef0ee5cff6f1d66a48861d963a8b150084fca9",
+      "sourceFamilyId": "DDB-FAMILY-85d3831238bfabf1ac40526c",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-85d3831238bfabf1ac40526c",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "53a0522ec1b75703e8c7b67fb0f2369a14395013e5adefd54ca382b72c984b8c",
+      "dimensions": [
+        832,
+        640
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x43dbd91607877a24",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_15357f2db8300375",
+      "relativePath": "selected/DDB_0074.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0074",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "1d53737a67eee4f53eac65a0bd87811b51a4d7812753a8eb838580915bad0daf",
+      "sourceFamilyId": "DDB-FAMILY-4facb6af2c4eb371405369fb",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-4facb6af2c4eb371405369fb",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "8c2e2f6b59badb16be18e1dd210a2e590cc96ff97a2c6b67ff0d38b2b433f425",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0xb6d377aac81017e",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_b89a041f2a1ecbfc",
+      "relativePath": "selected/DDB_0081.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0081",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "8ae851b6f2be52a6b8b43f6cd30c4df9a3ab539f01aeaaff53414d80c44b89e7",
+      "sourceFamilyId": "DDB-FAMILY-aaeac7fdc8013972c90f0c4c",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-aaeac7fdc8013972c90f0c4c",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "b1c9e2ca0d632e30c61d362cd6b8fc099cd74dbd501602ff13cafb71dcddbc88",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x50aacf42ee237361",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_d885c6439542e002",
+      "relativePath": "selected/DDB_0146.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "FIT",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0146",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "657c5b24945a610ef4233d1a03770ca3dcd159bca19f107f9177ae4129094c69",
+      "sourceFamilyId": "DDB-FAMILY-edd3af7a019c8af8ade95ef2",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-edd3af7a019c8af8ade95ef2",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "4fd0f8170c6c344e924d68520ec1f47872f8ed94ef348a13398d305674f5fb78",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x1d9a25e627a67861",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_22e090deeb9071cb",
+      "relativePath": "selected/DDB_0142.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "DEV",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0142",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "e837e4b6cca648ae90b65623c41af72cbd35464199dad16568d2ac75b26137bd",
+      "sourceFamilyId": "DDB-FAMILY-4386dc9c6f86ef1d36c213ec",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-4386dc9c6f86ef1d36c213ec",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "5602c225f8e66f2bd4564106b66a74c40c36c75c97bae1cd0aa64563f6c1938c",
+      "dimensions": [
+        512,
+        896
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x6763231313a9c5d5",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_031980a0174268c1",
+      "relativePath": "selected/DDB_0072.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "DEV",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0072",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "acec567e23ae99d9b163a49bdbc4f6f07f3540c72209e4306ab77e8d1cecc4ee",
+      "sourceFamilyId": "DDB-FAMILY-4e74018b65366b086fb95ba8",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-4e74018b65366b086fb95ba8",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "399403a37d9653718c961cb004d8fcc4063a72aed57db1485bca848771449a40",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x25c3cbb20e0f708f",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_00c0a023439fe717",
+      "relativePath": "selected/DDB_0001.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "DEV",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0001",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "54c1a5f9c941ce08a757c2448651b1d81bb899ff5fa8164cc0ec973a4193bd85",
+      "sourceFamilyId": "DDB-FAMILY-9b1e01224a4431a7e389ba06",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-9b1e01224a4431a7e389ba06",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "7eb1e5416fb5e032a30ec74088b6d055ccadfb8f80539f848d7379b4d917fb66",
+      "dimensions": [
+        768,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x46e371f064461b9b",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_4759cb69091743b8",
+      "relativePath": "selected/DDB_0054.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "DEV",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0054",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "fb5e6d4f28fc0f0c2c06a8e1dd35b35e737dcd518454fe59f68716dc371e1199",
+      "sourceFamilyId": "DDB-FAMILY-6622c50ab0b7ee7cc76a0194",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-6622c50ab0b7ee7cc76a0194",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "2aed0e399d16864faeca70dac75a2d83e8b7db0517c91f4b2eae22b69d057e95",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x26d989e7861649e9",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_79c87455ac38cbdb",
+      "relativePath": "selected/DDB_0053.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "DEV",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0053",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "8bb70aa1996e2936f039f7a5e295c97c8e8fd7494ab62ba2974500b8f92f32e6",
+      "sourceFamilyId": "DDB-FAMILY-a8dfbec4d02d2947db782d82",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-a8dfbec4d02d2947db782d82",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "546fbecf7059e284a0acab61bfc57e0d438bf7af9a6aa14ae85c22c80d792cd7",
+      "dimensions": [
+        512,
+        512
+      ],
+      "generatorFamily": "STABLE_DIFFUSION_1X_DIFFUSIONDB",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x1a6c4ba5b454e6c6",
+      "programmeExposure": "CONSUMED_A_E",
+      "promptGroup": "DDB_PROMPT_303e2c179299dcb7",
+      "relativePath": "selected/DDB_0103.png",
+      "rights": "CC0_1.0_CONSTRAINED",
+      "role": "DEV",
+      "rootKey": "DDB",
+      "sampleId": "DDB_0103",
+      "sceneIdentity": "PROMPT_HASH_GROUPED",
+      "sealed": false,
+      "sha256": "7e4afa382612880316acd61aa8eea06ac9736df3463731e76233d4fd9a945163",
+      "sourceFamilyId": "DDB-FAMILY-fab025d6fd131937ac0c23db",
+      "sourceFormat": "PNG",
+      "splitGroup": "DDB-FAMILY-fab025d6fd131937ac0c23db",
+      "trainingAllowed": true
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "9d6731d90acac09f90d87992b9069a567e93289e30ea2a72560bc25b6e254840",
+      "dimensions": [
+        5931,
+        3954
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "nearDuplicateHash": "0x55be39619234c89e",
+      "originCaution": "PHOTOGRAPH_UNKNOWN_PROCESSING_NOT_NATIVE_CAMERA",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/unsplash/P81LbTij5Ro.bin",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "UNSPLASH_P81LbTij5Ro",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "8a0ae49c76b72b9dbfb6ca293c466c25aefc065114f519238840626953f98a6d",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro",
+      "sourceFormat": "JPEG",
+      "splitGroup": "UNSPLASH_LITE_FAMILY_P81LbTij5Ro",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "e3305fd8e37e199dc298eeaba8cc89475eb9b9378227bbd9d33c017818a8a5cd",
+      "dimensions": [
+        4000,
+        6000
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "nearDuplicateHash": "0x657f8d249c890bb4",
+      "originCaution": "PHOTOGRAPH_UNKNOWN_PROCESSING_NOT_NATIVE_CAMERA",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/unsplash/UNwQLVLLBtc.bin",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "UNSPLASH_UNwQLVLLBtc",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "9381c1c888f4d96533e0af03faf383e9d221fc3692d749b91c94b5d804dba3a6",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc",
+      "sourceFormat": "JPEG",
+      "splitGroup": "UNSPLASH_LITE_FAMILY_UNwQLVLLBtc",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "7348ac5a41847ccad50bc9a27dcfc8c5bef58820ac2a27892c8ee5b12c2202e5",
+      "dimensions": [
+        2976,
+        3720
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "nearDuplicateHash": "0x564f3c38b4fc4107",
+      "originCaution": "PHOTOGRAPH_UNKNOWN_PROCESSING_NOT_NATIVE_CAMERA",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/unsplash/_mkb0Vby9tA.bin",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "UNSPLASH__mkb0Vby9tA",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "fb005b11fbd2a66267935041338cf11cc5040b5d5db35342e8e9f7b05e0a18e5",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA",
+      "sourceFormat": "JPEG",
+      "splitGroup": "UNSPLASH_LITE_FAMILY__mkb0Vby9tA",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "8fdd68d0dd100a562a81c9276a7f7cdb52e6959c7f83a98d121c3435391d7393",
+      "dimensions": [
+        4526,
+        3017
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "nearDuplicateHash": "0x334cc8b2f3670713",
+      "originCaution": "PHOTOGRAPH_UNKNOWN_PROCESSING_NOT_NATIVE_CAMERA",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/unsplash/Etobk5T7C_s.bin",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "UNSPLASH_Etobk5T7C_s",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "17c47ff27014866315f6d9a4d4fe41f0dd5478894acb09b0156d00a1556ae17b",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_Etobk5T7C_s",
+      "sourceFormat": "JPEG",
+      "splitGroup": "UNSPLASH_LITE_FAMILY_Etobk5T7C_s",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "7e190b22060a361a64abd17d1ef7af77752903069a38fa477251ed1c27761419",
+      "dimensions": [
+        3456,
+        5184
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "nearDuplicateHash": "0x4b65ef4721919998",
+      "originCaution": "PHOTOGRAPH_UNKNOWN_PROCESSING_NOT_NATIVE_CAMERA",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/unsplash/wQImoykAwGs.bin",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "UNSPLASH_wQImoykAwGs",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "fc4616c511c8195347f8c5225aad4a38a4614070b8bf84bbdbdec27581f5fafc",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_wQImoykAwGs",
+      "sourceFormat": "JPEG",
+      "splitGroup": "UNSPLASH_LITE_FAMILY_wQImoykAwGs",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "68688f86fc1cadadc341d696b4a8ede5d1e09dacf303b77b1c62752f6291e07d",
+      "dimensions": [
+        3840,
+        5760
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "nearDuplicateHash": "0x3709c8e7611c9fe0",
+      "originCaution": "PHOTOGRAPH_UNKNOWN_PROCESSING_NOT_NATIVE_CAMERA",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/unsplash/SdDvlTI3bVc.bin",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "UNSPLASH_SdDvlTI3bVc",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "b31f4b4da1b1349bea99f144bee20a0d59ec8d57fd34ca1c81d98361544f545a",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc",
+      "sourceFormat": "JPEG",
+      "splitGroup": "UNSPLASH_LITE_FAMILY_SdDvlTI3bVc",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "1d8e7b752f2dce1722f82893ebf44d3b35731126b7415ac826313f2fdb99d4aa",
+      "dimensions": [
+        4896,
+        3264
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "nearDuplicateHash": "0x7d3434db13444c1f",
+      "originCaution": "PHOTOGRAPH_UNKNOWN_PROCESSING_NOT_NATIVE_CAMERA",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/unsplash/QNwET9cMlJU.bin",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "UNSPLASH_QNwET9cMlJU",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "39df8027147d1dedca6d49d7b11e079346111caa320a6bf4a16fae9f631921f3",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_QNwET9cMlJU",
+      "sourceFormat": "JPEG",
+      "splitGroup": "UNSPLASH_LITE_FAMILY_QNwET9cMlJU",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "4e490a4bd2899d07a6d7d1f2b25b7f1af90601d47686717cc265d6ef99d186f9",
+      "dimensions": [
+        3648,
+        5472
+      ],
+      "generatorFamily": null,
+      "kind": "PHOTO_UNSPLASH",
+      "label": 0,
+      "nearDuplicateHash": "0x42acadc3d32d1cd8",
+      "originCaution": "PHOTOGRAPH_UNKNOWN_PROCESSING_NOT_NATIVE_CAMERA",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/unsplash/JHxFiw603QA.bin",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "UNSPLASH_JHxFiw603QA",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "041f213e4b5c38d9813d9ddb9363b5c002b71b9a4d10c4012e54aadbe9816487",
+      "sourceFamilyId": "UNSPLASH_LITE_FAMILY_JHxFiw603QA",
+      "sourceFormat": "JPEG",
+      "splitGroup": "UNSPLASH_LITE_FAMILY_JHxFiw603QA",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "f1b09dc7f5147441c232e832406686bfd01c3830c58f6e2d9487f90024eac5c8",
+      "dimensions": [
+        1024,
+        768
+      ],
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "nearDuplicateHash": "0x7a7a01d4d601ab7a",
+      "originCaution": "PROCEDURAL_NOT_REPRESENTATIVE_HUMAN_ART",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/procedural/LYTHAUS_PROC_HN_GAME_SCREENSHOT_163.png",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "4e26c69d64a2a5eedda9d07985d20b433ca81b7abb17c6786a575f6f47e2fda9",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "sourceFormat": "PNG",
+      "splitGroup": "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "521f43713361a844e55e58a6e941aebd7e9ef5fa417adbb09d66dd9200a4a11c",
+      "dimensions": [
+        1024,
+        768
+      ],
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "nearDuplicateHash": "0x4a9fca1fca94ca90",
+      "originCaution": "PROCEDURAL_NOT_REPRESENTATIVE_HUMAN_ART",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/procedural/LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178.png",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "cc7aa4495b8475c8da8568d5324f636b8cc86f220cfd6aa3afd72247d85509a9",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "sourceFormat": "PNG",
+      "splitGroup": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "2444175cf04e05308c4589de4780b7353ada24fda3dbfc831e41dd6881ad36c3",
+      "dimensions": [
+        1024,
+        768
+      ],
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "nearDuplicateHash": "0x69ab01a934e95e56",
+      "originCaution": "PROCEDURAL_NOT_REPRESENTATIVE_HUMAN_ART",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/procedural/LYTHAUS_PROC_HN_TEXT_GRAPHIC_129.png",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "becbe922a2b73897a6477529600ac38677e693c6fe94bdd64336a36820bef133",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "sourceFormat": "PNG",
+      "splitGroup": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "75add7452015af5ddbe130dedbb89466a27c4871355030d1cdb9c9d1074b399e",
+      "dimensions": [
+        1024,
+        768
+      ],
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "nearDuplicateHash": "0x7d8548e2273e39c8",
+      "originCaution": "PROCEDURAL_NOT_REPRESENTATIVE_HUMAN_ART",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/procedural/LYTHAUS_PROC_HN_COMPOSITE_071.png",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "244c59bdd22575f5b3c1300f4c3fb9103dcaa88b23f834c20392c74f6988d222",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "sourceFormat": "PNG",
+      "splitGroup": "LYTHAUS_PROC_HN_COMPOSITE_071",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "ed26536dd04955036377a08e555ddb57a94985dca1bbb53f9d7c61efdf41051d",
+      "dimensions": [
+        1024,
+        768
+      ],
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "nearDuplicateHash": "0x11ef8d03427da995",
+      "originCaution": "PROCEDURAL_NOT_REPRESENTATIVE_HUMAN_ART",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/procedural/LYTHAUS_PROC_HN_VECTOR_LIKE_003.png",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "0f7510612a817189ba98e80126f37683c998e1faffb9d594f934aff90dbf959f",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "sourceFormat": "PNG",
+      "splitGroup": "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "d16b2a502f57cc430ccc7d3dc87a3322f5747d83d9aadc57bc853384c8db61d4",
+      "dimensions": [
+        1024,
+        768
+      ],
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "nearDuplicateHash": "0x4a1fca1fca5f4a01",
+      "originCaution": "PROCEDURAL_NOT_REPRESENTATIVE_HUMAN_ART",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/procedural/LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118.png",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "3f64462b1298f4545012f28e8b001a4ffec8ac05258b8565bef6db1f11088c56",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "sourceFormat": "PNG",
+      "splitGroup": "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "f14db6838045b8c6cffa6784397e616b5e301db265ff1a49d879773d5c95a84e",
+      "dimensions": [
+        1024,
+        768
+      ],
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "nearDuplicateHash": "0x3a7a01d4d681ab7a",
+      "originCaution": "PROCEDURAL_NOT_REPRESENTATIVE_HUMAN_ART",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/procedural/LYTHAUS_PROC_HN_UI_SCREENSHOT_030.png",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "7c3a4c8228170c9a407ad6747376851015db5eb572add2f7d7988715693344d6",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "sourceFormat": "PNG",
+      "splitGroup": "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "a6a1308102cc94a3ab5021c8f9592d0a658291ccd70c9cca5f87180356f5c2a8",
+      "dimensions": [
+        1024,
+        768
+      ],
+      "generatorFamily": null,
+      "kind": "PROCEDURAL_SUPPLEMENT",
+      "label": 0,
+      "nearDuplicateHash": "0x5ab25ab36e95a54",
+      "originCaution": "PROCEDURAL_NOT_REPRESENTATIVE_HUMAN_ART",
+      "programmeExposure": "CONSUMED_I_AND_LATER",
+      "relativePath": "negative/procedural/LYTHAUS_PROC_HN_TEXT_GRAPHIC_081.png",
+      "rights": "EVALUATION_ONLY_IN_N",
+      "role": "EVAL_N",
+      "rootKey": "I",
+      "sampleId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "sceneIdentity": "UNKNOWN_PHOTOGRAPHER_OR_TEMPLATE_CLUSTER",
+      "sealed": false,
+      "sha256": "f99f7e3e2bbc9acd32e8ca42e17418c80ef1d642c48b74b0bb6489b0e87af4cf",
+      "sourceFamilyId": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "sourceFormat": "PNG",
+      "splitGroup": "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "40b9319c2005528dbd80633910e437f6b1f0c2fa44cb9899766d291e8ee8e600",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x9faa7e812c27e98",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-009-1",
+      "relativePath": "synthetic/Seedream-4/R-GR/R-GR-009-1.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "Seedream-4__R-GR-009-1",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "c54f9100872a30b34a08703bb6590de48e51f534b3ea11211f0a83708785cd53",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-009-1",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "d2d9f24a089f65f3cb09f3c9cacace59a8a5fb18cc1a10c32613a2f463d26631",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x43a31e5da2af3740",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-019-1",
+      "relativePath": "synthetic/Seedream-4/R-GR/R-GR-019-1.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "Seedream-4__R-GR-019-1",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "d35605c867f6ac24eaefd84e225a370dd17c533354a1c74ffe17421bf653282a",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-019-1",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "8ec49ec0e0bf5267768a284481dc29cdb471418d5140dcc1205d85095b7b25f4",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x136349ddb2ab7484",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-056-0",
+      "relativePath": "synthetic/Seedream-4/R-GR/R-GR-056-0.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "Seedream-4__R-GR-056-0",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "aab4e20728d53022dc4f47953fca86191d887cf8a852098a7b675d43218fe0e5",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-056-0",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "48f570c4554c821348a7540c786b742c95e0f22b1238400ca9c11d65d0d46261",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x683344d8ab4776b8",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-013-0",
+      "relativePath": "synthetic/Seedream-4/R-GR/R-GR-013-0.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "Seedream-4__R-GR-013-0",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "79b423b9699177dd6c153810a4b1fb2d4fab1080646d9e01b878c35b2f7153bc",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-013-0",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "29b5dc7720305d6e049a8dcae0622a133cd0c3ba8bea1cecf79f1b92e3f5bd8f",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "generatorFamily": "Seedream-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x7609c9dcf2262c8d",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-064-0",
+      "relativePath": "synthetic/Seedream-4/R-GR/R-GR-064-0.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "Seedream-4__R-GR-064-0",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "b1bff32d454db13aeb404b40047870b37023927d66d6379578309bdfe5f299cc",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-064-0",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "497674a3132ac432f621990d09286053bb435d46aebc5d89d7865493d8404d66",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x2632b86afe061979",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-046-0",
+      "relativePath": "synthetic/imagen-4/R-GR/R-GR-046-0.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "imagen-4__R-GR-046-0",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "f30947de0a493d933babbeefbe25b8a999bb03534553f8da558f931af8e54fed",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_imagen-4_imagen-4__R-GR-046-0",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "c3a25a3f94823f48e9651695baf8a11400da0175fbf5df5c61279b9a92c84210",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x65f6839c6e311989",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-075-0",
+      "relativePath": "synthetic/imagen-4/R-GR/R-GR-075-0.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "imagen-4__R-GR-075-0",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "911d7df6488b8de03940328fb5498ef512f5f789af3920b05d808515db8e1221",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_imagen-4_imagen-4__R-GR-075-0",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "fcfc8366ec7d913a012bd0308ab42214e6bfc9fbd2818ff5f37bdfa3d5dcc228",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x8999971f3f60d89",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-083-2",
+      "relativePath": "synthetic/imagen-4/R-GR/R-GR-083-2.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "imagen-4__R-GR-083-2",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "33f72702a0b30068686f3fc1e75b39ed2a0ac8e9a2c65deb1700e66cd05b5ede",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_imagen-4_imagen-4__R-GR-083-2",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "3876db12d952507c578f3f628de85aac889265d8fbe60a43561eee08146d9625",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x6cb944a12ed9cf14",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-061-3",
+      "relativePath": "synthetic/imagen-4/R-GR/R-GR-061-3.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "imagen-4__R-GR-061-3",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "dc4541da3d1e40abb8845c6c91ea8d43d33efcbf4ea2d03644ac7732cba81fe1",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_imagen-4_imagen-4__R-GR-061-3",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "cab57f6e0c42f0247332f6af31b45e7cbc91411cbf1e85c7f4557e742cdedeca",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "imagen-4",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x64a9136ecb5964ac",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-027-1",
+      "relativePath": "synthetic/imagen-4/R-GR/R-GR-027-1.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "imagen-4__R-GR-027-1",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "5299d1e6d3a7936f1f0242f86eabc993217e69d4142f60cb260e0c72e1e6efdd",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_imagen-4_imagen-4__R-GR-027-1",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "46e444fb499e48409d46f84802fa68a531cd1b250ebf97b860bd0d84bfda3f48",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x7889f0b08385af7a",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-048-1",
+      "relativePath": "synthetic/SD-3.5-Large/R-GR/R-GR-048-1.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "SD-3.5-Large__R-GR-048-1",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "d1c395e8a76161c3577eaadc7d619be0d4db4c02e7b3575a85c192fbee1b37ad",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-048-1",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "178c3e3854b15a5dbc35a1c2965ee0f60f464829c229c4c409ff8fee3081b825",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x525deec5c53a0ab",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-066-0",
+      "relativePath": "synthetic/SD-3.5-Large/R-GR/R-GR-066-0.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "SD-3.5-Large__R-GR-066-0",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "93fbc79ca144ae086b477a682d0bb4dfc088977871d64bde1eb77800b4c29c49",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-066-0",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "c6ac2a73371bca9875b3c5ef736ea55effa6315fc9f5fa733ab3db6cc78ee885",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x1951f8b130f98ce5",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-052-3",
+      "relativePath": "synthetic/SD-3.5-Large/R-GR/R-GR-052-3.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "SD-3.5-Large__R-GR-052-3",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "02cc5cfd6edde43182495df4908062c8afa3a7a81455792d5ab3cd8c16777611",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-052-3",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "34fb77ca27d00a61bf4ac931c9745927b8cd857cde22ee2e40ee5eb949981620",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x354fe449b924f4d0",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-090-0",
+      "relativePath": "synthetic/SD-3.5-Large/R-GR/R-GR-090-0.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "SD-3.5-Large__R-GR-090-0",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "acff1f50715de0c970ba59cafc52f90fac3fde7f9528a9a460d2073fa2e3ef4c",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-090-0",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "6d91993812717b89da9a098688ea8931f47efee5f97e7ee486c2fb7a63a7ff2a",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "SD-3.5-Large",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x39cc8d3f0b10d4d6",
+      "programmeExposure": "CONSUMED_I_JR1_K_M",
+      "promptGroup": "T2I:R-GR-062-3",
+      "relativePath": "synthetic/SD-3.5-Large/R-GR/R-GR-062-3.png",
+      "rights": "RESEARCH_ONLY_UNLESS_PER_FAMILY_OUTPUT_RIGHTS_ESTABLISHED",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "I",
+      "sampleId": "SD-3.5-Large__R-GR-062-3",
+      "sceneIdentity": "PROMPT_KEY_GROUPED_ACROSS_GENERATORS",
+      "sealed": false,
+      "sha256": "26fd16ac7e0748072f4919cb91a2adf2a5456558f4218acb98c2c2e7efbd0ea1",
+      "sourceFamilyId": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-062-3",
+      "sourceFormat": "PNG",
+      "splitGroup": "T2I_FAMILY_SD-3.5-Large_SD-3.5-Large__R-GR-062-3",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg95",
+        "jpeg75",
+        "resize75",
+        "resize75_jpeg95",
+        "png_roundtrip"
+      ],
+      "decodedRgbSha256": "a124f6ee0667cdabb0fce70cc0fe8194a881d1d615fb29936b685c44cb0aa389",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x1e4337082497eb5d",
+      "programmeExposure": "CONSUMED_G_H_I_JR1_K_M",
+      "promptGroup": "CF:013",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_013.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "FLUX1",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "sceneIdentity": "KNOWN_PROVIDER_PROMPT_ID",
+      "sealed": false,
+      "sha256": "4f337df0a3aa317845759537a07a4ea9a36dd3b0c62a4c5c9db72456098707cf",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "sourceFormat": "JPEG",
+      "splitGroup": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "7f910553fc0570305c5a69931ed0bd8cf875a32f54c4ef83fbdf438fc769a311",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x18c1709e6100ff7f",
+      "programmeExposure": "CONSUMED_G_H_I_JR1_K_M",
+      "promptGroup": "CF:002",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_002.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "FLUX1",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "sceneIdentity": "KNOWN_PROVIDER_PROMPT_ID",
+      "sealed": false,
+      "sha256": "6f2d964ccbb9901cc1d1c09919573357787df277dd51ae3a20dee8b8553a5470",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "sourceFormat": "JPEG",
+      "splitGroup": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "2489952d763bfad91ff1ea1c738a538bd8cc4a2a88936de7da06f91a3ab18bee",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x7e0301fcb1821ff1",
+      "programmeExposure": "CONSUMED_G_H_I_JR1_K_M",
+      "promptGroup": "CF:001",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_001.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "FLUX1",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "sceneIdentity": "KNOWN_PROVIDER_PROMPT_ID",
+      "sealed": false,
+      "sha256": "77be968a1b3f12ac3c11fa9b1d559c8ad9958a08a0cb0a80305b1a2b6152da32",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "sourceFormat": "JPEG",
+      "splitGroup": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "c5dff49fd2e670ad9d50519a0b127f50df273593bc3947441c7273f83320133b",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x4a79a11e92e14dd5",
+      "programmeExposure": "CONSUMED_G_H_I_JR1_K_M",
+      "promptGroup": "CF:004",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_004.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "FLUX1",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "sceneIdentity": "KNOWN_PROVIDER_PROMPT_ID",
+      "sealed": false,
+      "sha256": "1e05e9c865a418d1abed7c0c0eb43560f09c08c86aacef86dcfdb33c9390bd43",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "sourceFormat": "JPEG",
+      "splitGroup": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "trainingAllowed": false
+    },
+    {
+      "conditions": [
+        "original",
+        "jpeg75"
+      ],
+      "decodedRgbSha256": "f7b4a8e2989e072c9a9e9953b04aa33c44e03ce7164a5e2e6f2dd0ce17c5fe58",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "generatorFamily": "CLOUDFLARE_FLUX1_CONSUMED",
+      "kind": "SYNTHETIC",
+      "label": 1,
+      "nearDuplicateHash": "0x54577500e2b79fc",
+      "programmeExposure": "CONSUMED_G_H_I_JR1_K_M",
+      "promptGroup": "CF:012",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_012.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "role": "HISTORICAL_CHALLENGE",
+      "rootKey": "FLUX1",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "sceneIdentity": "KNOWN_PROVIDER_PROMPT_ID",
+      "sealed": false,
+      "sha256": "9df81d60b87d0e9d67ee4f85c4f7b5ecc80e0433ae0ef7bedafcf99abb4cee69",
+      "sourceFamilyId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "sourceFormat": "JPEG",
+      "splitGroup": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "trainingAllowed": false
+    }
+  ],
+  "schemaVersion": "wp007n-cohort-v1",
+  "scoreBlind": true,
+  "screenParents": 48,
+  "screenScope": "PHOTOGRAPH_VS_SYNTHETIC_SCREEN_ONLY_WITH_PROCEDURAL_SUPPLEMENT",
+  "sourceBytes": 198731800
+}

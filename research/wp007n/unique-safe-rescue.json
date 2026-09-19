@@ -1,0 +1,2463 @@
+{
+  "candidates": {
+    "A0": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 19,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "UNSPLASH_Etobk5T7C_s"
+          ]
+        },
+        "negative/BOTH_POSITIVE": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 11,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_POSITIVE": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-062-3"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 19,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "UNSPLASH_Etobk5T7C_s"
+          ]
+        },
+        "negative/BOTH_POSITIVE": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 12,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 1,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-062-3"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 19,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "UNSPLASH_Etobk5T7C_s"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 13,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_POSITIVE": {
+          "N": 4,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-062-3"
+          ]
+        }
+      }
+    },
+    "A0_PERMUTED": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 26,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 27,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 28,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        }
+      }
+    },
+    "A1": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 26,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 27,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 28,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        }
+      }
+    },
+    "A2": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 26,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 27,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 28,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        }
+      }
+    },
+    "B0": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 13,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "UNSPLASH_QNwET9cMlJU"
+          ]
+        },
+        "negative/BOTH_POSITIVE": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 13,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_POSITIVE": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 13,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "UNSPLASH_QNwET9cMlJU"
+          ]
+        },
+        "negative/BOTH_POSITIVE": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 14,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 13,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "UNSPLASH_QNwET9cMlJU"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 15,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_POSITIVE": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      }
+    },
+    "B0_PERMUTED": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 26,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 27,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 28,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        }
+      }
+    },
+    "B1": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 13,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "UNSPLASH_QNwET9cMlJU"
+          ]
+        },
+        "negative/BOTH_POSITIVE": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 13,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_POSITIVE": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 13,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "UNSPLASH_QNwET9cMlJU"
+          ]
+        },
+        "negative/BOTH_POSITIVE": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 14,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 13,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "UNSPLASH_QNwET9cMlJU"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 15,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_POSITIVE": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      }
+    },
+    "B1_PERMUTED": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 26,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 27,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 28,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        }
+      }
+    },
+    "NUISANCE": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 1,
+          "sourceIds": [
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 21,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/BOTH_POSITIVE": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 5,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 13,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 27,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "exactConditionUniqueRescue": {
+          "N": 4,
+          "sourceIds": [
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+          ]
+        },
+        "negative/BOTH_LOW": {
+          "N": 19,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 9,
+          "sourceIds": [
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 11,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/BOTH_POSITIVE": {
+          "N": 3,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-066-0"
+          ]
+        },
+        "synthetic/CANDIDATE_ONLY": {
+          "N": 4,
+          "sourceIds": [
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 2,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        }
+      }
+    },
+    "NUISANCE_PERMUTED": {
+      "ALL_DECLARED_WORST": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 26,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 2,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 14,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 6,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013"
+          ]
+        }
+      },
+      "jpeg75": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 27,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_13",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/SAFE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 20,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0",
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        }
+      },
+      "original": {
+        "denominator": {
+          "negative": 28,
+          "synthetic": 20
+        },
+        "negative/BOTH_LOW": {
+          "N": 27,
+          "sourceIds": [
+            "CSAFE_WP006E_iPhone11_3_06",
+            "CSAFE_WP006E_iPhone11_3_07",
+            "CSAFE_WP006E_iPhone12_3_01",
+            "CSAFE_WP006E_iPhone12_3_10",
+            "CSAFE_WP006E_s20_1_01",
+            "CSAFE_WP006E_s20_1_07",
+            "CSAFE_WP006E_s20_3_04",
+            "CSAFE_WP006E_s20_3_07",
+            "CSAFE_WP006E_s20_4_13",
+            "CSAFE_WP006E_s20_4_16",
+            "CSAFE_WP006E_s21_4_14",
+            "LYTHAUS_PROC_HN_COMPOSITE_071",
+            "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+            "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+            "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+            "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+            "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+            "UNSPLASH_Etobk5T7C_s",
+            "UNSPLASH_JHxFiw603QA",
+            "UNSPLASH_P81LbTij5Ro",
+            "UNSPLASH_QNwET9cMlJU",
+            "UNSPLASH_SdDvlTI3bVc",
+            "UNSPLASH_UNwQLVLLBtc",
+            "UNSPLASH__mkb0Vby9tA",
+            "UNSPLASH_wQImoykAwGs"
+          ]
+        },
+        "negative/CANDIDATE_ONLY": {
+          "N": 1,
+          "sourceIds": [
+            "CSAFE_WP006E_s21_4_13"
+          ]
+        },
+        "synthetic/BOTH_LOW": {
+          "N": 15,
+          "sourceIds": [
+            "Seedream-4__R-GR-009-1",
+            "Seedream-4__R-GR-013-0",
+            "Seedream-4__R-GR-019-1",
+            "Seedream-4__R-GR-056-0",
+            "Seedream-4__R-GR-064-0",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+            "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+            "imagen-4__R-GR-027-1",
+            "imagen-4__R-GR-046-0",
+            "imagen-4__R-GR-061-3",
+            "imagen-4__R-GR-075-0",
+            "imagen-4__R-GR-083-2"
+          ]
+        },
+        "synthetic/SAFE_ONLY": {
+          "N": 5,
+          "sourceIds": [
+            "SD-3.5-Large__R-GR-048-1",
+            "SD-3.5-Large__R-GR-052-3",
+            "SD-3.5-Large__R-GR-062-3",
+            "SD-3.5-Large__R-GR-066-0",
+            "SD-3.5-Large__R-GR-090-0"
+          ]
+        }
+      }
+    }
+  },
+  "interpretation": "Candidate-only and exact-condition rescue are distinct. ALL_DECLARED counts each parent once. SAFE is raw experimental reference, not authorized evidence on these unqualified conditions."
+}
