@@ -11,6 +11,12 @@ from wp007n_analysis import OUT,RUNTIME,read,save,sha,cached,load_candidate,infe
 def key(r):return r['sampleId'],r['condition'],r['view']
 
 
+def rank_correlation(x,y):
+    if len(set(x))<2 or len(set(y))<2:return None
+    value=float(spearmanr(x,y).statistic)
+    return value if math.isfinite(value) else None
+
+
 def summarize(rows,threshold):
     metric=fixed_metrics([r['label'] for r in rows],[r['score'] for r in rows],threshold)
     if len({r['sampleId'] for r in rows})!=len(rows):
@@ -134,7 +140,7 @@ def main():
                 rm={key(r):r for r in scores if r['candidate']==right}
                 threshold='originalThreshold' if condition=='original' else 'worstThreshold'
                 bins=Counter(('leftHigh' if r['score']>r[threshold] else 'leftLow')+'/'+('rightHigh' if rm[key(r)]['score']>rm[key(r)][threshold] else 'rightLow') for r in l)
-                correlation[f'{left}/{right}/{condition}/label{label}']={'counts':dict(bins),'N':len(l),'spearmanScores':float(spearmanr([r['score'] for r in l],[rm[key(r)]['score'] for r in l]).statistic)}
+                correlation[f'{left}/{right}/{condition}/label{label}']={'counts':dict(bins),'N':len(l),'spearmanScores':rank_correlation([r['score'] for r in l],[rm[key(r)]['score'] for r in l])}
     save(OUT/'error-correlation.json',{'comparisons':correlation,'interpretation':'Same-encoder A0/A1/A2 share representation and pretraining; no independence or corroboration authority inferred. Different encoders may also share upstream training exposure.'})
     latency={}
     for arm,rs in [('A',a),('B',b)]:

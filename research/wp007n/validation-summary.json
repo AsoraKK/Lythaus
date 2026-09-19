@@ -1,10 +1,10 @@
 {
   "AST": {
-    "files": 17,
+    "files": 23,
     "pass": true
   },
   "JSON": {
-    "files": 35,
+    "files": 54,
     "pass": true
   },
   "commands": {
@@ -65,8 +65,8 @@
       "exitCode": 0,
       "failures": [],
       "log": "external/wp007n/validation/authenticity-full.log",
-      "logHash": "a7008a59ef352ae1b6dfdfe33b8b64f0384644a8cbd183fbe2d61b0b40b8ce0f",
-      "seconds": 20.119738578796387
+      "logHash": "f129024e23aa0ae64ef8a69013ec9e72bc477df24379b272863dc47d06e366c8",
+      "seconds": 6.706585884094238
     },
     "diff-check": {
       "checkout": "N",
@@ -81,7 +81,21 @@
       "failures": [],
       "log": "external/wp007n/validation/diff-check.log",
       "logHash": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
-      "seconds": 0.0791635513305664
+      "seconds": 0.08810782432556152
+    },
+    "independent-known-answers": {
+      "checkout": "N",
+      "command": [
+        "C:/Python313/python.exe",
+        "scripts/authenticity/wp007n_independent_audit.py",
+        "--self-test"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/independent-known-answers.log",
+      "logHash": "3441a4a31b1282ff6d8c56305ba5d6d9c87b38f1d07b046763711d10a791c90c",
+      "seconds": 0.10319304466247559
     },
     "node-syntax": {
       "checkout": "N",
@@ -95,7 +109,7 @@
       "failures": [],
       "log": "external/wp007n/validation/node-syntax.log",
       "logHash": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
-      "seconds": 0.05558013916015625
+      "seconds": 0.04964923858642578
     },
     "parent-test-native-architecture": {
       "checkout": "UNCHANGED_M_PARENT",
@@ -149,8 +163,8 @@
         "not ok 151 - canonical manifest finalizes VERIFIED or BLOCKED after production smoke"
       ],
       "log": "external/wp007n/validation/parent-test-native-architecture.log",
-      "logHash": "4546548ee19045435e65dd9d9db9e4b114e4fae1fe5b050c36984fcd4e533a90",
-      "seconds": 5.6244895458221436
+      "logHash": "2f3f51967d06b0dcab21553afc9291f75305eb168a9a4b2089122a61ccd527d4",
+      "seconds": 4.417344331741333
     },
     "parent-validate-no-retired-provider-dependencies": {
       "checkout": "UNCHANGED_M_PARENT",
@@ -163,7 +177,7 @@
       "failures": [],
       "log": "external/wp007n/validation/parent-validate-no-retired-provider-dependencies.log",
       "logHash": "606ede6b78079328be03a38b2e761dbcdc6be387fde4ee06a56b09fa9ccd42fc",
-      "seconds": 2.824732542037964
+      "seconds": 1.4197731018066406
     },
     "python-N": {
       "checkout": "N",
@@ -181,8 +195,8 @@
       "exitCode": 0,
       "failures": [],
       "log": "external/wp007n/validation/python-N.log",
-      "logHash": "3907828d24bb12ef016e6f45c8f141c11ccf9363a00f0372a61d8df93dee2b54",
-      "seconds": 13.884667158126831
+      "logHash": "43034db9ad3418725a5cb513fd318818480462e27f4e26a665adbb7770701651",
+      "seconds": 4.914679288864136
     },
     "test-native-architecture": {
       "checkout": "N",
@@ -236,8 +250,8 @@
         "not ok 151 - canonical manifest finalizes VERIFIED or BLOCKED after production smoke"
       ],
       "log": "external/wp007n/validation/test-native-architecture.log",
-      "logHash": "815e7f29e5202e13b0d7b85265d9d9cea153ef889fa9f40d0f2e44d8f549ef61",
-      "seconds": 5.2963690757751465
+      "logHash": "95bc835381a1d0988e069361e9c8585c83dae5e36c46cbe9160a24414883b5e9",
+      "seconds": 4.3777244091033936
     },
     "test_wp007e_policies.py": {
       "checkout": "N",
@@ -249,8 +263,8 @@
       "exitCode": 0,
       "failures": [],
       "log": "external/wp007n/validation/test_wp007e_policies.py.log",
-      "logHash": "4b457d69134f4a327bdb2c95d597f2e4f622a3061abf4e76e72fb85e03dff0b4",
-      "seconds": 4.7453343868255615
+      "logHash": "9f4a0b46517d627b472c2517a76d97d97a180ded2f413ba38711e21a8a456875",
+      "seconds": 1.5360841751098633
     },
     "test_wp007m_probe.py": {
       "checkout": "N",
@@ -262,8 +276,8 @@
       "exitCode": 0,
       "failures": [],
       "log": "external/wp007n/validation/test_wp007m_probe.py.log",
-      "logHash": "9421e531887d17bb782039fd438fdd168f620c2ed1ab7cd9faf1ab92cab5e92b",
-      "seconds": 1.9161603450775146
+      "logHash": "023dc30fa6e1a8b71944fae4ac114e63a9d6751b96ba877077fd7c92b7948e92",
+      "seconds": 1.5776245594024658
     },
     "typecheck-native": {
       "checkout": "N",
@@ -279,7 +293,7 @@
       "failures": [],
       "log": "external/wp007n/validation/typecheck-native.log",
       "logHash": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
-      "seconds": 4.26540994644165
+      "seconds": 3.144563674926758
     },
     "validate-native-scope": {
       "checkout": "N",
@@ -292,7 +306,7 @@
       "failures": [],
       "log": "external/wp007n/validation/validate-native-scope.log",
       "logHash": "7ae7abc1f454a12a21bbc8ffe3da8abba03933494b727577e39abdbf5639a803",
-      "seconds": 0.0820777416229248
+      "seconds": 0.06395840644836426
     },
     "validate-no-retired-provider-dependencies": {
       "checkout": "N",
@@ -305,7 +319,7 @@
       "failures": [],
       "log": "external/wp007n/validation/validate-no-retired-provider-dependencies.log",
       "logHash": "606ede6b78079328be03a38b2e761dbcdc6be387fde4ee06a56b09fa9ccd42fc",
-      "seconds": 2.0772435665130615
+      "seconds": 1.474621295928955
     },
     "validate-workflow-action-pins": {
       "checkout": "N",
@@ -318,10 +332,10 @@
       "failures": [],
       "log": "external/wp007n/validation/validate-workflow-action-pins.log",
       "logHash": "e8dcd159e940abdcff65ba433e48a9a59192b6f5971486699f906fc0a947f673",
-      "seconds": 0.10933661460876465
+      "seconds": 0.08221650123596191
     }
   },
-  "dependencyHydration": "Reused locked L node_modules root junction; unchanged package-lock; no new repository dependencies",
+  "dependencyHydration": "Reused locked L node_modules root junction; checkout-local workspace package links; unchanged package-lock; no new repository dependencies. Transient missing-link failures preserved in validation-runtime-recovery.md",
   "parent": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
   "privacySecrets": {
     "flags": [],

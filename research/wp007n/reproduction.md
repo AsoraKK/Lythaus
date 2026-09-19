@@ -14,7 +14,7 @@ Use the existing Python 3.13 runtime with the N dependency overlay followed by t
 6. `wp007n_extract.py A --roles EVAL_N,HISTORICAL_CHALLENGE`, then B. Parent-atomic arrays/records remain outside Git. Repeating the same command validates and skips completed parents. It cannot retune or silently reuse caches after code changes. The persistent per-arm ledger reserves forwards before execution and uses exclusive Windows locking; failed/ambiguous work remains charged.
 7. `wp007n_safe_reference.py`: re-extract frozen SAFE on corresponding full-source/descendant views, with native center256 preprocessing. No reuse of M's different crop geometry. SAFE remains an unqualified raw reference here.
 8. `wp007n_analysis.py evaluate`, `wp007n_postprocess.py`, and the separate `wp007n_independent_audit.py`: exact-input joins, candidate metrics, source-level rescue/worst FPR, nuisance/permutation and independent recomputation. No fitting occurs in these commands.
-9. `wp007n_validate.py`: repository regressions and unchanged-parent reproduction of inherited failures. Logs are outside Git. Final JSON/AST/privacy/diff checks run again after report completion.
+9. `wp007n_sanitize_run_receipts.py` removes private runtime paths from published error text while preserving the raw external budget ledgers. `wp007n_validate.py` runs repository regressions and unchanged-parent reproduction of inherited failures. Logs are outside Git. `wp007n_final_receipts.py` rechecks JSON/AST/privacy/diff and immutable artifact identities after report completion.
 
 ## Scope and receipts
 
@@ -25,3 +25,5 @@ Requested JPEG quality is not the physical variable: cached records include actu
 Bulk checkpoint files, pooled float32 arrays and complete fitted head state remain outside Git. Small committed head manifests contain logical locations, hashes, parameter counts and training lineage, not weights. Preserve all externally cached state to resume; no cache cleanup is authorized.
 
 The complete original/JPEG75 screen is48 parents. A12-parent subset has six transformations, and a4-parent subset adds matched views. FIT/DEV/CALIBRATION are separate. Historical challenge and programme exposure are not renamed fresh confirmation. Missing actual human-created digital controls is an explicit data blocker, not a zero-error result.
+
+Repository regression hydration is separate from the frozen model runtime: use the identical locked L dependency installation through a root junction and checkout-local workspace package links. The N/M package-lock SHA-256 is `6fba42cb7869cb807ecefc422a1881ba96125b3a9b261e691609f15103855a69`. No package version changes are required. See [validation runtime recovery](validation-runtime-recovery.md). Run the independent auditor with `--self-test` for numerical fixtures and `--run` for actual completed row/cache evidence; neither launches a model or reads reserve media.

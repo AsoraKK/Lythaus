@@ -1,0 +1,159 @@
+{
+  "comparisons": {
+    "A1/A0/jpeg75/label0": {
+      "N": 28,
+      "counts": {
+        "leftLow/rightHigh": 13,
+        "leftLow/rightLow": 15
+      },
+      "spearmanScores": -0.20689655172413793
+    },
+    "A1/A0/jpeg75/label1": {
+      "N": 20,
+      "counts": {
+        "leftLow/rightHigh": 19,
+        "leftLow/rightLow": 1
+      },
+      "spearmanScores": -0.1789473684210526
+    },
+    "A1/A0/original/label0": {
+      "N": 28,
+      "counts": {
+        "leftLow/rightHigh": 13,
+        "leftLow/rightLow": 15
+      },
+      "spearmanScores": -0.05582922824302135
+    },
+    "A1/A0/original/label1": {
+      "N": 20,
+      "counts": {
+        "leftLow/rightHigh": 19,
+        "leftLow/rightLow": 1
+      },
+      "spearmanScores": -0.05263157894736842
+    },
+    "A1/B0/jpeg75/label0": {
+      "N": 28,
+      "counts": {
+        "leftLow/rightHigh": 15,
+        "leftLow/rightLow": 13
+      },
+      "spearmanScores": -0.05363984674329502
+    },
+    "A1/B0/jpeg75/label1": {
+      "N": 20,
+      "counts": {
+        "leftLow/rightHigh": 20
+      },
+      "spearmanScores": 0.06165413533834586
+    },
+    "A1/B0/original/label0": {
+      "N": 28,
+      "counts": {
+        "leftLow/rightHigh": 15,
+        "leftLow/rightLow": 13
+      },
+      "spearmanScores": 0.03503010399562124
+    },
+    "A1/B0/original/label1": {
+      "N": 20,
+      "counts": {
+        "leftLow/rightHigh": 20
+      },
+      "spearmanScores": 0.16541353383458643
+    },
+    "A2/A0/jpeg75/label0": {
+      "N": 28,
+      "counts": {
+        "leftLow/rightHigh": 13,
+        "leftLow/rightLow": 15
+      },
+      "spearmanScores": -0.14559386973180075
+    },
+    "A2/A0/jpeg75/label1": {
+      "N": 20,
+      "counts": {
+        "leftLow/rightHigh": 19,
+        "leftLow/rightLow": 1
+      },
+      "spearmanScores": -0.21353383458646616
+    },
+    "A2/A0/original/label0": {
+      "N": 28,
+      "counts": {
+        "leftLow/rightHigh": 13,
+        "leftLow/rightLow": 15
+      },
+      "spearmanScores": -0.1346469622331691
+    },
+    "A2/A0/original/label1": {
+      "N": 20,
+      "counts": {
+        "leftLow/rightHigh": 19,
+        "leftLow/rightLow": 1
+      },
+      "spearmanScores": -0.1533834586466165
+    },
+    "A2/B1/jpeg75/label0": {
+      "N": 28,
+      "counts": {
+        "leftLow/rightHigh": 15,
+        "leftLow/rightLow": 13
+      },
+      "spearmanScores": 0.019704433497536946
+    },
+    "A2/B1/jpeg75/label1": {
+      "N": 20,
+      "counts": {
+        "leftLow/rightHigh": 20
+      },
+      "spearmanScores": -0.004511278195488721
+    },
+    "A2/B1/original/label0": {
+      "N": 28,
+      "counts": {
+        "leftLow/rightHigh": 15,
+        "leftLow/rightLow": 13
+      },
+      "spearmanScores": -0.031746031746031744
+    },
+    "A2/B1/original/label1": {
+      "N": 20,
+      "counts": {
+        "leftLow/rightHigh": 20
+      },
+      "spearmanScores": 0.11428571428571428
+    },
+    "B0/B1/jpeg75/label0": {
+      "N": 28,
+      "counts": {
+        "leftHigh/rightHigh": 15,
+        "leftLow/rightLow": 13
+      },
+      "spearmanScores": 0.9967159277504104
+    },
+    "B0/B1/jpeg75/label1": {
+      "N": 20,
+      "counts": {
+        "leftHigh/rightHigh": 20
+      },
+      "spearmanScores": 0.9984962406015038
+    },
+    "B0/B1/original/label0": {
+      "N": 28,
+      "counts": {
+        "leftHigh/rightHigh": 15,
+        "leftLow/rightLow": 13
+      },
+      "spearmanScores": 0.9978106185002736
+    },
+    "B0/B1/original/label1": {
+      "N": 20,
+      "counts": {
+        "leftHigh/rightHigh": 20
+      },
+      "spearmanScores": 0.993984962406015
+    }
+  },
+  "interpretation": "Same-encoder A0/A1/A2 share representation and pretraining; no independence or corroboration authority inferred. Different encoders may also share upstream training exposure."
+}

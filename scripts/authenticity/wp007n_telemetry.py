@@ -17,7 +17,8 @@ def main(arm):
     out=Path(__file__).resolve().parents[2]/'research/wp007n'/('process-memory-'+arm+'.json')
     kernel=ctypes.windll.kernel32;kernel.OpenProcess.restype=ctypes.c_void_p;kernel.CloseHandle.argtypes=[ctypes.c_void_p]
     ctypes.windll.psapi.GetProcessMemoryInfo.argtypes=[ctypes.c_void_p,ctypes.POINTER(Counters),ctypes.c_ulong]
-    rows=[];start=time.time()
+    rows=json.loads(out.read_text()).get('observations',[]) if out.exists() else []
+    start=time.time()
     active={'pid':int(sys.argv[2])} if len(sys.argv)>2 else json.loads((runtime/('budget-'+arm+'.json')).read_text()).get('active')
     if not active:return
     while time.time()-start<2700:

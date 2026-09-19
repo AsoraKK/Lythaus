@@ -31,6 +31,7 @@ def main():
         key=name.replace(':','-');run(key,command)
         if results[key]['exitCode']:run('parent-'+key,command,parent)
     run('python-N',['C:/Python313/python.exe','-m','unittest','discover','-s','scripts/authenticity','-p','test_wp007n*.py'])
+    run('independent-known-answers',['C:/Python313/python.exe','scripts/authenticity/wp007n_independent_audit.py','--self-test'])
     for name in ('test_wp007e_policies.py','test_wp007m_probe.py'):
         run(name,['C:/Python313/python.exe','scripts/authenticity/'+name])
     run('diff-check',['git','diff','--check','e3adbcb3cb2ac0991db231476441d133db3e2cd3'])
@@ -42,7 +43,7 @@ def main():
     flags=[]
     for p in list(OUT.glob('*'))+files+[REPO/'packages/authenticity/tests/wp007n.test.mjs']:
         if p.is_file() and re.search(r'[A-Za-z]:[\\/]+Users[\\/]|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----',p.read_text(encoding='utf-8')):flags.append(str(p.relative_to(REPO)))
-    save(OUT/'validation-summary.json',{'commands':results,'status':'COMPLETED_WITH_EXPLICIT_RESULTS','AST':{'pass':True,'files':len(files)},'JSON':{'pass':True,'files':len(jsons)},'privacySecrets':{'pass':not flags,'flags':flags},'dependencyHydration':'Reused locked L node_modules root junction; unchanged package-lock; no new repository dependencies','parent':'e3adbcb3cb2ac0991db231476441d133db3e2cd3'})
+    save(OUT/'validation-summary.json',{'commands':results,'status':'COMPLETED_WITH_EXPLICIT_RESULTS','AST':{'pass':True,'files':len(files)},'JSON':{'pass':True,'files':len(jsons)},'privacySecrets':{'pass':not flags,'flags':flags},'dependencyHydration':'Reused locked L node_modules root junction; checkout-local workspace package links; unchanged package-lock; no new repository dependencies. Transient missing-link failures preserved in validation-runtime-recovery.md','parent':'e3adbcb3cb2ac0991db231476441d133db3e2cd3'})
 
 
 if __name__=='__main__':main()

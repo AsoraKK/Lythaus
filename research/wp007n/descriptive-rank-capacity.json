@@ -1,0 +1,106 @@
+{
+  "codeHash": "e5059a54606679775e2cf1f4118754e675974d696398c71d7df39d751f24f915",
+  "purpose": "Diagnostic ranking capacity at zero observed evaluation FP. This deliberately uses evaluation labels and cannot replace any frozen threshold, demonstrate specificity, or qualify a candidate. No cuts are exported.",
+  "results": {
+    "A0": {
+      "jpeg75": {
+        "TP": 8,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      },
+      "original": {
+        "TP": 8,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      }
+    },
+    "A1": {
+      "jpeg75": {
+        "TP": 0,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      },
+      "original": {
+        "TP": 0,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      }
+    },
+    "A2": {
+      "jpeg75": {
+        "TP": 0,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      },
+      "original": {
+        "TP": 0,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      }
+    },
+    "B0": {
+      "jpeg75": {
+        "TP": 12,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      },
+      "original": {
+        "TP": 12,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      }
+    },
+    "B1": {
+      "jpeg75": {
+        "TP": 12,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      },
+      "original": {
+        "TP": 9,
+        "negativeN": 28,
+        "notAnAdmissibleOperatingPoint": true,
+        "notCalibrated": true,
+        "observedFP": 0,
+        "positiveN": 20,
+        "source": "Evaluation ranking itself; maximum evaluation negative; strict ties negative"
+      }
+    }
+  }
+}

@@ -11,7 +11,21 @@ from wp007n_freeze import validate_roles
 from wp007n_guards import execution_signature,validate_calibrations
 
 
+def validate_regressions(checks):
+    if checks['status']!='COMPLETED_WITH_EXPLICIT_RESULTS':raise ValueError('VALIDATION_INCOMPLETE')
+    commands=checks['commands']
+    required=('authenticity-full','typecheck-native','validate-native-scope','validate-workflow-action-pins','python-N','independent-known-answers','test_wp007e_policies.py','test_wp007m_probe.py','diff-check','node-syntax')
+    if any(commands[name]['exitCode']!=0 for name in required):raise ValueError('REQUIRED_REGRESSION_FAILED')
+    if commands['authenticity-full']['counts']!=['# tests 388','# pass 388','# fail 0','# skipped 0']:raise ValueError('AUTHENTICITY_COVERAGE_CHANGED')
+    for name in ('test-native-architecture','validate-no-retired-provider-dependencies'):
+        current=commands[name];parent=commands['parent-'+name]
+        if current['exitCode']==0 or any(current[k]!=parent[k] for k in ('exitCode','counts','failures')):raise ValueError('INHERITED_FAILURE_MISMATCH')
+    if commands['test-native-architecture']['counts']!=['# tests 256','# pass 255','# fail 1','# skipped 0']:raise ValueError('ARCHITECTURE_COVERAGE_CHANGED')
+    if not all(checks[name]['pass'] for name in ('AST','JSON','privacySecrets')):raise ValueError('STATIC_VALIDATION_FAILED')
+
+
 def main():
+    checks=read(OUT/'validation-summary.json');validate_regressions(checks)
     co=read(OUT/'cohort-freeze.json');validate_roles(co['rows'])
     seal=read(OUT/'protocol-hash.json');validate_calibrations(co,seal['canonicalProtocolHash'])
     models=read(OUT/'checkpoint-freeze.json')
@@ -37,7 +51,6 @@ def main():
         if p.suffix=='.json':json.loads(text);parsed+=1
         if re.search(r'[A-Za-z]:[\\/]+Users[\\/]|ghp_[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----',text):flags.append(f)
     if flags:raise ValueError('PRIVATE_PATH_OR_SECRET:'+str(flags))
-    checks=read(OUT/'validation-summary.json')
     currentlog=(RUNTIME/'validation/validate-no-retired-provider-dependencies.log').read_text()
     parentlog=(RUNTIME/'validation/parent-validate-no-retired-provider-dependencies.log').read_text()
     if currentlog!=parentlog:raise ValueError('RETIRED_BASELINE_DIFFERENT')
