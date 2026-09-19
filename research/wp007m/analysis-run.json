@@ -1,0 +1,10 @@
+{
+  "aucCrosscheck": "Every AUC matched independent pairwise positive/negative comparison with half-credit ties",
+  "codeHash": "3858071742d121d60e809097f87d240921db425cffc07ad3e6fb3801d7f4b40d",
+  "command": "python scripts/authenticity/wp007m_analyze.py --bulk <EXTERNAL_WP007M>",
+  "completedUnix": 1789825836.0781841,
+  "inputHashes": {
+    "discovery": "41369a382a2d0cfd252f4b3fe325e399c3c82c195a29e099a7ebb09db53a10d8",
+    "heldout": "b59b49ee6e15d03a72b7c2b9039f48a0f43f785a13cc67132a01241f3a978371"
+  }
+}

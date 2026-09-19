@@ -1,0 +1,65 @@
+{
+  "codeHash": "4c9e463e3e945e3a2cf5671f1cc41ffb83d4f46111777b2553cca9d9f53e3c49",
+  "cohortHash": "8601716ce6ff46d6a2e6506b73c793cb3f15045ad7e25ac59909daea6b7a149b",
+  "command": "python scripts/authenticity/wp007m_diagnostic.py --camera <CONSUMED_WP007L> --flux <CONSUMED_FLUX1> --bulk <EXTERNAL_WP007M>",
+  "endUnix": 1789822010.46294,
+  "flux2Access": 0,
+  "freshConfirmation": false,
+  "results": {
+    "CLOUDFLARE_FLUX1_CONSUMED": {
+      "JPEG95": {
+        "high": 0,
+        "max": 0.1629185563219671,
+        "median": 0.021238189080523107,
+        "min": 0.0010762604181921986,
+        "n": 10,
+        "sourceFamilies": 1
+      },
+      "ORIGINAL": {
+        "high": 0,
+        "max": 0.16498458328686827,
+        "median": 0.05503326934169492,
+        "min": 0.02105067045066744,
+        "n": 10,
+        "sourceFamilies": 1
+      },
+      "RESIZE75": {
+        "high": 0,
+        "max": 0.08786617360040844,
+        "median": 0.05058080429021947,
+        "min": 0.0006245130577720026,
+        "n": 10,
+        "sourceFamilies": 1
+      }
+    },
+    "CSAFE_CONSUMED": {
+      "JPEG95": {
+        "high": 0,
+        "max": 0.18494709270950124,
+        "median": 0.06350540091466952,
+        "min": 0.0014683652018385729,
+        "n": 36,
+        "sourceFamilies": 8
+      },
+      "ORIGINAL": {
+        "high": 0,
+        "max": 0.19026259515121274,
+        "median": 0.048364777751455174,
+        "min": 0.001548008139402146,
+        "n": 36,
+        "sourceFamilies": 8
+      },
+      "RESIZE75": {
+        "high": 0,
+        "max": 0.2869599079278361,
+        "median": 0.0924969354685414,
+        "min": 0.003882970118347373,
+        "n": 36,
+        "sourceFamilies": 8
+      }
+    }
+  },
+  "rowsHash": "f79b4c8bd1a52399988d7b8342c69a93b221655f259437d77edd0a864a382bb8",
+  "startUnix": 1789822002.8559399,
+  "tuning": false
+}

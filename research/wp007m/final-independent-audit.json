@@ -1,0 +1,337 @@
+{
+  "artifactHashes": {
+    "cohort-freeze.json": "98c73dbba03a074bbbb9d15584e91b7e0dc2883a2fe5188bff0834f773cdfc56",
+    "decision-freeze.json": "3188f20ebaf03ae2572190320b935cc427b69afd73f455a6ca14c9da5284db0c",
+    "empirical-results.json": "8a0c9bbc4e605a69c08426d63b74d1a5d6fcda528f44758108841d9a145c389a"
+  },
+  "cameraModelAliases": {
+    "interpretation": "Model-name grouping overlap; does not prove duplicate physical devices or duplicate images.",
+    "normalization": "Last colon-delimited splitGroup component, casefold, retain ASCII a-z/0-9",
+    "overlapModels": 0,
+    "overlaps": []
+  },
+  "codeHashes": {
+    "wp007m_analyze.py": "3858071742d121d60e809097f87d240921db425cffc07ad3e6fb3801d7f4b40d",
+    "wp007m_integrity.py": "e7b1cb7c60ddeac1af65c2a0b682d9e78d699b77deff223453da7055ca0892e8"
+  },
+  "heldoutConditions": {
+    "JPEG75": {
+      "fpr": {
+        "ci95": [
+          0,
+          0.04093562556432678
+        ],
+        "k": 0,
+        "n": 90,
+        "rate": 0
+      },
+      "inducedFp": 0,
+      "missingCandidate": 0,
+      "recall": {
+        "ci95": [
+          0,
+          0.06112937052678838
+        ],
+        "k": 0,
+        "n": 59,
+        "rate": 0
+      },
+      "thresholdTies": 0,
+      "uniqueSafeRescue": 0
+    },
+    "JPEG85": {
+      "fpr": {
+        "ci95": [
+          0,
+          0.04093562556432678
+        ],
+        "k": 0,
+        "n": 90,
+        "rate": 0
+      },
+      "inducedFp": 0,
+      "missingCandidate": 0,
+      "recall": {
+        "ci95": [
+          0.0029982339183556406,
+          0.08995725964142297
+        ],
+        "k": 1,
+        "n": 59,
+        "rate": 0.01694915254237288
+      },
+      "thresholdTies": 0,
+      "uniqueSafeRescue": 1
+    },
+    "JPEG95": {
+      "fpr": {
+        "ci95": [
+          0,
+          0.04093562556432678
+        ],
+        "k": 0,
+        "n": 90,
+        "rate": 0
+      },
+      "inducedFp": 0,
+      "missingCandidate": 0,
+      "recall": {
+        "ci95": [
+          0.0029982339183556406,
+          0.08995725964142297
+        ],
+        "k": 1,
+        "n": 59,
+        "rate": 0.01694915254237288
+      },
+      "thresholdTies": 0,
+      "uniqueSafeRescue": 1
+    },
+    "ORIGINAL": {
+      "fpr": {
+        "ci95": [
+          0,
+          0.04093562556432678
+        ],
+        "k": 0,
+        "n": 90,
+        "rate": 0
+      },
+      "inducedFp": 0,
+      "missingCandidate": 0,
+      "recall": {
+        "ci95": [
+          0.0029982339183556406,
+          0.08995725964142297
+        ],
+        "k": 1,
+        "n": 59,
+        "rate": 0.01694915254237288
+      },
+      "thresholdTies": 0,
+      "uniqueSafeRescue": 1
+    },
+    "PNG_STRIP": {
+      "fpr": {
+        "ci95": [
+          0,
+          0.04093562556432678
+        ],
+        "k": 0,
+        "n": 90,
+        "rate": 0
+      },
+      "inducedFp": 0,
+      "missingCandidate": 0,
+      "recall": {
+        "ci95": [
+          0.0029982339183556406,
+          0.08995725964142297
+        ],
+        "k": 1,
+        "n": 59,
+        "rate": 0.01694915254237288
+      },
+      "thresholdTies": 0,
+      "uniqueSafeRescue": 1
+    },
+    "RESIZE75": {
+      "fpr": {
+        "ci95": [
+          0.0019640841009183393,
+          0.060284083117534505
+        ],
+        "k": 1,
+        "n": 90,
+        "rate": 0.011111111111111112
+      },
+      "inducedFp": 1,
+      "missingCandidate": 0,
+      "recall": {
+        "ci95": [
+          0,
+          0.06112937052678838
+        ],
+        "k": 0,
+        "n": 59,
+        "rate": 0
+      },
+      "thresholdTies": 0,
+      "uniqueSafeRescue": 0
+    },
+    "RESIZE75_JPEG95": {
+      "fpr": {
+        "ci95": [
+          0,
+          0.04093562556432678
+        ],
+        "k": 0,
+        "n": 90,
+        "rate": 0
+      },
+      "inducedFp": 0,
+      "missingCandidate": 0,
+      "recall": {
+        "ci95": [
+          0,
+          0.06112937052678838
+        ],
+        "k": 0,
+        "n": 59,
+        "rate": 0
+      },
+      "thresholdTies": 0,
+      "uniqueSafeRescue": 0
+    },
+    "SHARP95": {
+      "fpr": {
+        "ci95": [
+          0,
+          0.04093562556432678
+        ],
+        "k": 0,
+        "n": 90,
+        "rate": 0
+      },
+      "inducedFp": 0,
+      "missingCandidate": 0,
+      "recall": {
+        "ci95": [
+          0.0029982339183556406,
+          0.08995725964142297
+        ],
+        "k": 1,
+        "n": 59,
+        "rate": 0.01694915254237288
+      },
+      "thresholdTies": 0,
+      "uniqueSafeRescue": 1
+    }
+  },
+  "heldoutSourceWorstCandidateFP": {
+    "ALL": {
+      "ci95": [
+        0.0019640841009183393,
+        0.060284083117534505
+      ],
+      "k": 1,
+      "n": 90,
+      "rate": 0.011111111111111112
+    },
+    "HARD": {
+      "ci95": [
+        0,
+        0.11351339317396875
+      ],
+      "k": 0,
+      "n": 30,
+      "rate": 0
+    },
+    "PHOTO": {
+      "ci95": [
+        0.002948159794786248,
+        0.08855129727590062
+      ],
+      "k": 1,
+      "n": 60,
+      "rate": 0.016666666666666666
+    }
+  },
+  "inputHashes": {
+    "discovery-rows.jsonl": "41369a382a2d0cfd252f4b3fe325e399c3c82c195a29e099a7ebb09db53a10d8",
+    "heldout-rows.jsonl": "b59b49ee6e15d03a72b7c2b9039f48a0f43f785a13cc67132a01241f3a978371",
+    "safe-enrichment.jsonl": "620c54e5503b36f7d7bf01b618a31b5f645395a9393d69de028c87eaacce89b9"
+  },
+  "integrityModule": {
+    "currentRowsAccepted": true,
+    "note": "Integrity module rejects listed core overrides but not all authoritative metadata fields. Supplement codeHash and runnerCodeHash are not gated by the module; actual values independently match current run artifacts.",
+    "rejectionChecks": {
+      "cohort_mismatch_rejected": true,
+      "incomplete_matrix_rejected": true,
+      "metadata_override_rejected": true,
+      "supplement_incomplete_rejected": true,
+      "supplement_pixel_mismatch_rejected": true,
+      "unknown_code_rejected": true
+    },
+    "remainingGeneratorFamilyOverrideAccepted": true
+  },
+  "limits": [
+    "Hash checks verify recorded pixel identities, not fresh pixel decoding.",
+    "No heldout reclassification, split repair, cutoff adjustment or direction change.",
+    "Single fixed spatial shift remains a control, not a permutation distribution.",
+    "These findings do not qualify a detector or establish population FPR."
+  ],
+  "mainEmpiricalComparison": {
+    "disagreements": [],
+    "matched": true
+  },
+  "matrix": {
+    "allRows": 1984,
+    "cohortRuleAndRunHashesMatch": true,
+    "discoveryRows": 792,
+    "exactMembershipAndUniqueKeys": true,
+    "heldoutByKind": {
+      "HARD": 30,
+      "PHOTO": 60,
+      "SYNTHETIC": 59
+    },
+    "heldoutParents": 149,
+    "heldoutRows": 1192
+  },
+  "pillow95VsSharp95Pixels": {
+    "DISCOVERY": {
+      "equal": 99,
+      "total": 99
+    },
+    "HELDOUT": {
+      "equal": 149,
+      "total": 149
+    }
+  },
+  "rule": {
+    "comparison": "STRICT_GREATER",
+    "cutoff": 0.3487158244046029,
+    "retuned": false,
+    "safeThreshold": 0.5864923000335693,
+    "score": "abs(dependency12-dependency23)"
+  },
+  "safeEnrichment": {
+    "exactMissingKeySet": true,
+    "missingAfter": 0,
+    "missingBefore": 720,
+    "pixelSourceCohortCheckpointHashesMatch": true,
+    "rows": 720,
+    "supplementCodeHashMatchesRun": true
+  },
+  "schemaVersion": "wp007m-final-independent-audit-v1",
+  "scope": "Rows and metadata only; no image/model inference; frozen rule unchanged.",
+  "status": "REQUESTED_NUMERICAL_CHECKS_COMPLETE_WITH_LIMITATIONS",
+  "uniqueSafeRescue": {
+    "conditionRows": 5,
+    "definition": "Candidate strictly above cutoff and SAFE below frozen threshold on same condition.",
+    "parentsAnyMatchedCondition": 1,
+    "parentsSafeLowAcrossEveryCondition": 1
+  },
+  "findings": [
+    {
+      "severity": "scientific_limit",
+      "finding": "Pillow95 and Sharp95 are identical decoded-pixel conditions for 248/248 parents (99 discovery,149 heldout). Their agreement is not evidence of robustness to a different decoded codec output."
+    },
+    {
+      "severity": "scientific_limit",
+      "finding": "Unique SAFE rescue is one synthetic parent represented in five condition rows; it disappears under JPEG75 and the declared resize conditions. These are not five independent rescues."
+    },
+    {
+      "severity": "observed_false_positive",
+      "finding": "RESIZE75 induces one photographic false-positive parent. Worst-case candidate FP is 1/90 overall and 1/60 photographic; nominal 95% Wilson upper endpoints are 0.060284083117534505 and 0.08855129727590062. No low population-FPR qualification follows."
+    },
+    {
+      "severity": "integrity_hardening",
+      "finding": "In-memory negative testing proves generatorFamily can still override cohort metadata in validate_matrix; its blacklist does not protect every authoritative field. Actual current row metadata agrees with the cohort."
+    },
+    {
+      "severity": "integrity_hardening",
+      "finding": "enrich_safe does not itself enforce supplement codeHash; validate_matrix does not enforce runnerCodeHash. Actual supplement and runner hashes match the corresponding run artifacts in this independent audit."
+    }
+  ]
+}

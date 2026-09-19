@@ -9,6 +9,7 @@ from scipy.optimize import linear_sum_assignment
 from scipy.stats import spearmanr
 from sklearn.metrics import roc_auc_score,average_precision_score
 from wp007m_probe import OUT,ROOT,CONDITIONS,CANDIDATES,SAFE_THRESHOLD,joined,load,save,filehash,digest,wilson
+from wp007m_integrity import validate_matrix,validate_reference,enrich_safe
 
 
 def score(row,rule,group="features",null=False):
@@ -84,8 +85,13 @@ def main():
     a=argparse.ArgumentParser();a.add_argument("--bulk",required=True);args=a.parse_args()
     frozen=load(OUT/"decision-freeze.json");h=frozen.pop("freezeHash")
     if digest(frozen)!=h:raise ValueError("RULE_MUTATED")
-    rules=frozen["choices"];allrows=joined(args.bulk,"DISCOVERY")+joined(args.bulk,"HELDOUT")
+    validate_reference(Path(args.bulk))
+    rules=frozen["choices"];allrows=[]
     cohort=load(OUT/"cohort-freeze.json")
+    for role in ["DISCOVERY","HELDOUT"]:
+        raw=list(map(json.loads,(Path(args.bulk)/(role.lower()+"-rows.jsonl")).read_text().splitlines()))
+        allrows.extend(validate_matrix(cohort,raw,role))
+    enrich_safe(allrows,list(map(json.loads,(Path(args.bulk)/"safe-enrichment.jsonl").read_text().splitlines())))
     if len(allrows)!=len(cohort["rows"])*len(CONDITIONS):raise ValueError("INCOMPLETE_MATRIX")
     if len({(r["sampleId"],r["condition"]) for r in allrows})!=len(allrows):raise ValueError("DUPLICATE_MEASUREMENT")
     result={"schemaVersion":"wp007m-empirical-v1","ruleHash":h,"cohortHash":cohort["freezeHash"],"rows":len(allrows),"parents":len(cohort["rows"]),"roles":{},"productionAuthorization":"NO","fprStatus":"FPR_TARGET_NOT_STATISTICALLY_DEMONSTRATED","freshProgrammeConfirmation":False}

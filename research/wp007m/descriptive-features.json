@@ -1,0 +1,1062 @@
+{
+  "DISCOVERY": {
+    "JPEG75": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.16329284750337383,
+          "available": 58,
+          "averagePrecision": 0.5178777792460146,
+          "pairwiseCrosscheckDelta": 2.7755575615628914e-17,
+          "rankBiserial": -0.6734143049932524
+        },
+        "PHOTO": {
+          "auc": 0.7826923076923077,
+          "available": 79,
+          "averagePrecision": 0.760463142343693,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.5653846153846154
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.08367071524966263,
+          "available": 58,
+          "averagePrecision": 0.48677764357715436,
+          "pairwiseCrosscheckDelta": 1.3877787807814457e-17,
+          "rankBiserial": -0.8326585695006747
+        },
+        "PHOTO": {
+          "auc": 0.7846153846153846,
+          "available": 79,
+          "averagePrecision": 0.7810957371623981,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.5692307692307692
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.9352226720647773,
+          "available": 58,
+          "averagePrecision": 0.9738294314381271,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.8704453441295545
+        },
+        "PHOTO": {
+          "auc": 0.40064102564102566,
+          "available": 79,
+          "averagePrecision": 0.41406774064880114,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.19871794871794868
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.18623481781376516,
+          "available": 58,
+          "averagePrecision": 0.5186205038995253,
+          "pairwiseCrosscheckDelta": 2.7755575615628914e-17,
+          "rankBiserial": -0.6275303643724697
+        },
+        "PHOTO": {
+          "auc": 0.7903846153846154,
+          "available": 79,
+          "averagePrecision": 0.8043286297164459,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.5807692307692307
+        }
+      }
+    },
+    "JPEG85": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.12010796221322537,
+          "available": 58,
+          "averagePrecision": 0.4963908230819748,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.7597840755735492
+        },
+        "PHOTO": {
+          "auc": 0.8320512820512821,
+          "available": 79,
+          "averagePrecision": 0.7636980561230908,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6641025641025642
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.04993252361673415,
+          "available": 58,
+          "averagePrecision": 0.4734792752787861,
+          "pairwiseCrosscheckDelta": 6.938893903907228e-18,
+          "rankBiserial": -0.9001349527665317
+        },
+        "PHOTO": {
+          "auc": 0.8237179487179487,
+          "available": 79,
+          "averagePrecision": 0.8039647339456414,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6474358974358974
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.9446693657219973,
+          "available": 58,
+          "averagePrecision": 0.9771191806461184,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.8893387314439947
+        },
+        "PHOTO": {
+          "auc": 0.49743589743589745,
+          "available": 79,
+          "averagePrecision": 0.462505962017446,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.00512820512820511
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.21052631578947367,
+          "available": 58,
+          "averagePrecision": 0.5273384910796926,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.5789473684210527
+        },
+        "PHOTO": {
+          "auc": 0.8352564102564103,
+          "available": 79,
+          "averagePrecision": 0.832690089083317,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6705128205128206
+        }
+      }
+    },
+    "JPEG95": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.08097165991902834,
+          "available": 58,
+          "averagePrecision": 0.4807103430123544,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.8380566801619433
+        },
+        "PHOTO": {
+          "auc": 0.8064102564102564,
+          "available": 79,
+          "averagePrecision": 0.7151797340730309,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6128205128205129
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.024291497975708506,
+          "available": 58,
+          "averagePrecision": 0.4677138124215553,
+          "pairwiseCrosscheckDelta": 3.469446951953614e-18,
+          "rankBiserial": -0.951417004048583
+        },
+        "PHOTO": {
+          "auc": 0.8166666666666667,
+          "available": 79,
+          "averagePrecision": 0.7494425912166995,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6333333333333333
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.9865047233468285,
+          "available": 58,
+          "averagePrecision": 0.994072878072174,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.973009446693657
+        },
+        "PHOTO": {
+          "auc": 0.4685897435897436,
+          "available": 79,
+          "averagePrecision": 0.44052065763833126,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.06282051282051282
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.2658569500674764,
+          "available": 58,
+          "averagePrecision": 0.5710591656400449,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.4682860998650472
+        },
+        "PHOTO": {
+          "auc": 0.8320512820512821,
+          "available": 79,
+          "averagePrecision": 0.8204846510756194,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6641025641025642
+        }
+      }
+    },
+    "ORIGINAL": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.6167341430499325,
+          "available": 58,
+          "averagePrecision": 0.8462875338131053,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.23346828609986492
+        },
+        "PHOTO": {
+          "auc": 0.8025641025641026,
+          "available": 79,
+          "averagePrecision": 0.7052214581773012,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6051282051282052
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.31713900134952766,
+          "available": 58,
+          "averagePrecision": 0.6435843923602613,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.3657219973009447
+        },
+        "PHOTO": {
+          "auc": 0.8192307692307692,
+          "available": 79,
+          "averagePrecision": 0.755844637979467,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6384615384615384
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.9500674763832658,
+          "available": 58,
+          "averagePrecision": 0.979503007072509,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.9001349527665317
+        },
+        "PHOTO": {
+          "auc": 0.4153846153846154,
+          "available": 79,
+          "averagePrecision": 0.4222142794599015,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.16923076923076918
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.9838056680161944,
+          "available": 58,
+          "averagePrecision": 0.9927898080849781,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.9676113360323888
+        },
+        "PHOTO": {
+          "auc": 0.8346153846153846,
+          "available": 79,
+          "averagePrecision": 0.8226336850187789,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6692307692307693
+        }
+      }
+    },
+    "PNG_STRIP": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.6167341430499325,
+          "available": 58,
+          "averagePrecision": 0.8462875338131053,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.23346828609986492
+        },
+        "PHOTO": {
+          "auc": 0.8025641025641026,
+          "available": 79,
+          "averagePrecision": 0.7052214581773012,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6051282051282052
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.31713900134952766,
+          "available": 58,
+          "averagePrecision": 0.6435843923602613,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.3657219973009447
+        },
+        "PHOTO": {
+          "auc": 0.8192307692307692,
+          "available": 79,
+          "averagePrecision": 0.755844637979467,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6384615384615384
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.9500674763832658,
+          "available": 58,
+          "averagePrecision": 0.979503007072509,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.9001349527665317
+        },
+        "PHOTO": {
+          "auc": 0.4153846153846154,
+          "available": 79,
+          "averagePrecision": 0.4222142794599015,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.16923076923076918
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.9838056680161944,
+          "available": 58,
+          "averagePrecision": 0.9927898080849781,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.9676113360323888
+        },
+        "PHOTO": {
+          "auc": 0.8346153846153846,
+          "available": 79,
+          "averagePrecision": 0.8226336850187789,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6692307692307693
+        }
+      }
+    },
+    "RESIZE75": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.0,
+          "available": 58,
+          "averagePrecision": 0.4648260565286843,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -1.0
+        },
+        "PHOTO": {
+          "auc": 0.7974358974358975,
+          "available": 79,
+          "averagePrecision": 0.7207875532756701,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.594871794871795
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.032388663967611336,
+          "available": 58,
+          "averagePrecision": 0.46960901866458765,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.9352226720647774
+        },
+        "PHOTO": {
+          "auc": 0.8243589743589743,
+          "available": 79,
+          "averagePrecision": 0.7761351669578852,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6487179487179486
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.407557354925776,
+          "available": 58,
+          "averagePrecision": 0.6750476283483782,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.184885290148448
+        },
+        "PHOTO": {
+          "auc": 0.3705128205128205,
+          "available": 79,
+          "averagePrecision": 0.4141777418254306,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.25897435897435905
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.5114709851551956,
+          "available": 58,
+          "averagePrecision": 0.6748079398591422,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.022941970310391246
+        },
+        "PHOTO": {
+          "auc": 0.8416666666666666,
+          "available": 79,
+          "averagePrecision": 0.8413422978902428,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.6833333333333331
+        }
+      }
+    },
+    "RESIZE75_JPEG95": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.021592442645074227,
+          "available": 58,
+          "averagePrecision": 0.46714436806192283,
+          "pairwiseCrosscheckDelta": 3.469446951953614e-18,
+          "rankBiserial": -0.9568151147098516
+        },
+        "PHOTO": {
+          "auc": 0.808974358974359,
+          "available": 79,
+          "averagePrecision": 0.7326907599839347,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.617948717948718
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.02159244264507423,
+          "available": 58,
+          "averagePrecision": 0.46724761195535486,
+          "pairwiseCrosscheckDelta": 6.938893903907228e-18,
+          "rankBiserial": -0.9568151147098516
+        },
+        "PHOTO": {
+          "auc": 0.8166666666666667,
+          "available": 79,
+          "averagePrecision": 0.7580541721466023,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6333333333333333
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.902834008097166,
+          "available": 58,
+          "averagePrecision": 0.9517384045236812,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.8056680161943319
+        },
+        "PHOTO": {
+          "auc": 0.4256410256410257,
+          "available": 79,
+          "averagePrecision": 0.4357061513012662,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.14871794871794863
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.18758434547908232,
+          "available": 58,
+          "averagePrecision": 0.5183495339451049,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.6248313090418354
+        },
+        "PHOTO": {
+          "auc": 0.8435897435897436,
+          "available": 79,
+          "averagePrecision": 0.8387655233893708,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6871794871794872
+        }
+      }
+    },
+    "SHARP95": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.08097165991902834,
+          "available": 58,
+          "averagePrecision": 0.4807103430123544,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.8380566801619433
+        },
+        "PHOTO": {
+          "auc": 0.8064102564102564,
+          "available": 79,
+          "averagePrecision": 0.7151797340730309,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6128205128205129
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.024291497975708506,
+          "available": 58,
+          "averagePrecision": 0.4677138124215553,
+          "pairwiseCrosscheckDelta": 3.469446951953614e-18,
+          "rankBiserial": -0.951417004048583
+        },
+        "PHOTO": {
+          "auc": 0.8166666666666667,
+          "available": 79,
+          "averagePrecision": 0.7494425912166995,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6333333333333333
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.9865047233468285,
+          "available": 58,
+          "averagePrecision": 0.994072878072174,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.973009446693657
+        },
+        "PHOTO": {
+          "auc": 0.4685897435897436,
+          "available": 79,
+          "averagePrecision": 0.44052065763833126,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.06282051282051282
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.2658569500674764,
+          "available": 58,
+          "averagePrecision": 0.5710591656400449,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.4682860998650472
+        },
+        "PHOTO": {
+          "auc": 0.8320512820512821,
+          "available": 79,
+          "averagePrecision": 0.8204846510756194,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6641025641025642
+        }
+      }
+    }
+  },
+  "HELDOUT": {
+    "JPEG75": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.08983050847457627,
+          "available": 89,
+          "averagePrecision": 0.46909256734987453,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.8203389830508474
+        },
+        "PHOTO": {
+          "auc": 0.8307909604519774,
+          "available": 119,
+          "averagePrecision": 0.7833116596088345,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6615819209039548
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.036723163841807904,
+          "available": 89,
+          "averagePrecision": 0.4580247126034511,
+          "pairwiseCrosscheckDelta": 6.938893903907228e-18,
+          "rankBiserial": -0.9265536723163842
+        },
+        "PHOTO": {
+          "auc": 0.8048022598870057,
+          "available": 119,
+          "averagePrecision": 0.7744515462675029,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.6096045197740114
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.9209039548022598,
+          "available": 89,
+          "averagePrecision": 0.9413756619588811,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.8418079096045197
+        },
+        "PHOTO": {
+          "auc": 0.5220338983050847,
+          "available": 119,
+          "averagePrecision": 0.48510308862838214,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.04406779661016946
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.29491525423728815,
+          "available": 89,
+          "averagePrecision": 0.5276786128821845,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.4101694915254237
+        },
+        "PHOTO": {
+          "auc": 0.8313559322033898,
+          "available": 119,
+          "averagePrecision": 0.7591343544588832,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.6627118644067795
+        }
+      }
+    },
+    "JPEG85": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.09491525423728812,
+          "available": 89,
+          "averagePrecision": 0.4711078448789894,
+          "pairwiseCrosscheckDelta": 1.3877787807814457e-17,
+          "rankBiserial": -0.8101694915254237
+        },
+        "PHOTO": {
+          "auc": 0.8042372881355933,
+          "available": 119,
+          "averagePrecision": 0.7763485527389015,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6084745762711865
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.0028248587570621464,
+          "available": 89,
+          "averagePrecision": 0.4527820751662868,
+          "pairwiseCrosscheckDelta": 4.336808689942018e-19,
+          "rankBiserial": -0.9943502824858758
+        },
+        "PHOTO": {
+          "auc": 0.8675141242937853,
+          "available": 119,
+          "averagePrecision": 0.8284410195364581,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.7350282485875705
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.772316384180791,
+          "available": 89,
+          "averagePrecision": 0.9063243168257316,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.5446327683615819
+        },
+        "PHOTO": {
+          "auc": 0.4850282485875706,
+          "available": 119,
+          "averagePrecision": 0.5049037876370117,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.029943502824858803
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.3090395480225988,
+          "available": 89,
+          "averagePrecision": 0.5342416669267522,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.3819209039548024
+        },
+        "PHOTO": {
+          "auc": 0.8409604519774011,
+          "available": 119,
+          "averagePrecision": 0.7656787802003278,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6819209039548022
+        }
+      }
+    },
+    "JPEG95": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.06779661016949151,
+          "available": 89,
+          "averagePrecision": 0.46463812286325107,
+          "pairwiseCrosscheckDelta": 1.3877787807814457e-17,
+          "rankBiserial": -0.864406779661017
+        },
+        "PHOTO": {
+          "auc": 0.7901129943502825,
+          "available": 119,
+          "averagePrecision": 0.7467360719624816,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.580225988700565
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.054237288135593205,
+          "available": 89,
+          "averagePrecision": 0.4629405416932143,
+          "pairwiseCrosscheckDelta": 1.3877787807814457e-17,
+          "rankBiserial": -0.8915254237288136
+        },
+        "PHOTO": {
+          "auc": 0.8641242937853107,
+          "available": 119,
+          "averagePrecision": 0.8291277622743835,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.7282485875706215
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.6977401129943503,
+          "available": 89,
+          "averagePrecision": 0.8422599396247785,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.3954802259887007
+        },
+        "PHOTO": {
+          "auc": 0.4146892655367232,
+          "available": 119,
+          "averagePrecision": 0.4583221435171732,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.1706214689265536
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.37316384180790957,
+          "available": 89,
+          "averagePrecision": 0.5605831530885907,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.25367231638418086
+        },
+        "PHOTO": {
+          "auc": 0.8282485875706215,
+          "available": 119,
+          "averagePrecision": 0.7618917603945836,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.656497175141243
+        }
+      }
+    },
+    "ORIGINAL": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.38757062146892657,
+          "available": 89,
+          "averagePrecision": 0.68825675130196,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.22485875706214686
+        },
+        "PHOTO": {
+          "auc": 0.7884180790960451,
+          "available": 119,
+          "averagePrecision": 0.7393609180850624,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.5768361581920902
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.21525423728813559,
+          "available": 89,
+          "averagePrecision": 0.5283057402429399,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.5694915254237288
+        },
+        "PHOTO": {
+          "auc": 0.8748587570621469,
+          "available": 119,
+          "averagePrecision": 0.8380586328381873,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.7497175141242938
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.7282485875706215,
+          "available": 89,
+          "averagePrecision": 0.86937700785149,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.456497175141243
+        },
+        "PHOTO": {
+          "auc": 0.37033898305084745,
+          "available": 119,
+          "averagePrecision": 0.4375118470311386,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.2593220338983051
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.9870056497175141,
+          "available": 89,
+          "averagePrecision": 0.9936338319943288,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.9740112994350283
+        },
+        "PHOTO": {
+          "auc": 0.8313559322033898,
+          "available": 119,
+          "averagePrecision": 0.7669085734917375,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.6627118644067795
+        }
+      }
+    },
+    "PNG_STRIP": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.38757062146892657,
+          "available": 89,
+          "averagePrecision": 0.68825675130196,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.22485875706214686
+        },
+        "PHOTO": {
+          "auc": 0.7884180790960451,
+          "available": 119,
+          "averagePrecision": 0.7393609180850624,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.5768361581920902
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.21525423728813559,
+          "available": 89,
+          "averagePrecision": 0.5283057402429399,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.5694915254237288
+        },
+        "PHOTO": {
+          "auc": 0.8748587570621469,
+          "available": 119,
+          "averagePrecision": 0.8380586328381873,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.7497175141242938
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.7282485875706215,
+          "available": 89,
+          "averagePrecision": 0.86937700785149,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.456497175141243
+        },
+        "PHOTO": {
+          "auc": 0.37033898305084745,
+          "available": 119,
+          "averagePrecision": 0.4375118470311386,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.2593220338983051
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.9870056497175141,
+          "available": 89,
+          "averagePrecision": 0.9936338319943288,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.9740112994350283
+        },
+        "PHOTO": {
+          "auc": 0.8313559322033898,
+          "available": 119,
+          "averagePrecision": 0.7669085734917375,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.6627118644067795
+        }
+      }
+    },
+    "RESIZE75": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.045197740112994336,
+          "available": 89,
+          "averagePrecision": 0.46063406680474983,
+          "pairwiseCrosscheckDelta": 1.3877787807814457e-17,
+          "rankBiserial": -0.9096045197740114
+        },
+        "PHOTO": {
+          "auc": 0.8025423728813559,
+          "available": 119,
+          "averagePrecision": 0.7518499724147528,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6050847457627118
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.05197740112994349,
+          "available": 89,
+          "averagePrecision": 0.4620781894090449,
+          "pairwiseCrosscheckDelta": 6.938893903907228e-18,
+          "rankBiserial": -0.896045197740113
+        },
+        "PHOTO": {
+          "auc": 0.8754237288135593,
+          "available": 119,
+          "averagePrecision": 0.8391429608381912,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.7508474576271187
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.4022598870056497,
+          "available": 89,
+          "averagePrecision": 0.6954753805620377,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.19548022598870063
+        },
+        "PHOTO": {
+          "auc": 0.39971751412429374,
+          "available": 119,
+          "averagePrecision": 0.43269259560897366,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.20056497175141252
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.7016949152542373,
+          "available": 89,
+          "averagePrecision": 0.7173836570542831,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.40338983050847466
+        },
+        "PHOTO": {
+          "auc": 0.8426553672316384,
+          "available": 119,
+          "averagePrecision": 0.7967040616691415,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.6853107344632767
+        }
+      }
+    },
+    "RESIZE75_JPEG95": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.05310734463276835,
+          "available": 89,
+          "averagePrecision": 0.4608297420828158,
+          "pairwiseCrosscheckDelta": 6.938893903907228e-18,
+          "rankBiserial": -0.8937853107344633
+        },
+        "PHOTO": {
+          "auc": 0.811864406779661,
+          "available": 119,
+          "averagePrecision": 0.7815783722965713,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.623728813559322
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.041242937853107335,
+          "available": 89,
+          "averagePrecision": 0.4599933849922848,
+          "pairwiseCrosscheckDelta": 6.938893903907228e-18,
+          "rankBiserial": -0.9175141242937853
+        },
+        "PHOTO": {
+          "auc": 0.8680790960451976,
+          "available": 119,
+          "averagePrecision": 0.8240896618021472,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.7361581920903952
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.7807909604519774,
+          "available": 89,
+          "averagePrecision": 0.8873517044774062,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.5615819209039548
+        },
+        "PHOTO": {
+          "auc": 0.44180790960451977,
+          "available": 119,
+          "averagePrecision": 0.45808935142924817,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": -0.11638418079096047
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.36553672316384184,
+          "available": 89,
+          "averagePrecision": 0.5533379835582881,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.2689265536723163
+        },
+        "PHOTO": {
+          "auc": 0.849858757062147,
+          "available": 119,
+          "averagePrecision": 0.8086295350797512,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.699717514124294
+        }
+      }
+    },
+    "SHARP95": {
+      "dependency12": {
+        "HARD": {
+          "auc": 0.06779661016949151,
+          "available": 89,
+          "averagePrecision": 0.46463812286325107,
+          "pairwiseCrosscheckDelta": 1.3877787807814457e-17,
+          "rankBiserial": -0.864406779661017
+        },
+        "PHOTO": {
+          "auc": 0.7901129943502825,
+          "available": 119,
+          "averagePrecision": 0.7467360719624816,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.580225988700565
+        }
+      },
+      "dependency23": {
+        "HARD": {
+          "auc": 0.054237288135593205,
+          "available": 89,
+          "averagePrecision": 0.4629405416932143,
+          "pairwiseCrosscheckDelta": 1.3877787807814457e-17,
+          "rankBiserial": -0.8915254237288136
+        },
+        "PHOTO": {
+          "auc": 0.8641242937853107,
+          "available": 119,
+          "averagePrecision": 0.8291277622743835,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.7282485875706215
+        }
+      },
+      "dependencyDecay": {
+        "HARD": {
+          "auc": 0.6977401129943503,
+          "available": 89,
+          "averagePrecision": 0.8422599396247785,
+          "pairwiseCrosscheckDelta": 1.1102230246251565e-16,
+          "rankBiserial": 0.3954802259887007
+        },
+        "PHOTO": {
+          "auc": 0.4146892655367232,
+          "available": 119,
+          "averagePrecision": 0.4583221435171732,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.1706214689265536
+        }
+      },
+      "tailExcess12": {
+        "HARD": {
+          "auc": 0.37316384180790957,
+          "available": 89,
+          "averagePrecision": 0.5605831530885907,
+          "pairwiseCrosscheckDelta": 5.551115123125783e-17,
+          "rankBiserial": -0.25367231638418086
+        },
+        "PHOTO": {
+          "auc": 0.8282485875706215,
+          "available": 119,
+          "averagePrecision": 0.7618917603945836,
+          "pairwiseCrosscheckDelta": 0.0,
+          "rankBiserial": 0.656497175141243
+        }
+      }
+    }
+  }
+}
