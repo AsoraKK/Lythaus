@@ -1,0 +1,47 @@
+{
+  "forwards": 288,
+  "runs": [
+    {
+      "ambiguousForwardCharged": false,
+      "cachedParents": 0,
+      "codeCommit": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+      "codeHash": "c7996b9a485518622ff87eaf2bd5915b761ac7d36d4ac5eb1dee1b38abba0a1d",
+      "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+      "command": "python wp007n_extract.py B --roles FIT,DEV,CALIBRATION",
+      "endedUnix": 1789844493.489151,
+      "failure": null,
+      "forwards": 148,
+      "minimumAvailableBytes": 7393361920,
+      "newParents": 44,
+      "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+      "roles": [
+        "FIT",
+        "DEV",
+        "CALIBRATION"
+      ],
+      "seconds": 121.41367197036743,
+      "startedUnix": 1789844372.129372
+    },
+    {
+      "ambiguousForwardCharged": false,
+      "cachedParents": 0,
+      "codeCommit": "0fb918872b1a81f483b004701143178e72a62748",
+      "codeHash": "d41acb2b93fa9967903780f98202daec84b052aaac78a934db6799dc4cbc7d45",
+      "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+      "command": "python wp007n_extract.py B --roles EVAL_N,HISTORICAL_CHALLENGE",
+      "endedUnix": 1789846694.028438,
+      "failure": null,
+      "forwards": 140,
+      "minimumAvailableBytes": 7084748800,
+      "newParents": 48,
+      "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+      "roles": [
+        "EVAL_N",
+        "HISTORICAL_CHALLENGE"
+      ],
+      "seconds": 117.44859600067139,
+      "startedUnix": 1789846576.6920702
+    }
+  ],
+  "seconds": 238.85837697982788
+}

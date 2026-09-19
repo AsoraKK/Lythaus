@@ -1,0 +1,236 @@
+{
+  "analysisHash": "c0fc4f7367f7143ba792358e8c08e324ccc5719c508d4a84152a61e7f7f12738",
+  "checks": {
+    "aucTieFixture": 0.875,
+    "decisionAndCohortSelfHashes": true,
+    "discoveryHashMatchesFreezeAndRun": true,
+    "exactDiscoveryMatrix": true,
+    "haarEnergyAbsoluteError": 0,
+    "haarMatrixMaxAbsoluteError": 0,
+    "inputAndCohortHashes": true,
+    "negativeMaximumThresholds": true,
+    "rankAndPairwiseAucAgreement": true,
+    "sourceWorstCaseIndependentlyRecomputed": "candidate_and_baseline_only",
+    "strictThresholdTiesNotPositive": true,
+    "wilsonIndependentFormulaMaxError": 2.220446049250313e-16
+  },
+  "cohortHash": "a4ab896818600e39542e09eb6fb75d94e4f6fc25ce30aef3c060e76e625df060",
+  "conditionAuc": {
+    "JPEG75": {
+      "baseline": {
+        "auc": 0.6512820512820513,
+        "negativeN": 60,
+        "positiveN": 39,
+        "ties": 0
+      },
+      "features": {
+        "auc": 0.4815297696653629,
+        "negativeN": 59,
+        "positiveN": 39,
+        "ties": 0
+      }
+    },
+    "JPEG85": {
+      "baseline": {
+        "auc": 0.6512820512820513,
+        "negativeN": 60,
+        "positiveN": 39,
+        "ties": 0
+      },
+      "features": {
+        "auc": 0.4793568013906997,
+        "negativeN": 59,
+        "positiveN": 39,
+        "ties": 0
+      }
+    },
+    "JPEG95": {
+      "baseline": {
+        "auc": 0.6517094017094017,
+        "negativeN": 60,
+        "positiveN": 39,
+        "ties": 0
+      },
+      "features": {
+        "auc": 0.3020425901781834,
+        "negativeN": 59,
+        "positiveN": 39,
+        "ties": 0
+      }
+    },
+    "ORIGINAL": {
+      "baseline": {
+        "auc": 0.6542735042735043,
+        "negativeN": 60,
+        "positiveN": 39,
+        "ties": 0
+      },
+      "features": {
+        "auc": 0.32159930465015213,
+        "negativeN": 59,
+        "positiveN": 39,
+        "ties": 0
+      }
+    },
+    "PNG_STRIP": {
+      "baseline": {
+        "auc": 0.6542735042735043,
+        "negativeN": 60,
+        "positiveN": 39,
+        "ties": 0
+      },
+      "features": {
+        "auc": 0.32159930465015213,
+        "negativeN": 59,
+        "positiveN": 39,
+        "ties": 0
+      }
+    },
+    "RESIZE75": {
+      "baseline": {
+        "auc": 0.6542735042735043,
+        "negativeN": 60,
+        "positiveN": 39,
+        "ties": 0
+      },
+      "features": {
+        "auc": 0.444154715341156,
+        "negativeN": 59,
+        "positiveN": 39,
+        "ties": 0
+      }
+    },
+    "RESIZE75_JPEG95": {
+      "baseline": {
+        "auc": 0.6521367521367522,
+        "negativeN": 60,
+        "positiveN": 39,
+        "ties": 0
+      },
+      "features": {
+        "auc": 0.4293785310734463,
+        "negativeN": 59,
+        "positiveN": 39,
+        "ties": 0
+      }
+    },
+    "SHARP95": {
+      "baseline": {
+        "auc": 0.6517094017094017,
+        "negativeN": 60,
+        "positiveN": 39,
+        "ties": 0
+      },
+      "features": {
+        "auc": 0.3020425901781834,
+        "negativeN": 59,
+        "positiveN": 39,
+        "ties": 0
+      }
+    }
+  },
+  "decisionFreezeHash": "df617e4b2fb7a7c9c6ed427c53c780b3bf92f73e7cc1dea64c814093c55bc237",
+  "discoveryParents": 99,
+  "discoveryRows": 792,
+  "discoveryRowsHash": "41369a382a2d0cfd252f4b3fe325e399c3c82c195a29e099a7ebb09db53a10d8",
+  "limitations": [
+    "No extraction rerun; no model loaded; no source media read.",
+    "Haar and Wilson isolated from source via AST; full SciPy/sklearn integration not rerun.",
+    "Discovery-negative FPR is forced to zero by max-reference threshold and is not an unbiased validation estimate.",
+    "Fixed single parent shift is an alignment control, not a permutation distribution.",
+    "Static gate gaps do not prove that current discovery rows are corrupted."
+  ],
+  "probeHash": "94e0277b30f1d5059ec5d50f94a78b58ba2b3a4388dee07112d36e3c7cff970d",
+  "schemaVersion": "wp007m-independent-audit-v1",
+  "scope": "DISCOVERY_ONLY_NO_HELDOUT_MEDIA_OR_RESULTS_READ",
+  "sourceWorstCase": {
+    "ALL": {
+      "baseline": {
+        "ci95": [
+          0,
+          0.06017185214208986
+        ],
+        "k": 0,
+        "n": 60,
+        "rate": 0
+      },
+      "features": {
+        "ci95": [
+          0,
+          0.06017185214208986
+        ],
+        "k": 0,
+        "n": 60,
+        "rate": 0
+      }
+    },
+    "HARD": {
+      "baseline": {
+        "ci95": [
+          0,
+          0.16112515805281938
+        ],
+        "k": 0,
+        "n": 20,
+        "rate": 0
+      },
+      "features": {
+        "ci95": [
+          0,
+          0.16112515805281938
+        ],
+        "k": 0,
+        "n": 20,
+        "rate": 0
+      }
+    },
+    "PHOTO": {
+      "baseline": {
+        "ci95": [
+          0,
+          0.08762160119728664
+        ],
+        "k": 0,
+        "n": 40,
+        "rate": 0
+      },
+      "features": {
+        "ci95": [
+          0,
+          0.08762160119728664
+        ],
+        "k": 0,
+        "n": 40,
+        "rate": 0
+      }
+    }
+  },
+  "inspectionBoundary": "Snapshot before main agent's resume/crop-first repair; subsequent extractor changes were not audited.",
+  "findings": [
+    {
+      "id": "LINEAGE_GATES",
+      "severity": "high",
+      "verified": "select does not require a complete unique discovery matrix or verify row cohort/code/input hashes; analyze does not bind loaded discovery bytes to discoveryRowsHash or enforce row lineage. Current discovery assertions passed independently."
+    },
+    {
+      "id": "SHIFT_CONTROL",
+      "severity": "scientific_limit",
+      "verified": "One deterministic toroidal parent shift per scale; alignment control only, no permutation distribution or guarantee that periodic structure is destroyed."
+    },
+    {
+      "id": "FROZEN_DIRECTION",
+      "severity": "negative_discovery_result",
+      "verified": "Native primary AUROC 0.32159930465015213 on 39 positives and 59 measurable negatives; one negative unavailable. No feature/direction changes authorized."
+    },
+    {
+      "id": "REFERENCE_FPR",
+      "severity": "interpretation_limit",
+      "verified": "Negative max and strict greater force discovery 0/60 source FPs; nominal Wilson upper bound 0.06017185214208986 is arithmetic only, not validation of an adaptively set rule."
+    },
+    {
+      "id": "COHORT_SCOPE",
+      "severity": "reporting_limit",
+      "verified": "Frozen actual cohort: discovery 40 PHOTO,20 HARD,39 SYNTHETIC; heldout metadata only 60 PHOTO,30 HARD,59 SYNTHETIC. PHOTO derives from Unsplash and HARD from owned procedural templates; no verified pristine-camera or representative real-CGI population claim."
+    }
+  ]
+}

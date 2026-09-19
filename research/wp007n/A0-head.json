@@ -1,0 +1,78 @@
+{
+  "C": 0.01,
+  "backbone": "A",
+  "candidate": "A0",
+  "checkpointHash": "d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428",
+  "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+  "devIds": [
+    "CSAFE_WP006E_iPhone14_3_03",
+    "CSAFE_WP006E_iPhone14_3_06",
+    "CSAFE_WP006E_iPhone14_3_08",
+    "CSAFE_WP006E_s21_1_01",
+    "CSAFE_WP006E_s21_1_05",
+    "CSAFE_WP006E_s21_1_07",
+    "DDB_0001",
+    "DDB_0053",
+    "DDB_0054",
+    "DDB_0072",
+    "DDB_0103",
+    "DDB_0142"
+  ],
+  "fileSha256": "85dc967a31c8ecfe842e26462ba7e6ea57f1277c21caaf49a1b1dbe1c979cef5",
+  "fitSeconds": 0.015225999988615513,
+  "gridResults": [
+    {
+      "C": 0.01,
+      "devAP": 1.0,
+      "devTPAtZeroObservedFp": 6,
+      "selectionThreshold": 0.44999060705605487
+    },
+    {
+      "C": 0.1,
+      "devAP": 1.0,
+      "devTPAtZeroObservedFp": 6,
+      "selectionThreshold": 0.39510759845245724
+    },
+    {
+      "C": 1.0,
+      "devAP": 1.0,
+      "devTPAtZeroObservedFp": 6,
+      "selectionThreshold": 0.3374630797883107
+    }
+  ],
+  "headHash": "6abccacd6a4aa87d23789b9227d21902d94a37bedfff91b59a4db9eaeac5efe2",
+  "logicalArtifact": "external/wp007n/heads/A0-head.json",
+  "parameterCount": 1025,
+  "permutation": false,
+  "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+  "rawCoefficientsInGit": false,
+  "rightsClass": "RESEARCH_ONLY_DEPLOYMENT_REVIEW_REQUIRED",
+  "serializationMaxAbsError": 0.0,
+  "serializedBytes": 83655,
+  "trainingIds": [
+    "CSAFE_WP006E_iPhone11_1_03",
+    "CSAFE_WP006E_iPhone11_1_06",
+    "CSAFE_WP006E_iPhone11_1_07",
+    "CSAFE_WP006E_iPhone11_1_10",
+    "CSAFE_WP006E_iPhone14_1_01",
+    "CSAFE_WP006E_iPhone14_1_04",
+    "CSAFE_WP006E_iPhone14_1_05",
+    "CSAFE_WP006E_iPhone14_1_09",
+    "CSAFE_WP006E_s21_3_01",
+    "CSAFE_WP006E_s21_3_03",
+    "CSAFE_WP006E_s21_3_04",
+    "CSAFE_WP006E_s21_3_06",
+    "DDB_0011",
+    "DDB_0024",
+    "DDB_0037",
+    "DDB_0044",
+    "DDB_0066",
+    "DDB_0074",
+    "DDB_0081",
+    "DDB_0088",
+    "DDB_0093",
+    "DDB_0119",
+    "DDB_0132",
+    "DDB_0146"
+  ]
+}

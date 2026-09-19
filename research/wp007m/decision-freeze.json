@@ -1,0 +1,28 @@
+{
+  "choices": {
+    "baseline": {
+      "absolute": false,
+      "comparison": "STRICT_GREATER",
+      "direction": 1,
+      "key": "dctDcStd",
+      "missing": "NO_EVIDENCE",
+      "selection": "PRESELECTED_NO_SYNTHETIC_LABEL_SELECTION",
+      "threshold": 2.2144267960080066
+    },
+    "features": {
+      "absolute": true,
+      "comparison": "STRICT_GREATER",
+      "direction": 1,
+      "key": "dependencyDecay",
+      "missing": "NO_EVIDENCE",
+      "selection": "PRESELECTED_NO_SYNTHETIC_LABEL_SELECTION",
+      "threshold": 0.3487158244046029
+    }
+  },
+  "cohortHash": "a4ab896818600e39542e09eb6fb75d94e4f6fc25ce30aef3c060e76e625df060",
+  "discoveryRowsHash": "41369a382a2d0cfd252f4b3fe325e399c3c82c195a29e099a7ebb09db53a10d8",
+  "freezeHash": "df617e4b2fb7a7c9c6ed427c53c780b3bf92f73e7cc1dea64c814093c55bc237",
+  "status": "EXPLORATORY_REFERENCE_RULE_NOT_QUALIFIED",
+  "timestamp": 1789803522.4301932,
+  "training": false
+}

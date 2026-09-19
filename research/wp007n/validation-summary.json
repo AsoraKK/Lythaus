@@ -1,0 +1,345 @@
+{
+  "AST": {
+    "files": 23,
+    "pass": true
+  },
+  "JSON": {
+    "files": 54,
+    "pass": true
+  },
+  "commands": {
+    "authenticity-full": {
+      "checkout": "N",
+      "command": [
+        "node",
+        "--experimental-strip-types",
+        "--test-concurrency=2",
+        "--test",
+        "packages\\authenticity\\tests\\alpha.test.mjs",
+        "packages\\authenticity\\tests\\critical-cost-control.test.mjs",
+        "packages\\authenticity\\tests\\evaluation.test.mjs",
+        "packages\\authenticity\\tests\\foundation.test.mjs",
+        "packages\\authenticity\\tests\\wp002.test.mjs",
+        "packages\\authenticity\\tests\\wp003.test.mjs",
+        "packages\\authenticity\\tests\\wp004a.test.mjs",
+        "packages\\authenticity\\tests\\wp004b-budget-integrity.test.mjs",
+        "packages\\authenticity\\tests\\wp004b-live-calibration.test.mjs",
+        "packages\\authenticity\\tests\\wp004b-phase-c.test.mjs",
+        "packages\\authenticity\\tests\\wp004b-phase-e.test.mjs",
+        "packages\\authenticity\\tests\\wp004b-phase-g.test.mjs",
+        "packages\\authenticity\\tests\\wp004b-phase-h.test.mjs",
+        "packages\\authenticity\\tests\\wp004b-phase-i.test.mjs",
+        "packages\\authenticity\\tests\\wp004b-phase-j.test.mjs",
+        "packages\\authenticity\\tests\\wp004b.test.mjs",
+        "packages\\authenticity\\tests\\wp005a.test.mjs",
+        "packages\\authenticity\\tests\\wp005b.test.mjs",
+        "packages\\authenticity\\tests\\wp006a.test.mjs",
+        "packages\\authenticity\\tests\\wp006b.test.mjs",
+        "packages\\authenticity\\tests\\wp006c.test.mjs",
+        "packages\\authenticity\\tests\\wp006d.test.mjs",
+        "packages\\authenticity\\tests\\wp006e.test.mjs",
+        "packages\\authenticity\\tests\\wp007a.test.mjs",
+        "packages\\authenticity\\tests\\wp007ah.test.mjs",
+        "packages\\authenticity\\tests\\wp007ahr.test.mjs",
+        "packages\\authenticity\\tests\\wp007ahr2.test.mjs",
+        "packages\\authenticity\\tests\\wp007ahr3.test.mjs",
+        "packages\\authenticity\\tests\\wp007ahr4.test.mjs",
+        "packages\\authenticity\\tests\\wp007d.test.mjs",
+        "packages\\authenticity\\tests\\wp007f-detectors.test.mjs",
+        "packages\\authenticity\\tests\\wp007g.test.mjs",
+        "packages\\authenticity\\tests\\wp007h-safe.test.mjs",
+        "packages\\authenticity\\tests\\wp007i.test.mjs",
+        "packages\\authenticity\\tests\\wp007j-reconnaissance.test.mjs",
+        "packages\\authenticity\\tests\\wp007jr1.test.mjs",
+        "packages\\authenticity\\tests\\wp007k.test.mjs",
+        "packages\\authenticity\\tests\\wp007l.test.mjs",
+        "packages\\authenticity\\tests\\wp007m.test.mjs",
+        "packages\\authenticity\\tests\\wp007n.test.mjs"
+      ],
+      "counts": [
+        "# tests 388",
+        "# pass 388",
+        "# fail 0",
+        "# skipped 0"
+      ],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/authenticity-full.log",
+      "logHash": "f129024e23aa0ae64ef8a69013ec9e72bc477df24379b272863dc47d06e366c8",
+      "seconds": 6.706585884094238
+    },
+    "diff-check": {
+      "checkout": "N",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "e3adbcb3cb2ac0991db231476441d133db3e2cd3"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/diff-check.log",
+      "logHash": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "seconds": 0.08810782432556152
+    },
+    "independent-known-answers": {
+      "checkout": "N",
+      "command": [
+        "C:/Python313/python.exe",
+        "scripts/authenticity/wp007n_independent_audit.py",
+        "--self-test"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/independent-known-answers.log",
+      "logHash": "3441a4a31b1282ff6d8c56305ba5d6d9c87b38f1d07b046763711d10a791c90c",
+      "seconds": 0.10319304466247559
+    },
+    "node-syntax": {
+      "checkout": "N",
+      "command": [
+        "node",
+        "--check",
+        "packages/authenticity/tests/wp007n.test.mjs"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/node-syntax.log",
+      "logHash": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "seconds": 0.04964923858642578
+    },
+    "parent-test-native-architecture": {
+      "checkout": "UNCHANGED_M_PARENT",
+      "command": [
+        "node",
+        "--test-concurrency=2",
+        "--experimental-strip-types",
+        "--experimental-test-module-mocks",
+        "--test",
+        "scripts/tests/native-architecture-invariants.test.js",
+        "scripts/tests/ensure-cloudflare-worker-parent.test.mjs",
+        "scripts/tests/production-release-governance.test.mjs",
+        "scripts/tests/first-admin-bootstrap-activation.test.mjs",
+        "scripts/tests/release-classification.test.mjs",
+        "scripts/tests/component-deployment-plan.test.mjs",
+        "scripts/tests/failure-domains.test.mjs",
+        "scripts/tests/release-state.test.mjs",
+        "scripts/tests/auth-acceptance-provenance.test.mjs",
+        "scripts/tests/exact-release-evidence.test.mjs",
+        "scripts/tests/resolve-release-plan.test.mjs",
+        "scripts/tests/release-manifest.test.mjs",
+        "scripts/tests/release-manifest-workflow.test.js",
+        "scripts/tests/production-release-governance.test.mjs",
+        "scripts/tests/resolve-worker-version-state.test.mjs",
+        "scripts/tests/acceptance-rollback-snapshot.test.mjs",
+        "scripts/tests/scoped-worker-key-lifecycle.test.mjs",
+        "scripts/tests/cloudflare-email-lifecycle-contract.test.mjs",
+        "scripts/tests/collect-auth-acceptance-evidence.test.mjs",
+        "scripts/tests/real-email-acceptance-evidence.test.mjs",
+        "apps/lythaus-auth-acceptance-coordinator/tests/acceptance-contract.test.mjs",
+        "scripts/tests/dependency-review-policy.test.mjs",
+        "packages/contracts/tests/auth-state-and-email-policy.test.mjs",
+        "apps/lythaus-public-api/tests/auth-runtime-policy.test.mjs",
+        "apps/lythaus-public-api/tests/waitlist-handler-invariants.test.mjs",
+        "apps/lythaus-jobs/tests/transactional-email-runtime.test.mjs",
+        "apps/lythaus-admin-api/tests/admin-cors-policy.test.mjs",
+        "apps/lythaus-admin-api/tests/admin-runtime-policy.test.mjs",
+        "apps/lythaus-admin-api/tests/keeper-contract.test.mjs",
+        "apps/lythaus-admin-api/tests/request-body-policy.test.mjs",
+        "apps/lythaus-admin-api/tests/waitlist-handler-invariants.test.mjs",
+        "apps/lythaus-admin-api/tests/waitlist-handler.test.mjs"
+      ],
+      "counts": [
+        "# tests 256",
+        "# pass 255",
+        "# fail 1",
+        "# skipped 0"
+      ],
+      "exitCode": 1,
+      "failures": [
+        "not ok 151 - canonical manifest finalizes VERIFIED or BLOCKED after production smoke"
+      ],
+      "log": "external/wp007n/validation/parent-test-native-architecture.log",
+      "logHash": "2f3f51967d06b0dcab21553afc9291f75305eb168a9a4b2089122a61ccd527d4",
+      "seconds": 4.417344331741333
+    },
+    "parent-validate-no-retired-provider-dependencies": {
+      "checkout": "UNCHANGED_M_PARENT",
+      "command": [
+        "node",
+        "scripts/validate-no-retired-provider-dependencies.mjs"
+      ],
+      "counts": [],
+      "exitCode": 1,
+      "failures": [],
+      "log": "external/wp007n/validation/parent-validate-no-retired-provider-dependencies.log",
+      "logHash": "606ede6b78079328be03a38b2e761dbcdc6be387fde4ee06a56b09fa9ccd42fc",
+      "seconds": 1.4197731018066406
+    },
+    "python-N": {
+      "checkout": "N",
+      "command": [
+        "C:/Python313/python.exe",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts/authenticity",
+        "-p",
+        "test_wp007n*.py"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/python-N.log",
+      "logHash": "43034db9ad3418725a5cb513fd318818480462e27f4e26a665adbb7770701651",
+      "seconds": 4.914679288864136
+    },
+    "test-native-architecture": {
+      "checkout": "N",
+      "command": [
+        "node",
+        "--test-concurrency=2",
+        "--experimental-strip-types",
+        "--experimental-test-module-mocks",
+        "--test",
+        "scripts/tests/native-architecture-invariants.test.js",
+        "scripts/tests/ensure-cloudflare-worker-parent.test.mjs",
+        "scripts/tests/production-release-governance.test.mjs",
+        "scripts/tests/first-admin-bootstrap-activation.test.mjs",
+        "scripts/tests/release-classification.test.mjs",
+        "scripts/tests/component-deployment-plan.test.mjs",
+        "scripts/tests/failure-domains.test.mjs",
+        "scripts/tests/release-state.test.mjs",
+        "scripts/tests/auth-acceptance-provenance.test.mjs",
+        "scripts/tests/exact-release-evidence.test.mjs",
+        "scripts/tests/resolve-release-plan.test.mjs",
+        "scripts/tests/release-manifest.test.mjs",
+        "scripts/tests/release-manifest-workflow.test.js",
+        "scripts/tests/production-release-governance.test.mjs",
+        "scripts/tests/resolve-worker-version-state.test.mjs",
+        "scripts/tests/acceptance-rollback-snapshot.test.mjs",
+        "scripts/tests/scoped-worker-key-lifecycle.test.mjs",
+        "scripts/tests/cloudflare-email-lifecycle-contract.test.mjs",
+        "scripts/tests/collect-auth-acceptance-evidence.test.mjs",
+        "scripts/tests/real-email-acceptance-evidence.test.mjs",
+        "apps/lythaus-auth-acceptance-coordinator/tests/acceptance-contract.test.mjs",
+        "scripts/tests/dependency-review-policy.test.mjs",
+        "packages/contracts/tests/auth-state-and-email-policy.test.mjs",
+        "apps/lythaus-public-api/tests/auth-runtime-policy.test.mjs",
+        "apps/lythaus-public-api/tests/waitlist-handler-invariants.test.mjs",
+        "apps/lythaus-jobs/tests/transactional-email-runtime.test.mjs",
+        "apps/lythaus-admin-api/tests/admin-cors-policy.test.mjs",
+        "apps/lythaus-admin-api/tests/admin-runtime-policy.test.mjs",
+        "apps/lythaus-admin-api/tests/keeper-contract.test.mjs",
+        "apps/lythaus-admin-api/tests/request-body-policy.test.mjs",
+        "apps/lythaus-admin-api/tests/waitlist-handler-invariants.test.mjs",
+        "apps/lythaus-admin-api/tests/waitlist-handler.test.mjs"
+      ],
+      "counts": [
+        "# tests 256",
+        "# pass 255",
+        "# fail 1",
+        "# skipped 0"
+      ],
+      "exitCode": 1,
+      "failures": [
+        "not ok 151 - canonical manifest finalizes VERIFIED or BLOCKED after production smoke"
+      ],
+      "log": "external/wp007n/validation/test-native-architecture.log",
+      "logHash": "95bc835381a1d0988e069361e9c8585c83dae5e36c46cbe9160a24414883b5e9",
+      "seconds": 4.3777244091033936
+    },
+    "test_wp007e_policies.py": {
+      "checkout": "N",
+      "command": [
+        "C:/Python313/python.exe",
+        "scripts/authenticity/test_wp007e_policies.py"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/test_wp007e_policies.py.log",
+      "logHash": "9f4a0b46517d627b472c2517a76d97d97a180ded2f413ba38711e21a8a456875",
+      "seconds": 1.5360841751098633
+    },
+    "test_wp007m_probe.py": {
+      "checkout": "N",
+      "command": [
+        "C:/Python313/python.exe",
+        "scripts/authenticity/test_wp007m_probe.py"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/test_wp007m_probe.py.log",
+      "logHash": "023dc30fa6e1a8b71944fae4ac114e63a9d6751b96ba877077fd7c92b7948e92",
+      "seconds": 1.5776245594024658
+    },
+    "typecheck-native": {
+      "checkout": "N",
+      "command": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.native.json",
+        "--noEmit"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/typecheck-native.log",
+      "logHash": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "seconds": 3.144563674926758
+    },
+    "validate-native-scope": {
+      "checkout": "N",
+      "command": [
+        "node",
+        "scripts/validate-native-scope.mjs"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/validate-native-scope.log",
+      "logHash": "7ae7abc1f454a12a21bbc8ffe3da8abba03933494b727577e39abdbf5639a803",
+      "seconds": 0.06395840644836426
+    },
+    "validate-no-retired-provider-dependencies": {
+      "checkout": "N",
+      "command": [
+        "node",
+        "scripts/validate-no-retired-provider-dependencies.mjs"
+      ],
+      "counts": [],
+      "exitCode": 1,
+      "failures": [],
+      "log": "external/wp007n/validation/validate-no-retired-provider-dependencies.log",
+      "logHash": "606ede6b78079328be03a38b2e761dbcdc6be387fde4ee06a56b09fa9ccd42fc",
+      "seconds": 1.474621295928955
+    },
+    "validate-workflow-action-pins": {
+      "checkout": "N",
+      "command": [
+        "node",
+        "scripts/validate-workflow-action-pins.mjs"
+      ],
+      "counts": [],
+      "exitCode": 0,
+      "failures": [],
+      "log": "external/wp007n/validation/validate-workflow-action-pins.log",
+      "logHash": "e8dcd159e940abdcff65ba433e48a9a59192b6f5971486699f906fc0a947f673",
+      "seconds": 0.08221650123596191
+    }
+  },
+  "dependencyHydration": "Reused locked L node_modules root junction; checkout-local workspace package links; unchanged package-lock; no new repository dependencies. Transient missing-link failures preserved in validation-runtime-recovery.md",
+  "parent": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+  "privacySecrets": {
+    "flags": [],
+    "pass": true
+  },
+  "status": "COMPLETED_WITH_EXPLICIT_RESULTS"
+}

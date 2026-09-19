@@ -1,0 +1,18 @@
+{
+  "schemaVersion":"wp007m-pr-delivery-v1",
+  "url":"https://github.com/AsoraKK/Lythaus/pull/854",
+  "number":854,
+  "stateAtCreationVerification":"OPEN",
+  "mergedAt":null,
+  "baseBranch":"agent/wp007l-forensic-tool-forge",
+  "parentSha":"63d5daf05243673ad65f2b59dbdb81e94290180b",
+  "parentPr":853,
+  "parentState":"OPEN_UNMERGED",
+  "branch":"agent/wp007m-independent-discovery",
+  "headAtCreationVerification":"e116d84f3796f06fb954c27785f0363171ff5291",
+  "finalHeadRecord":"Exact final head is populated in the GitHub PR body after the delivery-audit commit; this file does not pretend to hash its own containing commit",
+  "scientificDisposition":"NO_GENERALIZABLE_INCREMENTAL_EVIDENCE_FOUND_FOR_FROZEN_RULE",
+  "scope":"Research scripts, tests, sanitized WP007M artifacts and narrowly scoped line-ending attributes only",
+  "autoMergeRequested":false,
+  "productionAuthorization":"NO"
+}

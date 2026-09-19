@@ -1,0 +1,428 @@
+{
+  "conditions": [
+    "ORIGINAL",
+    "JPEG95",
+    "RESIZE75"
+  ],
+  "createdUnix": 1789822002.854901,
+  "freezeHash": "8601716ce6ff46d6a2e6506b73c793cb3f15045ad7e25ac59909daea6b7a149b",
+  "role": "DIAGNOSTIC_ONLY_NO_TUNING",
+  "rows": [
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_1_02.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_02",
+      "sha256": "361d67dc2dc82bdaeeeea511f3be1c479551f0a6205b1e2a1eb16c366f1ee8cb",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_1_03.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_03",
+      "sha256": "64646d65913801f6de8b1b30a637d1b208a70330e68b36586db5eeb1abb49bbe",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_1_07.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_07",
+      "sha256": "fa3020ab73a9b96d1d24217df6837dcc7efff5c3723767acad4c0927ba933c2a",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_1_08.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_08",
+      "sha256": "280ff1f9ad98ca59604ab1963334f888682260e1c9119c8d8c2210106877a1ce",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_1_10.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_1_10",
+      "sha256": "d5a6d4098ddcfc4818b21d9fcb29e9282f662f1d636d1cd6ecf7f3288f7ee153",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_3_02.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_3_02",
+      "sha256": "f1d502fdd06f78ae8be52b25d1da6246db09a9b557c14a9bcdadf7a4a0ea3669",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_3_03.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_3_03",
+      "sha256": "bd33bd94629d5d7c08b8bb69e18527c532cd54eaac1fa8fc859e18efe5e1eb2e",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_3_06.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_3_06",
+      "sha256": "766f89fc3a67dd689139724f6634239255d6df4adba430653eae3e767fdaee4a",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone11_3_07.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone11_3_07",
+      "sha256": "5ec1a92cfc5dd47b762b998edfd0a6047e98badd6f06683d994b6cc3acb82470",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone11_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_1_02.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_1_02",
+      "sha256": "6dcecf52d2120d29c7b7232888106490eadce8390e2ba375ef8fa16fe3e6bf05",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_1_03.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_1_03",
+      "sha256": "699889b0a7bfc0fe2e4e4d8be68d41a9100ce45f4732478209712cb4c5815c2f",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_1_05.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_1_05",
+      "sha256": "c4a34d60e3003c65715b43d3bc783dae485f0462347559c694ba208c8040da9e",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_1_08.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_1_08",
+      "sha256": "865f57c97d4060c817a4943037907fb7df6caaa0c03aeedd0861a30b52854dc2",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_3_01.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_01",
+      "sha256": "5d6ae870026e7aeb850d585333e8350158a092adabaaa242d17791e7532ab10e",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_3_03.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_03",
+      "sha256": "942ad46fd50d48bfdae621e1bafefce6b67d054dca29d4ec5822041ffeba502a",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_3_04.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_04",
+      "sha256": "4321a43019715380a2fd89f931c3bc90ad5ee5cde9ed2eb4a847cb9978aa636f",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_3_06.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_06",
+      "sha256": "2c58c7134cf51319ea95bd7777b42ba6800658de1515008bb4c51c5510209ddc",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone12_3_09.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone12_3_09",
+      "sha256": "457a7c1396dc8baa619ce8074974ba03fe242422831fc31462442b3b6614a64c",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone12_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_1_02.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_1_02",
+      "sha256": "aebe9b9e56a119972923655efe0e1c7a7b5d3fa0c7fcc24116436c278ae513db",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_1_04.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_1_04",
+      "sha256": "4d5380408988c03b9630f686a23f5ae859a01f9acc521feab219fb6336cae364",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_1_09.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_1_09",
+      "sha256": "608fdf60bac140d8a8666b31b1c165fed65a0b36ae4e449246457983b6412f2a",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_1_12.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_1_12",
+      "sha256": "c0008cb45020b87ea6384c968289ef292610da6d8c94abeaef66254ced861422",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_3_04.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_04",
+      "sha256": "5dd39deb182b574ed945a2151e3ba2b5a3c02a6c5e35ec2bc63b8335383f4d4b",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_3_07.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_07",
+      "sha256": "8f992ecd4e9db2444c078f1ee3e2969097731fa0f60d108f1786bfa940af0562",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_3_08.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_08",
+      "sha256": "15ab86cb09f5dd33e19a69d2fd6d512c532ef2683cb122a8f9b224832b79226b",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_3_10.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_10",
+      "sha256": "bfcedfd43230666c6b2ede159ee3c751696860e4f024be5dc4fda056d8b3c049",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_iPhone14_3_11.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_iPhone14_3_11",
+      "sha256": "a736c6b948c536c90d297c7665fa0328186a74940e3f72c2729edd7bb8678410",
+      "sourceFamilyId": "CSAFE_DEVICE__iPhone14_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_1_01.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_01",
+      "sha256": "9f07266cf96d0714717a545b46b98f12cfb45352dcba4bfe6a0d0b07edc6adb9",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_1_06.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_06",
+      "sha256": "15a47065cba78e70efcda52921d605b912410b3076b0c89f0d2fd380f7b70546",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_1_08.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_08",
+      "sha256": "4ce2e49e22b3715b5f9fb80a93c43ca28dfaf50449d077fe0c3c97d26e4b4959",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_1_09.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_09",
+      "sha256": "953f993cf1e055db801f049882ae22568ab9ece5581c954f8ccca74066b99bda",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_1_11.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_1_11",
+      "sha256": "60b3de15cd51564b96f2dcdd699eb9b5d5ceb4c6d6d6a8a29f9556126a49ce9d",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_1"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_3_02.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_3_02",
+      "sha256": "35c195c2185eba902d0df6788ca6d16b21e3e03df2f661dc3c001edce022d887",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_3_04.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_3_04",
+      "sha256": "ab1d0065f775f6baf2ae5e9b597abfe8d61dfb20f926f765b2271c862538ed3e",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_3_05.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_3_05",
+      "sha256": "c302265a556aae7b05b666d703ab0e8faff9ed12ba2406302ca8ef2cbdd20069",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_3"
+    },
+    {
+      "group": "CSAFE_CONSUMED",
+      "relativePath": "originals/development/CAMERA_DEV__CSAFE_WP006E_note10_3_07.jpg",
+      "rights": "INHERITED_CSAFE_CC_BY_4_EVALUATION",
+      "root": "camera",
+      "sampleId": "CAMERA_DEV__CSAFE_WP006E_note10_3_07",
+      "sha256": "acbb1a53d45f934b2de0684af71d6d861e63819ce370652e83bedc280cdc9843",
+      "sourceFamilyId": "CSAFE_DEVICE__note10_3"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_001.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_001",
+      "sha256": "77be968a1b3f12ac3c11fa9b1d559c8ad9958a08a0cb0a80305b1a2b6152da32",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_002.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_002",
+      "sha256": "6f2d964ccbb9901cc1d1c09919573357787df277dd51ae3a20dee8b8553a5470",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_003.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_003",
+      "sha256": "59c2ca175577612caa243a667596ddaef5994cb8ace904cafbdb3a07e24cda5f",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_004.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_004",
+      "sha256": "1e05e9c865a418d1abed7c0c0eb43560f09c08c86aacef86dcfdb33c9390bd43",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_005.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_005",
+      "sha256": "c191f1c3cc362ad22ec847cd8875bc83a894b2b1bd9c5769c70f0fa495981b0a",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_011.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_011",
+      "sha256": "31957a1514c43377e3f82e502265c24436b371f24279913830d11a58825a5586",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_012.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_012",
+      "sha256": "9df81d60b87d0e9d67ee4f85c4f7b5ecc80e0433ae0ef7bedafcf99abb4cee69",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_013.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_013",
+      "sha256": "4f337df0a3aa317845759537a07a4ea9a36dd3b0c62a4c5c9db72456098707cf",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_014.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_014",
+      "sha256": "eac202912be6ed69adae76e648b4784f341dc66ed8d7817caab85426ba92ed8d",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    },
+    {
+      "group": "CLOUDFLARE_FLUX1_CONSUMED",
+      "relativePath": "WP007AH_FLUX_1_SCHNELL_PROMPT_015.jpg",
+      "rights": "INHERITED_ALREADY_CONSUMED_RESEARCH_EVALUATION",
+      "root": "flux",
+      "sampleId": "WP007AH_FLUX_1_SCHNELL_PROMPT_015",
+      "sha256": "20380f7a5ceb7286e3e97c21d826c33a7ec99a51e26e156b2a3bff6b0e15ea23",
+      "sourceFamilyId": "CLOUDFLARE_FLUX1_FLUX1"
+    }
+  ],
+  "ruleHash": "df617e4b2fb7a7c9c6ed427c53c780b3bf92f73e7cc1dea64c814093c55bc237",
+  "selection": "All36 consumed L development CSAFE originals; first10 registered consumed CloudflareFLUX1 IDs; no feature or SAFE-score selection"
+}

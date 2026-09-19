@@ -1,0 +1,22 @@
+{
+  "featureMs": {
+    "max": 412.0513000525534,
+    "p50": 35.25694998097606,
+    "p95": 104.3531000264919
+  },
+  "runArtifacts": [
+    "discovery-run.json",
+    "heldout-run.json"
+  ],
+  "safeMs": {
+    "max": 755.3190999897197,
+    "p50": 61.355499958153814,
+    "p95": 183.01366501545994
+  },
+  "scope": "featureMs includes candidate, null AND all K baseline FFT/DCT features; total includes encoder path and Sharp process startup, not source full decode",
+  "totalMs": {
+    "max": 2016.7092999909073,
+    "p50": 104.44804996950552,
+    "p95": 316.09047497040575
+  }
+}

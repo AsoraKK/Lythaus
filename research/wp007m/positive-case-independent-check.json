@@ -1,0 +1,75 @@
+{
+  "cases": [
+    {
+      "condition": "RESIZE75",
+      "generatorFamily": null,
+      "independent": 0.3551070336491679,
+      "independentHigh": true,
+      "kind": "PHOTO",
+      "main": 0.36631618382102504,
+      "mainHigh": true,
+      "sampleId": "UNSPLASH_bqcYWuLOtUI"
+    },
+    {
+      "condition": "ORIGINAL",
+      "generatorFamily": "Seedream-4",
+      "independent": 0.4403222253334281,
+      "independentHigh": true,
+      "kind": "SYNTHETIC",
+      "main": 0.44119958344010446,
+      "mainHigh": true,
+      "sampleId": "Seedream-4__R-GR-024-2"
+    },
+    {
+      "condition": "JPEG95",
+      "generatorFamily": "Seedream-4",
+      "independent": 0.4288469299162019,
+      "independentHigh": true,
+      "kind": "SYNTHETIC",
+      "main": 0.4302123074773547,
+      "mainHigh": true,
+      "sampleId": "Seedream-4__R-GR-024-2"
+    },
+    {
+      "condition": "JPEG85",
+      "generatorFamily": "Seedream-4",
+      "independent": 0.4807624793084112,
+      "independentHigh": true,
+      "kind": "SYNTHETIC",
+      "main": 0.4819035472688026,
+      "mainHigh": true,
+      "sampleId": "Seedream-4__R-GR-024-2"
+    },
+    {
+      "condition": "SHARP95",
+      "generatorFamily": "Seedream-4",
+      "independent": 0.4288469299162019,
+      "independentHigh": true,
+      "kind": "SYNTHETIC",
+      "main": 0.4302123074773547,
+      "mainHigh": true,
+      "sampleId": "Seedream-4__R-GR-024-2"
+    },
+    {
+      "condition": "PNG_STRIP",
+      "generatorFamily": "Seedream-4",
+      "independent": 0.4403222253334281,
+      "independentHigh": true,
+      "kind": "SYNTHETIC",
+      "main": 0.44119958344010446,
+      "mainHigh": true,
+      "sampleId": "Seedream-4__R-GR-024-2"
+    }
+  ],
+  "codeHash": "018e34c1a92fdd0af13e47fb884be6ea6f33cc2429450905f771c3eb03456fe6",
+  "decisionDisagreements": 0,
+  "hypothesisAdjusted": false,
+  "memoryScope": "Six real case reproductions including independent PyWavelets/scipy and baseline imports; excludes SAFE torch process and not a full-corpus maximum",
+  "processPeakWorkingSetBytes": 184311808,
+  "safeHistoricalComparison": {
+    "maxAbsoluteScoreDelta": 2.384185791015625e-06,
+    "n": 248,
+    "thresholdDecisionChanges": 0
+  },
+  "thresholdUnchanged": true
+}

@@ -1,0 +1,268 @@
+{
+  "batchScope": "Two-image validation only; scientific batching remains one;4 image-forwards charged",
+  "cleanBatchMaxAbs": 0.0,
+  "codeHash": "1c2972b6284c6a53558cabf4d61f6c61a43d24b629b9ab266531e8cc143958ba",
+  "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+  "coreCodeHash": "db651c2548950842d64a30f1ceb9d3c457f0274549077a9c3590f9113811260c",
+  "executionSignature": "a26133e49c333f2113cdecd364904e548f5da57010c84b6c02afd3220c6823fd",
+  "extractCodeHash": "d2dfecb6db05e5ccb70e4de57c6a045848333885d7df099142ebda886678454e",
+  "initialCompletedPass": "run-A.json first run:196 charged forwards,44 FIT/DEV/CAL parents,473.633seconds, no failures or interruption",
+  "legacySourceLocation": "external/wp007n/legacy-sources",
+  "parents": {
+    "CSAFE_WP006E_iPhone11_1_03": {
+      "arraySha256": "4c453dc509cafa0ed54f0b2769418439343fb692e75c96bf510605b36ea5dddc",
+      "metadataFile": "23fdf73dc5e284477c33ff307535733a599df407b1121f175a6cc85670473a84.json",
+      "metadataSha256": "3aa04ea12baf796377dd37460ef0d7054bc99d4fd924e6d6786c345813fb7928"
+    },
+    "CSAFE_WP006E_iPhone11_1_06": {
+      "arraySha256": "b8a3f9dc5fb1b009937390f95681112fc131673d1aa7b19f0952dbf245299b5c",
+      "metadataFile": "5f802d87bed88a1ff10050e641397d10dc00e0f259a033a6d84ef302f60ce442.json",
+      "metadataSha256": "5dea083eb16225cefc5912e498c4f256ad637e6bfe13e72d6ddce66a5a4e21a9"
+    },
+    "CSAFE_WP006E_iPhone11_1_07": {
+      "arraySha256": "34ff7a75965e1925f7fdc010158768f1b34e771f98d0db0eb0b940b5365c6715",
+      "metadataFile": "c9ecb2f03ed7a32c7c29c1799042e07e8b9ef1171e48fc3ff054c2ac7d3b490f.json",
+      "metadataSha256": "7b56595e7a15672a9b713ab4ecff95f1456dff705cb64073959d5ff3f56261e9"
+    },
+    "CSAFE_WP006E_iPhone11_1_10": {
+      "arraySha256": "dfe2ede1a73065097b0385cb0daa002948e2b69ae86229e7911bf8544e3cc25d",
+      "metadataFile": "30806938ced0e33f70e6b63be7243df7177c981b5de60fb25d469c7e2090f53b.json",
+      "metadataSha256": "ce9828c5458416c5e1e0f410b8e38e25e1db61efb3f7d6be90b158710ddf8b95"
+    },
+    "CSAFE_WP006E_iPhone12_1_03": {
+      "arraySha256": "fa0c5c1fe91556a21e6d32742c1d6fa0447b01fad617d9ca43de9f3344fb7f4b",
+      "metadataFile": "59c6f581542a3efb931f66c8a638dfaa208e376233640732594db0fcea94e23b.json",
+      "metadataSha256": "ba2f6ec17cafebc5e49c69edc6bbf72f631c407be439b943e581b43a39e5ae62"
+    },
+    "CSAFE_WP006E_iPhone12_1_05": {
+      "arraySha256": "e3546a2f763ac0581a00bfae1ba700d0adcb75cecc20419566c615b673dec5e0",
+      "metadataFile": "7175c5d1e93429d20c57330f8887accfcc1b1ee94c6bd88ad9dc51bb439d48d8.json",
+      "metadataSha256": "d9455096eeeacc8fd1e7ac552c60c71d8bfd4ac7f52b29e2c3f9a9628a827a59"
+    },
+    "CSAFE_WP006E_iPhone12_1_08": {
+      "arraySha256": "30b2fc274df396405ace72e2c3c5a49bdcd46aa2abc1f42c7d58f420a2d56362",
+      "metadataFile": "5934fcbaa73f4fc96e514976c700be054aa30256e7167316ddd303686accd4a1.json",
+      "metadataSha256": "24402b76b3556116f4209d200f7e2ca927a17ff386eecc7b5d02dc1cf4196b64"
+    },
+    "CSAFE_WP006E_iPhone14_1_01": {
+      "arraySha256": "4b06e6a8a892cd5dc00bc4a54d3efda8270cfdc20f5a1589959e2b0a87641beb",
+      "metadataFile": "ea7fd75e9ccd5037c7d573b6298cc42889bf91233ff42614c2366c4ced221b84.json",
+      "metadataSha256": "7ab576d121a475c8aaeefd2866dd5fb4ab2a20be4f2261a019ff271884e3cb86"
+    },
+    "CSAFE_WP006E_iPhone14_1_04": {
+      "arraySha256": "fac9d4951449beaf4a4695082225f66c7a10fe17669de7ee9e008bfb928ce6d3",
+      "metadataFile": "f0ac157f4c037032961fb6a320eeb7b620e221ae26491ef4c9f045b77a6c2509.json",
+      "metadataSha256": "ceeeb1c5a8a35ba0d52f6be259ad1913f75d97012dc72b3e245b165afb5c72e3"
+    },
+    "CSAFE_WP006E_iPhone14_1_05": {
+      "arraySha256": "445f1a992f9188d8a796049a499c04e05f8d746282e705360004c943e4d47f16",
+      "metadataFile": "48137b0aa5b70983af66df54788e5de43519c54f3e3a91d85927aa37e9427ba2.json",
+      "metadataSha256": "8659b2f6a94fe07796a570583657de0199bfc12c0d147f6471e82d9bb4fb3db2"
+    },
+    "CSAFE_WP006E_iPhone14_1_09": {
+      "arraySha256": "a1128a36a096305d7f2b0446ec7d116db59cc525139359c90634b5a06501ad2c",
+      "metadataFile": "64780b37c5c2cbc6ea4c4d1caf61f8da7d85f8f56c75e4d04a2a3dd41ab8dbec.json",
+      "metadataSha256": "4176e487b913fdbb10e53b7ce8e385002f0e044c6050881a5f77e88583e42ab2"
+    },
+    "CSAFE_WP006E_iPhone14_3_03": {
+      "arraySha256": "83e139b25d5d731379df68dd62881555e4e592829289f1595f679cea7258aa6a",
+      "metadataFile": "ddadb68f33ea15ad4ef78b9faad56ecf7f1eb8df853ed8e90545ee18cc8d22ad.json",
+      "metadataSha256": "848c853d17bb894a18f54af73a0b87086d0ce62ecaa1c712201bf21f0ea1620d"
+    },
+    "CSAFE_WP006E_iPhone14_3_06": {
+      "arraySha256": "a8e2a40a5ee8ddd61a9dd2de1c088b8a9cc0a6b8c623a5ae96dc8d7047b421a6",
+      "metadataFile": "efe89f83dc8c8aaae253ed8751e239ed3affdc5900137d037db7784e27760850.json",
+      "metadataSha256": "fc9d2812e6492bedc95e0c8b3c0701768afa89aa9c88ff1ef944c6b88036edbd"
+    },
+    "CSAFE_WP006E_iPhone14_3_08": {
+      "arraySha256": "04726b563a8f852793163fb89e017c016ef26ca6e9278bd2056ebeffc58d61cf",
+      "metadataFile": "87fcad02702477bcd0f755f56f4ad94adab6f3fb196c70b3e755e85380866de4.json",
+      "metadataSha256": "9fbe82aff3914885126312dc85b12782cebefa3ae0d3caad91ff21c231a0e1a7"
+    },
+    "CSAFE_WP006E_note10_1_01": {
+      "arraySha256": "6303308b19dc04d0ee02c8a6777f32c026f60835c799a1d21e2a51f30045e4f3",
+      "metadataFile": "be001b556761ffff46fd939225918420f24e51250097fec845b82dd6e40e462c.json",
+      "metadataSha256": "f51335f12c27daa558b831b89b968a154ffe20e77c5dad1b43e972fe81d9726a"
+    },
+    "CSAFE_WP006E_note10_1_05": {
+      "arraySha256": "d76306fa9dff08342a0c05330d7d8ef806317b0d4c73d7f8087c992b3de3e6ff",
+      "metadataFile": "47d44065f26bba11e652372b5b83aa09bfc5b3e5949fce9e3ae588a3d7f596d3.json",
+      "metadataSha256": "6e68a96db1b2badf132961f632d77b2190449d7ac297c17328c34d366e648d27"
+    },
+    "CSAFE_WP006E_note10_3_01": {
+      "arraySha256": "6041928bff854da0ac2e1392ee91ebb8a103b2c9aef00cbdc8c009d20862df0e",
+      "metadataFile": "c8c638f54302c9131b2b80b37e337399893437090ab41b0770597764f2c41543.json",
+      "metadataSha256": "f8bd112cf76a1a41c13b7407db3bcb010c6904c001229c162eca6aaae77b79e8"
+    },
+    "CSAFE_WP006E_note10_3_03": {
+      "arraySha256": "ea8336d505226d0330c08f6707a2d3b45c147ff331d20cffcde7b21165756624",
+      "metadataFile": "3ab9f109b744a5251ddfe5d687506132380ccef76c0ad2f7a759644cfe1aadf0.json",
+      "metadataSha256": "ced8ff3098fbbe010cc51bc5523940d149e791c10cabe412290b2bfb33f17c8f"
+    },
+    "CSAFE_WP006E_note10_3_06": {
+      "arraySha256": "f87186811a43908dd94e24850bb5da04e46b6a7fc380fb297915305e552a869c",
+      "metadataFile": "2e47196835124ae76f2ce8717f2f49f7ed9bcaa09330dfdcb946433a8dbbfcf9.json",
+      "metadataSha256": "7f4c5d4d1d9e49b569ec5c53a44a3d5c382324873b27b7de6d62748a331e2240"
+    },
+    "CSAFE_WP006E_s21_1_01": {
+      "arraySha256": "ec3d76ef4578ecb14f83baedf2d170c2fb1175be2cc69a2cc77e56a98b76198f",
+      "metadataFile": "4b66c78742a9d98c4b95188aead93f9f788c300042368540c366b9f3852070ae.json",
+      "metadataSha256": "873b669243c9aa872360ac8c024a9bd7556865c3c8dc6bff38f7bfae18b3b1da"
+    },
+    "CSAFE_WP006E_s21_1_05": {
+      "arraySha256": "73d3e1063d6319ebe3141324d9e56fab4d50b7fb20247ed289648655bc896573",
+      "metadataFile": "ad18262d8497a5f824799b98885be6e9c8442db08e55e76711cade1569c9b43c.json",
+      "metadataSha256": "8d7160083dfc745949d64fcab07fa45af939c7b56ab72b5b99f4efc20ceceedc"
+    },
+    "CSAFE_WP006E_s21_1_07": {
+      "arraySha256": "0829646c1d9a5adf4f5d4161c772cbed27edb673d15dd35397bfa87d1d44a9c0",
+      "metadataFile": "fd83ec58210c315d05de510ca033a73ff6b57e8be3af7a02e8a556fd9a98bd7f.json",
+      "metadataSha256": "ffa66fd4df073a0055ba482f8847976ff3037df1bafa5bd089d3e5e9fb74bf1d"
+    },
+    "CSAFE_WP006E_s21_3_01": {
+      "arraySha256": "606649c18b9afc8ae53c97f7ea8b0040fe181ef833a36e64b3060b9a04db5aed",
+      "metadataFile": "e07754dba03df42668c49198a5139265bb8a11c8da90e5c285f695335c2dda78.json",
+      "metadataSha256": "962956ff16ba891f7ff906f448b1288b7cf0eb13d1dbdc9afa35c090e2988b67"
+    },
+    "CSAFE_WP006E_s21_3_03": {
+      "arraySha256": "7e7659175ecd8272385d27e08087d90dbdf6d072714fa6deb3c7edb5f041f9ec",
+      "metadataFile": "86f5c884cc409956d240f161c127c2c15640cdb922b50498a897d2626a9e3c1d.json",
+      "metadataSha256": "8f12f22bdf1b3bfb3c36e6bd852d175ba08ebccca4a4ba22c3c5c4a3d8620409"
+    },
+    "CSAFE_WP006E_s21_3_04": {
+      "arraySha256": "5dffe4610118ba997e10cc2969eb90b08f20acd21703c4eb5475037629a0cbb8",
+      "metadataFile": "8cd013666492d49bf491070d87e697d2afdcf781e1371ba264695ba78d2250c2.json",
+      "metadataSha256": "6682e222923bfb5639d89be8b0a6e70b7b69105887bca38c66347608a21a802a"
+    },
+    "CSAFE_WP006E_s21_3_06": {
+      "arraySha256": "8244d3e265d5c01c73dbd126f3e61c9c97fe4abb57a390c6785857a3aaacaaf2",
+      "metadataFile": "f9faf9aa0d5dc3f8671e3eb712a35a86e16e0fa28b6719acfe320b04cb326896.json",
+      "metadataSha256": "7db8fce30fb3c38d09bf57b1f0ffa314c052a3cb4858d5845de23b72ea01d148"
+    },
+    "DDB_0001": {
+      "arraySha256": "c50bf788a54824e7bca83a1f4f659a871a43b1f433ccfbe29b12ffba783f2eb6",
+      "metadataFile": "705b39bdf28df0445e83554e06e70da522807c9624d751f472e84b86c9ad06c4.json",
+      "metadataSha256": "1e70f0b119005901efdf72f27f4825aefbfefb2f50f119332955dc6432209211"
+    },
+    "DDB_0011": {
+      "arraySha256": "747ead4a09efe5f534658bcf48a93bf0d5de6048dd4ec1e2c913f6806badf39f",
+      "metadataFile": "049dcafc66e429581f1af14fb1d2db2bf04d50d375b1aedd7ff1a32eabbd1194.json",
+      "metadataSha256": "d80b1797428ec999e14ce5334ed96c2fb2028c27319adc2df59ff3966514ec24"
+    },
+    "DDB_0024": {
+      "arraySha256": "8870b77a5d537b63d9e8e6706fe66626bfebe15a75d5fba274965414d04373cd",
+      "metadataFile": "b7e422d2cfd5f656fbf70a901d80ac826685d87c078b5763bbfb00814fe0bbdc.json",
+      "metadataSha256": "36bf20b45cf49d90c74631c832d75afbe8e82f977e956dedd79c00003c457433"
+    },
+    "DDB_0037": {
+      "arraySha256": "511858dd0cf08a9ba1193e86011a13ca497123aaaa8d73d8166a674744de0c7c",
+      "metadataFile": "bcb94f1d1f390a1e353513f29fde9bdf9a9f854d6f9921aadd6244a217577594.json",
+      "metadataSha256": "15874d6442da0b07145c07b596cceb1a5648028144625331d9ac6771e9f74a51"
+    },
+    "DDB_0044": {
+      "arraySha256": "e57c6c3ece13b40bc25dc2702d1b86f5a2203c5c5d44a97be89aed4dc83959e2",
+      "metadataFile": "6455fdf549a849331e97862fcf0b236122a2d3e76f743cc2646947b9d5da0266.json",
+      "metadataSha256": "64c831d0f15ad3d10e9078df25826290ebc2a7a34d2a700ea1fc768cbaecf9de"
+    },
+    "DDB_0053": {
+      "arraySha256": "31e25a89746aa84e261fb288d02cb6611f1322697cd27aab3e8d6c360380c001",
+      "metadataFile": "fdb52c6cc5c2c95aa3972a8e622851098a17f854f761fe2b36373a44dea6df76.json",
+      "metadataSha256": "970ae76cde111e797b56ad3278d7d42c14a807a7cc3b72347a3ce5c27d05b405"
+    },
+    "DDB_0054": {
+      "arraySha256": "b9a706e720bedefa85ce577a0ce554371bbc301f005d619fdfdf299c821ddd15",
+      "metadataFile": "74cdf7f20d118fc9653af586754778c5c51101f47689bbfeb693eb6eba4f57dc.json",
+      "metadataSha256": "3ce6ea54e2452e11d5318ae465fe74a0bf20b0a9157c1101d842097e9648e8f2"
+    },
+    "DDB_0066": {
+      "arraySha256": "d6b195acf39400066397eb7b10f3b61d6bfbabaaeeb55a6095cdb2da9e01ee6d",
+      "metadataFile": "4a74aab25d57136b58443c20414dc059b7e472efe82160358d0bac6963e26508.json",
+      "metadataSha256": "1e7c94ccee849fd56218d4b62dd4fd253f48478de95ccc96925355080fca1d11"
+    },
+    "DDB_0072": {
+      "arraySha256": "d7181c1da9a64b2beb603c9a9867d648e1107d927f1f20d1c2466c6c8b1be4f4",
+      "metadataFile": "72213f4fed5191612c39c81fc9ffc4c45c4ac973bbfa7ee4c427067c79d7773b.json",
+      "metadataSha256": "e17d6bd31741411ade6275932eefde1d96da74baba041a4baea4546ba88b65c6"
+    },
+    "DDB_0074": {
+      "arraySha256": "5aea8907ae168619ee02a3e0f44204e868c1ce0494e529ed05a32c3464f4296a",
+      "metadataFile": "bd7097b9b2753121236f75eb20ac6905224d365231f9324ae881ff66b3731313.json",
+      "metadataSha256": "da8a1e6b4a3009da8aada181c258b14333ddac5250f316a5698d2292d03b007f"
+    },
+    "DDB_0081": {
+      "arraySha256": "378bed181319a216696b8a6adfa63356177d1cff149c9f5022370bade4876457",
+      "metadataFile": "1a088c5c76720120cc0fe5525ba0ad2de1dae1093e8baab5fb4d28994f98b8d8.json",
+      "metadataSha256": "4d2afe6b6b06a54dd29c8214ade3efa7c8cd99541899cac782b2d2d369998c33"
+    },
+    "DDB_0088": {
+      "arraySha256": "5c2c2c09b90b8fc49ba82a88bcee98076adc451a90c23a284f2f4cbe00ddfbb8",
+      "metadataFile": "eb3189862ce719ba505b2659f4b5142358b9ccfab2171a5bc9092885f2f410e2.json",
+      "metadataSha256": "3c78df548d690ab4e2c0d5f14c4c9b523ff00ca416246cb0660eecca3995dd6c"
+    },
+    "DDB_0093": {
+      "arraySha256": "1f97acb6eab2fb24e89fe531578131f8fed06f21420ddb5ebac339149b45cca7",
+      "metadataFile": "d653194103ffc5a60773d287753bbe8424f7f2bf8d8f40eea3357c4e0cb4a806.json",
+      "metadataSha256": "02d34b056e85cea362532bd73be5a787b4e5421b25a42c1f6e400b2cc8fe5ddb"
+    },
+    "DDB_0103": {
+      "arraySha256": "38afdcd01605e471ccd98e252e7c4995132570850e999d63794521f8988e361a",
+      "metadataFile": "cbbb60c71f24bb6d61159c35c8528166d97cf1428438b9fb4330259961cbffea.json",
+      "metadataSha256": "ae57f5442514a1f9552ec18a5db8dcb0aeb66019dfcb6e5a4e2af2d3d998e349"
+    },
+    "DDB_0119": {
+      "arraySha256": "7bfe1ddceac878c5e75cf27acc615a42980ea7d65d7e7883602408dc41d55cde",
+      "metadataFile": "cd4884e0211e2ae75e8f57fe1c2397099a46485fb1ca07daaba123046eba8308.json",
+      "metadataSha256": "4d22099dec3a3d52e34215297ddb8d687f5e13deb72c601447431fe7522de290"
+    },
+    "DDB_0132": {
+      "arraySha256": "c6b565bbe0eebb64b506c055b60a262cb18a267c639aa1c58df3553d0152485e",
+      "metadataFile": "ab6e80462edf7898ccdec771f529db31cc56a0d1a58bef6e971e87ae3faa5655.json",
+      "metadataSha256": "29cce26c927411a0483a7c8324042aeb8106588273a4b793fa8a1303de007369"
+    },
+    "DDB_0142": {
+      "arraySha256": "f82a855fe4ac3754e93efb9b6d8e704c23fff4cf07ac2e9ae443b93e5e3701d9",
+      "metadataFile": "180b36f739ed347bbbae1c5dc3982b06cb01ded108657094e8b71c1932f18199.json",
+      "metadataSha256": "96359859cfb204df91a0ec4aa99ebe497d0fd5a4f04e356e3c8bf81bd74dd3e7"
+    },
+    "DDB_0146": {
+      "arraySha256": "774ab174039eb7faaef49893fcb761120572b2f73897218a4ff6c699d0e85f48",
+      "metadataFile": "1a9ac8fe157819f64b32a648af8d800344f315f16524851d8f1bfba54d5bd962.json",
+      "metadataSha256": "56a461749256c9f506e82ec6be709578098dd0d8b8c39cba54727529fbb58877"
+    }
+  },
+  "reason": "Admission/accounting/finite checks hardened; arithmetic, transformations, weights, seeds, cohort and protocol unchanged. No legacy EVAL cache permitted.",
+  "replayResults": [
+    {
+      "cleanMaxAbs": 0.0,
+      "order": "REVERSED_FROZEN_PANEL",
+      "responseMaxAbs": 0.0,
+      "sampleId": "CSAFE_WP006E_note10_3_01",
+      "tensorIdentical": true
+    },
+    {
+      "cleanMaxAbs": 0.0,
+      "order": "REVERSED_FROZEN_PANEL",
+      "responseMaxAbs": 0.0,
+      "sampleId": "CSAFE_WP006E_note10_1_05",
+      "tensorIdentical": true
+    },
+    {
+      "cleanMaxAbs": 0.0,
+      "order": "REVERSED_FROZEN_PANEL",
+      "responseMaxAbs": 0.0,
+      "sampleId": "CSAFE_WP006E_note10_3_03",
+      "tensorIdentical": true
+    },
+    {
+      "cleanMaxAbs": 0.0,
+      "order": "REVERSED_FROZEN_PANEL",
+      "responseMaxAbs": 0.0,
+      "sampleId": "CSAFE_WP006E_note10_1_01",
+      "tensorIdentical": true
+    }
+  ],
+  "replayValidated": true,
+  "responseBatchMaxAbs": 0.0,
+  "schemaVersion": "wp007n-legacy-certificate-v1",
+  "validatedCacheParents": 44
+}

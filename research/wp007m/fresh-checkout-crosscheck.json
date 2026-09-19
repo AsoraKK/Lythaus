@@ -1,0 +1,12 @@
+{
+  "schemaVersion":"wp007m-fresh-checkout-crosscheck-v1",
+  "commit":"25248ae3e006186d8b479a854f878badaed40e15",
+  "method":"New detached sparse Git worktree with Windows core.autocrlf=true; no copied research files; existing approved Python runtime",
+  "pythonFocused":{"pass":14,"fail":0},
+  "nodeFocused":{"pass":6,"fail":0},
+  "reaggregation":{"command":"python scripts/authenticity/wp007m_analyze.py --bulk <EXTERNAL_WP007M>","rows":1984,"safeSupplementRows":720,"outputSha256":"8a0c9bbc4e605a69c08426d63b74d1a5d6fcda528f44758108841d9a145c389a","identicalToOriginal":true},
+  "byteHashChecks":{"experimentPlan":"70d1822560111ee80bbafe11a8cd86ffa16faf723ded78eb690325573b123f9a","cohort":"98c73dbba03a074bbbb9d15584e91b7e0dc2883a2fe5188bff0834f773cdfc56","decision":"3188f20ebaf03ae2572190320b935cc427b69afd73f455a6ca14c9da5284db0c","measurementCode":"dc0b7099131b1bb7f6aca5f08ab530cd6ada7429ba4f4b21b6a53955addb34b6"},
+  "newMediaInference":false,
+  "limit":"Independent checkout and reaggregation, not independent new source population or a repeat of all neural inference",
+  "productionAuthorization":"NO"
+}

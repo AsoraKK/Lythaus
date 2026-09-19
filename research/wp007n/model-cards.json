@@ -1,0 +1,625 @@
+{
+  "SAFEunchanged": true,
+  "candidates": {
+    "A0": {
+      "backbone": {
+        "bytes": 1217586395,
+        "codeCommit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+        "model": "dinov2_vitl14",
+        "sha256": "d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428",
+        "source": "official Meta public URL in resource-admission.json"
+      },
+      "calibrationHash": "23dca4ff22fbcaa662a94bbb993aa84685a6347a86f33af748e655a9e767f2f2",
+      "codeOwnership": "New measurement/fitting/contract code Lythaus-owned; pretrained architecture/weights remain third-party Apache-2.0",
+      "deploymentStatus": "RESEARCH_ONLY_NOT_QUALIFIED; separate deployment rights/notices review required",
+      "executionStatus": "VALIDATED_COMPLETE",
+      "featureDefinition": "1024D normalized CLS",
+      "headManifest": {
+        "C": 0.01,
+        "backbone": "A",
+        "candidate": "A0",
+        "checkpointHash": "d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428",
+        "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+        "devIds": [
+          "CSAFE_WP006E_iPhone14_3_03",
+          "CSAFE_WP006E_iPhone14_3_06",
+          "CSAFE_WP006E_iPhone14_3_08",
+          "CSAFE_WP006E_s21_1_01",
+          "CSAFE_WP006E_s21_1_05",
+          "CSAFE_WP006E_s21_1_07",
+          "DDB_0001",
+          "DDB_0053",
+          "DDB_0054",
+          "DDB_0072",
+          "DDB_0103",
+          "DDB_0142"
+        ],
+        "fileSha256": "85dc967a31c8ecfe842e26462ba7e6ea57f1277c21caaf49a1b1dbe1c979cef5",
+        "fitSeconds": 0.015225999988615513,
+        "gridResults": [
+          {
+            "C": 0.01,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.44999060705605487
+          },
+          {
+            "C": 0.1,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.39510759845245724
+          },
+          {
+            "C": 1.0,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.3374630797883107
+          }
+        ],
+        "headHash": "6abccacd6a4aa87d23789b9227d21902d94a37bedfff91b59a4db9eaeac5efe2",
+        "logicalArtifact": "external/wp007n/heads/A0-head.json",
+        "parameterCount": 1025,
+        "permutation": false,
+        "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+        "rawCoefficientsInGit": false,
+        "rightsClass": "RESEARCH_ONLY_DEPLOYMENT_REVIEW_REQUIRED",
+        "serializationMaxAbsError": 0.0,
+        "serializedBytes": 83655,
+        "trainingIds": [
+          "CSAFE_WP006E_iPhone11_1_03",
+          "CSAFE_WP006E_iPhone11_1_06",
+          "CSAFE_WP006E_iPhone11_1_07",
+          "CSAFE_WP006E_iPhone11_1_10",
+          "CSAFE_WP006E_iPhone14_1_01",
+          "CSAFE_WP006E_iPhone14_1_04",
+          "CSAFE_WP006E_iPhone14_1_05",
+          "CSAFE_WP006E_iPhone14_1_09",
+          "CSAFE_WP006E_s21_3_01",
+          "CSAFE_WP006E_s21_3_03",
+          "CSAFE_WP006E_s21_3_04",
+          "CSAFE_WP006E_s21_3_06",
+          "DDB_0011",
+          "DDB_0024",
+          "DDB_0037",
+          "DDB_0044",
+          "DDB_0066",
+          "DDB_0074",
+          "DDB_0081",
+          "DDB_0088",
+          "DDB_0093",
+          "DDB_0119",
+          "DDB_0132",
+          "DDB_0146"
+        ]
+      },
+      "headTrainingRights": "CSAFE CC BY4.0 and DiffusionDB CC0/item grant",
+      "limitations": [
+        "Actual human-created digital controls absent",
+        "Only SD1-era positive family in FIT/DEV",
+        "Eight CSAFE-only calibration parents",
+        "Historical programme exposure and unknown pretraining membership",
+        "No independent encoder-family evaluation"
+      ],
+      "lowScoreMeaning": "NO_POSITIVE_EVIDENCE_NOT_HUMAN",
+      "originalThreshold": 0.42308950412969865,
+      "publicAuthority": false,
+      "scientificDisposition": "UNSAFE_AT_TESTED_OPERATING_POINT",
+      "sourceWorst": {
+        "FP": 13,
+        "FPR": 0.4642857142857143,
+        "N": 28,
+        "conditionScope": "original/JPEG75 for48 screen parents plus six conditions in frozen12-parent panel; unequal panel coverage explicitly retained",
+        "positiveParentIds": [
+          "LYTHAUS_PROC_HN_COMPOSITE_071",
+          "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+          "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+          "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+          "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+          "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+          "UNSPLASH_JHxFiw603QA",
+          "UNSPLASH_P81LbTij5Ro",
+          "UNSPLASH_QNwET9cMlJU",
+          "UNSPLASH_SdDvlTI3bVc",
+          "UNSPLASH_UNwQLVLLBtc",
+          "UNSPLASH__mkb0Vby9tA",
+          "UNSPLASH_wQImoykAwGs"
+        ],
+        "subgroups": {
+          "PHOTO_CSAFE": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 12,
+            "wilson95": [
+              2.7755575615628914e-17,
+              0.24249400665524085
+            ]
+          },
+          "PHOTO_UNSPLASH": {
+            "FP": 7,
+            "FPR": 0.875,
+            "N": 8,
+            "wilson95": [
+              0.5291118177871464,
+              0.9775825085499433
+            ]
+          },
+          "PROCEDURAL_SUPPLEMENT": {
+            "FP": 6,
+            "FPR": 0.75,
+            "N": 8,
+            "wilson95": [
+              0.40927543031016883,
+              0.9285207872478909
+            ]
+          }
+        },
+        "wilson95": [
+          0.2953156998279538,
+          0.6418731076553209
+        ]
+      },
+      "worstThreshold": 0.42308950412969865
+    },
+    "A1": {
+      "backbone": {
+        "bytes": 1217586395,
+        "codeCommit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+        "model": "dinov2_vitl14",
+        "sha256": "d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428",
+        "source": "official Meta public URL in resource-admission.json"
+      },
+      "calibrationHash": "40539b0462f0c44452950ea2d89c982f68ae5018476ecd5012af677e11bcc3ba",
+      "codeOwnership": "New measurement/fitting/contract code Lythaus-owned; pretrained architecture/weights remain third-party Apache-2.0",
+      "deploymentStatus": "RESEARCH_ONLY_NOT_QUALIFIED; separate deployment rights/notices review required",
+      "executionStatus": "VALIDATED_COMPLETE",
+      "featureDefinition": "1024D normalized CLS",
+      "headManifest": null,
+      "headTrainingRights": "No detector head training; authorized CSAFE negative reference calibration",
+      "limitations": [
+        "Actual human-created digital controls absent",
+        "Only SD1-era positive family in FIT/DEV",
+        "Eight CSAFE-only calibration parents",
+        "Historical programme exposure and unknown pretraining membership",
+        "No independent encoder-family evaluation"
+      ],
+      "lowScoreMeaning": "NO_POSITIVE_EVIDENCE_NOT_HUMAN",
+      "originalThreshold": 0.10222393274307251,
+      "publicAuthority": false,
+      "scientificDisposition": "NO_INCREMENTAL_EVIDENCE_AT_TESTED_OPERATING_POINT",
+      "sourceWorst": {
+        "FP": 0,
+        "FPR": 0.0,
+        "N": 28,
+        "conditionScope": "original/JPEG75 for48 screen parents plus six conditions in frozen12-parent panel; unequal panel coverage explicitly retained",
+        "positiveParentIds": [],
+        "subgroups": {
+          "PHOTO_CSAFE": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 12,
+            "wilson95": [
+              2.7755575615628914e-17,
+              0.24249400665524085
+            ]
+          },
+          "PHOTO_UNSPLASH": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 8,
+            "wilson95": [
+              0.0,
+              0.32440756488388023
+            ]
+          },
+          "PROCEDURAL_SUPPLEMENT": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 8,
+            "wilson95": [
+              0.0,
+              0.32440756488388023
+            ]
+          }
+        },
+        "wilson95": [
+          1.3877787807814457e-17,
+          0.12064330476584563
+        ]
+      },
+      "worstThreshold": 0.10222393274307251
+    },
+    "A2": {
+      "backbone": {
+        "bytes": 1217586395,
+        "codeCommit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+        "model": "dinov2_vitl14",
+        "sha256": "d5383ea8f4877b2472eb973e0fd72d557c7da5d3611bd527ceeb1d7162cbf428",
+        "source": "official Meta public URL in resource-admission.json"
+      },
+      "calibrationHash": "9f44c6f34935a070e44c7273b2622d6193422bceeac24e2ad746cd2dfaee82f0",
+      "codeOwnership": "New measurement/fitting/contract code Lythaus-owned; pretrained architecture/weights remain third-party Apache-2.0",
+      "deploymentStatus": "RESEARCH_ONLY_NOT_QUALIFIED; separate deployment rights/notices review required",
+      "executionStatus": "VALIDATED_COMPLETE",
+      "featureDefinition": "1024D normalized CLS",
+      "headManifest": null,
+      "headTrainingRights": "No detector head training; authorized CSAFE negative reference calibration",
+      "limitations": [
+        "Actual human-created digital controls absent",
+        "Only SD1-era positive family in FIT/DEV",
+        "Eight CSAFE-only calibration parents",
+        "Historical programme exposure and unknown pretraining membership",
+        "No independent encoder-family evaluation"
+      ],
+      "lowScoreMeaning": "NO_POSITIVE_EVIDENCE_NOT_HUMAN",
+      "originalThreshold": 0.09876869122187297,
+      "publicAuthority": false,
+      "scientificDisposition": "NO_INCREMENTAL_EVIDENCE_AT_TESTED_OPERATING_POINT",
+      "sourceWorst": {
+        "FP": 0,
+        "FPR": 0.0,
+        "N": 28,
+        "conditionScope": "original/JPEG75 for48 screen parents plus six conditions in frozen12-parent panel; unequal panel coverage explicitly retained",
+        "positiveParentIds": [],
+        "subgroups": {
+          "PHOTO_CSAFE": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 12,
+            "wilson95": [
+              2.7755575615628914e-17,
+              0.24249400665524085
+            ]
+          },
+          "PHOTO_UNSPLASH": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 8,
+            "wilson95": [
+              0.0,
+              0.32440756488388023
+            ]
+          },
+          "PROCEDURAL_SUPPLEMENT": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 8,
+            "wilson95": [
+              0.0,
+              0.32440756488388023
+            ]
+          }
+        },
+        "wilson95": [
+          1.3877787807814457e-17,
+          0.12064330476584563
+        ]
+      },
+      "worstThreshold": 0.09876869122187297
+    },
+    "B0": {
+      "backbone": {
+        "bytes": 1790786632,
+        "codeCommit": "3e352cca660658d4b5c90f42a7808b11469e4c66",
+        "model": "PE-Core-B16-224",
+        "revision": "a16450b46fef32363459920c2685a1b4ef13dcd9",
+        "sha256": "0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce",
+        "source": "official facebook Hugging Face artifact; LFS hash independently declared upstream"
+      },
+      "calibrationHash": "de50c5fb323ab6c7362f83d7830b831a5b48518e7e5fa9c26e189bdf7ea826aa",
+      "codeOwnership": "New measurement/fitting/contract code Lythaus-owned; pretrained architecture/weights remain third-party Apache-2.0",
+      "deploymentStatus": "RESEARCH_ONLY_NOT_QUALIFIED; separate deployment rights/notices review required",
+      "executionStatus": "VALIDATED_COMPLETE",
+      "featureDefinition": "1024D official vision attention-pool plus projection",
+      "headManifest": {
+        "C": 0.01,
+        "backbone": "B",
+        "candidate": "B0",
+        "checkpointHash": "0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce",
+        "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+        "devIds": [
+          "CSAFE_WP006E_iPhone14_3_03",
+          "CSAFE_WP006E_iPhone14_3_06",
+          "CSAFE_WP006E_iPhone14_3_08",
+          "CSAFE_WP006E_s21_1_01",
+          "CSAFE_WP006E_s21_1_05",
+          "CSAFE_WP006E_s21_1_07",
+          "DDB_0001",
+          "DDB_0053",
+          "DDB_0054",
+          "DDB_0072",
+          "DDB_0103",
+          "DDB_0142"
+        ],
+        "fileSha256": "bb3a6edf032431b86a5888ea684052ba46a97b6444f4951b2714b4c3d493bb58",
+        "fitSeconds": 0.011000200000125915,
+        "gridResults": [
+          {
+            "C": 0.01,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.3117862143133264
+          },
+          {
+            "C": 0.1,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.18574178432337962
+          },
+          {
+            "C": 1.0,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.097122559278488
+          }
+        ],
+        "headHash": "898ad9cb29da6ecba5081ed5c8db941d6a0fa59f82d6dc1660fcf5e3d0a92713",
+        "logicalArtifact": "external/wp007n/heads/B0-head.json",
+        "parameterCount": 1025,
+        "permutation": false,
+        "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+        "rawCoefficientsInGit": false,
+        "rightsClass": "RESEARCH_ONLY_DEPLOYMENT_REVIEW_REQUIRED",
+        "serializationMaxAbsError": 0.0,
+        "serializedBytes": 83776,
+        "trainingIds": [
+          "CSAFE_WP006E_iPhone11_1_03",
+          "CSAFE_WP006E_iPhone11_1_06",
+          "CSAFE_WP006E_iPhone11_1_07",
+          "CSAFE_WP006E_iPhone11_1_10",
+          "CSAFE_WP006E_iPhone14_1_01",
+          "CSAFE_WP006E_iPhone14_1_04",
+          "CSAFE_WP006E_iPhone14_1_05",
+          "CSAFE_WP006E_iPhone14_1_09",
+          "CSAFE_WP006E_s21_3_01",
+          "CSAFE_WP006E_s21_3_03",
+          "CSAFE_WP006E_s21_3_04",
+          "CSAFE_WP006E_s21_3_06",
+          "DDB_0011",
+          "DDB_0024",
+          "DDB_0037",
+          "DDB_0044",
+          "DDB_0066",
+          "DDB_0074",
+          "DDB_0081",
+          "DDB_0088",
+          "DDB_0093",
+          "DDB_0119",
+          "DDB_0132",
+          "DDB_0146"
+        ]
+      },
+      "headTrainingRights": "CSAFE CC BY4.0 and DiffusionDB CC0/item grant",
+      "limitations": [
+        "Actual human-created digital controls absent",
+        "Only SD1-era positive family in FIT/DEV",
+        "Eight CSAFE-only calibration parents",
+        "Historical programme exposure and unknown pretraining membership",
+        "No independent encoder-family evaluation"
+      ],
+      "lowScoreMeaning": "NO_POSITIVE_EVIDENCE_NOT_HUMAN",
+      "originalThreshold": 0.2906082529423697,
+      "publicAuthority": false,
+      "scientificDisposition": "UNSAFE_AT_TESTED_OPERATING_POINT",
+      "sourceWorst": {
+        "FP": 15,
+        "FPR": 0.5357142857142857,
+        "N": 28,
+        "conditionScope": "original/JPEG75 for48 screen parents plus six conditions in frozen12-parent panel; unequal panel coverage explicitly retained",
+        "positiveParentIds": [
+          "LYTHAUS_PROC_HN_COMPOSITE_071",
+          "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+          "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+          "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+          "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+          "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+          "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+          "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+          "UNSPLASH_Etobk5T7C_s",
+          "UNSPLASH_JHxFiw603QA",
+          "UNSPLASH_P81LbTij5Ro",
+          "UNSPLASH_SdDvlTI3bVc",
+          "UNSPLASH_UNwQLVLLBtc",
+          "UNSPLASH__mkb0Vby9tA",
+          "UNSPLASH_wQImoykAwGs"
+        ],
+        "subgroups": {
+          "PHOTO_CSAFE": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 12,
+            "wilson95": [
+              2.7755575615628914e-17,
+              0.24249400665524085
+            ]
+          },
+          "PHOTO_UNSPLASH": {
+            "FP": 7,
+            "FPR": 0.875,
+            "N": 8,
+            "wilson95": [
+              0.5291118177871464,
+              0.9775825085499433
+            ]
+          },
+          "PROCEDURAL_SUPPLEMENT": {
+            "FP": 8,
+            "FPR": 1.0,
+            "N": 8,
+            "wilson95": [
+              0.6755924351161198,
+              1.0
+            ]
+          }
+        },
+        "wilson95": [
+          0.358126892344679,
+          0.7046843001720462
+        ]
+      },
+      "worstThreshold": 0.3039159876109493
+    },
+    "B1": {
+      "backbone": {
+        "bytes": 1790786632,
+        "codeCommit": "3e352cca660658d4b5c90f42a7808b11469e4c66",
+        "model": "PE-Core-B16-224",
+        "revision": "a16450b46fef32363459920c2685a1b4ef13dcd9",
+        "sha256": "0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce",
+        "source": "official facebook Hugging Face artifact; LFS hash independently declared upstream"
+      },
+      "calibrationHash": "2c0bfdd92740286785c3c44801441ee9def8be5f91ba5cc0c325498471accb83",
+      "codeOwnership": "New measurement/fitting/contract code Lythaus-owned; pretrained architecture/weights remain third-party Apache-2.0",
+      "deploymentStatus": "RESEARCH_ONLY_NOT_QUALIFIED; separate deployment rights/notices review required",
+      "executionStatus": "VALIDATED_COMPLETE",
+      "featureDefinition": "1024D official vision attention-pool plus projection",
+      "headManifest": {
+        "C": 0.01,
+        "backbone": "B",
+        "candidate": "B1",
+        "checkpointHash": "0a5c220aa083488e0fc9221f766dced8a576b7074662d9b9da923da1e8844fce",
+        "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+        "devIds": [
+          "CSAFE_WP006E_iPhone14_3_03",
+          "CSAFE_WP006E_iPhone14_3_06",
+          "CSAFE_WP006E_iPhone14_3_08",
+          "CSAFE_WP006E_s21_1_01",
+          "CSAFE_WP006E_s21_1_05",
+          "CSAFE_WP006E_s21_1_07",
+          "DDB_0001",
+          "DDB_0053",
+          "DDB_0054",
+          "DDB_0072",
+          "DDB_0103",
+          "DDB_0142"
+        ],
+        "fileSha256": "82629fea91184c21c2c7b1a1c04432905c376caa2d294d07142c322d7a876528",
+        "fitSeconds": 0.00968090002425015,
+        "gridResults": [
+          {
+            "C": 0.01,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.3466013710210099
+          },
+          {
+            "C": 0.1,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.23261585801602866
+          },
+          {
+            "C": 1.0,
+            "devAP": 1.0,
+            "devTPAtZeroObservedFp": 6,
+            "selectionThreshold": 0.1410102607351686
+          }
+        ],
+        "headHash": "016ce3f90e6a0bf0dc817d5c431b87a9be4834a2175f735a37672e70a9b566cf",
+        "logicalArtifact": "external/wp007n/heads/B1-head.json",
+        "parameterCount": 1025,
+        "permutation": false,
+        "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+        "rawCoefficientsInGit": false,
+        "rightsClass": "RESEARCH_ONLY_DEPLOYMENT_REVIEW_REQUIRED",
+        "serializationMaxAbsError": 0.0,
+        "serializedBytes": 83801,
+        "trainingIds": [
+          "CSAFE_WP006E_iPhone11_1_03",
+          "CSAFE_WP006E_iPhone11_1_06",
+          "CSAFE_WP006E_iPhone11_1_07",
+          "CSAFE_WP006E_iPhone11_1_10",
+          "CSAFE_WP006E_iPhone14_1_01",
+          "CSAFE_WP006E_iPhone14_1_04",
+          "CSAFE_WP006E_iPhone14_1_05",
+          "CSAFE_WP006E_iPhone14_1_09",
+          "CSAFE_WP006E_s21_3_01",
+          "CSAFE_WP006E_s21_3_03",
+          "CSAFE_WP006E_s21_3_04",
+          "CSAFE_WP006E_s21_3_06",
+          "DDB_0011",
+          "DDB_0024",
+          "DDB_0037",
+          "DDB_0044",
+          "DDB_0066",
+          "DDB_0074",
+          "DDB_0081",
+          "DDB_0088",
+          "DDB_0093",
+          "DDB_0119",
+          "DDB_0132",
+          "DDB_0146"
+        ]
+      },
+      "headTrainingRights": "CSAFE CC BY4.0 and DiffusionDB CC0/item grant",
+      "limitations": [
+        "Actual human-created digital controls absent",
+        "Only SD1-era positive family in FIT/DEV",
+        "Eight CSAFE-only calibration parents",
+        "Historical programme exposure and unknown pretraining membership",
+        "No independent encoder-family evaluation"
+      ],
+      "lowScoreMeaning": "NO_POSITIVE_EVIDENCE_NOT_HUMAN",
+      "originalThreshold": 0.281177897363928,
+      "publicAuthority": false,
+      "scientificDisposition": "UNSAFE_AT_TESTED_OPERATING_POINT",
+      "sourceWorst": {
+        "FP": 15,
+        "FPR": 0.5357142857142857,
+        "N": 28,
+        "conditionScope": "original/JPEG75 for48 screen parents plus six conditions in frozen12-parent panel; unequal panel coverage explicitly retained",
+        "positiveParentIds": [
+          "LYTHAUS_PROC_HN_COMPOSITE_071",
+          "LYTHAUS_PROC_HN_GAME_SCREENSHOT_163",
+          "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_118",
+          "LYTHAUS_PROC_HN_PROCEDURAL_PATTERN_178",
+          "LYTHAUS_PROC_HN_TEXT_GRAPHIC_081",
+          "LYTHAUS_PROC_HN_TEXT_GRAPHIC_129",
+          "LYTHAUS_PROC_HN_UI_SCREENSHOT_030",
+          "LYTHAUS_PROC_HN_VECTOR_LIKE_003",
+          "UNSPLASH_Etobk5T7C_s",
+          "UNSPLASH_JHxFiw603QA",
+          "UNSPLASH_P81LbTij5Ro",
+          "UNSPLASH_SdDvlTI3bVc",
+          "UNSPLASH_UNwQLVLLBtc",
+          "UNSPLASH__mkb0Vby9tA",
+          "UNSPLASH_wQImoykAwGs"
+        ],
+        "subgroups": {
+          "PHOTO_CSAFE": {
+            "FP": 0,
+            "FPR": 0.0,
+            "N": 12,
+            "wilson95": [
+              2.7755575615628914e-17,
+              0.24249400665524085
+            ]
+          },
+          "PHOTO_UNSPLASH": {
+            "FP": 7,
+            "FPR": 0.875,
+            "N": 8,
+            "wilson95": [
+              0.5291118177871464,
+              0.9775825085499433
+            ]
+          },
+          "PROCEDURAL_SUPPLEMENT": {
+            "FP": 8,
+            "FPR": 1.0,
+            "N": 8,
+            "wilson95": [
+              0.6755924351161198,
+              1.0
+            ]
+          }
+        },
+        "wilson95": [
+          0.358126892344679,
+          0.7046843001720462
+        ]
+      },
+      "worstThreshold": 0.2956419722994899
+    }
+  },
+  "productionAuthorization": "NO"
+}

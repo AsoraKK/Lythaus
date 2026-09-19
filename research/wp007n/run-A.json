@@ -1,0 +1,79 @@
+{
+  "forwards": 781,
+  "runs": [
+    {
+      "cachedParents": 0,
+      "codeCommit": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+      "codeHash": "d2dfecb6db05e5ccb70e4de57c6a045848333885d7df099142ebda886678454e",
+      "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+      "command": "python wp007n_extract.py A --roles FIT,DEV,CALIBRATION",
+      "endedUnix": 1789843644.8799396,
+      "failure": null,
+      "forwards": 196,
+      "minimumAvailableBytes": 6067781632,
+      "newParents": 44,
+      "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+      "roles": [
+        "FIT",
+        "DEV",
+        "CALIBRATION"
+      ],
+      "seconds": 473.63323187828064,
+      "startedUnix": 1789843171.2467053
+    },
+    {
+      "ambiguousForwardCharged": false,
+      "codeHash": "1c2972b6284c6a53558cabf4d61f6c61a43d24b629b9ab266531e8cc143958ba",
+      "command": "python wp007n_replay.py",
+      "endedUnix": 1789844318.4398437,
+      "failure": null,
+      "forwards": 20,
+      "roles": [
+        "CALIBRATION_REPLAY"
+      ],
+      "seconds": 55.66946077346802,
+      "startedUnix": 1789844262.7741697
+    },
+    {
+      "ambiguousForwardCharged": true,
+      "cachedParents": 0,
+      "codeCommit": "a008acae6250fd39e552466fd8a0b4d0929ac095",
+      "codeHash": "d41acb2b93fa9967903780f98202daec84b052aaac78a934db6799dc4cbc7d45",
+      "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+      "command": "python wp007n_extract.py A --roles EVAL_N,HISTORICAL_CHALLENGE",
+      "endedUnix": 1789846034.6830938,
+      "failure": "PermissionError:[WinError 5] Access is denied: 'external/wp007n\\\\budget-A.json.partial' -> 'external/wp007n\\\\budget-A.json'",
+      "forwards": 377,
+      "minimumAvailableBytes": 5957705728,
+      "newParents": 30,
+      "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+      "roles": [
+        "EVAL_N",
+        "HISTORICAL_CHALLENGE"
+      ],
+      "seconds": 920.7813754081726,
+      "startedUnix": 1789845113.952977
+    },
+    {
+      "ambiguousForwardCharged": false,
+      "cachedParents": 30,
+      "codeCommit": "0fb918872b1a81f483b004701143178e72a62748",
+      "codeHash": "d41acb2b93fa9967903780f98202daec84b052aaac78a934db6799dc4cbc7d45",
+      "cohortHash": "1560ebc45f5a385c8007993542a9a10545b72beef70741622b004dd15eb087cb",
+      "command": "python wp007n_extract.py A --roles EVAL_N,HISTORICAL_CHALLENGE",
+      "endedUnix": 1789846558.3973968,
+      "failure": null,
+      "forwards": 188,
+      "minimumAvailableBytes": 6646427648,
+      "newParents": 18,
+      "protocolHash": "6ff6c6baddce03c0bf6c2f1f0fb0003e750f7ee3951db1fe1969d2dbbcf10620",
+      "roles": [
+        "EVAL_N",
+        "HISTORICAL_CHALLENGE"
+      ],
+      "seconds": 441.8677005767822,
+      "startedUnix": 1789846116.5785062
+    }
+  ],
+  "seconds": 1891.9484372138977
+}
