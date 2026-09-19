@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "wp007n-pr-delivery-v1",
+  "number": 855,
+  "state": "OPEN",
+  "mergedAt": null,
+  "parent": "e3adbcb3cb2ac0991db231476441d133db3e2cd3",
+  "baseBranch": "agent/wp007m-independent-discovery",
+  "branch": "agent/wp007n-two-arm",
+  "scientificResultsHeadAtCreation": "9a59562d1ee7ded7e6de475cfeeca315ec157b9b",
+  "verifiedUtc": "2026-09-19T20:02:16.5510457Z",
+  "verification": "Authenticated PR view confirms open/unmerged state and exact base/head at creation; PR attached to the task. Final delivery-only commit identity is recorded in the PR body and live head, avoiding a self-referential commit hash in this receipt.",
+  "deliveryScope": "Both bounded arms executed and independently audited; negative dispositions are not qualification. Actual human digital controls BLOCKED_DATA; optional learned combined-response comparison DEFERRED_OPTIONAL.",
+  "parentMerged": false,
+  "automaticFollowupStarted": false,
+  "reserves": "REMAIN_SEALED",
+  "productionAuthorization": "NO"
+}

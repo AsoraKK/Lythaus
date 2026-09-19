@@ -10,6 +10,8 @@
 
 Parent is the unchanged, open PR854 head `e3adbcb3cb2ac0991db231476441d133db3e2cd3`; branch `agent/wp007n-two-arm`. No parent merge or history rewrite. [Current-state audit](current-state-audit.json). SAFE-A, CES-S's unqualified status, EF1/EF2, Safety, Moondream, Judge and deterministic-policy authority are unchanged. Production **NO**. FLUX.2 and future EF2 reserves remain sealed.
 
+Delivered as open, unmerged PR855. [Delivery receipt](pr-delivery.json), [completion self-audit](completion-self-audit.md). Blocked or optional comparisons are not counted as completed detector evaluations.
+
 ## What actually ran
 
 | ID | Frozen representation / measurement | Status and scope |

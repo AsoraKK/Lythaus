@@ -140,17 +140,19 @@
       "crossCheck": "Separate audit, fresh checkout and live PR lineage",
       "evidence": [
         "validation-summary.json",
+        "independent-results-audit.md",
+        "pr-delivery.json",
         "final-report.md"
       ],
-      "executionStatus": "RUNNING",
+      "executionStatus": "VALIDATED_COMPLETE",
       "experiment": "H-M regressions, numerical/contract tests, final report and PR",
       "id": "delivery",
       "limitations": [
-        "Unmerged PR still required"
+        "Two inherited repository failures independently reproduced; actual-human-digital and optional combined comparison not completed"
       ],
-      "qualityPercent": 100,
+      "qualityPercent": 110,
       "question": "Are results reproducible and correctly bounded in an unmerged stacked PR?",
-      "scientificDisposition": "VALIDATION_COMPLETE_PR_PENDING"
+      "scientificDisposition": "BOUNDED_RESEARCH_DELIVERED_UNMERGED"
     },
     {
       "crossCheck": "Not executed, not claimed",
