@@ -1,0 +1,25 @@
+{
+  "schemaVersion":"wp007o-methodology-delivery-v1",
+  "scientificStatus":["BLOCKED_DATA","BLOCKED_DISCLOSURE"],
+  "scientificOutcome":"WITHHELD_NO_PUBLIC_CONCLUSION",
+  "privateAuthorityCommit":"4735f3260566d3a1713a38e719396784cf9008fd",
+  "publicationParent":"6ffef36b45b7d2c16a26758e3e5618b10ac45a6d",
+  "deliveryScope":"Methodology and tooling only; scientific results withheld pending rights clearance and completion of representative-control evaluation.",
+  "plan":[
+    {"step":"Preserve private package","status":"completed"},
+    {"step":"Curate public machinery","status":"completed"},
+    {"step":"Audit disclosure and fixtures","status":"completed"},
+    {"step":"Open unmerged methodology PR","status":"completed"}
+  ],
+  "publicationDeliveryStatus":"OPEN_UNMERGED",
+  "publicationPullRequest":"https://github.com/AsoraKK/Lythaus/pull/856",
+  "publicationCompletionDoesNotResolveScientificBlockers":true,
+  "fullScientificCompletionClaim":false,
+  "publicationFixtureResultsAreNotEmpiricalEvidence":true,
+  "PEExperimentation":"STOPPED",
+  "recalibrationAuthorized":false,
+  "headFittingAuthorized":false,
+  "newLeadStarted":false,
+  "productionAuthorization":"NO",
+  "reserves":"REMAIN_SEALED"
+}
