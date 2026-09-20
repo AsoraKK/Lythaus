@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "wp007o-publication-validation-v1",
+  "scope": "METHODOLOGY_ONLY_NO_EMPIRICAL_EVALUATION",
+  "scientificStatus": ["BLOCKED_DATA", "BLOCKED_DISCLOSURE"],
+  "parentCommit": "6ffef36b45b7d2c16a26758e3e5618b10ac45a6d",
+  "baselineCrosscheckCommit": "86c8cb25af6485c1be84b258793c4d179de95a3f",
+  "parentAndBaselineTreeIdentical": true,
+  "environment": {
+    "os": "Windows",
+    "python": "3.13",
+    "node": "22.17.0",
+    "dependencyInstall": false,
+    "existingLocalDependenciesReused": true,
+    "workspaceJunctionsRepairedLocally": true,
+    "privatePathsPublished": false
+  },
+  "checks": {
+    "pythonO": {"command": "python -m unittest discover -s scripts/authenticity -p test_wp007o.py", "passed": 50, "failed": 0},
+    "pythonN": {"command": "python -m unittest discover -s scripts/authenticity -p test_wp007n*.py", "passed": 41, "failed": 0},
+    "pythonM": {"command": "python -m unittest discover -s scripts/authenticity -p test_wp007m_probe.py", "passed": 14, "failed": 0},
+    "pythonE": {"command": "python -m unittest discover -s scripts/authenticity -p test_wp007e_policies.py", "passed": 8, "failed": 0},
+    "nodeO": {"command": "node --experimental-strip-types --test packages/authenticity/tests/wp007o.test.mjs", "passed": 8, "failed": 0},
+    "authenticityAll": {"command": "node --experimental-strip-types --test packages/authenticity/tests/*.test.mjs", "passed": 396, "failed": 0, "includesHistoricalNodeRegressions": true},
+    "typecheckNative": {"command": "npm run typecheck:native", "status": "PASS"},
+    "nativeScope": {"command": "npm run validate:native-scope", "status": "PASS"},
+    "workflowPins": {"command": "npm run validate:workflow-action-pins", "status": "PASS"},
+    "nodeSyntax": {"command": "node --check packages/authenticity/tests/wp007o.test.mjs", "status": "PASS"},
+    "pythonAST": {"scope": "All new Python files", "status": "PASS"},
+    "json": {"scope": "All new JSON files", "status": "PASS"},
+    "diffCheck": {"command": "git diff --check", "status": "PASS"}
+  },
+  "inheritedFailures": [
+    {
+      "command": "npm run test:native-architecture",
+      "passed": 255,
+      "failed": 1,
+      "skipped": 0,
+      "failingTest": "canonical manifest finalizes VERIFIED or BLOCKED after production smoke",
+      "source": "scripts/tests/production-release-governance.test.mjs",
+      "reproducedOnUnchangedParentTree": true,
+      "validatorChanged": false
+    },
+    {
+      "command": "npm run validate:no-retired-provider-dependencies",
+      "status": "FAIL_INHERITED",
+      "existingViolationCount": 6,
+      "reproducedOnUnchangedParentTree": true,
+      "validatorChanged": false,
+      "newPublicationFilesCauseNoAdditionalViolations": true
+    }
+  ],
+  "publicationAudit": {
+    "privateEvidenceIndexAndCodeHashesVerified": true,
+    "authoritativePrivateCheckoutUnchanged": true,
+    "privateIdentifiersAndDerivedValuesScanPassed": true,
+    "denySetKeptPrivate": true,
+    "privacySecretsScanPassed": true,
+    "privateCommitExcludedFromPublicationAncestry": true,
+    "newCommitHistoryMustAlsoPassBeforePush": true,
+    "automatedScanIsNotALegalRightsOpinion": true
+  },
+  "noNewScientificExecution": {
+    "backboneLoads": 0,
+    "projectImageReads": 0,
+    "inferenceOnProjectMedia": 0,
+    "calibrationRuns": 0,
+    "headFittingOnProjectData": 0,
+    "sealedMediaAccess": 0,
+    "providerCalls": 0
+  },
+  "qualificationClaim": false,
+  "productionAuthorization": "NO"
+}
