@@ -1708,7 +1708,7 @@ jobs:
         run: rm -f "$RUNNER_TEMP/production-cutover/base-secrets.json" "$RUNNER_TEMP/production-cutover/public-secrets.json" "$RUNNER_TEMP/production-cutover/jobs-secrets.json" "$RUNNER_TEMP/production-cutover/coordinator-secrets.json" "$RUNNER_TEMP/production-cutover/worker-secrets.json" "$RUNNER_TEMP/production-cutover/turnstile-secret.json"
       - name: Upload sanitized production cutover evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: production-cutover-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/production-cutover

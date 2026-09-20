@@ -68,7 +68,7 @@ jobs:
             "$GITHUB_SHA" "${DEPENDENCY_REVIEW_MODE:-unknown}" "${DEPENDENCY_REVIEW_REASON:-unknown}" \
             > .artifacts/security-run-evidence/run.json
       - name: Upload exact-SHA security evidence
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: security-run-evidence-Dependency-review-${{ github.sha }}
           if-no-files-found: error
