@@ -164,7 +164,7 @@ jobs:
           require_successful_run 'Native secret scan' "$SECRET_SCAN_RUN_ID"
           require_successful_run 'Historical branch reconciliation' "$HISTORICAL_RECONCILIATION_RUN_ID"
       - name: Download exact historical reconciliation evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: historical-branch-reconciliation-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/historical-reconciliation
@@ -172,7 +172,7 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ inputs.historical_reconciliation_run_id }}
       - name: Download exact security evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: security-run-evidence-CodeQL-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/security-evidence/CodeQL
@@ -180,7 +180,7 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ inputs.codeql_run_id }}
       - name: Download exact dependency review evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: security-run-evidence-Dependency-review-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/security-evidence/Dependency-review
@@ -188,7 +188,7 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ inputs.dependency_review_run_id }}
       - name: Download exact secret scan evidence
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: security-run-evidence-Native-secret-scan-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/security-evidence/Native-secret-scan
@@ -670,7 +670,7 @@ jobs:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 1
       - name: Download exact predeployment rollback snapshots
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: production-cutover-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/production-cutover
