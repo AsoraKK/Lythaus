@@ -216,3 +216,19 @@ PR2 keeps `ci.yml` job names unchanged, retains
 moves the six wrapper responsibilities into the existing required jobs. GitHub
 replacement-run and negative-test receipts are recorded with this inventory
 after the PR checks complete.
+
+## PR2 local validation receipts
+
+| Validation | Result |
+| --- | --- |
+| actionlint 1.7.7 and immutable action pins | Pass |
+| Production release contract and retired-provider scan | Pass |
+| Release governance suite | Pass |
+| OpenAPI lint, examples, route-parity contract tests | Pass; 33 Jest tests passed and 17 platform-skipped tests were reported |
+| Native architecture, migration, product-integrity, critical-coverage, identity, budget, provider, production-gate, and waitlist suites | Pass |
+| Authenticity beta TypeScript and JavaScript suites | Pass |
+| Python container checks and Docker image execution | Not run locally; Python and the Docker Linux daemon are unavailable on this Windows host; required CI jobs remain authoritative |
+
+The native, migration, contract, security, and coverage suites retain
+fail-closed negative-path assertions; no continue-on-error or threshold
+relaxation was added.
