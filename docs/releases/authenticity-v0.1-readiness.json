@@ -6,7 +6,7 @@
   "integrationPr": "https://github.com/AsoraKK/Lythaus/pull/862",
   "engineeringSourceSha": "4d3480eb2b48147f0899b8e95ff20973024d274d",
   "engineeringReady": false,
-  "liveRestrictedBeta": ["BLOCKED_RIGHTS", "BLOCKED_RUNTIME", "BLOCKED_RELEASE"],
+  "liveRestrictedBeta": ["BLOCKED_RIGHTS", "BLOCKED_RUNTIME", "BLOCKED_ACCESS", "BLOCKED_RELEASE"],
   "publicEnforcement": "PUBLIC_ENFORCEMENT_NOT_APPROVED",
   "scope": "AUTHOR_AND_ADMIN_ONLY_FLUTTER_WEB_FIRST",
   "deployed": false,
@@ -45,5 +45,31 @@
     "completeCi": {"state": "PASSED", "runId": 36324314561, "sourceSha": "4d3480eb2b48147f0899b8e95ff20973024d274d"},
     "flutterWebBuild": {"state": "PASSED", "runId": 36324314327, "jobId": 108634302026}
   },
-  "pending": ["supported dependency review for Dart changes", "checkpoint hosting rights decision", "authorized real CPU parity, image build, supply-chain review and sizing", "verified account allowances and scoped budget approval", "reviewed merge", "authorized migration and disabled deployment", "actual private app and advisory acceptance", "deployed rollback"]
+  "continuation": {
+    "sourceSha": "fb536c289e50cb55badd0b5c9b9f1afede9e43ac",
+    "testMergeSha": "95ee8a705e10b11557a5409b48490b5fa9fbe52a",
+    "reviewedReleaseSha": null,
+    "receiptOnlyCommitsAddNoRuntimeEvidence": true,
+    "acceptedMaxPixels": 16777216,
+    "memoryFit": "4 * wholeContainerPostResponsePeakBytes < 3 * provisionedBytes; integer arithmetic; equality rejected",
+    "maxPixelMeasurement": null,
+    "dependencyReview": {"state": "PASSED", "runId": 36339080618, "jobId": 108675485876, "mode": "native-with-artifact-verified-license-resolution", "comparisonHttpStatus": 200, "requestId": "7008:15EF:3413F61:36ED356:6AB95A06", "coverage": "COMPLETE", "dartDependencies": 8, "runtimeNodeDependencies": 2, "pythonDependencies": 19, "artifactVerifiedBsdLicenses": 4, "highSeverityFailure": false, "historicalNativeLicenseFailureRunId": 36337306887},
+    "postgres17": {"state": "PASSED_PROTOCOL_FIXTURES", "runId": 36339080589, "productionWrites": false},
+    "nativeWorkers": {"state": "PASSED", "runId": 36339080604, "betaAndHistoricalTests": 29, "releaseControlTests": 8},
+    "openApi": {"state": "PASSED", "runId": 36339080634, "generatedDartTests": 845},
+    "apiContract": {"state": "PASSED", "runId": 36339080652},
+    "codeql": {"state": "PASSED", "runId": 36339080672},
+    "secretScan": {"state": "PASSED", "runId": 36339080752},
+    "fullFlutter": {"state": "PASSED", "runId": 36339080570, "coveragePercent": 87.13, "unchangedThresholdPercent": 87, "webBuild": "PASSED", "webSmoke": "PASSED", "providerMode": "EXPLICIT_TEST_DOUBLES"},
+    "completeCi": {"state": "PASSED", "runId": 36339080617},
+    "codeOnlyLinux": {"runner": "GitHub-hosted ubuntu-24.04 standard public runner", "cpuCount": 4, "memoryBytes": 16766414848, "diskFreeBytes": 91532582912, "dockerVersion": "28.0.4", "nonRootSupervisorTests": 4, "codeValidationImageBuilt": true, "evaluationImageBuilt": false, "servingImageBuilt": false, "checkpointLoaded": false, "privateMediaLoaded": false},
+    "accountEvidence": {"cloudflareReadOnlyInventoryRunId": 36337257617, "inventorySourceSha": "8e3b3ebad2f846e61db2bfe819376723da7e9863", "cloudflareBillingMeters": "UNVERIFIED", "planetScaleObservedAt": "2026-09-27T17:55:55.565Z", "recordedSeptemberExperimentReservations": 0, "recordedSeptemberCommitmentUsd": 0, "existingDatabaseInvoiceLineUsd": 5, "databaseLineBilledThroughCloudflare": true, "offLedgerExperimentCommitments": "UNVERIFIED", "productionWrites": false},
+    "admission": {"defaultReservationUsd": null, "measuredCaseReservationUsd": null, "feasibleCaseCapacity": null, "maximumUsageEvidenceAgeSeconds": 3600, "configExpiresWithUsageEvidence": true},
+    "realSafeCalls": 0,
+    "realAdviserCalls": 0,
+    "deployed": false,
+    "liveAppAcceptance": null,
+    "rollbackObserved": false
+  },
+  "pending": ["checkpoint rights evidence for exact evaluation and hosted scopes", "protected private Linux evaluation access", "real CPU parity, full image build, maximum-input sizing and runtime supply-chain validation", "verified Cloudflare allowances and off-ledger commitments with scoped budget approval", "reviewed merge", "authorized migration and disabled deployment", "actual private app and advisory acceptance", "deployed rollback"]
 }
