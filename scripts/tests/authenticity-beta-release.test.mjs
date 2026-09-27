@@ -28,6 +28,8 @@ test('case admission requires separate measurements and never treats the smoke a
   assert.throws(()=>measuredCaseAdmission({...receipt,caseEnvelope:null}));
   assert.throws(()=>measuredCaseAdmission({...receipt,caseEnvelope:{...caseEnvelope,activeSeconds:5}}));
   assert.throws(()=>measuredCaseAdmission({...receipt,verifiedRemainingUnits:{}}));
+  const estimate=estimateBetaSmoke('standard-1',receipt.verifiedRemainingUnits,{doGbSeconds:{used:1399999,included:400000}},{...caseEnvelope,units:{...caseEnvelope.units,doGbSeconds:0}});
+  assert.equal(estimate.services.doGbSeconds,12.5);
 });
 
 test('whole-container peak must be strictly below 75 percent without rounding', () => {

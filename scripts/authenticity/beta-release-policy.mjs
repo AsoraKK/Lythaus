@@ -46,7 +46,7 @@ export function estimateBetaSmoke(instanceType, remaining = {}, account = {}, en
   const units = Object.fromEntries(Object.entries(smokeUnits).map(([name, [usage, unit, price]]) => {
     const boundedUsage = envelope ? envelope.units?.[name] : usage;
     assert.ok(finite(boundedUsage), `bounded_${name}_required`);
-    return [name, [boundedUsage, unit, price]];
+    return [name, [name === 'doGbSeconds' ? Math.max(boundedUsage, 1800 * 0.128) : boundedUsage, unit, price]];
   }));
   const services = {};
   for (const [name, [usage, unit, price]] of Object.entries(units)) {
