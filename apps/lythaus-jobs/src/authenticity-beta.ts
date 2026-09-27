@@ -36,7 +36,7 @@ async function step<T>(env: Env, row: CaseRow, name: 'safety' | 'safe' | 'advice
       throw new Error('beta_attempt_consumed');
     }
     const id = uuidv7();
-    await client.query(`INSERT INTO moderation.authenticity_beta_steps(id,case_id,revision,step,state,reuse_key,reservation_id) VALUES($1,$2,$3,$4,'started',$5,(SELECT id FROM system.cost_budget_reservations WHERE correlation_id=$2::text AND operation='authenticity_beta_case' LIMIT 1))`, [id,row.case_id,row.revision,name,reuseKey]);
+    await client.query(`INSERT INTO moderation.authenticity_beta_steps(id,case_id,revision,step,state,reuse_key,reservation_id) VALUES($1,$2::uuid,$3,$4,'started',$5,(SELECT id FROM system.cost_budget_reservations WHERE correlation_id=$2::uuid::text AND operation='authenticity_beta_case' LIMIT 1))`, [id,row.case_id,row.revision,name,reuseKey]);
     return { id, state: 'started', output: null, reuse_key: reuseKey };
   });
   if (started.state === 'completed') return started.output as T;

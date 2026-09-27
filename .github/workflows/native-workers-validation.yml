@@ -114,6 +114,7 @@ jobs:
       - run: npx tsc -p apps/lythaus-authenticity-runtime/tsconfig.json --noEmit
       - run: node --experimental-strip-types --test packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs
       - run: node --test scripts/tests/authenticity-beta-release.test.mjs
+      - run: python3 apps/lythaus-authenticity-runtime/container/test_artifacts.py
       - run: npm run validate:native-workers
       - run: npm run validate:native-scope
       - run: npm run validate:no-retired-provider-dependencies

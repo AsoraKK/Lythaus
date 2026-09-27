@@ -11,6 +11,8 @@ const connectionString=process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 if(!connectionString || !['localhost','127.0.0.1','::1'].includes(new URL(connectionString).hostname)) throw new Error('Local PostgreSQL 17 test database required');
 async function connect(role) {
   const client=new pg.Client({connectionString,ssl:false}); await client.connect();
+  const runQuery=client.query.bind(client);
+  client.query=async(...args)=>{try{return await runQuery(...args);}catch(error){console.error('CI_SQL_FAILURE',error.code,error.message);throw error;}};
   if(role) { if(!['lythaus_runtime','lythaus_jobs','lythaus_admin'].includes(role)) throw new Error('test_role_invalid'); await client.query(`SET ROLE ${role}`); }
   return client;
 }
@@ -74,7 +76,7 @@ try {
   assert.equal((await api(`/${first}`,'GET',undefined,stranger)).status,404);
   await processBetaEvent(env,uuidv7(),{caseId:first,revision:1});assert.equal(safeCalls,0);
   const e=await processCase(first);await processBetaEvent(env,e.id,e.payload);
-  assert.deepEqual([safetyCalls,safeCalls,adviceCalls],[1,1,1]);
+  assert.deepEqual([safetyCalls,safeCalls,adviceCalls],[1,1,1],JSON.stringify((await admin.query(`SELECT state,failure_code FROM moderation.authenticity_beta WHERE case_id=$1`,[first])).rows));
   const response=await api(`/${first}`);assert.equal(response.headers.get('cache-control'),'private, no-store');
   const result=await response.json();assert.equal(result.finding,'SYNTHETIC_LIKE_EVIDENCE');assert.equal(result.publicationEligible,false);assert.equal(JSON.stringify(result).includes(SAFE_CHECKPOINT),false);
   assert.equal((await api(`/${first}/finalise`,'POST')).status,200);assert.equal(safeCalls,1);
