@@ -7,6 +7,8 @@ import '../golden_test_utils.dart';
 /// Golden test surface size for LythButton - tall enough for 5 button variants
 const Size _kButtonGoldenSize = Size(400, 350);
 
+void _noop() {}
+
 void main() {
   setUpAll(() async {
     await loadFontsForGoldenTests();
@@ -22,24 +24,37 @@ void main() {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            LythButton(label: 'Primary', variant: LythButtonVariant.primary),
+            LythButton(
+              label: 'Primary',
+              variant: LythButtonVariant.primary,
+              onPressed: _noop,
+            ),
             SizedBox(height: 12),
             LythButton(
               label: 'Secondary',
               variant: LythButtonVariant.secondary,
+              onPressed: _noop,
             ),
             SizedBox(height: 12),
-            LythButton(label: 'Tertiary', variant: LythButtonVariant.tertiary),
+            LythButton(
+              label: 'Tertiary',
+              variant: LythButtonVariant.tertiary,
+              onPressed: _noop,
+            ),
             SizedBox(height: 12),
             LythButton(
               label: 'Destructive',
               variant: LythButtonVariant.destructive,
+              onPressed: _noop,
             ),
             SizedBox(height: 12),
-            LythButton(
-              label: 'Loading',
-              variant: LythButtonVariant.primary,
-              isLoading: true,
+            MediaQuery(
+              data: MediaQueryData(disableAnimations: true),
+              child: LythButton(
+                label: 'Loading',
+                variant: LythButtonVariant.primary,
+                isLoading: true,
+              ),
             ),
           ],
         ),
@@ -62,24 +77,37 @@ void main() {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            LythButton(label: 'Primary', variant: LythButtonVariant.primary),
+            LythButton(
+              label: 'Primary',
+              variant: LythButtonVariant.primary,
+              onPressed: _noop,
+            ),
             SizedBox(height: 12),
             LythButton(
               label: 'Secondary',
               variant: LythButtonVariant.secondary,
+              onPressed: _noop,
             ),
             SizedBox(height: 12),
-            LythButton(label: 'Tertiary', variant: LythButtonVariant.tertiary),
+            LythButton(
+              label: 'Tertiary',
+              variant: LythButtonVariant.tertiary,
+              onPressed: _noop,
+            ),
             SizedBox(height: 12),
             LythButton(
               label: 'Destructive',
               variant: LythButtonVariant.destructive,
+              onPressed: _noop,
             ),
             SizedBox(height: 12),
-            LythButton(
-              label: 'Loading',
-              variant: LythButtonVariant.primary,
-              isLoading: true,
+            MediaQuery(
+              data: MediaQueryData(disableAnimations: true),
+              child: LythButton(
+                label: 'Loading',
+                variant: LythButtonVariant.primary,
+                isLoading: true,
+              ),
             ),
           ],
         ),

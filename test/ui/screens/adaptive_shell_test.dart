@@ -5,6 +5,7 @@ import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 class _StaticLiveFeedNotifier extends LiveFeedController {
   _StaticLiveFeedNotifier(List<FeedItem> items)
@@ -59,6 +60,59 @@ List<Override> _baseOverrides({bool guest = false}) => [
 
 void main() {
   group('AdaptiveShell', () {
+    testWidgets(
+      'native back restores tab and query without losing route context',
+      (tester) async {
+        final router = GoRouter(
+          initialLocation: '/?source=fixture',
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, state) => AdaptiveShell(
+                initialIndex: switch (state.uri.queryParameters['tab']) {
+                  'profile' => 2,
+                  'rewards' => 3,
+                  _ => 0,
+                },
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ..._baseOverrides(guest: true),
+              currentUserProvider.overrideWithValue(null),
+            ],
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rewards'));
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.queryParameters, {
+          'source': 'fixture',
+          'tab': 'rewards',
+        });
+        await tester.tap(find.text('Profile'));
+        await tester.pumpAndSettle();
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.text('Sign in to view your rewards.'), findsOneWidget);
+        expect(router.routeInformationProvider.value.uri.queryParameters, {
+          'source': 'fixture',
+          'tab': 'rewards',
+        });
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.queryParameters, {
+          'source': 'fixture',
+          'tab': 'discover',
+        });
+      },
+    );
+
     testWidgets('renders bottom nav on narrow viewport', (tester) async {
       await tester.binding.setSurfaceSize(const Size(375, 812));
       addTearDown(() => tester.binding.setSurfaceSize(null));

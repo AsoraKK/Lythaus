@@ -25,7 +25,7 @@ class PrivacyDeleteSection extends StatelessWidget {
 
     return LythCard(
       backgroundColor: colors.errorContainer,
-      borderColor: colors.error.withValues(alpha: 0.3),
+      borderColor: colors.error,
       padding: EdgeInsets.all(spacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,11 +34,13 @@ class PrivacyDeleteSection extends StatelessWidget {
             children: [
               Icon(Icons.delete_forever_outlined, color: colors.error),
               SizedBox(width: spacing.md),
-              Text(
-                'Delete your account',
-                style: textTheme.titleLarge?.copyWith(
-                  color: colors.onErrorContainer,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  'Delete your account',
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colors.onErrorContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

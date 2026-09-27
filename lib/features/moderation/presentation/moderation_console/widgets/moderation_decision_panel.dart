@@ -3,6 +3,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/components/lyth_button.dart';
 
 import 'package:lythaus/features/moderation/domain/moderation_decision.dart';
 
@@ -107,30 +108,21 @@ class _ModerationDecisionPanelState extends State<ModerationDecisionPanel> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Mark as policy test'),
-                Switch.adaptive(
-                  value: _policyTest,
-                  onChanged: widget.isSubmitting
-                      ? null
-                      : (value) {
-                          setState(() => _policyTest = value);
-                        },
-                ),
-              ],
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Mark as policy test'),
+              value: _policyTest,
+              onChanged: widget.isSubmitting
+                  ? null
+                  : (value) {
+                      setState(() => _policyTest = value);
+                    },
             ),
             const SizedBox(height: 12),
-            ElevatedButton(
+            LythButton(
+              label: 'Submit decision',
               onPressed: widget.isSubmitting ? null : _submit,
-              child: widget.isSubmitting
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Submit decision'),
+              isLoading: widget.isSubmitting,
             ),
           ],
         ),

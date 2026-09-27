@@ -1,548 +1,177 @@
-# Lythaus Design System
+# Lythaus design system
 
-Comprehensive component library and design tokens for the Lythaus product.
+The canonical application and support-page system uses **warm editorial precision**:
+warm paper or near-black reading surfaces, measured typography, clear controls,
+and amber reserved for orientation and primary action. Content is the focus.
 
-## Components (12)
+The public marketing homepage is a frozen, separate consumer. Do not import these
+tokens or styles into its layout, styles, scripts, fonts or assets. The secondary
+website layout opts into this system independently.
 
-### 1. **Button** (`LythButton`)
-Primary action component with multiple variants.
+## Source and platform adapters
 
-**Variants:**
-- `.primary()` - Primary action (filled)
-- `.secondary()` - Secondary action (outlined)
-- `.tertiary()` - Tertiary action (text-only)
-- `.loading()` - Loading state with spinner
+`design/tokens.json` defines shared semantic colors, typography, layout, radius,
+spacing and motion. `tokens/semantic_colors.dart` is the small compile-time Flutter
+adapter. `test/design_system/semantic_foundations_test.dart` checks every color
+against the JSON. Flutter does not fetch or parse design tokens at runtime.
 
-**Features:**
-- Loading states with spinner
-- Disabled state support
-- Full width option
-- Semantic sizing
-- Accessibility: 48x48 minimum tap target
+Web support surfaces consume the JSON in their opt-in layout. Share semantic roles
+and values across platforms; use native Material and HTML controls for behavior.
+The application continues to use its existing theme preference and persistence.
 
-**Usage:**
-```dart
-LythButton.primary(
-  label: 'Submit',
-  onPressed: _handleSubmit,
-)
+`LythAvatar` reserves its diameter and uses an account initial during loading or
+image failure. It leaves the source media unchanged. Reaction controls use native
+outlined buttons with selected semantics and meaningful icons; public subscription
+labels remain distinct from authorship and private reputation.
 
-LythButton.loading(label: 'Processing')
+## Semantic colors
+
+| Role | Flutter use | Meaning |
+| --- | --- | --- |
+| canvas | `colorScheme.surface` | Full-screen background |
+| surface | `surfaceContainer` | Reading panels and fields |
+| surfaceRaised | `surfaceContainerHigh` | Menus and secondary containers |
+| text | `onSurface` | Primary reading text |
+| secondary | `onSurfaceVariant` | Supporting prose and icons |
+| muted | `semanticColors['muted']` | Metadata; tested on every reading surface |
+| accent / onAccent | `primary / onPrimary` | Links, focus and primary filled actions |
+| selection / onSelection | `primaryContainer / onPrimaryContainer` | Selected destinations and filters |
+| border | `outlineVariant` | Decorative dividers, non-interactive card edges |
+| control | `outline` | Essential field, control and interactive-card boundaries |
+| focus | `primary` | Visible focus, plus native focus semantics |
+| danger / onDanger | `error / onError` | Destructive action and its label |
+| dangerSurface | `errorContainer` | Error feedback surface |
+| success, warning, info | `semanticColors[role]` | Distinct feedback with matching `roleSurface` |
+
+Dark references are canvas `#070706`, text `#F2EEE3`, secondary `#C9C3B7`,
+muted `#A09A8F`, accent `#F2C98D`. Light uses warm paper `#F7F4EC` and deep
+amber `#80551F` for readable small links and controls. Do not use pale amber as
+small text on a light surface.
+
+Enabled text pairs are tested at 4.5:1; essential boundaries and focus are tested
+at 3:1 across canvas, surface and raised surfaces. Decorative dividers and
+disabled controls are separate roles and do not claim enabled-control contrast.
+Do not multiply outline opacity for a field boundary or metadata text.
+
+The contrast helper composites a translucent foreground on an opaque background
+and uses Flutter's sRGB relative luminance calculation. Passing a translucent
+background fails explicitly because its final appearance is unknown.
+
+## Typography and layout
+
+App typography uses **bundled Manrope**, directly through `fontFamily`, without
+the previous Google Fonts runtime lookup. Flutter's existing web engine still
+attempts a Roboto fallback request in a cold browser; the blocked-network browser
+harness records it in both versions. It is not a new typography dependency.
+DM Sans is the website body reference. It is not bundled
+in Flutter, so Manrope is the documented platform fallback rather than a new
+download. The existing five licensed Manrope assets remain unchanged.
+
+| Role | Size / line height | Usage |
+| --- | --- | --- |
+| display / headline large | 28–32 / 1.2–1.25 | Page hierarchy |
+| headline medium / small | 24 / 1.3; 20 / 1.35 | Section hierarchy |
+| title large / medium / small | 18 / 1.4; 16 / 1.4; 14 / 1.4 | Compact headings |
+| body large | 16 / 1.6 | Posts, articles and input text |
+| body medium | 14 / 1.5 | Interface explanations |
+| body small | 12 / 1.5 | Metadata and secondary captions |
+| labels | 12–14 / 1.4 | Controls; never important policy prose |
+
+Headings use restrained negative tracking; body text uses normal tracking. Never
+cap system text scaling. Controls grow in height and labels wrap at larger sizes.
+
+The shared spacing scale is 4, 8, 12, 16, 24, 32, 48, 64. Existing Flutter
+`xl = 20` is retained as a compatibility value; use 24 for new major gaps.
+Current names are `xs=4, sm=8, md=12, lg=16, xl=20, xxl=24, xxxl=32, huge=48`.
+Controls use radius 8, surfaces 12 and dialogs 16. Avatars may remain circular.
+Reading width starts at 720 logical pixels; support articles at 760 CSS pixels.
+
+Flutter targets are at least 48 logical pixels. Website controls target 44 CSS
+pixels. These are product usability targets, not WCAG AA minimum-size claims.
+
+## Components and states
+
+Import `package:lythaus/design_system/index.dart` for tokens, theme and core
+components, or `components/index.dart` for the complete component collection.
+
+- `LythButton`: primary, secondary, tertiary and destructive variants. Busy state
+  preserves label geometry, announces progress, and disables duplicate taps.
+  Small and medium have a 48-pixel minimum; large has 52. Labels may wrap.
+- `LythTextInput` / `LythTextField`: persistent labels, native focus/error
+  association, email autofill and password visibility. Errors/helpers occupy
+  natural height once, rather than a fixed-height field plus duplicate errors.
+  Use `LythTextField` when participating in a `Form`.
+- `LythCard`: quiet grouping. Its interactive version has a visible control
+  boundary and native ink/focus interaction. `LythCardElevated` remains available
+  for existing consumers; avoid elevated cards in long scrolling feeds.
+- `LythIconButton`: standard, filled and outlined. Supply a meaningful tooltip.
+  Disabled colors come from the native control, not a fixed icon color.
+- `LythListRow`: text expands, the whole row is interactive, selection is
+  announced, and a precise amber leading line reinforces the selected state.
+- `LythChip`: standard, filter and input. Selected filters retain the native
+  checkmark and selection semantics. A chip is not a replacement for a button.
+- `LythConfirmDialog`: scrollable confirmation content and native action
+  overflow. The callback is synchronous; callers own async confirmation,
+  reauthentication, pending states and failure recovery.
+- `LythSnackbar`: success, error, warning and information use distinct surface
+  pairs and named icons. Actions remain readable on their feedback surface.
+  Emit success only after the existing service confirms completion.
+- `LythSkeleton`: stable dimensions with a modest loading pulse. It becomes
+  static when reduced motion is enabled, including changes while visible.
+- `LythEmptyState`: an honest empty state with optional valid recovery action.
+  Callers must distinguish loading, empty data, denied access and request failure.
+
+Native Material buttons, fields, menus, sheets, dialogs, switches, radios,
+checkboxes, tabs, navigation, progress, tooltips and tables receive the same
+theme. Prefer native state handling for hover, press, focus, selected and disabled
+states. Business busy/error/success state stays with the existing controller.
+
+## Product patterns and trust
+
+Use an amber selected-navigation line, a quiet authorship disclosure area, and
+tabular contribution rows to aid orientation. Do not invent trust metrics.
+Authorship, security, personhood, reputation, rewards and subscription remain
+distinct concepts and must use actual model states.
+
+Keep post text visually stronger than time, identifiers and disclosure metadata.
+Provide visible policy requirements in composition; tooltips may supplement
+them but must not be the only explanation. Settings group related controls and
+keep security and destructive actions discoverable. Rewards preserves separate
+weekly, monthly and quarterly contract groups and never substitutes zero for an
+unknown balance.
+
+## Motion
+
+New small control transitions use 160 ms and surfaces use 220 ms. Existing
+`quick=100ms, standard=200ms, prominent=300ms` aliases remain for compatibility.
+Respect `context.disableAnimations` for custom transitions. Busy buttons provide
+a static indicator under reduced motion, and skeletons stop their controller.
+Do not add page reveals, feed entrance animation or perpetual decorative motion.
+The legacy Flutter wordmark widget is not a new animation pattern and its artwork
+is not changed by this upgrade.
+
+## Verification and exceptions
+
+Run from the repository root:
+
+```sh
+flutter analyze --no-pub lib/design_system
+flutter test --no-pub test/design_system test/golden_comparator_test.dart
+flutter test --no-pub test/features/feed/presentation/create_post_screen_test.dart test/features/feed/presentation/create_post_screen_extended_test.dart test/features/feed/presentation/create_post_screen_ui_paths_test.dart test/features/privacy/analytics_settings_card_test.dart
 ```
 
----
-
-### 2. **Text Input** (`LythTextInput`)
-Form field with validation and error handling.
-
-**Variants:**
-- `.standard()` - Default text input
-- `.password()` - Masked password field
-- `.textarea()` - Multi-line text input
-- `.email()` - Email validation
-- `.numeric()` - Numeric input only
-
-**Features:**
-- Error state with message
-- Helper text support
-- Loading indicator
-- Character count
-- Focus indication
-
-**Usage:**
-```dart
-LythTextInput.email(
-  label: 'Email',
-  onChanged: (value) => _email = value,
-  validator: (value) => _validateEmail(value),
-)
-
-LythTextInput.textarea(
-  label: 'Message',
-  maxLines: 5,
-  helperText: 'Max 500 characters',
-)
-```
-
----
-
-### 3. **Card** (`LythCard`)
-Container for grouped content.
-
-**Variants:**
-- `.standard()` - Default card
-- `.elevated()` - Elevated with shadow
-- `.filled()` - Filled background
-- `.outlined()` - Border only
-
-**Features:**
-- On-tap handler
-- Custom padding
-- Flexible content layout
-
-**Usage:**
-```dart
-LythCard.elevated(
-  onTap: _handleTap,
-  child: Column(
-    children: [
-      Text('Title'),
-      Text('Content'),
-    ],
-  ),
-)
-```
-
----
-
-### 4. **Icon Button** (`LythIconButton`)
-Compact button for single icon action.
-
-**Variants:**
-- `.standard()` - Default icon button
-- `.filled()` - Filled background
-- `.tonal()` - Tonal background
-
-**Features:**
-- Loading state support
-- Disabled state
-- Tooltip support
-- 48x48 minimum tap target
-
-**Usage:**
-```dart
-LythIconButton.standard(
-  icon: Icons.favorite,
-  onPressed: _toggleLike,
-  tooltip: 'Like',
-)
-```
-
----
-
-### 5. **Confirm Dialog** (`LythConfirmDialog`)
-Modal for confirmation actions.
-
-**Features:**
-- Customizable title and message
-- Primary and secondary buttons
-- Async handling
-- Accessibility focused
-
-**Usage:**
-```dart
-final confirmed = await showDialog<bool>(
-  context: context,
-  builder: (_) => LythConfirmDialog(
-    title: 'Delete?',
-    message: 'This cannot be undone.',
-    confirmLabel: 'Delete',
-    onConfirm: () => Navigator.pop(context, true),
-  ),
-) ?? false;
-```
-
----
-
-### 6. **Snackbar** (`LythSnackbar`)
-Inline notifications and feedback.
-
-**Variants:**
-- `.info()` - Information message
-- `.success()` - Success message
-- `.warning()` - Warning message
-- `.error()` - Error message
-
-**Features:**
-- Auto-dismiss with duration
-- Action button support
-- Animated entry/exit
-- Respects reduce-motion
-
-**Usage:**
-```dart
-ScaffoldMessenger.of(context).showSnackBar(
-  SnackBar(content: LythSnackbar.success(
-    message: 'Saved!',
-    action: 'Undo',
-    onAction: _undo,
-  )),
-);
-```
-
----
-
-### 7. **List Row** (`LythListRow`)
-Semantic list item component.
-
-**Features:**
-- Title and subtitle support
-- Leading and trailing widgets
-- On-tap handler
-- Divider support
-- Visual feedback
-
-**Usage:**
-```dart
-LythListRow(
-  title: 'Settings',
-  subtitle: 'App preferences',
-  leadingIcon: Icons.settings,
-  trailingIcon: Icons.arrow_forward,
-  onTap: _openSettings,
-)
-```
-
----
-
-### 8. **Chip** (`LythChip`)
-Compact, selectable tag component.
-
-**Variants:**
-- `.filter()` - Filter/selection chip
-- `.input()` - Input chip with delete
-- `.suggestion()` - Suggestion chip
-- `.action()` - Action chip
-
-**Features:**
-- Selected state
-- Removable option
-- Icon support
-- On-tap handler
-
-**Usage:**
-```dart
-LythChip.filter(
-  label: 'Flutter',
-  selected: isFlutterSelected,
-  onSelected: (selected) => _toggleFilter('Flutter'),
-)
-
-LythChip.input(
-  label: 'Tag',
-  onDeleted: () => _removeTag('Tag'),
-)
-```
-
----
-
-### 9. **Slider** (`LythSlider`)
-Range input component.
-
-**Features:**
-- Value label display
-- Min/max value support
-- Division marks
-- Accessibility: Keyboard navigation
-- Respects reduce-motion
-
-**Usage:**
-```dart
-LythSlider(
-  value: _volume,
-  onChanged: (value) => setState(() => _volume = value),
-  min: 0,
-  max: 100,
-  label: 'Volume',
-)
-```
-
----
-
-### 10. **Icon** (`LythIcon`)
-Semantic icon component with sizing.
-
-**Factories:**
-- `.small()` - 16x16
-- `.medium()` - 24x24
-- `.large()` - 32x32
-
-**Features:**
-- Semantic sizing
-- Custom color support
-- Consistent scaling
-
-**Usage:**
-```dart
-LythIcon.medium(
-  icon: Icons.check,
-  color: context.colorScheme.primary,
-)
-```
-
----
-
-### 11. **Empty State** (`LythEmptyState`)
-Placeholder for empty content.
-
-**Features:**
-- Icon display
-- Title and subtitle
-- Optional action button
-- Centered layout
-
-**Usage:**
-```dart
-LythEmptyState(
-  icon: Icons.inbox,
-  title: 'No Messages',
-  subtitle: 'You have no new messages',
-  actionLabel: 'Refresh',
-  onAction: _refresh,
-)
-```
-
----
-
-### 12. **Skeleton** (`LythSkeleton`)
-Loading placeholder component.
-
-**Factories:**
-- `.line()` - Text placeholder
-- `.box()` - Content placeholder
-- `.circle()` - Avatar placeholder
-
-**Features:**
-- Animated pulsing (respects reduce-motion)
-- Custom sizing
-- Customizable border radius
-
-**Usage:**
-```dart
-LythSkeleton.line(height: 16)
-LythSkeleton.box(width: 100, height: 100)
-LythSkeleton.circle(radius: 24)
-```
-
----
-
-## Design Tokens
-
-### Spacing
-Token-based spacing values for consistent margins and padding.
-
-```dart
-context.spacing.xs      // 4
-context.spacing.sm      // 8
-context.spacing.md      // 12
-context.spacing.lg      // 16
-context.spacing.xl      // 24
-context.spacing.xxl     // 32
-context.spacing.xxxl    // 48
-context.spacing.huge    // 64
-```
-
-### Radius
-Standardized border radius values.
-
-```dart
-context.radius.xs       // 2
-context.radius.sm       // 4
-context.radius.md       // 8
-context.radius.lg       // 12
-context.radius.xl       // 16
-context.radius.pill     // 24
-context.radius.circle   // 999
-context.radius.card     // 12
-context.radius.button   // 8
-context.radius.input    // 8
-context.radius.dialog   // 16
-```
-
-### Motion
-Animation durations and curves.
-
-```dart
-context.motion.quick           // 150ms
-context.motion.standard        // 300ms
-context.motion.prominent       // 500ms
-context.motion.slow            // 1000ms
-context.motion.standardCurve   // Curves.easeInOutCubic
-context.motion.entranceCurve   // Curves.easeOutCubic
-context.motion.exitCurve       // Curves.easeInCubic
-context.motion.emphasisCurve   // Curves.elasticOut
-```
-
-### Color Scheme
-Material 3 compliant color scheme with semantic colors.
-
-```dart
-context.colorScheme.primary
-context.colorScheme.secondary
-context.colorScheme.surface
-context.colorScheme.error
-context.colorScheme.onSurface
-```
-
----
-
-## Accessibility
-
-All components follow Material 3 accessibility guidelines:
-
-- **Minimum tap targets**: 48x48 logical pixels for interactive elements
-- **Keyboard navigation**: Full support via Material widgets
-- **Color contrast**: WCAG AA compliance
-- **Semantic colors**: Used consistently across components
-- **Reduce motion**: Animations respect `disableAnimations` setting
-- **Screen readers**: Proper labeling and semantics
-
----
-
-## Theme Integration
-
-Access tokens via `BuildContext` extension:
-
-```dart
-// In any widget with BuildContext
-Widget build(BuildContext context) {
-  return Padding(
-    padding: EdgeInsets.all(context.spacing.lg.toDouble()),
-    child: Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(context.radius.card),
-      ),
-      child: Text(
-        'Hello',
-        style: context.textTheme.headlineSmall,
-      ),
-    ),
-  );
-}
-```
-
----
-
-## File Structure
-
-```
-lib/design_system/
-├── components/              # 12 component files
-│   ├── lyth_button.dart
-│   ├── lyth_card.dart
-│   ├── lyth_chip.dart
-│   ├── lyth_confirm_dialog.dart
-│   ├── lyth_empty_state.dart
-│   ├── lyth_icon.dart
-│   ├── lyth_icon_button.dart
-│   ├── lyth_list_row.dart
-│   ├── lyth_skeleton.dart
-│   ├── lyth_slider.dart
-│   ├── lyth_snackbar.dart
-│   ├── lyth_text_input.dart
-│   └── index.dart           # Barrel export
-│
-├── theme/                   # Theme configuration
-│   ├── lyth_color_schemes.dart
-│   ├── lyth_theme_extensions.dart
-│   ├── lyth_theme_data.dart
-│   ├── theme_build_context_x.dart
-│   └── index.dart
-│
-├── tokens/                  # Design tokens
-│   ├── motion.dart
-│   ├── radius.dart
-│   ├── spacing.dart
-│   └── color.dart
-│
-└── widgets/                 # Utility widgets
-    ├── lyth_wordmark.dart
-    └── index.dart
-```
-
----
-
-## Best Practices
-
-### 1. Use Semantic Constructors
-```dart
-// ✅ Good
-LythButton.primary(label: 'Save', onPressed: _save)
-
-// ❌ Avoid
-RaisedButton(child: Text('Save'), onPressed: _save)
-```
-
-### 2. Access Tokens via BuildContext
-```dart
-// ✅ Good
-padding: EdgeInsets.all(context.spacing.md.toDouble())
-
-// ❌ Avoid
-padding: EdgeInsets.all(16)
-```
-
-### 3. Respect Accessibility Settings
-```dart
-// ✅ Good - Built-in to all components
-LythSkeleton.line()  // Auto-respects reduce-motion
-
-// ❌ Avoid
-AnimatedContainer()  // Without checking disableAnimations
-```
-
-### 4. Use Confirm Dialog for Destructive Actions
-```dart
-// ✅ Good
-final confirmed = await showDialog<bool>(
-  context: context,
-  builder: (_) => LythConfirmDialog(...),
-) ?? false;
-
-// ❌ Avoid
-final confirmed = await _showCustomDialog();
-```
-
-### 5. Maintain Consistent Spacing
-```dart
-// ✅ Good
-Column(
-  spacing: context.spacing.md.toDouble(),
-  children: [...],
-)
-
-// ❌ Avoid
-Column(
-  children: [
-    child1,
-    SizedBox(height: 16),
-    child2,
-  ],
-)
-```
-
----
-
-## Extending the Design System
-
-To add a new component:
-
-1. Create `lib/design_system/components/lyth_my_component.dart`
-2. Implement semantic named constructors
-3. Use `BuildContext` to access tokens
-4. Add comprehensive Dart doc comments
-5. Support all required states (loading, disabled, error)
-6. Export from `lib/design_system/components/index.dart`
-7. Document in this README
-
----
-
-## Testing Components
-
-Each component should include:
-- Widget tests for all variants
-- Accessibility tests (semantic colors, contrast)
-- State transition tests
-- Responsive layout tests
-
----
-
-## Version History
-
-- **v1.0.0** - Initial 12 components, full theme integration
-  - Button, Text Input, Card
-  - Icon Button, Confirm Dialog, Snackbar
-  - List Row, Chip, Slider
-  - Icon, Empty State, Skeleton
-  - Complete token system (spacing, radius, motion)
+The foundations test covers all shared color roles, known contrast reference
+values, alpha compositing, 320-pixel layouts at 200% text, stable loading geometry,
+password visibility and dynamic reduced-motion preferences. These checks do not
+constitute a manual screen-reader audit or establish every route's accessibility.
+
+The golden comparator retains its documented 15% cross-platform tolerance, with
+the pre-existing percentage/fraction defect corrected. The comparator test proves
+that 20% and 100% image differences fail. Homepage comparisons are independent
+and must never use that tolerance or adopt a changed baseline.
+
+Update only deliberately changed Flutter golden images after reviewing the
+before/after render. See `COMPONENT_VERIFICATION.md` and the repository's route
+migration matrix for exact implemented/verified coverage. Keep unresolved
+dependencies and untested integration paths explicit.
 

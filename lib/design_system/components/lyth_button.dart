@@ -27,8 +27,8 @@ enum LythButtonVariant {
 
 /// Size variants for buttons
 enum LythButtonSize {
-  small(height: 36, horizontal: 12),
-  medium(height: 44, horizontal: 16),
+  small(height: 48, horizontal: 12),
+  medium(height: 48, horizontal: 16),
   large(height: 52, horizontal: 24);
 
   final double height;
@@ -156,59 +156,43 @@ class LythButton extends StatelessWidget {
   bool get _isDisabled => disabled || isLoading || onPressed == null;
 
   Widget _buildLabel(BuildContext context) {
-    if (isLoading) {
-      return SizedBox(
-        width: 16,
-        height: 16,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            variant == LythButtonVariant.destructive
-                ? context.colorScheme.error
-                : variant == LythButtonVariant.secondary
-                ? context.colorScheme.onSurface
-                : context.colorScheme.onPrimary,
-          ),
-        ),
-      );
-    }
-
-    final textColor = variant == LythButtonVariant.destructive
-        ? context.colorScheme.error
-        : variant == LythButtonVariant.secondary
-        ? context.colorScheme.onSurface
-        : variant == LythButtonVariant.tertiary
-        ? context.colorScheme.primary
-        : context.colorScheme.onPrimary;
-
-    final gap = context.spacing.sm;
-    final textStyle = Theme.of(
-      context,
-    ).textTheme.labelLarge?.copyWith(color: textColor);
-
-    if (icon == null) {
-      return Text(label, style: textStyle);
-    }
-
-    final iconWidget = Icon(icon, size: 18, color: textColor);
-
-    if (iconAfter) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label, style: textStyle),
-          SizedBox(width: gap),
-          iconWidget,
-        ],
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    final text = Text(label, textAlign: TextAlign.center);
+    final content = icon == null
+        ? text
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!iconAfter) ...[
+                Icon(icon, size: 20),
+                SizedBox(width: context.spacing.sm),
+              ],
+              Flexible(child: text),
+              if (iconAfter) ...[
+                SizedBox(width: context.spacing.sm),
+                Icon(icon, size: 20),
+              ],
+            ],
+          );
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        iconWidget,
-        SizedBox(width: gap),
-        Text(label, style: textStyle),
+        Visibility(
+          visible: !isLoading,
+          maintainSize: true,
+          maintainAnimation: true,
+          maintainState: true,
+          child: content,
+        ),
+        if (isLoading)
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: context.disableAnimations ? 0.75 : null,
+              color: context.colorScheme.onSurfaceVariant,
+            ),
+          ),
       ],
     );
   }
@@ -240,14 +224,21 @@ class LythButton extends StatelessWidget {
       ),
     };
 
-    // Apply size constraints
-    button = SizedBox(height: size.height, child: button);
+    button = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: size.height),
+      child: button,
+    );
 
     // Add tooltip if provided
     if (tooltip != null) {
       button = Tooltip(message: tooltip!, child: button);
     }
 
-    return button;
+    return Semantics(
+      label: isLoading ? label : null,
+      value: isLoading ? 'In progress' : null,
+      liveRegion: isLoading,
+      child: button,
+    );
   }
 }

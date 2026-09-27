@@ -11,7 +11,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/components/lyth_snackbar.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/core/error/error_codes.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
@@ -91,206 +93,210 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Create Post',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => _handleClose(context),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Tooltip(
-              key: _policyTooltipKey,
-              message: _policyReminderMessage,
-              triggerMode: TooltipTriggerMode.manual,
-              showDuration: const Duration(seconds: 6),
-              child: FilledButton(
-                onPressed: state.isSubmitting || !state.isValid || !canCreate
-                    ? null
-                    : _handleSubmit,
-                child: state.isSubmitting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Create Post', style: context.textTheme.titleLarge),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: 'Close composer',
+            onPressed: () => _handleClose(context),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Tooltip(
+                key: _policyTooltipKey,
+                message: _policyReminderMessage,
+                triggerMode: TooltipTriggerMode.manual,
+                showDuration: const Duration(seconds: 6),
+                child: FilledButton(
+                  onPressed: state.isSubmitting || !state.isValid || !canCreate
+                      ? null
+                      : _handleSubmit,
+                  child: Semantics(
+                    label: state.isSubmitting ? 'Post' : null,
+                    value: state.isSubmitting ? 'In progress' : null,
+                    liveRegion: state.isSubmitting,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Visibility(
+                          visible: !state.isSubmitting,
+                          maintainSize: true,
+                          maintainAnimation: true,
+                          maintainState: true,
+                          child: const Text('Post'),
                         ),
-                      )
-                    : Text('Post', style: GoogleFonts.sora()),
+                        if (state.isSubmitting)
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: context.disableAnimations ? 0.75 : null,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: GestureDetector(
-        onTap: () => _focusNode.requestFocus(),
-        child: Column(
-          children: [
-            // Error banner
-            if (state.isBlocked)
-              _ContentBlockedBanner(
-                result: state.blockedResult!,
-                onAppeal:
-                    state.blockedResult!.appealEligible &&
-                        (state.blockedResult!.appealCaseId?.isNotEmpty ?? false)
-                    ? () => _submitBlockedAppeal(
-                        state.blockedResult!.appealCaseId!,
-                      )
-                    : null,
-              ),
-            if (state.isLimitExceeded)
-              _LimitExceededBanner(result: state.limitExceededResult!),
-            if (state.hasError &&
-                state.errorResult?.code != ErrorCodes.deviceIntegrityBlocked)
-              _ErrorBanner(result: state.errorResult!),
+          ],
+        ),
+        body: GestureDetector(
+          onTap: () => _focusNode.requestFocus(),
+          child: Column(
+            children: [
+              // Error banner
+              if (state.isBlocked)
+                _ContentBlockedBanner(
+                  result: state.blockedResult!,
+                  onAppeal:
+                      state.blockedResult!.appealEligible &&
+                          (state.blockedResult!.appealCaseId?.isNotEmpty ??
+                              false)
+                      ? () => _submitBlockedAppeal(
+                          state.blockedResult!.appealCaseId!,
+                        )
+                      : null,
+                ),
+              if (state.isLimitExceeded)
+                _LimitExceededBanner(result: state.limitExceededResult!),
+              if (state.hasError &&
+                  state.errorResult?.code != ErrorCodes.deviceIntegrityBlocked)
+                _ErrorBanner(result: state.errorResult!),
 
-            // Main content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Auth required message
-                      if (!canCreate) _AuthRequiredCard(theme: theme),
+              // Main content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Auth required message
+                        if (!canCreate) _AuthRequiredCard(theme: theme),
 
-                      // Text input
-                      TextField(
-                        controller: _textController,
-                        focusNode: _focusNode,
-                        minLines: 8,
-                        maxLines: 12,
-                        textAlignVertical: TextAlignVertical.top,
-                        enabled: canCreate && !state.isSubmitting,
-                        style: GoogleFonts.sora(fontSize: 16),
-                        decoration: InputDecoration(
-                          hintText: "What's on your mind?",
-                          hintStyle: GoogleFonts.sora(color: theme.hintColor),
-                          border: InputBorder.none,
-                          errorText: state.validationError,
-                          counterText: isAssisted
-                              ? '$characterCount/$characterLimit '
-                                    'user-perceived characters'
-                              : '$characterCount/$characterLimit',
-                          semanticCounterText: isAssisted
-                              ? '$characterCount of $characterLimit '
-                                    'user-perceived characters used'
-                              : '$characterCount of $characterLimit '
-                                    'characters used',
-                        ),
-                        onChanged: (value) {
-                          ref
-                              .read(postCreationProvider.notifier)
-                              .updateText(value);
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'AI disclosure',
-                        style: GoogleFonts.sora(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Required. AI-generated public content is not allowed. '
-                        'AI-assisted public text is limited to '
-                        '$aiAssistedPublicTextMaxGraphemes user-perceived characters.',
-                        style: GoogleFonts.sora(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: Text(
-                              'Human-authored',
-                              style: GoogleFonts.sora(fontSize: 12),
+                        // Text input
+                        TextField(
+                          controller: _textController,
+                          focusNode: _focusNode,
+                          minLines: 8,
+                          maxLines: 12,
+                          textAlignVertical: TextAlignVertical.top,
+                          enabled: canCreate && !state.isSubmitting,
+                          style: context.textTheme.bodyLarge,
+                          decoration: InputDecoration(
+                            labelText: 'Your post',
+                            floatingLabelBehavior: FloatingLabelBehavior.always,
+                            hintText: "What's on your mind?",
+                            hintStyle: context.textTheme.bodyMedium?.copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
                             ),
-                            selected: state.aiLabel == 'human',
-                            onSelected: canCreate && !state.isSubmitting
-                                ? (_) => ref
-                                      .read(postCreationProvider.notifier)
-                                      .setAiLabel('human')
-                                : null,
+                            border: InputBorder.none,
+                            errorText: state.validationError,
+                            counterText: isAssisted
+                                ? '$characterCount/$characterLimit '
+                                      'user-perceived characters'
+                                : '$characterCount/$characterLimit',
+                            semanticCounterText: isAssisted
+                                ? '$characterCount of $characterLimit '
+                                      'user-perceived characters used'
+                                : '$characterCount of $characterLimit '
+                                      'characters used',
                           ),
-                          ChoiceChip(
-                            label: Text(
-                              'AI-assisted',
-                              style: GoogleFonts.sora(fontSize: 12),
-                            ),
-                            selected: state.aiLabel == 'assisted',
-                            onSelected: canCreate && !state.isSubmitting
-                                ? (_) => ref
-                                      .read(postCreationProvider.notifier)
-                                      .setAiLabel('assisted')
-                                : null,
-                          ),
-                        ],
-                      ),
-                      if (isAssisted)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            '$characterCount of '
-                            '$aiAssistedPublicTextMaxGraphemes user-perceived '
-                            'characters used for AI-assisted public text.',
-                            style: GoogleFonts.sora(
-                              fontSize: 12,
-                              color:
-                                  characterCount >
-                                      aiAssistedPublicTextMaxGraphemes
-                                  ? theme.colorScheme.error
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
+                          onChanged: (value) {
+                            ref
+                                .read(postCreationProvider.notifier)
+                                .updateText(value);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'AI disclosure',
+                          style: context.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Challenge Mode: Proof of origin (optional)',
-                        style: GoogleFonts.sora(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(height: 4),
+                        Text(
+                          'Required. AI-generated public content is not allowed. '
+                          'AI-assisted public text is limited to '
+                          '$aiAssistedPublicTextMaxGraphemes user-perceived characters.',
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Optional. No penalty if not provided.',
-                        style: GoogleFonts.sora(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: Text(
+                                'Human-authored',
+                                style: context.textTheme.bodySmall,
+                              ),
+                              selected: state.aiLabel == 'human',
+                              onSelected: canCreate && !state.isSubmitting
+                                  ? (_) => ref
+                                        .read(postCreationProvider.notifier)
+                                        .setAiLabel('human')
+                                  : null,
+                            ),
+                            ChoiceChip(
+                              label: Text(
+                                'AI-assisted',
+                                style: context.textTheme.bodySmall,
+                              ),
+                              selected: state.aiLabel == 'assisted',
+                              onSelected: canCreate && !state.isSubmitting
+                                  ? (_) => ref
+                                        .read(postCreationProvider.notifier)
+                                        .setAiLabel('assisted')
+                                  : null,
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      _ProofTile(
-                        title: 'Capture metadata hash',
-                        subtitle: 'Device-captured media fingerprint',
-                        value: state.proofSignals.captureMetadataHash,
-                        onAdd: () => _editProofValue(
+                        if (isAssisted)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              '$characterCount of '
+                              '$aiAssistedPublicTextMaxGraphemes user-perceived '
+                              'characters used for AI-assisted public text.',
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color:
+                                    characterCount >
+                                        aiAssistedPublicTextMaxGraphemes
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Challenge Mode: Proof of origin (optional)',
+                          style: context.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Optional. No penalty if not provided.',
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _ProofTile(
                           title: 'Capture metadata hash',
-                          helper:
-                              'Paste a hash generated from device capture metadata.',
-                          currentValue: state.proofSignals.captureMetadataHash,
-                          onSave: ref
-                              .read(postCreationProvider.notifier)
-                              .updateCaptureMetadataHash,
-                        ),
-                        onViewDetails: () => _showProofDetails(
-                          kind: _ProofTileKind.captureHash,
-                          value: state.proofSignals.captureMetadataHash!,
-                          onEdit: () => _editProofValue(
+                          subtitle: 'Device-captured media fingerprint',
+                          value: state.proofSignals.captureMetadataHash,
+                          onAdd: () => _editProofValue(
                             title: 'Capture metadata hash',
                             helper:
                                 'Paste a hash generated from device capture metadata.',
@@ -300,24 +306,26 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 .read(postCreationProvider.notifier)
                                 .updateCaptureMetadataHash,
                           ),
+                          onViewDetails: () => _showProofDetails(
+                            kind: _ProofTileKind.captureHash,
+                            value: state.proofSignals.captureMetadataHash!,
+                            onEdit: () => _editProofValue(
+                              title: 'Capture metadata hash',
+                              helper:
+                                  'Paste a hash generated from device capture metadata.',
+                              currentValue:
+                                  state.proofSignals.captureMetadataHash,
+                              onSave: ref
+                                  .read(postCreationProvider.notifier)
+                                  .updateCaptureMetadataHash,
+                            ),
+                          ),
                         ),
-                      ),
-                      _ProofTile(
-                        title: 'Edit history hash',
-                        subtitle: 'Edit sequence fingerprint',
-                        value: state.proofSignals.editHistoryHash,
-                        onAdd: () => _editProofValue(
+                        _ProofTile(
                           title: 'Edit history hash',
-                          helper: 'Paste a hash generated from edit history.',
-                          currentValue: state.proofSignals.editHistoryHash,
-                          onSave: ref
-                              .read(postCreationProvider.notifier)
-                              .updateEditHistoryHash,
-                        ),
-                        onViewDetails: () => _showProofDetails(
-                          kind: _ProofTileKind.editHash,
-                          value: state.proofSignals.editHistoryHash!,
-                          onEdit: () => _editProofValue(
+                          subtitle: 'Edit sequence fingerprint',
+                          value: state.proofSignals.editHistoryHash,
+                          onAdd: () => _editProofValue(
                             title: 'Edit history hash',
                             helper: 'Paste a hash generated from edit history.',
                             currentValue: state.proofSignals.editHistoryHash,
@@ -325,25 +333,25 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 .read(postCreationProvider.notifier)
                                 .updateEditHistoryHash,
                           ),
+                          onViewDetails: () => _showProofDetails(
+                            kind: _ProofTileKind.editHash,
+                            value: state.proofSignals.editHistoryHash!,
+                            onEdit: () => _editProofValue(
+                              title: 'Edit history hash',
+                              helper:
+                                  'Paste a hash generated from edit history.',
+                              currentValue: state.proofSignals.editHistoryHash,
+                              onSave: ref
+                                  .read(postCreationProvider.notifier)
+                                  .updateEditHistoryHash,
+                            ),
+                          ),
                         ),
-                      ),
-                      _ProofTile(
-                        title: 'Source attestation',
-                        subtitle: 'Source link or signed statement URL',
-                        value: state.proofSignals.sourceAttestationUrl,
-                        onAdd: () => _editProofValue(
-                          title: 'Source attestation URL',
-                          helper:
-                              'Provide a source URL that supports this post.',
-                          currentValue: state.proofSignals.sourceAttestationUrl,
-                          onSave: ref
-                              .read(postCreationProvider.notifier)
-                              .updateSourceAttestationUrl,
-                        ),
-                        onViewDetails: () => _showProofDetails(
-                          kind: _ProofTileKind.sourceAttestation,
-                          value: state.proofSignals.sourceAttestationUrl!,
-                          onEdit: () => _editProofValue(
+                        _ProofTile(
+                          title: 'Source attestation',
+                          subtitle: 'Source link or signed statement URL',
+                          value: state.proofSignals.sourceAttestationUrl,
+                          onAdd: () => _editProofValue(
                             title: 'Source attestation URL',
                             helper:
                                 'Provide a source URL that supports this post.',
@@ -353,45 +361,56 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 .read(postCreationProvider.notifier)
                                 .updateSourceAttestationUrl,
                           ),
+                          onViewDetails: () => _showProofDetails(
+                            kind: _ProofTileKind.sourceAttestation,
+                            value: state.proofSignals.sourceAttestationUrl!,
+                            onEdit: () => _editProofValue(
+                              title: 'Source attestation URL',
+                              helper:
+                                  'Provide a source URL that supports this post.',
+                              currentValue:
+                                  state.proofSignals.sourceAttestationUrl,
+                              onSave: ref
+                                  .read(postCreationProvider.notifier)
+                                  .updateSourceAttestationUrl,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // Bottom toolbar
-            SafeArea(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: theme.dividerColor, width: 1),
+              // Bottom toolbar
+              SafeArea(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                ),
-                child: Row(
-                  children: [
-                    const Spacer(),
-                    Text(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: theme.dividerColor, width: 1),
+                    ),
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
                       '$remainingCharacters '
                       '${isAssisted ? 'user-perceived characters' : 'characters'} '
                       'remaining',
-                      style: GoogleFonts.sora(
-                        fontSize: 12,
+                      style: context.textTheme.bodySmall?.copyWith(
                         color: characterCount > characterLimit * 0.9
                             ? theme.colorScheme.error
-                            : theme.hintColor,
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -439,23 +458,28 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Discard post?', style: GoogleFonts.sora()),
+        scrollable: true,
+        title: Text('Discard post?', style: context.textTheme.headlineSmall),
         content: Text(
           'Your post will be lost if you close this screen.',
-          style: GoogleFonts.sora(),
+          style: context.textTheme.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Keep editing', style: GoogleFonts.sora()),
+            child: const Text('Keep editing'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: context.colorScheme.error,
+              foregroundColor: context.colorScheme.onError,
+            ),
             onPressed: () {
               ref.read(postCreationProvider.notifier).reset();
               Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
-            child: Text('Discard', style: GoogleFonts.sora()),
+            child: const Text('Discard'),
           ),
         ],
       ),
@@ -473,12 +497,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             userId: user.id,
           );
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Post created successfully!', style: GoogleFonts.sora()),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
+    LythSnackbar.success(
+      context: context,
+      message: 'Post created successfully!',
     );
 
     // Reset and close
@@ -496,7 +517,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final next = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(title, style: GoogleFonts.sora()),
+        scrollable: true,
+        title: Text(title, style: context.textTheme.headlineSmall),
         content: TextField(
           controller: controller,
           minLines: 1,
@@ -545,16 +567,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             children: [
               Text(
                 kind.title,
-                style: GoogleFonts.sora(
-                  fontSize: 16,
+                style: context.textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Status: Provided',
-                style: GoogleFonts.sora(
-                  fontSize: 12,
+                style: context.textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.tertiary,
                   fontWeight: FontWeight.w600,
                 ),
@@ -563,32 +583,28 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               if (isHash) ...[
                 Text(
                   'Hash preview',
-                  style: GoogleFonts.sora(
-                    fontSize: 12,
+                  style: context.textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 SelectableText(
                   hashPreview,
-                  style: GoogleFonts.sora(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ] else ...[
                 Text(
                   'Domain: $domain',
-                  style: GoogleFonts.sora(
-                    fontSize: 13,
+                  style: context.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
                 SelectableText(
                   trimmed,
-                  style: GoogleFonts.sora(
-                    fontSize: 12,
+                  style: context.textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -608,7 +624,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         SnackBar(
                           content: Text(
                             isHash ? 'Hash copied' : 'Link copied',
-                            style: GoogleFonts.sora(),
+                            style: sheetContext.textTheme.bodyMedium,
                           ),
                         ),
                       );
@@ -654,7 +670,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final statement = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Request an appeal review', style: GoogleFonts.sora()),
+        scrollable: true,
+        title: Text(
+          'Request an appeal review',
+          style: context.textTheme.headlineSmall,
+        ),
         content: TextField(
           controller: controller,
           minLines: 3,
@@ -668,11 +688,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: GoogleFonts.sora()),
+            child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text('Submit', style: GoogleFonts.sora()),
+            child: const Text('Submit'),
           ),
         ],
       ),
@@ -685,7 +705,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         SnackBar(
           content: Text(
             'Please provide at least 10 characters for your appeal.',
-            style: GoogleFonts.sora(),
+            style: context.textTheme.bodyMedium,
           ),
         ),
       );
@@ -702,7 +722,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               ? 'Appeal submitted for independent trained-reviewer and '
                     'adjudicator review. We will notify you when there is an update.'
               : 'Failed to submit appeal. Please try again.',
-          style: GoogleFonts.sora(),
+          style: context.textTheme.bodyMedium,
         ),
       ),
     );
@@ -747,19 +767,15 @@ class _ProofTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        title: Text(
-          title,
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600, fontSize: 13),
-        ),
+        title: Text(title, style: context.textTheme.titleSmall),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(subtitle, style: GoogleFonts.sora(fontSize: 11)),
+            Text(subtitle, style: context.textTheme.bodySmall),
             const SizedBox(height: 4),
             Text(
               provided ? 'Provided' : 'Not provided',
-              style: GoogleFonts.sora(
-                fontSize: 12,
+              style: context.textTheme.bodySmall?.copyWith(
                 color: provided
                     ? Theme.of(context).colorScheme.tertiary
                     : Theme.of(context).colorScheme.onSurfaceVariant,
@@ -769,8 +785,7 @@ class _ProofTile extends StatelessWidget {
             if (safePreview != null)
               Text(
                 safePreview,
-                style: GoogleFonts.sora(
-                  fontSize: 11,
+                style: context.textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -806,7 +821,7 @@ class _ContentBlockedBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      color: theme.colorScheme.error.withValues(alpha: 0.1),
+      color: theme.colorScheme.errorContainer,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -817,7 +832,7 @@ class _ContentBlockedBanner extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Content Blocked',
-                  style: GoogleFonts.sora(
+                  style: context.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.error,
                   ),
@@ -826,7 +841,7 @@ class _ContentBlockedBanner extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(result.message, style: GoogleFonts.sora(fontSize: 14)),
+          Text(result.message, style: context.textTheme.bodyMedium),
           if (result.categories.isNotEmpty) ...[
             const SizedBox(height: 8),
             Wrap(
@@ -834,11 +849,9 @@ class _ContentBlockedBanner extends StatelessWidget {
               runSpacing: 4,
               children: result.categories.map((category) {
                 return Chip(
-                  label: Text(category, style: GoogleFonts.sora(fontSize: 12)),
+                  label: Text(category, style: context.textTheme.bodySmall),
                   visualDensity: VisualDensity.compact,
-                  backgroundColor: theme.colorScheme.error.withValues(
-                    alpha: 0.2,
-                  ),
+                  backgroundColor: theme.colorScheme.errorContainer,
                 );
               }).toList(),
             ),
@@ -865,7 +878,6 @@ class _LimitExceededBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final hours = result.retryAfter.inHours;
     final minutes = result.retryAfter.inMinutes % 60;
 
@@ -879,7 +891,7 @@ class _LimitExceededBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      color: theme.colorScheme.secondary.withValues(alpha: 0.1),
+      color: context.semanticColors['warningSurface'],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -887,16 +899,16 @@ class _LimitExceededBanner extends StatelessWidget {
             children: [
               Icon(
                 Icons.timer_outlined,
-                color: theme.colorScheme.secondary,
+                color: context.semanticColors['warning'],
                 size: 20,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Daily Limit Reached',
-                  style: GoogleFonts.sora(
+                  style: context.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.secondary,
+                    color: context.semanticColors['warning'],
                   ),
                 ),
               ),
@@ -906,7 +918,7 @@ class _LimitExceededBanner extends StatelessWidget {
           Text(
             'You\'ve reached your daily limit of ${result.limit} posts '
             '(${result.tier} tier). $retryText.',
-            style: GoogleFonts.sora(fontSize: 14),
+            style: context.textTheme.bodyMedium,
           ),
         ],
       ),
@@ -926,7 +938,7 @@ class _ErrorBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      color: theme.colorScheme.error.withValues(alpha: 0.1),
+      color: theme.colorScheme.errorContainer,
       child: Row(
         children: [
           Icon(Icons.error_outline, color: theme.colorScheme.error, size: 20),
@@ -934,8 +946,7 @@ class _ErrorBanner extends StatelessWidget {
           Expanded(
             child: Text(
               result.message,
-              style: GoogleFonts.sora(
-                fontSize: 14,
+              style: context.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.error,
               ),
             ),
@@ -965,7 +976,7 @@ class _AuthRequiredCard extends StatelessWidget {
             Expanded(
               child: Text(
                 'Please sign in to create a post.',
-                style: GoogleFonts.sora(),
+                style: context.textTheme.bodyMedium,
               ),
             ),
           ],
@@ -986,7 +997,7 @@ class CreatePostFAB extends ConsumerWidget {
     return FloatingActionButton.extended(
       onPressed: () => _openCreatePost(context, canCreate),
       icon: const Icon(Icons.edit),
-      label: Text('Post', style: GoogleFonts.sora()),
+      label: const Text('Post'),
       tooltip: canCreate ? 'Create a new post' : 'Sign in to create a post',
     );
   }
@@ -997,7 +1008,7 @@ class CreatePostFAB extends ConsumerWidget {
         SnackBar(
           content: Text(
             'Please sign in to create a post',
-            style: GoogleFonts.sora(),
+            style: context.textTheme.bodyMedium,
           ),
         ),
       );

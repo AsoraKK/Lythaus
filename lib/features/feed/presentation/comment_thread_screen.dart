@@ -2,6 +2,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/core/error/error_codes.dart';
@@ -295,29 +296,34 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Comments')),
-      body: Column(
-        children: [
-          if (_errorMessage != null)
-            MaterialBanner(
-              content: Text(_errorMessage!),
-              actions: [
-                TextButton(onPressed: _loadInitial, child: const Text('Retry')),
-              ],
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Comments')),
+        body: Column(
+          children: [
+            if (_errorMessage != null)
+              MaterialBanner(
+                content: Text(_errorMessage!),
+                actions: [
+                  TextButton(
+                    onPressed: _loadInitial,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            Expanded(child: _buildCommentList()),
+            _ComposerBar(
+              controller: _composerController,
+              replyTarget: _replyTarget,
+              isSubmitting: _isSubmitting,
+              composerFocusNode: _composerFocusNode,
+              onCancelReply: () => setState(() {
+                _replyTarget = null;
+              }),
+              onSend: _submitComment,
             ),
-          Expanded(child: _buildCommentList()),
-          _ComposerBar(
-            controller: _composerController,
-            replyTarget: _replyTarget,
-            isSubmitting: _isSubmitting,
-            composerFocusNode: _composerFocusNode,
-            onCancelReply: () => setState(() {
-              _replyTarget = null;
-            }),
-            onSend: _submitComment,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -430,21 +436,28 @@ class _ComposerBar extends StatelessWidget {
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => onSend(),
                     decoration: const InputDecoration(
-                      hintText: 'Write a reply',
+                      labelText: 'Write a reply',
                       border: OutlineInputBorder(),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: isSubmitting ? null : onSend,
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send, size: 18),
+                Tooltip(
+                  message: 'Send reply',
+                  child: FilledButton(
+                    onPressed: isSubmitting ? null : onSend,
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(
+                            Icons.send,
+                            size: 18,
+                            semanticLabel: 'Send reply',
+                          ),
+                  ),
                 ),
               ],
             ),

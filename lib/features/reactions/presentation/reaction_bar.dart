@@ -181,38 +181,26 @@ class _ReactionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? selectedColor : defaultColor;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: selected ? color.withAlpha(30) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? color : color.withAlpha(60),
-            width: selected ? 1.5 : 1,
+    return Semantics(
+      selected: selected,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: color,
+          backgroundColor: selected
+              ? Theme.of(context).colorScheme.primaryContainer
+              : null,
+          side: BorderSide(
+            color: selected ? color : Theme.of(context).colorScheme.outline,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_icon, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 4),
-            Text(
-              count > 0 ? '${type.label} $count' : type.label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: color,
-              ),
-            ),
-          ],
-        ),
+        icon: Icon(switch (type) {
+          ReactionType.like => Icons.thumb_up_outlined,
+          ReactionType.insightful => Icons.lightbulb_outline,
+          ReactionType.support => Icons.favorite_border,
+        }, size: 18),
+        label: Text(count > 0 ? '${type.label} $count' : type.label),
       ),
     );
   }
-
-  String get _icon => type.name;
 }

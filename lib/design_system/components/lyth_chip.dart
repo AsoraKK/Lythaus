@@ -100,10 +100,10 @@ class LythChip extends StatelessWidget {
         onSelected: disabled ? null : onSelected,
         backgroundColor:
             backgroundColor ?? context.colorScheme.surfaceContainer,
-        selectedColor: backgroundColor ?? context.colorScheme.primary,
+        selectedColor: backgroundColor ?? context.colorScheme.primaryContainer,
         labelStyle: TextStyle(
           color: selected
-              ? context.colorScheme.onPrimary
+              ? context.colorScheme.onPrimaryContainer
               : context.colorScheme.onSurface,
         ),
       );

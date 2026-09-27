@@ -44,8 +44,10 @@ class LythSnackbar {
     _show(
       context,
       message: message,
-      backgroundColor: context.colorScheme.surface,
-      textColor: context.colorScheme.onSurface,
+      backgroundColor: context.semanticColors['successSurface']!,
+      textColor: context.semanticColors['success']!,
+      icon: Icons.check_circle_outline,
+      status: 'Success',
       duration: duration,
       action: action,
     );
@@ -61,8 +63,10 @@ class LythSnackbar {
     _show(
       context,
       message: message,
-      backgroundColor: context.colorScheme.error,
-      textColor: context.colorScheme.onError,
+      backgroundColor: context.colorScheme.errorContainer,
+      textColor: context.colorScheme.onErrorContainer,
+      icon: Icons.error_outline,
+      status: 'Error',
       duration: duration,
       action: action,
     );
@@ -78,8 +82,10 @@ class LythSnackbar {
     _show(
       context,
       message: message,
-      backgroundColor: context.colorScheme.surfaceContainer,
-      textColor: context.colorScheme.onSurface,
+      backgroundColor: context.semanticColors['infoSurface']!,
+      textColor: context.semanticColors['info']!,
+      icon: Icons.info_outline,
+      status: 'Information',
       duration: duration,
       action: action,
     );
@@ -95,8 +101,10 @@ class LythSnackbar {
     _show(
       context,
       message: message,
-      backgroundColor: context.colorScheme.surface,
-      textColor: context.colorScheme.onSurface,
+      backgroundColor: context.semanticColors['warningSurface']!,
+      textColor: context.semanticColors['warning']!,
+      icon: Icons.warning_amber_outlined,
+      status: 'Warning',
       duration: duration,
       action: action,
     );
@@ -107,15 +115,32 @@ class LythSnackbar {
     required String message,
     required Color backgroundColor,
     required Color textColor,
+    required IconData icon,
+    required String status,
     required Duration duration,
     SnackBarAction? action,
   }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: TextStyle(color: textColor)),
+        content: Row(
+          children: [
+            Icon(icon, color: textColor, semanticLabel: status),
+            SizedBox(width: context.spacing.md),
+            Expanded(
+              child: Text(message, style: TextStyle(color: textColor)),
+            ),
+          ],
+        ),
         backgroundColor: backgroundColor,
         duration: duration,
-        action: action,
+        action: action == null
+            ? null
+            : SnackBarAction(
+                label: action.label,
+                onPressed: action.onPressed,
+                textColor: textColor,
+                disabledTextColor: textColor.withValues(alpha: 0.6),
+              ),
       ),
     );
   }

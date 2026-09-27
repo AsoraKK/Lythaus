@@ -101,6 +101,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('Private'), 200);
     await tester.tap(find.text('Private').first);
     await tester.pumpAndSettle();
 
@@ -170,6 +171,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(find.text('Private'), 200);
       await tester.tap(find.text('Private').first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
@@ -54,22 +55,24 @@ class _ModerationConsoleScreenState
 
   @override
   Widget build(BuildContext context) {
-    return ModeratorGuard(
-      title: 'Moderation',
-      child: DefaultTabController(
-        length: ModerationConsoleScreen._tabs.length,
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Moderation Console'),
-            centerTitle: false,
-            bottom: const TabBar(tabs: ModerationConsoleScreen._tabs),
-          ),
-          body: const TabBarView(
-            children: [
-              ModerationQueueTab(),
-              ModerationAuditTab(),
-              _InsightsTab(),
-            ],
+    return ReadingPane(
+      child: ModeratorGuard(
+        title: 'Moderation',
+        child: DefaultTabController(
+          length: ModerationConsoleScreen._tabs.length,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Moderation Console'),
+              centerTitle: false,
+              bottom: const TabBar(tabs: ModerationConsoleScreen._tabs),
+            ),
+            body: const TabBarView(
+              children: [
+                ModerationQueueTab(),
+                ModerationAuditTab(),
+                _InsightsTab(),
+              ],
+            ),
           ),
         ),
       ),
@@ -171,7 +174,7 @@ class _InsightsTabState extends ConsumerState<_InsightsTab> {
           Text(
             'Track moderation load, decision outcomes, and queue pressure.',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.74),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 16),
@@ -530,7 +533,7 @@ class _MetricCard extends StatelessWidget {
           Text(
             data.hint,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],

@@ -105,22 +105,21 @@ class LythListRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 title,
                 style: context.textTheme.bodyLarge?.copyWith(
                   color: context.colorScheme.onSurface,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
               if (subtitle != null) ...[
                 SizedBox(height: context.spacing.xs.toDouble()),
                 Text(
                   subtitle!,
                   style: context.textTheme.bodySmall?.copyWith(
-                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],
@@ -138,30 +137,39 @@ class LythListRow extends StatelessWidget {
             padding: EdgeInsets.only(left: context.spacing.md.toDouble()),
             child: Icon(
               trailingIcon,
-              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+              color: context.colorScheme.onSurfaceVariant,
               size: 20,
             ),
           ),
       ],
     );
 
-    return Container(
-      height: height,
-      padding: padding,
-      decoration: BoxDecoration(
+    return Semantics(
+      selected: selected,
+      child: Material(
         color: selected
-            ? context.colorScheme.primary.withValues(alpha: 0.1)
+            ? context.colorScheme.primaryContainer
             : Colors.transparent,
-        border: Border(
-          bottom: BorderSide(
-            color: context.colorScheme.outline.withValues(alpha: 0.1),
-            width: 1,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Container(
+            constraints: BoxConstraints(minHeight: height),
+            padding: padding,
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: selected
+                      ? context.colorScheme.primary
+                      : Colors.transparent,
+                  width: 3,
+                ),
+                bottom: BorderSide(color: context.colorScheme.outlineVariant),
+              ),
+            ),
+            child: content,
           ),
         ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(onTap: onTap, onLongPress: onLongPress, child: content),
       ),
     );
   }

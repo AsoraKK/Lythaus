@@ -1,0 +1,35 @@
+---
+import SecondaryLayout from '../../layouts/SecondaryLayout.astro';
+const groups = [
+  { title: 'Getting started', links: [
+    { href: '/signup', label: 'Create your account' },
+    { href: '/invite', label: 'Redeem an invite' },
+    { href: '/sign-in', label: 'Sign in to Lythaus' },
+  ] },
+  { title: 'Account access', links: [
+    { href: '/forgot-password', label: 'Reset your password' },
+    { href: '/resend-verification', label: 'Request email verification' },
+    { href: '/check-email', label: 'Waiting for an account email' },
+  ] },
+  { title: 'Publishing and community', links: [
+    { href: '/ai-moderation', label: 'Content transparency and review' },
+    { href: '/guidelines', label: 'Community guidelines' },
+    { href: '/guidelines#appeals', label: 'Appeals' },
+  ] },
+  { title: 'Privacy and support', links: [
+    { href: '/privacy', label: 'Privacy and your data' },
+    { href: '/terms', label: 'Terms of service' },
+    { href: '/contact', label: 'Contact Lythaus' },
+  ] },
+];
+---
+<SecondaryLayout title="Help" description="Find Lythaus account guidance, community policies, and support." canonicalPath="/help">
+  <section class="section section--wide" aria-labelledby="help-title">
+    <span class="eyebrow">Lythaus support</span>
+    <h1 id="help-title">How can we help?</h1>
+    <p>Account guidance and community information, in one place.</p>
+    <div class="help-directory">
+      {groups.map(({ title, links }) => <section class="help-group"><h2>{title}</h2><ul>{links.map(({ href, label }) => <li><a href={href}>{label}</a></li>)}</ul></section>)}
+    </div>
+  </section>
+</SecondaryLayout>

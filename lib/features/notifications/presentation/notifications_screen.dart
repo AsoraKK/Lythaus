@@ -12,6 +12,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/core/routing/deeplink_router.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart'
     as models;
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
@@ -29,6 +31,8 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final ScrollController _scrollController = ScrollController();
+  final Set<String> _pending = {};
+  bool _markingAll = false;
 
   @override
   void initState() {
@@ -53,6 +57,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent * 0.8 &&
         !state.isLoadingMore &&
+        !state.hasError &&
         state.continuationToken != null) {
       ref.read(notificationsControllerProvider.notifier).loadMore();
     }
@@ -64,16 +69,67 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         .loadNotifications();
   }
 
-  Future<void> _markAsRead(models.Notification notification) async {
+  void _message(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<bool> _markAsRead(models.Notification notification) async {
+    if (_pending.contains(notification.id)) return false;
+    setState(() => _pending.add(notification.id));
     await ref
         .read(notificationsControllerProvider.notifier)
         .markAsRead(notification.id);
+    if (!mounted) return false;
+    setState(() => _pending.remove(notification.id));
+    final read = ref
+        .read(notificationsControllerProvider)
+        .notifications
+        .any((item) => item.id == notification.id && item.read);
+    if (!read && !_markingAll) {
+      _message('Could not mark this notification as read. Please try again.');
+    }
+    return read;
   }
 
   Future<void> _dismiss(models.Notification notification) async {
+    if (_pending.contains(notification.id)) return;
+    setState(() => _pending.add(notification.id));
     await ref
         .read(notificationsControllerProvider.notifier)
         .dismiss(notification.id);
+    if (!mounted) return;
+    setState(() => _pending.remove(notification.id));
+    if (ref
+        .read(notificationsControllerProvider)
+        .notifications
+        .any((item) => item.id == notification.id)) {
+      _message('Could not dismiss this notification. Please try again.');
+    }
+  }
+
+  Future<void> _markAllRead() async {
+    if (_markingAll) return;
+    setState(() => _markingAll = true);
+    final unread = ref
+        .read(notificationsControllerProvider)
+        .notifications
+        .where((item) => !item.read)
+        .toList();
+    var failures = 0;
+    for (final item in unread) {
+      if (!mounted) return;
+      if (!await _markAsRead(item)) failures += 1;
+    }
+    if (!mounted) return;
+    setState(() => _markingAll = false);
+    _message(
+      failures == 0
+          ? 'Loaded notifications marked as read.'
+          : 'Some notifications could not be marked as read. Please try again.',
+    );
   }
 
   Future<void> _handleTap(models.Notification notification) async {
@@ -81,66 +137,118 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       await _markAsRead(notification);
     }
 
-    // TODO: Navigate via deep-link
-    if (notification.deeplink != null) {
-      debugPrint('Navigate to: ${notification.deeplink}');
-      // Implement deep-link navigation here
+    if (!mounted) return;
+    final link = notification.deeplink;
+    if (link == null || !DeeplinkRouter.canNavigate(link)) {
+      _message('This notification has no available destination.');
+      return;
     }
+    await DeeplinkRouter.navigate(context, link);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(notificationsControllerProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [
-          if (state.notifications.any((n) => !n.read))
-            LythButton.tertiary(
-              size: LythButtonSize.small,
-              label: 'Mark all read',
-              onPressed: () {
-                // TODO: Implement mark all as read
-              },
-            ),
-        ],
-      ),
-      body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : state.hasError
-          ? _ErrorState(
-              message: state.errorMessage ?? 'Failed to load notifications',
-              onRetry: _handleRefresh,
-            )
-          : state.notifications.isEmpty
-          ? _EmptyState(onRefresh: _handleRefresh)
-          : RefreshIndicator(
-              onRefresh: _handleRefresh,
-              child: ListView.separated(
-                controller: _scrollController,
-                itemCount:
-                    state.notifications.length +
-                    (state.continuationToken != null ? 1 : 0),
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  if (index >= state.notifications.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Notifications')),
+        body: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Column(
+                children: [
+                  if (state.notifications.any((n) => !n.read))
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: context.spacing.lg,
+                        ),
+                        child: LythButton(
+                          variant: LythButtonVariant.tertiary,
+                          size: LythButtonSize.small,
+                          label: 'Mark all read',
+                          tooltip: 'Mark loaded notifications as read',
+                          isLoading: _markingAll,
+                          onPressed: _markingAll ? null : _markAllRead,
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: state.isLoading && state.notifications.isEmpty
+                        ? const Center(child: CircularProgressIndicator())
+                        : state.hasError && state.notifications.isEmpty
+                        ? _ErrorState(
+                            message:
+                                'Could not load notifications. Check your connection and try again.',
+                            onRetry: _handleRefresh,
+                          )
+                        : state.notifications.isEmpty
+                        ? _EmptyState(onRefresh: _handleRefresh)
+                        : RefreshIndicator(
+                            onRefresh: _handleRefresh,
+                            child: ListView.separated(
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount:
+                                  state.notifications.length +
+                                  (state.continuationToken != null ||
+                                          state.hasError
+                                      ? 1
+                                      : 0),
+                              separatorBuilder: (context, index) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                if (index >= state.notifications.length) {
+                                  return Padding(
+                                    padding: EdgeInsets.all(context.spacing.lg),
+                                    child: state.isLoadingMore
+                                        ? const Center(
+                                            child: CircularProgressIndicator(),
+                                          )
+                                        : Column(
+                                            children: [
+                                              if (state.hasError)
+                                                const Text(
+                                                  'Could not load more notifications. Your loaded notifications are still available.',
+                                                ),
+                                              LythButton.secondary(
+                                                label: state.hasError
+                                                    ? 'Retry loading'
+                                                    : 'Load more',
+                                                onPressed: () => ref
+                                                    .read(
+                                                      notificationsControllerProvider
+                                                          .notifier,
+                                                    )
+                                                    .loadMore(),
+                                              ),
+                                            ],
+                                          ),
+                                  );
+                                }
 
-                  final notification = state.notifications[index];
-                  return _NotificationCard(
-                    notification: notification,
-                    onTap: () => _handleTap(notification),
-                    onMarkRead: () => _markAsRead(notification),
-                    onDismiss: () => _dismiss(notification),
-                  );
-                },
+                                final notification = state.notifications[index];
+                                return _NotificationCard(
+                                  notification: notification,
+                                  onTap: () => _handleTap(notification),
+                                  onMarkRead: () => _markAsRead(notification),
+                                  onDismiss: () => _dismiss(notification),
+                                  busy: _pending.contains(notification.id),
+                                );
+                              },
+                            ),
+                          ),
+                  ),
+                ],
               ),
             ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -152,14 +260,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 class _NotificationCard extends StatelessWidget {
   final models.Notification notification;
   final VoidCallback onTap;
-  final VoidCallback onMarkRead;
-  final VoidCallback onDismiss;
+  final Future<void> Function() onMarkRead;
+  final Future<void> Function() onDismiss;
+  final bool busy;
 
   const _NotificationCard({
     required this.notification,
     required this.onTap,
     required this.onMarkRead,
     required this.onDismiss,
+    required this.busy,
   });
 
   @override
@@ -169,7 +279,7 @@ class _NotificationCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final backgroundColor = notification.read
         ? scheme.surface
-        : scheme.primaryContainer.withValues(alpha: 0.18);
+        : scheme.surfaceContainerLow;
 
     return Dismissible(
       key: Key(notification.id),
@@ -187,22 +297,16 @@ class _NotificationCard extends StatelessWidget {
         alignment: Alignment.centerRight,
       ),
       confirmDismiss: (direction) async {
+        if (busy) return false;
         if (direction == DismissDirection.startToEnd) {
-          // Left swipe: mark as read
-          onMarkRead();
-          return false;
+          await onMarkRead();
         } else {
-          // Right swipe: dismiss
-          return true;
+          await onDismiss();
         }
-      },
-      onDismissed: (direction) {
-        if (direction == DismissDirection.endToStart) {
-          onDismiss();
-        }
+        return false;
       },
       child: LythCard.clickable(
-        onTap: onTap,
+        onTap: busy ? null : onTap,
         padding: EdgeInsets.all(spacing.lg),
         backgroundColor: backgroundColor,
         child: Row(
@@ -239,35 +343,53 @@ class _NotificationCard extends StatelessWidget {
                                 ? FontWeight.normal
                                 : FontWeight.bold,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (!notification.read)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: scheme.primary,
-                            shape: BoxShape.circle,
+                        Semantics(
+                          label: 'Unread',
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: scheme.primary,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
+                      PopupMenuButton<String>(
+                        tooltip: 'Notification actions',
+                        enabled: !busy,
+                        onSelected: (action) async {
+                          if (action == 'read') await onMarkRead();
+                          if (action == 'dismiss') await onDismiss();
+                        },
+                        itemBuilder: (_) => [
+                          if (!notification.read)
+                            const PopupMenuItem(
+                              value: 'read',
+                              child: Text('Mark as read'),
+                            ),
+                          const PopupMenuItem(
+                            value: 'dismiss',
+                            child: Text('Dismiss notification'),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                   SizedBox(height: spacing.xs),
                   Text(
                     notification.body,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.7),
+                      color: scheme.onSurfaceVariant,
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: spacing.sm),
                   Text(
-                    _formatTime(notification.createdAt),
+                    _formatTime(context, notification.createdAt),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.5),
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -315,7 +437,7 @@ class _NotificationCard extends StatelessWidget {
     };
   }
 
-  String _formatTime(DateTime time) {
+  String _formatTime(BuildContext context, DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
 
@@ -323,7 +445,7 @@ class _NotificationCard extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${time.month}/${time.day}/${time.year}';
+    return MaterialLocalizations.of(context).formatCompactDate(time.toLocal());
   }
 }
 
@@ -367,34 +489,40 @@ class _ErrorState extends StatelessWidget {
     final spacing = context.spacing;
 
     return Center(
-      child: Padding(
-        padding: EdgeInsets.all(spacing.xxxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 80, color: theme.colorScheme.error),
-            SizedBox(height: spacing.xxl),
-            Text(
-              'Something went wrong',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(spacing.xxxl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 80,
+                color: theme.colorScheme.error,
               ),
-            ),
-            SizedBox(height: spacing.md),
-            Text(
-              message,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              SizedBox(height: spacing.xxl),
+              Text(
+                'Something went wrong',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: spacing.xxxl),
-            LythButton.primary(
-              label: 'Try Again',
-              onPressed: onRetry,
-              icon: Icons.refresh,
-            ),
-          ],
+              SizedBox(height: spacing.md),
+              Text(
+                message,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: spacing.xxxl),
+              LythButton.primary(
+                label: 'Try Again',
+                onPressed: onRetry,
+                icon: Icons.refresh,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -416,38 +544,40 @@ class _EmptyState extends StatelessWidget {
     final spacing = context.spacing;
 
     return Center(
-      child: Padding(
-        padding: EdgeInsets.all(spacing.xxxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.notifications_none_outlined,
-              size: 120,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-            ),
-            SizedBox(height: spacing.xxl),
-            Text(
-              'No Notifications',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(spacing.xxxl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.notifications_none_outlined,
+                size: 64,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
-            ),
-            SizedBox(height: spacing.md),
-            Text(
-              'When you get notifications, they will show up here',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              SizedBox(height: spacing.xxl),
+              Text(
+                'No Notifications',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: spacing.xxxl),
-            LythButton.secondary(
-              label: 'Refresh',
-              onPressed: onRefresh,
-              icon: Icons.refresh,
-            ),
-          ],
+              SizedBox(height: spacing.md),
+              Text(
+                'When you get notifications, they will show up here',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: spacing.xxxl),
+              LythButton.secondary(
+                label: 'Refresh',
+                onPressed: onRefresh,
+                icon: Icons.refresh,
+              ),
+            ],
+          ),
         ),
       ),
     );

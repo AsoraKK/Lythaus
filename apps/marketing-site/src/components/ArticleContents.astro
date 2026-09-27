@@ -1,0 +1,8 @@
+---
+interface Props { sections: { id: string; title: string }[] }
+const { sections } = Astro.props;
+---
+<details class="article-contents">
+  <summary>On this page</summary>
+  <nav aria-label="On this page"><ol>{sections.map(({ id, title }) => <li><a href={`#${id}`}>{title}</a></li>)}</ol></nav>
+</details>

@@ -13,6 +13,8 @@ import 'package:lythaus/features/moderation/presentation/screens/appeal_history_
 import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/ui/screens/profile/settings_screen.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 
 /// Route name constants.
 abstract final class AppRoutes {
@@ -24,6 +26,8 @@ abstract final class AppRoutes {
   static const String moderation = 'moderation';
   static const String moderationAppeal = 'moderation-appeal';
   static const String notificationSettings = 'notification-settings';
+  static const String rewards = 'rewards';
+  static const String settings = 'settings';
 }
 
 String? resolveAppRedirect({
@@ -74,7 +78,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         name: AppRoutes.login,
         path: '/login',
-        builder: (context, state) => const AuthChoiceScreen(),
+        builder: (context, state) =>
+            const ReadingPane(child: AuthChoiceScreen()),
       ),
 
       // Invite redemption — top-level public route so anonymous users can
@@ -86,11 +91,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             InviteRedeemScreen(inviteCode: state.pathParameters['code']),
       ),
 
-      // Alpha app shell (tabs: Discover, Create, Profile)
+      // Alpha app shell (tabs: Discover, Create, Profile, Rewards)
+      GoRoute(
+        name: AppRoutes.rewards,
+        path: '/rewards',
+        redirect: (context, state) => Uri(
+          path: '/',
+          queryParameters: {...state.uri.queryParameters, 'tab': 'rewards'},
+        ).toString(),
+      ),
+      GoRoute(
+        name: AppRoutes.settings,
+        path: '/settings',
+        builder: (context, state) => const ReadingPane(child: SettingsScreen()),
+      ),
       GoRoute(
         name: AppRoutes.shell,
         path: '/',
-        builder: (context, state) => const AdaptiveShell(),
+        builder: (context, state) => AdaptiveShell(
+          initialIndex: switch (state.uri.queryParameters['tab']) {
+            'create' => isGuest ? 0 : 1,
+            'profile' => 2,
+            'rewards' => 3,
+            _ => 0,
+          },
+        ),
         routes: [
           // Post detail
           GoRoute(

@@ -6,11 +6,16 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:lythaus/design_system/theme/lyth_theme_extensions.dart';
+import 'package:lythaus/design_system/tokens/semantic_colors.dart';
 
 /// Extension methods for accessing Lythaus theme tokens
 extension LythBuildContextX on BuildContext {
   /// Get the current color scheme
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
+
+  /// Semantic feedback and reading roles shared with support pages.
+  Map<String, Color> get semanticColors =>
+      LythSemanticColors.of(Theme.of(this).brightness);
 
   /// Get spacing tokens
   SpacingTokens get spacing =>
