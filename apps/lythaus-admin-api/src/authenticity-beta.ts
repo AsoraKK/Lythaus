@@ -23,14 +23,14 @@ async function routeAdminBeta(request:Request,env:Env,actor:AdminActor):Promise<
   if(!match) return json({error:'not_found'},404);
   const [,caseId,action]=match;
   if(!caseId && request.method==='GET') {
-    await query(env.DB_ADMIN_FRESH,`INSERT INTO system.audit_events(id,actor_id,action,target_type,reason_code,metadata) VALUES($1,$2,'authenticity.beta.list','authenticity_case','ADMIN_ACCESS',$3::jsonb)`,[uuidv7(),actor.userId,JSON.stringify({role:actor.role})]);
+    await query(env.DB_ADMIN_FRESH,`INSERT INTO system.audit_events(id,actor_id,action,target_type,reason_code,correlation_id,metadata) VALUES($1,$2,'authenticity.beta.list','authenticity_case','ADMIN_ACCESS',$1::text,$3::jsonb)`,[uuidv7(),actor.userId,JSON.stringify({role:actor.role})]);
     const rows=await query<Row>(env.DB_ADMIN_FRESH,`SELECT * FROM moderation.authenticity_beta WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100`);
     return json({items:rows.rows.map(view)});
   }
   const found=await query<Row>(env.DB_ADMIN_FRESH,`SELECT * FROM moderation.authenticity_beta WHERE case_id=$1 AND deleted_at IS NULL`,[caseId]);
   const row=found.rows[0]; if(!row) return json({error:'not_found'},404);
   if(request.method==='GET') {
-    await query(env.DB_ADMIN_FRESH,`INSERT INTO system.audit_events(id,actor_id,action,target_type,target_id,reason_code,metadata) VALUES($1,$2,'authenticity.beta.read','authenticity_case',$3,'ADMIN_ACCESS',$4::jsonb)`,[uuidv7(),actor.userId,caseId,JSON.stringify({role:actor.role,view:action==='image'?'image':'diagnostics'})]);
+    await query(env.DB_ADMIN_FRESH,`INSERT INTO system.audit_events(id,actor_id,action,target_type,target_id,reason_code,correlation_id,metadata) VALUES($1,$2,'authenticity.beta.read','authenticity_case',$3,'ADMIN_ACCESS',$3::text,$4::jsonb)`,[uuidv7(),actor.userId,caseId,JSON.stringify({role:actor.role,view:action==='image'?'image':'diagnostics'})]);
     if(action==='image') {
       const display=await env.MEDIA_QUARANTINE?.get(`beta-display/${row.owner_id}/${row.case_id}.png`);
       if(!display) return json({error:'image_unavailable'},404);
@@ -62,7 +62,7 @@ async function routeAdminBeta(request:Request,env:Env,actor:AdminActor):Promise<
       await client.query(`INSERT INTO moderation.authenticity_beta_feedback(id,case_id,actor_id,kind,message,policy_version) VALUES($1,$2,$3,'review',$4,$5)`,[uuidv7(),caseId,actor.userId,message,BETA_POLICY]);
       await client.query(`UPDATE moderation.authenticity_beta SET review_state='reviewed',updated_at=now() WHERE case_id=$1`,[caseId]);
     }
-    await client.query(`INSERT INTO system.audit_events(id,actor_id,action,target_type,target_id,reason_code,metadata) VALUES($1,$2,$3,'authenticity_case',$4,'BETA_NON_ENFORCING',$5::jsonb)`,[uuidv7(),actor.userId,`authenticity.beta.${action}`,caseId,JSON.stringify({role:actor.role,policyVersion:BETA_POLICY})]);
+    await client.query(`INSERT INTO system.audit_events(id,actor_id,action,target_type,target_id,reason_code,correlation_id,metadata) VALUES($1,$2,$3,'authenticity_case',$4,'BETA_NON_ENFORCING',$4::text,$5::jsonb)`,[uuidv7(),actor.userId,`authenticity.beta.${action}`,caseId,JSON.stringify({role:actor.role,policyVersion:BETA_POLICY})]);
   });
   return json({accepted:true,publicationEligible:false},202);
 }

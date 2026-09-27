@@ -516,7 +516,11 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.ok(coordinatorActivation > candidateUpload);
   assert.ok(keeperAcceptance > coordinatorActivation);
   assert.ok(productionActivation > keeperAcceptance);
-  assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 deploy(?:\s|['"])/);
+  const disabledRuntime = workersWorkflow.slice(workersWorkflow.indexOf('- name: Prepare approved disabled authenticity runtime'), workersWorkflow.indexOf('- name: Refresh generated Worker types after deployment identity materialization'));
+  assert.match(disabledRuntime, /vars\.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != ''/);
+  assert.match(disabledRuntime, /materialize-authenticity-beta-runtime\.mjs/);
+  assert.match(disabledRuntime, /deploy --config apps\/lythaus-authenticity-runtime\/wrangler\.release\.jsonc/);
+  assert.doesNotMatch(workersWorkflow.replace(disabledRuntime, ''), /wrangler@4\.123\.0 deploy(?:\s|['"])/);
   assert.match(coordinatorParentHelper, /COORDINATOR_PARENT_EXISTED_BEFORE/);
   assert.match(coordinatorParentHelper, /COORDINATOR_PARENT_CREATED/);
   assert.match(workersWorkflow, /COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS/);

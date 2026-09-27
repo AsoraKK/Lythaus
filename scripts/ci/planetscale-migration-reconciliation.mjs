@@ -11,11 +11,11 @@ const root = process.cwd();
 // canonical relation shape exists, not when representative objects happen to exist.
 const relationContracts = {
   '0017_authenticity_beta.sql': {
-    'moderation.authenticity_beta': 'PENDING_POSTGRES17_RECEIPT',
-    'moderation.authenticity_beta_steps': 'PENDING_POSTGRES17_RECEIPT',
-    'moderation.authenticity_beta_feedback': 'PENDING_POSTGRES17_RECEIPT',
-    'media.upload_sessions': 'PENDING_POSTGRES17_RECEIPT',
-    'system.cost_budget_reservations': 'PENDING_POSTGRES17_RECEIPT',
+    'moderation.authenticity_beta': '7b65a935028973b971078e26f4ac8e08af5b2b463719c33cd7d786527347270a',
+    'moderation.authenticity_beta_steps': 'f66855f06e27e958bcf3a077ab17a21766f8c7e42c475f37a692e107be2d71f7',
+    'moderation.authenticity_beta_feedback': 'b58dad10b370e4705639cc7fbeed4ad88960a01f18b1552d6061124a15925c45',
+    'media.upload_sessions': '30ee05f7f6bea21a9a62e76ce14c99ca193aabf532d366e2aebf57da00c86bac',
+    'system.cost_budget_reservations': '1e65dbc7d23f7e4869762df219c2d7ddb45d5217958bbae65c0542ac17623944',
   },
   '0009_cost_budget_enforcement.sql': {
     'system.cost_budget_periods': '4fc59a0e2197b2c736f8d02a4b2cd44215661b5afd0b6f78327180d7bc2bc8d0',

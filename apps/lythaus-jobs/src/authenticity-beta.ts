@@ -67,7 +67,7 @@ export async function processBetaEvent(env: Env, eventId: string, payload: unkno
   if (!uuid.test(eventId) || typeof value.caseId !== 'string' || !uuid.test(value.caseId) || !Number.isSafeInteger(value.revision)) throw new Error('beta_event_invalid');
   const authentic = await query(env.DB_JOBS_FRESH, `SELECT e.id FROM system.outbox_events e JOIN moderation.authenticity_beta b ON b.case_id=e.aggregate_id::uuid WHERE e.id=$1 AND e.event_type='moderation.authenticity_beta.requested' AND e.aggregate_type='authenticity_case' AND e.actor_id=b.owner_id AND e.payload->>'caseId'=$2 AND e.payload->>'revision'=$3`, [eventId,value.caseId,String(value.revision)]);
   if (!authentic.rowCount) {
-    await query(env.DB_JOBS_FRESH, `INSERT INTO system.audit_events(id,action,target_type,target_id,reason_code,metadata) VALUES($1,'authenticity.beta.job.rejected','authenticity_case',$2,'FORGED_EVENT','{}')`, [uuidv7(),value.caseId]);
+    await query(env.DB_JOBS_FRESH, `INSERT INTO system.audit_events(id,action,target_type,target_id,reason_code,correlation_id,metadata) VALUES($1,'authenticity.beta.job.rejected','authenticity_case',$2,'FORGED_EVENT',$3,'{}')`, [uuidv7(),value.caseId,eventId]);
     return;
   }
   const row = await transaction(env.DB_JOBS_FRESH, async client => {
