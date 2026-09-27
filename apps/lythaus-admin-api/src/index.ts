@@ -6,6 +6,7 @@ import { constantTimeEqual, decryptField, hmacLookup, uuidv7 } from '@lythaus/se
 import { adminCorsPreflight, assertAdminMutationRequest, withAdminCors } from './admin-cors-policy.ts';
 import { requireActiveAdminMembership, verifiedAccessSubject, type AdminActor } from './admin-access-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
+import { handleAdminBeta } from './authenticity-beta.ts';
 import { adminWaitlistFilters, parseAdminUserId, parseReasonCode, rejectUnknownFields, requireConfirmation } from './admin-runtime-policy.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
@@ -1142,6 +1143,13 @@ export default {
       }
       const actor = await requireAdmin(request, env);
       await enforceAdminRateLimit(request, env, actor.userId);
+      if (request.method === 'GET' && url.pathname === '/api/admin/authenticity/cases') return cors(await handleAdminBeta(request, env, actor));
+      if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)$/)) return cors(await handleAdminBeta(request, env, actor));
+      if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/image$/)) return cors(await handleAdminBeta(request, env, actor));
+      if (request.method === 'POST' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/(review|retry|advice)$/)) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await handleAdminBeta(request, env, actor));
+      }
       const keeperEnv = env as KeeperEnv;
       if (request.method === 'GET' && url.pathname === '/api/admin/auth/summary') return cors(await getAdminAuthSummary(request, keeperEnv, actor, id));
       if (request.method === 'GET' && url.pathname === '/api/admin/email-health') return cors(await getAdminEmailHealth(request, keeperEnv, actor, id));

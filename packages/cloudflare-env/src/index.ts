@@ -23,6 +23,11 @@ export interface EnvBindings {
   AUDIT_DLQ?: Queue;
   LYTHAUS_CONFIG?: KVNamespaceLike;
   AUTHENTICITY_AI_ENABLED?: string;
+  AUTHENTICITY_BETA_ENABLED?: string;
+  AUTHENTICITY_BETA_STORAGE_ENABLED?: string;
+  OPENAI_API_KEY?: string;
+  AUTHENTICITY_BETA_DISPATCH_SECRET?: string;
+  AUTHENTICITY_BETA_CONTAINER?: { getByName(name: string): ServiceBinding };
   AUTHENTICITY_TEXT_MODEL?: string;
   AUTHENTICITY_IMAGE_MODEL?: string;
   AUTHENTICITY_REASONER_MODEL?: string;

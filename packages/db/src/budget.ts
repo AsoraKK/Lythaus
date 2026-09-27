@@ -127,7 +127,8 @@ export async function reserveBudget(binding: HyperdriveBinding, input: ReserveBu
     const reserved = await client.query<{ total: string }>(
       `SELECT COALESCE(SUM(estimated_cost_usd), 0)::text AS total
          FROM system.cost_budget_reservations
-        WHERE period_key = $1 AND status = 'reserved' AND expires_at > now()`, [input.period]
+        WHERE period_key = $1 AND ((status = 'reserved' AND expires_at > now())
+          OR (status IN ('committed', 'reconciled') AND actual_cost_usd IS NULL))`, [input.period]
     );
     const currentSpend = Number(committed.rows[0]?.total ?? 0) + Number(reserved.rows[0]?.total ?? 0);
     const projectedSpendUsd = currentSpend + input.estimatedCostUsd;

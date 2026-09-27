@@ -1,0 +1,14 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "lythaus-authenticity-runtime",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "vars": { "AUTHENTICITY_BETA_ENABLED": "false", "RUNTIME_DIGEST": "REQUIRED_APPROVED_IMAGE_DIGEST" },
+  "containers": [{ "class_name": "SafeBetaContainer", "image": "REQUIRED_APPROVED_IMAGE_BY_DIGEST", "instance_type": "REQUIRED_MEASURED_INSTANCE_TYPE", "max_instances": 1 }],
+  "durable_objects": { "bindings": [{ "name": "AUTHENTICITY_BETA_CONTAINER", "class_name": "SafeBetaContainer" }] },
+  "migrations": [{ "tag": "authenticity-beta-v1", "new_sqlite_classes": ["SafeBetaContainer"] }]
+}

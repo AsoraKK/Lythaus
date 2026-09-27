@@ -9,7 +9,7 @@
     "format-check": "npm run format-dart",
     "audit:production": "node scripts/check-npm-audit.js",
     "openapi:lint": "redocly lint api/openapi/openapi.yaml",
-    "openapi:bundle": "redocly bundle api/openapi/openapi.yaml -o api/openapi/dist/openapi.json --config=api/openapi/redocly.yaml",
+    "openapi:bundle": "redocly bundle api/openapi/openapi.yaml -o api/openapi/dist/openapi.json --config=api/openapi/redocly.yaml && node scripts/trim-trailing-whitespace.js api/openapi/dist/openapi.json",
     "openapi:validate:examples": "ts-node tools/openapi/validate-examples.ts",
     "openapi:check:bundle": "node scripts/check-git-diff-clean.js api/openapi/dist/openapi.json",
     "openapi:gen:dart": "node scripts/clean-openapi-dart-generated.mjs && openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=lythaus_api_client,nullableFields=true,hideGenerationTimestamp=true && node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client && node scripts/trim-trailing-whitespace.js lib/generated/api_client",

@@ -32,6 +32,24 @@ void main() {
       // TODO
     });
 
+    // Resume bounded unfinished work
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<BetaActionResponse> adminAuthenticityBetaRetry(String caseId, BetaFeedback betaFeedback) async
+    test('test adminAuthenticityBetaRetry', () async {
+      // TODO
+    });
+
+    // Record a versioned non-enforcing review
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<BetaActionResponse> adminAuthenticityBetaReview(String caseId, BetaFeedback betaFeedback) async
+    test('test adminAuthenticityBetaReview', () async {
+      // TODO
+    });
+
     // Publish an editorial News Board entry
     //
     //Future<EditorialPublicationResponse> adminEditorialPublicationsCreate(EditorialPublicationCreate editorialPublicationCreate) async
@@ -224,6 +242,33 @@ void main() {
       // TODO
     });
 
+    // Read audited diagnostics and review history
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<BetaAdminCase> getAdminAuthenticityBetaCase(String caseId) async
+    test('test getAdminAuthenticityBetaCase', () async {
+      // TODO
+    });
+
+    // Read the audited private display derivative
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<Uint8List> getAdminAuthenticityBetaImage(String caseId) async
+    test('test getAdminAuthenticityBetaImage', () async {
+      // TODO
+    });
+
+    // List private beta review cases
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<BetaCaseList> listAdminAuthenticityBetaCases() async
+    test('test listAdminAuthenticityBetaCases', () async {
+      // TODO
+    });
+
     // List admin audit events
     //
     //Future<AdminItems> productIntegrityAdminAuditList() async
@@ -235,6 +280,15 @@ void main() {
     //
     //Future<AdminItems> productIntegrityAdminUsersSearch(String q) async
     test('test productIntegrityAdminUsersSearch', () async {
+      // TODO
+    });
+
+    // Request one bounded explanation of eligible persisted evidence
+    //
+    // Privileged, audited request. Requires supported successful SAFE evidence and selective escalation, an unconsumed adviser attempt, a current lease/admission budget and unexpired case. Uses the existing outbox. Does not rerun SAFE or Safety, change the deterministic finding, or publish content.
+    //
+    //Future<BetaActionResponse> requestAdminAuthenticityBetaAdvice(String caseId, BetaFeedback betaFeedback) async
+    test('test requestAdminAuthenticityBetaAdvice', () async {
       // TODO
     });
 

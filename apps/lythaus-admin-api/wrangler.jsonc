@@ -13,6 +13,8 @@
   "version_metadata": { "binding": "WORKER_VERSION" },
   "observability": { "enabled": true, "head_sampling_rate": 0.25 },
   "vars": {
+    "AUTHENTICITY_BETA_ENABLED": "false",
+    "AUTHENTICITY_BETA_STORAGE_ENABLED": "true",
     "ENVIRONMENT": "production",
     "EXPECTED_HOSTNAMES": "admin.lythaus.co,admin-api.lythaus.co",
     "CORS_ALLOWED_ORIGINS": "https://admin.lythaus.co",
@@ -21,9 +23,9 @@
     "ACCESS_AUDIENCES": "REPLACE_WITH_ADMIN_UI_ACCESS_AUDIENCE,REPLACE_WITH_ADMIN_API_ACCESS_AUDIENCE",
     "ACCESS_JWKS_URL": "REPLACE_WITH_ACCESS_JWKS_URL",
     "EXPECTED_DATABASE_TARGET": "main",
-    "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "REPLACE_WITH_POST_0016_SCHEMA_FINGERPRINT",
-    "EXPECTED_DATABASE_RELATION_COUNT": "REPLACE_WITH_POST_0016_RELATION_COUNT",
-    "EXPECTED_DATABASE_SCHEMA_VERSION": "0016_transactional_email_envelope_boundary.sql",
+    "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "REPLACE_WITH_POST_0017_SCHEMA_FINGERPRINT",
+    "EXPECTED_DATABASE_RELATION_COUNT": "REPLACE_WITH_POST_0017_RELATION_COUNT",
+    "EXPECTED_DATABASE_SCHEMA_VERSION": "0017_authenticity_beta.sql",
     "EXPECTED_DATABASE_ROLE_CLASS": "login_non_superuser",
     "EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED": "true",
     "AUTHENTICATED_ACCEPTANCE_PROVEN": "false"
@@ -47,6 +49,8 @@
         { "binding": "DB_PRIVACY_FRESH", "id": "bae909aa72e244bfa8ca8a948053b6" }
       ],
       "vars": {
+    "AUTHENTICITY_BETA_ENABLED": "false",
+    "AUTHENTICITY_BETA_STORAGE_ENABLED": "true",
         "ENVIRONMENT": "development",
         "EXPECTED_HOSTNAMES": "lythaus-admin-api-development.lythaus.workers.dev",
         "CORS_ALLOWED_ORIGINS": "http://localhost:3000",

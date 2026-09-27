@@ -20,6 +20,8 @@ servers:
   - url: https://api.lythaus.co/api
     description: Lythaus MVP API gateway
 tags:
+  - name: AuthenticityBeta
+    description: Private, non-enforcing image evidence and review.
   - name: Feed
     description: Feed retrieval endpoints.
   - name: Health
@@ -57,6 +59,32 @@ tags:
   - name: Waitlist
     description: Private beta waitlist registration.
 paths:
+  /authenticity/cases:
+    $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases'
+  /authenticity/cases/{caseId}:
+    $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases~1{caseId}'
+  /authenticity/cases/{caseId}/finalise:
+    $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases~1{caseId}~1finalise'
+  /authenticity/cases/{caseId}/feedback:
+    $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases~1{caseId}~1feedback'
+  /authenticity/cases/{caseId}/review:
+    $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases~1{caseId}~1review'
+  /authenticity/cases/{caseId}/cancel:
+    $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases~1{caseId}~1cancel'
+  /authenticity/cases/{caseId}/image:
+    $ref: './authenticity-beta.yaml#/paths/~1authenticity~1cases~1{caseId}~1image'
+  /admin/authenticity/cases:
+    $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases'
+  /admin/authenticity/cases/{caseId}:
+    $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}'
+  /admin/authenticity/cases/{caseId}/image:
+    $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1image'
+  /admin/authenticity/cases/{caseId}/review:
+    $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1review'
+  /admin/authenticity/cases/{caseId}/retry:
+    $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1retry'
+  /admin/authenticity/cases/{caseId}/advice:
+    $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1advice'
   /waitlist:
     post:
       operationId: joinWaitlist

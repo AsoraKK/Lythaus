@@ -1,5 +1,7 @@
 * text=auto
 *.sh text eol=lf
+apps/lythaus-authenticity-runtime/container/*.py text eol=lf
+apps/lythaus-authenticity-runtime/container/requirements.lock text eol=lf
 
 # Wrangler emits a small number of intentional trailing-space type stubs.
 apps/lythaus-*/src/worker-configuration.d.ts whitespace=-trailing-space

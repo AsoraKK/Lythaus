@@ -38,7 +38,7 @@ for (const relative of configs) {
   if (!new RegExp(`"name"\\s*:\\s*"${expectedNames[relative]}"`).test(production)) failures.push(`${relative}: production must reuse ${expectedNames[relative]}`);
   if (/"images"\s*:/.test(production)) failures.push(`${relative}: Cloudflare Images binding is forbidden for this migration`);
   if (!/HYPERDRIVE_QUERY_CACHE_MODE/.test(source) || !/disabled/.test(source)) failures.push(`${relative}: Hyperdrive cache-disabled intent missing`);
-  if (!/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0016_transactional_email_envelope_boundary\.sql"/.test(production)) failures.push(`${relative}: production must require migration 0016`);
+  if (!/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0017_authenticity_beta\.sql"/.test(production)) failures.push(`${relative}: production must require migration 0017`);
   if (!/"EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED"\s*:\s*"true"/.test(production)) failures.push(`${relative}: production must require the budget ledger`);
   if (/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0008_legacy_relink_status\.sql"/.test(production)) failures.push(`${relative}: legacy 0008 production identity is forbidden`);
   if (relative.includes('public-api') && !/api\.lythaus\.co/.test(production)) failures.push(`${relative}: public API must use api.lythaus.co`);
@@ -56,7 +56,7 @@ for (const [config, types] of generatedTypes) {
   const result = spawnSync(
     npx,
     ['--yes', 'wrangler@4.123.0', 'types', '--check', types, '--config', config],
-    { cwd: root, encoding: 'utf8' },
+    { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' },
   );
   if (result.error || result.status !== 0) {
     const detail = [result.stderr, result.stdout].filter(Boolean).join('\n').trim();
