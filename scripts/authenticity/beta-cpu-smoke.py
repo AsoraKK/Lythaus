@@ -27,7 +27,7 @@ def sha(data):
 
 
 def close_enough(actual, historical, manifest):
-    return math.isfinite(actual) and abs(actual - historical) <= manifest["absoluteTolerance"] + manifest["relativeTolerance"] * abs(historical)
+    return math.isfinite(actual) and abs(actual - historical) <= manifest["absoluteTolerance"]
 
 
 def prepare(manifest, approval):

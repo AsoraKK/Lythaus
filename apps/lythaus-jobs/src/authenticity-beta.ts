@@ -1,7 +1,7 @@
 import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { uuidv7 } from '@lythaus/security';
-import { BETA_ADVISER, BETA_ADVISER_ROLE, BETA_LIMITS, BETA_VERSION, SAFE_CHECKPOINT, SAFE_PREPROCESSING, assertSafeResult, betaAdviceRequest, betaReuseKey, compileBetaResult, parseBetaAdvice, readBoundedBytes, type BetaResult, type SafeResult } from '../../../packages/authenticity/src/beta.ts';
+import { BETA_ADVISER, BETA_ADVISER_ROLE, BETA_LIMITS, BETA_VERSION, SAFE_CHECKPOINT, SAFE_PREPROCESSING, assertSafeResult, betaAdviceEligible, betaAdviceRequest, betaReuseKey, compileBetaResult, parseBetaAdvice, readBoundedBytes, type BetaResult, type SafeResult } from '../../../packages/authenticity/src/beta.ts';
 import { readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { sha256Hex } from '../../../packages/authenticity/src/forensics.ts';
 import { validateMediaPayload } from '../../../packages/authenticity/src/media-intake.ts';
@@ -67,7 +67,9 @@ async function saveResult(env: Env, row: CaseRow, result: BetaResult, terminal: 
 export async function processBetaEvent(env: Env, eventId: string, payload: unknown): Promise<void> {
   const value = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {};
   if (!uuid.test(eventId) || typeof value.caseId !== 'string' || !uuid.test(value.caseId) || !Number.isSafeInteger(value.revision)) throw new Error('beta_event_invalid');
-  const authentic = await query(env.DB_JOBS_FRESH, `SELECT e.id FROM system.outbox_events e JOIN moderation.authenticity_beta b ON b.case_id=e.aggregate_id::uuid WHERE e.id=$1 AND e.event_type='moderation.authenticity_beta.requested' AND e.aggregate_type='authenticity_case' AND e.actor_id=b.owner_id AND e.payload->>'caseId'=$2 AND e.payload->>'revision'=$3`, [eventId,value.caseId,String(value.revision)]);
+  const operation = value.operation ?? 'analysis';
+  if (!['analysis','advice'].includes(String(operation))) throw new Error('beta_event_invalid');
+  const authentic = await query(env.DB_JOBS_FRESH, `SELECT e.id FROM system.outbox_events e JOIN moderation.authenticity_beta b ON b.case_id=e.aggregate_id::uuid WHERE e.id=$1 AND e.event_type='moderation.authenticity_beta.requested' AND e.aggregate_type='authenticity_case' AND e.actor_id=b.owner_id AND e.payload->>'caseId'=$2 AND e.payload->>'revision'=$3 AND coalesce(e.payload->>'operation','analysis')=$4`, [eventId,value.caseId,String(value.revision),operation]);
   if (!authentic.rowCount) {
     await query(env.DB_JOBS_FRESH, `INSERT INTO system.audit_events(id,action,target_type,target_id,reason_code,correlation_id,metadata) VALUES($1,'authenticity.beta.job.rejected','authenticity_case',$2,'FORGED_EVENT',$3,'{}')`, [uuidv7(),value.caseId,eventId]);
     return;
@@ -85,60 +87,67 @@ export async function processBetaEvent(env: Env, eventId: string, payload: unkno
   try {
     await current(env,row);
     const config = await readBetaConfig(env);
-    const objectRecord = await query<{ content_type: string; byte_size: string }>(env.DB_JOBS_FRESH, `SELECT content_type,byte_size FROM media.objects WHERE id=$1 AND owner_id=$2 AND object_key=$3 AND sha256=$4 AND deleted_at IS NULL AND state='beta_private'`, [row.case_id,row.owner_id,row.original_key,row.input_hash]);
-    const record = objectRecord.rows[0];
-    if (!record || !env.MEDIA_QUARANTINE) throw new Error('beta_original_unavailable');
-    const object = await env.MEDIA_QUARANTINE.get(row.original_key);
-    if (!object || object.httpEtag !== row.original_etag || object.size !== Number(record.byte_size)) throw new Error('beta_original_changed');
-    const bytes = await readBoundedBytes(object.body,BETA_LIMITS.bytes);
-    if (await sha256Hex(bytes) !== row.input_hash) throw new Error('beta_original_changed');
-    const preflight = validateMediaPayload({ bytes, declaredMime: record.content_type, idempotencyKey: row.case_id });
-    const reuseKey = await betaReuseKey(row.owner_id,row.input_hash,config.runtimeDigest,config.preprocessingHash);
-    const safety = await step<ModerationAnalysis>(env,row,'safety',reuseKey,async () => createOpenAIModerationProvider({ apiKey: env.OPENAI_API_KEY, timeoutMs: 15000, maxImageBytes: BETA_LIMITS.bytes, flaggedResult: 'REVIEW' }).analyseImage({ caseId: row.case_id, mime: preflight.mime, bytes }));
-    await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET safety=$4::jsonb,updated_at=now() WHERE ${fence}`, [row.case_id,row.revision,row.lease_token,JSON.stringify(safety)]);
-    if (safety.result !== 'ALLOW') {
-      await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET state=$4,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE ${fence}`, [row.case_id,row.revision,row.lease_token,safety.result === 'BLOCK' ? 'safety_blocked' : 'safety_review']);
-      return;
+    if (operation === 'advice') {
+      if (!betaAdviceEligible(result) || result!.safe.inputHash !== row.input_hash || result!.safe.revision !== row.revision || result!.safe.runtimeDigest !== config.runtimeDigest || result!.safe.preprocessingHash !== config.preprocessingHash) throw new Error('beta_attempt_consumed');
+      const recorded = await query(env.DB_JOBS_FRESH, `SELECT id FROM moderation.authenticity_beta_steps WHERE case_id=$1 AND ((step='safe' AND state='completed') OR (step='safety' AND state='completed' AND output->>'result'='ALLOW'))`,[row.case_id]);
+      if (recorded.rowCount !== 2) throw new Error('beta_attempt_consumed');
+    } else {
+      const objectRecord = await query<{ content_type: string; byte_size: string }>(env.DB_JOBS_FRESH, `SELECT content_type,byte_size FROM media.objects WHERE id=$1 AND owner_id=$2 AND object_key=$3 AND sha256=$4 AND deleted_at IS NULL AND state='beta_private'`, [row.case_id,row.owner_id,row.original_key,row.input_hash]);
+      const record = objectRecord.rows[0];
+      if (!record || !env.MEDIA_QUARANTINE) throw new Error('beta_original_unavailable');
+      const object = await env.MEDIA_QUARANTINE.get(row.original_key);
+      if (!object || object.httpEtag !== row.original_etag || object.size !== Number(record.byte_size)) throw new Error('beta_original_changed');
+      const bytes = await readBoundedBytes(object.body,BETA_LIMITS.bytes);
+      if (await sha256Hex(bytes) !== row.input_hash) throw new Error('beta_original_changed');
+      const preflight = validateMediaPayload({ bytes, declaredMime: record.content_type, idempotencyKey: row.case_id });
+      const reuseKey = await betaReuseKey(row.owner_id,row.input_hash,config.runtimeDigest,config.preprocessingHash);
+      const safety = await step<ModerationAnalysis>(env,row,'safety',reuseKey,async () => createOpenAIModerationProvider({ apiKey: env.OPENAI_API_KEY, timeoutMs: 15000, maxImageBytes: BETA_LIMITS.bytes, flaggedResult: 'REVIEW' }).analyseImage({ caseId: row.case_id, mime: preflight.mime, bytes }));
+      await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET safety=$4::jsonb,updated_at=now() WHERE ${fence}`, [row.case_id,row.revision,row.lease_token,JSON.stringify(safety)]);
+      if (safety.result !== 'ALLOW') {
+        await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET state=$4,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE ${fence}`, [row.case_id,row.revision,row.lease_token,safety.result === 'BLOCK' ? 'safety_blocked' : 'safety_review']);
+        return;
+      }
+      const disabled = !config.rightsApproval ? 'BLOCKED_RIGHTS' : !config.runtimeApproval || !config.safeEnabled || !env.AUTHENTICITY_BETA_CONTAINER || !env.AUTHENTICITY_BETA_DISPATCH_SECRET ? 'BLOCKED_RUNTIME' : null;
+      if (disabled) {
+        await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET state='paused',failure_code=$4,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE ${fence}`, [row.case_id,row.revision,row.lease_token,disabled]);
+        return;
+      }
+      if (result && (result.schemaVersion !== BETA_VERSION || result.safe.runtimeDigest !== config.runtimeDigest || result.safe.preprocessingHash !== config.preprocessingHash)) throw new Error('beta_attempt_consumed');
+      if (!result) {
+        const safe = await step<SafeResult>(env,row,'safe',reuseKey,async runId => {
+          const active = await readBetaConfig(env);
+          if (!active.safeEnabled || !active.rightsApproval) throw new Error('beta_paused');
+          const binding = { caseId: row.case_id, runId, inputHash: row.input_hash, revision: row.revision };
+          const response = await env.AUTHENTICITY_BETA_CONTAINER!.getByName('safe-a-beta-v1').fetch(new Request('http://safe/infer', { method: 'POST', headers: { 'authorization': `Bearer ${env.AUTHENTICITY_BETA_DISPATCH_SECRET}`, 'content-type': preflight.mime, 'x-beta-binding': JSON.stringify(binding) }, body: bytes, signal: AbortSignal.timeout(195000) }));
+          if (!response.ok) throw new Error('beta_runtime_failed');
+          const received = JSON.parse(new TextDecoder().decode(await readBoundedBytes(response.body,8*1024*1024))) as { result: SafeResult; display?: string };
+          assertSafeResult(received.result,{ ...binding, runtimeDigest: active.runtimeDigest, preprocessingHash: active.preprocessingHash });
+          if (received.result.status === 'OK' && !received.result.forensics) throw new Error('beta_forensics_missing');
+          if (received.result.facts) received.result.facts.sourceHistory = active.sourceHistoryHashes.includes(row.input_hash) ? 'DOCUMENTED_LOSSLESS' : 'UNKNOWN';
+          if (received.display) {
+            if (!/^[A-Za-z0-9+/=]+$/.test(received.display) || received.display.length>6*1024*1024) throw new Error('beta_display_invalid');
+            const display = Uint8Array.from(atob(received.display),c=>c.charCodeAt(0));
+            if (display.length>BETA_LIMITS.displayBytes || ![137,80,78,71,13,10,26,10].every((v,i)=>display[i]===v)) throw new Error('beta_display_invalid');
+            const key = `beta-display/${row.owner_id}/${row.case_id}.png`;
+            await current(env,row);
+            await env.MEDIA_QUARANTINE!.put(key,display,{httpMetadata:{contentType:'image/png'}});
+            try { await current(env,row); } catch (error) { await env.MEDIA_QUARANTINE!.delete(key); throw error; }
+            await transaction(env.DB_JOBS_FRESH,async client=>{
+              const locked=await client.query<{storage_reserved_bytes:string;display_bytes:string}>(`SELECT storage_reserved_bytes,display_bytes FROM moderation.authenticity_beta WHERE ${fence} FOR UPDATE`,[row.case_id,row.revision,row.lease_token]);
+              if (!locked.rows[0]) throw new Error('beta_stale');
+              await client.query(`UPDATE media.storage_ledger SET bytes_reserved=greatest(0,bytes_reserved-$2),bytes_approved=bytes_approved+$3-$4 WHERE user_id=$1`,[row.owner_id,Number(locked.rows[0].storage_reserved_bytes),display.length,Number(locked.rows[0].display_bytes)]);
+              await client.query(`UPDATE moderation.authenticity_beta SET storage_reserved_bytes=0,display_bytes=$2 WHERE case_id=$1`,[row.case_id,display.length]);
+            });
+          }
+          return received.result;
+        });
+        result = compileBetaResult(safe,safety);
+        await saveResult(env,row,result,false);
+      }
     }
-    const disabled = !config.rightsApproval ? 'BLOCKED_RIGHTS' : !config.runtimeApproval || !config.safeEnabled || !env.AUTHENTICITY_BETA_CONTAINER || !env.AUTHENTICITY_BETA_DISPATCH_SECRET ? 'BLOCKED_RUNTIME' : null;
-    if (disabled) {
-      await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET state='paused',failure_code=$4,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE ${fence}`, [row.case_id,row.revision,row.lease_token,disabled]);
-      return;
-    }
-    if (result && (result.schemaVersion !== BETA_VERSION || result.safe.runtimeDigest !== config.runtimeDigest || result.safe.preprocessingHash !== config.preprocessingHash)) throw new Error('beta_attempt_consumed');
-    if (!result) {
-      const safe = await step<SafeResult>(env,row,'safe',reuseKey,async runId => {
-        const active = await readBetaConfig(env);
-        if (!active.safeEnabled || !active.rightsApproval) throw new Error('beta_paused');
-        const binding = { caseId: row.case_id, runId, inputHash: row.input_hash, revision: row.revision };
-        const response = await env.AUTHENTICITY_BETA_CONTAINER!.getByName('safe-a-beta-v1').fetch(new Request('http://safe/infer', { method: 'POST', headers: { 'authorization': `Bearer ${env.AUTHENTICITY_BETA_DISPATCH_SECRET}`, 'content-type': preflight.mime, 'x-beta-binding': JSON.stringify(binding) }, body: bytes, signal: AbortSignal.timeout(BETA_LIMITS.inferenceMs + BETA_LIMITS.decodeMs + 75000) }));
-        if (!response.ok) throw new Error('beta_runtime_failed');
-        const received = JSON.parse(new TextDecoder().decode(await readBoundedBytes(response.body,8*1024*1024))) as { result: SafeResult; display?: string };
-        assertSafeResult(received.result,{ ...binding, runtimeDigest: active.runtimeDigest, preprocessingHash: active.preprocessingHash });
-        if (received.result.status === 'OK' && !received.result.forensics) throw new Error('beta_forensics_missing');
-        if (received.result.facts) received.result.facts.sourceHistory = active.sourceHistoryHashes.includes(row.input_hash) ? 'DOCUMENTED_LOSSLESS' : 'UNKNOWN';
-        if (received.display) {
-          if (!/^[A-Za-z0-9+/=]+$/.test(received.display) || received.display.length>6*1024*1024) throw new Error('beta_display_invalid');
-          const display = Uint8Array.from(atob(received.display),c=>c.charCodeAt(0));
-          if (display.length>BETA_LIMITS.displayBytes || ![137,80,78,71,13,10,26,10].every((v,i)=>display[i]===v)) throw new Error('beta_display_invalid');
-          const key = `beta-display/${row.owner_id}/${row.case_id}.png`;
-          await current(env,row);
-          await env.MEDIA_QUARANTINE!.put(key,display,{httpMetadata:{contentType:'image/png'}});
-          try { await current(env,row); } catch (error) { await env.MEDIA_QUARANTINE!.delete(key); throw error; }
-          await transaction(env.DB_JOBS_FRESH,async client=>{
-            const locked=await client.query<{storage_reserved_bytes:string;display_bytes:string}>(`SELECT storage_reserved_bytes,display_bytes FROM moderation.authenticity_beta WHERE ${fence} FOR UPDATE`,[row.case_id,row.revision,row.lease_token]);
-            if (!locked.rows[0]) throw new Error('beta_stale');
-            await client.query(`UPDATE media.storage_ledger SET bytes_reserved=greatest(0,bytes_reserved-$2),bytes_approved=bytes_approved+$3-$4 WHERE user_id=$1`,[row.owner_id,Number(locked.rows[0].storage_reserved_bytes),display.length,Number(locked.rows[0].display_bytes)]);
-            await client.query(`UPDATE moderation.authenticity_beta SET storage_reserved_bytes=0,display_bytes=$2 WHERE case_id=$1`,[row.case_id,display.length]);
-          });
-        }
-        return received.result;
-      });
-      result = compileBetaResult(safe,safety);
-      await saveResult(env,row,result,false);
-    }
+    if (!result) throw new Error('beta_execution_failed');
     const adviserConfig = await readBetaConfig(env);
-    if (result.route === 'ESCALATE' && result.advisory.status !== 'complete') {
+    if (betaAdviceEligible(result) && result.advisory.status !== 'complete') {
       const recentFailures = await query<{count:string}>(env.DB_JOBS_FRESH, `SELECT count(DISTINCT case_id)::text AS count FROM moderation.authenticity_beta_steps WHERE step='advice' AND state='ambiguous' AND completed_at>now()-interval '15 minutes'`);
       if (!adviserConfig.adviserEnabled || !env.AI || !env.AI_GATEWAY_ID || Number(recentFailures.rows[0]?.count ?? 0) >= 3) result.advisory = { status: 'disabled', role: BETA_ADVISER_ROLE };
       else {
@@ -173,6 +182,7 @@ function usage(raw: unknown) {
 }
 
 export async function expireBetaWork(env: Env): Promise<void> {
+  await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta_steps s SET state='ambiguous',error_code='PROVIDER_OUTCOME_UNKNOWN',completed_at=now() FROM moderation.authenticity_beta b WHERE b.case_id=s.case_id AND s.state='started' AND (b.expires_at<=now() OR b.lease_until<now() OR b.deleted_at IS NOT NULL OR b.state='cancelled')`);
   await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET state='expired',revision=revision+1,lease_token=NULL,lease_until=NULL,failure_code='CASE_DEADLINE',updated_at=now() WHERE expires_at<=now() AND state IN ('uploading','queued','analyzing','paused')`);
   await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET state='failed',lease_token=NULL,lease_until=NULL,failure_code='RETRY_EXHAUSTED',updated_at=now() WHERE attempts>=3 AND state IN ('queued','analyzing') AND (lease_until IS NULL OR lease_until<now())`);
 }

@@ -109,6 +109,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**listAdminAuthenticityBetaCases**](doc/AdminApi.md#listadminauthenticitybetacases) | **GET** /admin/authenticity/cases | List private beta review cases
 [*AdminApi*](doc/AdminApi.md) | [**productIntegrityAdminAuditList**](doc/AdminApi.md#productintegrityadminauditlist) | **GET** /admin/audit | List admin audit events
 [*AdminApi*](doc/AdminApi.md) | [**productIntegrityAdminUsersSearch**](doc/AdminApi.md#productintegrityadminuserssearch) | **GET** /admin/users/search | Search users
+[*AdminApi*](doc/AdminApi.md) | [**requestAdminAuthenticityBetaAdvice**](doc/AdminApi.md#requestadminauthenticitybetaadvice) | **POST** /admin/authenticity/cases/{caseId}/advice | Request one bounded explanation of eligible persisted evidence
 [*AppealsApi*](doc/AppealsApi.md) | [**adminAppealsPendingAdjudicationList**](doc/AppealsApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [*AppealsApi*](doc/AppealsApi.md) | [**adminReviewerQualificationCreate**](doc/AppealsApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
 [*AppealsApi*](doc/AppealsApi.md) | [**adminReviewerQualificationUpdate**](doc/AppealsApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state

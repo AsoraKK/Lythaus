@@ -1146,7 +1146,7 @@ export default {
       if (request.method === 'GET' && url.pathname === '/api/admin/authenticity/cases') return cors(await handleAdminBeta(request, env, actor));
       if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)$/)) return cors(await handleAdminBeta(request, env, actor));
       if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/image$/)) return cors(await handleAdminBeta(request, env, actor));
-      if (request.method === 'POST' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/(review|retry)$/)) {
+      if (request.method === 'POST' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/(review|retry|advice)$/)) {
         assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
         return cors(await handleAdminBeta(request, env, actor));
       }

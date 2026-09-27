@@ -27,8 +27,8 @@ mock.module(new URL('../../packages/authenticity/src/openai-moderation.ts',impor
 reserve=(await import('../../packages/db/src/budget.ts')).reserveBudget;
 const {handleBetaApi}=await import('../../apps/lythaus-public-api/src/authenticity-beta.ts');
 const {handleAdminBeta}=await import('../../apps/lythaus-admin-api/src/authenticity-beta.ts');
-const {processBetaEvent}=await import('../../apps/lythaus-jobs/src/authenticity-beta.ts');
-const {purgeBetaMedia}=await import('../../packages/db/src/authenticity-beta.ts');
+const {processBetaEvent,expireBetaWork}=await import('../../apps/lythaus-jobs/src/authenticity-beta.ts');
+const {purgeBetaMedia,reconcileBetaCost}=await import('../../packages/db/src/authenticity-beta.ts');
 
 class ProtocolBucket {
   objects=new Map();
@@ -77,10 +77,20 @@ try {
   const first=await create();await upload(first);
   assert.equal((await api(`/${first}`,'GET',undefined,stranger)).status,404);
   await processBetaEvent(env,uuidv7(),{caseId:first,revision:1});assert.equal(safeCalls,0);
+  config.adviserEnabled=false;
   const e=await processCase(first);await processBetaEvent(env,e.id,e.payload);
+  assert.deepEqual([safetyCalls,safeCalls,adviceCalls],[1,1,0]);
+  config.adviserEnabled=true;
+  await processBetaEvent(env,e.id,{...e.payload,operation:'advice'});
+  assert.equal(adviceCalls,0);
+  const adviceRequest=()=>new Request(`https://admin.example.test/api/admin/authenticity/cases/${first}/advice`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:'Explain this eligible recorded evidence once.'})});
+  assert.equal((await handleAdminBeta(adviceRequest(),env,{userId:owner,role:'moderator'})).status,403);
+  assert.equal((await handleAdminBeta(adviceRequest(),env,{userId:owner,role:'operations'})).status,202);
+  const manual=await processCase(first);await processBetaEvent(env,manual.id,manual.payload);
+  assert.equal((await handleAdminBeta(adviceRequest(),env,{userId:owner,role:'operations'})).status,409);
   assert.deepEqual([safetyCalls,safeCalls,adviceCalls],[1,1,1],JSON.stringify((await admin.query(`SELECT state,failure_code FROM moderation.authenticity_beta WHERE case_id=$1`,[first])).rows));
   const response=await api(`/${first}`);assert.equal(response.headers.get('cache-control'),'private, no-store');
-  const result=await response.json();assert.equal(result.finding,'SYNTHETIC_LIKE_EVIDENCE');assert.equal(result.publicationEligible,false);assert.equal(JSON.stringify(result).includes(SAFE_CHECKPOINT),false);
+  const result=await response.json();assert.equal(result.finding,'SYNTHETIC_LIKE_EVIDENCE');assert.equal(result.detectorExecution,'completed');assert.equal(result.publicationEligible,false);assert.equal(JSON.stringify(result).includes(SAFE_CHECKPOINT),false);
   assert.equal((await api(`/${first}/finalise`,'POST')).status,200);assert.equal(safeCalls,1);
   assert.equal((await api(`/${first}/review`,'POST',{message:'Please review the limitations.'})).status,202);
   const actor={userId:owner,role:'moderator'};
@@ -102,8 +112,20 @@ try {
   await admin.query(`UPDATE media.upload_sessions SET expires_at=now()-interval '20 minutes' WHERE id=$1`,[third]);await admin.query(`UPDATE moderation.authenticity_beta SET deleted_at=now()-interval '20 minutes' WHERE case_id=$1`,[third]);
   assert.equal(await purgeBetaMedia(env.DB_JOBS_FRESH,bucket,owner),0);
   assert.equal((await api('','POST',submission)).status,429);
+  const committed=(await admin.query(`SELECT status,actual_cost_usd FROM system.cost_budget_reservations WHERE correlation_id=$1`,[third])).rows[0];
+  assert.equal(committed.status,'committed');assert.equal(committed.actual_cost_usd,null);
+  const billing={caseId:third,actorId:owner,evidenceSha256:'f'.repeat(64),billedCostUsd:0.01,attemptIds:(await admin.query(`SELECT id FROM moderation.authenticity_beta_steps WHERE case_id=$1`,[third])).rows.map(row=>row.id),allChargesFinal:true};
+  await assert.rejects(()=>reconcileBetaCost(env.DB_JOBS_FRESH,billing),/admin_required/);
+  await assert.rejects(()=>reconcileBetaCost(env.DB_ADMIN_FRESH,{...billing,attemptIds:[]}),/unaccounted/);
+  await assert.rejects(()=>reconcileBetaCost(env.DB_ADMIN_FRESH,{...billing,allChargesFinal:false}),/evidence_required/);
+  await reconcileBetaCost(env.DB_ADMIN_FRESH,billing);await reconcileBetaCost(env.DB_ADMIN_FRESH,billing);
+  assert.equal(Number((await admin.query(`SELECT count(*) AS n FROM system.cost_usage_events WHERE external_reference=$1`,[`beta-bill:${third}:${billing.evidenceSha256}`])).rows[0].n),1);
+  await assert.rejects(()=>reconcileBetaCost(env.DB_ADMIN_FRESH,{...billing,billedCostUsd:0}),/conflict/);
   config.enabled=false;assert.equal((await api('','POST',submission)).status,503);assert.equal((await api(`/${first}`)).status,200);
   assert.equal((await api(`/${second}/cancel`,'POST')).status,200);
+  await admin.query(`UPDATE moderation.authenticity_beta SET state='queued',expires_at=now()-interval '1 second' WHERE case_id=$1`,[second]);
+  const callsBeforeExpiry=[safetyCalls,safeCalls,adviceCalls];await expireBetaWork(env);await processCase(second);
+  assert.equal((await (await api(`/${second}`)).json()).status,'expired');assert.deepEqual([safetyCalls,safeCalls,adviceCalls],callsBeforeExpiry);
   const isolation=await admin.query(`SELECT (SELECT count(*) FROM feed.discovery_candidates) AS feed,(SELECT count(*) FROM trust.reputation_events WHERE subject_user_id=$1) AS reputation,(SELECT count(*) FROM trust.reward_redemptions WHERE user_id=$1) AS rewards`,[owner]);assert.equal(Number(isolation.rows[0].feed),0);assert.equal(Number(isolation.rows[0].reputation),0);assert.equal(Number(isolation.rows[0].rewards),0);
   console.log('PASS: PostgreSQL 17 beta admission, ownership, forged jobs, exact bytes, duplicate protection, Safety stop, persisted advice, private review, stale object, cancellation, late deletion, budget and kill switch. All provider outputs were explicit CI protocol fixtures; no detector performance claim.');
 } finally {await admin.end();mock.restoreAll();}

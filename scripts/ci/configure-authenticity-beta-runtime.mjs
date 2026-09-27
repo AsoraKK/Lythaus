@@ -32,7 +32,7 @@ if (command === 'dispatch-secret') {
     if (!['PUBLIC','ADMIN','JOBS'].every(prefix => process.env[`${prefix}_WORKER_SOURCE_SHA`] === approved.sourceSha && process.env[`${prefix}_WORKER_STATUS`] === 'ACTIVATED')) throw new Error('exact_workers_must_be_active');
     if (!process.env.GITHUB_ENV) throw new Error('protected_release_environment_required');
     fs.appendFileSync(process.env.GITHUB_ENV, 'AUTHENTICITY_BETA_ACTIVATION_ATTEMPTED=true\n');
-    config = { enabled: true, expiresAt: receipt.expiresAt, allowlist: receipt.allowlist, safeEnabled: true, adviserEnabled: true, rightsApproval: receipt.rightsEvidenceSha256, budgetApproval: receipt.budgetEvidenceSha256, runtimeApproval: receipt.runtimeEvidenceSha256, runtimeDigest: approved.runtimeDigest, preprocessingHash: approved.preprocessingHash, caseReservationUsd: 0.5, sourceHistoryHashes: receipt.sourceHistoryHashes };
+    config = { enabled: true, expiresAt: receipt.expiresAt, allowlist: receipt.allowlist, safeEnabled: true, adviserEnabled: true, rightsApproval: receipt.rightsEvidenceSha256, budgetApproval: receipt.budgetEvidenceSha256, runtimeApproval: receipt.runtimeEvidenceSha256, runtimeDigest: approved.runtimeDigest, preprocessingHash: approved.preprocessingHash, caseReservationUsd: approved.caseReservationUsd, sourceHistoryHashes: receipt.sourceHistoryHashes };
   } else {
     const prior = await fetch(endpoint, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });
     if (!prior.ok && prior.status !== 404) throw new Error('config_read_failed');

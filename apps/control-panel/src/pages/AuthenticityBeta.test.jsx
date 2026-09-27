@@ -4,6 +4,17 @@ import AuthenticityBeta from './AuthenticityBeta.jsx';
 import { adminRequest } from '../api/adminApi.js';
 vi.mock('../api/adminApi.js',()=>({adminRequest:vi.fn()}));
 beforeEach(()=>adminRequest.mockReset());
+it('offers one bounded advice request only for completed evidence',async()=>{
+  const item={caseId:'advice-fixture',status:'complete',reviewState:'none',advisoryStatus:'disabled',explanation:'Synthetic-like evidence.',limitations:[],diagnostics:{safe:{status:'OK'}},feedback:[]};
+  adminRequest.mockImplementation(async path=>path==='authenticity/cases'?{items:[item]}:item);
+  render(<AuthenticityBeta/>);
+  fireEvent.click(await screen.findByRole('button',{name:'Open advice-fixture'}));
+  const button=await screen.findByRole('button',{name:'Request bounded advice'});
+  expect(button).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Versioned review explanation'),{target:{value:'Explain recorded evidence only.'}});
+  fireEvent.click(button);
+  await waitFor(()=>expect(adminRequest).toHaveBeenCalledWith('authenticity/cases/advice-fixture/advice',{method:'POST',body:{message:'Explain recorded evidence only.'}}));
+});
 it('opens private evidence and records a non-enforcing review without interpreting feedback as markup',async()=>{
   const item={caseId:'fixture-case',status:'inconclusive',reviewState:'requested',advisoryStatus:'not_requested',explanation:'Authorship remains unresolved.',limitations:['Experimental evidence only.'],diagnostics:{safe:{status:'OK'}},feedback:[{id:'feedback',kind:'feedback',message:'<script>publish()</script>'}]};
   adminRequest.mockImplementation(async path=>path==='authenticity/cases'?{items:[item]}:item);

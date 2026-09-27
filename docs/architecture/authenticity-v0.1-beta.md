@@ -18,6 +18,17 @@ Main already supplied the independent Safety route, EF1/EF2/EF4 arithmetic, Evid
 
 ## Implemented path
 
+The continuation of PR #862 reconciles these implementation differences without changing SAFE or its interpretation policy:
+
+| Agreed behavior | Corrected implementation |
+| --- | --- |
+| Initially 40 million decoded pixels | Retain 16,777,216 (4096 × 4096) as the safer unmeasured resource ceiling. Reject larger input without resizing. No maximum-input measurement is claimed. Expansion needs a separately measured fit. |
+| Peak below 75% of provisioned RAM | Exact integer comparison `4 × peakBytes < 3 × capacityBytes`; equality fails, no rounding. Whole-container peak must be measured after response construction. |
+| Optional administrator advice | Authenticated/audited `POST /admin/authenticity/cases/{caseId}/advice` schedules the existing outbox only for eligible persisted evidence and an unused attempt. SAFE and Safety are not rerun. |
+| Bound the entire runtime | Independent Linux supervisor kills the Node/Python process group and removes scratch on startup/request wall deadline or observed client abort, including blocked forensic computation. |
+| Truthful author result | Allowlisted `detectorExecution` distinguishes completed inference, unusable output and no recorded completion, independently of an inconclusive interpretation. |
+| Measured case admission | No fixed case-price default. Protected activation derives a case reservation from a measured envelope and current account meters; smoke and recurring case bounds remain separate. |
+
 1. An authenticated, server-allowlisted author consents to processing without dataset consent. Flutter `file_selector` reads the selected bytes without compression, rotation or format conversion. A selected file is an accepted upload, not proof of camera originality.
 2. The public API reserves storage and cost, creates an existing moderation case plus a beta extension, and issues a bounded quarantine upload. Completion validates owner, size, byte signature and SHA-256, copies to an immutable revision object, and records an outbox event transactionally.
 3. The existing mixed Jobs consumer validates durable event identity, claims a bounded lease, verifies original ETag/hash, and runs independent OpenAI Safety through the existing approved adapter. A block or review stops expensive analysis.

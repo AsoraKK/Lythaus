@@ -14,27 +14,64 @@ const sha = value => /^[a-f0-9]{64}$/.test(value ?? '');
 const finite = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 export const hashReceipt = text => createHash('sha256').update(text).digest('hex');
 
-export function estimateBetaSmoke(instanceType, remaining = {}) {
+export function memoryFits(peakMemoryBytes, capacityBytes) {
+  assert.ok(Number.isSafeInteger(peakMemoryBytes) && peakMemoryBytes > 0 && Number.isSafeInteger(capacityBytes) && capacityBytes > 0, 'whole_container_integer_byte_measurement_required');
+  return BigInt(peakMemoryBytes) * 4n < BigInt(capacityBytes) * 3n;
+}
+
+export function incrementalCharge(usage, unit, price, account, rounded = true) {
+  assert.ok([usage, unit, price].every(finite) && unit > 0, 'invalid_meter');
+  const bill = quantity => (rounded ? Math.ceil(quantity / unit) : quantity / unit) * price;
+  if (!account) return bill(usage);
+  assert.ok(finite(account.used) && finite(account.included), 'invalid_account_meter');
+  return Math.max(0, bill(Math.max(0, account.used + usage - account.included)) - bill(Math.max(0, account.used - account.included)));
+}
+
+export function feasibleCaseCapacity(reservationUsd, betaCommittedUsd, sharedCommittedUsd) {
+  assert.ok(finite(reservationUsd) && reservationUsd > 0 && finite(betaCommittedUsd) && finite(sharedCommittedUsd), 'measured_reservation_required');
+  return Math.max(0, Math.floor(Math.min(1.6 - betaCommittedUsd, 8 - sharedCommittedUsd) / reservationUsd + 1e-9));
+}
+
+export function estimateBetaSmoke(instanceType, remaining = {}, account = {}, envelope = null) {
   const instance = INSTANCE_TYPES[instanceType];
   assert.ok(instance, 'measured_instance_required');
-  const units = {
+  const smokeUnits = {
     r2ClassA: [64, 1e6, 4.5], r2ClassB: [256, 1e6, 0.36], r2GbMonth: [1, 1, 0.015],
-    doRequests: [128, 1e6, 0.15], doGbSeconds: [1800 * 0.134217728, 1e6, 12.5],
+    doRequests: [128, 1e6, 0.15], doGbSeconds: [1800 * 0.128, 1e6, 12.5],
     doRowsRead: [10000, 1e6, 0.001], doRowsWritten: [1000, 1e6, 1], doGbMonth: [0.01, 1, 0.2],
     workerRequests: [5000, 1e6, 0.3], workerCpuMs: [60000, 1e6, 0.02],
     queueOperations: [128, 1e6, 0.4], logEvents: [5000, 1e6, 0.6],
     kvReads: [10000, 1e6, 0.5], kvWrites: [1, 1e6, 5], kvGbMonth: [0.001, 1, 0.5],
   };
+  const units = Object.fromEntries(Object.entries(smokeUnits).map(([name, [usage, unit, price]]) => {
+    const boundedUsage = envelope ? envelope.units?.[name] : usage;
+    assert.ok(finite(boundedUsage), `bounded_${name}_required`);
+    return [name, [boundedUsage, unit, price]];
+  }));
   const services = {};
   for (const [name, [usage, unit, price]] of Object.entries(units)) {
     assert.ok(remaining[name] === undefined || finite(remaining[name]), 'invalid_verified_allowance');
-    services[name] = Math.ceil(Math.max(0, usage - (remaining[name] ?? 0)) / unit) * price;
+    const rounded = !['workerRequests','workerCpuMs','queueOperations','kvReads','kvWrites','kvGbMonth','logEvents'].includes(name);
+    services[name] = account[name] ? incrementalCharge(usage, unit, price, account[name], rounded) : incrementalCharge(Math.max(0, usage - (remaining[name] ?? 0)), unit, price, null, rounded);
   }
-  services.container = 1800 * (instance.gib * 0.0000025 + instance.cpu * 0.000020 + instance.diskGb * 0.00000007);
-  services.containerEgress = 16 * 8 * 1024 * 1024 / 1e9 * 0.05;
-  services.adviser = (2 * 16000 * 0.20 + 2 * 2400 * 0.30) / 1e6;
+  const activeSeconds = envelope?.activeSeconds ?? 1800;
+  assert.ok(finite(activeSeconds) && activeSeconds === 1800, 'full_runtime_lifetime_bound_required');
+  services.container = Math.ceil(activeSeconds * 100) / 100 * (instance.gib * 0.0000025 + instance.cpu * 0.000020 + instance.diskGb * 0.00000007);
+  services.containerEgress = (envelope ? 1 : 16) * 8 * 1024 * 1024 / 1e9 * 0.05;
+  services.adviser = ((envelope ? 1 : 2) * (16000 * 0.20 + 2400 * 0.30)) / 1e6;
   const subtotal = Object.values(services).reduce((sum, amount) => sum + amount, 0);
   return { pricingDate: PRICING_DATE, kind: 'CONSERVATIVE_ESTIMATE_NOT_BILL', services, subtotalUsd: subtotal, reservationUsd: Math.ceil(subtotal / 0.8 * 100) / 100, safetyUsd: null, imageRegistryUsd: null, databaseIncrementalUsd: null };
+}
+
+export function measuredCaseAdmission(receipt) {
+  const envelope = receipt.caseEnvelope;
+  assert.ok(envelope?.schemaVersion === 'lythaus-beta-case-envelope-v1' && sha(envelope.measurementReceiptSha256), 'measured_case_envelope_required');
+  assert.ok(finite(envelope.observedWholeCaseSeconds) && envelope.observedWholeCaseSeconds > 0 && envelope.observedWholeCaseSeconds <= 120, 'whole_case_measurement_required');
+  const estimate = estimateBetaSmoke(receipt.instanceType, receipt.verifiedRemainingUnits, receipt.accountMeters, envelope);
+  for (const field of ['safetyUpperBoundUsd','imageRegistryUpperBoundUsd','databaseUpperBoundUsd']) assert.ok(finite(envelope[field]), `${field}_required`);
+  const caseReservationUsd = Math.ceil((estimate.subtotalUsd + envelope.safetyUpperBoundUsd + envelope.imageRegistryUpperBoundUsd + envelope.databaseUpperBoundUsd) / 0.8 * 100) / 100;
+  assert.ok(caseReservationUsd > 0 && caseReservationUsd <= 1.6, 'BLOCKED_CASE_BUDGET');
+  return { caseReservationUsd, feasibleCases: feasibleCaseCapacity(caseReservationUsd, receipt.betaCommittedUsd, receipt.sharedExperimentCommittedUsd) };
 }
 
 export function validateBetaRelease(receipt, { sourceSha, approvedReceiptHash, rawReceipt, preprocessingHash, now = Date.now() }) {
@@ -60,20 +97,23 @@ export function validateBetaRelease(receipt, { sourceSha, approvedReceiptHash, r
   assert.equal(receipt.authorAdminOnly, true);
   assert.match(receipt.image, /^registry\.cloudflare\.com\/[a-f0-9]{32}\/lythaus-safe-beta@sha256:[a-f0-9]{64}$/);
   assert.ok(finite(receipt.peakMemoryBytes) && receipt.peakMemoryBytes > 0);
+  assert.equal(receipt.memoryMeasurementScope, 'WHOLE_CONTAINER_POST_RESPONSE', 'supervisor_node_python_decode_scratch_and_response_peak_required');
   assert.ok(finite(receipt.imageBytes) && receipt.imageBytes > 0);
   assert.equal(receipt.measuredMaxPixels, 16777216, 'maximum_pixel_memory_measurement_required');
   assert.equal(receipt.realParityPassed, true);
   assert.ok(Number.isInteger(receipt.realParityCases) && receipt.realParityCases >= 8 && Number.isInteger(receipt.realSafeAttempts) && receipt.realSafeAttempts >= receipt.realParityCases && receipt.realSafeAttempts <= 16);
-  const smallest = Object.entries(INSTANCE_TYPES).find(([, spec]) => receipt.peakMemoryBytes * 1.3 <= spec.gib * 2 ** 30 && receipt.imageBytes * 2 + 128 * 1024 * 1024 <= spec.diskGb * 1e9)?.[0];
+  const smallest = Object.entries(INSTANCE_TYPES).find(([, spec]) => memoryFits(receipt.peakMemoryBytes, spec.gib * 2 ** 30) && receipt.imageBytes * 2 + 128 * 1024 * 1024 <= spec.diskGb * 1e9)?.[0];
   assert.equal(receipt.instanceType, smallest, 'smallest_measured_fit_with_headroom_required');
   assert.ok(finite(receipt.sharedExperimentCommittedUsd) && finite(receipt.betaCommittedUsd));
   assert.ok(sha(receipt.allowanceEvidenceSha256), 'current_account_allowance_evidence_required');
   assert.ok(Date.parse(receipt.allowanceObservedAt) <= now && Date.parse(receipt.allowanceObservedAt) >= now - 3600000, 'account_usage_receipt_stale');
-  const estimate = estimateBetaSmoke(receipt.instanceType, receipt.verifiedRemainingUnits);
+  const estimate = estimateBetaSmoke(receipt.instanceType, receipt.verifiedRemainingUnits, receipt.accountMeters);
   for (const field of ['safetyUpperBoundUsd', 'imageRegistryUpperBoundUsd', 'databaseUpperBoundUsd']) assert.ok(finite(receipt[field]), `${field}_required`);
   const reservation = Math.ceil((estimate.subtotalUsd + receipt.safetyUpperBoundUsd + receipt.imageRegistryUpperBoundUsd + receipt.databaseUpperBoundUsd) / 0.8 * 100) / 100;
   assert.ok(reservation <= 0.5 && receipt.sharedExperimentCommittedUsd + reservation <= 8 && receipt.betaCommittedUsd + reservation <= 1.6, 'BLOCKED_BUDGET');
-  return { sourceSha, receiptSha256: approvedReceiptHash, image: receipt.image, runtimeDigest: receipt.image.split('@')[1], instanceType: receipt.instanceType, preprocessingHash, reservedUpperBoundUsd: reservation, enabled, publicEnforcementApproved: false };
+  const admission = enabled ? measuredCaseAdmission(receipt) : { caseReservationUsd: null, feasibleCases: 0 };
+  if (enabled) assert.ok(admission.feasibleCases >= 1, 'BLOCKED_CASE_CAPACITY');
+  return { sourceSha, receiptSha256: approvedReceiptHash, image: receipt.image, runtimeDigest: receipt.image.split('@')[1], instanceType: receipt.instanceType, preprocessingHash, reservedUpperBoundUsd: reservation, ...admission, enabled, publicEnforcementApproved: false };
 }
 
 export function withBetaConfiguration(plan, approved) {

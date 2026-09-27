@@ -4,11 +4,48 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { estimateBetaSmoke, validateBetaRelease, hashReceipt, withBetaConfiguration } from '../authenticity/beta-release-policy.mjs';
+import { estimateBetaSmoke, validateBetaRelease, hashReceipt, withBetaConfiguration, memoryFits, incrementalCharge, feasibleCaseCapacity, measuredCaseAdmission } from '../authenticity/beta-release-policy.mjs';
+
+const meterNames=['r2ClassA','r2ClassB','r2GbMonth','doRequests','doGbSeconds','doRowsRead','doRowsWritten','doGbMonth','workerRequests','workerCpuMs','queueOperations','logEvents','kvReads','kvWrites','kvGbMonth'];
+const caseEnvelope={schemaVersion:'lythaus-beta-case-envelope-v1',measurementReceiptSha256:'6'.repeat(64),observedWholeCaseSeconds:5,activeSeconds:1800,units:Object.fromEntries(meterNames.map(name=>[name,1])),safetyUpperBoundUsd:0,imageRegistryUpperBoundUsd:0,databaseUpperBoundUsd:0};
+
+test('rounded billing is an account-period delta, while proportional services stay proportional',()=>{
+  assert.equal(incrementalCharge(10,1e6,12.5,{used:400001,included:400000}),0);
+  assert.equal(incrementalCharge(10,1e6,12.5,{used:1399999,included:400000}),12.5);
+  assert.equal(incrementalCharge(10,1e6,12.5,undefined),12.5);
+  assert.equal(incrementalCharge(500000,1e6,0.3,{used:10000000,included:10000000},false),0.15);
+  assert.equal(incrementalCharge(100,1e6,0.4,{used:0,included:1000},false),0);
+  assert.throws(()=>incrementalCharge(10,1e6,12.5,{used:null,included:0}));
+  assert.equal(feasibleCaseCapacity(0.5,0,0),3);
+  assert.equal(feasibleCaseCapacity(0.1,1.5,0),1);
+  assert.equal(feasibleCaseCapacity(0.1,0,7.99),0);
+});
+
+test('case admission requires separate measurements and never treats the smoke allowance as a case price',()=>{
+  const [receipt]=fixture({caseEnvelope});
+  assert.equal(measuredCaseAdmission(receipt).caseReservationUsd,0.06);
+  assert.equal(measuredCaseAdmission(receipt).feasibleCases,26);
+  assert.throws(()=>measuredCaseAdmission({...receipt,caseEnvelope:null}));
+  assert.throws(()=>measuredCaseAdmission({...receipt,caseEnvelope:{...caseEnvelope,activeSeconds:5}}));
+  assert.throws(()=>measuredCaseAdmission({...receipt,verifiedRemainingUnits:{}}));
+});
+
+test('whole-container peak must be strictly below 75 percent without rounding', () => {
+  const capacity = 4 * 2 ** 30;
+  const boundary = capacity * 3 / 4;
+  assert.equal(memoryFits(boundary - 1, capacity), true);
+  assert.equal(memoryFits(boundary, capacity), false);
+  assert.equal(memoryFits(boundary + 1, capacity), false);
+  assert.equal(memoryFits(Math.floor(capacity / 1.3), capacity), false);
+  assert.equal(memoryFits(2, 3), true);
+  assert.equal(memoryFits(3, 4), false);
+  assert.throws(() => memoryFits(1.5, capacity));
+  assert.throws(() => memoryFits(null, capacity));
+});
 
 const now = Date.parse('2026-09-27T12:00:00Z');
 function fixture(overrides = {}) {
-  const receipt = { schemaVersion: 'lythaus-beta-release-approval-v1', sourceSha: 'a'.repeat(40), phase: 'DISABLED_DEPLOYMENT', decisionOwner: 'explicit protocol fixture', expiresAt: new Date(now + 3600000).toISOString(), checkpointSha256: 'b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e', preprocessingHash: 'b'.repeat(64), rightsEvidenceSha256: 'c'.repeat(64), runtimeEvidenceSha256: 'd'.repeat(64), budgetEvidenceSha256: 'e'.repeat(64), resourceApprovalSha256: 'f'.repeat(64), restrictedBetaHostingAuthorized: true, publicEnforcementApproved: false, authorAdminOnly: true, image: `registry.cloudflare.com/${'1'.repeat(32)}/lythaus-safe-beta@sha256:${'2'.repeat(64)}`, peakMemoryBytes: 1.5 * 2 ** 30, imageBytes: 2e9, measuredMaxPixels: 16777216, realParityPassed: true, realParityCases: 8, realSafeAttempts: 8, instanceType: 'standard-1', sharedExperimentCommittedUsd: 0, betaCommittedUsd: 0, allowanceEvidenceSha256: '3'.repeat(64), allowanceObservedAt: new Date(now).toISOString(), verifiedRemainingUnits: Object.fromEntries(['r2ClassA','r2ClassB','r2GbMonth','doRequests','doGbSeconds','doRowsRead','doRowsWritten','doGbMonth','workerRequests','workerCpuMs','queueOperations','logEvents','kvReads','kvWrites','kvGbMonth'].map(key => [key, 1e7])), safetyUpperBoundUsd: 0, imageRegistryUpperBoundUsd: 0, databaseUpperBoundUsd: 0, ...overrides };
+  const receipt = { schemaVersion: 'lythaus-beta-release-approval-v1', sourceSha: 'a'.repeat(40), phase: 'DISABLED_DEPLOYMENT', decisionOwner: 'explicit protocol fixture', expiresAt: new Date(now + 3600000).toISOString(), checkpointSha256: 'b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e', preprocessingHash: 'b'.repeat(64), rightsEvidenceSha256: 'c'.repeat(64), runtimeEvidenceSha256: 'd'.repeat(64), budgetEvidenceSha256: 'e'.repeat(64), resourceApprovalSha256: 'f'.repeat(64), restrictedBetaHostingAuthorized: true, publicEnforcementApproved: false, authorAdminOnly: true, image: `registry.cloudflare.com/${'1'.repeat(32)}/lythaus-safe-beta@sha256:${'2'.repeat(64)}`, peakMemoryBytes: 1.5 * 2 ** 30, memoryMeasurementScope: 'WHOLE_CONTAINER_POST_RESPONSE', imageBytes: 2e9, measuredMaxPixels: 16777216, realParityPassed: true, realParityCases: 8, realSafeAttempts: 8, instanceType: 'standard-1', sharedExperimentCommittedUsd: 0, betaCommittedUsd: 0, allowanceEvidenceSha256: '3'.repeat(64), allowanceObservedAt: new Date(now).toISOString(), verifiedRemainingUnits: Object.fromEntries(['r2ClassA','r2ClassB','r2GbMonth','doRequests','doGbSeconds','doRowsRead','doRowsWritten','doGbMonth','workerRequests','workerCpuMs','queueOperations','logEvents','kvReads','kvWrites','kvGbMonth'].map(key => [key, 1e7])), safetyUpperBoundUsd: 0, imageRegistryUpperBoundUsd: 0, databaseUpperBoundUsd: 0, caseEnvelope, ...overrides };
   const rawReceipt = JSON.stringify(receipt);
   return [receipt, { sourceSha: 'a'.repeat(40), approvedReceiptHash: hashReceipt(rawReceipt), rawReceipt, preprocessingHash: 'b'.repeat(64), now }];
 }
@@ -44,7 +81,7 @@ test('protected configuration command rejects stale Workers before dispatch and 
     const rawReceipt=JSON.stringify(receipt);
     const marker=path.join(directory,'sent');
     const environment=path.join(directory,'github.env');
-    const mock=`import fs from 'node:fs';globalThis.fetch=async(url,options)=>{if(options.method!=='PUT'||!url.startsWith('https://api.cloudflare.com/client/v4/accounts/'))throw Error('unexpected_request');const config=JSON.parse(options.body);if(!config.enabled||config.allowlist.length!==1||config.caseReservationUsd!==0.5)throw Error('invalid_config');fs.writeFileSync(${JSON.stringify(marker)},'sent');return new Response(JSON.stringify({success:process.env.TEST_PROVIDER_SUCCESS==='true'}),{status:process.env.TEST_PROVIDER_SUCCESS==='true'?200:500});};`;
+    const mock=`import fs from 'node:fs';globalThis.fetch=async(url,options)=>{if(options.method!=='PUT'||!url.startsWith('https://api.cloudflare.com/client/v4/accounts/'))throw Error('unexpected_request');const config=JSON.parse(options.body);if(!config.enabled||config.allowlist.length!==1||config.caseReservationUsd!==0.06)throw Error('invalid_config');fs.writeFileSync(${JSON.stringify(marker)},'sent');return new Response(JSON.stringify({success:process.env.TEST_PROVIDER_SUCCESS==='true'}),{status:process.env.TEST_PROVIDER_SUCCESS==='true'?200:500});};`;
     const env={...process.env,GITHUB_ACTIONS:'true',GITHUB_ENV:environment,CLOUDFLARE_ACCOUNT_ID:'1'.repeat(32),CLOUDFLARE_API_TOKEN:'explicit-protocol-fixture',RELEASE_SHA:receipt.sourceSha,AUTHENTICITY_BETA_RELEASE_RECEIPT:rawReceipt,AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256:hashReceipt(rawReceipt),TEST_PROVIDER_SUCCESS:'true'};
     for(const prefix of ['PUBLIC','ADMIN','JOBS']) {env[`${prefix}_WORKER_SOURCE_SHA`]=receipt.sourceSha;env[`${prefix}_WORKER_STATUS`]='ACTIVATED';}
     const invoke=extra=>spawnSync(process.execPath,['--import',`data:text/javascript,${encodeURIComponent(mock)}`,'scripts/ci/configure-authenticity-beta-runtime.mjs','activate'],{env:{...env,...extra},encoding:'utf8'});

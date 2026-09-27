@@ -19,7 +19,7 @@ createInterface({ input: child.stdout }).on('line', line => {
   try {
     if (line.length > 65536) throw new Error('protocol_limit');
     const data = JSON.parse(line);
-    if (Object.hasOwn(data,'ready')) { ready = data.ready === true; startup = data; }
+    if (Object.hasOwn(data,'ready')) { ready = data.ready === true; startup = data; if (ready) process.stdout.write('BETA_READY\n'); }
     else if (pending) { const resolver = pending; pending = null; resolver(data); }
   } catch { child.kill('SIGKILL'); }
 });
@@ -37,6 +37,9 @@ createServer(async (req,res) => {
   if (req.url !== '/infer' || req.method !== 'POST' || !authorized(req)) return reply(res,404,{error:'not_found'});
   if (!ready || busy) return reply(res,503,{error:'runtime_unavailable'});
   busy = true;
+  process.stdout.write('BETA_START\n');
+  const abort = () => { if (!res.writableFinished) process.stdout.write('BETA_ABORT\n'); };
+  res.once('close', abort);
   let directory, timer;
   try {
     const binding = JSON.parse(req.headers['x-beta-binding'] ?? '{}');
@@ -69,5 +72,5 @@ createServer(async (req,res) => {
     completed++;
     reply(res,200,{result,display});
   } catch { if (!res.headersSent) reply(res,422,{error:'bounded_inference_failed'}); }
-  finally { clearTimeout(timer); if(directory) await rm(directory,{recursive:true,force:true}); busy=false; }
+  finally { clearTimeout(timer); if(directory) await rm(directory,{recursive:true,force:true}); res.off('close',abort); busy=false; process.stdout.write('BETA_DONE\n'); }
 }).listen(8080,'0.0.0.0');

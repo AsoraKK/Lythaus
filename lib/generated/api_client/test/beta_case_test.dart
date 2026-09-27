@@ -82,5 +82,11 @@ void main() {
       // TODO
     });
 
+    // Execution availability, separate from interpretation. Completed includes inconclusive unknown-history and JPEG results; no score or threshold is exposed.
+    // String detectorExecution
+    test('to test the property `detectorExecution`', () async {
+      // TODO
+    });
+
   });
 }

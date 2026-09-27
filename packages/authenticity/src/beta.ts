@@ -103,7 +103,11 @@ export function compileBetaResult(safe: SafeResult, safety: ModerationAnalysis):
     recommendation: createInsufficientEvidenceRecommendation('A positive specialist cannot distinguish synthetic content from photographed synthetic material or certify authorship.'),
     advisory: { status: 'not_requested', role: BETA_ADVISER_ROLE }, publicationEligible: false, authenticityEnforcementEnabled: false };
 }
+export function betaAdviceEligible(result: BetaResult | null): boolean {
+  return result !== null && result.safe.status === 'OK' && result.support === 'SUPPORTED' && result.route === 'ESCALATE' && result.finding !== 'UNAVAILABLE';
+}
 export function betaAdviceRequest(result: BetaResult) {
+  if (!betaAdviceEligible(result)) throw new Error('beta_advice_ineligible');
   const packet: EvidencePacket = { ...result.packet, observations: [], observationHistory: [], evidence: result.packet.evidence.map<PacketEvidence>(item => ({ ...item, value: (item.family === 'EF3_GENERATIVE_FORENSICS' ? { rawThresholdCrossing: result.rawThresholdCrossing, support: result.support, positiveOnly: true } : { measurementAvailable: item.quality === 'AVAILABLE', authorshipQualified: false }) as PacketEvidence['value'], provenance: { ...item.provenance, limitations: item.provenance.limitations.slice(0,2) } })), safetyContext: { ...result.packet.safetyContext, providerEvidence: null } };
   const canonical = buildJudgeRequest(packet, { structuredOutputMode: 'JSON_OBJECT' });
   const template = createInsufficientEvidenceRecommendation('Concise evidence-grounded explanation of limitations and missingness.');
@@ -122,6 +126,7 @@ export function authorBetaView(input: { id: string; state: BetaState; createdAt:
   const progress: Partial<Record<BetaState,string>> = { uploading: 'Finish uploading this image to begin private analysis.', queued: 'The image is queued for private analysis.', analyzing: 'Safety checks and image analysis are in progress.', paused: 'Analysis is paused. An administrator must resolve activation or budget requirements.', expired: 'The processing deadline expired. This case will not start further model calls.', cancelled: 'Analysis was cancelled.', safety_review: 'Independent Safety checks require review. Authorship analysis has stopped.', safety_blocked: 'Independent Safety checks stopped this image. This says nothing about authorship.' };
   return { schemaVersion: BETA_VERSION, caseId: input.id, status: input.state, createdAt: input.createdAt, updatedAt: input.updatedAt, expiresAt: input.expiresAt, reviewState: input.reviewState,
     finding: input.result?.finding ?? 'UNAVAILABLE', explanation: progress[input.state] ?? explanations[input.result?.finding ?? 'UNAVAILABLE'], advisoryStatus: input.result?.advisory.status ?? 'not_requested',
+    detectorExecution: input.result?.safe.status === 'OK' ? 'completed' : input.result ? 'no_usable_output' : 'not_recorded',
     limitations: ['Private experimental analysis; not authenticity certification.', 'JPEG processing and unknown history limit interpretation.', 'Coverage differs across generators; missed detections and false positives occur.'],
     versions: { analysis: BETA_VERSION, policy: BETA_POLICY, detector: 'SAFE-A', adviser: BETA_ADVISER_ROLE }, publicationEligible: false, rewardsEligible: false };
 }

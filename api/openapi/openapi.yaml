@@ -83,6 +83,8 @@ paths:
     $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1review'
   /admin/authenticity/cases/{caseId}/retry:
     $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1retry'
+  /admin/authenticity/cases/{caseId}/advice:
+    $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1advice'
   /waitlist:
     post:
       operationId: joinWaitlist

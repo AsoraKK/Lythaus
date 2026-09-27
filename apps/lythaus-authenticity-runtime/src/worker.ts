@@ -20,13 +20,20 @@ export class SafeBetaContainer extends Container<RuntimeEnv> {
     let difference = 0;
     for (let index=0; index<expected.length; index++) difference |= expected.charCodeAt(index) ^ supplied.charCodeAt(index);
     if (difference || new URL(request.url).pathname !== '/infer' || request.method !== 'POST') return new Response(null,{status:404});
-    await this.startAndWaitForPorts();
     const deadline = Date.now() + 60_000;
-    while (Date.now() < deadline) {
-      const readiness = await this.containerFetch(new Request('http://safe/ready'));
-      if (readiness.ok) return this.containerFetch(request);
-      await new Promise(resolve => setTimeout(resolve, 1_000));
+    const startupSignal = AbortSignal.any([request.signal, AbortSignal.timeout(60_000)]);
+    try {
+      await this.startAndWaitForPorts({ cancellationOptions: { abort: startupSignal, instanceGetTimeoutMS: 60_000, portReadyTimeoutMS: 60_000 } });
+      while (Date.now() < deadline && !startupSignal.aborted) {
+        const readiness = await this.containerFetch(new Request('http://safe/ready',{signal:startupSignal}));
+        if (readiness.ok) return this.containerFetch(request);
+        await new Promise(resolve => setTimeout(resolve, 1_000));
+      }
+    } catch {
+      await this.stop('SIGKILL');
+      return Response.json({error:'beta_startup_timeout'},{status:503,headers:{'cache-control':'no-store'}});
     }
+    await this.stop('SIGKILL');
     return Response.json({error:'beta_startup_timeout'},{status:503,headers:{'cache-control':'no-store'}});
   }
 

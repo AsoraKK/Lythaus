@@ -194,7 +194,7 @@
       "post": {
         "operationId": "createAuthenticityBetaCase",
         "summary": "Create an upload case",
-        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "description": "Private original-byte upload; at most 10 MiB and 16,777,216 decoded pixels, one RGB PNG/JPEG frame, at least 256 pixels per side. Oversized inputs are rejected without resizing. Source history determines interpretation separately from successful inference.",
         "tags": [
           "AuthenticityBeta"
         ],
@@ -1706,6 +1706,125 @@
         "operationId": "adminAuthenticityBetaRetry",
         "summary": "Resume bounded unfinished work",
         "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/cases/{caseId}/advice": {
+      "post": {
+        "operationId": "requestAdminAuthenticityBetaAdvice",
+        "summary": "Request one bounded explanation of eligible persisted evidence",
+        "description": "Privileged, audited request. Requires supported successful SAFE evidence and selective escalation, an unconsumed adviser attempt, a current lease/admission budget and unexpired case. Uses the existing outbox. Does not rerun SAFE or Safety, change the deterministic finding, or publish content.",
         "tags": [
           "Admin"
         ],
@@ -10256,6 +10375,15 @@
             "items": {
               "$ref": "#/components/schemas/BetaReview"
             }
+          },
+          "detectorExecution": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "no_usable_output",
+              "not_recorded"
+            ],
+            "description": "Execution availability, separate from interpretation. Completed includes inconclusive unknown-history and JPEG results; no score or threshold is exposed."
           }
         }
       },

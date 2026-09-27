@@ -1,6 +1,28 @@
 import { query, transaction, type HyperdriveBinding } from './index.ts';
 import type { EnvBindings } from '../../cloudflare-env/src/index.ts';
 
+export async function reconcileBetaCost(binding: HyperdriveBinding, input: {caseId:string;actorId:string;evidenceSha256:string;billedCostUsd:number;attemptIds:string[];allChargesFinal:boolean}): Promise<void> {
+  if (!/^[a-f0-9]{64}$/.test(input.evidenceSha256) || !Number.isFinite(input.billedCostUsd) || input.billedCostUsd < 0 || input.billedCostUsd > 1_000_000 || input.allChargesFinal !== true || !Array.isArray(input.attemptIds) || new Set(input.attemptIds).size !== input.attemptIds.length) throw new Error('beta_billing_evidence_required');
+  await transaction(binding,async client=>{
+    const role=await client.query<{allowed:boolean}>(`SELECT current_user='lythaus_admin' AS allowed`);
+    if (!role.rows[0]?.allowed) throw new Error('beta_billing_admin_required');
+    const row=await client.query<{case_id:string}>(`SELECT case_id FROM moderation.authenticity_beta WHERE case_id=$1 AND state='deleted' AND purged_at IS NOT NULL AND lease_token IS NULL FOR UPDATE`,[input.caseId]);
+    if (!row.rowCount) throw new Error('beta_billing_work_or_storage_pending');
+    const steps=await client.query<{id:string;state:string}>(`SELECT id,state FROM moderation.authenticity_beta_steps WHERE case_id=$1 ORDER BY id`,[input.caseId]);
+    if (steps.rows.some(step=>step.state==='started') || JSON.stringify(steps.rows.map(step=>step.id)) !== JSON.stringify([...input.attemptIds].sort())) throw new Error('beta_billing_attempts_unaccounted');
+    const reservation=await client.query<{id:string;period_key:string;status:string;actual_cost_usd:string|null;measurement:Record<string,unknown>|null}>(`SELECT id,period_key,status,actual_cost_usd,measurement FROM system.cost_budget_reservations WHERE operation='authenticity_beta_case' AND correlation_id=$1 FOR UPDATE`,[input.caseId]);
+    const budget=reservation.rows[0];
+    if (!budget || !['committed','reconciled'].includes(budget.status)) throw new Error('beta_billing_reservation_missing');
+    if (budget.actual_cost_usd !== null) {
+      if (Number(budget.actual_cost_usd)!==input.billedCostUsd || budget.measurement?.billingEvidenceSha256!==input.evidenceSha256) throw new Error('beta_billing_receipt_conflict');
+      return;
+    }
+    await client.query(`INSERT INTO system.cost_usage_events(id,period_key,reservation_id,operation,provider,external_reference,amount_usd) VALUES($1,$2,$3,'authenticity_beta_case','beta-attributable-services',$4,$5)`,[crypto.randomUUID(),budget.period_key,budget.id,`beta-bill:${input.caseId}:${input.evidenceSha256}`,input.billedCostUsd]);
+    await client.query(`UPDATE system.cost_budget_reservations SET status='reconciled',actual_cost_usd=$2,billing_state='billed',measurement=coalesce(measurement,'{}'::jsonb)||$3::jsonb,updated_at=now() WHERE id=$1`,[budget.id,input.billedCostUsd,JSON.stringify({billingEvidenceSha256:input.evidenceSha256,accountedAttempts:input.attemptIds.length,allChargesFinal:true})]);
+    await client.query(`INSERT INTO system.audit_events(id,actor_id,action,target_type,target_id,reason_code,correlation_id,metadata) VALUES($1,$2,'authenticity.beta.billing.reconciled','authenticity_case',$3,'FINAL_PROVIDER_BILLING',$3::uuid::text,$4::jsonb)`,[crypto.randomUUID(),input.actorId,input.caseId,JSON.stringify({evidenceSha256:input.evidenceSha256,billedCostUsd:input.billedCostUsd})]);
+  });
+}
+
 export async function tombstoneBetaCases(binding: HyperdriveBinding, ownerId: string, caseId: string | null = null, olderThan: string | null = null): Promise<void> {
   await transaction(binding,async client=>{
     const hold = await client.query<{active:boolean}>(`SELECT privacy.beta_subject_has_hold($1) AS active`,[ownerId]);

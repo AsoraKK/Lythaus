@@ -283,5 +283,14 @@ void main() {
       // TODO
     });
 
+    // Request one bounded explanation of eligible persisted evidence
+    //
+    // Privileged, audited request. Requires supported successful SAFE evidence and selective escalation, an unconsumed adviser attempt, a current lease/admission budget and unexpired case. Uses the existing outbox. Does not rerun SAFE or Safety, change the deterministic finding, or publish content.
+    //
+    //Future<BetaActionResponse> requestAdminAuthenticityBetaAdvice(String caseId, BetaFeedback betaFeedback) async
+    test('test requestAdminAuthenticityBetaAdvice', () async {
+      // TODO
+    });
+
   });
 }

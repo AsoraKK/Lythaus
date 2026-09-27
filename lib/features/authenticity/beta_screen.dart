@@ -262,7 +262,7 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
               ),
               const SizedBox(height: Spacing.md),
               const Text(
-                'Choose a still RGB PNG or JPEG, up to 10 MiB and 16 megapixels, at least 256 × 256. HEIC, animation, and unusual color modes are unsupported. JPEG processing can destroy useful evidence. Converting JPEG to PNG does not restore it.',
+                'Choose a still RGB PNG or JPEG, up to 10 MiB and 16,777,216 decoded pixels (for example, 4096 × 4096), at least 256 × 256. Larger images are rejected without resizing. HEIC, animation, and unusual color modes are unsupported. JPEG processing can destroy useful evidence. Converting JPEG to PNG does not restore it.',
               ),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
@@ -355,6 +355,14 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
                         ),
                         const SizedBox(height: Spacing.sm),
                         Text(selected['explanation'] as String),
+                        Text(
+                          selected['detectorExecution'] == 'completed'
+                              ? 'SAFE-A ran successfully. Interpretation depends on the image’s processing history.'
+                              : selected['detectorExecution'] ==
+                                    'no_usable_output'
+                              ? 'SAFE-A did not return usable output.'
+                              : 'No completed SAFE-A execution is recorded.',
+                        ),
                         if (_preview != null)
                           Image.memory(
                             _preview!,

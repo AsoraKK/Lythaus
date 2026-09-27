@@ -50,6 +50,7 @@ async function routeBetaApi(request: Request, env: BetaEnv, userId: string): Pro
     if (!env.MEDIA_QUARANTINE || !env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.MEDIA_QUARANTINE_BUCKET) return privateJson({ error: 'beta_upload_unavailable' }, 503);
     const id = uuidv7(); const key = `quarantine/${userId}/${id}`;
     const signed = await createPresignedPutUrl({ accountId: env.R2_ACCOUNT_ID, bucket: env.MEDIA_QUARANTINE_BUCKET, key, contentType: input.contentType as 'image/png' | 'image/jpeg', accessKeyId: env.R2_ACCESS_KEY_ID, secretAccessKey: env.R2_SECRET_ACCESS_KEY, expiresInSeconds: 600 });
+    if (config.caseReservationUsd === null) return privateJson({error:'beta_measured_reservation_required'},503);
     const reservation = await reserveBudget(env.DB_APP_FRESH, { period: new Date().toISOString().slice(0, 7), operation: 'authenticity_beta_case', operationClass: 'experiment', estimatedCostUsd: config.caseReservationUsd, idempotencyKey: `beta:${id}`, correlationId: id, config: appBudget(env) });
     if (reservation.status !== 'reserved') return privateJson({ error: 'beta_budget_paused' }, 429);
     try {

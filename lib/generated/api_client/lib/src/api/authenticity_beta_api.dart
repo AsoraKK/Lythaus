@@ -406,7 +406,7 @@ class AuthenticityBetaApi {
   }
 
   /// Create an upload case
-  /// Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+  /// Private original-byte upload; at most 10 MiB and 16,777,216 decoded pixels, one RGB PNG/JPEG frame, at least 256 pixels per side. Oversized inputs are rejected without resizing. Source history determines interpretation separately from successful inference.
   ///
   /// Parameters:
   /// * [idempotencyKey]

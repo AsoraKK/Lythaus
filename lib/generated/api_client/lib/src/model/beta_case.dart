@@ -28,6 +28,7 @@ part 'beta_case.g.dart';
 /// * [publicationEligible]
 /// * [rewardsEligible]
 /// * [reviews]
+/// * [detectorExecution] - Execution availability, separate from interpretation. Completed includes inconclusive unknown-history and JPEG results; no score or threshold is exposed.
 @BuiltValue()
 abstract class BetaCase implements Built<BetaCase, BetaCaseBuilder> {
   @BuiltValueField(wireName: r'schemaVersion')
@@ -77,6 +78,11 @@ abstract class BetaCase implements Built<BetaCase, BetaCaseBuilder> {
 
   @BuiltValueField(wireName: r'reviews')
   BuiltList<BetaReview>? get reviews;
+
+  /// Execution availability, separate from interpretation. Completed includes inconclusive unknown-history and JPEG results; no score or threshold is exposed.
+  @BuiltValueField(wireName: r'detectorExecution')
+  BetaCaseDetectorExecutionEnum? get detectorExecution;
+  // enum detectorExecutionEnum {  completed,  no_usable_output,  not_recorded,  };
 
   BetaCase._();
 
@@ -176,6 +182,13 @@ class _$BetaCaseSerializer implements PrimitiveSerializer<BetaCase> {
       yield serializers.serialize(
         object.reviews,
         specifiedType: const FullType(BuiltList, [FullType(BetaReview)]),
+      );
+    }
+    if (object.detectorExecution != null) {
+      yield r'detectorExecution';
+      yield serializers.serialize(
+        object.detectorExecution,
+        specifiedType: const FullType(BetaCaseDetectorExecutionEnum),
       );
     }
   }
@@ -306,6 +319,13 @@ class _$BetaCaseSerializer implements PrimitiveSerializer<BetaCase> {
           ) as BuiltList<BetaReview>;
           result.reviews.replace(valueDes);
           break;
+        case r'detectorExecution':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BetaCaseDetectorExecutionEnum),
+          ) as BetaCaseDetectorExecutionEnum;
+          result.detectorExecution = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -406,4 +426,24 @@ class BetaCaseFindingEnum extends EnumClass {
 
   static BuiltSet<BetaCaseFindingEnum> get values => _$betaCaseFindingEnumValues;
   static BetaCaseFindingEnum valueOf(String name) => _$betaCaseFindingEnumValueOf(name);
+}
+
+class BetaCaseDetectorExecutionEnum extends EnumClass {
+
+  /// Execution availability, separate from interpretation. Completed includes inconclusive unknown-history and JPEG results; no score or threshold is exposed.
+  @BuiltValueEnumConst(wireName: r'completed')
+  static const BetaCaseDetectorExecutionEnum completed = _$betaCaseDetectorExecutionEnum_completed;
+  /// Execution availability, separate from interpretation. Completed includes inconclusive unknown-history and JPEG results; no score or threshold is exposed.
+  @BuiltValueEnumConst(wireName: r'no_usable_output')
+  static const BetaCaseDetectorExecutionEnum noUsableOutput = _$betaCaseDetectorExecutionEnum_noUsableOutput;
+  /// Execution availability, separate from interpretation. Completed includes inconclusive unknown-history and JPEG results; no score or threshold is exposed.
+  @BuiltValueEnumConst(wireName: r'not_recorded')
+  static const BetaCaseDetectorExecutionEnum notRecorded = _$betaCaseDetectorExecutionEnum_notRecorded;
+
+  static Serializer<BetaCaseDetectorExecutionEnum> get serializer => _$betaCaseDetectorExecutionEnumSerializer;
+
+  const BetaCaseDetectorExecutionEnum._(String name): super(name);
+
+  static BuiltSet<BetaCaseDetectorExecutionEnum> get values => _$betaCaseDetectorExecutionEnumValues;
+  static BetaCaseDetectorExecutionEnum valueOf(String name) => _$betaCaseDetectorExecutionEnumValueOf(name);
 }

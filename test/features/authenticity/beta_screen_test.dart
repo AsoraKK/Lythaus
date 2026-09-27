@@ -12,6 +12,7 @@ class _Api extends BetaApi {
   _Api() : super(Dio(), () async => 'test');
   final calls = <String>[];
   String status = 'complete';
+  String detectorExecution = 'completed';
   bool empty = false,
       unavailable = false,
       failAction = false,
@@ -44,6 +45,7 @@ class _Api extends BetaApi {
     'explanation':
         'No positive SAFE evidence was detected. This does not establish human authorship.',
     'advisoryStatus': 'not_requested',
+    'detectorExecution': detectorExecution,
     'limitations': ['Private experimental analysis.'],
     'versions': {'analysis': betaConsentVersion},
     'reviews': <Map<String, dynamic>>[],
@@ -265,8 +267,17 @@ void main() {
         300,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
+      await Scrollable.ensureVisible(tester.element(tile), alignment: 0.5);
+      await tester.pumpAndSettle();
+      expect(tile.hitTestable(), findsOneWidget);
       await tester.tap(tile);
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.textContaining('does not establish human authorship'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(
         find.textContaining('does not establish human authorship'),
         findsOneWidget,

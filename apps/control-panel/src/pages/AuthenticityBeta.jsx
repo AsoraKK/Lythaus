@@ -26,7 +26,7 @@ export default function AuthenticityBeta() {
     try {
       await adminRequest(`authenticity/cases/${selected.caseId}/${action}`, { method: 'POST', body: { message } });
       setSelected(await adminRequest(`authenticity/cases/${selected.caseId}`)); setMessage('');
-    } catch { setError(action === 'retry' ? 'Retry is unavailable or its attempt has already been consumed.' : 'Review could not be recorded.'); }
+    } catch { setError(action === 'advice' ? 'Advice requires eligible recorded evidence and an unused attempt.' : action === 'retry' ? 'Retry is unavailable or its attempt has already been consumed.' : 'Review could not be recorded.'); }
     finally { setBusy(false); }
   }
   return <PageLayout title="Authenticity beta" subtitle="Private experimental evidence. Reviews do not certify authorship, publish content, or affect rewards.">
@@ -44,6 +44,7 @@ export default function AuthenticityBeta() {
         <label>Versioned review explanation<textarea value={message} maxLength={2000} onChange={event=>setMessage(event.target.value)} /></label>
         <LythButton disabled={busy || !message.trim()} onClick={()=>submit('review')}>Record private review</LythButton>
         {['paused','failed'].includes(selected.status) && <LythButton disabled={busy || !message.trim()} onClick={()=>submit('retry')}>Retry unfinished work</LythButton>}
+        {selected.status === 'complete' && ['disabled','not_requested'].includes(selected.advisoryStatus) && <LythButton disabled={busy || !message.trim()} onClick={()=>submit('advice')}>Request bounded advice</LythButton>}
       </>}</LythCard>
     </div>
   </PageLayout>;

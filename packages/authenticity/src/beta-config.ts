@@ -10,7 +10,7 @@ export interface BetaConfig {
   runtimeApproval: string | null;
   runtimeDigest: string;
   preprocessingHash: string;
-  caseReservationUsd: number;
+  caseReservationUsd: number | null;
   sourceHistoryHashes: string[];
 }
 export async function readBetaConfig(env: Pick<EnvBindings, 'LYTHAUS_CONFIG' | 'AUTHENTICITY_BETA_ENABLED'>): Promise<BetaConfig> {
@@ -26,7 +26,7 @@ export async function readBetaConfig(env: Pick<EnvBindings, 'LYTHAUS_CONFIG' | '
     runtimeApproval: typeof value.runtimeApproval === 'string' && /^[a-f0-9]{64}$/.test(value.runtimeApproval) ? value.runtimeApproval : null,
     runtimeDigest: typeof value.runtimeDigest === 'string' ? value.runtimeDigest : '',
     preprocessingHash: typeof value.preprocessingHash === 'string' ? value.preprocessingHash : '',
-    caseReservationUsd: typeof value.caseReservationUsd === 'number' && Number.isFinite(value.caseReservationUsd) && value.caseReservationUsd > 0 && value.caseReservationUsd <= 0.5 ? value.caseReservationUsd : 0.5,
+    caseReservationUsd: typeof value.caseReservationUsd === 'number' && Number.isFinite(value.caseReservationUsd) && value.caseReservationUsd > 0 && value.caseReservationUsd <= 1.6 ? value.caseReservationUsd : null,
     sourceHistoryHashes: Array.isArray(value.sourceHistoryHashes) ? value.sourceHistoryHashes.filter(hash => typeof hash === 'string' && /^[a-f0-9]{64}$/.test(hash)) : [],
   };
 }

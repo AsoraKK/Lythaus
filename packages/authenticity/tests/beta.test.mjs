@@ -54,6 +54,20 @@ test('private author DTO has a strict allowlist, including nested values',()=>{
   const json=JSON.stringify(dto);
   for(const term of ['rawScore','threshold','inputHash','checkpoint','prompt','secret','0.586','forensics','packet']) assert.equal(json.includes(term),false,term);
   assert.equal(dto.publicationEligible,false); assert.equal(dto.rewardsEligible,false);
+  assert.equal(dto.detectorExecution,'completed');
+  assert.equal(authorBetaView({result:null}).detectorExecution,'not_recorded');
+  assert.equal(authorBetaView({result:compileBetaResult(safe(null,{status:'TIMEOUT',facts:null}),safety)}).detectorExecution,'no_usable_output');
+});
+
+test('advice cannot manufacture usefulness for degraded or absent SAFE evidence',()=>{
+  for (const value of [safe(1,{facts:{...safe().facts,mime:'image/jpeg'}}),safe(1,{facts:{...safe().facts,sourceHistory:'UNKNOWN'}}),safe(null,{status:'TIMEOUT',facts:null})]) {
+    const result=compileBetaResult(value,safety);
+    result.route='ESCALATE';
+    assert.throws(()=>betaAdviceRequest(result),/ineligible/);
+  }
+  const max=safe(1,{facts:{...safe().facts,width:4096,height:4096}});
+  assert.doesNotThrow(()=>assertSafeResult(max,binding));
+  assert.throws(()=>assertSafeResult({...max,facts:{...max.facts,width:4097}},binding),/facts_invalid/);
 });
 test('adviser uses bounded sanitized canonical packet and strict envelope/reference parser',()=>{
   const result=compileBetaResult(safe(1),safety);
