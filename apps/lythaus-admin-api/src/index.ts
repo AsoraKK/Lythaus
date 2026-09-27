@@ -1143,8 +1143,11 @@ export default {
       }
       const actor = await requireAdmin(request, env);
       await enforceAdminRateLimit(request, env, actor.userId);
-      if (url.pathname.startsWith('/api/admin/authenticity/cases')) {
-        if (request.method !== 'GET') assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+      if (request.method === 'GET' && url.pathname === '/api/admin/authenticity/cases') return cors(await handleAdminBeta(request, env, actor));
+      if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)$/)) return cors(await handleAdminBeta(request, env, actor));
+      if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/image$/)) return cors(await handleAdminBeta(request, env, actor));
+      if (request.method === 'POST' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/(review|retry)$/)) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
         return cors(await handleAdminBeta(request, env, actor));
       }
       const keeperEnv = env as KeeperEnv;

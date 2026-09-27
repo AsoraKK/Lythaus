@@ -189,6 +189,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
                 }
               }
             }
@@ -415,6 +432,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
                 }
               }
             }
@@ -555,6 +589,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
                 }
               }
             }
@@ -684,6 +735,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
                 }
               }
             }
@@ -813,6 +881,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
                 }
               }
             }
@@ -932,6 +1017,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
                 }
               }
             }

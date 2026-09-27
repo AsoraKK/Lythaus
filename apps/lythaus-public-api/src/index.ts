@@ -3017,6 +3017,18 @@ async function getComments(request: Request, env: Env, postId: string, viewer?: 
   return feedResponse(request, env, { items: presentCommentFeedItems(items), nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.createdAt, id: tail.id }) : null }, 'comments', Boolean(viewer));
 }
 
+async function dispatchBeta(request: Request, env: Env): Promise<Response> {
+  const user = await principal(request, env);
+  const work = () => handleBetaApi(request, env, user.userId);
+  const operation = `beta.${request.method}.${new URL(request.url).pathname}`;
+  const result = request.method === 'GET' ? await work() : await idempotentMutation(request, env, user.userId, operation, work);
+  const origin = corsOrigin(request, env);
+  if (origin) { result.headers.set('access-control-allow-origin', origin); result.headers.set('access-control-allow-credentials', 'true'); }
+  result.headers.set('vary', 'Origin, Authorization');
+  result.headers.set('cache-control', 'private, no-store');
+  return result;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const id = correlationId(request);
@@ -3278,16 +3290,10 @@ export default {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'post.create', () => createPost(request, env, user));
       }
-      if (url.pathname.startsWith('/api/authenticity/cases')) {
-        const user = await principal(request, env);
-        const work = () => handleBetaApi(request, env, user.userId);
-        const result = request.method === 'GET' ? await work() : await idempotentMutation(request, env, user.userId, `beta.${request.method}.${url.pathname}`, work);
-        const origin = corsOrigin(request, env);
-        if (origin) { result.headers.set('access-control-allow-origin', origin); result.headers.set('access-control-allow-credentials', 'true'); }
-        result.headers.set('vary', 'Origin, Authorization');
-        result.headers.set('cache-control', 'private, no-store');
-        return result;
-      }
+      if (['GET','POST'].includes(request.method) && url.pathname === '/api/authenticity/cases') return await dispatchBeta(request, env);
+      if (['GET','DELETE'].includes(request.method) && url.pathname.match(/^\/api\/authenticity\/cases\/([^/]+)$/)) return await dispatchBeta(request, env);
+      if (request.method === 'GET' && url.pathname.match(/^\/api\/authenticity\/cases\/([^/]+)\/image$/)) return await dispatchBeta(request, env);
+      if (request.method === 'POST' && url.pathname.match(/^\/api\/authenticity\/cases\/([^/]+)\/(finalise|feedback|review|cancel)$/)) return await dispatchBeta(request, env);
       if (request.method === 'POST' && url.pathname === '/api/media/uploads' && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });
       if (request.method === 'POST' && url.pathname === '/api/media/uploads') {
         const user = await principal(request, env);
