@@ -28,7 +28,7 @@ export function resolvedDependencies(file, content) {
     const lock = parse(content);
     return Object.entries(lock.packages ?? {}).filter(([, value]) => value.source !== 'sdk').map(([name, value]) => {
       if (value.source !== 'hosted') throw new Error(`UNSUPPORTED_DEPENDENCY_SOURCE:${file}:${name}`);
-      return { ecosystem: 'pub', name, version: value.version, relationship: value.dependency === 'transitive' ? 'transitive' : 'direct' };
+      return { ecosystem: 'pub', name, version: value.version, integrity: value.description?.sha256, relationship: value.dependency === 'transitive' ? 'transitive' : 'direct' };
     });
   }
   if (/requirements\.(txt|lock)$/.test(file)) {

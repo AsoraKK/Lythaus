@@ -39,11 +39,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/ci/dependency-review-native.mjs
+      - name: Test narrowly scoped license resolution
+        run: python3 scripts/ci/test_dart_license_review.py
+      - name: Verify exact public Dart archive licenses
+        id: licenses
+        run: python3 scripts/ci/dart-license-review.py
       - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48
         id: native
         with:
           fail-on-severity: high
           deny-licenses: GPL-3.0, AGPL-3.0
+          allow-dependencies-licenses: ${{ steps.licenses.outputs.resolved }}
           base-ref: ${{ env.BASE_SHA }}
           head-ref: ${{ env.HEAD_SHA }}
           retry-on-snapshot-warnings: true
@@ -52,6 +58,7 @@ jobs:
         if: always()
         env:
           NATIVE_OUTCOME: ${{ steps.native.outcome }}
+          LICENSE_OUTCOME: ${{ steps.licenses.outcome }}
         run: node scripts/ci/dependency-review-receipt.mjs
       - name: Upload exact comparison and security evidence
         if: always()

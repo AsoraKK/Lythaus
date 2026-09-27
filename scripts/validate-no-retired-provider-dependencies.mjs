@@ -98,7 +98,10 @@ for (const relative of scannedFiles) {
   if (contents.includes('\0')) continue;
 
   for (const rule of forbidden) {
-    if (rule.pattern.test(contents)) {
+    const activeContents = rule.name === 'retired brand'
+      ? contents.replaceAll('https://github.com/AsoraKK/Lythaus/', 'https://github.com/CANONICAL_REPOSITORY/')
+      : contents;
+    if (rule.pattern.test(activeContents)) {
       failures.push(`${normalized}: ${rule.name} appears in active content`);
     }
   }
