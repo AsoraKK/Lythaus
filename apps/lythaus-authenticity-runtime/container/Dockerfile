@@ -3,8 +3,8 @@ FROM node:24.6.0-bookworm-slim@sha256:9b741b28148b0195d62fa456ed84dd6c953c1f17a3
 FROM python:3.13.5-slim-bookworm@sha256:4c2cf9917bd1cbacc5e9b07320025bdb7cdf2df7b0ceaccb55e9dd7e30987419
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
-COPY apps/lythaus-authenticity-runtime/container/requirements.lock /tmp/requirements.lock
-RUN pip install --no-cache-dir --require-hashes --no-deps --only-binary=:all: -r /tmp/requirements.lock && pip check
+COPY apps/lythaus-authenticity-runtime/container/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --require-hashes --no-deps --only-binary=:all: -r /tmp/requirements.txt && pip check
 COPY apps/lythaus-authenticity-runtime/container/prepare_artifacts.py /tmp/prepare_artifacts.py
 RUN --mount=type=secret,id=safe_rights,required=true --mount=type=secret,id=safe_checkpoint,required=true python /tmp/prepare_artifacts.py
 COPY packages/authenticity/src /app/packages/authenticity/src

@@ -7,7 +7,7 @@ The code license is not a checkpoint deployment grant. Building an image that
 contains the checkpoint requires the separate, evidenced restricted-beta
 hosting decision described in the model card. No checkpoint is committed here.
 
-Dependency versions and wheel hashes are in `container/requirements.lock`.
+Dependency versions and wheel hashes are in `container/requirements.txt` (the supported dependency-graph filename; contents unchanged from the original lock).
 Torch and torchvision use the CPU-only upstream wheel index. Their upstream
 license files and those of NumPy, Pillow, PyWavelets, pytorch-wavelets and Kornia
 remain in the installed distributions. The build uses Debian-based Python and
