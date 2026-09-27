@@ -1,0 +1,12 @@
+**
+!apps/
+!apps/lythaus-authenticity-runtime/
+!apps/lythaus-authenticity-runtime/container/
+!apps/lythaus-authenticity-runtime/container/**
+!packages/
+!packages/authenticity/
+!packages/authenticity/src/
+!packages/authenticity/src/**
+**/__pycache__/**
+**/*.pyc
+packages/authenticity/src/wp*.ts

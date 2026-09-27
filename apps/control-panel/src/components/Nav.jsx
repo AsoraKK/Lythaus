@@ -4,6 +4,7 @@ const links = [
   { to: '/', label: 'Home', end: true },
   { to: '/flags', label: 'Flags' },
   { to: '/appeals', label: 'Appeals' },
+  { to: '/authenticity', label: 'Authenticity beta' },
   { to: '/users', label: 'Users' },
   { to: '/waitlist', label: 'Waitlist' },
   { to: '/audit', label: 'Audit' },

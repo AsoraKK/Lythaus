@@ -394,7 +394,7 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=production Turnstile provider configuration validation failed' >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/production-cutover"
           node scripts/cloudflare/waitlist-turnstile.mjs ensure
-      - name: Materialize approved post-0016 deployment identity
+      - name: Materialize approved post-0017 deployment identity
         env:
           PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
           PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
@@ -409,7 +409,7 @@ jobs:
           # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=deployment_identity_materialization_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=approved post-0016 deployment identity materialization failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=approved post-0017 deployment identity materialization failed' >> "$GITHUB_ENV"
           node scripts/ci/validate-product-integrity-deploy-identity.mjs
       - name: Refresh generated Worker types after deployment identity materialization
         run: |
@@ -992,7 +992,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0017_authenticity_beta.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -1016,7 +1016,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0017_authenticity_beta.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -1042,7 +1042,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0017_authenticity_beta.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -1270,7 +1270,7 @@ jobs:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0016_transactional_email_envelope_boundary.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0017_authenticity_beta.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}

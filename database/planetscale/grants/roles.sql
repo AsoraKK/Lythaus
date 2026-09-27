@@ -116,6 +116,17 @@ GRANT SELECT (id, purge_after, retention_hold), DELETE ON marketing.waitlist_sig
 GRANT EXECUTE ON FUNCTION privacy.reconcile_subject_data_locations(uuid) TO lythaus_privacy;
 
 GRANT USAGE, CREATE ON SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_migrations;
+GRANT SELECT, INSERT, UPDATE ON moderation.authenticity_beta, moderation.authenticity_beta_steps TO lythaus_runtime, lythaus_jobs, lythaus_admin, lythaus_privacy;
+GRANT SELECT, INSERT, DELETE ON moderation.authenticity_beta_feedback TO lythaus_runtime, lythaus_jobs, lythaus_admin, lythaus_privacy;
+GRANT UPDATE (status, observed_bytes, finalised_at) ON media.upload_sessions TO lythaus_runtime;
+GRANT UPDATE (state, deleted_at) ON media.objects TO lythaus_runtime;
+GRANT UPDATE (state, resolved_at) ON moderation.cases TO lythaus_runtime;
+GRANT UPDATE (bytes_reserved, bytes_approved, object_count, last_reconciled_at) ON media.storage_ledger TO lythaus_runtime;
+GRANT SELECT, INSERT ON media.ownership TO lythaus_runtime;
+GRANT SELECT (content_type, content_id, provider), UPDATE (signal) ON moderation.detector_runs TO lythaus_runtime;
+GRANT INSERT, UPDATE ON system.cost_budget_periods TO lythaus_runtime, lythaus_jobs;
+GRANT USAGE ON SCHEMA privacy TO lythaus_jobs;
+GRANT EXECUTE ON FUNCTION privacy.beta_subject_has_hold(uuid), privacy.record_beta_location(uuid,uuid), privacy.remove_beta_location(uuid,uuid) TO lythaus_runtime, lythaus_jobs;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_migrations;
 

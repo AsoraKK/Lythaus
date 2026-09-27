@@ -12,6 +12,8 @@ Method | HTTP request | Description
 [**adminAppealsAdjudicate**](AdminApi.md#adminappealsadjudicate) | **POST** /admin/appeals/{appealId}/adjudications | Record a trained editorial appeal adjudication
 [**adminAppealsPendingAdjudicationList**](AdminApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [**adminAuthSummary**](AdminApi.md#adminauthsummary) | **GET** /admin/auth/summary | Read live authentication summary
+[**adminAuthenticityBetaRetry**](AdminApi.md#adminauthenticitybetaretry) | **POST** /admin/authenticity/cases/{caseId}/retry | Resume bounded unfinished work
+[**adminAuthenticityBetaReview**](AdminApi.md#adminauthenticitybetareview) | **POST** /admin/authenticity/cases/{caseId}/review | Record a versioned non-enforcing review
 [**adminEditorialPublicationsCreate**](AdminApi.md#admineditorialpublicationscreate) | **POST** /admin/editorial/publications | Publish an editorial News Board entry
 [**adminEmailHealth**](AdminApi.md#adminemailhealth) | **GET** /admin/email-health | Read transactional email health
 [**adminHealth**](AdminApi.md#adminhealth) | **GET** /admin/health | Check admin Worker health
@@ -38,6 +40,9 @@ Method | HTTP request | Description
 [**adminWaitlistPatch**](AdminApi.md#adminwaitlistpatch) | **PATCH** /admin/waitlist/{waitlistId} | Edit a waitlist signup
 [**adminWaitlistRetentionHoldUpdate**](AdminApi.md#adminwaitlistretentionholdupdate) | **POST** /admin/waitlist/{waitlistId}/retention-hold | Set a waitlist retention hold
 [**adminWaitlistStatusUpdate**](AdminApi.md#adminwaitliststatusupdate) | **POST** /admin/waitlist/{waitlistId}/status | Update a waitlist signup status
+[**getAdminAuthenticityBetaCase**](AdminApi.md#getadminauthenticitybetacase) | **GET** /admin/authenticity/cases/{caseId} | Read audited diagnostics and review history
+[**getAdminAuthenticityBetaImage**](AdminApi.md#getadminauthenticitybetaimage) | **GET** /admin/authenticity/cases/{caseId}/image | Read the audited private display derivative
+[**listAdminAuthenticityBetaCases**](AdminApi.md#listadminauthenticitybetacases) | **GET** /admin/authenticity/cases | List private beta review cases
 [**productIntegrityAdminAuditList**](AdminApi.md#productintegrityadminauditlist) | **GET** /admin/audit | List admin audit events
 [**productIntegrityAdminUsersSearch**](AdminApi.md#productintegrityadminuserssearch) | **GET** /admin/users/search | Search users
 
@@ -171,6 +176,104 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminAuthenticityBetaRetry**
+> BetaActionResponse adminAuthenticityBetaRetry(caseId, betaFeedback)
+
+Resume bounded unfinished work
+
+Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final BetaFeedback betaFeedback = ; // BetaFeedback |
+
+try {
+    final response = api.adminAuthenticityBetaRetry(caseId, betaFeedback);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminAuthenticityBetaRetry: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+ **betaFeedback** | [**BetaFeedback**](BetaFeedback.md)|  |
+
+### Return type
+
+[**BetaActionResponse**](BetaActionResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminAuthenticityBetaReview**
+> BetaActionResponse adminAuthenticityBetaReview(caseId, betaFeedback)
+
+Record a versioned non-enforcing review
+
+Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final BetaFeedback betaFeedback = ; // BetaFeedback |
+
+try {
+    final response = api.adminAuthenticityBetaReview(caseId, betaFeedback);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminAuthenticityBetaReview: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+ **betaFeedback** | [**BetaFeedback**](BetaFeedback.md)|  |
+
+### Return type
+
+[**BetaActionResponse**](BetaActionResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -1373,6 +1476,143 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAdminAuthenticityBetaCase**
+> BetaAdminCase getAdminAuthenticityBetaCase(caseId)
+
+Read audited diagnostics and review history
+
+Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getAdminAuthenticityBetaCase(caseId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->getAdminAuthenticityBetaCase: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+
+### Return type
+
+[**BetaAdminCase**](BetaAdminCase.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAdminAuthenticityBetaImage**
+> Uint8List getAdminAuthenticityBetaImage(caseId)
+
+Read the audited private display derivative
+
+Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getAdminAuthenticityBetaImage(caseId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->getAdminAuthenticityBetaImage: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+
+### Return type
+
+[**Uint8List**](Uint8List.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: image/png, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listAdminAuthenticityBetaCases**
+> BetaCaseList listAdminAuthenticityBetaCases()
+
+List private beta review cases
+
+Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.listAdminAuthenticityBetaCases();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->listAdminAuthenticityBetaCases: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**BetaCaseList**](BetaCaseList.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

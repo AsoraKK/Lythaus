@@ -387,6 +387,7 @@ export function buildPrivacyDataPassport(input: {
   accountabilitySignals: unknown[];
   notificationPreferences: unknown;
   notificationDevices: unknown[];
+  authenticityBeta?: { cases: unknown[]; feedback: unknown[]; trainingConsent: false; publicationEligible: false };
   activity: unknown[];
   submittedAppeals: unknown[];
   reviewerQualification: unknown;
@@ -404,6 +405,7 @@ export function buildPrivacyDataPassport(input: {
     privateProfile: input.privateProfile,
     contactEmail: input.contactEmail,
     consentRecords: input.consentRecords,
+    authenticityBeta: input.authenticityBeta ?? { cases: [], feedback: [], trainingConsent: false, publicationEligible: false },
     entitlement: input.entitlement,
     rewardRedemptions: input.rewardRedemptions,
     accountEvents: input.accountEvents,

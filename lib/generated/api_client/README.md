@@ -76,6 +76,8 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsAdjudicate**](doc/AdminApi.md#adminappealsadjudicate) | **POST** /admin/appeals/{appealId}/adjudications | Record a trained editorial appeal adjudication
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsPendingAdjudicationList**](doc/AdminApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [*AdminApi*](doc/AdminApi.md) | [**adminAuthSummary**](doc/AdminApi.md#adminauthsummary) | **GET** /admin/auth/summary | Read live authentication summary
+[*AdminApi*](doc/AdminApi.md) | [**adminAuthenticityBetaRetry**](doc/AdminApi.md#adminauthenticitybetaretry) | **POST** /admin/authenticity/cases/{caseId}/retry | Resume bounded unfinished work
+[*AdminApi*](doc/AdminApi.md) | [**adminAuthenticityBetaReview**](doc/AdminApi.md#adminauthenticitybetareview) | **POST** /admin/authenticity/cases/{caseId}/review | Record a versioned non-enforcing review
 [*AdminApi*](doc/AdminApi.md) | [**adminEditorialPublicationsCreate**](doc/AdminApi.md#admineditorialpublicationscreate) | **POST** /admin/editorial/publications | Publish an editorial News Board entry
 [*AdminApi*](doc/AdminApi.md) | [**adminEmailHealth**](doc/AdminApi.md#adminemailhealth) | **GET** /admin/email-health | Read transactional email health
 [*AdminApi*](doc/AdminApi.md) | [**adminHealth**](doc/AdminApi.md#adminhealth) | **GET** /admin/health | Check admin Worker health
@@ -102,6 +104,9 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistPatch**](doc/AdminApi.md#adminwaitlistpatch) | **PATCH** /admin/waitlist/{waitlistId} | Edit a waitlist signup
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistRetentionHoldUpdate**](doc/AdminApi.md#adminwaitlistretentionholdupdate) | **POST** /admin/waitlist/{waitlistId}/retention-hold | Set a waitlist retention hold
 [*AdminApi*](doc/AdminApi.md) | [**adminWaitlistStatusUpdate**](doc/AdminApi.md#adminwaitliststatusupdate) | **POST** /admin/waitlist/{waitlistId}/status | Update a waitlist signup status
+[*AdminApi*](doc/AdminApi.md) | [**getAdminAuthenticityBetaCase**](doc/AdminApi.md#getadminauthenticitybetacase) | **GET** /admin/authenticity/cases/{caseId} | Read audited diagnostics and review history
+[*AdminApi*](doc/AdminApi.md) | [**getAdminAuthenticityBetaImage**](doc/AdminApi.md#getadminauthenticitybetaimage) | **GET** /admin/authenticity/cases/{caseId}/image | Read the audited private display derivative
+[*AdminApi*](doc/AdminApi.md) | [**listAdminAuthenticityBetaCases**](doc/AdminApi.md#listadminauthenticitybetacases) | **GET** /admin/authenticity/cases | List private beta review cases
 [*AdminApi*](doc/AdminApi.md) | [**productIntegrityAdminAuditList**](doc/AdminApi.md#productintegrityadminauditlist) | **GET** /admin/audit | List admin audit events
 [*AdminApi*](doc/AdminApi.md) | [**productIntegrityAdminUsersSearch**](doc/AdminApi.md#productintegrityadminuserssearch) | **GET** /admin/users/search | Search users
 [*AppealsApi*](doc/AppealsApi.md) | [**adminAppealsPendingAdjudicationList**](doc/AppealsApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
@@ -120,6 +125,15 @@ Class | Method | HTTP request | Description
 [*AuthApi*](doc/AuthApi.md) | [**authPasswordResetRequest**](doc/AuthApi.md#authpasswordresetrequest) | **POST** /auth/password/reset/request | Request an opaque password reset message
 [*AuthApi*](doc/AuthApi.md) | [**authRefresh**](doc/AuthApi.md#authrefresh) | **POST** /auth/refresh | Rotate a refresh token
 [*AuthApi*](doc/AuthApi.md) | [**authUserInfo**](doc/AuthApi.md#authuserinfo) | **GET** /auth/userinfo | Get the authenticated user&#39;s current identity claims
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**authenticityBetaCancel**](doc/AuthenticityBetaApi.md#authenticitybetacancel) | **POST** /authenticity/cases/{caseId}/cancel | Cancel unfinished analysis
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**authenticityBetaFeedback**](doc/AuthenticityBetaApi.md#authenticitybetafeedback) | **POST** /authenticity/cases/{caseId}/feedback | Submit private feedback
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**authenticityBetaFinalise**](doc/AuthenticityBetaApi.md#authenticitybetafinalise) | **POST** /authenticity/cases/{caseId}/finalise | Finish the immutable upload
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**authenticityBetaReview**](doc/AuthenticityBetaApi.md#authenticitybetareview) | **POST** /authenticity/cases/{caseId}/review | Request review or appeal a review
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**createAuthenticityBetaCase**](doc/AuthenticityBetaApi.md#createauthenticitybetacase) | **POST** /authenticity/cases | Create an upload case
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**deleteAuthenticityBetaCase**](doc/AuthenticityBetaApi.md#deleteauthenticitybetacase) | **DELETE** /authenticity/cases/{caseId} | Invalidate and delete your case
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**getAuthenticityBetaCase**](doc/AuthenticityBetaApi.md#getauthenticitybetacase) | **GET** /authenticity/cases/{caseId} | Read a private case
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**getAuthenticityBetaImage**](doc/AuthenticityBetaApi.md#getauthenticitybetaimage) | **GET** /authenticity/cases/{caseId}/image | Read the private display derivative
+[*AuthenticityBetaApi*](doc/AuthenticityBetaApi.md) | [**listAuthenticityBetaCases**](doc/AuthenticityBetaApi.md#listauthenticitybetacases) | **GET** /authenticity/cases | List your private beta cases
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsCreate**](doc/CustomFeedsApi.md#customfeedscreate) | **POST** /custom-feeds | Create a custom feed
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsDelete**](doc/CustomFeedsApi.md#customfeedsdelete) | **DELETE** /custom-feeds/{id} | Delete an owned custom feed
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsGet**](doc/CustomFeedsApi.md#customfeedsget) | **GET** /custom-feeds/{id} | Get an owned custom feed
@@ -238,6 +252,15 @@ Class | Method | HTTP request | Description
  - [AuthUserInfo200Response](doc/AuthUserInfo200Response.md)
  - [BadGatewayError](doc/BadGatewayError.md)
  - [BadGatewayErrorError](doc/BadGatewayErrorError.md)
+ - [BetaActionResponse](doc/BetaActionResponse.md)
+ - [BetaAdminCase](doc/BetaAdminCase.md)
+ - [BetaCase](doc/BetaCase.md)
+ - [BetaCaseList](doc/BetaCaseList.md)
+ - [BetaError](doc/BetaError.md)
+ - [BetaFeedback](doc/BetaFeedback.md)
+ - [BetaReview](doc/BetaReview.md)
+ - [BetaSubmission](doc/BetaSubmission.md)
+ - [BetaUpload](doc/BetaUpload.md)
  - [BookmarkChange](doc/BookmarkChange.md)
  - [BookmarkCreateRequest](doc/BookmarkCreateRequest.md)
  - [BookmarkList](doc/BookmarkList.md)

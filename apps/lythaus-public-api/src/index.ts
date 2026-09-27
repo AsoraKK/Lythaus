@@ -6,6 +6,7 @@ import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/
 import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
+import { handleBetaApi } from './authenticity-beta.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
 import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
@@ -1252,7 +1253,7 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
 
 async function finaliseUpload(request: Request, env: Env, user: Principal, sessionId: string): Promise<Response> {
   const result = await query<{ object_key: string; expected_bytes: number; checksum_sha256: string; status: string }>(env.DB_APP_FRESH,
-    `SELECT object_key, expected_bytes, checksum_sha256, status FROM media.upload_sessions WHERE id = $1 AND user_id = $2`,
+    `SELECT object_key, expected_bytes, checksum_sha256, status FROM media.upload_sessions WHERE id = $1 AND user_id = $2 AND purpose = 'standard'`,
     [sessionId, user.userId]
   );
   const session = result.rows[0];
@@ -3276,6 +3277,16 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/posts') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'post.create', () => createPost(request, env, user));
+      }
+      if (url.pathname.startsWith('/api/authenticity/cases')) {
+        const user = await principal(request, env);
+        const work = () => handleBetaApi(request, env, user.userId);
+        const result = request.method === 'GET' ? await work() : await idempotentMutation(request, env, user.userId, `beta.${request.method}.${url.pathname}`, work);
+        const origin = corsOrigin(request, env);
+        if (origin) { result.headers.set('access-control-allow-origin', origin); result.headers.set('access-control-allow-credentials', 'true'); }
+        result.headers.set('vary', 'Origin, Authorization');
+        result.headers.set('cache-control', 'private, no-store');
+        return result;
       }
       if (request.method === 'POST' && url.pathname === '/api/media/uploads' && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });
       if (request.method === 'POST' && url.pathname === '/api/media/uploads') {

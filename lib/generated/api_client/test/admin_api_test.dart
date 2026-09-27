@@ -32,6 +32,24 @@ void main() {
       // TODO
     });
 
+    // Resume bounded unfinished work
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<BetaActionResponse> adminAuthenticityBetaRetry(String caseId, BetaFeedback betaFeedback) async
+    test('test adminAuthenticityBetaRetry', () async {
+      // TODO
+    });
+
+    // Record a versioned non-enforcing review
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<BetaActionResponse> adminAuthenticityBetaReview(String caseId, BetaFeedback betaFeedback) async
+    test('test adminAuthenticityBetaReview', () async {
+      // TODO
+    });
+
     // Publish an editorial News Board entry
     //
     //Future<EditorialPublicationResponse> adminEditorialPublicationsCreate(EditorialPublicationCreate editorialPublicationCreate) async
@@ -221,6 +239,33 @@ void main() {
     //
     //Future<WaitlistStatusResponse> adminWaitlistStatusUpdate(String waitlistId, WaitlistStatusUpdate waitlistStatusUpdate) async
     test('test adminWaitlistStatusUpdate', () async {
+      // TODO
+    });
+
+    // Read audited diagnostics and review history
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<BetaAdminCase> getAdminAuthenticityBetaCase(String caseId) async
+    test('test getAdminAuthenticityBetaCase', () async {
+      // TODO
+    });
+
+    // Read the audited private display derivative
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<Uint8List> getAdminAuthenticityBetaImage(String caseId) async
+    test('test getAdminAuthenticityBetaImage', () async {
+      // TODO
+    });
+
+    // List private beta review cases
+    //
+    // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
+    //
+    //Future<BetaCaseList> listAdminAuthenticityBetaCases() async
+    test('test listAdminAuthenticityBetaCases', () async {
       // TODO
     });
 

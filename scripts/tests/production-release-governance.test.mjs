@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import fs from 'node:fs';
 import test from 'node:test';
 
-const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
+const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8').replace(/\r\n/g, '\n');
 const webWorkflow = readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
 const workersWorkflow = readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8').replace(/\r\n/g, '\n');
 const adr003Workflow = readFileSync('.github/workflows/native-adr003-acceptance.yml', 'utf8');
@@ -129,7 +129,7 @@ test('every production deployment entrypoint remains bound to exact CI and secur
 });
 
 test('refreshes generated Worker types after deployment identity materialization', () => {
-  const materialize = workersWorkflow.indexOf('- name: Materialize approved post-0016 deployment identity');
+  const materialize = workersWorkflow.indexOf('- name: Materialize approved post-0017 deployment identity');
   const refresh = workersWorkflow.indexOf('- name: Refresh generated Worker types after deployment identity materialization');
   const validate = workersWorkflow.indexOf('- name: Validate provisioned native Worker configuration');
   assert.ok(materialize >= 0, 'deployment identity materialization must remain explicit');

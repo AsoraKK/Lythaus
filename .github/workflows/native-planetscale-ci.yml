@@ -7,6 +7,10 @@ on:
       - 'database/planetscale/**'
       - 'scripts/ci/validate-planetscale-postgres17.mjs'
       - 'scripts/ci/validate-first-admin-bootstrap-postgres17.mjs'
+      - 'scripts/ci/validate-authenticity-beta-postgres17.mjs'
+      - 'apps/lythaus-*/src/authenticity-beta.ts'
+      - 'packages/authenticity/src/beta*.ts'
+      - 'packages/db/src/authenticity-beta.ts'
       - '.github/workflows/native-planetscale-ci.yml'
 
 permissions:
@@ -49,3 +53,7 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: node scripts/ci/validate-first-admin-bootstrap-postgres17.mjs
+      - name: Exercise private beta handlers against PostgreSQL 17
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: node --experimental-strip-types --experimental-test-module-mocks scripts/ci/validate-authenticity-beta-postgres17.mjs

@@ -129,6 +129,34 @@ export function approvedPost0016Expectation(configuredFingerprint = '', configur
   return { fingerprint, relationCount, canonical };
 }
 
+export function canonicalPost0017SchemaContract({ root = process.cwd(), committedOnly = false } = {}) {
+  const manifest = loadApprovedMigrations({ root, committedOnly });
+  const migrationPrefix = expectedMigrationPrefix('0017_authenticity_beta.sql');
+  const relations = relationInventory(manifest.migrations.slice(0, migrationPrefix.length));
+  const migrations = migrationPrefix
+    .map(({ name, appliedSha256 }) => ({ version: name, checksum: appliedSha256 }));
+  return Object.freeze({
+    fingerprint: runtimeSchemaFingerprint(relations, migrations),
+    relationCount: relations.length,
+    relations: Object.freeze(relations),
+    migrations: Object.freeze(migrations),
+  });
+}
+
+export function approvedPost0017Expectation(configuredFingerprint = '', configuredRelationCount = '') {
+  const canonical = canonicalPost0017SchemaContract({ committedOnly: process.env.CI === 'true' });
+  const fingerprint = configuredFingerprint.trim() || canonical.fingerprint;
+  const relationCountText = String(configuredRelationCount ?? '').trim();
+  const relationCount = relationCountText ? Number(relationCountText) : canonical.relationCount;
+  if (!/^[0-9a-f]{64}$/.test(fingerprint) || fingerprint !== canonical.fingerprint) {
+    throw new Error('post-0017 schema fingerprint does not match the canonical migration contract');
+  }
+  if (!Number.isInteger(relationCount) || relationCount !== canonical.relationCount) {
+    throw new Error(`post-0017 relation count must match the canonical migration contract (${canonical.relationCount})`);
+  }
+  return { fingerprint, relationCount, canonical };
+}
+
 export function approvedPost0014Expectation(configuredFingerprint = '', configuredRelationCount = '') {
   const canonical = canonicalPost0014SchemaContract({ committedOnly: process.env.CI === 'true' });
   const fingerprint = configuredFingerprint.trim() || canonical.fingerprint;

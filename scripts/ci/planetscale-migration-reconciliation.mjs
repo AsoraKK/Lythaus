@@ -10,6 +10,13 @@ const root = process.cwd();
 // intentionally fail-closed: the registry may only be advanced when the complete
 // canonical relation shape exists, not when representative objects happen to exist.
 const relationContracts = {
+  '0017_authenticity_beta.sql': {
+    'moderation.authenticity_beta': 'PENDING_POSTGRES17_RECEIPT',
+    'moderation.authenticity_beta_steps': 'PENDING_POSTGRES17_RECEIPT',
+    'moderation.authenticity_beta_feedback': 'PENDING_POSTGRES17_RECEIPT',
+    'media.upload_sessions': 'PENDING_POSTGRES17_RECEIPT',
+    'system.cost_budget_reservations': 'PENDING_POSTGRES17_RECEIPT',
+  },
   '0009_cost_budget_enforcement.sql': {
     'system.cost_budget_periods': '4fc59a0e2197b2c736f8d02a4b2cd44215661b5afd0b6f78327180d7bc2bc8d0',
     'system.cost_budget_reservations': '80e450217777b8d8d371f882769d5c1cc0788b21482e33eed4bdf6feb57f2409',
@@ -70,6 +77,11 @@ function canonicalFunctionBody(migrationName, qualifiedName) {
 }
 
 const functionContracts = {
+  '0017_authenticity_beta.sql': Object.fromEntries([
+    ['privacy.beta_subject_has_hold(p_subject_id uuid)','boolean',['pg_catalog','privacy']],
+    ['privacy.record_beta_location(p_subject_id uuid, p_case_id uuid)','void',['pg_catalog','privacy','moderation']],
+    ['privacy.remove_beta_location(p_subject_id uuid, p_case_id uuid)','void',['pg_catalog','privacy','moderation']],
+  ].map(([identity,resultType,searchPath])=>[identity,{canonicalBody:canonicalFunctionBody('0017_authenticity_beta.sql',identity.split('(')[0]),language:'sql',resultType,searchPath}])),
   '0012_product_integrity_v2.sql': {
     'privacy.reconcile_subject_data_locations(p_subject_id uuid)': {
       canonicalBody: canonicalFunctionBody('0012_product_integrity_v2.sql', 'privacy.reconcile_subject_data_locations'),
@@ -145,7 +157,7 @@ SELECT EXISTS (
    WHERE procedure_namespace.nspname = '${schema}'
      AND procedure_entry.proname = '${name}'
      AND pg_get_function_identity_arguments(procedure_entry.oid) = '${argumentsText}'
-     AND procedure_language.lanname = 'plpgsql'
+     AND procedure_language.lanname = '${contract.language ?? 'plpgsql'}'
      AND procedure_entry.prosecdef IS TRUE
      AND pg_get_function_result(procedure_entry.oid) = '${contract.resultType}'
      AND replace(procedure_entry.prosrc, E'\\r\\n', E'\\n') = ${dollarQuote(contract.canonicalBody)}

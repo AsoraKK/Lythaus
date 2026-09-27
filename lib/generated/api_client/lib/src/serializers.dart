@@ -54,6 +54,15 @@ import 'package:lythaus_api_client/src/model/auth_password_reset_request_request
 import 'package:lythaus_api_client/src/model/auth_user_info200_response.dart';
 import 'package:lythaus_api_client/src/model/bad_gateway_error.dart';
 import 'package:lythaus_api_client/src/model/bad_gateway_error_error.dart';
+import 'package:lythaus_api_client/src/model/beta_action_response.dart';
+import 'package:lythaus_api_client/src/model/beta_admin_case.dart';
+import 'package:lythaus_api_client/src/model/beta_case.dart';
+import 'package:lythaus_api_client/src/model/beta_case_list.dart';
+import 'package:lythaus_api_client/src/model/beta_error.dart';
+import 'package:lythaus_api_client/src/model/beta_feedback.dart';
+import 'package:lythaus_api_client/src/model/beta_review.dart';
+import 'package:lythaus_api_client/src/model/beta_submission.dart';
+import 'package:lythaus_api_client/src/model/beta_upload.dart';
 import 'package:lythaus_api_client/src/model/bookmark_change.dart';
 import 'package:lythaus_api_client/src/model/bookmark_create_request.dart';
 import 'package:lythaus_api_client/src/model/bookmark_list.dart';
@@ -230,6 +239,15 @@ part 'serializers.g.dart';
   AuthUserInfo200Response,
   BadGatewayError,
   BadGatewayErrorError,
+  BetaActionResponse,
+  BetaAdminCase,
+  BetaCase,
+  BetaCaseList,
+  BetaError,
+  BetaFeedback,
+  BetaReview,
+  BetaSubmission,
+  BetaUpload,
   BookmarkChange,
   BookmarkCreateRequest,
   BookmarkList,

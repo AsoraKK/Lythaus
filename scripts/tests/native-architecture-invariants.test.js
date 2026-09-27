@@ -446,9 +446,9 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
   assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
   assert.match(verifier, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION/);
-  assert.match(verifier, /0016_transactional_email_envelope_boundary\.sql/);
-  assert.match(verifier, /production post-0016 schema fingerprint mismatch/);
-  assert.match(verifier, /production post-0016 relation count/);
+  assert.match(verifier, /0017_authenticity_beta\.sql/);
+  assert.match(verifier, /production post-0017 schema fingerprint mismatch/);
+  assert.match(verifier, /production post-0017 relation count/);
   assert.match(verifier, /to_regclass\('marketing\.waitlist_signups'\)/);
   assert.match(verifier, /system\.rate_limit_windows/);
   const deployIdentity = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
