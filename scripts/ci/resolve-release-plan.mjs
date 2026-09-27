@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { dependencyGraphChanged } from './dependency-review-policy.mjs';
 import { classifyRelease } from '../release/release-classification.mjs';
 import { componentDisposition } from '../release/component-deployment-plan.mjs';
+import { hashReceipt, validateBetaRelease, withBetaConfiguration } from '../authenticity/beta-release-policy.mjs';
 
 const argv = process.argv.slice(2);
 const argument = (name) => {
@@ -55,12 +56,20 @@ const rootPackageDependencyChanged = changedFiles.includes('package.json')
     })())
   : false;
 
-const classification = classifyRelease({
+let classification = classifyRelease({
   changedFiles,
   baseSha: comparisonBase,
   forceAuthCritical,
   rootPackageDependencyChanged,
 });
+if (process.env.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256) {
+  const rawReceipt = process.env.AUTHENTICITY_BETA_RELEASE_RECEIPT;
+  const approved = validateBetaRelease(JSON.parse(rawReceipt ?? '{}'), {
+    sourceSha: releaseSha, approvedReceiptHash: process.env.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256,
+    rawReceipt, preprocessingHash: hashReceipt(fs.readFileSync('apps/lythaus-authenticity-runtime/container/safe_process.py', 'utf8').replace(/\r\n/g, '\n')),
+  });
+  classification = withBetaConfiguration(classification, approved);
+}
 const plan = {
   schemaVersion: 'lythaus-release-plan-v1',
   generatedAt: new Date().toISOString(),
@@ -76,6 +85,7 @@ const plan = {
   criticalReasons: classification.criticalReasons,
   standardReasons: classification.standardReasons,
   rulesVersion: classification.rulesVersion,
+  ...(classification.configurationChanges ? { configurationChanges: classification.configurationChanges } : {}),
 };
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });

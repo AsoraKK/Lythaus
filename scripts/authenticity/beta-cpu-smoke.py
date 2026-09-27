@@ -13,6 +13,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 CHECKPOINT = "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e"
+PREPROCESSING = "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1"
 THRESHOLD = 0.5864923000335693
 
 
@@ -125,8 +126,10 @@ def main():
                 if len(raw) > 8 * 1024 * 1024:
                     raise ValueError("RESPONSE_LIMIT")
                 result = json.loads(raw)["result"]
-                if any(result.get(key) != value for key, value in binding.items()) or result.get("checkpoint") != CHECKPOINT or result.get("runtimeDigest") != approval["runtimeDigest"] or result.get("preprocessingHash") != approval["preprocessingHash"]:
+                if any(result.get(key) != value for key, value in binding.items()) or result.get("checkpoint") != CHECKPOINT or result.get("runtimeDigest") != approval["runtimeDigest"] or result.get("preprocessingHash") != approval["preprocessingHash"] or result.get("preprocessing") != PREPROCESSING or result.get("schemaVersion") != "lythaus-authenticity-beta-v0.1.0":
                     raise ValueError("RUNTIME_IDENTITY_MISMATCH")
+                if result.get("status") not in {"OK", "UNSUPPORTED", "TIMEOUT", "CHECKSUM_MISMATCH", "DECODE_FAILURE", "UNAVAILABLE", "INVALID_OUTPUT", "BLOCKED_RIGHTS", "BLOCKED_RUNTIME"}:
+                    raise ValueError("INVALID_MODEL_STATUS")
                 score = result.get("score")
                 if result["status"] == "OK" and (not isinstance(score, (int, float)) or isinstance(score, bool) or not math.isfinite(score) or not 0 <= score <= 1):
                     raise ValueError("INVALID_SCORE")

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { estimateBetaSmoke, validateBetaRelease, hashReceipt } from '../authenticity/beta-release-policy.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { estimateBetaSmoke, validateBetaRelease, hashReceipt, withBetaConfiguration } from '../authenticity/beta-release-policy.mjs';
 
 const now = Date.parse('2026-09-27T12:00:00Z');
 function fixture(overrides = {}) {
@@ -19,4 +23,36 @@ test('disabled runtime materialization requires exact owner-approved source, rig
   assert.equal(validateBetaRelease(...fixture()).enabled, false);
   for (const change of [{phase:'ACTIVATE'},{realParityPassed:false},{restrictedBetaHostingAuthorized:false},{instanceType:'lite'},{publicEnforcementApproved:true},{verifiedRemainingUnits:{}},{allowanceObservedAt:'2026-09-26T00:00:00Z'},{preprocessingHash:'0'.repeat(64)},{sourceSha:'9'.repeat(40)}]) assert.throws(() => validateBetaRelease(...fixture(change)));
   const [receipt, context] = fixture(); context.approvedReceiptHash = '0'.repeat(64); assert.throws(() => validateBetaRelease(receipt, context));
+});
+test('activation requires bounded owners, prior disabled evidence and rollback while preserving source classification', () => {
+  const activation = {phase:'RESTRICTED_ACTIVATION',disabledDeploymentReceiptSha256:'4'.repeat(64),rollbackPlanSha256:'5'.repeat(64),allowlist:['01990000-0000-7000-8000-000000000001'],sourceHistoryHashes:[]};
+  const approved=validateBetaRelease(...fixture(activation));
+  assert.equal(approved.enabled,true);
+  for (const change of [{allowlist:[]},{allowlist:['*']},{sourceHistoryHashes:['unknown']},{disabledDeploymentReceiptSha256:null},{rollbackPlanSha256:null},{expiresAt:new Date(now).toISOString()},{realSafeAttempts:-1}]) assert.throws(()=>validateBetaRelease(...fixture({...activation,...change})));
+  const original={releaseClass:'STANDARD_RELEASE',changedFiles:[],changedComponents:[],reusedComponents:['public','admin','jobs','marketing'],criticalReasons:[]};
+  const plan=withBetaConfiguration(original,approved);
+  assert.deepEqual(plan.changedComponents,['admin','jobs','public']);
+  assert.equal(plan.releaseClass,'AUTH_CRITICAL_RELEASE');
+  assert.deepEqual(plan.changedFiles,[]);
+  assert.deepEqual(plan.reusedComponents,['marketing']);
+  assert.equal(original.releaseClass,'STANDARD_RELEASE');
+});
+test('protected configuration command rejects stale Workers before dispatch and records ambiguous sends for rollback', () => {
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'lythaus-beta-release-'));
+  try {
+    const [receipt]=fixture({phase:'RESTRICTED_ACTIVATION',disabledDeploymentReceiptSha256:'4'.repeat(64),rollbackPlanSha256:'5'.repeat(64),allowlist:['01990000-0000-7000-8000-000000000001'],sourceHistoryHashes:[],expiresAt:new Date(Date.now()+3600000).toISOString(),allowanceObservedAt:new Date().toISOString(),preprocessingHash:hashReceipt(fs.readFileSync('apps/lythaus-authenticity-runtime/container/safe_process.py','utf8').replace(/\r\n/g,'\n'))});
+    const rawReceipt=JSON.stringify(receipt);
+    const marker=path.join(directory,'sent');
+    const environment=path.join(directory,'github.env');
+    const mock=`import fs from 'node:fs';globalThis.fetch=async(url,options)=>{if(options.method!=='PUT'||!url.startsWith('https://api.cloudflare.com/client/v4/accounts/'))throw Error('unexpected_request');const config=JSON.parse(options.body);if(!config.enabled||config.allowlist.length!==1||config.caseReservationUsd!==0.5)throw Error('invalid_config');fs.writeFileSync(${JSON.stringify(marker)},'sent');return new Response(JSON.stringify({success:process.env.TEST_PROVIDER_SUCCESS==='true'}),{status:process.env.TEST_PROVIDER_SUCCESS==='true'?200:500});};`;
+    const env={...process.env,GITHUB_ACTIONS:'true',GITHUB_ENV:environment,CLOUDFLARE_ACCOUNT_ID:'1'.repeat(32),CLOUDFLARE_API_TOKEN:'explicit-protocol-fixture',RELEASE_SHA:receipt.sourceSha,AUTHENTICITY_BETA_RELEASE_RECEIPT:rawReceipt,AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256:hashReceipt(rawReceipt),TEST_PROVIDER_SUCCESS:'true'};
+    for(const prefix of ['PUBLIC','ADMIN','JOBS']) {env[`${prefix}_WORKER_SOURCE_SHA`]=receipt.sourceSha;env[`${prefix}_WORKER_STATUS`]='ACTIVATED';}
+    const invoke=extra=>spawnSync(process.execPath,['--import',`data:text/javascript,${encodeURIComponent(mock)}`,'scripts/ci/configure-authenticity-beta-runtime.mjs','activate'],{env:{...env,...extra},encoding:'utf8'});
+    const stale=invoke({JOBS_WORKER_SOURCE_SHA:'9'.repeat(40)});
+    assert.notEqual(stale.status,0);assert.equal(fs.existsSync(marker),false);
+    const ambiguous=invoke({TEST_PROVIDER_SUCCESS:'false'});
+    assert.notEqual(ambiguous.status,0);assert.match(fs.readFileSync(environment,'utf8'),/ACTIVATION_ATTEMPTED=true/);assert.equal(fs.readFileSync(marker,'utf8'),'sent');
+    const success=invoke({});assert.equal(success.status,0,success.stderr);assert.equal(JSON.parse(success.stdout).liveAppAcceptance,false);
+    assert.equal(success.stdout.includes('explicit-protocol-fixture'),false);assert.equal(success.stdout.includes(receipt.allowlist[0]),false);
+  } finally { fs.rmSync(directory,{recursive:true,force:true}); }
 });

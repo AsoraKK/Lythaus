@@ -21,6 +21,61 @@ class _Adapter implements HttpClientAdapter {
 
 void main() {
   test(
+    'private preview authenticates to the API and bounds display data',
+    () async {
+      final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test/api'));
+      var bytes = Uint8List.fromList([1, 2, 3]);
+      var calls = 0;
+      dio.httpClientAdapter = _Adapter((options, _) async {
+        calls++;
+        expect(options.uri.path, '/api/authenticity/cases/case-1/image');
+        expect(options.headers['Authorization'], 'Bearer private-token');
+        return ResponseBody.fromBytes(bytes, 200);
+      });
+      expect(await BetaApi(dio, () async => null).image('case-1'), isNull);
+      expect(calls, 0);
+      final api = BetaApi(dio, () async => 'private-token');
+      expect(await api.image('case-1'), bytes);
+      bytes = Uint8List(4194305);
+      expect(await api.image('case-1'), isNull);
+      expect(calls, 2);
+    },
+  );
+  test(
+    'forged upload destinations never receive image bytes or finalise a case',
+    () async {
+      for (final target in [
+        'http://account.r2.cloudflarestorage.com/object',
+        'https://account.r2.cloudflarestorage.com.evil.test/object',
+        'https://127.0.0.1/object',
+      ]) {
+        final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test/api'));
+        var calls = 0;
+        dio.httpClientAdapter = _Adapter((_, _) async {
+          calls++;
+          return ResponseBody.fromString(
+            jsonEncode({'caseId': 'case-1', 'uploadUrl': target}),
+            201,
+            headers: {
+              Headers.contentTypeHeader: ['application/json'],
+            },
+          );
+        });
+        final api = BetaApi(
+          dio,
+          () async => 'token',
+          uploadClient: () =>
+              throw StateError('image dispatch must not happen'),
+        );
+        await expectLater(
+          api.upload(Uint8List.fromList([1]), 'image/png', (_, _) {}),
+          throwsStateError,
+        );
+        expect(calls, 1);
+      }
+    },
+  );
+  test(
     'uploads exact selected bytes without credentials, then finalises once',
     () async {
       final input = Uint8List.fromList([
@@ -83,6 +138,7 @@ void main() {
         );
         expect(bytes, input);
         expect(options.contentType, 'image/png');
+        expect(options.followRedirects, false);
         return ResponseBody.fromString('', 200);
       });
       final api = BetaApi(

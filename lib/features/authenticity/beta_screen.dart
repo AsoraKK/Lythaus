@@ -8,6 +8,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/authenticity/beta_api.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
+final betaImagePickerProvider = Provider<Future<XFile?> Function()>((ref) {
+  return () => openFile(
+    acceptedTypeGroups: const [
+      XTypeGroup(
+        label: 'PNG or JPEG image',
+        extensions: ['png', 'jpg', 'jpeg'],
+        mimeTypes: ['image/png', 'image/jpeg'],
+        uniformTypeIdentifiers: ['public.png', 'public.jpeg'],
+      ),
+    ],
+  );
+});
+
 class AuthenticityBetaScreen extends ConsumerStatefulWidget {
   const AuthenticityBetaScreen({super.key});
   @override
@@ -108,13 +121,7 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
       _progress = null;
     });
     try {
-      const group = XTypeGroup(
-        label: 'PNG or JPEG image',
-        extensions: ['png', 'jpg', 'jpeg'],
-        mimeTypes: ['image/png', 'image/jpeg'],
-        uniformTypeIdentifiers: ['public.png', 'public.jpeg'],
-      );
-      final file = await openFile(acceptedTypeGroups: [group]);
+      final file = await ref.read(betaImagePickerProvider)();
       if (file == null) {
         return;
       }
@@ -216,7 +223,9 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
       ].contains(detail['status'])) {
         try {
           final preview = await ref.read(betaApiProvider).image(id);
-          if (mounted && selection == _selection && _selected?['caseId'] == id) {
+          if (mounted &&
+              selection == _selection &&
+              _selected?['caseId'] == id) {
             setState(() {
               _preview = preview;
             });

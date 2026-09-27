@@ -78,6 +78,12 @@ test('disabled switches never select an alternate provider',async()=>{
   const config=await readBetaConfig({AUTHENTICITY_BETA_ENABLED:'false',LYTHAUS_CONFIG:{get:async()=>({enabled:true,safeEnabled:false,adviserEnabled:false,allowlist:['owner']})}});
   assert.equal(config.enabled,false); assert.equal(config.safeEnabled,false); assert.equal(config.adviserEnabled,false); assert.equal(config.rightsApproval,null);
 });
+test('activation expires without removing owner read and deletion access',async()=>{
+  for (const [expiresAt, enabled] of [[undefined,false],['invalid',false],[new Date(Date.now()-1000).toISOString(),false],[new Date(Date.now()+3600000).toISOString(),true],[new Date(Date.now()+8*86400000).toISOString(),false]]) {
+    const config=await readBetaConfig({AUTHENTICITY_BETA_ENABLED:'true',LYTHAUS_CONFIG:{get:async()=>({enabled:true,expiresAt,allowlist:['owner']})}});
+    assert.equal(config.enabled,enabled); assert.deepEqual(config.allowlist,['owner']);
+  }
+});
 test('bounded stream rejects oversized input and reuse stays owner/version specific',async()=>{
   await assert.rejects(()=>readBoundedBytes(new Response(new Uint8Array(5)).body,4),/body_limit/);
   const a=await betaReuseKey('owner',binding.inputHash,binding.runtimeDigest,binding.preprocessingHash);

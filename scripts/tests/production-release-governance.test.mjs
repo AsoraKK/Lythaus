@@ -516,9 +516,11 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.ok(coordinatorActivation > candidateUpload);
   assert.ok(keeperAcceptance > coordinatorActivation);
   assert.ok(productionActivation > keeperAcceptance);
-  const disabledRuntime = workersWorkflow.slice(workersWorkflow.indexOf('- name: Prepare approved disabled authenticity runtime'), workersWorkflow.indexOf('- name: Refresh generated Worker types after deployment identity materialization'));
+  const disabledRuntime = workersWorkflow.slice(workersWorkflow.indexOf('- name: Prepare approved authenticity runtime'), workersWorkflow.indexOf('- name: Refresh generated Worker types after deployment identity materialization'));
   assert.match(disabledRuntime, /vars\.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != ''/);
   assert.match(disabledRuntime, /materialize-authenticity-beta-runtime\.mjs/);
+  assert.match(disabledRuntime, /configure-authenticity-beta-runtime\.mjs disable/);
+  assert.match(disabledRuntime, /--secrets-file "\$runtime_secrets_file"/);
   assert.match(disabledRuntime, /deploy --config apps\/lythaus-authenticity-runtime\/wrangler\.release\.jsonc/);
   assert.doesNotMatch(workersWorkflow.replace(disabledRuntime, ''), /wrangler@4\.123\.0 deploy(?:\s|['"])/);
   assert.match(coordinatorParentHelper, /COORDINATOR_PARENT_EXISTED_BEFORE/);
@@ -537,6 +539,8 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.match(rollback, /versions deploy \$COORDINATOR_ROLLBACK_SPECS/);
   assert.match(workersWorkflow, /Capture predeployment Worker state[\s\S]*coordinator-before-versions\.json/);
   assert.match(workersWorkflow, /Resolve changed candidates and reused production versions \(CANDIDATE gate\)/);
+  assert.ok(workersWorkflow.indexOf('- name: Activate approved private authenticity cohort') > workersWorkflow.indexOf('- name: ACTIVATION - Export candidate, reuse, and activation metadata'));
+  assert.match(workersWorkflow, /AUTHENTICITY_BETA_ACTIVATION_ATTEMPTED == 'true'/);
 });
 
 test('release rollback capture preserves serving traffic beside staged candidates', () => {

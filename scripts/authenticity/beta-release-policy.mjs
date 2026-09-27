@@ -42,7 +42,13 @@ export function validateBetaRelease(receipt, { sourceSha, approvedReceiptHash, r
   assert.equal(receipt.schemaVersion, 'lythaus-beta-release-approval-v1');
   assert.match(sourceSha, /^[a-f0-9]{40}$/);
   assert.equal(receipt.sourceSha, sourceSha, 'exact_release_source_required');
-  assert.equal(receipt.phase, 'DISABLED_DEPLOYMENT', 'activation_requires_separate_live_acceptance');
+  assert.ok(['DISABLED_DEPLOYMENT', 'RESTRICTED_ACTIVATION'].includes(receipt.phase), 'unknown_release_phase');
+  const enabled = receipt.phase === 'RESTRICTED_ACTIVATION';
+  if (enabled) {
+    assert.ok(sha(receipt.disabledDeploymentReceiptSha256) && sha(receipt.rollbackPlanSha256), 'disabled_deployment_and_rollback_evidence_required');
+    assert.ok(Array.isArray(receipt.allowlist) && receipt.allowlist.length > 0 && receipt.allowlist.length <= 20 && receipt.allowlist.every(id => /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id)), 'bounded_owner_allowlist_required');
+    assert.ok(Array.isArray(receipt.sourceHistoryHashes) && receipt.sourceHistoryHashes.length <= 16 && receipt.sourceHistoryHashes.every(sha), 'explicit_fixture_support_list_required');
+  }
   assert.ok(typeof receipt.decisionOwner === 'string' && receipt.decisionOwner.length > 0);
   const expiry = Date.parse(receipt.expiresAt);
   assert.ok(Number.isFinite(expiry) && expiry > now && expiry <= now + 7 * 86400000, 'approval_expired_or_unbounded');
@@ -57,7 +63,7 @@ export function validateBetaRelease(receipt, { sourceSha, approvedReceiptHash, r
   assert.ok(finite(receipt.imageBytes) && receipt.imageBytes > 0);
   assert.equal(receipt.measuredMaxPixels, 16777216, 'maximum_pixel_memory_measurement_required');
   assert.equal(receipt.realParityPassed, true);
-  assert.ok(receipt.realParityCases >= 8 && receipt.realSafeAttempts <= 16);
+  assert.ok(Number.isInteger(receipt.realParityCases) && receipt.realParityCases >= 8 && Number.isInteger(receipt.realSafeAttempts) && receipt.realSafeAttempts >= receipt.realParityCases && receipt.realSafeAttempts <= 16);
   const smallest = Object.entries(INSTANCE_TYPES).find(([, spec]) => receipt.peakMemoryBytes * 1.3 <= spec.gib * 2 ** 30 && receipt.imageBytes * 2 + 128 * 1024 * 1024 <= spec.diskGb * 1e9)?.[0];
   assert.equal(receipt.instanceType, smallest, 'smallest_measured_fit_with_headroom_required');
   assert.ok(finite(receipt.sharedExperimentCommittedUsd) && finite(receipt.betaCommittedUsd));
@@ -67,5 +73,15 @@ export function validateBetaRelease(receipt, { sourceSha, approvedReceiptHash, r
   for (const field of ['safetyUpperBoundUsd', 'imageRegistryUpperBoundUsd', 'databaseUpperBoundUsd']) assert.ok(finite(receipt[field]), `${field}_required`);
   const reservation = Math.ceil((estimate.subtotalUsd + receipt.safetyUpperBoundUsd + receipt.imageRegistryUpperBoundUsd + receipt.databaseUpperBoundUsd) / 0.8 * 100) / 100;
   assert.ok(reservation <= 0.5 && receipt.sharedExperimentCommittedUsd + reservation <= 8 && receipt.betaCommittedUsd + reservation <= 1.6, 'BLOCKED_BUDGET');
-  return { sourceSha, receiptSha256: approvedReceiptHash, image: receipt.image, runtimeDigest: receipt.image.split('@')[1], instanceType: receipt.instanceType, preprocessingHash, reservedUpperBoundUsd: reservation, enabled: false, publicEnforcementApproved: false };
+  return { sourceSha, receiptSha256: approvedReceiptHash, image: receipt.image, runtimeDigest: receipt.image.split('@')[1], instanceType: receipt.instanceType, preprocessingHash, reservedUpperBoundUsd: reservation, enabled, publicEnforcementApproved: false };
+}
+
+export function withBetaConfiguration(plan, approved) {
+  const components = approved.enabled ? ['public', 'admin', 'jobs'] : ['jobs'];
+  const changedComponents = [...new Set([...plan.changedComponents, ...components])].sort();
+  return { ...plan, releaseClass: 'AUTH_CRITICAL_RELEASE', changedComponents,
+    reusedComponents: plan.reusedComponents.filter(component => !changedComponents.includes(component)),
+    criticalReasons: [...plan.criticalReasons, { rule: 'approved-beta-configuration', receiptSha256: approved.receiptSha256 }],
+    configurationChanges: { schemaVersion: 'lythaus-beta-configuration-plan-v1', components, receiptSha256: approved.receiptSha256, enabled: approved.enabled },
+  };
 }

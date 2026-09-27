@@ -117,6 +117,8 @@ class BetaApi {
         data: Stream<List<int>>.value(bytes),
         options: Options(
           contentType: mime,
+          followRedirects: false,
+          maxRedirects: 0,
           headers: {'Content-Length': bytes.length},
         ),
         onSendProgress: progress,
