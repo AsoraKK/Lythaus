@@ -54,6 +54,7 @@ def main():
     comparison = json.loads((directory / 'comparison.json').read_text())
     receipt = {'schemaVersion': 'lythaus-dart-license-resolution-v1', 'conclusion': 'failure', 'packages': [], 'nativeLimitationRun': '36337306887', 'deniedLicenses': sorted(DENIED)}
     try:
+        require({value.strip() for value in os.environ.get('DENY_LICENSES', '').split(',')} == DENIED, 'LICENSE_POLICY_CHANGED_REVIEW_REQUIRED')
         require(comparison.get('coverage') == 'COMPLETE', 'NATIVE_COVERAGE_REQUIRED')
         selected = [row for row in comparison['changes'] if row['change_type'] == 'added' and row['ecosystem'].lower() == 'pub' and row['name'] in EVIDENCE]
         for change in selected:

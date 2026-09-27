@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
+      DENY_LICENSES: GPL-3.0, AGPL-3.0
       BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || inputs.base_sha }}
       HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'push' && github.sha || inputs.head_sha }}
     steps:
@@ -48,7 +49,7 @@ jobs:
         id: native
         with:
           fail-on-severity: high
-          deny-licenses: GPL-3.0, AGPL-3.0
+          deny-licenses: ${{ env.DENY_LICENSES }}
           allow-dependencies-licenses: ${{ steps.licenses.outputs.resolved }}
           base-ref: ${{ env.BASE_SHA }}
           head-ref: ${{ env.HEAD_SHA }}
