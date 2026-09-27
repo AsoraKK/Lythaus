@@ -214,8 +214,14 @@ the replacement path.
 PR2 keeps `ci.yml` job names unchanged, retains
 `native-planetscale-ci.yml` and `mobile-security-check.yml`, and
 moves the six wrapper responsibilities into the existing required jobs. GitHub
-replacement-run and negative-test receipts are recorded with this inventory
-after the PR checks complete.
+replacement-run and negative-test receipts are recorded with this inventory.
+
+Successful GitHub replacement receipts:
+
+| Review | CI run | Result |
+| --- | --- | --- |
+| PR1 #863 | 36351426482 | All seven canonical CI jobs passed; retained contract, security, CodeQL, scan, and dependency-review checks also passed |
+| PR2 #864 | 36351621200 | All seven canonical CI jobs passed; CodeQL run 36351621204 and retained security/dependency checks also passed |
 
 ## PR2 local validation receipts
 
