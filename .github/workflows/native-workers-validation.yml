@@ -115,6 +115,7 @@ jobs:
       - run: node --experimental-strip-types --test packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs
       - run: node --test scripts/tests/authenticity-beta-release.test.mjs
       - run: python3 apps/lythaus-authenticity-runtime/container/test_artifacts.py
+      - run: python3 scripts/tests/test_beta_cpu_smoke.py
       - run: python3 apps/lythaus-authenticity-runtime/container/test_supervisor.py
       - name: Record code-only Linux capacity
         run: python3 scripts/ci/authenticity-linux-capacity.py

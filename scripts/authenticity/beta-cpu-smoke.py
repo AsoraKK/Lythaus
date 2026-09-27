@@ -59,6 +59,13 @@ def prepare(manifest, approval):
     if __version__ != "12.3.0":
         raise ValueError("FROZEN_PILLOW_VERSION_REQUIRED")
     Image.MAX_IMAGE_PIXELS = 16777216
+    for record, data in records:
+        if not isinstance(record.get("historicalScore"), (int, float)) or isinstance(record["historicalScore"], bool) or not math.isfinite(record["historicalScore"]) or not 0 <= record["historicalScore"] <= 1:
+            raise ValueError("FROZEN_HISTORICAL_SCORE_REQUIRED")
+        with Image.open(io.BytesIO(data)) as original:
+            if original.format not in ("PNG", "JPEG") or min(original.size) < 256 or original.width * original.height > 16777216 or original.mode != "RGB" or getattr(original, "n_frames", 1) != 1:
+                raise ValueError("FIXTURE_FORMAT_UNSUPPORTED")
+            original.verify()
     parents = [next(item for item in records if item[0]["category"] == "CAMERA"), next(item for item in records if item[0]["groundTruth"] == 1)]
     for record, data in parents:
         with Image.open(io.BytesIO(data)) as original:

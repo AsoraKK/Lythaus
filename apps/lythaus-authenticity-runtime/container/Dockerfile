@@ -14,10 +14,14 @@ CMD ["python", "-u", "apps/lythaus-authenticity-runtime/container/supervisor.py"
 FROM source AS code-validation
 CMD ["python", "apps/lythaus-authenticity-runtime/container/test_supervisor.py"]
 
-FROM source AS runtime
+FROM source AS evaluation
 USER root
 COPY apps/lythaus-authenticity-runtime/container/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --require-hashes --no-deps --only-binary=:all: -r /tmp/requirements.txt && pip check
+USER 65532:65532
+
+FROM evaluation AS runtime
+USER root
 COPY apps/lythaus-authenticity-runtime/container/prepare_artifacts.py /tmp/prepare_artifacts.py
 RUN --mount=type=secret,id=safe_rights,required=true --mount=type=secret,id=safe_checkpoint,required=true python /tmp/prepare_artifacts.py
 USER 65532:65532

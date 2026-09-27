@@ -113,7 +113,8 @@ export function validateBetaRelease(receipt, { sourceSha, approvedReceiptHash, r
   assert.ok(reservation <= 0.5 && receipt.sharedExperimentCommittedUsd + reservation <= 8 && receipt.betaCommittedUsd + reservation <= 1.6, 'BLOCKED_BUDGET');
   const admission = enabled ? measuredCaseAdmission(receipt) : { caseReservationUsd: null, feasibleCases: 0 };
   if (enabled) assert.ok(admission.feasibleCases >= 1, 'BLOCKED_CASE_CAPACITY');
-  return { sourceSha, receiptSha256: approvedReceiptHash, image: receipt.image, runtimeDigest: receipt.image.split('@')[1], instanceType: receipt.instanceType, preprocessingHash, reservedUpperBoundUsd: reservation, ...admission, enabled, publicEnforcementApproved: false };
+  const admissionExpiresAt = new Date(Math.min(expiry, Date.parse(receipt.allowanceObservedAt) + 3600000)).toISOString();
+  return { sourceSha, receiptSha256: approvedReceiptHash, image: receipt.image, runtimeDigest: receipt.image.split('@')[1], instanceType: receipt.instanceType, preprocessingHash, reservedUpperBoundUsd: reservation, ...admission, admissionExpiresAt, enabled, publicEnforcementApproved: false };
 }
 
 export function withBetaConfiguration(plan, approved) {

@@ -61,6 +61,14 @@ test('disabled runtime materialization requires exact owner-approved source, rig
   for (const change of [{phase:'ACTIVATE'},{realParityPassed:false},{restrictedBetaHostingAuthorized:false},{instanceType:'lite'},{publicEnforcementApproved:true},{verifiedRemainingUnits:{}},{allowanceObservedAt:'2026-09-26T00:00:00Z'},{preprocessingHash:'0'.repeat(64)},{sourceSha:'9'.repeat(40)}]) assert.throws(() => validateBetaRelease(...fixture(change)));
   const [receipt, context] = fixture(); context.approvedReceiptHash = '0'.repeat(64); assert.throws(() => validateBetaRelease(receipt, context));
 });
+
+test('admission cannot outlive the account usage evidence or approval', () => {
+  const oldUsage = new Date(now - 30 * 60000).toISOString();
+  const result = validateBetaRelease(...fixture({ expiresAt: new Date(now + 7 * 86400000).toISOString(), allowanceObservedAt: oldUsage }));
+  assert.equal(result.admissionExpiresAt, new Date(now + 30 * 60000).toISOString());
+  const earlier = new Date(now + 60000).toISOString();
+  assert.equal(validateBetaRelease(...fixture({ expiresAt: earlier })).admissionExpiresAt, earlier);
+});
 test('activation requires bounded owners, prior disabled evidence and rollback while preserving source classification', () => {
   const activation = {phase:'RESTRICTED_ACTIVATION',disabledDeploymentReceiptSha256:'4'.repeat(64),rollbackPlanSha256:'5'.repeat(64),allowlist:['01990000-0000-7000-8000-000000000001'],sourceHistoryHashes:[]};
   const approved=validateBetaRelease(...fixture(activation));

@@ -97,55 +97,6 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **requestAdminAuthenticityBetaAdvice**
-> BetaActionResponse requestAdminAuthenticityBetaAdvice(caseId, betaFeedback)
-
-Request one bounded explanation of eligible persisted evidence
-
-Privileged, audited request. Requires supported successful SAFE evidence and selective escalation, an unconsumed adviser attempt, a current lease/admission budget and unexpired case. Uses the existing outbox. Does not rerun SAFE or Safety, change the deterministic finding, or publish content.
-
-### Example
-```dart
-import 'package:lythaus_api_client/api.dart';
-// TODO Configure API key authorization: cloudflareAccess
-//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
-// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
-
-final api = LythausApiClient().getAdminApi();
-final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final BetaFeedback betaFeedback = ; // BetaFeedback |
-
-try {
-    final response = api.requestAdminAuthenticityBetaAdvice(caseId, betaFeedback);
-    print(response);
-} catch on DioException (e) {
-    print('Exception when calling AdminApi->requestAdminAuthenticityBetaAdvice: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **caseId** | **String**|  |
- **betaFeedback** | [**BetaFeedback**](BetaFeedback.md)|  |
-
-### Return type
-
-[**BetaActionResponse**](BetaActionResponse.md)
-
-### Authorization
-
-[cloudflareAccess](../README.md#cloudflareAccess)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **adminAppealsPendingAdjudicationList**
 > PendingAppealAdjudicationList adminAppealsPendingAdjudicationList()
 
@@ -1749,6 +1700,55 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **requestAdminAuthenticityBetaAdvice**
+> BetaActionResponse requestAdminAuthenticityBetaAdvice(caseId, betaFeedback)
+
+Request one bounded explanation of eligible persisted evidence
+
+Privileged, audited request. Requires supported successful SAFE evidence and selective escalation, an unconsumed adviser attempt, a current lease/admission budget and unexpired case. Uses the existing outbox. Does not rerun SAFE or Safety, change the deterministic finding, or publish content.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final BetaFeedback betaFeedback = ; // BetaFeedback |
+
+try {
+    final response = api.requestAdminAuthenticityBetaAdvice(caseId, betaFeedback);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->requestAdminAuthenticityBetaAdvice: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+ **betaFeedback** | [**BetaFeedback**](BetaFeedback.md)|  |
+
+### Return type
+
+[**BetaActionResponse**](BetaActionResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
