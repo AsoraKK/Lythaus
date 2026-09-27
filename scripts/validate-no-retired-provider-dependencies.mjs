@@ -28,6 +28,8 @@ const approvedAllowlistPaths = new Set([
   'docs/security/provider-decommission-follow-up.md',
   'docs/architecture/email-guest-authentication-adr.md',
   'docs/architecture/adr-003-lythaus-current-state.md',
+  'docs/architecture/authenticity-v0.1-beta.md',
+  'docs/models/safe-a-v0.1.md',
   'README.md',
   'AGENTS.md',
   '.github/copilot-instructions.md',

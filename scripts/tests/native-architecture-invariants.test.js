@@ -454,8 +454,8 @@ test('production migrations remain explicit while Worker deployment verifies rea
   const deployIdentity = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
   assert.match(workflow, /MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'true'/);
   assert.match(workflow, /node scripts\/ci\/validate-product-integrity-deploy-identity\.mjs[\s\S]*validate:native-workers:provisioned/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0016_SCHEMA_FINGERPRINT/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0016_RELATION_COUNT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0017_SCHEMA_FINGERPRINT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0017_RELATION_COUNT/);
   assert.match(deployIdentity, /fs\.writeFileSync\(configPath, source/);
   assert.match(workflow, /Capture predeployment Worker state/);
   assert.match(workflow, /Roll back partial Worker deployment on failure/);

@@ -54,7 +54,7 @@ const submission={contentType:'image/png',size:bytes.length,checksumSha256:hash,
 async function create(){const response=await api('','POST',submission);assert.equal(response.status,201,JSON.stringify(await response.clone().json()));return (await response.json()).caseId;}
 async function upload(id){await bucket.put(`quarantine/${owner}/${id}`,bytes);const response=await api(`/${id}/finalise`,'POST');assert.equal(response.status,202,JSON.stringify(await response.clone().json()));}
 async function event(id){return (await sql({},`SELECT id,payload FROM system.outbox_events WHERE aggregate_id=$1 ORDER BY created_at DESC LIMIT 1`,[id])).rows[0];}
-async function process(id){const e=await event(id);await processBetaEvent(env,e.id,e.payload);return e;}
+async function processCase(id){const e=await event(id);await processBetaEvent(env,e.id,e.payload);return e;}
 const admin=await connect();
 try {
   const version=(await admin.query("SELECT current_setting('server_version_num')::integer AS n")).rows[0].n;assert.ok(version>=170000&&version<180000);
@@ -73,7 +73,7 @@ try {
   const first=await create();await upload(first);
   assert.equal((await api(`/${first}`,'GET',undefined,stranger)).status,404);
   await processBetaEvent(env,uuidv7(),{caseId:first,revision:1});assert.equal(safeCalls,0);
-  const e=await process(first);await processBetaEvent(env,e.id,e.payload);
+  const e=await processCase(first);await processBetaEvent(env,e.id,e.payload);
   assert.deepEqual([safetyCalls,safeCalls,adviceCalls],[1,1,1]);
   const response=await api(`/${first}`);assert.equal(response.headers.get('cache-control'),'private, no-store');
   const result=await response.json();assert.equal(result.finding,'SYNTHETIC_LIKE_EVIDENCE');assert.equal(result.publicationEligible,false);assert.equal(JSON.stringify(result).includes(SAFE_CHECKPOINT),false);
@@ -84,14 +84,14 @@ try {
   assert.equal((await (await api(`/${first}`)).json()).reviews.length,1);
   const denied=await handleAdminBeta(new Request('https://admin.example.test/api/admin/authenticity/cases'),env,{...actor,role:'support'});assert.equal(denied.status,403);
   const second=await create();await upload(second);
-  const original=`beta-original/${owner}/${second}/1`;await bucket.put(original,new Uint8Array([1,2,3]));await process(second);assert.equal(safeCalls,1);
+  const original=`beta-original/${owner}/${second}/1`;await bucket.put(original,new Uint8Array([1,2,3]));await processCase(second);assert.equal(safeCalls,1);
   assert.equal((await (await api(`/${second}`)).json()).status,'failed');
   await bucket.put(original,bytes);
   const retry=await handleAdminBeta(new Request(`https://admin.example.test/api/admin/authenticity/cases/${second}/retry`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:'Restore protocol fixture object.'})}),env,{...actor,role:'operations'});assert.equal(retry.status,202);
-  safetyResult='REVIEW';await process(second);assert.equal(safeCalls,1);assert.equal((await (await api(`/${second}`)).json()).status,'safety_review');safetyResult='ALLOW';
+  safetyResult='REVIEW';await processCase(second);assert.equal(safeCalls,1);assert.equal((await (await api(`/${second}`)).json()).status,'safety_review');safetyResult='ALLOW';
   const third=await create();await upload(third);
   duringInference=async id=>assert.equal((await api(`/${id}`,'DELETE')).status,200);
-  await process(third);assert.equal((await api(`/${third}`)).status,404);assert.equal(adviceCalls,1);
+  await processCase(third);assert.equal((await api(`/${third}`)).status,404);assert.equal(adviceCalls,1);
   const tombstone=(await admin.query(`SELECT result,revision,state FROM moderation.authenticity_beta WHERE case_id=$1`,[third])).rows[0];assert.equal(tombstone.result,null);assert.equal(tombstone.state,'deleted');assert.equal(tombstone.revision,2);
   await bucket.put(`quarantine/${owner}/${third}`,bytes);
   await purgeBetaMedia(env.DB_JOBS_FRESH,bucket,owner);assert.equal(bucket.objects.has(`quarantine/${owner}/${third}`),false);
