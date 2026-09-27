@@ -32,7 +32,7 @@ export function resolvedDependencies(file, content) {
     });
   }
   if (/requirements\.(txt|lock)$/.test(file)) {
-    return content.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#')).map(line => {
+    return content.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#') && !/^--find-links https:\/\/download-r2\.pytorch\.org\/whl\/cpu\/(torch|torchvision)-[0-9.]+%2Bcpu-cp313-cp313-manylinux_2_28_x86_64\.whl$/.test(line)).map(line => {
       const pinned = line.match(/^([A-Za-z0-9_.-]+)==([^\s]+)\s+--hash=sha256:[a-f0-9]{64}$/);
       const wheel = line.match(/^([A-Za-z0-9_.-]+) @ https:\/\/download-r2\.pytorch\.org\/whl\/cpu\/[^/]+-([0-9.]+(?:%2Bcpu)?)-cp313-cp313-manylinux_2_28_x86_64\.whl --hash=sha256:[a-f0-9]{64}$/);
       if (!pinned && !wheel) throw new Error(`UNSUPPORTED_REQUIREMENT:${file}`);
