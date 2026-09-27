@@ -21,6 +21,8 @@ async function current(env: Env, row: CaseRow): Promise<void> {
   if (env.COST_BUDGET_ENABLED !== 'true' || !config.budgetApproval) throw new Error('beta_paused');
   const budget = await query(env.DB_JOBS_FRESH,`SELECT id FROM system.cost_budget_reservations WHERE operation='authenticity_beta_case' AND correlation_id=$1 AND status IN ('committed','reconciled') AND NOT EXISTS(SELECT 1 FROM system.cost_kill_switches WHERE enabled AND key=ANY($2::text[]))`,[row.case_id,['global','authenticity','operation:authenticity_beta_case','provider:lythaus-safe-container','provider:cloudflare-workers-ai','provider:openai']]);
   if (!budget.rowCount) throw new Error('beta_paused');
+  const failures = await query<{count:string}>(env.DB_JOBS_FRESH, `SELECT count(DISTINCT case_id)::text AS count FROM moderation.authenticity_beta_steps WHERE step='safe' AND state='ambiguous' AND completed_at>now()-interval '15 minutes'`);
+  if (Number(failures.rows[0]?.count ?? 0) >= 3) throw new Error('beta_paused');
   const result = await query(env.DB_JOBS_FRESH, `SELECT case_id FROM moderation.authenticity_beta WHERE ${fence}`, [row.case_id,row.revision,row.lease_token]);
   if (!result.rowCount) throw new Error('beta_stale');
 }
@@ -137,7 +139,8 @@ export async function processBetaEvent(env: Env, eventId: string, payload: unkno
     }
     const adviserConfig = await readBetaConfig(env);
     if (result.route === 'ESCALATE' && result.advisory.status !== 'complete') {
-      if (!adviserConfig.adviserEnabled || !env.AI || !env.AI_GATEWAY_ID) result.advisory = { status: 'disabled', role: BETA_ADVISER_ROLE };
+      const recentFailures = await query<{count:string}>(env.DB_JOBS_FRESH, `SELECT count(DISTINCT case_id)::text AS count FROM moderation.authenticity_beta_steps WHERE step='advice' AND state='ambiguous' AND completed_at>now()-interval '15 minutes'`);
+      if (!adviserConfig.adviserEnabled || !env.AI || !env.AI_GATEWAY_ID || Number(recentFailures.rows[0]?.count ?? 0) >= 3) result.advisory = { status: 'disabled', role: BETA_ADVISER_ROLE };
       else {
         try {
           const packetKey = await sha256Hex(new TextEncoder().encode(JSON.stringify([result.packet,'lythaus-beta-adviser-v1',BETA_ADVISER])));

@@ -10,6 +10,8 @@ Install the separate small Worker dependency lock with `npm ci --ignore-scripts 
 
 The PostgreSQL 17 CI job applies all migrations and role grants to an ephemeral database, then runs `validate-authenticity-beta-postgres17.mjs`. Its R2/model outputs are explicit protocol fixtures, not real inference. Production reconciliation must use actual PostgreSQL 17 fingerprints, never invented digests. Historical migration identities remain immutable.
 
+`beta-cpu-smoke.py --approval <private-approved-mapping.json> --receipt <new-private-file.json>` runs the frozen eight originals and eight descendants only against `127.0.0.1:8080`. The private mapping must explicitly authorize compute, checkpoint use and each nonsealed fixture, bind source/image/preprocessing identities, and expire within one day. It requires the dispatch secret in the environment and Pillow 12.3.0. It preflights every original hash, reserves each attempt durably before send, refuses redirects/retries and stops on failed parity. Receipts stay outside the repository and contain no fixture paths or media. This is CPU integration evidence, never app acceptance. The checkpoint-integrity unit tests use explicit filesystem fixtures without loading Torch.
+
 ## Runtime preparation and release
 
 1. Resolve checkpoint rights and authorized nonsealed fixture mapping. Keep receipts and media private. Do not copy weights, signed URLs or local fixture paths into Git/CI logs.
@@ -27,6 +29,8 @@ The existing protected `native-workers-deploy` workflow optionally deploys the d
 Master `AUTHENTICITY_BETA_ENABLED` defaults false in public API, Jobs and runtime. Private KV `authenticity-beta-v1` also requires `enabled:true`, a UUID allowlist, component switches, approval receipt hashes (`rightsApproval`, `budgetApproval`, `runtimeApproval`), image digest and preprocessing hash. `sourceHistoryHashes` must stay empty for ordinary unknown-history uploads. Only documented, approved lossless fixtures may be listed.
 
 Safety remains independently enforced. `AUTHENTICITY_BETA_STORAGE_ENABLED` keeps expiry/deletion cleanup active even when inference is disabled. Disabling the beta does not disable authentication/Safety or publish media. Reads, cancellation and deletion remain available under their ownership rules.
+
+Three ambiguous SAFE attempts across cases in 15 minutes pause further work. Three adviser failures in that window disable optional advice while preserving the deterministic result. Budget/global/provider kill switches apply before every step. Each consumed external attempt stays consumed after a crash; a retry cannot promise exactly-once provider billing.
 
 The existing US$10/month total incremental experiment ceiling is binding. Beta is additionally limited to $2 with 20% metering headroom; the global admission reserve stops at $8. Default reservation is $0.50/case, so only three cases fit the $1.60 usable beta reserve until usage is reconciled. Daily ceilings of five/user and twenty/global are upper bounds, not promised capacity. Unknown billed cost remains null; committed estimates continue consuming budget. Broader application variables are not a substitute for the stricter beta checks.
 

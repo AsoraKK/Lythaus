@@ -6,6 +6,7 @@ import { uuidv7 } from '../../packages/authenticity/src/uuid.ts';
 import { BETA_VERSION, SAFE_CHECKPOINT, SAFE_PREPROCESSING } from '../../packages/authenticity/src/beta.ts';
 import { generateForensicFeatureBundleV1 } from '../../packages/authenticity/src/forensics.ts';
 import { createInsufficientEvidenceRecommendation } from '../../packages/authenticity/src/judge.ts';
+import { classifyMigrationState, assertCompleteMigrationPostconditions } from './planetscale-migration-reconciliation.mjs';
 
 const connectionString=process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 if(!connectionString || !['localhost','127.0.0.1','::1'].includes(new URL(connectionString).hostname)) throw new Error('Local PostgreSQL 17 test database required');
@@ -60,6 +61,7 @@ async function processCase(id){const e=await event(id);await processBetaEvent(en
 const admin=await connect();
 try {
   const version=(await admin.query("SELECT current_setting('server_version_num')::integer AS n")).rows[0].n;assert.ok(version>=170000&&version<180000);
+  for(const state of await classifyMigrationState(admin,['0017_authenticity_beta.sql'])) assertCompleteMigrationPostconditions(state);
   for(const relation of ['moderation.authenticity_beta','moderation.authenticity_beta_steps','moderation.authenticity_beta_feedback','media.upload_sessions','system.cost_budget_reservations']) {
     const fingerprint=await admin.query(`WITH resolved AS (SELECT to_regclass($1) AS relation_oid), contract AS (SELECT jsonb_build_object(
       'columns',COALESCE((SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'notNull',a.attnotnull,'default',pg_get_expr(d.adbin,d.adrelid)) ORDER BY a.attnum) FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE a.attrelid=resolved.relation_oid AND a.attnum>0 AND NOT a.attisdropped),'[]'::jsonb),
