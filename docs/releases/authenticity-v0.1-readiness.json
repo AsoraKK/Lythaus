@@ -2,7 +2,10 @@
   "schemaVersion": "lythaus-authenticity-readiness-v1",
   "baseSha": "8e3b3ebad2f846e61db2bfe819376723da7e9863",
   "sourceIdentity": "Use the exact integration PR head for engineering and reviewed merge SHA for release; never substitute one for the other.",
-  "engineering": "IMPLEMENTATION_IN_PROGRESS",
+  "engineering": "IMPLEMENTED_AWAITING_REVIEW_AND_REAL_RUNTIME_VALIDATION",
+  "integrationPr": "https://github.com/AsoraKK/Lythaus/pull/862",
+  "engineeringSourceSha": "4d3480eb2b48147f0899b8e95ff20973024d274d",
+  "engineeringReady": false,
   "liveRestrictedBeta": ["BLOCKED_RIGHTS", "BLOCKED_RUNTIME", "BLOCKED_RELEASE"],
   "publicEnforcement": "PUBLIC_ENFORCEMENT_NOT_APPROVED",
   "scope": "AUTHOR_AND_ADMIN_ONLY_FLUTTER_WEB_FIRST",
@@ -30,5 +33,17 @@
   "rollbackExercise": null,
   "observedPerformance": {"coldMs": null, "warmMs": null, "endToEndMs": null, "peakMemoryBytes": null, "throughput": null, "imageBytes": null},
   "cost": {"totalExperimentCeilingUsd": 10, "betaSubBudgetUsd": 2, "headroomFraction": 0.2, "plannedSmokeReservationUsd": 0.5, "actualReservedUsd": 0, "measuredUsd": null, "billedUsd": null},
-  "pending": ["PostgreSQL 17 handler CI and canonical fingerprints", "real CPU parity and sizing", "protected runtime deployment wiring", "reviewed merge", "authorized disabled deployment", "actual private app and advisory acceptance", "deployed rollback"]
+  "engineeringReceipts": {
+    "postgres17": {"state": "PASSED_PROTOCOL_FIXTURES", "runId": 36324314354, "sourceSha": "4d3480eb2b48147f0899b8e95ff20973024d274d", "canonicalMigrationFingerprintsVerified": true},
+    "nativeWorkers": {"state": "PASSED", "runId": 36324314561, "jobId": 108634009209},
+    "releaseGovernanceLocal": {"passed": 146},
+    "betaAndHistoricalContractsLocal": {"passed": 28},
+    "betaReleaseControlsLocal": {"passed": 4},
+    "flutterBetaLocal": {"passed": 12, "analyze": "PASSED", "providerMode": "EXPLICIT_TEST_DOUBLES"},
+    "dependencyReview": {"state": "BLOCKED_UNSUPPORTED_DART_FALLBACK", "runId": 36324314274},
+    "fullFlutterCoverage": {"state": "PASSED", "runId": 36324314327, "jobId": 108634302074, "percent": 87.14, "unchangedThresholdPercent": 87},
+    "completeCi": {"state": "PASSED", "runId": 36324314561, "sourceSha": "4d3480eb2b48147f0899b8e95ff20973024d274d"},
+    "flutterWebBuild": {"state": "PASSED", "runId": 36324314327, "jobId": 108634302026}
+  },
+  "pending": ["supported dependency review for Dart changes", "checkpoint hosting rights decision", "authorized real CPU parity, image build, supply-chain review and sizing", "verified account allowances and scoped budget approval", "reviewed merge", "authorized migration and disabled deployment", "actual private app and advisory acceptance", "deployed rollback"]
 }
