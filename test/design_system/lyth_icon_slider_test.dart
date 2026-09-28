@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lythaus/design_system/components/lyth_icon_button.dart';
@@ -11,6 +12,42 @@ void main() {
       theme: LythausTheme.light(),
       home: Scaffold(body: Center(child: child)),
     );
+  }
+
+  for (final outlined in [false, true]) {
+    for (final enabled in [false, true]) {
+      testWidgets('icon variant $outlined supports keyboard when $enabled', (
+        tester,
+      ) async {
+        var activations = 0;
+        void activate() => activations++;
+        await tester.pumpWidget(
+          wrap(
+            outlined
+                ? LythIconButton.outlined(
+                    icon: Icons.bookmark_outline,
+                    tooltip: 'Save post',
+                    onPressed: enabled ? activate : null,
+                  )
+                : LythIconButton.filled(
+                    icon: Icons.bookmark_outline,
+                    tooltip: 'Save post',
+                    onPressed: enabled ? activate : null,
+                  ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final button = find.byType(IconButton);
+        expect(find.byTooltip('Save post'), findsOneWidget);
+        expect(tester.getSize(button).width, greaterThanOrEqualTo(48));
+        expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+        expect(activations, enabled ? 1 : 0);
+      });
+    }
   }
 
   testWidgets('LythIconButton shows tooltip and reacts to taps', (

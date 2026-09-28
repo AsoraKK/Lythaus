@@ -67,6 +67,48 @@ void main() {
         ? LythausTheme.light()
         : LythausTheme.dark();
 
+    testWidgets('$appearance rows preserve trailing actions at enlarged text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      var activations = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: Column(
+              children: [
+                LythListRow(
+                  title: 'Account security settings',
+                  trailingIcon: Icons.chevron_right,
+                  onTap: () => activations++,
+                ),
+                const LythListRow(
+                  title: 'Review request status',
+                  trailing: Text('Pending'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.chevron_right).hitTestable(), findsOneWidget);
+      expect(find.text('Pending').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('Account security settings'));
+      expect(activations, 1);
+      expect(tester.takeException(), isNull);
+    });
+
     test(
       '$appearance composited reading, action, control and feedback contrast',
       () {
