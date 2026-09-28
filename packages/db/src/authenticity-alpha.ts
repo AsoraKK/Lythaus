@@ -41,7 +41,7 @@ export async function scheduleAlphaPurge(
          FROM moderation.authenticity_alpha a
          LEFT JOIN media.upload_sessions u ON u.id=a.upload_session_id
         WHERE a.case_id=$1 AND a.owner_id=$2
-        FOR UPDATE`,
+        FOR UPDATE OF a`,
       [caseId, ownerId],
     );
     const row = locked.rows[0] as (AlphaPurgeRow & { upload_key?: string | null }) | undefined;
@@ -208,7 +208,7 @@ export async function purgeAlphaMedia(
              FROM moderation.authenticity_alpha a
              LEFT JOIN media.objects o ON o.id=a.object_id
             WHERE a.case_id=$1 AND a.deleted_at IS NOT NULL AND a.purge_state='pending'
-            FOR UPDATE`,
+            FOR UPDATE OF a`,
           [row.case_id],
         );
         const current = locked.rows[0];
