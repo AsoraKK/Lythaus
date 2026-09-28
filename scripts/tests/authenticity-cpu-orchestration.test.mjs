@@ -1,15 +1,18 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFile, execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import test from 'node:test';
 
 const root = process.cwd();
 const python = process.platform === 'win32' ? 'python' : 'python3';
 const script = name => path.join(root, 'scripts', 'authenticity', name);
 const run = (file, args, options = {}) => spawnSync(file, args, { cwd: root, encoding: 'utf8', ...options });
+const runAsync = promisify(execFile);
 const sha = value => createHash('sha256').update(value).digest('hex');
 
 test('workflow uses root build context, hash-pinned client, preflight and external measurement order', () => {
@@ -17,17 +20,21 @@ test('workflow uses root build context, hash-pinned client, preflight and extern
   assert.ok(workflow.includes('docker build --target evaluation --file apps/lythaus-authenticity-runtime/container/Dockerfile'));
   assert.ok(workflow.includes('--tag "lythaus-safe-evaluation:${RELEASE_SHA}" .'));
   assert.match(workflow, /--require-hashes .* -r scripts\/authenticity\/evaluation-client-requirements\.txt/);
+  assert.match(workflow, /actions\/setup-python@[0-9a-f]{40}[\s\S]*python-version: '3\.13\.5'/);
   assert.match(workflow, /--preflight-only/);
   assert.match(workflow, /consume-evaluation-authorization\.mjs/);
   assert.match(workflow, /--user 65532:65532/);
   assert.match(workflow, /--mount "type=volume,src=\$MODEL_VOLUME,dst=\/opt\/safe,readonly"/);
   assert.match(workflow, /measure-container-memory\.py --pid/);
+  assert.match(workflow, /Verify durable authorization marker before runtime build/);
   assert.doesNotMatch(workflow, /--volume "\$RUNNER_TEMP\/authenticity-evaluation:\/opt\/safe:ro"/);
   const dockerIgnore = fs.readFileSync(path.join(root, 'apps/lythaus-authenticity-runtime/container/Dockerfile.dockerignore'), 'utf8');
   assert.match(dockerIgnore, /^\*\*/);
   assert.doesNotMatch(dockerIgnore, /!.*(?:checkpoint\.pth|fixtures|private)/);
   assert.ok(workflow.indexOf('--preflight-only') < workflow.indexOf('docker build --target evaluation'));
   assert.ok(workflow.indexOf('consume-evaluation-authorization.mjs') < workflow.indexOf('docker build --target evaluation'));
+  assert.ok(workflow.indexOf('Persist consumed authorization marker') < workflow.indexOf('Verify durable authorization marker before runtime build'));
+  assert.ok(workflow.indexOf('Verify durable authorization marker before runtime build') < workflow.indexOf('docker build --target evaluation'));
 });
 
 test('authorization ledger is atomic across reruns', () => {
@@ -43,6 +50,33 @@ test('authorization ledger is atomic across reruns', () => {
     assert.match(second.stdout, /AUTHORIZATION_ALREADY_CONSUMED/);
     assert.equal(JSON.parse(fs.readFileSync(ledger, 'utf8')).sourceSha, 'a'.repeat(40));
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('GitHub artifact ledger verifies the current run and rejects prior claims', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-github-authz-'));
+  const sourceSha = 'a'.repeat(40);
+  const authorizationId = 'protocol-run-github';
+  const checkpointSha256 = 'b'.repeat(64);
+  const expiresAtEpochSeconds = 4_102_444_800;
+  const authorizationKey = sha(JSON.stringify({ authorizationId, sourceSha, checkpointSha256, expiresAtEpochSeconds }));
+  const markerName = `authenticity-evaluation-consumed-${authorizationKey.slice(0, 32)}`;
+  const approval = path.join(directory, 'approval.json');
+  fs.writeFileSync(approval, JSON.stringify({ sourceSha, authorizationId, checkpointSha256, expiresAtEpochSeconds }));
+  const server = http.createServer((request, response) => {
+    response.setHeader('content-type', 'application/json');
+    response.end(JSON.stringify({ artifacts: [{ name: markerName, expired: false, workflow_run: { id: 42 } }] }));
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  try {
+    const baseEnv = { ...process.env, GITHUB_TOKEN: 'protocol-token', GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_API_URL: `http://127.0.0.1:${port}` };
+    const verify = await runAsync(process.execPath, [script('consume-evaluation-authorization.mjs'), '--approval', approval, '--source-sha', sourceSha, '--verify'], { cwd: root, env: { ...baseEnv, GITHUB_RUN_ID: '42' }, encoding: 'utf8' });
+    assert.match(verify.stdout, /EVALUATION_AUTHORIZATION_VERIFIED/);
+    await assert.rejects(() => runAsync(process.execPath, [script('consume-evaluation-authorization.mjs'), '--approval', approval, '--source-sha', sourceSha], { cwd: root, env: { ...baseEnv, GITHUB_RUN_ID: '43' }, encoding: 'utf8' }), error => /AUTHORIZATION_ALREADY_CONSUMED/.test(error.stdout));
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('model staging copies only reviewed files without world access', () => {

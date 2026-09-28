@@ -27,16 +27,27 @@ const repository = process.env.GITHUB_REPOSITORY;
 const api = process.env.GITHUB_API_URL ?? 'https://api.github.com';
 if (!token || !repository) throw new Error('GITHUB_ARTIFACT_LEDGER_UNAVAILABLE');
 const headers = { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' };
-let page = 1; let found = false;
-while (page <= 10) {
-  const response = await fetch(`${api}/repos/${repository}/actions/artifacts?per_page=100&page=${page}`, { headers });
+const findArtifacts = async () => {
+  const response = await fetch(`${api}/repos/${repository}/actions/artifacts?name=${encodeURIComponent(markerName)}&per_page=100&page=1`, { headers });
   if (!response.ok) throw new Error('GITHUB_ARTIFACT_LEDGER_UNAVAILABLE');
   const data = await response.json();
-  if ((data.artifacts ?? []).some(item => item.name === markerName && item.expired !== true)) { found = true; break; }
-  if (!data.artifacts?.length || data.artifacts.length < 100) break;
-  page += 1;
+  return (data.artifacts ?? []).filter(item => item.name === markerName && item.expired !== true);
+};
+let artifacts = await findArtifacts();
+if (args.includes('--verify') && !artifacts.some(item => String(item.workflow_run?.id ?? '') === String(process.env.GITHUB_RUN_ID ?? ''))) {
+  for (let attempt = 1; attempt < 10; attempt += 1) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    artifacts = await findArtifacts();
+    if (artifacts.some(item => String(item.workflow_run?.id ?? '') === String(process.env.GITHUB_RUN_ID ?? ''))) break;
+  }
 }
-if (found) throw new Error('AUTHORIZATION_ALREADY_CONSUMED');
+if (artifacts.length && !args.includes('--verify')) throw new Error('AUTHORIZATION_ALREADY_CONSUMED');
+if (args.includes('--verify')) {
+  const runId = process.env.GITHUB_RUN_ID;
+  if (!runId || !artifacts.some(item => String(item.workflow_run?.id ?? '') === runId)) throw new Error('AUTHORIZATION_MARKER_NOT_DURABLE');
+  process.stdout.write('EVALUATION_AUTHORIZATION_VERIFIED\n');
+  process.exit(0);
+}
 const output = args.includes('--output') ? path.resolve(value('--output')) : null;
 if (output) { fs.mkdirSync(path.dirname(output), { recursive: true, mode: 0o700 }); fs.writeFileSync(output, JSON.stringify(marker) + '\n', { mode: 0o600 }); }
 writeOutput(process.env.GITHUB_OUTPUT); process.stdout.write('EVALUATION_AUTHORIZATION_CONSUMED\n');
