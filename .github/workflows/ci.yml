@@ -133,6 +133,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter analyze
+      - run: node --test scripts/tests/version-web-entrypoints.test.mjs
       - run: bash scripts/test-with-coverage.sh
       - run: bash scripts/check_coverage_gates.sh
       - name: Build immutable web release artifact
@@ -177,8 +178,11 @@ jobs:
       - run: node --test apps/marketing-site/tests/*.test.mjs
       - run: npm --prefix apps/control-panel run build
       - run: npm --prefix apps/marketing-site run build
+      - run: node scripts/cloudflare/validate-marketing-output.mjs apps/marketing-site/dist
       - name: Install homepage test browsers
         run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify existing browsers receive new app entrypoints
+        run: node scripts/tests/web-release-cache.browser.mjs
       - name: Verify homepage optical and accessibility contracts
         run: npm run marketing:test:browser
 

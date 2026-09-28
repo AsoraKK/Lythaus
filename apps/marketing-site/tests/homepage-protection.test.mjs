@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -78,6 +78,13 @@ export function assertHomepageFrozen() {
   for (const entry of entries) {
     const [metadata, filename] = entry.split('\t');
     const expected = metadata.split(' ')[2];
+    if (filename === 'apps/marketing-site/public/sitemap.xml') {
+      const original = git('show', `${baselineSha}:${filename}`);
+      const addition = '  <url><loc>https://lythaus.co/help</loc><priority>0.6</priority></url>\n';
+      const current = readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n').trim();
+      assert.equal(current, original.replace('</urlset>', `${addition}</urlset>`), 'Sitemap may only append the new Help route; all original URLs and metadata are frozen');
+      continue;
+    }
     if (!existsSync(path.join(root, filename)) || git('hash-object', `--path=${filename}`, filename) !== expected) changed.push(filename);
   }
   assert.deepEqual(changed, [], 'Homepage dependencies changed from the explicit frozen revision');

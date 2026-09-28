@@ -21,6 +21,15 @@ Secondary routes use their own opt-in layout, stylesheet and fonts. The homepage
 
 ## Evidence locations
 
+### Secondary route metadata correction, 28 September 2026
+
+The new Help route is appended to the sitemap. Its guard compares the complete file
+against the original sitemap plus that single exact entry, preserving every existing
+URL, ordering and priority, including the homepage. No rendering dependency, homepage
+metadata, screenshot baseline or visual tolerance changes. The new noindex 404 page
+uses its actual `/404.html` output path as its canonical URL. CI now runs the existing
+production output validator so these release blockers are caught before merge.
+
 ### Upstream integration for live delivery, 28 September 2026
 
 Homepage source/rendering and screenshot baselines remain fixed at

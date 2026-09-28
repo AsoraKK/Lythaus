@@ -105,6 +105,8 @@ flutter build web --release --no-tree-shake-icons \
   --dart-define=API_BASE_URL="${API_BASE_URL}" \
   --dart-define=AUTH_URL="${AUTH_URL}"
 
+node scripts/ci/version-web-entrypoints.mjs build/web
+
 echo "==> Copying _redirects for SPA routing"
 cp web/_redirects build/web/_redirects
 echo "==> Copying _headers for CSP and cache rules"
