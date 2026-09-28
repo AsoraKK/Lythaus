@@ -154,10 +154,11 @@ try {
   assert.equal(result.status, 200);
   const body = await result.json();
   assert.equal(body.status, 'complete');
-  assert.equal(body.result.finding, 'INCONCLUSIVE');
-  assert.equal(body.result.components.safety_text.execution, 'completed');
-  assert.equal(body.result.components.safety_text.interpretation, 'available');
-  assert.equal(body.result.safe, null);
+  assert.equal(body.finding, 'INCONCLUSIVE');
+  assert.equal(body.execution.safety_text.execution, 'completed');
+  assert.equal(body.execution.safety_text.interpretation, 'available');
+  assert.equal(body.execution.safe.execution, 'unsupported');
+  assert.equal(body.execution.safe.reason, 'SAFE-A_requires_image');
   assert.equal((await callApi(`/api/authenticity/alpha/cases/${caseId}`, 'GET', undefined, stranger)).status, 404);
 
   const deleted = await callApi(`/api/authenticity/alpha/cases/${caseId}`, 'DELETE');
