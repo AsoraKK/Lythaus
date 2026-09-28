@@ -262,6 +262,7 @@ const artifacts = {
     { artifact: 'authenticity_alpha_owner_index', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha_owner_created') IS NOT NULL AS present" },
     { artifact: 'authenticity_alpha_expiry_index', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha_expiry') IS NOT NULL AS present" },
     { artifact: 'authenticity_alpha_purpose_check', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'upload_sessions_purpose_check' AND pg_get_constraintdef(oid) ILIKE '%authenticity_alpha%') AS present" },
+    { artifact: 'authenticity_alpha_status_check', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'upload_sessions_status_check' AND pg_get_constraintdef(oid) ILIKE '%cancelled%') AS present" },
     { artifact: 'record_alpha_location_function', kind: 'schema_artifact', sql: "SELECT to_regprocedure('privacy.record_alpha_location(uuid,uuid)') IS NOT NULL AS present" },
     { artifact: 'remove_alpha_location_function', kind: 'schema_artifact', sql: "SELECT to_regprocedure('privacy.remove_alpha_location(uuid,uuid)') IS NOT NULL AS present" },
   ],

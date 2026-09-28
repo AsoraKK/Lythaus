@@ -61,7 +61,16 @@ async function processCase(id){const e=await event(id);await processBetaEvent(en
 const admin=await connect();
 try {
   const version=(await admin.query("SELECT current_setting('server_version_num')::integer AS n")).rows[0].n;assert.ok(version>=170000&&version<180000);
-  for(const state of await classifyMigrationState(admin,['0017_authenticity_beta.sql'])) assertCompleteMigrationPostconditions(state);
+  const [betaSchema] = await classifyMigrationState(admin,['0017_authenticity_beta.sql']);
+  // Migration 0018 intentionally supersedes upload_sessions constraints while
+  // preserving every other 0017 beta relation contract. Validate that historical
+  // shape explicitly, then validate the alpha migration's final constraints.
+  assertCompleteMigrationPostconditions({
+    ...betaSchema,
+    artifacts: betaSchema.artifacts.filter(({ artifact }) => artifact !== 'relation:media.upload_sessions'),
+  });
+  const [alphaSchema] = await classifyMigrationState(admin,['0018_authenticity_private_alpha.sql']);
+  assertCompleteMigrationPostconditions(alphaSchema);
   for(const relation of ['moderation.authenticity_beta','moderation.authenticity_beta_steps','moderation.authenticity_beta_feedback','media.upload_sessions','system.cost_budget_reservations']) {
     const fingerprint=await admin.query(`WITH resolved AS (SELECT to_regclass($1) AS relation_oid), contract AS (SELECT jsonb_build_object(
       'columns',COALESCE((SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'notNull',a.attnotnull,'default',pg_get_expr(d.adbin,d.adrelid)) ORDER BY a.attnum) FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE a.attrelid=resolved.relation_oid AND a.attnum>0 AND NOT a.attisdropped),'[]'::jsonb),
