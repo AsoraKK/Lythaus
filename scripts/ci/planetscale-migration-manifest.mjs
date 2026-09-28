@@ -26,10 +26,11 @@ export const APPROVED_MIGRATIONS = [
   { name: '0015_production_auth_acceptance_coordinator.sql', repositorySha256: 'e8db5a46be476750632d1f184eb27aa2c1d9fbf5ecd9969bd7ad880397df4fef', lfOnlyBreaks: [[1, 9999]], appliedBytes: 4_673, appliedSha256: 'e8db5a46be476750632d1f184eb27aa2c1d9fbf5ecd9969bd7ad880397df4fef' },
   { name: '0016_transactional_email_envelope_boundary.sql', repositorySha256: '7d80f32da5bf9a7b598b09f403a3dd8bcf3e86b8a9c7341cbe1b18fac6917ce7', lfOnlyBreaks: [[1, 9999]], appliedBytes: 751, appliedSha256: '7d80f32da5bf9a7b598b09f403a3dd8bcf3e86b8a9c7341cbe1b18fac6917ce7' },
   { name: '0017_authenticity_beta.sql', repositorySha256: '1a766eb057c2da5fbc9eba34f57454043bc92dba87bb86003ec8452ec697e05e', lfOnlyBreaks: [[1, 9999]], appliedBytes: 4903, appliedSha256: '1a766eb057c2da5fbc9eba34f57454043bc92dba87bb86003ec8452ec697e05e' },
+  { name: '0018_authenticity_private_alpha.sql', repositorySha256: '8f786a649cc38ff025e52e1092891c5373247e3553324b2ff76a8ba176312972', lfOnlyBreaks: [[1, 9999]], appliedBytes: 4983, appliedSha256: '8f786a649cc38ff025e52e1092891c5373247e3553324b2ff76a8ba176312972' },
 ];
 
-export const EXPECTED_MIGRATION_BYTES = 94178;
-export const EXPECTED_MIGRATION_SET_SHA256 = 'eff4f356b6b6b74298e2ff948ec846a7bb5affe1ddcd1e87ae1b3212ab9644fb';
+export const EXPECTED_MIGRATION_BYTES = 99162;
+export const EXPECTED_MIGRATION_SET_SHA256 = '4d229dc687ebdda2f9177d1197aee6fa119fccdeeef0dfcb52cf006e14be06c9';
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');

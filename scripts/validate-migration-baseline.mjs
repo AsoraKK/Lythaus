@@ -3,12 +3,13 @@ import path from 'node:path';
 
 const root = process.cwd();
 const migrationDir = path.join(root, 'database', 'planetscale', 'migrations');
-const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql', '0009_cost_budget_enforcement.sql', '0010_native_runtime_parity.sql', '0011_email_guest_auth_only.sql', '0012_product_integrity_v2.sql', '0013_marketing_waitlist.sql', '0014_transactional_email_outbox.sql', '0015_production_auth_acceptance_coordinator.sql', '0016_transactional_email_envelope_boundary.sql', '0017_authenticity_beta.sql'];
+const requiredMigrations = ['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql', '0004_launch_contract.sql', '0005_auth_revocation.sql', '0006_admin_role_expansion.sql', '0007_contact_emails.sql', '0008_legacy_relink_status.sql', '0009_cost_budget_enforcement.sql', '0010_native_runtime_parity.sql', '0011_email_guest_auth_only.sql', '0012_product_integrity_v2.sql', '0013_marketing_waitlist.sql', '0014_transactional_email_outbox.sql', '0015_production_auth_acceptance_coordinator.sql', '0016_transactional_email_envelope_boundary.sql', '0017_authenticity_beta.sql', '0018_authenticity_private_alpha.sql'];
 const requiredSeeds = ['0001_feature_flags.sql'];
 const requiredRecoveryFiles = ['restore-verify.sql'];
 const requiredSchemas = ['identity', 'content', 'social', 'feed', 'moderation', 'privacy', 'trust', 'media', 'editorial', 'marketing', 'system'];
 const requiredTables = [
   'moderation.authenticity_beta', 'moderation.authenticity_beta_steps', 'moderation.authenticity_beta_feedback',
+  'moderation.authenticity_alpha', 'moderation.authenticity_alpha_steps', 'moderation.authenticity_alpha_feedback',
   'identity.users', 'identity.provider_links', 'identity.handles', 'identity.email_credentials', 'identity.refresh_token_families',
   'identity.auth_sessions', 'identity.consent_records', 'identity.user_region_preferences', 'identity.admin_memberships',
   'identity.email_verification_tokens', 'identity.password_reset_tokens', 'identity.account_events', 'identity.contact_emails',
@@ -37,7 +38,7 @@ const requiredTables = [
   'system.rate_limit_windows',
 ];
 const requiredViews = ['media.storage_ledgers'];
-const requiredFunctions = ['privacy.set_retention_rule', 'privacy.reconcile_subject_data_locations'];
+const requiredFunctions = ['privacy.set_retention_rule', 'privacy.reconcile_subject_data_locations', 'privacy.record_alpha_location', 'privacy.remove_alpha_location'];
 const failures = [];
 for (const file of requiredMigrations) {
   if (!fs.existsSync(path.join(migrationDir, file))) failures.push(`missing migration: ${file}`);

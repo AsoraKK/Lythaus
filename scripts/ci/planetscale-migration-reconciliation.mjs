@@ -255,6 +255,16 @@ const artifacts = {
     ...contractArtifacts['0016_transactional_email_envelope_boundary.sql'],
     { artifact: 'transactional_email_outbox_delivery_envelope_key_check', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint constraint_entry JOIN pg_class relation_entry ON relation_entry.oid = constraint_entry.conrelid JOIN pg_namespace relation_namespace ON relation_namespace.oid = relation_entry.relnamespace WHERE relation_namespace.nspname = 'system' AND relation_entry.relname = 'transactional_email_outbox' AND constraint_entry.conname = 'transactional_email_outbox_delivery_envelope_key_check' AND constraint_entry.contype = 'c' AND constraint_entry.convalidated IS TRUE AND pg_get_constraintdef(constraint_entry.oid) ILIKE '%delivery_envelope_ciphertext IS NULL%' AND pg_get_constraintdef(constraint_entry.oid) ILIKE '%delivery_envelope_encryption_key_version IS NOT NULL%') AS present" },
   ],
+  '0018_authenticity_private_alpha.sql': [
+    { artifact: 'authenticity_alpha_table', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha') IS NOT NULL AS present" },
+    { artifact: 'authenticity_alpha_steps_table', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha_steps') IS NOT NULL AS present" },
+    { artifact: 'authenticity_alpha_feedback_table', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha_feedback') IS NOT NULL AS present" },
+    { artifact: 'authenticity_alpha_owner_index', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha_owner_created') IS NOT NULL AS present" },
+    { artifact: 'authenticity_alpha_expiry_index', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha_expiry') IS NOT NULL AS present" },
+    { artifact: 'authenticity_alpha_purpose_check', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'upload_sessions_purpose_check' AND pg_get_constraintdef(oid) ILIKE '%authenticity_alpha%') AS present" },
+    { artifact: 'record_alpha_location_function', kind: 'schema_artifact', sql: "SELECT to_regprocedure('privacy.record_alpha_location(uuid,uuid)') IS NOT NULL AS present" },
+    { artifact: 'remove_alpha_location_function', kind: 'schema_artifact', sql: "SELECT to_regprocedure('privacy.remove_alpha_location(uuid,uuid)') IS NOT NULL AS present" },
+  ],
 };
 
 export const migrationPostconditions = Object.fromEntries(

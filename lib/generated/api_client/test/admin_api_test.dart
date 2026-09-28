@@ -260,12 +260,33 @@ void main() {
       // TODO
     });
 
+    // Read private alpha diagnostics
+    //
+    //Future<AlphaAdminCase> getAdminAuthenticityPrivateAlphaCase(String caseId) async
+    test('test getAdminAuthenticityPrivateAlphaCase', () async {
+      // TODO
+    });
+
+    // Read a quarantined private alpha image
+    //
+    //Future getAdminAuthenticityPrivateAlphaImage(String caseId) async
+    test('test getAdminAuthenticityPrivateAlphaImage', () async {
+      // TODO
+    });
+
     // List private beta review cases
     //
     // Private, non-enforcing beta. Responses are no-store. Polling never starts inference.
     //
     //Future<BetaCaseList> listAdminAuthenticityBetaCases() async
     test('test listAdminAuthenticityBetaCases', () async {
+      // TODO
+    });
+
+    // List private alpha cases for authorized administrators
+    //
+    //Future<AlphaAdminCaseList> listAdminAuthenticityPrivateAlphaCases() async
+    test('test listAdminAuthenticityPrivateAlphaCases', () async {
       // TODO
     });
 
@@ -289,6 +310,20 @@ void main() {
     //
     //Future<BetaActionResponse> requestAdminAuthenticityBetaAdvice(String caseId, BetaFeedback betaFeedback) async
     test('test requestAdminAuthenticityBetaAdvice', () async {
+      // TODO
+    });
+
+    // Request one bounded private alpha explanation
+    //
+    //Future<AlphaAction> requestAdminAuthenticityPrivateAlphaAdvice(String caseId, AlphaFeedback alphaFeedback) async
+    test('test requestAdminAuthenticityPrivateAlphaAdvice', () async {
+      // TODO
+    });
+
+    // Record an administrator private alpha review
+    //
+    //Future<AlphaAction> reviewAdminAuthenticityPrivateAlphaCase(String caseId, AlphaFeedback alphaFeedback) async
+    test('test reviewAdminAuthenticityPrivateAlphaCase', () async {
       // TODO
     });
 

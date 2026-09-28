@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "lythaus-authenticity-private-alpha-readiness-v1",
+  "source": {
+    "baseSha": "8c5f7ffed09653d05aeaed3c09a88e48e683071c",
+    "branch": "feat/authenticity-private-alpha",
+    "validatedSourceSha": null,
+    "productionSourceSha": null
+  },
+  "scope": "AUTHOR_AND_ADMIN_ONLY_PRIVATE_FLUTTER_ALPHA",
+  "publicEnforcement": "PUBLIC_ENFORCEMENT_NOT_APPROVED",
+  "components": {
+    "openaiSafety": { "text": "IMPLEMENTED_GATED", "image": "IMPLEMENTED_GATED", "liveCalls": 0 },
+    "safeA": { "state": "IMPLEMENTED_GATED", "realCalls": 0, "frozen": { "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35", "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e", "preprocessing": "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1", "threshold": 0.5864923000335693, "comparison": ">=" } },
+    "forensics": { "state": "IMPLEMENTED_DETERMINISTIC" },
+    "moondream": { "state": "IMPLEMENTED_FEATURE_GATED", "liveCalls": 0, "role": "BOUNDED_VISUAL_OBSERVER" },
+    "gptOss": { "state": "IMPLEMENTED_FEATURE_GATED", "liveCalls": 0, "model": "@cf/openai/gpt-oss-20b", "role": "MISSINGNESS_EXPLANATION_ONLY" },
+    "textAuthorship": "UNAVAILABLE",
+    "ef2": "MEASUREMENT_ONLY",
+    "ef5": "UNAVAILABLE"
+  },
+  "limits": { "maxFileBytes": 10485760, "maxDecodedPixels": 16777216, "caseAgeMinutes": 15, "adviserAttemptsPerCase": 1 },
+  "testing": { "protocolTests": "PASSED", "flutterTargetedAnalyze": "PASSED", "ordinaryInputEvaluation": "NOT_RUN", "liveAppAcceptance": "NOT_RUN", "rollbackObserved": "NOT_RUN" },
+  "deployment": { "worker": "NOT_DEPLOYED", "flutter": "NOT_DEPLOYED", "migration0018": "NOT_APPLIED", "servingImageDigest": null },
+  "cost": { "providerCallsReserved": false, "measuredCaseReservationUsd": null, "billedUsd": null },
+  "ownerActions": ["Approve finite Safety/Moondream/GPT-OSS provider-call envelope", "Approve exact reviewed deployment and migration scope after CI", "Provide current usage evidence before activation" ]
+}

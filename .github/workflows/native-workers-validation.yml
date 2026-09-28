@@ -112,7 +112,7 @@ jobs:
       - run: npm run typecheck:native
       - run: npm ci --ignore-scripts --prefix apps/lythaus-authenticity-runtime
       - run: npx tsc -p apps/lythaus-authenticity-runtime/tsconfig.json --noEmit
-      - run: node --experimental-strip-types --test packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs
+      - run: node --experimental-strip-types --test packages/authenticity/tests/private-alpha.test.mjs packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs
       - run: node --test scripts/tests/authenticity-beta-release.test.mjs
       - run: python3 apps/lythaus-authenticity-runtime/container/test_artifacts.py
       - run: python3 scripts/tests/test_beta_cpu_smoke.py
