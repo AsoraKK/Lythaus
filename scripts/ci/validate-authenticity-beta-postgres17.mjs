@@ -65,10 +65,9 @@ try {
   // Migration 0018 intentionally supersedes upload_sessions constraints while
   // preserving every other 0017 beta relation contract. Validate that historical
   // shape explicitly, then validate the alpha migration's final constraints.
-  assertCompleteMigrationPostconditions({
-    ...betaSchema,
-    artifacts: betaSchema.artifacts.filter(({ artifact }) => artifact !== 'relation:media.upload_sessions'),
-  });
+  const preservedBetaArtifacts = betaSchema.artifacts.filter(({ artifact }) => artifact !== 'relation:media.upload_sessions');
+  const missingPreservedBetaArtifacts = preservedBetaArtifacts.filter(({ present }) => !present).map(({ artifact }) => artifact);
+  if (missingPreservedBetaArtifacts.length) throw new Error(`canonical postcondition verification failed for 0017_authenticity_beta.sql: ${missingPreservedBetaArtifacts.join(', ')}`);
   const [alphaSchema] = await classifyMigrationState(admin,['0018_authenticity_private_alpha.sql']);
   assertCompleteMigrationPostconditions(alphaSchema);
   for(const relation of ['moderation.authenticity_beta','moderation.authenticity_beta_steps','moderation.authenticity_beta_feedback','media.upload_sessions','system.cost_budget_reservations']) {
