@@ -9,7 +9,7 @@ rights remain separately reviewed.
 
 | Candidate | Role | Code licence | Weights/data | Technical fit | Decision |
 |---|---|---|---|---|---|
-| SAFE | Teacher | Apache-2.0 repository and published checkpoint path | Root Apache-2.0 licence supports a provisional reliance record; checkpoint-specific scope and training-data provenance are not explicit | Strong transformation/generalisation research; upstream training uses four GPUs; CPU inference and RAM unmeasured | `LICENCE_RELIANCE_REVIEW` |
+| SAFE | Teacher | Apache-2.0 repository and published checkpoint path | Owner accepted bounded Apache-2.0 reliance; checkpoint-specific scope and training-data provenance remain explicitly uncertain | Strong transformation/generalisation research; upstream training uses four GPUs; CPU inference and RAM unmeasured | `OWNER_ACCEPTED_LICENCE_RELIANCE` |
 | GRIP CLIP | Control/teacher | Apache-2.0 repository | Git-LFS weights, upstream CLIP/open_clip and data rights unresolved | Lightweight CLIP strategy with reported degraded/unseen-generator robustness; upstream example is CUDA-oriented | `NEEDS_PERMISSION` |
 | LaRE2 | Reconstruction experiment | Apache-2.0 repository | DIFT/LASTED dependencies, weights and GenImage rights unresolved | Lower extraction cost than full reconstruction in the paper; still requires foundation models and GPU-oriented research stack | `RESEARCH_ONLY` |
 | DIRE | Reconstruction experiment | No repository licence verified | Diffusion reconstruction dependencies, weights and dataset rights unresolved | Established reconstruction evidence but high compute and latency for escalation-only use | `RESEARCH_ONLY` |
@@ -37,9 +37,11 @@ The detailed, owner-reviewable record is
 - **Dependencies:** PyTorch, torchvision, DWT, and other dependency terms are
   reviewed separately.
 - **Distillation:** `DO_NOT_TRAIN`.
-- **Classification:** `LICENCE_RELIANCE_REVIEW`; no separate maintainer
-  permission is presumed universally necessary. Owner/legal review must record
-  whether the root licence is relied on for the included binary checkpoint.
+- **Classification:** `OWNER_ACCEPTED_LICENCE_RELIANCE`; no separate maintainer
+  permission is presumed necessary on the evidence reviewed. The owner
+  acceptance covers bounded private evaluation and intended private
+  commercial-beta inference/hosting, while checkpoint-scope uncertainty and
+  training-data provenance remain visible and reopenable.
 
 ## GRIP decision package
 

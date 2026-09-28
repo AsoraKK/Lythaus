@@ -42,7 +42,7 @@ export const MODEL_REGISTRY: readonly ModelManifest[] = [
     codeRepositoryUrl: 'https://github.com/ouxiang-li/safe',
     licence: 'Apache-2.0 (repository code)',
     licenceEvidenceUrl: 'https://github.com/ouxiang-li/safe',
-    weightLicence: 'PUBLISHED_APACHE_2_0_CHECKPOINT_SCOPE_REVIEW_REQUIRED',
+    weightLicence: 'OWNER_ACCEPTED_APACHE_2_0_RELIANCE_SCOPE_UNCERTAINTY_RETAINED',
     weightLicenceEvidenceUrl: 'https://github.com/Ouxiang-Li/SAFE/blob/4e998724651b227def64f5be0cd60c0aa1552c35/LICENSE',
     commercialUseStatus: 'UNKNOWN',
     distillationSuitability: 'CONDITIONAL',

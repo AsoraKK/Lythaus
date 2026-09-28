@@ -1,9 +1,26 @@
 # SAFE-A v0.1 licence-reliance record
 
-**Status:** `OWNER_REVIEW_REQUIRED`; this is a licence-scope record, not a
-maintainer permission letter and not a release receipt.
+**Status:** `OWNER_ACCEPTED_PUBLISHED_APACHE_2_0_RELIANCE`; this is a
+licence-scope record, not a maintainer permission letter, legal certification,
+blanket third-party clearance, or release receipt.
 
 **Review date:** 2026-09-28
+
+## Owner decision
+
+On 2026-09-28, the Lythaus owner accepted the published Apache-2.0
+licence-reliance basis documented here, using correction commit
+`d76fed1454ae51d03b1399e2a00300da64fce5ef` as the evidence reference. The
+accepted scope is bounded private evaluation and intended private
+commercial-beta inference and hosting of the exact frozen checkpoint, subject
+to the Apache-2.0 notice, modification, patent, trademark and warranty terms
+recorded below.
+
+The checkpoint-scope uncertainty remains recorded because the root licence
+does not name the binary explicitly. No separate maintainer permission is
+claimed or required on the evidence currently reviewed. Training-data
+provenance remains `UNKNOWN`, and this decision is reopened if material
+contrary evidence or additional applicable terms are discovered.
 
 ## Pinned evidence
 
@@ -57,15 +74,17 @@ pinned tree or the public issue history. Issue comments from Ouxiang-Li about
 JPEG robustness and four-class ProGAN training are scientific clarifications,
 not licence restrictions.
 
-**Question for owner/legal review or, if required, the SAFE maintainer:**
+**Narrow question retained for reopening only if contrary evidence appears:**
 
 > Does the root Apache License 2.0 at commit `4e998724651b227def64f5be0cd60c0aa1552c35` apply to the included `checkpoint/checkpoint-best.pth` for commercial inference and private hosted serving, subject to Apache-2.0 notices and without granting SAFE trademarks?
 
 No question about Lythaus's runner, budget, retention schedule, deployment
-process, or cohort is part of this licence question.
+process, or cohort is part of this licence record. No maintainer contact is
+being initiated merely because the checkpoint is not named expressly.
 
 ## Release interpretation
 
-Until the owner records acceptance of this reliance record or resolves the
-narrow question, the release may keep a rights-review gate. That gate is not a
-claim that a separate maintainer permission letter is universally required.
+The owner acceptance removes the published-licence reliance blocker for the
+bounded scope above. The retained checkpoint-scope uncertainty and unknown
+training-data provenance remain visible, and other fixture, runtime, budget,
+retention, deployment and release gates remain independent.
