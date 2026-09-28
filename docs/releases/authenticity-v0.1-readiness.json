@@ -22,7 +22,20 @@
     "preprocessing": "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1",
     "threshold": 0.5864923000335693,
     "comparison": ">=",
-    "rights": "RESEARCH_EVALUATION_ONLY_DEPLOYMENT_REVIEW_UNRESOLVED"
+    "rights": "PUBLISHED_APACHE_2_0_CHECKPOINT_SCOPE_REVIEW_REQUIRED",
+    "licenseRelianceRecord": "docs/models/safe-a-v0.1-license-reliance.md",
+    "licenseEvidence": {
+      "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+      "licensePath": "LICENSE",
+      "licenseBlobSha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "checkpointPath": "checkpoint/checkpoint-best.pth",
+      "checkpointBytes": 5840638,
+      "checkpointSha256Verified": true,
+      "checkpointSpecificTermsFound": false,
+      "commercialUseBanFound": false,
+      "trainingDataRights": "UNKNOWN_NOT_A_PROVED_INFERENCE_RESTRICTION",
+      "narrowScopeQuestionOpen": true
+    }
   },
   "adviser": {"role": "GPT_OSS_BETA_ADVISOR", "model": "@cf/openai/gpt-oss-20b", "hostedWeightHash": null, "liveCalls": 0},
   "observer": "DISABLED",
@@ -71,5 +84,5 @@
     "liveAppAcceptance": null,
     "rollbackObserved": false
   },
-  "pending": ["checkpoint rights evidence for exact evaluation and hosted scopes", "protected private Linux evaluation access", "real CPU parity, full image build, maximum-input sizing and runtime supply-chain validation", "verified Cloudflare allowances and off-ledger commitments with scoped budget approval", "reviewed merge", "authorized migration and disabled deployment", "actual private app and advisory acceptance", "deployed rollback"]
+  "pending": ["owner review of the published Apache-2.0 checkpoint-scope reliance record or its one narrow clarification", "protected private Linux evaluation access and separate fixture/image permissions", "real CPU parity, full image build, maximum-input sizing and runtime supply-chain validation", "verified Cloudflare allowances and off-ledger commitments with scoped budget approval", "reviewed merge", "authorized migration and disabled deployment", "actual private app and advisory acceptance", "deployed rollback"]
 }
