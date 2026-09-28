@@ -214,7 +214,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('gold'), findsOneWidget);
+      expect(find.text('Subscription: gold'), findsOneWidget);
       expect(find.text('Editorial Contributor'), findsNothing);
       expect(find.text('Trusted'), findsNothing);
       expect(find.text('Editor'), findsNothing);

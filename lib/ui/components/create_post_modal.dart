@@ -126,7 +126,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
       }
     });
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.all(spacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -160,6 +160,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
             controller: controller,
             onChanged: notifier.updateText,
             maxLines: 4,
+            label: 'Your post',
             placeholder: 'Share an update...',
             errorText: state.validationError,
           ),

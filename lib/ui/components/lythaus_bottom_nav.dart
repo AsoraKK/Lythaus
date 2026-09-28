@@ -32,6 +32,10 @@ class LythausBottomNav extends ConsumerWidget {
         icon: Icon(Icons.person_outline),
         label: 'Profile',
       ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.redeem_outlined),
+        label: 'Rewards',
+      ),
     ];
 
     final orderedItems = leftHanded ? items.reversed.toList() : items;

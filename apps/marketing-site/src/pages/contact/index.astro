@@ -1,37 +1,25 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import SecondaryLayout from '../../layouts/SecondaryLayout.astro';
 ---
-<BaseLayout
+<SecondaryLayout
   title="Contact"
   description="Get in touch with the Lythaus team."
   canonicalPath="/contact"
 >
   <section class="section">
-    <h1>Contact Us</h1>
-    <p>
-      Have a question, suggestion, or need support? We would love to hear from
-      you.
-    </p>
-
-    <form class="contact-form" data-contact>
-      <label for="name">Name</label>
-      <input type="text" id="name" name="name" required />
-
-      <label for="email">Email</label>
-      <input type="email" id="email" name="email" required />
-
-      <label for="subject">Subject</label>
-      <select id="subject" name="subject">
-        <option value="general">General inquiry</option>
-        <option value="support">Support</option>
-        <option value="feedback">Feedback</option>
-        <option value="press">Press</option>
-      </select>
-
-      <label for="message">Message</label>
-      <textarea id="message" name="message" rows="5" required></textarea>
-
-      <button class="button primary" type="submit">Send message</button>
-    </form>
+    <span class="eyebrow">Help and support</span>
+    <h1>Contact Lythaus</h1>
+    <p>Find account guidance in <a href="/help">Help</a>, or use the contact details published in our policies.</p>
+    <div class="contact-options">
+      <div>
+        <h2>General support</h2>
+        <p><a class="text-link" href="mailto:support@lythaus.app">support@lythaus.app</a></p>
+        <p>This opens your email app. Do not include passwords, verification links, or reset tokens.</p>
+      </div>
+      <div>
+        <h2>Privacy and safety</h2>
+        <p>For personal data requests, see the <a href="/privacy#contact">Privacy Policy</a>. For reporting and appeals guidance, see the <a href="/guidelines#appeals">Community Guidelines</a>.</p>
+      </div>
+    </div>
   </section>
-</BaseLayout>
+</SecondaryLayout>

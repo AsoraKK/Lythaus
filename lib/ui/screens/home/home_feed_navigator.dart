@@ -106,6 +106,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
 
   void _onFeedSelected(int index) {
     setState(() => _activeIndex = index);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _pageController.jumpToPage(index);
+      return;
+    }
     _pageController.animateToPage(
       index,
       duration: LythMotion.standard,
@@ -203,7 +207,8 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
-      builder: (_) => const FeedControlPanel(),
+      isScrollControlled: true,
+      builder: (_) => const SingleChildScrollView(child: FeedControlPanel()),
     );
   }
 

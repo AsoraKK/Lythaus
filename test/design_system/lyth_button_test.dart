@@ -37,7 +37,7 @@ void main() {
     expect(find.byType(OutlinedButton), findsOneWidget);
   });
 
-  testWidgets('loading state replaces label with progress indicator', (
+  testWidgets('loading state preserves hidden label and blocks submission', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -46,7 +46,17 @@ void main() {
 
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.text('Saving'), findsNothing);
+    final visibility = tester.widget<Visibility>(
+      find
+          .ancestor(of: find.text('Saving'), matching: find.byType(Visibility))
+          .first,
+    );
+    expect(visibility.visible, isFalse);
+    expect(visibility.maintainSize, isTrue);
+    expect(
+      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+      isNull,
+    );
   });
 
   testWidgets('iconAfter renders icon after label', (tester) async {
@@ -69,7 +79,7 @@ void main() {
       ),
     );
 
-    expect(row.children.first, isA<Text>());
+    expect((row.children.first as Flexible).child, isA<Text>());
     expect(row.children.last, isA<Icon>());
   });
 

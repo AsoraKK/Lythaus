@@ -75,9 +75,7 @@ class LythEmptyState extends StatelessWidget {
             Icon(
               icon,
               size: iconSize,
-              color:
-                  iconColor ??
-                  context.colorScheme.outline.withValues(alpha: 0.5),
+              color: iconColor ?? context.colorScheme.onSurfaceVariant,
             ),
 
             SizedBox(height: context.spacing.lg.toDouble()),
@@ -97,7 +95,7 @@ class LythEmptyState extends StatelessWidget {
               Text(
                 subtitle!,
                 style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: context.colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),

@@ -486,7 +486,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Search'), findsOneWidget);
-      expect(find.textContaining('Search across feeds'), findsOneWidget);
+      expect(
+        find.textContaining('Find posts by tag across your feeds.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('top bar trending button opens trending feed', (tester) async {

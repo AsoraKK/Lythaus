@@ -180,10 +180,19 @@ void main() {
       expect(light.surface, isNot(dark.surface));
     });
 
-    test('dark primary is the same warm ivory as light', () {
+    test('each appearance has an accessible amber action treatment', () {
       final light = LythColorSchemes.light();
       final dark = LythColorSchemes.dark();
-      expect(light.primary, equals(dark.primary));
+      for (final scheme in [light, dark]) {
+        expect(
+          LythColorSchemes.contrastRatio(scheme.primary, scheme.surface),
+          greaterThanOrEqualTo(4.5),
+        );
+        expect(
+          LythColorSchemes.contrastRatio(scheme.onPrimary, scheme.primary),
+          greaterThanOrEqualTo(4.5),
+        );
+      }
     });
   });
 }

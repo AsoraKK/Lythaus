@@ -115,14 +115,16 @@ class _ReceiptContent extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
           child: Row(
             children: [
-              Text(
-                'Post Receipt',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              Expanded(
+                child: Text(
+                  'Post Receipt',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
               ),
-              const Spacer(),
               IconButton(
+                tooltip: 'Close receipt',
                 onPressed: () => Navigator.of(context).maybePop(),
                 icon: const Icon(Icons.close),
               ),
@@ -223,8 +225,8 @@ class _ReceiptEventTile extends StatelessWidget {
               runSpacing: 4,
               children: event.policyLinks
                   .map(
-                    (link) => InkWell(
-                      onTap: () => _launchUrl(link.url),
+                    (link) => TextButton(
+                      onPressed: () => _launchUrl(link.url),
                       child: Text(
                         link.title,
                         style: Theme.of(context).textTheme.labelMedium

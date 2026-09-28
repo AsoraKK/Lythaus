@@ -11,6 +11,7 @@ library design_system;
 export 'tokens/spacing.dart';
 export 'tokens/radius.dart';
 export 'tokens/motion.dart';
+export 'tokens/semantic_colors.dart';
 
 // Theme
 export 'theme/lyth_theme.dart';
@@ -19,6 +20,7 @@ export 'theme/lyth_theme_extensions.dart';
 export 'theme/theme_build_context_x.dart';
 
 // Components
+export 'components/lyth_avatar.dart';
 export 'components/lyth_button.dart';
 export 'components/lyth_text_field.dart';
 export 'components/lyth_text_input.dart';

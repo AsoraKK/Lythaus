@@ -101,14 +101,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final privateOption = find.text('Private').first;
+    final privateOption = find.text('Private');
     await tester.scrollUntilVisible(
       privateOption,
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-    await Scrollable.ensureVisible(tester.element(privateOption), alignment: 0.5);
+    await Scrollable.ensureVisible(
+      tester.element(privateOption),
+      alignment: 0.5,
+    );
     await tester.pumpAndSettle();
     expect(privateOption.hitTestable(), findsOneWidget);
     await tester.tap(privateOption);
@@ -180,14 +183,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final privateOption = find.text('Private').first;
+      final privateOption = find.text('Private');
       await tester.scrollUntilVisible(
         privateOption,
         300,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      await Scrollable.ensureVisible(tester.element(privateOption), alignment: 0.5);
+      await Scrollable.ensureVisible(
+        tester.element(privateOption),
+        alignment: 0.5,
+      );
       await tester.pumpAndSettle();
       expect(privateOption.hitTestable(), findsOneWidget);
       await tester.tap(privateOption);

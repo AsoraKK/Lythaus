@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 import 'package:lythaus/features/moderation/domain/moderation_queue_item.dart';
 
@@ -18,12 +19,12 @@ class ModerationQueueItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = context.semanticColors;
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.radius.card),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
           child: Column(
@@ -37,7 +38,7 @@ class ModerationQueueItemTile extends StatelessWidget {
                     item.type == ModerationItemType.appeal
                         ? Icons.groups_outlined
                         : Icons.flag_outlined,
-                    color: Colors.white,
+                    color: theme.colorScheme.onPrimary,
                   ),
                 ),
                 title: Text(
@@ -72,36 +73,33 @@ class ModerationQueueItemTile extends StatelessWidget {
                   _buildChip(
                     context,
                     label: _titleCase(item.queue),
-                    color: Colors.grey.shade700,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                   if (item.aiRiskBand != null)
                     _buildChip(
                       context,
                       label: item.aiRiskBand!,
-                      color: Colors.redAccent.shade100,
+                      color: colors['warning']!,
                     ),
                   if (item.isEscalated)
                     _buildChip(
                       context,
                       label: 'Escalated',
-                      color: Colors.amber.shade300,
+                      color: colors['warning']!,
                     ),
                   _buildChip(
                     context,
                     label: item.status,
-                    color: Colors.blueGrey,
+                    color: colors['info']!,
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                spacing: context.spacing.lg,
+                runSpacing: context.spacing.sm,
                 children: [
-                  const Icon(Icons.flag_outlined, size: 16),
-                  const SizedBox(width: 4),
                   Text('${item.reportCount} flags'),
-                  const SizedBox(width: 16),
-                  const Icon(Icons.fact_check_outlined, size: 16),
-                  const SizedBox(width: 4),
                   Text('${item.reviewerDecisions} assigned reviewer decisions'),
                 ],
               ),
@@ -114,9 +112,9 @@ class ModerationQueueItemTile extends StatelessWidget {
 
   Color _severityColor(BuildContext context, ModerationSeverityLevel severity) {
     return switch (severity) {
-      ModerationSeverityLevel.high => Colors.redAccent,
-      ModerationSeverityLevel.medium => Colors.orangeAccent,
-      ModerationSeverityLevel.low => Colors.greenAccent,
+      ModerationSeverityLevel.high => context.semanticColors['danger']!,
+      ModerationSeverityLevel.medium => context.semanticColors['warning']!,
+      ModerationSeverityLevel.low => context.semanticColors['info']!,
       ModerationSeverityLevel.unknown => Theme.of(context).colorScheme.primary,
     };
   }
@@ -127,9 +125,9 @@ class ModerationQueueItemTile extends StatelessWidget {
     required Color color,
   }) {
     return Chip(
-      label: Text(label),
-      backgroundColor: color.withValues(alpha: 0.15),
-      side: BorderSide(color: color.withValues(alpha: 0.4)),
+      label: Text(label, style: TextStyle(color: color)),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      side: BorderSide(color: Theme.of(context).colorScheme.outline),
     );
   }
 

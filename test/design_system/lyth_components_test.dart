@@ -105,7 +105,7 @@ void main() {
         matching: find.byType(Row),
       ),
     );
-    expect(row.children.first, isA<Text>());
+    expect((row.children.first as Flexible).child, isA<Text>());
   });
 
   testWidgets('LythButton loading replaces label with spinner', (tester) async {
@@ -126,6 +126,18 @@ void main() {
     await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.text('Loading'), findsNothing);
+    expect(
+      tester
+          .widget<Visibility>(
+            find
+                .ancestor(
+                  of: find.text('Loading'),
+                  matching: find.byType(Visibility),
+                )
+                .first,
+          )
+          .visible,
+      isFalse,
+    );
   });
 }

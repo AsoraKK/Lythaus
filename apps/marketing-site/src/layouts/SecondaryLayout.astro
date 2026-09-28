@@ -1,0 +1,163 @@
+---
+import tokens from '../../../../design/tokens.json';
+import regularFont from '../../../../assets/fonts/Manrope-Regular.ttf?url';
+import semiboldFont from '../../../../assets/fonts/Manrope-SemiBold.ttf?url';
+import '../styles/secondary.css';
+
+const {
+  title = 'Lythaus',
+  description = 'A calm, human-first publishing network.',
+  canonicalPath = '',
+  absoluteTitle = false,
+  noReferrer = false,
+  noIndex = false,
+} = Astro.props;
+const pageTitle = absoluteTitle ? title : `${title} | Lythaus`;
+const canonicalUrl = `${Astro.site?.origin ?? 'https://lythaus.co'}${canonicalPath}`;
+const navigation = [
+  { href: '/features', label: 'Features' },
+  { href: '/about', label: 'About' },
+  { href: '/pricing', label: 'Pricing' },
+  { href: '/help', label: 'Help' },
+];
+const helpArticle = ['/privacy', '/terms', '/guidelines', '/ai-moderation', '/contact'].includes(canonicalPath);
+const cssName = (key: string) => key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+const themeCss = Object.entries(tokens.color).map(([mode, colors]) => {
+  const declarations = Object.entries(colors).map(([key, value]) => `--ds-${cssName(key)}:${value}`).join(';');
+  const explicit = `html[data-secondary][data-appearance="${mode}"]{color-scheme:${mode};${declarations}}`;
+  const automatic = `html[data-secondary]:not([data-appearance]){color-scheme:${mode};${declarations}}`;
+  return explicit + (mode === 'light' ? automatic : `@media(prefers-color-scheme:dark){${automatic}}`);
+}).join('');
+const foundationCss = `html[data-secondary]{--ds-radius-control:${tokens.radius.control}px;--ds-radius-surface:${tokens.radius.surface}px;--ds-target:${tokens.layout.webTarget}px;--ds-article-width:${tokens.layout.articleWidth}px;--ds-motion:${tokens.motion.control}ms;--ds-brand-surface:${tokens.color.dark.canvas}}`;
+const fontCss = `@font-face{font-family:"Lythaus Interface";src:url("${regularFont}") format("truetype");font-weight:400;font-style:normal;font-display:swap}@font-face{font-family:"Lythaus Interface";src:url("${semiboldFont}") format("truetype");font-weight:600 800;font-style:normal;font-display:swap}`;
+---
+<!doctype html>
+<html lang="en" data-secondary>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    {noReferrer && <meta name="referrer" content="no-referrer" />}
+    {noIndex && <meta name="robots" content="noindex, nofollow, noarchive" />}
+    <meta name="theme-color" content={tokens.color.light.canvas} media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content={tokens.color.dark.canvas} media="(prefers-color-scheme: dark)" />
+    <title>{pageTitle}</title>
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon.png" sizes="64x64" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="apple-touch-icon" type="image/png" href="/apple-touch-icon.png" sizes="180x180" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="Lythaus" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <link rel="preload" as="font" type="font/ttf" href={regularFont} crossorigin />
+    <style is:inline set:html={fontCss + themeCss + foundationCss} />
+    <script is:inline>
+      (() => {
+        try {
+          const saved = localStorage.getItem('lythaus-secondary-appearance');
+          if (saved === 'light' || saved === 'dark') document.documentElement.dataset.appearance = saved;
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body class="secondary-page">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="secondary-header">
+      <a class="secondary-brand" href="/" aria-label="Lythaus home">
+        <span class="brand-mark"><img src="/brand/lythaus-mark.svg" alt="" width="28" height="28" /></span>
+        <span>Lythaus</span>
+      </a>
+      <nav class="secondary-nav" aria-label="Main navigation">
+        {navigation.map(({ href, label }) => <a href={href} aria-current={canonicalPath === href ? 'page' : undefined}>{label}</a>)}
+      </nav>
+      <div class="secondary-header-actions">
+        <a class="button secondary app-link" href="https://app.lythaus.co">Open app <span aria-hidden="true">↗</span></a>
+        <details class="secondary-menu">
+          <summary>Menu</summary>
+          <nav aria-label="Mobile navigation">
+            {navigation.map(({ href, label }) => <a href={href} aria-current={canonicalPath === href ? 'page' : undefined}>{label}</a>)}
+            <a href="/sign-in">Sign in</a>
+            <a href="https://app.lythaus.co">Open app</a>
+          </nav>
+        </details>
+      </div>
+    </header>
+    <main class="secondary-main" id="main-content" tabindex="-1">
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          {helpArticle && <li><a href="/help">Help</a></li>}
+          <li aria-current="page">{title}</li>
+        </ol>
+      </nav>
+      <slot />
+    </main>
+    <footer class="secondary-footer">
+      <div class="footer-intro"><a class="secondary-brand" href="/">Lythaus</a><p>A calmer place for human ideas.</p></div>
+      <nav aria-label="Footer navigation">
+        <a href="/help">Help</a><a href="/contact">Contact</a><a href="/guidelines">Guidelines</a>
+        <a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/invite">Redeem invite</a>
+      </nav>
+      <div class="appearance-control" hidden>
+        <label for="secondary-appearance">Appearance</label>
+        <select id="secondary-appearance"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>
+      </div>
+    </footer>
+    <script is:inline>
+      (() => {
+        const appearance = document.getElementById('secondary-appearance');
+        if (appearance instanceof HTMLSelectElement) {
+          appearance.value = document.documentElement.dataset.appearance || 'system';
+          appearance.closest('.appearance-control').hidden = false;
+          appearance.addEventListener('change', () => {
+            if (appearance.value === 'system') delete document.documentElement.dataset.appearance;
+            else document.documentElement.dataset.appearance = appearance.value;
+            try {
+              if (appearance.value === 'system') localStorage.removeItem('lythaus-secondary-appearance');
+              else localStorage.setItem('lythaus-secondary-appearance', appearance.value);
+            } catch {}
+          });
+        }
+        document.querySelectorAll('.auth-form input[type="password"]').forEach((input) => {
+          if (!(input instanceof HTMLInputElement)) return;
+          const field = document.createElement('div');
+          field.className = 'password-field';
+          input.replaceWith(field);
+          field.append(input);
+          const toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'password-toggle';
+          toggle.textContent = 'Show';
+          toggle.setAttribute('aria-label', `Show ${input.labels?.[0]?.textContent?.toLowerCase() || 'password'}`);
+          toggle.setAttribute('aria-controls', input.id);
+          toggle.setAttribute('aria-pressed', 'false');
+          toggle.addEventListener('click', () => {
+            const visible = input.type === 'password';
+            input.type = visible ? 'text' : 'password';
+            toggle.textContent = visible ? 'Hide' : 'Show';
+            toggle.setAttribute('aria-pressed', String(visible));
+          });
+          field.append(toggle);
+        });
+        const menu = document.querySelector('.secondary-menu');
+        if (menu instanceof HTMLDetailsElement) {
+          document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && menu.open) {
+              menu.open = false;
+              menu.querySelector('summary').focus();
+            }
+          });
+          document.addEventListener('click', (event) => {
+            if (event.target instanceof Node && !menu.contains(event.target)) menu.open = false;
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

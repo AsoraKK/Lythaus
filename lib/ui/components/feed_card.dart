@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import 'package:lythaus/design_system/components/lyth_card.dart';
 import 'package:lythaus/design_system/components/lyth_chip.dart';
@@ -9,6 +10,7 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/tier_badge.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
 import 'package:lythaus/ui/components/receipt_drawer.dart';
+import 'package:lythaus/ui/components/authorship_disclosure.dart';
 
 class FeedCard extends StatelessWidget {
   const FeedCard({
@@ -37,7 +39,7 @@ class FeedCard extends StatelessWidget {
     final headline = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w700,
     );
-    final body = theme.textTheme.bodyMedium?.copyWith(height: 1.3);
+    final body = theme.textTheme.bodyLarge;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -60,23 +62,37 @@ class FeedCard extends StatelessWidget {
                       color: theme.colorScheme.secondary,
                     ),
                   ),
-                Expanded(child: Text(item.title, style: headline)),
-                if (showSource)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(sourceLabel, style: theme.textTheme.labelMedium),
-                      if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty)
-                        Padding(
-                          padding: EdgeInsets.only(left: spacing.xs),
-                          child: Icon(
-                            Icons.link,
-                            size: 14,
-                            color: theme.colorScheme.primary,
-                          ),
+                      Text(item.author, style: theme.textTheme.titleSmall),
+                      Text(
+                        DateFormat.yMMMd().add_jm().format(
+                          item.publishedAt.toLocal(),
+                        ),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      if (showSource && sourceLabel != item.author)
+                        Wrap(
+                          spacing: spacing.xs,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Source: $sourceLabel',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            if (item.sourceUrl?.isNotEmpty ?? false)
+                              Icon(
+                                Icons.link,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                          ],
                         ),
                     ],
                   ),
+                ),
                 if (canEdit && onEdit != null)
                   PopupMenuButton<String>(
                     tooltip: 'Post actions',
@@ -95,6 +111,10 @@ class FeedCard extends StatelessWidget {
                   ),
               ],
             ),
+            if (item.title.isNotEmpty) ...[
+              SizedBox(height: spacing.sm),
+              Text(item.title, style: headline),
+            ],
             SizedBox(height: spacing.xs),
             if (item.imageUrl != null || item.videoThumbnailUrl != null)
               _MediaPreview(
@@ -111,10 +131,11 @@ class FeedCard extends StatelessWidget {
               runSpacing: spacing.xs,
               children: [
                 TierBadge(label: _contentLabel(item.contentType)),
-                LythChip(label: item.authorshipLabel),
                 ...item.tags.map((tag) => LythChip(label: tag)),
               ],
             ),
+            SizedBox(height: spacing.sm),
+            AuthorshipDisclosure(label: item.authorshipLabel),
             TrustStripRow(
               summary: item.trustSummary,
               onTap: () => ReceiptDrawer.show(context, item.id),
@@ -164,10 +185,16 @@ class _MediaPreview extends StatelessWidget {
                   alpha: 0.4,
                 ),
                 alignment: Alignment.center,
-                child: Icon(
-                  Icons.broken_image_outlined,
-                  size: 32,
-                  color: scheme.onSurface.withValues(alpha: 0.6),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.broken_image_outlined,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Media unavailable'),
+                  ],
                 ),
               ),
             ),

@@ -25,14 +25,15 @@ class TolerantGoldenFileComparator extends LocalFileComparator {
       await getGoldenBytes(golden),
     );
 
-    if (!result.passed && result.diffPercent <= tolerance * 100) {
-      return true;
-    }
-    if (!result.passed) {
+    try {
+      if (result.passed || result.diffPercent <= tolerance) {
+        return true;
+      }
       final error = await generateFailureOutput(result, golden, basedir);
       throw FlutterError(error);
+    } finally {
+      result.dispose();
     }
-    return result.passed;
   }
 }
 

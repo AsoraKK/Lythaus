@@ -1,12 +1,12 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import SecondaryLayout from '../layouts/SecondaryLayout.astro';
 
 const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
 ---
 
-<BaseLayout
+<SecondaryLayout
   title="Verify your email"
   description="Request a new Lythaus email verification link."
   canonicalPath="/resend-verification"
@@ -169,23 +169,4 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
       if (window.location.search) window.history.replaceState(null, '', '/resend-verification');
     }
   </script>
-</BaseLayout>
-
-<style>
-  .auth-page { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.7fr); gap: clamp(48px, 10vw, 140px); align-items: start; padding: clamp(82px, 13vw, 150px) 0 120px; }
-  .auth-intro h1 { margin-top: 22px; }
-  .auth-intro p { max-width: 520px; color: var(--muted); font-size: 18px; line-height: 1.7; }
-  .auth-form { display: grid; gap: 10px; padding: 30px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-  .auth-form label { color: var(--muted); font-size: 13px; }
-  .auth-form input { width: 100%; min-height: 50px; padding: 0 15px; color: var(--text); background: #0d0f10; border: 1px solid var(--line-strong); border-radius: 10px; outline: none; }
-  .auth-form input:focus { border-color: rgba(223,231,220,.7); box-shadow: 0 0 0 3px rgba(223,231,220,.08); }
-  .auth-form input[aria-invalid='true'] { border-color: #f1a7a0; }
-  .auth-field-note, .auth-footnote { margin: 0 0 8px; color: var(--quiet); font-size: 12px; line-height: 1.5; }
-  .auth-footnote { margin-top: 4px; }
-  .auth-turnstile-shell { min-height: 65px; margin: 8px 0; }
-  .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-  .auth-status:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
-  .auth-status[data-state='error'] { color: #f1a7a0; }
-  .auth-status[data-state='success'] { color: #b8d5b5; }
-  @media (max-width: 760px) { .auth-page { grid-template-columns: 1fr; padding-top: 72px; } .auth-form { padding: 22px; } }
-</style>
+</SecondaryLayout>

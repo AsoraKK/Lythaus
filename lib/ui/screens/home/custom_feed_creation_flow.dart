@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -25,39 +26,41 @@ class _CustomFeedCreationFlowState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Custom Feed'),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: _buildStep(_currentStep),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.md),
-          child: Row(
-            children: [
-              if (_currentStep > 0)
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Create Custom Feed'),
+          centerTitle: true,
+          elevation: 0,
+        ),
+        body: _buildStep(_currentStep),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(Spacing.md),
+            child: Row(
+              children: [
+                if (_currentStep > 0)
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _previousStep,
+                      child: const Text('Back'),
+                    ),
+                  ),
+                if (_currentStep > 0) const SizedBox(width: Spacing.sm),
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: _previousStep,
-                    child: const Text('Back'),
+                  child: FilledButton(
+                    onPressed: _isCreating ? null : _handlePrimaryAction,
+                    child: _isCreating
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(_currentStep >= 4 ? 'Create' : 'Next'),
                   ),
                 ),
-              if (_currentStep > 0) const SizedBox(width: Spacing.sm),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _isCreating ? null : _handlePrimaryAction,
-                  child: _isCreating
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(_currentStep >= 4 ? 'Create' : 'Next'),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

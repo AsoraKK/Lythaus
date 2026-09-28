@@ -1,10 +1,10 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import SecondaryLayout from '../layouts/SecondaryLayout.astro';
 
 const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
 ---
 
-<BaseLayout
+<SecondaryLayout
   title="Confirm your email"
   description="Confirm the email address for your Lythaus account."
   canonicalPath="/verify-email"
@@ -98,22 +98,4 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
       });
     }
   </script>
-</BaseLayout>
-
-<style>
-  .auth-page { display: grid; grid-template-columns: minmax(0, 720px); justify-content: center; align-items: start; padding: clamp(82px, 13vw, 150px) 0 120px; }
-  .auth-page--single { min-height: 52vh; }
-  .auth-intro { text-align: center; }
-  .auth-intro h1 { margin-top: 22px; }
-  .auth-intro > p { max-width: 620px; margin: 22px auto 0; color: var(--muted); font-size: 18px; line-height: 1.7; }
-  .auth-form { display: grid; gap: 10px; padding: 30px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-  .auth-form--centered { max-width: 480px; margin: 38px auto 0; text-align: left; }
-  .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-  .auth-status:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
-  .auth-status[data-state='error'] { color: #f1a7a0; }
-  .auth-status[data-state='success'] { color: #b8d5b5; }
-  .auth-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
-  .auth-actions [hidden] { display: none; }
-  .auth-actions .text-link { color: var(--muted); font-size: 13px; text-decoration: underline; }
-  @media (max-width: 560px) { .auth-page { padding-top: 72px; } .auth-form { padding: 22px; } .auth-actions { align-items: flex-start; flex-direction: column; } }
-</style>
+</SecondaryLayout>

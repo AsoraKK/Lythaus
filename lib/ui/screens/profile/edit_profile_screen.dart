@@ -2,6 +2,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/core/network/dio_client.dart';
@@ -40,35 +41,37 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Edit profile')),
-      body: ListView(
-        padding: const EdgeInsets.all(Spacing.md),
-        children: [
-          TextField(
-            controller: _displayName,
-            maxLength: 80,
-            decoration: const InputDecoration(labelText: 'Display name'),
-          ),
-          const SizedBox(height: Spacing.sm),
-          TextField(
-            controller: _bio,
-            maxLength: 500,
-            maxLines: 5,
-            decoration: const InputDecoration(labelText: 'Bio'),
-          ),
-          const SizedBox(height: Spacing.md),
-          FilledButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: _saving
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.save_outlined),
-            label: const Text('Save profile'),
-          ),
-        ],
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Edit profile')),
+        body: ListView(
+          padding: const EdgeInsets.all(Spacing.md),
+          children: [
+            TextField(
+              controller: _displayName,
+              maxLength: 80,
+              decoration: const InputDecoration(labelText: 'Display name'),
+            ),
+            const SizedBox(height: Spacing.sm),
+            TextField(
+              controller: _bio,
+              maxLength: 500,
+              maxLines: 5,
+              decoration: const InputDecoration(labelText: 'Bio'),
+            ),
+            const SizedBox(height: Spacing.md),
+            FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: _saving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_outlined),
+              label: const Text('Save profile'),
+            ),
+          ],
+        ),
       ),
     );
   }
