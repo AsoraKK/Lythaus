@@ -1,6 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+const sanitizedFailure = error => {
+  const code = error?.message && /^[A-Z0-9_]+$/.test(error.message) ? error.message : 'MATERIALIZATION_FAILED';
+  process.stderr.write(`PRIVATE_APPROVAL_MATERIALIZATION_REJECTED:${code}\n`);
+  process.exitCode = 1;
+};
+process.on('uncaughtException', sanitizedFailure);
+process.on('unhandledRejection', sanitizedFailure);
+
 const args = process.argv.slice(2);
 const value = (name) => {
   const index = args.indexOf(name);

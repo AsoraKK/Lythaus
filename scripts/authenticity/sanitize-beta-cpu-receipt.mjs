@@ -6,6 +6,9 @@ const output = args[args.indexOf('--output') + 1];
 if (!input || !output) throw new Error('RECEIPT_ARGUMENT_REQUIRED');
 const report = JSON.parse(fs.readFileSync(input, 'utf8'));
 if (!report || typeof report !== 'object' || !Array.isArray(report.attempts)) throw new Error('RECEIPT_INVALID');
+const externalPath = args.includes('--external-measurement') ? args[args.indexOf('--external-measurement') + 1] : null;
+const external = externalPath ? JSON.parse(fs.readFileSync(externalPath, 'utf8')) : null;
+if (external && external.scope !== 'WHOLE_CONTAINER_POST_RESPONSE') throw new Error('MEASUREMENT_SCOPE_INVALID');
 const counts = {};
 let parityPassed = 0;
 let parityFailed = 0;
@@ -27,6 +30,7 @@ const sanitized = {
   state: report.state,
   appAcceptance: report.appAcceptance === true,
   attempts: { total: report.attempts.length, states: counts, parityPassed, parityFailed },
-  measurements: { maxEndToEndMs, maxCgroupPeakBytes },
+  imageIdentity: report.imageIdentity ?? null,
+  measurements: { maxEndToEndMs, serverReportedMaxCgroupPeakBytes: maxCgroupPeakBytes, wholeContainerPeakBytes: external?.cgroupPeakBytes ?? null, memoryMeasurementScope: external?.scope ?? null },
 };
 fs.writeFileSync(output, JSON.stringify(sanitized, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });

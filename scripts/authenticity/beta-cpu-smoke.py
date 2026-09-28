@@ -41,6 +41,14 @@ def prepare(manifest, approval):
         raise ValueError("RUNTIME_IDENTITY_REQUIRED")
     if not re.fullmatch(r"[a-f0-9]{40}", approval.get("sourceSha", "")):
         raise ValueError("SOURCE_IDENTITY_REQUIRED")
+    if not re.fullmatch(r"[A-Za-z0-9._:-]{8,128}", approval.get("authorizationId", "")):
+        raise ValueError("AUTHORIZATION_ID_REQUIRED")
+    if approval.get("checkpointSha256") != CHECKPOINT or approval.get("preprocessing") != PREPROCESSING:
+        raise ValueError("FROZEN_MODEL_IDENTITY_MISMATCH")
+    if approval.get("maxSafeAttempts") != 16 or approval.get("maxActiveMinutes") != 30 or approval.get("maxFileBytes") != 10 * 1024 * 1024 or approval.get("maxDecodedPixels") != 16_777_216:
+        raise ValueError("EVALUATION_LIMIT_MISMATCH")
+    if approval.get("automaticRetries") is not False or approval.get("publicInferenceEndpoint") is not False:
+        raise ValueError("UNSAFE_EVALUATION_MODE")
     if not time.time() < approval.get("expiresAtEpochSeconds", 0) <= time.time() + 86400:
         raise ValueError("APPROVAL_EXPIRED")
     records = []
@@ -83,7 +91,7 @@ def prepare(manifest, approval):
                             buffer = io.BytesIO()
                             jpeg.save(buffer, format="PNG")
                 records.append(({**record, "sampleId": record["sampleId"] + ":" + operation, "descendant": True, "historicalScore": None}, buffer.getvalue()))
-    if len(records) != manifest["maxSafeAttempts"]:
+    if manifest.get("maxSafeAttempts") != 16 or manifest.get("maxActiveMinutes") != 30 or len(records) != manifest["maxSafeAttempts"]:
         raise ValueError("FROZEN_ATTEMPT_COUNT_MISMATCH")
     return records
 
@@ -93,6 +101,8 @@ def main():
     parser.add_argument("--approval", required=True, type=Path)
     parser.add_argument("--receipt", required=True, type=Path)
     parser.add_argument("--port", type=int, default=8080)
+    parser.add_argument("--preflight-only", action="store_true")
+    parser.add_argument("--image-identity", type=Path)
     args = parser.parse_args()
     if not 1024 <= args.port <= 65535:
         raise ValueError("INVALID_PORT")
@@ -106,7 +116,12 @@ def main():
     raw_approval = args.approval.read_bytes()
     approval = json.loads(raw_approval)
     records = prepare(manifest, approval)
-    report = {"schemaVersion": "lythaus-beta-cpu-smoke-v1", "sourceSha": approval["sourceSha"], "runtimeDigest": approval["runtimeDigest"], "approvalSha256": sha(raw_approval), "appAcceptance": False, "adviserCalls": 0, "attempts": [], "rawClassifierCountsHistoricalReuseOnly": {"TP": 0, "FN": 0, "FP": 0, "TN": 0, "unavailable": 0}, "state": "RUNNING"}
+    image_identity = None
+    if args.image_identity:
+        image_identity = json.loads(args.image_identity.read_text())
+        if image_identity.get("sourceSha") != approval["sourceSha"] or image_identity.get("identityKind") not in {"local_image_id", "registry_manifest_digest"} or not re.fullmatch(r"sha256:[a-f0-9]{64}", image_identity.get("imageId", "")):
+            raise ValueError("IMAGE_IDENTITY_INVALID")
+    report = {"schemaVersion": "lythaus-beta-cpu-smoke-v1", "sourceSha": approval["sourceSha"], "runtimeDigest": approval["runtimeDigest"], "approvalSha256": sha(raw_approval), "imageIdentity": image_identity, "appAcceptance": False, "adviserCalls": 0, "attempts": [], "rawClassifierCountsHistoricalReuseOnly": {"TP": 0, "FN": 0, "FP": 0, "TN": 0, "unavailable": 0}, "state": "RUNNING"}
     with output.open("x", encoding="utf-8") as handle:
         os.chmod(output, 0o600)
         def save():
@@ -115,6 +130,11 @@ def main():
             handle.truncate()
             handle.flush()
             os.fsync(handle.fileno())
+        if args.preflight_only:
+            report["state"] = "PREFLIGHT_COMPLETE_NOT_MODEL_EXECUTION"
+            report["preflight"] = {"recordCount": len(records), "maxSafeAttempts": approval["maxSafeAttempts"], "maxDecodedPixels": approval["maxDecodedPixels"]}
+            save()
+            return 0
         started = time.monotonic()
         for record, data in records:
             if time.monotonic() - started >= 30 * 60:
@@ -133,7 +153,7 @@ def main():
                 if len(raw) > 8 * 1024 * 1024:
                     raise ValueError("RESPONSE_LIMIT")
                 result = json.loads(raw)["result"]
-                if any(result.get(key) != value for key, value in binding.items()) or result.get("checkpoint") != CHECKPOINT or result.get("runtimeDigest") != approval["runtimeDigest"] or result.get("preprocessingHash") != approval["preprocessingHash"] or result.get("preprocessing") != PREPROCESSING or result.get("schemaVersion") != "lythaus-authenticity-beta-v0.1.0":
+                if any(result.get(key) != value for key, value in binding.items()) or result.get("checkpoint") != CHECKPOINT or result.get("runtimeDigest") != approval["runtimeDigest"] or result.get("preprocessingHash") != approval["preprocessingHash"] or result.get("preprocessing") != PREPROCESSING or result.get("schemaVersion") != "lythaus-authenticity-beta-v0.1.0" or (image_identity is not None and result.get("imageIdentity") != image_identity):
                     raise ValueError("RUNTIME_IDENTITY_MISMATCH")
                 if result.get("status") not in {"OK", "UNSUPPORTED", "TIMEOUT", "CHECKSUM_MISMATCH", "DECODE_FAILURE", "UNAVAILABLE", "INVALID_OUTPUT", "BLOCKED_RIGHTS", "BLOCKED_RUNTIME"}:
                     raise ValueError("INVALID_MODEL_STATUS")

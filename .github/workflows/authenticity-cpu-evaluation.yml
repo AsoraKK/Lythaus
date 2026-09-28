@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: lythaus-authenticity-private-cpu-evaluation
@@ -25,6 +26,7 @@ jobs:
       EVALUATION_BUNDLE_URL: ${{ secrets.AUTHENTICITY_EVALUATION_BUNDLE_URL }}
       EVALUATION_BUNDLE_TOKEN: ${{ secrets.AUTHENTICITY_EVALUATION_BUNDLE_TOKEN }}
       AUTHENTICITY_BETA_DISPATCH_SECRET: ${{ secrets.AUTHENTICITY_BETA_DISPATCH_SECRET }}
+      MODEL_VOLUME: lythaus-safe-model-${{ github.run_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -45,53 +47,100 @@ jobs:
           test -n "$EVALUATION_BUNDLE_URL"
           test -n "$EVALUATION_BUNDLE_TOKEN"
           test -n "$AUTHENTICITY_BETA_DISPATCH_SECRET"
-      - name: Download private evidence bundle without redirects
+      - name: Download and validate private evidence bundle
         shell: bash
         env:
           BUNDLE_PATH: ${{ runner.temp }}/authenticity-evaluation.tgz
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --max-redirs 0 \
+          curl --fail --silent --show-error --max-redirs 0 --max-filesize 268435456 \
             -H "Authorization: Bearer ${EVALUATION_BUNDLE_TOKEN}" \
             "$EVALUATION_BUNDLE_URL" -o "$BUNDLE_PATH"
+          python3 scripts/authenticity/validate-private-evaluation-bundle.py --archive "$BUNDLE_PATH"
           mkdir -m 700 "$RUNNER_TEMP/authenticity-evaluation"
           tar --extract --no-same-owner --no-same-permissions --file "$BUNDLE_PATH" --directory "$RUNNER_TEMP/authenticity-evaluation"
-          if find "$RUNNER_TEMP/authenticity-evaluation" -type l -print -quit | grep -q .; then
-            echo 'PRIVATE_BUNDLE_SYMLINK_FORBIDDEN' >&2
-            exit 1
-          fi
           test -f "$RUNNER_TEMP/authenticity-evaluation/approval.json"
           test -f "$RUNNER_TEMP/authenticity-evaluation/checkpoint.pth"
           test -f "$RUNNER_TEMP/authenticity-evaluation/models/resnet.py"
       - name: Materialize source-bound private approval
         run: node scripts/authenticity/materialize-private-evaluation.mjs --approval "$RUNNER_TEMP/authenticity-evaluation/approval.json" --root "$RUNNER_TEMP/authenticity-evaluation" --output "$RUNNER_TEMP/authenticity-approval.json" --source-sha "$RELEASE_SHA"
+      - name: Validate frozen model, rights, fixture and runtime preflight
+        run: node scripts/authenticity/validate-private-evaluation-approval.mjs --approval "$RUNNER_TEMP/authenticity-evaluation/approval.json" --root "$RUNNER_TEMP/authenticity-evaluation" --output "$RUNNER_TEMP/authenticity-preflight-identity.json" --source-sha "$RELEASE_SHA"
+      - name: Install the hash-pinned smoke client
+        run: >-
+          python3 -m pip install --disable-pip-version-check --no-deps --only-binary=:all: --require-hashes --quiet -r scripts/authenticity/evaluation-client-requirements.txt
+      - name: Complete preflight without checkpoint loading
+        run: python3 scripts/authenticity/beta-cpu-smoke.py --approval "$RUNNER_TEMP/authenticity-approval.json" --receipt "$RUNNER_TEMP/private-beta-preflight.json" --preflight-only
+      - name: Consume one-use evaluation authorization
+        id: consume
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: node scripts/authenticity/consume-evaluation-authorization.mjs --approval "$RUNNER_TEMP/authenticity-approval.json" --source-sha "$RELEASE_SHA" --output "$RUNNER_TEMP/consumed-authorization.json"
+      - name: Persist consumed authorization marker
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: ${{ steps.consume.outputs.artifact_name }}
+          path: ${{ runner.temp }}/consumed-authorization.json
+          retention-days: 2
+          if-no-files-found: error
       - name: Build pinned evaluation runtime
-        run: docker build --target evaluation --tag lythaus-safe-evaluation:${RELEASE_SHA} apps/lythaus-authenticity-runtime/container
+        run: docker build --target evaluation --file apps/lythaus-authenticity-runtime/container/Dockerfile --build-arg RELEASE_SHA="$RELEASE_SHA" --tag "lythaus-safe-evaluation:${RELEASE_SHA}" .
+      - name: Verify immutable local image identity
+        run: |
+          set -euo pipefail
+          docker image inspect "lythaus-safe-evaluation:${RELEASE_SHA}" > "$RUNNER_TEMP/evaluation-image-inspect.json"
+          node scripts/authenticity/verify-evaluation-image.mjs --inspect "$RUNNER_TEMP/evaluation-image-inspect.json" --output "$RUNNER_TEMP/evaluation-image-identity.json" --source-sha "$RELEASE_SHA"
+      - name: Stage only reviewed model artifacts
+        run: |
+          set -euo pipefail
+          python3 scripts/authenticity/stage-private-models.py --root "$RUNNER_TEMP/authenticity-evaluation" --output "$RUNNER_TEMP/authenticity-model"
+          docker volume create "$MODEL_VOLUME" >/dev/null
+          docker run --rm --user 0:0 \
+            --mount "type=bind,src=$RUNNER_TEMP/authenticity-model,dst=/input,readonly" \
+            --mount "type=volume,src=$MODEL_VOLUME,dst=/opt/safe" \
+            --entrypoint /bin/sh "lythaus-safe-evaluation:${RELEASE_SHA}" -ceu \
+            'install -d -o 65532 -g 65532 -m 0750 /opt/safe/models && install -o 65532 -g 65532 -m 0440 /input/checkpoint.pth /opt/safe/checkpoint.pth && install -o 65532 -g 65532 -m 0440 /input/models/resnet.py /opt/safe/models/resnet.py'
       - name: Start loopback-only runtime
         shell: bash
         run: |
           set -euo pipefail
           docker run --detach --rm --name lythaus-safe-evaluation \
+            --user 65532:65532 --cap-drop=ALL --security-opt=no-new-privileges --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=128m,uid=65532,gid=65532,mode=700 \
             --publish 127.0.0.1:18080:8080 \
             --env RUNTIME_DIGEST="$(node -e "const a=require(process.env.RUNNER_TEMP + '/authenticity-approval.json'); process.stdout.write(a.runtimeDigest)")" \
+            --env RUNTIME_IMAGE_IDENTITY="$(cat "$RUNNER_TEMP/evaluation-image-identity.json")" \
             --env AUTHENTICITY_BETA_DISPATCH_SECRET \
-            --volume "$RUNNER_TEMP/authenticity-evaluation:/opt/safe:ro" \
-            lythaus-safe-evaluation:${RELEASE_SHA}
+            --mount "type=volume,src=$MODEL_VOLUME,dst=/opt/safe,readonly" \
+            "lythaus-safe-evaluation:${RELEASE_SHA}"
           for ((attempt=1; attempt<=60; attempt++)); do curl --fail --silent http://127.0.0.1:18080/ready >/dev/null && exit 0; sleep 1; done
           exit 1
-      - name: Install the frozen smoke client dependency
-        run: python -m pip install --disable-pip-version-check --no-deps --require-hashes --quiet pillow==12.3.0 --hash=sha256:0847a763afefb695bc912d7c131e7e0632d4edc1d8698f58ddabec8e46b8b6d3
       - name: Run the bounded frozen smoke
-        run: python scripts/authenticity/beta-cpu-smoke.py --approval "$RUNNER_TEMP/authenticity-approval.json" --receipt "$RUNNER_TEMP/private-beta-cpu-receipt.json" --port 18080
+        run: python3 scripts/authenticity/beta-cpu-smoke.py --approval "$RUNNER_TEMP/authenticity-approval.json" --receipt "$RUNNER_TEMP/private-beta-cpu-receipt.json" --image-identity "$RUNNER_TEMP/evaluation-image-identity.json" --port 18080
+      - name: Capture external whole-container peak after response
+        if: success()
+        run: |
+          set -euo pipefail
+          pid="$(docker inspect --format '{{.State.Pid}}' lythaus-safe-evaluation)"
+          python3 scripts/authenticity/measure-container-memory.py --pid "$pid" --output "$RUNNER_TEMP/whole-container-memory.json"
       - name: Sanitize the private receipt
         if: always()
-        run: node scripts/authenticity/sanitize-beta-cpu-receipt.mjs --input "$RUNNER_TEMP/private-beta-cpu-receipt.json" --output "$RUNNER_TEMP/authenticity-cpu-receipt-sanitized.json"
+        run: |
+          set -euo pipefail
+          if test -f "$RUNNER_TEMP/whole-container-memory.json"; then
+            node scripts/authenticity/sanitize-beta-cpu-receipt.mjs --input "$RUNNER_TEMP/private-beta-cpu-receipt.json" --external-measurement "$RUNNER_TEMP/whole-container-memory.json" --output "$RUNNER_TEMP/authenticity-cpu-receipt-sanitized.json"
+          else
+            node scripts/authenticity/sanitize-beta-cpu-receipt.mjs --input "$RUNNER_TEMP/private-beta-cpu-receipt.json" --output "$RUNNER_TEMP/authenticity-cpu-receipt-sanitized.json"
+          fi
       - name: Stop runtime and remove private mounts
         if: always()
         run: |
           docker stop --time 5 lythaus-safe-evaluation >/dev/null 2>&1 || true
           docker rm -f lythaus-safe-evaluation >/dev/null 2>&1 || true
-          rm -rf "$RUNNER_TEMP/authenticity-evaluation" "$RUNNER_TEMP/authenticity-evaluation.tgz" "$RUNNER_TEMP/authenticity-approval.json" "$RUNNER_TEMP/private-beta-cpu-receipt.json"
+          docker volume rm "$MODEL_VOLUME" >/dev/null 2>&1 || true
+          rm -rf "$RUNNER_TEMP/authenticity-evaluation" "$RUNNER_TEMP/authenticity-evaluation.tgz" "$RUNNER_TEMP/authenticity-approval.json" "$RUNNER_TEMP/private-beta-cpu-receipt.json" "$RUNNER_TEMP/private-beta-preflight.json" "$RUNNER_TEMP/authenticity-model"
       - name: Upload sanitized receipt only
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f

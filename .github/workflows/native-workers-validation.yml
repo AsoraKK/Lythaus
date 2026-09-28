@@ -39,6 +39,10 @@ on:
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
       - 'scripts/tests/planetscale-production-migrations.test.mjs'
       - 'scripts/tests/public-waitlist-cutover.test.mjs'
+      - 'scripts/authenticity/**'
+      - 'scripts/tests/authenticity-cpu-orchestration.test.mjs'
+      - '.github/workflows/authenticity-cpu-evaluation.yml'
+      - 'apps/lythaus-authenticity-runtime/container/**'
       - 'scripts/critical-coverage-gate.mjs'
       - 'scripts/critical-coverage-manifest.json'
       - 'tsconfig.native.json'
@@ -83,6 +87,10 @@ on:
       - 'scripts/tests/product-integrity-runtime-invariants.test.mjs'
       - 'scripts/tests/planetscale-production-migrations.test.mjs'
       - 'scripts/tests/public-waitlist-cutover.test.mjs'
+      - 'scripts/authenticity/**'
+      - 'scripts/tests/authenticity-cpu-orchestration.test.mjs'
+      - '.github/workflows/authenticity-cpu-evaluation.yml'
+      - 'apps/lythaus-authenticity-runtime/container/**'
       - 'scripts/critical-coverage-gate.mjs'
       - 'scripts/critical-coverage-manifest.json'
       - 'tsconfig.native.json'
@@ -118,6 +126,7 @@ jobs:
       - run: node --test scripts/tests/authenticity-beta-release.test.mjs
       - run: python3 apps/lythaus-authenticity-runtime/container/test_artifacts.py
       - run: python3 scripts/tests/test_beta_cpu_smoke.py
+      - run: npm run test:authenticity-cpu-orchestration
       - run: python3 apps/lythaus-authenticity-runtime/container/test_supervisor.py
       - name: Record code-only Linux capacity
         run: python3 scripts/ci/authenticity-linux-capacity.py
