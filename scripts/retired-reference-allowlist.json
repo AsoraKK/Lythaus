@@ -7,6 +7,11 @@
       "reason": "Repository instructions require the Lythaus former-name introduction; no retired runtime dependency is introduced."
     },
     {
+      "path": "docs/architecture/authenticity-private-alpha.md",
+      "kind": "historical-brand-context",
+      "reason": "Repository instructions require the Lythaus former-name introduction; no retired runtime dependency is introduced."
+    },
+    {
       "path": "docs/models/safe-a-v0.1.md",
       "kind": "historical-source-links",
       "reason": "Pinned research citations retain the existing GitHub repository owner name; these are evidence links, not product branding."

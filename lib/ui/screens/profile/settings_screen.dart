@@ -11,7 +11,7 @@ import 'package:lythaus/ui/theme/spacing.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
 import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
-import 'package:lythaus/features/authenticity/beta_screen.dart';
+import 'package:lythaus/features/authenticity/alpha_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -45,13 +45,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.image_search_outlined),
-              title: const Text('Authenticity beta'),
+              title: const Text('Private authenticity alpha'),
               subtitle: const Text(
-                'Private image evidence for invited beta users',
+                'Safety, SAFE-A, forensic evidence, and bounded visual explanations',
               ),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const AuthenticityBetaScreen(),
+                  builder: (_) => const AuthenticityPrivateAlphaScreen(),
                 ),
               ),
             ),

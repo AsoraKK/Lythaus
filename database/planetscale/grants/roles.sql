@@ -121,6 +121,15 @@ GRANT EXECUTE ON FUNCTION privacy.reconcile_subject_data_locations(uuid) TO lyth
 GRANT USAGE, CREATE ON SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_migrations;
 GRANT SELECT, INSERT, UPDATE ON moderation.authenticity_beta, moderation.authenticity_beta_steps TO lythaus_runtime, lythaus_jobs, lythaus_admin, lythaus_privacy;
 GRANT SELECT, INSERT, DELETE ON moderation.authenticity_beta_feedback TO lythaus_runtime, lythaus_jobs, lythaus_admin, lythaus_privacy;
+-- Private alpha keeps text/image cases and component attempts separate from the
+-- historical image-only beta tables. Runtime never deletes rows; privacy purge
+-- owns deletion after the approved retention decision.
+GRANT SELECT, INSERT, UPDATE ON moderation.authenticity_alpha, moderation.authenticity_alpha_steps TO lythaus_runtime, lythaus_jobs, lythaus_admin;
+GRANT SELECT, INSERT, DELETE ON moderation.authenticity_alpha_feedback TO lythaus_runtime, lythaus_jobs, lythaus_admin;
+GRANT SELECT, DELETE ON moderation.authenticity_alpha, moderation.authenticity_alpha_steps, moderation.authenticity_alpha_feedback TO lythaus_privacy;
+GRANT EXECUTE ON FUNCTION privacy.record_alpha_location(uuid,uuid) TO lythaus_runtime;
+GRANT EXECUTE ON FUNCTION privacy.remove_alpha_location(uuid,uuid) TO lythaus_runtime, lythaus_jobs, lythaus_privacy;
+GRANT EXECUTE ON FUNCTION privacy.alpha_subject_has_hold(uuid) TO lythaus_runtime, lythaus_jobs, lythaus_privacy;
 GRANT UPDATE (status, observed_bytes, finalised_at) ON media.upload_sessions TO lythaus_runtime;
 GRANT UPDATE (state, deleted_at) ON media.objects TO lythaus_runtime;
 GRANT UPDATE (state, resolved_at) ON moderation.cases TO lythaus_runtime;

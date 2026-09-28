@@ -53,6 +53,8 @@
     "test:database-identity": "node --experimental-strip-types --test scripts/tests/db-identity-contract.test.mjs",
     "test:budget": "node --experimental-strip-types --test scripts/tests/budget-contract.test.mjs",
     "test:authenticity": "node --experimental-strip-types --test packages/authenticity/tests/evaluation.test.mjs",
+    "test:authenticity-private-alpha": "node --experimental-strip-types --experimental-test-module-mocks --test packages/authenticity/tests/private-alpha.test.mjs apps/lythaus-public-api/tests/authenticity-alpha-hardening.test.mjs apps/lythaus-jobs/tests/authenticity-alpha-hardening.test.mjs packages/db/tests/authenticity-alpha-lifecycle.test.mjs scripts/tests/budget-scope.test.mjs scripts/tests/private-evaluation-receipt.test.mjs",
+    "test:authenticity-cpu-orchestration": "node --test scripts/tests/authenticity-cpu-orchestration.test.mjs scripts/tests/private-evaluation-receipt.test.mjs",
     "test:authenticity-foundation": "node --experimental-strip-types --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test packages/authenticity/tests/evaluation.test.mjs packages/authenticity/tests/foundation.test.mjs packages/authenticity/tests/wp002.test.mjs packages/authenticity/tests/wp003.test.mjs packages/authenticity/tests/wp006b.test.mjs",
     "test:authenticity-wp003": "node --experimental-strip-types --test packages/authenticity/tests/wp003.test.mjs",
     "test:authenticity-wp004a": "node --experimental-strip-types --test packages/authenticity/tests/wp004a.test.mjs",

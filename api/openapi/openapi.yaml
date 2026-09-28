@@ -22,6 +22,8 @@ servers:
 tags:
   - name: AuthenticityBeta
     description: Private, non-enforcing image evidence and review.
+  - name: AuthenticityPrivateAlpha
+    description: Private text/image alpha combining Safety, evidence, optional observation and bounded explanation.
   - name: Feed
     description: Feed retrieval endpoints.
   - name: Health
@@ -85,6 +87,32 @@ paths:
     $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1retry'
   /admin/authenticity/cases/{caseId}/advice:
     $ref: './authenticity-beta.yaml#/paths/~1admin~1authenticity~1cases~1{caseId}~1advice'
+  /authenticity/alpha/cases:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1authenticity~1alpha~1cases'
+  /authenticity/alpha/cases/{caseId}:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1authenticity~1alpha~1cases~1{caseId}'
+  /authenticity/alpha/cases/{caseId}/finalise:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1authenticity~1alpha~1cases~1{caseId}~1finalise'
+  /authenticity/alpha/cases/{caseId}/feedback:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1authenticity~1alpha~1cases~1{caseId}~1feedback'
+  /authenticity/alpha/cases/{caseId}/review:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1authenticity~1alpha~1cases~1{caseId}~1review'
+  /authenticity/alpha/cases/{caseId}/cancel:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1authenticity~1alpha~1cases~1{caseId}~1cancel'
+  /authenticity/alpha/cases/{caseId}/advice:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1authenticity~1alpha~1cases~1{caseId}~1advice'
+  /authenticity/alpha/cases/{caseId}/image:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1authenticity~1alpha~1cases~1{caseId}~1image'
+  /admin/authenticity/alpha/cases:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1admin~1authenticity~1alpha~1cases'
+  /admin/authenticity/alpha/cases/{caseId}:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1admin~1authenticity~1alpha~1cases~1{caseId}'
+  /admin/authenticity/alpha/cases/{caseId}/image:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1admin~1authenticity~1alpha~1cases~1{caseId}~1image'
+  /admin/authenticity/alpha/cases/{caseId}/review:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1admin~1authenticity~1alpha~1cases~1{caseId}~1review'
+  /admin/authenticity/alpha/cases/{caseId}/advice:
+    $ref: './authenticity-private-alpha.yaml#/paths/~1admin~1authenticity~1alpha~1cases~1{caseId}~1advice'
   /waitlist:
     post:
       operationId: joinWaitlist
