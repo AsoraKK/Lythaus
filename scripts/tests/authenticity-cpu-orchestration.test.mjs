@@ -69,7 +69,7 @@ test('GitHub artifact ledger verifies the current run and rejects prior claims',
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
   try {
-    const baseEnv = { ...process.env, GITHUB_TOKEN: 'protocol-token', GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_API_URL: `http://127.0.0.1:${port}` };
+    const baseEnv = { ...process.env, GITHUB_TOKEN: 'protocol-token', GITHUB_REPOSITORY: 'owner/repo', GITHUB_API_URL: `http://127.0.0.1:${port}` };
     const verify = await runAsync(process.execPath, [script('consume-evaluation-authorization.mjs'), '--approval', approval, '--source-sha', sourceSha, '--verify'], { cwd: root, env: { ...baseEnv, GITHUB_RUN_ID: '42' }, encoding: 'utf8' });
     assert.match(verify.stdout, /EVALUATION_AUTHORIZATION_VERIFIED/);
     await assert.rejects(() => runAsync(process.execPath, [script('consume-evaluation-authorization.mjs'), '--approval', approval, '--source-sha', sourceSha], { cwd: root, env: { ...baseEnv, GITHUB_RUN_ID: '43' }, encoding: 'utf8' }), error => /AUTHORIZATION_ALREADY_CONSUMED/.test(error.stdout));
