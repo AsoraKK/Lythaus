@@ -10,10 +10,19 @@ the protected frontend deployment workflow, then verifying the live domain. The 
 review notes below remain follow-up findings, not a reason to withhold the requested
 release. Backend/database changes and activation of incomplete features are outside scope.
 
-1. In progress: prepare reviewed UI release against current main.
-2. Pending: pass exact-revision CI and release checks.
+1. Completed: prepare UI release in PR #872 against current main.
+2. In progress: pass exact-revision CI and release checks.
 3. Pending: publish the approved frontend artifacts.
 4. Pending: verify live UI, asset identity and homepage preservation.
+
+Provider inventory `36460645612` confirms the app still serves deployment
+`b954be3b-625c-45b7-8b1c-e3cf3c1b9666`, source
+`3dc65b477fd8898ec898fbc62e3ad00378fd2144`, created 29 August 2026. This is the
+recorded app rollback target. Marketing serves deployment
+`4b5367fa-53f1-48df-9051-193d390ba1a5`, source
+`8e3b3ebad2f846e61db2bfe819376723da7e9863`. Both existing projects use production
+branch `main`; the app's automatic deployments remain disabled. No provider setting
+was changed by this inventory.
 
 ## Work stages
 

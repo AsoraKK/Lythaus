@@ -101,7 +101,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final privateOption = find.text('Private').first;
+    final privateOption = find.text('Private');
     await tester.scrollUntilVisible(
       privateOption,
       300,
@@ -183,7 +183,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final privateOption = find.text('Private').first;
+      final privateOption = find.text('Private');
       await tester.scrollUntilVisible(
         privateOption,
         300,
