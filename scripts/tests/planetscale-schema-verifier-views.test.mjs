@@ -27,7 +27,7 @@ test('production schema verification is sequential and emits safe relation drift
   assert.match(source, /missing=\$\{JSON\.stringify\(missing\)\}/);
   assert.match(source, /extra=\$\{JSON\.stringify\(extra\)\}/);
   assert.match(source, /relations: relations\.rows/);
-  assert.match(postgres17, /relation_count\) \+ 2 !== 102/);
+  assert.match(postgres17, /relation_count\) \+ 2 !== 105/);
   assert.match(postgres17, /production_auth_acceptance_runs/);
   assert.match(postgres17, /production_auth_acceptance_events/);
 });
