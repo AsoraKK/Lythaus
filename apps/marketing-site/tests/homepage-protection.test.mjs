@@ -6,6 +6,24 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 export const baselineSha = '8e3b3ebad2f846e61db2bfe819376723da7e9863';
+const upstreamBaselineSha = '8c5ad6f311c6b14819edae5995eedce33c7465b6';
+const upstreamProtectedPaths = [
+  '.gitattributes',
+  'package.json',
+  'apps/lythaus-public-api/src/authenticity-alpha.ts',
+  'apps/lythaus-public-api/src/authenticity-beta.ts',
+  'apps/lythaus-public-api/src/index.ts',
+  'apps/lythaus-public-api/src/worker-configuration.d.ts',
+  'apps/lythaus-public-api/tests/authenticity-alpha-hardening.test.mjs',
+  'apps/lythaus-public-api/wrangler.jsonc',
+  'packages/cloudflare-env/src/index.ts',
+  'packages/db/src/authenticity-alpha.ts',
+  'packages/db/src/authenticity-beta.ts',
+  'packages/db/src/budget.ts',
+  'packages/db/src/index.ts',
+  'packages/db/tests/authenticity-alpha-lifecycle.test.mjs',
+  'scripts/ci/materialize-public-waitlist-deploy.mjs',
+];
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const protectedPaths = [
   'apps/marketing-site/src/pages/index.astro',
@@ -50,7 +68,11 @@ const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8'
 
 export function assertHomepageFrozen() {
   assert.equal(git('rev-parse', `${baselineSha}^{commit}`), baselineSha, 'Frozen baseline must be available; do not substitute HEAD');
-  const entries = git('ls-tree', '-r', baselineSha, '--', ...protectedPaths).split('\n').filter(Boolean);
+  assert.equal(git('rev-parse', `${upstreamBaselineSha}^{commit}`), upstreamBaselineSha, 'Reviewed upstream revision must be available');
+  assert.equal(git('merge-base', baselineSha, upstreamBaselineSha), baselineSha);
+  const originals = git('ls-tree', '-r', baselineSha, '--', ...protectedPaths).split('\n').filter(Boolean);
+  const upstream = git('ls-tree', '-r', upstreamBaselineSha, '--', ...upstreamProtectedPaths).split('\n').filter(Boolean);
+  const entries = [...new Map([...originals, ...upstream].map(entry => [entry.split('\t')[1], entry])).values()];
   assert.ok(entries.length >= 30, 'Protected dependency inventory unexpectedly empty');
   const changed = [];
   for (const entry of entries) {
@@ -64,6 +86,23 @@ export function assertHomepageFrozen() {
 
 test('homepage and its source, asset, build and waitlist dependencies remain frozen', () => {
   assertHomepageFrozen();
+});
+
+test('upstream integration preserves homepage rendering inputs and waitlist route dispatch', () => {
+  assert.deepEqual(
+    git('diff', '--name-only', baselineSha, upstreamBaselineSha, '--', 'apps/marketing-site', 'package-lock.json').split('\n').filter(Boolean),
+    [],
+  );
+  const before = JSON.parse(git('show', `${baselineSha}:package.json`));
+  const after = JSON.parse(git('show', `${upstreamBaselineSha}:package.json`));
+  const changedScripts = Object.keys({ ...before.scripts, ...after.scripts }).filter(key => before.scripts[key] !== after.scripts[key]);
+  assert.deepEqual(changedScripts.sort(), ['openapi:bundle', 'test:authenticity-cpu-orchestration', 'test:authenticity-private-alpha'].sort());
+  delete before.scripts;
+  delete after.scripts;
+  assert.deepEqual(after, before, 'Upstream must not change homepage dependencies');
+  const waitlistLines = revision => git('show', `${revision}:apps/lythaus-public-api/src/index.ts`).split('\n').filter(line => /waitlist/i.test(line));
+  assert.deepEqual(waitlistLines(upstreamBaselineSha), waitlistLines(baselineSha));
+  assert.deepEqual(upstreamProtectedPaths.filter(filename => filename.startsWith('apps/marketing-site/')), []);
 });
 
 test('secondary presentation does not add a homepage interceptor', () => {

@@ -1,6 +1,6 @@
 # Application route and state migration
 
-Lythaus (formerly Asora). Source baseline: `8e3b3ebad2f846e61db2bfe819376723da7e9863`. The production entry is `lib/main.dart` → `appRouterProvider` → `AdaptiveShell`, not the legacy `lib/screens/feed_screen.dart`. Paths below are relative to `lib/`. Existing auth/state/service boundaries and server contracts remain authoritative.
+Lythaus. Source baseline: `8e3b3ebad2f846e61db2bfe819376723da7e9863`. The production entry is `lib/main.dart` → `appRouterProvider` → `AdaptiveShell`, not the legacy `lib/screens/feed_screen.dart`. Paths below are relative to `lib/`. Existing auth/state/service boundaries and server contracts remain authoritative.
 
 ## Route and component matrix
 

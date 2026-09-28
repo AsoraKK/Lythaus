@@ -34,6 +34,17 @@ import 'package:lythaus_api_client/src/model/admin_user_page.dart';
 import 'package:lythaus_api_client/src/model/admin_user_profile_patch.dart';
 import 'package:lythaus_api_client/src/model/admin_waitlist_create.dart';
 import 'package:lythaus_api_client/src/model/admin_waitlist_patch.dart';
+import 'package:lythaus_api_client/src/model/alpha_action.dart';
+import 'package:lythaus_api_client/src/model/alpha_admin_case.dart';
+import 'package:lythaus_api_client/src/model/alpha_admin_case_list.dart';
+import 'package:lythaus_api_client/src/model/alpha_case.dart';
+import 'package:lythaus_api_client/src/model/alpha_case_list.dart';
+import 'package:lythaus_api_client/src/model/alpha_component.dart';
+import 'package:lythaus_api_client/src/model/alpha_create_request.dart';
+import 'package:lythaus_api_client/src/model/alpha_create_response.dart';
+import 'package:lythaus_api_client/src/model/alpha_error.dart';
+import 'package:lythaus_api_client/src/model/alpha_feedback.dart';
+import 'package:lythaus_api_client/src/model/alpha_review.dart';
 import 'package:lythaus_api_client/src/model/api_error.dart';
 import 'package:lythaus_api_client/src/model/appeal_adjudication_request.dart';
 import 'package:lythaus_api_client/src/model/appeal_adjudication_response.dart';
@@ -54,6 +65,15 @@ import 'package:lythaus_api_client/src/model/auth_password_reset_request_request
 import 'package:lythaus_api_client/src/model/auth_user_info200_response.dart';
 import 'package:lythaus_api_client/src/model/bad_gateway_error.dart';
 import 'package:lythaus_api_client/src/model/bad_gateway_error_error.dart';
+import 'package:lythaus_api_client/src/model/beta_action_response.dart';
+import 'package:lythaus_api_client/src/model/beta_admin_case.dart';
+import 'package:lythaus_api_client/src/model/beta_case.dart';
+import 'package:lythaus_api_client/src/model/beta_case_list.dart';
+import 'package:lythaus_api_client/src/model/beta_error.dart';
+import 'package:lythaus_api_client/src/model/beta_feedback.dart';
+import 'package:lythaus_api_client/src/model/beta_review.dart';
+import 'package:lythaus_api_client/src/model/beta_submission.dart';
+import 'package:lythaus_api_client/src/model/beta_upload.dart';
 import 'package:lythaus_api_client/src/model/bookmark_change.dart';
 import 'package:lythaus_api_client/src/model/bookmark_create_request.dart';
 import 'package:lythaus_api_client/src/model/bookmark_list.dart';
@@ -210,6 +230,17 @@ part 'serializers.g.dart';
   AdminUserProfilePatch,
   AdminWaitlistCreate,
   AdminWaitlistPatch,
+  AlphaAction,
+  AlphaAdminCase,
+  AlphaAdminCaseList,
+  AlphaCase,$AlphaCase,
+  AlphaCaseList,
+  AlphaComponent,
+  AlphaCreateRequest,
+  AlphaCreateResponse,
+  AlphaError,
+  AlphaFeedback,
+  AlphaReview,
   ApiError,
   AppealAdjudicationRequest,
   AppealAdjudicationResponse,
@@ -230,6 +261,15 @@ part 'serializers.g.dart';
   AuthUserInfo200Response,
   BadGatewayError,
   BadGatewayErrorError,
+  BetaActionResponse,
+  BetaAdminCase,
+  BetaCase,
+  BetaCaseList,
+  BetaError,
+  BetaFeedback,
+  BetaReview,
+  BetaSubmission,
+  BetaUpload,
   BookmarkChange,
   BookmarkCreateRequest,
   BookmarkList,
@@ -372,6 +412,7 @@ Serializers serializers = (_$serializers.toBuilder()
         const FullType(BuiltMap, [FullType(String), FullType(JsonObject)]),
         () => MapBuilder<String, JsonObject>(),
       )
+      ..add(AlphaCase.serializer)
       ..add(AppealOutcome.serializer)
       ..add(CursorPage.serializer)
       ..add(PrivacyRequest.serializer)

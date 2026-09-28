@@ -12,6 +12,8 @@ import 'package:lythaus_api_client/src/api/activity_api.dart';
 import 'package:lythaus_api_client/src/api/admin_api.dart';
 import 'package:lythaus_api_client/src/api/appeals_api.dart';
 import 'package:lythaus_api_client/src/api/auth_api.dart';
+import 'package:lythaus_api_client/src/api/authenticity_beta_api.dart';
+import 'package:lythaus_api_client/src/api/authenticity_private_alpha_api.dart';
 import 'package:lythaus_api_client/src/api/custom_feeds_api.dart';
 import 'package:lythaus_api_client/src/api/feed_api.dart';
 import 'package:lythaus_api_client/src/api/health_api.dart';
@@ -97,6 +99,18 @@ class LythausApiClient {
   /// by doing that all interceptors will not be executed
   AuthApi getAuthApi() {
     return AuthApi(dio, serializers);
+  }
+
+  /// Get AuthenticityBetaApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AuthenticityBetaApi getAuthenticityBetaApi() {
+    return AuthenticityBetaApi(dio, serializers);
+  }
+
+  /// Get AuthenticityPrivateAlphaApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AuthenticityPrivateAlphaApi getAuthenticityPrivateAlphaApi() {
+    return AuthenticityPrivateAlphaApi(dio, serializers);
   }
 
   /// Get CustomFeedsApi instance, base route and serializer can be overridden by a given but be careful,

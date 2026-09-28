@@ -15,6 +15,8 @@ import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
+import 'package:lythaus/features/authenticity/beta_screen.dart';
+import 'package:lythaus/features/authenticity/alpha_screen.dart';
 
 /// Route name constants.
 abstract final class AppRoutes {
@@ -104,6 +106,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: AppRoutes.settings,
         path: '/settings',
         builder: (context, state) => const ReadingPane(child: SettingsScreen()),
+      ),
+      GoRoute(
+        path: '/authenticity',
+        builder: (context, state) => const AuthenticityPrivateAlphaScreen(),
+      ),
+      GoRoute(
+        path: '/authenticity-beta',
+        builder: (context, state) => const AuthenticityBetaScreen(),
       ),
       GoRoute(
         name: AppRoutes.shell,

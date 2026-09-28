@@ -21,6 +21,23 @@ Secondary routes use their own opt-in layout, stylesheet and fonts. The homepage
 
 ## Evidence locations
 
+### Upstream integration for live delivery, 28 September 2026
+
+Homepage source/rendering and screenshot baselines remain fixed at
+`8e3b3ebad2f846e61db2bfe819376723da7e9863`. The UI PR must integrate the subsequent
+main revision `8c5ad6f311c6b14819edae5995eedce33c7465b6`. That revision already
+changes 15 explicitly listed shared/backend paths for authenticity work, including
+new files. The guard now freezes those exact paths to their reviewed upstream blobs;
+all other original protected paths retain their original hashes. The UI does not
+modify or deploy these backend changes.
+
+An additional test proves that upstream changes no marketing source or lockfile,
+changes only three named root package scripts, preserves every other package field,
+and leaves waitlist dispatch/import lines identical. `.gitattributes` adds only
+authenticity-container line-ending rules. Waitlist materialization changes belong to
+upstream's separate backend/schema release and are not invoked for this frontend
+deployment. No screenshot baseline, tolerance, mask or existing assertion was removed.
+
 Evidence root: `C:/Users/kylee/AppData/Local/Temp/lythaus-design-evidence`.
 
 | Artifact | Contents |

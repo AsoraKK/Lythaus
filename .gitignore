@@ -39,6 +39,9 @@ test-results/
 playwright-report/
 .artifacts/
 .cache/
+apps/lythaus-authenticity-runtime/container/__pycache__/
+scripts/authenticity/__pycache__/
+scripts/ci/__pycache__/
 *.lcov
 *.log
 

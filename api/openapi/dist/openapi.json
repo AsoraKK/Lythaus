@@ -17,6 +17,14 @@
   ],
   "tags": [
     {
+      "name": "AuthenticityBeta",
+      "description": "Private, non-enforcing image evidence and review."
+    },
+    {
+      "name": "AuthenticityPrivateAlpha",
+      "description": "Private text/image alpha combining Safety, evidence, optional observation and bounded explanation."
+    },
+    {
       "name": "Feed",
       "description": "Feed retrieval endpoints."
     },
@@ -90,6 +98,2553 @@
     }
   ],
   "paths": {
+    "/authenticity/cases": {
+      "get": {
+        "operationId": "listAuthenticityBetaCases",
+        "summary": "List your private beta cases",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaCaseList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAuthenticityBetaCase",
+        "summary": "Create an upload case",
+        "description": "Private original-byte upload; at most 10 MiB and 16,777,216 decoded pixels, one RGB PNG/JPEG frame, at least 256 pixels per side. Oversized inputs are rejected without resizing. Source history determines interpretation separately from successful inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetaSubmission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaUpload"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/cases/{caseId}": {
+      "get": {
+        "operationId": "getAuthenticityBetaCase",
+        "summary": "Read a private case",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaCase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAuthenticityBetaCase",
+        "summary": "Invalidate and delete your case",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/cases/{caseId}/finalise": {
+      "post": {
+        "operationId": "authenticityBetaFinalise",
+        "summary": "Finish the immutable upload",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Already finalised; returns the persisted case without scheduling another model call.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/cases/{caseId}/feedback": {
+      "post": {
+        "operationId": "authenticityBetaFeedback",
+        "summary": "Submit private feedback",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/cases/{caseId}/review": {
+      "post": {
+        "operationId": "authenticityBetaReview",
+        "summary": "Request review or appeal a review",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/cases/{caseId}/cancel": {
+      "post": {
+        "operationId": "authenticityBetaCancel",
+        "summary": "Cancel unfinished analysis",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                },
+                "examples": {
+                  "idempotency_key_conflict": {
+                    "value": {
+                      "error": "idempotency_key_conflict"
+                    }
+                  },
+                  "idempotency_in_progress": {
+                    "value": {
+                      "error": "idempotency_in_progress"
+                    }
+                  },
+                  "idempotency_outcome_unknown": {
+                    "value": {
+                      "error": "idempotency_outcome_unknown"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/cases/{caseId}/image": {
+      "get": {
+        "operationId": "getAuthenticityBetaImage",
+        "summary": "Read the private display derivative",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "AuthenticityBeta"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/cases": {
+      "get": {
+        "operationId": "listAdminAuthenticityBetaCases",
+        "summary": "List private beta review cases",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaCaseList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/cases/{caseId}": {
+      "get": {
+        "operationId": "getAdminAuthenticityBetaCase",
+        "summary": "Read audited diagnostics and review history",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaAdminCase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/cases/{caseId}/image": {
+      "get": {
+        "operationId": "getAdminAuthenticityBetaImage",
+        "summary": "Read the audited private display derivative",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/cases/{caseId}/review": {
+      "post": {
+        "operationId": "adminAuthenticityBetaReview",
+        "summary": "Record a versioned non-enforcing review",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/cases/{caseId}/retry": {
+      "post": {
+        "operationId": "adminAuthenticityBetaRetry",
+        "summary": "Resume bounded unfinished work",
+        "description": "Private, non-enforcing beta. Responses are no-store. Polling never starts inference.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/cases/{caseId}/advice": {
+      "post": {
+        "operationId": "requestAdminAuthenticityBetaAdvice",
+        "summary": "Request one bounded explanation of eligible persisted evidence",
+        "description": "Privileged, audited request. Requires supported successful SAFE evidence and selective escalation, an unconsumed adviser attempt, a current lease/admission budget and unexpired case. Uses the existing outbox. Does not rerun SAFE or Safety, change the deterministic finding, or publish content.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Private beta response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                },
+                "description": "Private response cache policy."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale case or consumed attempt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Admission or budget paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Component disabled or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/alpha/cases": {
+      "get": {
+        "operationId": "listAuthenticityPrivateAlphaCases",
+        "summary": "List private alpha cases",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private alpha cases.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaCaseList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAuthenticityPrivateAlphaCase",
+        "summary": "Create a text, image or mixed private alpha case",
+        "description": "Author/admin-only, non-enforcing alpha. Image bytes remain in quarantine until finalisation. Polling does not start work.",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Text case or upload session created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or consent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Alpha unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Budget or cohort paused.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/alpha/cases/{caseId}": {
+      "get": {
+        "operationId": "getAuthenticityPrivateAlphaCase",
+        "summary": "Get a private alpha result",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result and component states.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaCase"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAuthenticityPrivateAlphaCase",
+        "summary": "Delete a private alpha case",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAction"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/alpha/cases/{caseId}/finalise": {
+      "post": {
+        "operationId": "finaliseAuthenticityPrivateAlphaCase",
+        "summary": "Finalize a private alpha image upload",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued for analysis.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid bytes or hash.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Expired or already finalized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/alpha/cases/{caseId}/feedback": {
+      "post": {
+        "operationId": "submitAuthenticityPrivateAlphaFeedback",
+        "summary": "Submit private alpha feedback",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Feedback accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAction"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/alpha/cases/{caseId}/review": {
+      "post": {
+        "operationId": "requestAuthenticityPrivateAlphaReview",
+        "summary": "Request private alpha review",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Review request accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAction"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/alpha/cases/{caseId}/cancel": {
+      "post": {
+        "operationId": "cancelAuthenticityPrivateAlphaCase",
+        "summary": "Cancel private alpha processing",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAction"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/alpha/cases/{caseId}/advice": {
+      "post": {
+        "operationId": "requestAuthenticityPrivateAlphaAdvice",
+        "summary": "Request one bounded GPT-OSS explanation",
+        "description": "Uses persisted evidence only. It cannot rerun SAFE, certify authorship, or change publication/reputation state.",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Advice queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAction"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No eligible evidence or attempt consumed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authenticity/alpha/cases/{caseId}/image": {
+      "get": {
+        "operationId": "getAuthenticityPrivateAlphaImage",
+        "summary": "Get a private alpha image",
+        "tags": [
+          "AuthenticityPrivateAlpha"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original quarantined image bytes.",
+            "content": {
+              "image/png": {},
+              "image/jpeg": {}
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/alpha/cases": {
+      "get": {
+        "operationId": "listAdminAuthenticityPrivateAlphaCases",
+        "summary": "List private alpha cases for authorized administrators",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audited administrator diagnostics.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAdminCaseList"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator role required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/alpha/cases/{caseId}": {
+      "get": {
+        "operationId": "getAdminAuthenticityPrivateAlphaCase",
+        "summary": "Read private alpha diagnostics",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audited administrator diagnostics.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAdminCase"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator role required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/alpha/cases/{caseId}/image": {
+      "get": {
+        "operationId": "getAdminAuthenticityPrivateAlphaImage",
+        "summary": "Read a quarantined private alpha image",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original quarantined image bytes.",
+            "content": {
+              "image/png": {},
+              "image/jpeg": {}
+            }
+          },
+          "403": {
+            "description": "Administrator role required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Image not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/alpha/cases/{caseId}/review": {
+      "post": {
+        "operationId": "reviewAdminAuthenticityPrivateAlphaCase",
+        "summary": "Record an administrator private alpha review",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Review recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAction"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator role required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/authenticity/alpha/cases/{caseId}/advice": {
+      "post": {
+        "operationId": "requestAdminAuthenticityPrivateAlphaAdvice",
+        "summary": "Request one bounded private alpha explanation",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AlphaCaseId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlphaFeedback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Advice queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaAction"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator role required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Advice is unavailable or already consumed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/waitlist": {
       "post": {
         "operationId": "joinWaitlist",
@@ -8391,6 +10946,765 @@
           }
         }
       },
+      "BetaReview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "message",
+          "policyVersion",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BetaCase": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "caseId",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "expiresAt",
+          "reviewState",
+          "finding",
+          "explanation",
+          "advisoryStatus",
+          "limitations",
+          "versions",
+          "publicationEligible",
+          "rewardsEligible"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "uploading",
+              "queued",
+              "analyzing",
+              "complete",
+              "inconclusive",
+              "unsupported",
+              "failed",
+              "paused",
+              "safety_review",
+              "safety_blocked",
+              "cancelled",
+              "expired",
+              "deleted"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reviewState": {
+            "type": "string",
+            "enum": [
+              "none",
+              "requested",
+              "reviewed"
+            ]
+          },
+          "finding": {
+            "type": "string",
+            "enum": [
+              "SYNTHETIC_LIKE_EVIDENCE",
+              "NO_POSITIVE_SAFE_EVIDENCE",
+              "INCONCLUSIVE",
+              "UNAVAILABLE"
+            ]
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "advisoryStatus": {
+            "type": "string"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "versions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "publicationEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "rewardsEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BetaReview"
+            }
+          },
+          "detectorExecution": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "no_usable_output",
+              "not_recorded"
+            ],
+            "description": "Execution availability, separate from interpretation. Completed includes inconclusive unknown-history and JPEG results; no score or threshold is exposed."
+          }
+        }
+      },
+      "BetaCaseList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/BetaCase"
+            }
+          }
+        }
+      },
+      "BetaError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "BetaSubmission": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentType",
+          "size",
+          "checksumSha256",
+          "consentVersion",
+          "trainingConsent"
+        ],
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "image/jpeg"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10485760
+          },
+          "checksumSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "consentVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-authenticity-beta-v0.1.0"
+            ]
+          },
+          "trainingConsent": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        }
+      },
+      "BetaUpload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "caseId",
+          "uploadUrl",
+          "expiresAt",
+          "status",
+          "contentType"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "uploading"
+            ]
+          },
+          "contentType": {
+            "type": "string"
+          }
+        }
+      },
+      "BetaActionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "accepted": {
+            "type": "boolean"
+          },
+          "publicationEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        }
+      },
+      "BetaFeedback": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      },
+      "BetaAdminCase": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "uploading",
+              "queued",
+              "analyzing",
+              "complete",
+              "inconclusive",
+              "unsupported",
+              "failed",
+              "paused",
+              "safety_review",
+              "safety_blocked",
+              "cancelled",
+              "expired",
+              "deleted"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reviewState": {
+            "type": "string",
+            "enum": [
+              "none",
+              "requested",
+              "reviewed"
+            ]
+          },
+          "finding": {
+            "type": "string",
+            "enum": [
+              "SYNTHETIC_LIKE_EVIDENCE",
+              "NO_POSITIVE_SAFE_EVIDENCE",
+              "INCONCLUSIVE",
+              "UNAVAILABLE"
+            ]
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "advisoryStatus": {
+            "type": "string"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "versions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "publicationEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "rewardsEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BetaReview"
+            }
+          },
+          "feedback": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "diagnostics": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "AlphaComponent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "execution",
+          "interpretation",
+          "requested"
+        ],
+        "properties": {
+          "execution": {
+            "type": "string",
+            "enum": [
+              "not_requested",
+              "queued",
+              "running",
+              "completed",
+              "skipped",
+              "unsupported",
+              "failed",
+              "timed_out"
+            ]
+          },
+          "interpretation": {
+            "type": "string",
+            "enum": [
+              "not_requested",
+              "available",
+              "inconclusive",
+              "unavailable"
+            ]
+          },
+          "requested": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaReview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "message",
+          "policyVersion",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AlphaCase": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "caseId",
+          "contentKind",
+          "status",
+          "finding",
+          "interpretation",
+          "execution",
+          "publicationEligible",
+          "rewardsEligible"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "type": "string"
+          },
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contentKind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "text_image"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reviewState": {
+            "type": "string"
+          },
+          "finding": {
+            "type": "string",
+            "enum": [
+              "SYNTHETIC_LIKE_EVIDENCE",
+              "NO_POSITIVE_SAFE_EVIDENCE",
+              "INCONCLUSIVE",
+              "UNAVAILABLE"
+            ]
+          },
+          "interpretation": {
+            "type": "string",
+            "enum": [
+              "not_requested",
+              "available",
+              "inconclusive",
+              "unavailable"
+            ]
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "execution": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AlphaComponent"
+            }
+          },
+          "observer": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "adviserStatus": {
+            "type": "string"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "versions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          "hasText": {
+            "type": "boolean"
+          },
+          "hasImage": {
+            "type": "boolean"
+          },
+          "publicationEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "rewardsEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaReview"
+            }
+          }
+        }
+      },
+      "AlphaCaseList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/AlphaCase"
+            }
+          }
+        }
+      },
+      "AlphaError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentKind",
+          "consentVersion",
+          "trainingConsent"
+        ],
+        "properties": {
+          "contentKind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "text_image"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "image/jpeg"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10485760
+          },
+          "checksumSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "observerRequested": {
+            "type": "boolean",
+            "default": false
+          },
+          "explanationRequested": {
+            "type": "boolean",
+            "default": false
+          },
+          "consentVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-authenticity-private-alpha-v0.1.0"
+            ]
+          },
+          "trainingConsent": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        }
+      },
+      "AlphaCreateResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "caseId",
+          "status"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "contentType": {
+            "type": "string"
+          }
+        }
+      },
+      "AlphaAction": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "accepted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AlphaFeedback": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      },
+      "AlphaAdminCase": {
+        "type": "object",
+        "additionalProperties": true,
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AlphaCase"
+          }
+        ],
+        "properties": {
+          "diagnostics": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "feedback": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlphaReview"
+            }
+          }
+        }
+      },
+      "AlphaAdminCaseList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/AlphaAdminCase"
+            }
+          }
+        }
+      },
       "CursorPage": {
         "type": "object",
         "required": [
@@ -11698,6 +15012,15 @@
       }
     },
     "parameters": {
+      "AlphaCaseId": {
+        "name": "caseId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
       "cursor": {
         "name": "cursor",
         "in": "query",

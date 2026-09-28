@@ -9,6 +9,7 @@ import Waitlist from './pages/Waitlist.jsx';
 import AppPreview from './pages/AppPreview.jsx';
 import ProductionAuthAcceptance from './pages/ProductionAuthAcceptance.jsx';
 import AdminAccessGate from './components/AdminAccessGate.jsx';
+import AuthenticityBeta from './pages/AuthenticityBeta.jsx';
 
 const NotFound = () => (
   <section className="page">
@@ -35,6 +36,7 @@ function App() {
               <Route path="/users" element={<Users />} />
               <Route path="/waitlist" element={<Waitlist />} />
               <Route path="/moderation" element={<Flags />} />
+              <Route path="/authenticity" element={<AuthenticityBeta />} />
               <Route path="/audit" element={<Audit />} />
               <Route path="/preview" element={<AppPreview />} />
               <Route path="/production-auth-acceptance" element={<ProductionAuthAcceptance />} />

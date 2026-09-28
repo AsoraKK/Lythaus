@@ -14,6 +14,7 @@ import 'package:lythaus/features/notifications/presentation/notifications_screen
 import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
 import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:lythaus/features/authenticity/alpha_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -46,6 +47,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             Text('Account', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: Spacing.sm),
+            if (currentUser != null)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.image_search_outlined),
+                title: const Text('Private authenticity alpha'),
+                subtitle: const Text(
+                  'Safety, SAFE-A, forensic evidence, and bounded visual explanations',
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AuthenticityPrivateAlphaScreen(),
+                  ),
+                ),
+              ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.notifications_none),

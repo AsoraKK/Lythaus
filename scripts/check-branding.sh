@@ -40,7 +40,7 @@ content_matches="$({
     "$ROOT/packages" "$ROOT/scripts" "$ROOT/.github" "$ROOT/assets" "$ROOT/docs/product" \
     "$ROOT/docs/architecture" "$ROOT/pubspec.yaml" "$ROOT/package.json" \
     2>/dev/null || true
-} | rg -v "$OWNER_EXCEPTION|$EMAIL_EXCEPTION" || true)"
+} | sed -E "s/Lythaus \\(formerly $RETIRED_BRAND\\)/Lythaus/g" | rg -i "$RETIRED_BRAND" | rg -v "$OWNER_EXCEPTION|$EMAIL_EXCEPTION" || true)"
 
 if [[ -n "$content_matches" ]]; then
   echo 'Retired brand found in active code or configuration:' >&2

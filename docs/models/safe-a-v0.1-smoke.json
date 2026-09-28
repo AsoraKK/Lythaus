@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "lythaus-beta-smoke-manifest-v1",
+  "frozenBeforeBetaInference": true,
+  "frozenOn": "2026-09-27",
+  "purpose": "Historical reuse for integration parity only; not independent qualification. No media redistribution.",
+  "selection": "First two sample IDs in each already-used H auxiliary negative subtype; first sample ID in each named historical synthetic family. No selection against new implementation output.",
+  "executionState": "BLOCKED_RIGHTS_AND_RUNTIME",
+  "absoluteTolerance": 1e-06,
+  "relativeTolerance": 1e-05,
+  "maxSafeAttempts": 16,
+  "maxAdviserAttempts": 2,
+  "maxActiveMinutes": 30,
+  "maxReservedUsd": 0.5,
+  "records": [
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_02",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-02",
+      "sha256": "361d67dc2dc82bdaeeeea511f3be1c479551f0a6205b1e2a1eb16c366f1ee8cb",
+      "historicalScore": 0.016140002757310867,
+      "historicalSourceRef": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+      "historicalScoreArtifact": "research/wp007h/safe-scores.json",
+      "groundTruth": 0,
+      "category": "CAMERA",
+      "generatorFamily": null,
+      "rightsScope": "Historical research evaluation only; private fixture mapping and deployment-specific rights must be verified before execution."
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_1_03",
+      "sourceFamilyId": "CSAFE-WP006E-FAMILY-iPhone11_1-03",
+      "sha256": "64646d65913801f6de8b1b30a637d1b208a70330e68b36586db5eeb1abb49bbe",
+      "historicalScore": 0.02638094313442707,
+      "historicalSourceRef": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+      "historicalScoreArtifact": "research/wp007h/safe-scores.json",
+      "groundTruth": 0,
+      "category": "CAMERA",
+      "generatorFamily": null,
+      "rightsScope": "Historical research evaluation only; private fixture mapping and deployment-specific rights must be verified before execution."
+    },
+    {
+      "sampleId": "PNGN_CHART_03",
+      "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-CHART-03",
+      "sha256": "77fe5143cd31ebf0894d96c9f2e8c3ae1310d9b410ea416d910a16367312af33",
+      "historicalScore": 0.47324439883232117,
+      "historicalSourceRef": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+      "historicalScoreArtifact": "research/wp007h/safe-scores.json",
+      "groundTruth": 0,
+      "category": "DIGITAL_NON_AI",
+      "generatorFamily": null,
+      "rightsScope": "Historical research evaluation only; private fixture mapping and deployment-specific rights must be verified before execution."
+    },
+    {
+      "sampleId": "PNGN_CHART_05",
+      "sourceFamilyId": "LYTHAUS-PROGRAMMATIC-HN-CHART-05",
+      "sha256": "f3d6a302c00570c236a5f4f5d0c3dfb808696a9ec041c7efe5e41303a2c68402",
+      "historicalScore": 0.47324439883232117,
+      "historicalSourceRef": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+      "historicalScoreArtifact": "research/wp007h/safe-scores.json",
+      "groundTruth": 0,
+      "category": "DIGITAL_NON_AI",
+      "generatorFamily": null,
+      "rightsScope": "Historical research evaluation only; private fixture mapping and deployment-specific rights must be verified before execution."
+    },
+    {
+      "sampleId": "WP007H_BLIP3o-8B_01c5d6b14456",
+      "sourceFamilyId": "T2I-COREBENCH-WP007H-BLIP3o-8B",
+      "sha256": "01c5d6b14456058167d33fa6b2d805daeadc5d8583e89f4d0bbe5f1ddaffce43",
+      "historicalScore": 0.9426043033599854,
+      "historicalSourceRef": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+      "historicalScoreArtifact": "research/wp007h/safe-scores.json",
+      "groundTruth": 1,
+      "category": "SYNTHETIC_ACTUAL_GENERATED",
+      "generatorFamily": "BLIP3o-8B",
+      "rightsScope": "Historical research evaluation only; private fixture mapping and deployment-specific rights must be verified before execution."
+    },
+    {
+      "sampleId": "WP007H_Janus-Pro-7B_05830b238f54",
+      "sourceFamilyId": "T2I-COREBENCH-WP007H-Janus-Pro-7B",
+      "sha256": "05830b238f5438944e30ed8f5cb1a2cfdce06ecbf4304b9bd9ac6dfe0112dc99",
+      "historicalScore": 0.9236063957214355,
+      "historicalSourceRef": "bcbadd676f8ff0670369de80d487d77a6613fcf5",
+      "historicalScoreArtifact": "research/wp007h/safe-scores.json",
+      "groundTruth": 1,
+      "category": "SYNTHETIC_ACTUAL_GENERATED",
+      "generatorFamily": "Janus-Pro-7B",
+      "rightsScope": "Historical research evaluation only; private fixture mapping and deployment-specific rights must be verified before execution."
+    },
+    {
+      "sampleId": "Seedream-4__R-GR-001-3",
+      "sourceFamilyId": "T2I_FAMILY_Seedream-4_Seedream-4__R-GR-001-3",
+      "sha256": "fe5ef204d1c8b235179b443f81e91f52607a9c02b1fb605f7f1efe93f0511269",
+      "historicalScore": 0.08009527623653412,
+      "historicalSourceRef": "cce247e66be4de3fb0e927cc12e7a0c87d70561d",
+      "historicalScoreArtifact": "research/wp007i/safe-original-scores.json",
+      "groundTruth": 1,
+      "category": "MODERN_GENERATED",
+      "generatorFamily": "Seedream-4",
+      "rightsScope": "Historical research evaluation only; private fixture mapping and deployment-specific rights must be verified before execution."
+    },
+    {
+      "sampleId": "imagen-4__R-GR-001-0",
+      "sourceFamilyId": "T2I_FAMILY_imagen-4_imagen-4__R-GR-001-0",
+      "sha256": "c21c9bba880b45c24745673457ae257ab19c6d897f082c05b88f2c7a723dfd5d",
+      "historicalScore": 0.050658129155635834,
+      "historicalSourceRef": "cce247e66be4de3fb0e927cc12e7a0c87d70561d",
+      "historicalScoreArtifact": "research/wp007i/safe-original-scores.json",
+      "groundTruth": 1,
+      "category": "MODERN_GENERATED",
+      "generatorFamily": "imagen-4",
+      "rightsScope": "Historical research evaluation only; private fixture mapping and deployment-specific rights must be verified before execution."
+    }
+  ],
+  "controlledDescendants": [
+    {
+      "parent": "first-camera",
+      "operations": [
+        "JPEG_Q95",
+        "JPEG_Q75",
+        "RESIZE_HALF",
+        "JPEG_Q95_THEN_PNG"
+      ],
+      "independentSources": false
+    },
+    {
+      "parent": "first-synthetic",
+      "operations": [
+        "JPEG_Q95",
+        "JPEG_Q75",
+        "RESIZE_HALF",
+        "JPEG_Q95_THEN_PNG"
+      ],
+      "independentSources": false
+    }
+  ]
+}

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import fs from 'node:fs';
 import test from 'node:test';
 
-const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8');
+const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8').replace(/\r\n/g, '\n');
 const webWorkflow = readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
 const workersWorkflow = readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8').replace(/\r\n/g, '\n');
 const adr003Workflow = readFileSync('.github/workflows/native-adr003-acceptance.yml', 'utf8');
@@ -129,7 +129,7 @@ test('every production deployment entrypoint remains bound to exact CI and secur
 });
 
 test('refreshes generated Worker types after deployment identity materialization', () => {
-  const materialize = workersWorkflow.indexOf('- name: Materialize approved post-0016 deployment identity');
+  const materialize = workersWorkflow.indexOf('- name: Materialize approved post-0017 deployment identity');
   const refresh = workersWorkflow.indexOf('- name: Refresh generated Worker types after deployment identity materialization');
   const validate = workersWorkflow.indexOf('- name: Validate provisioned native Worker configuration');
   assert.ok(materialize >= 0, 'deployment identity materialization must remain explicit');
@@ -516,7 +516,13 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.ok(coordinatorActivation > candidateUpload);
   assert.ok(keeperAcceptance > coordinatorActivation);
   assert.ok(productionActivation > keeperAcceptance);
-  assert.doesNotMatch(workersWorkflow, /wrangler@4\.123\.0 deploy(?:\s|['"])/);
+  const disabledRuntime = workersWorkflow.slice(workersWorkflow.indexOf('- name: Prepare approved authenticity runtime'), workersWorkflow.indexOf('- name: Refresh generated Worker types after deployment identity materialization'));
+  assert.match(disabledRuntime, /vars\.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != ''/);
+  assert.match(disabledRuntime, /materialize-authenticity-beta-runtime\.mjs/);
+  assert.match(disabledRuntime, /configure-authenticity-beta-runtime\.mjs disable/);
+  assert.match(disabledRuntime, /--secrets-file "\$runtime_secrets_file"/);
+  assert.match(disabledRuntime, /deploy --config apps\/lythaus-authenticity-runtime\/wrangler\.release\.jsonc/);
+  assert.doesNotMatch(workersWorkflow.replace(disabledRuntime, ''), /wrangler@4\.123\.0 deploy(?:\s|['"])/);
   assert.match(coordinatorParentHelper, /COORDINATOR_PARENT_EXISTED_BEFORE/);
   assert.match(coordinatorParentHelper, /COORDINATOR_PARENT_CREATED/);
   assert.match(workersWorkflow, /COORDINATOR_PREVIOUS_DEPLOYMENT_EXISTS/);
@@ -533,6 +539,8 @@ test('coordinator parent bootstrap is ordered before inventory and activation', 
   assert.match(rollback, /versions deploy \$COORDINATOR_ROLLBACK_SPECS/);
   assert.match(workersWorkflow, /Capture predeployment Worker state[\s\S]*coordinator-before-versions\.json/);
   assert.match(workersWorkflow, /Resolve changed candidates and reused production versions \(CANDIDATE gate\)/);
+  assert.ok(workersWorkflow.indexOf('- name: Activate approved private authenticity cohort') > workersWorkflow.indexOf('- name: ACTIVATION - Export candidate, reuse, and activation metadata'));
+  assert.match(workersWorkflow, /AUTHENTICITY_BETA_ACTIVATION_ATTEMPTED == 'true'/);
 });
 
 test('release rollback capture preserves serving traffic beside staged candidates', () => {

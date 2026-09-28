@@ -8,6 +8,9 @@ import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
 import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, readTransactionalEmailDeliveryEvidence, reconcileTransactionalEmailLifecycleQueueMessage, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
+import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
+import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
+import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
 interface Env extends EnvBindings {
@@ -1618,6 +1621,8 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   }
   try {
     if (eventType === 'content.post.created' || eventType === 'content.post.updated') await processPostModeration(message, env);
+    if (eventType === 'moderation.authenticity_beta.requested') await processBetaEvent(env, eventId, message.body.payload);
+    if (eventType === 'moderation.authenticity_alpha.requested') await processAlphaEvent(env, eventId, message.body.payload);
     if (eventType === 'content.profile.updated') await processProfileModeration(message, env);
     if (eventType === 'content.comment.created' || eventType === 'content.comment.updated') {
       await processCommentModeration(message, env);
@@ -1885,6 +1890,11 @@ export default {
   },
 
   async scheduled(_event: unknown, env: Env): Promise<void> {
+    if (env.AUTHENTICITY_BETA_STORAGE_ENABLED === 'true') {
+      await expireBetaWork(env);
+      await purgeBetaMedia(env.DB_JOBS_FRESH,env.MEDIA_QUARANTINE);
+    }
+    if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);
@@ -1961,6 +1971,15 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       return { subjectId, state: 'blocked' };
     }
 
+    if (this.env.AUTHENTICITY_BETA_STORAGE_ENABLED === 'true') {
+      await step.do('tombstone-private-beta',async()=>{await tombstoneBetaCases(this.env.DB_JOBS_FRESH,subjectId); return true;});
+      await step.sleep('wait-private-beta-upload-expiry','16 minutes');
+      await step.do('purge-private-beta',async()=>{
+        const remaining=await purgeBetaMedia(this.env.DB_JOBS_FRESH,this.env.MEDIA_QUARANTINE,subjectId);
+        if (remaining>0) throw new Error('beta_purge_pending');
+        return true;
+      });
+    }
     await step.do('redact-authoritative-content', async () => {
       await transaction(this.env.DB_JOBS_FRESH, async (client) => {
         await client.query(`UPDATE content.comments SET body = '[deleted]', moderation_state = 'blocked' WHERE author_id = $1`, [subjectId]);
@@ -2253,6 +2272,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         accountabilitySignals,
         notificationPreferences,
         notificationDevices,
+        betaCases,
+        betaFeedback,
       ] = await Promise.all([
         query(this.env.DB_JOBS_FRESH, `SELECT id, body, declared_creation_mode, visibility, moderation_state, geo_scope, place_id, published_at, created_at FROM content.posts WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, post_id, parent_id, body, moderation_state, created_at FROM content.comments WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
@@ -2295,6 +2316,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         query(this.env.DB_JOBS_FRESH, `SELECT id, signal_type, signal_value, policy_version, created_at FROM trust.accountability_signals WHERE user_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT email_enabled, push_enabled, replies_enabled, moderation_enabled, rewards_enabled, updated_at FROM feed.notification_preferences WHERE user_id = $1`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, platform, active, created_at, revoked_at FROM feed.notification_devices WHERE user_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT case_id, state, consent_version, review_state, created_at, updated_at, expires_at, result->>'finding' AS finding, result->'advisory'->>'status' AS advisory_status FROM moderation.authenticity_beta WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT f.id, f.case_id, f.kind, f.message, f.policy_version, f.created_at FROM moderation.authenticity_beta_feedback f JOIN moderation.authenticity_beta b ON b.case_id=f.case_id WHERE b.owner_id=$1 AND b.deleted_at IS NULL ORDER BY f.created_at`, [subjectId]),
       ]);
       return buildPrivacyDataPassport({
         generatedAt: new Date().toISOString(),
@@ -2322,6 +2345,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         accountabilitySignals: accountabilitySignals.rows,
         notificationPreferences: notificationPreferences.rows[0] ?? null,
         notificationDevices: notificationDevices.rows,
+        authenticityBeta: { cases: betaCases.rows, feedback: betaFeedback.rows, trainingConsent: false, publicationEligible: false },
         activity: userActivity.rows,
         submittedAppeals: submittedAppeals.rows,
         reviewerQualification: reviewerQualification.rows[0] ?? null,
@@ -2482,6 +2506,10 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
           return { posts: redactedPosts, media: 0 };
         }
         if (plan === 'delete_media') {
+          if (this.env.AUTHENTICITY_BETA_STORAGE_ENABLED === 'true') {
+            await tombstoneBetaCases(this.env.DB_JOBS_FRESH,candidate.user_id,null,candidate.retention_period);
+            await purgeBetaMedia(this.env.DB_JOBS_FRESH,this.env.MEDIA_QUARANTINE,candidate.user_id);
+          }
           const objects = await query<{ id: string; object_key: string; byte_size: number }>(this.env.DB_JOBS_FRESH,
             `SELECT id, object_key, byte_size FROM media.objects WHERE owner_id = $1 AND created_at < now() - $2::interval AND deleted_at IS NULL`,
             [candidate.user_id, candidate.retention_period]);
