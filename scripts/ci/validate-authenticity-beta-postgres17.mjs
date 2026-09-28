@@ -122,8 +122,8 @@ try {
   await admin.query(`UPDATE media.upload_sessions SET expires_at=now()-interval '20 minutes' WHERE id=$1`,[third]);await admin.query(`UPDATE moderation.authenticity_beta SET deleted_at=now()-interval '20 minutes' WHERE case_id=$1`,[third]);
   assert.equal(await purgeBetaMedia(env.DB_JOBS_FRESH,bucket,owner),0);
   assert.equal((await api('','POST',submission)).status,429);
-  const released=(await admin.query(`SELECT count(*) AS n FROM system.cost_budget_reservations WHERE operation='authenticity_beta_case' AND status='released' AND actual_cost_usd IS NULL`)).rows[0];
-  assert.equal(Number(released.n),1);
+  const rejected=(await admin.query(`SELECT count(*) AS n FROM system.cost_budget_reservations WHERE operation='authenticity_beta_case' AND status='rejected' AND actual_cost_usd IS NULL`)).rows[0];
+  assert.equal(Number(rejected.n),1);
   const committed=(await admin.query(`SELECT status,actual_cost_usd FROM system.cost_budget_reservations WHERE correlation_id=$1`,[third])).rows[0];
   assert.equal(committed.status,'committed');assert.equal(committed.actual_cost_usd,null);
   const billing={caseId:third,actorId:owner,evidenceSha256:'f'.repeat(64),billedCostUsd:0.01,attemptIds:(await admin.query(`SELECT id FROM moderation.authenticity_beta_steps WHERE case_id=$1`,[third])).rows.map(row=>row.id),allChargesFinal:true};

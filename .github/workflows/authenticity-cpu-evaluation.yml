@@ -77,7 +77,7 @@ jobs:
             --env AUTHENTICITY_BETA_DISPATCH_SECRET \
             --volume "$RUNNER_TEMP/authenticity-evaluation:/opt/safe:ro" \
             lythaus-safe-evaluation:${RELEASE_SHA}
-          for attempt in {1..60}; do curl --fail --silent http://127.0.0.1:18080/ready >/dev/null && exit 0; sleep 1; done
+          for ((attempt=1; attempt<=60; attempt++)); do curl --fail --silent http://127.0.0.1:18080/ready >/dev/null && exit 0; sleep 1; done
           exit 1
       - name: Install the frozen smoke client dependency
         run: python -m pip install --disable-pip-version-check --no-deps --require-hashes --quiet pillow==12.3.0 --hash=sha256:0847a763afefb695bc912d7c131e7e0632d4edc1d8698f58ddabec8e46b8b6d3
