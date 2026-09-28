@@ -73,8 +73,8 @@ class _PrivateAlphaScreenState extends ConsumerState<AuthenticityPrivateAlphaScr
     }
   }
 
-  Future<void> _load() async {
-    if (_busy) return;
+  Future<void> _load({bool allowWhileBusy = false}) async {
+    if (_busy && !allowWhileBusy) return;
     try {
       final response = await ref.read(privateAlphaApiProvider).request('');
       final items = (response['items'] as List<dynamic>? ?? const [])
@@ -145,7 +145,7 @@ class _PrivateAlphaScreenState extends ConsumerState<AuthenticityPrivateAlphaScr
       }
       _text.clear();
       _polls = 0;
-      await _load();
+      await _load(allowWhileBusy: true);
       if (mounted) setState(() => _selected = _cases.where((item) => item['caseId'] == id).firstOrNull);
     } catch (_) {
       if (mounted) setState(() => _error = 'The alpha case could not be submitted. Check content, connection, and cohort access.');
@@ -185,14 +185,15 @@ class _PrivateAlphaScreenState extends ConsumerState<AuthenticityPrivateAlphaScr
     });
     try {
       final id = selected['caseId'] as String;
+      final deleting = action == 'delete';
       await ref.read(privateAlphaApiProvider).request(
          action == 'delete' ? '/$id' : '/$id/$action',
         method: action == 'delete' ? 'DELETE' : 'POST',
         data: action == 'advice' ? const {} : {'message': _feedback.text.trim()},
       );
       _feedback.clear();
-      await _load();
-      if (mounted) await _select(id);
+      await _load(allowWhileBusy: true);
+      if (mounted && !deleting) await _select(id);
     } catch (_) {
       if (mounted) setState(() => _error = 'That case action could not finish.');
     } finally {
