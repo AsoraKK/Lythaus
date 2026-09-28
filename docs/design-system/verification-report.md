@@ -2,11 +2,23 @@
 
 ## Outcome and release status
 
+**Delivery request, 28 September 2026:** the user accepts the presented appearance and
+requests that the live app display the updated UI. Review, merge and protected frontend
+deployment are now in scope. Live delivery is tracked in [the current status](implementation-status.md#live-delivery-2026-09-28);
+the earlier visual observations remain follow-up work. No deployment success is implied
+by that authorisation.
+
+**Visual acceptance reopened, 28 September 2026:** the user's quality concern is confirmed
+by a fresh live/branch comparison. The live app does not show the pushed branch, and the
+branch itself still has an insufficiently composed sign-in screen, empty feed and guest
+Profile. The checks below remain engineering evidence; they are not acceptance of the
+requested visual quality. See [the current status](implementation-status.md#live-and-branch-review-2026-09-28).
+
 The local Flutter application and all 16 existing secondary website routes now share warm editorial design foundations. The website also has a real-link Help directory and a styled 404 page. The app retains Flutter/Riverpod/GoRouter and its service boundaries; the support site retains Astro. The marketing homepage remains a frozen consumer with independent source, rendering and behavior evidence.
 
 **This implementation is not production acceptance.** Verification was completed locally before committing. The user subsequently authorised committing and pushing on 27 September 2026 to `codex/lythaus-design-system`. Work is in `C:/Users/kylee/.codex/worktrees/lythaus-design-system/Lythaus`, based on `8e3b3ebad2f846e61db2bfe819376723da7e9863`. The original checkout and unrelated untracked files were preserved. The baseline was fetched and rechecked against GitHub on 27 September 2026; no claim is made that production is deployed from that SHA. Merge, deployment, schema changes and infrastructure mutations remain outside the authorised delivery.
 
-The full requested definition of done remains **open** for the genuine dependencies below. They were not replaced with invented content or fake functionality.
+The full requested definition of done remains **open** for visual quality and the genuine dependencies below. They were not replaced with invented content or fake functionality.
 
 ## What is implemented
 

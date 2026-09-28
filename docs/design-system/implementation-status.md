@@ -2,18 +2,54 @@
 
 Baseline: `8e3b3ebad2f846e61db2bfe819376723da7e9863` (`origin/main`, rechecked on 2026-09-27). Original checkout HEAD: `8a832e692110ec14083ca1c56bcf554ff10e1ebb`; unrelated untracked work is preserved there. Implementation is in the isolated `lythaus-design-system` worktree. The user authorised committing and pushing this work on 2026-09-27; the delivery branch is `codex/lythaus-design-system`. Merge, deployment, schema and infrastructure changes remain outside that authorisation.
 
+## Live delivery, 2026-09-28
+
+The user accepts the presented appearance and asks to fix the old UI still served by
+`app.lythaus.co`. This authorises progressing the existing UI through review, merge and
+the protected frontend deployment workflow, then verifying the live domain. The visual
+review notes below remain follow-up findings, not a reason to withhold the requested
+release. Backend/database changes and activation of incomplete features are outside scope.
+
+1. In progress: prepare reviewed UI release against current main.
+2. Pending: pass exact-revision CI and release checks.
+3. Pending: publish the approved frontend artifacts.
+4. Pending: verify live UI, asset identity and homepage preservation.
+
 ## Work stages
 
 1. Completed: inventory routes and capture baselines.
 2. Completed: protect homepage and establish semantic foundations.
 3. Completed locally: migrate reachable app journeys and secondary website; preserve deferred gates.
-4. Completed locally: inspect rendered fixtures and repair regressions.
+4. Reopened on 2026-09-28: visual acceptance does not meet the requested product quality. The live/branch comparison confirms that contrast and navigation improvements alone do not complete the redesign.
 5. Completed: record reproducible verification and remaining acceptance dependencies.
 
-The full product definition of done remains open for the Rewards recurrence contract,
+The full product definition of done remains open for visual quality, the Rewards recurrence contract,
 approved policy conflicts and real integration/native accessibility acceptance.
 See [the final verification report](verification-report.md), [app matrix](app-migration.md),
 [web matrix](web-migration.md) and [homepage evidence](homepage-protection.md).
+
+## Live and branch review, 2026-09-28
+
+The user reports that `app.lythaus.co` still looks low quality. Fresh desktop (1440px)
+and phone (390px) captures confirm that production is not displaying the design branch.
+`a8e8780ae8db35ceb19af7bc419683883acc236d` is absent from the refreshed `origin/main`
+(`8c5f7ffed09653d05aeaed3c09a88e48e683071c`), and no PR exists for the branch.
+The public JS bundle hashes to `3dc9ecbf2bee3b548f4dc7ccbe21f12428381c09e149b01b948c13f4a106ad0c`;
+the tested local branch bundle hashes to `f589d3c0dc025fec6c05c8b41d76f29bef7f758eb7435a8975b1c25d284417cd`.
+This identifies a different build, not an exact production source revision.
+
+The branch also fails the intended visual standard: sign-in retains the generic sparkle
+icon and undifferentiated vertical action stack; the empty feed lacks useful next actions
+and a considered desktop composition; the guest Profile is a single sentence without a
+sign-in action. Shared tokens, passing tests and route coverage do not establish visual
+completion. Do not deploy this branch as the finished redesign on the strength of the
+earlier verification summary.
+
+Fresh evidence is in `C:/Users/kylee/AppData/Local/Temp/lythaus-live-review-2026-09-28-comparison/`.
+Live sign-in and guest feed were exercised at both widths; branch sign-in/feed were
+captured at both widths and branch guest Profile on desktop. The branch uses intercepted
+empty-feed fixtures; live captures use the public guest experience. No credentials,
+account writes, production mutations or authenticated-route acceptance were performed.
 
 ## Direction
 
