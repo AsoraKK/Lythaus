@@ -8,6 +8,7 @@ import {
   parsePrivateAlphaExplanation,
   authorPrivateAlphaView,
 } from '../src/private-alpha.ts';
+import { measuredAlphaBudget } from '../src/beta-config.ts';
 import { createInsufficientEvidenceRecommendation } from '../src/judge.ts';
 
 const caseId = '01990000-0000-7000-8000-000000000101';
@@ -30,6 +31,44 @@ const moderation = {
     status: 'SUCCESS',
   },
 };
+
+function measuredConfig(overrides = {}) {
+  return {
+    enabled: true,
+    expiresAt: new Date(Date.now() + 3600000).toISOString(),
+    allowlist: [caseId],
+    safeEnabled: true,
+    adviserEnabled: true,
+    rightsApproval: 'a'.repeat(64),
+    budgetApproval: 'b'.repeat(64),
+    runtimeApproval: 'c'.repeat(64),
+    runtimeDigest: 'sha256:' + 'd'.repeat(64),
+    preprocessingHash: 'e'.repeat(64),
+    caseReservationUsd: 0.2,
+    adviserReservationUsd: 0.05,
+    observerReservationUsd: 0.04,
+    budgetEvidenceSha256: 'b'.repeat(64),
+    budgetObservedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+    budgetExpiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+    authenticitySubBudgetUsd: 2,
+    authenticityHeadroomUsd: 0.4,
+    sourceHistoryHashes: [],
+    ...overrides,
+  };
+}
+
+test('measured alpha admission rejects an environment-only estimate and stale usage evidence', () => {
+  assert.throws(() => measuredAlphaBudget(measuredConfig({ budgetApproval: null, budgetEvidenceSha256: null })), /alpha_budget_evidence_required/);
+  assert.throws(() => measuredAlphaBudget(measuredConfig({ budgetObservedAt: new Date(Date.now() - 61 * 60_000).toISOString() })), /alpha_budget_evidence_stale/);
+});
+
+test('measured alpha admission requires optional-provider envelopes', () => {
+  assert.throws(() => measuredAlphaBudget(measuredConfig({ adviserReservationUsd: null }), { observer: false, adviser: true }), /alpha_adviser_measurement_required/);
+  const plan = measuredAlphaBudget(measuredConfig(), { observer: true, adviser: true });
+  assert.equal(plan.authenticityLimitUsd, 1.6);
+  assert.ok(Math.abs(plan.caseReservationUsd - 0.24) < 1e-9);
+  assert.equal(plan.adviserReservationUsd, 0.05);
+});
 
 test('alpha component matrix distinguishes requested execution from interpretation', () => {
   const text = initialAlphaComponents({ contentKind: 'text', observerRequested: false, explanationRequested: true });

@@ -94,6 +94,14 @@ const functionContracts = {
       resultType: 'integer',
     },
   },
+  '0019_authenticity_alpha_hardening.sql': {
+    'privacy.alpha_subject_has_hold(p_subject_id uuid)': {
+      canonicalBody: canonicalFunctionBody('0019_authenticity_alpha_hardening.sql', 'privacy.alpha_subject_has_hold'),
+      language: 'sql',
+      resultType: 'boolean',
+      searchPath: ['pg_catalog', 'privacy'],
+    },
+  },
 };
 
 const columnContractSql = (label, relation, column, type) => {
@@ -120,6 +128,16 @@ const columnContracts = {
   '0016_transactional_email_envelope_boundary.sql': [
     ['system.transactional_email_outbox', 'delivery_envelope_ciphertext', 'text'],
     ['system.transactional_email_outbox', 'delivery_envelope_encryption_key_version', 'text'],
+  ],
+  '0019_authenticity_alpha_hardening.sql': [
+    ['moderation.authenticity_alpha', 'advice_reservation_id', 'uuid'],
+    ['moderation.authenticity_alpha', 'purge_state', 'text'],
+    ['moderation.authenticity_alpha', 'purge_attempts', 'integer'],
+    ['moderation.authenticity_alpha', 'purge_requested_at', 'timestamp with time zone'],
+    ['moderation.authenticity_alpha', 'purge_completed_at', 'timestamp with time zone'],
+    ['moderation.authenticity_alpha', 'purge_last_error', 'text'],
+    ['moderation.authenticity_alpha', 'storage_released_at', 'timestamp with time zone'],
+    ['moderation.authenticity_alpha_steps', 'reservation_id', 'uuid'],
   ],
 };
 
@@ -265,6 +283,9 @@ const artifacts = {
     { artifact: 'authenticity_alpha_status_check', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'upload_sessions_status_check' AND pg_get_constraintdef(oid) ILIKE '%cancelled%') AS present" },
     { artifact: 'record_alpha_location_function', kind: 'schema_artifact', sql: "SELECT to_regprocedure('privacy.record_alpha_location(uuid,uuid)') IS NOT NULL AS present" },
     { artifact: 'remove_alpha_location_function', kind: 'schema_artifact', sql: "SELECT to_regprocedure('privacy.remove_alpha_location(uuid,uuid)') IS NOT NULL AS present" },
+  ],
+  '0019_authenticity_alpha_hardening.sql': [
+    { artifact: 'authenticity_alpha_purge_index', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha_purge_idx') IS NOT NULL AS present" },
   ],
 };
 

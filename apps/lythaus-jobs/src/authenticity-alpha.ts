@@ -1,4 +1,4 @@
-import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
+import { purgeAlphaMedia, query, reconcileBudgetReservation, scheduleAlphaPurge, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { uuidv7 } from '@lythaus/security';
 import {
@@ -17,7 +17,7 @@ import {
   type PrivateAlphaResult,
 } from '../../../packages/authenticity/src/private-alpha.ts';
 import { BETA_LIMITS, assertSafeResult, readBoundedBytes, type SafeResult } from '../../../packages/authenticity/src/beta.ts';
-import { readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
+import { measuredAlphaBudget, readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { buildEvidencePacket } from '../../../packages/authenticity/src/evidence-packet.ts';
 import { applyWp005aRoutingGate, compileEpistemicLedger } from '../../../packages/authenticity/src/epistemic-compiler.ts';
 import { sha256Hex } from '../../../packages/authenticity/src/forensics.ts';
@@ -43,6 +43,7 @@ type AlphaRow = {
   components: Record<AlphaComponent, AlphaComponentStatus>;
   observer_requested: boolean;
   explanation_requested: boolean;
+  advice_reservation_id: string | null;
   lease_token: string;
 };
 type StepRow = { id: string; state: string; output: unknown; reuse_key: string };
@@ -52,14 +53,19 @@ const fence = "case_id=$1 AND revision=$2 AND lease_token=$3 AND lease_until>now
 
 async function active(env: AlphaEnv, row: AlphaRow): Promise<void> {
   const config = await readBetaConfig(env);
-  if (env.AUTHENTICITY_ALPHA_ENABLED !== 'true' || env.COST_BUDGET_ENABLED !== 'true' || !config.enabled || !config.budgetApproval || !config.allowlist.includes(row.owner_id)) throw new Error('alpha_paused');
+  if (env.AUTHENTICITY_ALPHA_ENABLED !== 'true' || env.COST_BUDGET_ENABLED !== 'true' || !config.enabled || !config.allowlist.includes(row.owner_id)) throw new Error('alpha_paused');
+  try {
+    measuredAlphaBudget(config, { observer: row.observer_requested, adviser: row.explanation_requested });
+  } catch {
+    throw new Error('alpha_paused');
+  }
   const reservation = await query(env.DB_JOBS_FRESH, "SELECT id FROM system.cost_budget_reservations WHERE operation='authenticity_alpha_case' AND correlation_id=$1 AND status IN ('committed','reconciled') AND NOT EXISTS (SELECT 1 FROM system.cost_kill_switches WHERE enabled AND key=ANY($2::text[]))", [row.case_id, ['global', 'authenticity', 'operation:authenticity_alpha_case', 'provider:lythaus-safe-container', 'provider:cloudflare-workers-ai', 'provider:openai']]);
   if (!reservation.rowCount) throw new Error('alpha_paused');
   const current = await query(env.DB_JOBS_FRESH, "SELECT case_id FROM moderation.authenticity_alpha WHERE " + fence, [row.case_id, row.revision, row.lease_token]);
   if (!current.rowCount) throw new Error('alpha_stale');
 }
 
-async function step<T>(env: AlphaEnv, row: AlphaRow, component: AlphaComponent, reuseKey: string, execute: (runId: string) => Promise<T>): Promise<T> {
+async function step<T>(env: AlphaEnv, row: AlphaRow, component: AlphaComponent, reuseKey: string, execute: (runId: string) => Promise<T>, reservationId: string | null = null): Promise<T> {
   await active(env, row);
   const started = await transaction(env.DB_JOBS_FRESH, async (client) => {
     const valid = await client.query("SELECT case_id FROM moderation.authenticity_alpha WHERE " + fence + " FOR UPDATE", [row.case_id, row.revision, row.lease_token]);
@@ -70,7 +76,7 @@ async function step<T>(env: AlphaEnv, row: AlphaRow, component: AlphaComponent, 
       throw new Error('alpha_attempt_consumed');
     }
     const id = uuidv7();
-    await client.query("INSERT INTO moderation.authenticity_alpha_steps(id,case_id,revision,component,state,reuse_key) VALUES($1,$2,$3,$4,'started',$5)", [id, row.case_id, row.revision, component, reuseKey]);
+    await client.query("INSERT INTO moderation.authenticity_alpha_steps(id,case_id,revision,component,state,reuse_key,reservation_id) VALUES($1,$2,$3,$4,'started',$5,$6)", [id, row.case_id, row.revision, component, reuseKey, reservationId]);
     return { id, state: 'started', output: null, reuse_key: reuseKey };
   });
   if (started.state === 'completed') return started.output as T;
@@ -135,6 +141,26 @@ function usage(raw: unknown) {
   return { inputTokens: count(record.prompt_tokens ?? record.input_tokens), outputTokens: count(record.completion_tokens ?? record.output_tokens) };
 }
 
+async function reconcileAdviceReservation(env: AlphaEnv, row: AlphaRow, reason: string): Promise<void> {
+  if (!row.advice_reservation_id) throw new Error('alpha_advice_reservation_missing');
+  const reservation = await query<{ estimated_cost_usd: string; status: string }>(
+    env.DB_JOBS_FRESH,
+    `SELECT estimated_cost_usd,status FROM system.cost_budget_reservations WHERE id=$1`,
+    [row.advice_reservation_id],
+  );
+  const current = reservation.rows[0];
+  if (!current || !['reserved', 'committed', 'reconciled'].includes(current.status)) throw new Error('alpha_advice_reservation_invalid');
+  if (current.status === 'reserved') {
+    await reconcileBudgetReservation(env.DB_JOBS_FRESH, {
+      reservationId: row.advice_reservation_id,
+      actualCostUsd: Number(current.estimated_cost_usd),
+      provider: 'cloudflare-workers-ai',
+      externalReference: `alpha-advice:${row.case_id}:${row.revision}`,
+      reason,
+    });
+  }
+}
+
 export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload: unknown): Promise<void> {
   const value = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {};
   if (!UUID.test(eventId) || typeof value.caseId !== 'string' || !UUID.test(value.caseId) || !Number.isSafeInteger(value.revision)) throw new Error('alpha_event_invalid');
@@ -146,7 +172,7 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
   }
   const row = await transaction(env.DB_JOBS_FRESH, async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(hashtext('authenticity-alpha-runtime'))");
-    const result = await client.query<AlphaRow>("UPDATE moderation.authenticity_alpha SET state='analyzing',lease_token=$3,lease_until=now()+interval '5 minutes',attempts=attempts+1,updated_at=now() WHERE case_id=$1 AND revision=$2 AND deleted_at IS NULL AND expires_at>now() AND state IN ('queued','analyzing') AND attempts<3 RETURNING *", [value.caseId, value.revision, uuidv7()]);
+    const result = await client.query<AlphaRow>("UPDATE moderation.authenticity_alpha SET state='analyzing',lease_token=$3,lease_until=now()+interval '5 minutes',attempts=attempts+1,updated_at=now() WHERE case_id=$1 AND revision=$2 AND deleted_at IS NULL AND expires_at>now() AND (state='queued' OR (state='analyzing' AND (lease_until IS NULL OR lease_until<=now()))) AND attempts<3 RETURNING *", [value.caseId, value.revision, uuidv7()]);
     return result.rows[0];
   });
   if (!row) return;
@@ -166,6 +192,7 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
         if (row.result) {
           row.result.explanation = { status: 'disabled', role: 'GPT_OSS_PRIVATE_ALPHA_EXPLAINER' };
           setComponent(row.result, 'adviser', { execution: 'skipped', interpretation: 'unavailable', requested: true, reason: 'adviser_disabled' });
+          await reconcileAdviceReservation(env, row, 'adviser_disabled_before_execution');
           await saveResult(env, row, row.result, true);
         }
         return;
@@ -185,10 +212,12 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
           } finally {
             if (timer) clearTimeout(timer);
           }
-        });
+        }, row.advice_reservation_id);
+        await reconcileAdviceReservation(env, row, 'adviser_attempt_completed');
         result.explanation = { status: 'complete', role: 'GPT_OSS_PRIVATE_ALPHA_EXPLAINER', ...advice };
         setComponent(result, 'adviser', { execution: 'completed', interpretation: 'available', requested: true });
       } catch {
+        await reconcileAdviceReservation(env, row, 'adviser_attempt_ambiguous_or_failed').catch(() => undefined);
         result.explanation = { status: 'attempt_consumed', role: 'GPT_OSS_PRIVATE_ALPHA_EXPLAINER' };
         setComponent(result, 'adviser', { execution: 'failed', interpretation: 'unavailable', requested: true, reason: 'provider_failure' });
       }
@@ -285,44 +314,14 @@ async function saveResult(env: AlphaEnv, row: AlphaRow, result: PrivateAlphaResu
 
 export async function expireAlphaWork(env: AlphaEnv): Promise<void> {
   await query(env.DB_JOBS_FRESH, "UPDATE moderation.authenticity_alpha_steps s SET state='ambiguous',error_code='PROVIDER_OUTCOME_UNKNOWN',completed_at=now() FROM moderation.authenticity_alpha a WHERE a.case_id=s.case_id AND s.state='started' AND (a.expires_at<=now() OR a.lease_until<now() OR a.deleted_at IS NOT NULL OR a.state='cancelled')");
-  await query(env.DB_JOBS_FRESH, "UPDATE moderation.authenticity_alpha SET state='expired',revision=revision+1,lease_token=NULL,lease_until=NULL,failure_code='CASE_DEADLINE',updated_at=now() WHERE expires_at<=now() AND state IN ('uploading','queued','analyzing','paused')");
-  await query(env.DB_JOBS_FRESH, "UPDATE moderation.authenticity_alpha SET state='failed',lease_token=NULL,lease_until=NULL,failure_code='RETRY_EXHAUSTED',updated_at=now() WHERE attempts>=3 AND state IN ('queued','analyzing') AND (lease_until IS NULL OR lease_until<now())");
-  if (!env.MEDIA_QUARANTINE) return;
-  const stale = await query<{ case_id: string; owner_id: string; object_id: string | null; upload_session_id: string | null; original_key: string | null; upload_key: string | null; state: string }>(env.DB_JOBS_FRESH, `
-    SELECT a.case_id, a.owner_id, a.object_id, a.upload_session_id, a.original_key, u.object_key AS upload_key, a.state
-      FROM moderation.authenticity_alpha a
-      LEFT JOIN media.upload_sessions u ON u.id=a.upload_session_id
-     WHERE a.state IN ('expired','cancelled','deleted')
-       AND a.purged_at IS NULL
-       AND a.updated_at > now() - interval '1 day'
-       AND (a.original_key IS NOT NULL OR u.object_key IS NOT NULL)`);
-  for (const row of stale.rows) {
-    const purged = await transaction(env.DB_JOBS_FRESH, async (client) => {
-      const locked = await client.query<{ state: string; object_id: string | null; upload_session_id: string | null; original_key: string | null }>(
-        `SELECT state,object_id,upload_session_id,original_key FROM moderation.authenticity_alpha WHERE case_id=$1 AND owner_id=$2 FOR UPDATE`,
-        [row.case_id, row.owner_id],
-      );
-      const current = locked.rows[0];
-      if (!current || current.state !== row.state || ['expired', 'cancelled', 'deleted'].includes(current.state) === false) return false;
-      if (current.upload_session_id) {
-        const upload = await client.query<{ expected_bytes: string; status: string }>(`SELECT expected_bytes,status FROM media.upload_sessions WHERE id=$1 FOR UPDATE`, [current.upload_session_id]);
-        if (upload.rows[0]?.status === 'pending') {
-          await client.query(`UPDATE media.storage_ledger SET bytes_reserved=greatest(0,bytes_reserved-$2) WHERE user_id=$1`, [row.owner_id, Number(upload.rows[0].expected_bytes)]);
-          await client.query(`UPDATE media.upload_sessions SET status='expired' WHERE id=$1 AND status='pending'`, [current.upload_session_id]);
-        }
-      }
-      if (current.object_id) {
-        const object = await client.query<{ byte_size: string; state: string }>(`SELECT byte_size,state FROM media.objects WHERE id=$1 AND owner_id=$2 FOR UPDATE`, [current.object_id, row.owner_id]);
-        if (object.rows[0] && object.rows[0].state !== 'deleted') {
-          await client.query(`UPDATE media.storage_ledger SET bytes_approved=greatest(0,bytes_approved-$2),object_count=greatest(0,object_count-1) WHERE user_id=$1`, [row.owner_id, Number(object.rows[0].byte_size)]);
-          await client.query(`UPDATE media.objects SET state='deleted',deleted_at=now() WHERE id=$1 AND owner_id=$2`, [current.object_id, row.owner_id]);
-        }
-      }
-      await client.query(`UPDATE moderation.authenticity_alpha SET purged_at=now(),updated_at=now() WHERE case_id=$1 AND owner_id=$2 AND purged_at IS NULL`, [row.case_id, row.owner_id]);
-      await client.query(`SELECT privacy.remove_alpha_location($1,$2)`, [row.owner_id, row.case_id]);
-      return true;
-    });
-    const keys = [row.original_key, row.upload_key].filter((key): key is string => Boolean(key));
-    if (purged && keys.length) await env.MEDIA_QUARANTINE.delete(keys);
+  const expired = await query<{ case_id: string; owner_id: string }>(env.DB_JOBS_FRESH, "SELECT case_id,owner_id FROM moderation.authenticity_alpha WHERE expires_at<=now() AND state IN ('uploading','queued','analyzing','paused') AND deleted_at IS NULL");
+  for (const row of expired.rows) {
+    try {
+      await scheduleAlphaPurge(env.DB_JOBS_FRESH, row.owner_id, row.case_id, 'expired');
+    } catch (error) {
+      if (!(error instanceof Error && error.message === 'alpha_retention_hold')) throw error;
+    }
   }
+  await query(env.DB_JOBS_FRESH, "UPDATE moderation.authenticity_alpha SET state='failed',lease_token=NULL,lease_until=NULL,failure_code='RETRY_EXHAUSTED',updated_at=now() WHERE attempts>=3 AND state IN ('queued','analyzing') AND (lease_until IS NULL OR lease_until<now())");
+  await purgeAlphaMedia(env.DB_JOBS_FRESH, env.MEDIA_QUARANTINE);
 }

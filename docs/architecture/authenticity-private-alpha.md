@@ -42,8 +42,10 @@ The 10 MiB byte and 16,777,216 decoded-pixel limits are enforced without resizin
 | OpenAI Safety, SAFE-A, observer and adviser orchestration | `apps/lythaus-jobs/src/authenticity-alpha.ts` |
 | Authenticated create/upload/result/review/feedback/advice/delete | `apps/lythaus-public-api/src/authenticity-alpha.ts` |
 | Audited administrator diagnostics, review and one-attempt advice | `apps/lythaus-admin-api/src/authenticity-alpha.ts` |
-| Additive persistence and privacy location | `database/planetscale/migrations/0018_authenticity_private_alpha.sql` |
+| Additive persistence and privacy location | `database/planetscale/migrations/0018_authenticity_private_alpha.sql`, `database/planetscale/migrations/0019_authenticity_alpha_hardening.sql` |
+| Shared measured admission and retryable purge | `packages/db/src/budget.ts`, `packages/db/src/authenticity-alpha.ts` |
 | Flutter author experience | `lib/features/authenticity/alpha_screen.dart`, `alpha_api.dart` |
 | Existing app route | `/authenticity` |
+| Protected frozen SAFE smoke preparation | `.github/workflows/authenticity-cpu-evaluation.yml`, `scripts/authenticity/materialize-private-evaluation.mjs`, `scripts/authenticity/sanitize-beta-cpu-receipt.mjs` |
 
 The implementation is code-complete for review and protocol-tested on this branch. Real provider calls, a checkpoint-bearing image, deployment, ordinary-input evaluation and live app acceptance remain separately approval-gated and are not claimed here.

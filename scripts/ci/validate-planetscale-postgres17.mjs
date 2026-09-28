@@ -98,9 +98,9 @@ try {
   for (const field of ['users', 'posts', 'subject_locations', 'idempotency', 'contact_emails', 'locator_function', 'retention_function', 'budget_periods', 'budget_reservations', 'usage_events', 'kill_switches', 'waitlist_signups', 'production_auth_acceptance_runs', 'production_auth_acceptance_events']) if (!row[field]) throw new Error(`PostgreSQL 17 compatibility check missing ${field}`);
   if (Number(row.waitlist_retention_column_count) !== 4) throw new Error(`PostgreSQL 17 compatibility check expected waitlist retention and hold columns`);
   if (Number(row.extension_count) !== 3) throw new Error(`PostgreSQL 17 compatibility check expected 3 required extensions, found ${row.extension_count}`);
-  if (Number(row.relation_count) !== 103) throw new Error(`PostgreSQL 17 compatibility check expected 103 local application relations after migration 0018, found ${row.relation_count}`);
+  if (Number(row.relation_count) !== 103) throw new Error(`PostgreSQL 17 compatibility check expected 103 local application relations through migration 0019, found ${row.relation_count}`);
   if (Number(row.relation_count) + 2 !== 105) throw new Error(`PostgreSQL 17 compatibility check expected 105 PlanetScale relations including two provider extension views, found ${Number(row.relation_count) + 2}`);
-  if (Number(row.table_count) !== 102) throw new Error(`PostgreSQL 17 compatibility check expected 102 launch tables after migration 0018, found ${row.table_count}`);
+  if (Number(row.table_count) !== 102) throw new Error(`PostgreSQL 17 compatibility check expected 102 launch tables through migration 0019, found ${row.table_count}`);
 
   const privileges = await client.query(`
     SELECT

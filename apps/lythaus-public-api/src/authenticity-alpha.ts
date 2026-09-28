@@ -1,4 +1,4 @@
-import { query, reserveBudget, transaction, type BudgetConfig, type HyperdriveBinding } from '@lythaus/db';
+import { purgeAlphaMedia, query, reserveBudget, reserveBudgetInTransaction, scheduleAlphaPurge, transaction, type BudgetConfig, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { createPresignedPutUrl } from '@lythaus/media';
 import { uuidv7 } from '@lythaus/security';
@@ -12,7 +12,7 @@ import {
   type PrivateAlphaResult,
 } from '../../../packages/authenticity/src/private-alpha.ts';
 import { readBoundedBytes } from '../../../packages/authenticity/src/beta.ts';
-import { readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
+import { measuredAlphaBudget, readBetaConfig, type BetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { sha256Hex } from '../../../packages/authenticity/src/forensics.ts';
 import { validateMediaPayload } from '../../../packages/authenticity/src/media-intake.ts';
 
@@ -41,6 +41,11 @@ type AlphaRow = {
   deleted_at?: Date | null;
 };
 
+type AlphaAdmission = {
+  config: BetaConfig;
+  measured: ReturnType<typeof measuredAlphaBudget>;
+};
+
 const privateJson = (body: unknown, status = 200) => Response.json(body, {
   status,
   headers: { 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' },
@@ -63,6 +68,15 @@ function appBudget(env: AlphaEnv): BudgetConfig {
     essentialOnlyUsd: values[3],
     deepScanStopUsd: values[4],
   };
+}
+
+function requireAlphaAdmission(env: AlphaEnv, config: BetaConfig, userId: string, requested: { observer: boolean; adviser: boolean }): AlphaAdmission {
+  if (env.AUTHENTICITY_ALPHA_ENABLED !== 'true' || env.AUTHENTICITY_ALPHA_STORAGE_ENABLED !== 'true' || !config.enabled || !config.allowlist.includes(userId)) throw new Error('alpha_budget_paused');
+  try {
+    return { config, measured: measuredAlphaBudget(config, requested) };
+  } catch {
+    throw new Error('alpha_budget_paused');
+  }
 }
 
 async function body(request: Request): Promise<Record<string, unknown>> {
@@ -115,20 +129,18 @@ export async function handleAlphaApi(request: Request, env: AlphaEnv, userId: st
       alpha_advice_attempt_consumed: 409,
       alpha_advice_disabled: 409,
       alpha_not_found: 404,
+      alpha_retention_hold: 409,
     };
     return privateJson({ error: statuses[code] ? code : 'alpha_unavailable' }, statuses[code] ?? 503);
   }
 }
 
 async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): Promise<Response> {
-  const config = await readBetaConfig(env);
-  if (env.AUTHENTICITY_ALPHA_ENABLED !== 'true' || env.AUTHENTICITY_ALPHA_STORAGE_ENABLED !== 'true' || !config.enabled) return privateJson({ error: 'alpha_disabled' }, 404);
-  if (!config.allowlist.includes(userId)) return privateJson({ error: 'alpha_disabled' }, 404);
-  await expireAlphaCases(env, userId);
   const url = new URL(request.url);
   const match = url.pathname.match(/^\/api\/authenticity\/alpha\/cases(?:\/([0-9a-f-]{36})(?:\/(finalise|feedback|review|cancel|advice|image))?)?$/);
   if (!match) return privateJson({ error: 'alpha_not_found' }, 404);
   const [, caseId, action] = match;
+  await expireAlphaCases(env, userId);
 
   if (!caseId && request.method === 'GET') {
     const rows = await query<AlphaRow>(env.DB_APP_FRESH, `SELECT * FROM moderation.authenticity_alpha WHERE owner_id=$1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50`, [userId]);
@@ -136,7 +148,7 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
   }
 
   if (!caseId && request.method === 'POST') {
-    if (!config.budgetApproval) return privateJson({ error: 'alpha_budget_paused' }, 503);
+    const config = await readBetaConfig(env);
     const input = await body(request);
     if (input.consentVersion !== PRIVATE_ALPHA_CONSENT || input.trainingConsent !== false) throw new Error('alpha_consent_required');
     const kind = contentKind(input.contentKind);
@@ -147,6 +159,7 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
     }
     const observerRequested = input.observerRequested === true;
     const explanationRequested = input.explanationRequested === true;
+    const admission = requireAlphaAdmission(env, config, userId, { observer: observerRequested, adviser: explanationRequested });
     const id = uuidv7();
     const image = kind !== 'text';
     const hash = image ? String(input.checksumSha256) : await sha256Hex(new TextEncoder().encode(text ?? ''));
@@ -167,15 +180,18 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
         expiresInSeconds: 600,
       });
     }
-    const estimate = Number(env.AUTHENTICITY_ALPHA_CASE_ESTIMATE_USD);
-    if (!Number.isFinite(estimate) || estimate <= 0) throw new Error('alpha_budget_paused');
     const reservation = await reserveBudget(env.DB_APP_FRESH, {
       period: new Date().toISOString().slice(0, 7),
       operation: 'authenticity_alpha_case',
       operationClass: 'experiment',
-      estimatedCostUsd: estimate,
+      estimatedCostUsd: admission.measured.caseReservationUsd,
       idempotencyKey: 'alpha:' + id,
       correlationId: id,
+      provider: 'lythaus-authenticity-alpha',
+      scope: {
+        operationNames: ['authenticity_alpha_case', 'authenticity_beta_case', 'authenticity_alpha_advice'],
+        limitUsd: admission.measured.authenticityLimitUsd,
+      },
       config: appBudget(env),
     });
     if (reservation.status !== 'reserved') return privateJson({ error: 'alpha_budget_paused' }, 429);
@@ -235,6 +251,8 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
     return new Response(object.body, { headers: { 'content-type': row.content_type, 'cache-control': 'private, no-store', 'content-security-policy': "default-src 'none'; sandbox" } });
   }
   if (request.method === 'POST' && action === 'finalise') {
+    const config = await readBetaConfig(env);
+    requireAlphaAdmission(env, config, userId, { observer: row.observer_requested, adviser: row.explanation_requested });
     if (!row.upload_session_id || row.state !== 'uploading' || !env.MEDIA_QUARANTINE) throw new Error('alpha_upload_expired');
     const session = await query<{ object_key: string; content_type: string; expected_bytes: string }>(env.DB_APP_FRESH, `SELECT object_key,content_type,expected_bytes FROM media.upload_sessions WHERE id=$1 AND user_id=$2 AND purpose='authenticity_alpha' AND status='pending' AND expires_at>now()`, [row.upload_session_id, userId]);
     if (!session.rows[0]) throw new Error('alpha_upload_expired');
@@ -266,11 +284,32 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
     return privateJson({ caseId, status: 'queued' }, 202);
   }
   if (request.method === 'POST' && action === 'advice') {
-    if (env.AUTHENTICITY_ALPHA_ADVISER_ENABLED !== 'true' || !config.budgetApproval) throw new Error('alpha_advice_disabled');
-    if (!row.result || row.advice_attempts > 0 || row.state === 'deleted') throw new Error(row.advice_attempts > 0 ? 'alpha_advice_attempt_consumed' : 'alpha_advice_ineligible');
-    const changed = await query(env.DB_APP_FRESH, `UPDATE moderation.authenticity_alpha SET state='analyzing',advice_attempts=advice_attempts+1,updated_at=now() WHERE case_id=$1 AND owner_id=$2 AND revision=$3 AND result IS NOT NULL AND advice_attempts=0 AND deleted_at IS NULL RETURNING case_id`, [caseId, userId, row.revision]);
-    if (!changed.rowCount) throw new Error('alpha_advice_attempt_consumed');
-    await query(env.DB_APP_FRESH, `INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,actor_id,payload) VALUES($1,'moderation.authenticity_alpha.requested','authenticity_alpha_case',$2,$3,$4::jsonb)`, [uuidv7(), caseId, userId, JSON.stringify({ caseId, revision: row.revision, operation: 'advice' })]);
+    const config = await readBetaConfig(env);
+    if (env.AUTHENTICITY_ALPHA_ADVISER_ENABLED !== 'true') throw new Error('alpha_advice_disabled');
+    const admission = requireAlphaAdmission(env, config, userId, { observer: false, adviser: true });
+    const accepted = await transaction(env.DB_APP_FRESH, async (client) => {
+      await client.query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+      const locked = await client.query<AlphaRow>(`SELECT * FROM moderation.authenticity_alpha WHERE case_id=$1 AND owner_id=$2 AND deleted_at IS NULL FOR UPDATE`, [caseId, userId]);
+      const current = locked.rows[0];
+      if (!current || !current.result || current.advice_attempts > 0 || !['complete', 'inconclusive', 'unsupported', 'failed'].includes(current.state) || current.expires_at <= new Date()) throw new Error(current?.advice_attempts ? 'alpha_advice_attempt_consumed' : 'alpha_advice_ineligible');
+      const reservation = await reserveBudgetInTransaction(client, {
+        period: new Date().toISOString().slice(0, 7),
+        operation: 'authenticity_alpha_advice',
+        operationClass: 'optional',
+        estimatedCostUsd: admission.measured.adviserReservationUsd,
+        idempotencyKey: `alpha-advice:${caseId}:${current.revision}`,
+        correlationId: caseId,
+        provider: 'cloudflare-workers-ai',
+        scope: { operationNames: ['authenticity_alpha_case', 'authenticity_beta_case', 'authenticity_alpha_advice'], limitUsd: admission.measured.authenticityLimitUsd },
+        config: appBudget(env),
+      });
+      if (reservation.status !== 'reserved') throw new Error('alpha_budget_paused');
+      const changed = await client.query<{ revision: number }>(`UPDATE moderation.authenticity_alpha SET state='analyzing',advice_attempts=advice_attempts+1,advice_reservation_id=$3,updated_at=now() WHERE case_id=$1 AND owner_id=$2 AND revision=$4 AND result IS NOT NULL AND advice_attempts=0 AND deleted_at IS NULL RETURNING revision`, [caseId, userId, reservation.id, current.revision]);
+      if (!changed.rowCount) throw new Error('alpha_advice_attempt_consumed');
+      await client.query(`INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,actor_id,payload) VALUES($1,'moderation.authenticity_alpha.requested','authenticity_alpha_case',$2,$3,$4::jsonb)`, [uuidv7(), caseId, userId, JSON.stringify({ caseId, revision: current.revision, operation: 'advice' })]);
+      return { reservationId: reservation.id };
+    });
+    void accepted;
     return privateJson({ caseId, status: 'queued', adviser: 'GPT_OSS_PRIVATE_ALPHA_EXPLAINER' }, 202);
   }
   if (request.method === 'POST' && ['feedback', 'review'].includes(action ?? '')) {
@@ -287,29 +326,25 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
   }
   if (request.method === 'DELETE' || (request.method === 'POST' && action === 'cancel')) {
     const deleting = request.method === 'DELETE';
-    await transaction(env.DB_APP_FRESH, async (client) => {
-      const locked = await client.query<{ state: string; object_id: string | null; upload_session_id: string | null }>(`SELECT state,object_id,upload_session_id FROM moderation.authenticity_alpha WHERE case_id=$1 AND owner_id=$2 AND deleted_at IS NULL FOR UPDATE`, [caseId, userId]);
-      if (!locked.rows[0]) throw new Error('alpha_not_found');
-      const previous = locked.rows[0];
-      if (previous.state === 'uploading' && previous.upload_session_id) {
-        const upload = await client.query<{ expected_bytes: string }>(`SELECT expected_bytes FROM media.upload_sessions WHERE id=$1 FOR UPDATE`, [previous.upload_session_id]);
-        if (upload.rows[0]) await client.query(`UPDATE media.storage_ledger SET bytes_reserved=greatest(0,bytes_reserved-$2) WHERE user_id=$1`, [userId, Number(upload.rows[0].expected_bytes)]);
-        await client.query(`UPDATE media.upload_sessions SET status='cancelled' WHERE id=$1 AND status='pending'`, [previous.upload_session_id]);
-      }
-      if (previous.object_id) {
-        const object = await client.query<{ byte_size: string; state: string }>(`SELECT byte_size,state FROM media.objects WHERE id=$1 AND owner_id=$2 FOR UPDATE`, [previous.object_id, userId]);
-        if (object.rows[0] && object.rows[0].state !== 'deleted') await client.query(`UPDATE media.storage_ledger SET bytes_approved=greatest(0,bytes_approved-$2),object_count=greatest(0,object_count-1) WHERE user_id=$1`, [userId, Number(object.rows[0].byte_size)]);
-      }
-      await client.query(`UPDATE moderation.authenticity_alpha SET state=$3,revision=revision+1,lease_token=NULL,lease_until=NULL,deleted_at=CASE WHEN $3='deleted' THEN now() ELSE deleted_at END,purged_at=now(),updated_at=now() WHERE case_id=$1 AND owner_id=$2 AND deleted_at IS NULL`, [caseId, userId, deleting ? 'deleted' : 'cancelled']);
-      if (previous.object_id) await client.query(`UPDATE media.objects SET deleted_at=now(),state='deleted' WHERE id=$1 AND owner_id=$2`, [previous.object_id, userId]);
-      await client.query(`SELECT privacy.remove_alpha_location($1,$2)`, [userId, caseId]);
+    const scheduled = await scheduleAlphaPurge(env.DB_APP_FRESH, userId, caseId, deleting ? 'deleted' : 'cancelled');
+    const purge = await purgeAlphaMedia(env.DB_APP_FRESH, env.MEDIA_QUARANTINE, caseId);
+    return privateJson({
+      caseId,
+      status: deleting ? 'deleted' : 'cancelled',
+      purgeStatus: purge.completed > 0 || scheduled.purgeState === 'completed' ? 'completed' : purge.pending > 0 ? 'pending' : 'blocked',
     });
-    if (row.original_key && env.MEDIA_QUARANTINE) await env.MEDIA_QUARANTINE.delete(row.original_key);
-    return privateJson({ caseId, status: deleting ? 'deleted' : 'cancelled' });
   }
   return privateJson({ error: 'alpha_not_found' }, 404);
 }
 
 async function expireAlphaCases(env: AlphaEnv, userId: string): Promise<void> {
-  await query(env.DB_APP_FRESH, `UPDATE moderation.authenticity_alpha SET state='expired',revision=revision+1,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE owner_id=$1 AND expires_at<=now() AND state IN ('uploading','queued','analyzing','paused')`, [userId]);
+  const expired = await query<{ case_id: string }>(env.DB_APP_FRESH, `SELECT case_id FROM moderation.authenticity_alpha WHERE owner_id=$1 AND expires_at<=now() AND state IN ('uploading','queued','analyzing','paused') AND deleted_at IS NULL`, [userId]);
+  for (const item of expired.rows) {
+    try {
+      await scheduleAlphaPurge(env.DB_APP_FRESH, userId, item.case_id, 'expired');
+      await purgeAlphaMedia(env.DB_APP_FRESH, env.MEDIA_QUARANTINE, item.case_id);
+    } catch (error) {
+      if (!(error instanceof Error && error.message === 'alpha_retention_hold')) throw error;
+    }
+  }
 }

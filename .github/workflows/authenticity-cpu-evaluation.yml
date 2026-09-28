@@ -1,0 +1,101 @@
+name: Authenticity private CPU evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact reviewed source SHA; must equal current main
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-authenticity-private-cpu-evaluation
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-24.04
+    environment: authenticity-private-evaluation
+    timeout-minutes: 45
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      EVALUATION_BUNDLE_URL: ${{ secrets.AUTHENTICITY_EVALUATION_BUNDLE_URL }}
+      EVALUATION_BUNDLE_TOKEN: ${{ secrets.AUTHENTICITY_EVALUATION_BUNDLE_TOKEN }}
+      AUTHENTICITY_BETA_DISPATCH_SECRET: ${{ secrets.AUTHENTICITY_BETA_DISPATCH_SECRET }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - name: Verify exact current main source
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags origin main
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+      - name: Require private bundle and dispatch secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$EVALUATION_BUNDLE_URL"
+          test -n "$EVALUATION_BUNDLE_TOKEN"
+          test -n "$AUTHENTICITY_BETA_DISPATCH_SECRET"
+      - name: Download private evidence bundle without redirects
+        shell: bash
+        env:
+          BUNDLE_PATH: ${{ runner.temp }}/authenticity-evaluation.tgz
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-redirs 0 \
+            -H "Authorization: Bearer ${EVALUATION_BUNDLE_TOKEN}" \
+            "$EVALUATION_BUNDLE_URL" -o "$BUNDLE_PATH"
+          mkdir -m 700 "$RUNNER_TEMP/authenticity-evaluation"
+          tar --extract --no-same-owner --no-same-permissions --file "$BUNDLE_PATH" --directory "$RUNNER_TEMP/authenticity-evaluation"
+          if find "$RUNNER_TEMP/authenticity-evaluation" -type l -print -quit | grep -q .; then
+            echo 'PRIVATE_BUNDLE_SYMLINK_FORBIDDEN' >&2
+            exit 1
+          fi
+          test -f "$RUNNER_TEMP/authenticity-evaluation/approval.json"
+          test -f "$RUNNER_TEMP/authenticity-evaluation/checkpoint.pth"
+          test -f "$RUNNER_TEMP/authenticity-evaluation/models/resnet.py"
+      - name: Materialize source-bound private approval
+        run: node scripts/authenticity/materialize-private-evaluation.mjs --approval "$RUNNER_TEMP/authenticity-evaluation/approval.json" --root "$RUNNER_TEMP/authenticity-evaluation" --output "$RUNNER_TEMP/authenticity-approval.json" --source-sha "$RELEASE_SHA"
+      - name: Build pinned evaluation runtime
+        run: docker build --target evaluation --tag lythaus-safe-evaluation:${RELEASE_SHA} apps/lythaus-authenticity-runtime/container
+      - name: Start loopback-only runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach --rm --name lythaus-safe-evaluation \
+            --publish 127.0.0.1:18080:8080 \
+            --env RUNTIME_DIGEST="$(node -e "const a=require(process.env.RUNNER_TEMP + '/authenticity-approval.json'); process.stdout.write(a.runtimeDigest)")" \
+            --env AUTHENTICITY_BETA_DISPATCH_SECRET \
+            --volume "$RUNNER_TEMP/authenticity-evaluation:/opt/safe:ro" \
+            lythaus-safe-evaluation:${RELEASE_SHA}
+          for attempt in {1..60}; do curl --fail --silent http://127.0.0.1:18080/ready >/dev/null && exit 0; sleep 1; done
+          exit 1
+      - name: Install the frozen smoke client dependency
+        run: python -m pip install --disable-pip-version-check --no-deps --require-hashes --quiet pillow==12.3.0 --hash=sha256:0847a763afefb695bc912d7c131e7e0632d4edc1d8698f58ddabec8e46b8b6d3
+      - name: Run the bounded frozen smoke
+        run: python scripts/authenticity/beta-cpu-smoke.py --approval "$RUNNER_TEMP/authenticity-approval.json" --receipt "$RUNNER_TEMP/private-beta-cpu-receipt.json" --port 18080
+      - name: Sanitize the private receipt
+        if: always()
+        run: node scripts/authenticity/sanitize-beta-cpu-receipt.mjs --input "$RUNNER_TEMP/private-beta-cpu-receipt.json" --output "$RUNNER_TEMP/authenticity-cpu-receipt-sanitized.json"
+      - name: Stop runtime and remove private mounts
+        if: always()
+        run: |
+          docker stop --time 5 lythaus-safe-evaluation >/dev/null 2>&1 || true
+          docker rm -f lythaus-safe-evaluation >/dev/null 2>&1 || true
+          rm -rf "$RUNNER_TEMP/authenticity-evaluation" "$RUNNER_TEMP/authenticity-evaluation.tgz" "$RUNNER_TEMP/authenticity-approval.json" "$RUNNER_TEMP/private-beta-cpu-receipt.json"
+      - name: Upload sanitized receipt only
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: authenticity-cpu-evaluation-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/authenticity-cpu-receipt-sanitized.json
+          if-no-files-found: error

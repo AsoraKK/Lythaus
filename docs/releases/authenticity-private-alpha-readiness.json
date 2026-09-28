@@ -19,8 +19,8 @@
     "ef5": "UNAVAILABLE"
   },
   "limits": { "maxFileBytes": 10485760, "maxDecodedPixels": 16777216, "caseAgeMinutes": 15, "adviserAttemptsPerCase": 1 },
-  "testing": { "protocolTests": "PASSED", "flutterTargetedAnalyze": "PASSED", "ordinaryInputEvaluation": "NOT_RUN", "liveAppAcceptance": "NOT_RUN", "rollbackObserved": "NOT_RUN" },
-  "deployment": { "worker": "NOT_DEPLOYED", "flutter": "NOT_DEPLOYED", "migration0018": "NOT_APPLIED", "servingImageDigest": null },
+  "testing": { "protocolTests": "PASSED", "flutterTargetedAnalyze": "PASSED", "evaluationWorkflow": "READY_NOT_RUN", "ordinaryInputEvaluation": "NOT_RUN", "liveAppAcceptance": "NOT_RUN", "rollbackObserved": "NOT_RUN" },
+  "deployment": { "worker": "NOT_DEPLOYED", "flutter": "NOT_DEPLOYED", "migration0018": "NOT_APPLIED", "migration0019": "NOT_APPLIED", "servingImageDigest": null },
   "cost": { "providerCallsReserved": false, "measuredCaseReservationUsd": null, "billedUsd": null },
-  "ownerActions": ["Approve finite Safety/Moondream/GPT-OSS provider-call envelope", "Approve exact reviewed deployment and migration scope after CI", "Provide current usage evidence before activation" ]
+  "ownerActions": ["Configure the protected private-evaluation bundle URL/token and retention scope", "Approve finite Safety/Moondream/GPT-OSS provider-call envelope", "Approve exact reviewed deployment and migration scope after CI", "Provide current usage evidence before activation" ]
 }
