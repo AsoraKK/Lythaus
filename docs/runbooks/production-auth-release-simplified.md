@@ -111,6 +111,12 @@ The canonical web build bundles CanvasKit with `--no-web-resources-cdn`.
 The browser gate rejects an artifact that still depends on Google's renderer
 CDN before attempting sign-in; do not whitelist that external dependency in
 the isolated test or substitute a different local artifact.
+Flutter 3.41.1's WebKit semantics host can be offset outside the viewport even
+when the canvas looks correct. The app-only `flutter-semantics.css` anchors it
+at the view origin, matching the [upstream engine fix](https://github.com/flutter/flutter/pull/190486).
+Keep this compatibility rule until the pinned engine contains the fix and the
+unforced pointer/keyboard browser matrix proves it is unnecessary. No SDK
+upgrade, forced control click, or marketing homepage style change is used.
 
 ## Recovery semantics
 
@@ -175,6 +181,9 @@ and labeled accordingly. A failed remote sign-out retains a nonsensitive local
 pending marker and refuses to restore the cookie until server logout succeeds.
 Native logout can prove the session with its refresh credential even after its
 access token expires. A 401 is not proof that revocation completed.
+Sign-in shows its busy state before device-integrity evaluation. The auth
+preflight has an eight-second deadline and fails closed with a retry message;
+a late result, double-click or disposed screen must not initiate a login.
 Web Dio must not override `User-Agent`: WebKit otherwise requests permission
 for that header in CORS preflight and prevents authenticated app data loading.
 Do not expand the production CORS allowlist to accommodate a browser-owned header.

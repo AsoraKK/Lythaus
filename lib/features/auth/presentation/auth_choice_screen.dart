@@ -37,6 +37,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   bool _screenViewLogged = false;
   bool _obscurePassword = true;
   bool _isRecoveryActionLoading = false;
+  bool _isSignInPending = false;
 
   @override
   void initState() {
@@ -84,7 +85,9 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
           .timeout(const Duration(seconds: 10));
 
   Future<void> _handleEmailSignIn() async {
-    if (ref.read(authStateProvider).isLoading || _isRecoveryActionLoading) {
+    if (ref.read(authStateProvider).isLoading ||
+        _isRecoveryActionLoading ||
+        _isSignInPending) {
       return;
     }
     FocusScope.of(context).unfocus();
@@ -103,13 +106,19 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
       properties: {AnalyticsEvents.propMethod: 'email'},
     );
     if (!mounted) return;
-    await runWithDeviceGuard(
-      context,
-      ref,
-      IntegrityUseCase.signIn,
-      () =>
-          ref.read(authStateProvider.notifier).signInWithEmail(email, password),
-    );
+    setState(() => _isSignInPending = true);
+    try {
+      await runWithDeviceGuard(
+        context,
+        ref,
+        IntegrityUseCase.signIn,
+        () => ref
+            .read(authStateProvider.notifier)
+            .signInWithEmail(email, password),
+      );
+    } finally {
+      if (mounted) setState(() => _isSignInPending = false);
+    }
     if (!mounted) return;
     if (ref.read(authStateProvider).valueOrNull != null) {
       _track(
@@ -210,7 +219,8 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
               ? (authState.error! as AuthFailure).message
               : 'Unable to sign in. Check your details and connection, then try again.')
         : null;
-    final isBusy = authState.isLoading || _isRecoveryActionLoading;
+    final isBusy =
+        authState.isLoading || _isRecoveryActionLoading || _isSignInPending;
     return ReadingPane(
       child: Scaffold(
         body: SafeArea(
@@ -294,7 +304,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                       ],
                       const SizedBox(height: 20),
                       LythButton.primary(
-                        label: authState.isLoading
+                        label: authState.isLoading || _isSignInPending
                             ? 'Signing in…'
                             : 'Sign in with email',
                         icon: Icons.login,

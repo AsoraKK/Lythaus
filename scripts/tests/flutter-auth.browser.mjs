@@ -5,10 +5,10 @@ import test from 'node:test';
 import { chromium, webkit } from 'playwright';
 import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
 
-const build=path.resolve('build/web');
+const build=path.resolve(process.env.AUTH_WEB_ARTIFACT_DIR??'build/web');
 assert.match(await readFile(path.join(build,'flutter_bootstrap.js'),'utf8'), /"useLocalCanvasKit":true/,
   'The canonical release must bundle its renderer; browser acceptance must not depend on an external CDN');
-const mime={'.html':'text/html','.js':'application/javascript','.json':'application/json','.wasm':'application/wasm','.ttf':'font/ttf','.otf':'font/otf','.png':'image/png'};
+const mime={'.html':'text/html','.css':'text/css','.js':'application/javascript','.json':'application/json','.wasm':'application/wasm','.ttf':'font/ttf','.otf':'font/otf','.png':'image/png'};
 const user={id:'018f0000-0000-7000-8000-000000000001',email:'synthetic@example.invalid',role:'user',tier:'bronze',subscription_tier:'free',reputation_score:0,created_at:'2026-08-01T00:00:00Z',last_login_at:'2026-08-01T00:00:00Z'};
 for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of [1440,390]) {
   test(`${name} ${width}: actual Flutter release login, recovery navigation, cookie restore and logout`,async t=>{
@@ -66,6 +66,9 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     }
     await openApp();
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor({timeout:60000});
+    const recoveryBox=await page.getByRole('button',{name:'Forgot password?',exact:true}).boundingBox();
+    assert.ok(recoveryBox&&recoveryBox.x>=0&&recoveryBox.x+recoveryBox.width<=width,
+      'Recovery semantics must remain inside the actual viewport, including WebKit');
     assert.equal(await page.title(),'Lythaus');
     if(process.env.AUTH_QA_DIR){await mkdir(process.env.AUTH_QA_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AUTH_QA_DIR,`flutter-${name}-${width}-entry.png`)});}
     await page.getByRole('button',{name:'Forgot password?',exact:true}).click();

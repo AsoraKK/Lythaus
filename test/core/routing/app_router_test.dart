@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
+import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
@@ -23,11 +24,17 @@ User _user() => User(
 
 class _MockAuthService extends Mock implements AuthService {}
 
+class _MockIntegrityGuard extends Mock implements DeviceIntegrityGuard {}
+
 void main() {
   testWidgets('auth loading/errors retain router and entered email', (
     tester,
   ) async {
     final service = _MockAuthService();
+    final guard = _MockIntegrityGuard();
+    when(
+      () => guard.evaluate(IntegrityUseCase.signIn),
+    ).thenAnswer((_) async => DeviceIntegrityDecision.allow());
     when(() => service.getCurrentUser()).thenAnswer((_) async => null);
     when(
       () => service.loginWithEmail(any(), any()),
@@ -35,6 +42,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         enhancedAuthServiceProvider.overrideWithValue(service),
+        deviceIntegrityGuardProvider.overrideWithValue(guard),
         analyticsClientProvider.overrideWithValue(const NullAnalyticsClient()),
       ],
     );

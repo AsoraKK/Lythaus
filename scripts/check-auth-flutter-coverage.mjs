@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const required = [
   'lib/core/network/dio_client.dart',
+  'lib/core/security/device_integrity_guard.dart',
   'lib/features/auth/application/auth_service.dart',
   'lib/features/auth/application/auth_providers.dart',
   'lib/features/auth/application/session_platform_native.dart',
