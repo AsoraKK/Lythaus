@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
+import { assertCompleteMigrationPostconditions, classifyMigrationState } from './planetscale-migration-reconciliation.mjs';
 
 const { Client } = pg;
 
@@ -67,6 +68,8 @@ try {
     const row = recordedMigrations.rows[index];
     if (row.version !== migration.name || row.checksum !== migration.checksum) throw new Error(`PostgreSQL 17 migration checksum mismatch: ${migration.name}`);
   });
+  const releaseMigrationNames = migrations.filter(({ name }) => name >= '0017_').map(({ name }) => name);
+  for (const state of await classifyMigrationState(client, releaseMigrationNames)) assertCompleteMigrationPostconditions(state);
   const grants = fs.readFileSync(path.join(root, 'database', 'planetscale', 'grants', 'roles.sql'), 'utf8');
   await client.query(grants);
   await client.query(fs.readFileSync(path.join(root, 'database', 'planetscale', 'verification', 'verify.sql'), 'utf8'));
@@ -207,7 +210,7 @@ try {
     subjectLocatorReconciled: true,
     rollbackClean: true,
   };
-  console.log(JSON.stringify({ serverVersion: version.rows[0].version, migrations, checks: row, privileges: privilegeRow, transactionChecks }, null, 2));
+  console.log(JSON.stringify({ serverVersion: version.rows[0].version, migrations: migrations.map(({ name, checksum }) => ({ name, checksum })), checks: row, privileges: privilegeRow, transactionChecks }, null, 2));
 } finally {
   await client.end();
 }

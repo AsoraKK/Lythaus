@@ -4,17 +4,13 @@ import { APPROVED_MIGRATIONS, expectedMigrationPrefix } from './planetscale-migr
 
 const root = process.cwd();
 
-// These fingerprints are generated against the canonical PostgreSQL 17 schema after
-// applying immutable migrations 0000 through 0014. A relation contract includes every
-// live column, constraint and index for relations changed by a migration. This is
-// intentionally fail-closed: the registry may only be advanced when the complete
-// canonical relation shape exists, not when representative objects happen to exist.
+// Relation fingerprints enforce complete canonical shapes for relations that later
+// migrations do not evolve. Evolved relations use stable migration invariants below.
 const relationContracts = {
   '0017_authenticity_beta.sql': {
     'moderation.authenticity_beta': '7b65a935028973b971078e26f4ac8e08af5b2b463719c33cd7d786527347270a',
     'moderation.authenticity_beta_steps': 'f66855f06e27e958bcf3a077ab17a21766f8c7e42c475f37a692e107be2d71f7',
     'moderation.authenticity_beta_feedback': 'b58dad10b370e4705639cc7fbeed4ad88960a01f18b1552d6061124a15925c45',
-    'media.upload_sessions': '30ee05f7f6bea21a9a62e76ce14c99ca193aabf532d366e2aebf57da00c86bac',
     'system.cost_budget_reservations': '1e65dbc7d23f7e4869762df219c2d7ddb45d5217958bbae65c0542ac17623944',
   },
   '0009_cost_budget_enforcement.sql': {
@@ -249,6 +245,28 @@ const contractArtifacts = Object.fromEntries(
 
 const artifacts = {
   ...contractArtifacts,
+  '0017_authenticity_beta.sql': [
+    ...contractArtifacts['0017_authenticity_beta.sql'],
+    { artifact: 'beta_upload_session_purpose_not_null', kind: 'schema_artifact', sql: `SELECT EXISTS (
+      SELECT 1
+        FROM pg_attribute attribute
+       WHERE attribute.attrelid = to_regclass('media.upload_sessions')
+         AND attribute.attname = 'purpose'
+         AND attribute.attnum > 0
+         AND NOT attribute.attisdropped
+         AND format_type(attribute.atttypid, attribute.atttypmod) = 'text'
+         AND attribute.attnotnull
+    ) AS present` },
+    { artifact: 'beta_upload_session_purpose_check', kind: 'schema_artifact', sql: `SELECT EXISTS (
+      SELECT 1
+        FROM pg_constraint constraint_entry
+       WHERE constraint_entry.conrelid = to_regclass('media.upload_sessions')
+         AND constraint_entry.conname = 'upload_sessions_purpose_check'
+         AND constraint_entry.contype = 'c'
+         AND constraint_entry.convalidated
+         AND pg_get_constraintdef(constraint_entry.oid) ILIKE '%authenticity_beta%'
+    ) AS present` },
+  ],
   '0013_marketing_waitlist.sql': [
     { artifact: 'waitlist_table', kind: 'schema_artifact', sql: "SELECT to_regclass('marketing.waitlist_signups') IS NOT NULL AS present" },
     { artifact: 'waitlist_purge_after', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'marketing' AND table_name = 'waitlist_signups' AND column_name = 'purge_after') AS present" },

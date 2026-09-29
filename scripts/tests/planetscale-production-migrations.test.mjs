@@ -71,6 +71,34 @@ test('requires both 0016 envelope columns and its key-version constraint', async
   assert.throws(() => assertCompleteMigrationPostconditions(state), /transactional_email_outbox_delivery_envelope_key_check/);
 });
 
+test('keeps 0017 upload-session postconditions valid after 0018 evolves the relation', async () => {
+  const checks = migrationPostconditions['0017_authenticity_beta.sql'];
+  assert.ok(!checks.some(({ artifact }) => artifact === 'relation:media.upload_sessions'));
+  assert.ok(checks.some(({ artifact }) => artifact === 'beta_upload_session_purpose_not_null'));
+  assert.ok(checks.some(({ artifact }) => artifact === 'beta_upload_session_purpose_check'));
+
+  const queries = [];
+  const completeClient = {
+    async query(sql) {
+      queries.push(sql);
+      return { rows: [{ present: true }] };
+    },
+  };
+  const [complete] = await classifyMigrationState(completeClient, ['0017_authenticity_beta.sql']);
+  assert.equal(complete.state, 'FULLY_APPLIED');
+  assert.ok(queries.some((sql) => sql.includes("format_type(attribute.atttypid, attribute.atttypmod) = 'text'") && sql.includes('attribute.attnotnull')));
+  assert.ok(queries.some((sql) => sql.includes("pg_get_constraintdef(constraint_entry.oid) ILIKE '%authenticity_beta%'")));
+
+  const missingCheckClient = {
+    async query(sql) {
+      return { rows: [{ present: !sql.includes("constraint_entry.conname = 'upload_sessions_purpose_check'") }] };
+    },
+  };
+  const [missingCheck] = await classifyMigrationState(missingCheckClient, ['0017_authenticity_beta.sql']);
+  assert.equal(missingCheck.state, 'PARTIALLY_APPLIED');
+  assert.throws(() => assertCompleteMigrationPostconditions(missingCheck), /beta_upload_session_purpose_check/);
+});
+
 test('function postconditions verify canonical PL/pgSQL semantics without pg_get_functiondef', async () => {
   const queries = [];
   const client = {
