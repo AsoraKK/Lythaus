@@ -8,30 +8,6 @@ const root = path.resolve(import.meta.dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
 const baselineSha = '8e3b3ebad2f846e61db2bfe819376723da7e9863';
 const baseline = {
-  "forgot-password.astro": {
-    "kind": "scripts",
-    "sha256": "5f08a258ff7b8a898a7dd7ad0c07ba45c78e01053abf49376a8dd16667679ca8"
-  },
-  "resend-verification.astro": {
-    "kind": "scripts",
-    "sha256": "1493c28bdd356cdad9f41eef420a650b396bb76ae333af1fdf544cc76fe3eb86"
-  },
-  "reset-password.astro": {
-    "kind": "scripts",
-    "sha256": "4ec114cbb9472e1b14171a187f20a16a2ef7da5cfc2ea67ed60bb6bb8a9413bf"
-  },
-  "sign-in.astro": {
-    "kind": "scripts",
-    "sha256": "07f9b00f3d9dff1dbc2da4d0b68fd5c8f2c7a9b9f0c3f26dadb459f1b626463f"
-  },
-  "signup.astro": {
-    "kind": "scripts",
-    "sha256": "15e4232c4fd6ece262f3d028b247d5da671dc3e4ab246e936ee1a38db669a4ec"
-  },
-  "verify-email.astro": {
-    "kind": "scripts",
-    "sha256": "2befeaa99368aa8c5b0e08a85b304c4f86e7ffa61ca0e4976d3313d0326be7fa"
-  },
   "invite/index.astro": {
     "kind": "scripts",
     "sha256": "a1ad00c505031ec35ca3e972f29aa80d264dd53f6127a355b0dd2fe3a2d8525c"
@@ -49,6 +25,22 @@ const baseline = {
     "sha256": "8669b6087c600b1db858b23c3d6a73d56f0536cf6129d7585cf42155e99866ce"
   }
 };
+
+test('repaired auth scripts use the bounded shared transport, never credential browser storage', () => {
+  for (const page of ['forgot-password', 'resend-verification', 'reset-password', 'sign-in', 'signup', 'verify-email']) {
+    const source = read(`src/pages/${page}.astro`);
+    assert.match(source, /from '..\/scripts\/auth-request'/);
+    assert.match(source, /await authFetch\(/);
+    assert.doesNotMatch(source, /localStorage|sessionStorage|await fetch\(/);
+  }
+  for (const page of ['reset-password', 'verify-email']) {
+    const source = read(`src/pages/${page}.astro`);
+    assert.match(source, /window.location.hash.slice\(1\)/);
+    assert.match(source, /history.replaceState/);
+    assert.match(source, /form.addEventListener\('submit'/);
+    assert.match(source, /generation !== linkGeneration/);
+  }
+});
 
 for (const [file, expected] of Object.entries(baseline)) {
   test(`${file} preserves ${expected.kind} from ${baselineSha}`, () => {

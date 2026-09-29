@@ -3,18 +3,24 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, normalizeUserTier, validateTurnstileResponse, type ActivityCategory, type ActivityEventType, type CreatePostInput, type ReputationEffect, type UserTier } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
-import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
+import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyLoginPassword, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
 import { handleBetaApi } from './authenticity-beta.ts';
 import { handleAlphaApi } from './authenticity-alpha.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
+import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction.ts';
+import { expiredRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
+import { requireUncompromisedPassword } from './auth-password-screen.ts';
+import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryPlan } from './auth-recovery-policy.ts';
+import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
 import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
 import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
+import { acceptanceContextToken } from '@lythaus/contracts';
 import { createWaitlistRouteHandler } from './waitlist-handler.ts';
 import { parseWaitlistRequest, requireWaitlistSecrets, verifyWaitlistTurnstile } from './waitlist-runtime-policy.ts';
 
@@ -102,10 +108,10 @@ async function acceptanceContext(request: Request, env: Env): Promise<Acceptance
         AND candidate_version = $4
         AND status IN ('pending', 'in_progress')
         AND expires_at > now()`,
-    [runId, await acceptanceContextDigest(context), releaseSha, env.WORKER_VERSION.id],
+    [runId, await acceptanceContextDigest(acceptanceContextToken(context)), releaseSha, env.WORKER_VERSION.id],
   );
   if (result.rowCount !== 1) throw new Error('authentication_required');
-  return { runId, context, releaseSha, candidateSourceSha };
+  return { runId, context: acceptanceContextToken(context), releaseSha, candidateSourceSha };
 }
 
 interface ActivityDescriptor {
@@ -161,8 +167,8 @@ async function sha256Hex(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function enforceRateLimit(request: Request, env: Env, scope: string, limit: number): Promise<void> {
-  const subject = request.headers.get('cf-connecting-ip')
+async function enforceRateLimit(request: Request, env: Env, scope: string, limit: number, addressSubject?: string): Promise<void> {
+  const subject = addressSubject ?? request.headers.get('cf-connecting-ip')
     ?? request.headers.get('authorization')
     ?? 'anonymous';
   const subjectHash = await sha256Hex(`${scope}:${subject}`);
@@ -236,7 +242,8 @@ function hashConfiguredPassword(env: Env, password: string, pepper: string): Pas
   });
 }
 
-async function verifyTurnstile(env: Env, token: unknown): Promise<{ observedAt: string; hostname: string; action: string } | undefined> {
+async function verifyTurnstile(env: Env, token: unknown, expectedAction: 'account_signup' | 'verification_resend' | 'password_reset_request'): Promise<{ observedAt: string; hostname: string; action: string } | undefined> {
+  if (env.ENVIRONMENT === 'production' && (env.TURNSTILE_REQUIRED !== 'true' || !env.TURNSTILE_EXPECTED_HOSTNAMES?.trim())) throw new Error('turnstile_unavailable');
   if (!requiresTurnstileVerification(env.TURNSTILE_REQUIRED, env.TURNSTILE_SECRET_KEY, token)) return undefined;
   let response: Response;
   try {
@@ -246,8 +253,9 @@ async function verifyTurnstile(env: Env, token: unknown): Promise<{ observedAt: 
       body: JSON.stringify({
         secret: env.TURNSTILE_SECRET_KEY,
         response: token,
-        idempotency_key: randomToken(16),
+        idempotency_key: uuidv7(),
       }),
+      signal: AbortSignal.timeout(8000),
     });
   } catch {
     throw new Error('turnstile_unavailable');
@@ -259,7 +267,7 @@ async function verifyTurnstile(env: Env, token: unknown): Promise<{ observedAt: 
   } catch {
     throw new Error('turnstile_unavailable');
   }
-  validateTurnstileResponse(result, env.TURNSTILE_EXPECTED_HOSTNAMES, env.TURNSTILE_EXPECTED_ACTION);
+  validateTurnstileResponse(result, env.TURNSTILE_EXPECTED_HOSTNAMES, expectedAction);
   if (typeof result.hostname !== 'string' || typeof result.action !== 'string') throw new Error('turnstile_failed');
   return { observedAt: new Date().toISOString(), hostname: result.hostname, action: result.action };
 }
@@ -284,35 +292,31 @@ async function recordAcceptanceTurnstile(env: Env, acceptance: AcceptanceContext
 async function issueSession(
   env: Env,
   userId: string,
+  verifiedPasswordHash: PasswordHash,
   roles: string[] = [],
   onSessionCreated?: (client: DatabaseClient) => Promise<void>,
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
   const secrets = requireAuthSecrets(env);
-  return issueAuthSession({
-    loadAccount: async (subjectId) => {
-      const account = await query<{ status: string; token_version: number }>(env.DB_APP_FRESH,
-        `SELECT status, token_version FROM identity.users WHERE id = $1`, [subjectId]);
-      const row = account.rows[0];
-      return row ? { status: row.status, tokenVersion: Number(row.token_version) } : undefined;
-    },
-    createRefreshFamilyAndSession: async (input) => transaction(env.DB_APP_FRESH, async (client) => {
+  return transaction(env.DB_APP_FRESH, async (client) => issueAuthSession({
+    loadAccount: (subjectId) => lockLoginAccount(client, subjectId, verifiedPasswordHash),
+    createRefreshFamilyAndSession: async (input) => {
       await client.query(`INSERT INTO identity.refresh_token_families (id, user_id) VALUES ($1, $2)`, [input.familyId, input.userId]);
       await client.query(`INSERT INTO identity.auth_sessions (id, user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, decode($4, 'base64'), now() + ($5::integer * interval '1 day'))`, [input.sessionId, input.userId, input.familyId, input.refreshTokenHash, input.refreshSessionDays]);
       if (onSessionCreated) await onSessionCreated(client);
-    }),
+    },
     randomToken,
     hashRefreshToken: hashResetToken,
     newId: uuidv7,
     signAccessToken: ({ userId: subjectId, roles: subjectRoles, tokenVersion }) => signAccessToken({ userId: subjectId, roles: [...subjectRoles], tokenVersion, privateKeyPem: secrets.privateKey, keyId: secrets.keyId }),
-  }, { userId, roles });
+  }, { userId, roles }));
 }
 
 async function queueTransactionalEmail(
   client: DatabaseClient,
   input: {
     userId: string;
-    purpose: 'verification' | 'password_reset' | 'invite' | 'email_change';
-    challengeId: string;
+    purpose: 'verification' | 'password_reset' | 'invite' | 'email_change' | 'password_changed';
+    challengeId?: string;
     token: string;
     recipient: string;
     deliveryEncryptionKey: string;
@@ -337,6 +341,23 @@ async function queueTransactionalEmail(
     acceptanceRunId: input.acceptance?.runId,
     correlationId: input.correlationId,
   });
+  if (input.acceptance && ['verification', 'password_reset'].includes(input.purpose)) {
+    await client.query(
+      `INSERT INTO system.production_auth_acceptance_events (id, run_id, event_type)
+       SELECT $1, id, CASE WHEN $2='password_reset' THEN 'password_reset_requested'
+         WHEN resend_fixture_user_id=$3::uuid THEN 'resend_requested' ELSE 'initial_verification_requested' END
+       FROM system.production_auth_acceptance_runs WHERE id=$4
+       ON CONFLICT (run_id, event_type) DO NOTHING`,
+      [uuidv7(), input.purpose, input.userId, input.acceptance.runId],
+    );
+  }
+}
+
+async function cancelPendingAuthEmails(client: DatabaseClient, userId: string, purpose: 'verification' | 'password_reset'): Promise<void> {
+  await client.query(
+    `UPDATE system.transactional_email_outbox SET state='cancelled', terminal_at=now(), updated_at=now(),
+            delivery_envelope_ciphertext=NULL, delivery_envelope_encryption_key_version=NULL
+      WHERE user_id=$1 AND purpose=$2 AND state IN ('queued','processing','failed')`, [userId, purpose]);
 }
 
 function requiredTransactionalEmailKey(env: Env): string {
@@ -381,62 +402,62 @@ async function proveTransactionalEmailKeyCompatibility(request: Request, env: En
   });
 }
 
-async function queueAccountVerificationEmail(request: Request, env: Env, userId: string, recipient: string, acceptance?: AcceptanceContext): Promise<void> {
-  const verificationToken = randomToken(32);
-  const challengeId = uuidv7();
-  const sourceEventId = uuidv7();
+async function queueRecoveryEmail(request: Request, env: Env, lookup: string, intent: 'verification' | 'recovery', acceptance?: AcceptanceContext): Promise<void> {
   const secrets = requireAuthSecrets(env);
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    const account = await client.query<{ id: string; status: string; verified_at: string | null }>(
-      `SELECT u.id, u.status, c.verified_at
-         FROM identity.users u
-         JOIN identity.email_credentials c ON c.user_id = u.id
-        WHERE u.id = $1
-        FOR UPDATE`,
-      [userId],
-    );
-    if (!account.rows[0] || account.rows[0].verified_at || !['active', 'relink_required'].includes(account.rows[0].status)) {
-      throw new Error('account_unavailable');
-    }
+  const deliveryEncryptionKey = requiredTransactionalEmailKey(env);
+  const outcome = await transaction(env.DB_APP_FRESH, client => persistRecoveryIntake(client, correlationId(request), async () => {
+    const userId = await findRecoveryUser(client, lookup);
+    const account = userId ? await lockRecoveryAccount(client, userId) : undefined;
+    const plan = recoveryPlan(account);
+    if (!account || plan === 'suppressed' || plan === 'support_required') return plan;
+    if (intent === 'verification' && plan === 'reset_password') return 'suppressed';
+    const purpose = plan === 'credential_setup' ? 'verification' : 'password_reset';
+    const table = purpose === 'verification' ? 'identity.email_verification_tokens' : 'identity.password_reset_tokens';
+    const pending = await client.query(
+      `SELECT id FROM ${table} WHERE user_id=$1 AND consumed_at IS NULL AND superseded_at IS NULL
+        AND expires_at>now() AND created_at>now()-interval '30 seconds'`, [account.id]);
+    if (pending.rowCount) return 'cooldown';
+    const recipient = normalizeEmailAddress(await decryptField({
+      ciphertext: account.contact_ciphertext!, encryptionKeyVersion: account.contact_key_version!,
+    }, secrets.encryptionKey));
+    if (hmacLookup(recipient, secrets.hmacKey) !== account.contact_lookup || account.contact_lookup !== lookup) return 'support_required';
+    const token = randomToken(32);
+    const challengeId = uuidv7();
+    await client.query(`UPDATE ${table} SET superseded_at=now() WHERE user_id=$1 AND consumed_at IS NULL AND superseded_at IS NULL`, [account.id]);
+    await cancelPendingAuthEmails(client, account.id, purpose);
     await client.query(
-      `UPDATE identity.email_verification_tokens
-          SET superseded_at = now()
-        WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
-      [userId]);
-    await client.query(
-      `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-      [challengeId, userId, hashAuthToken(verificationToken, 'verification')]);
+      `INSERT INTO ${table}(id,user_id,token_hash,expires_at) VALUES($1,$2,decode($3,'base64'),now()+interval '30 minutes')`,
+      [challengeId, account.id, hashAuthToken(token, purpose)]);
     await queueTransactionalEmail(client, {
-      userId,
-      purpose: 'verification',
-      challengeId,
-      token: verificationToken,
-      recipient,
-      deliveryEncryptionKey: requiredTransactionalEmailKey(env),
-      correlationId: acceptance?.runId ?? correlationId(request),
-      acceptance,
+      userId: account.id, purpose, challengeId, token, recipient, deliveryEncryptionKey,
+      correlationId: acceptance?.runId ?? correlationId(request), acceptance,
     });
-    await writeActivity(client, request, { userId }, sourceEventId, {
-      eventType: 'account.email_verification_requested', category: 'account',
-      title: 'You requested another verification email',
-      explanation: 'A new time-limited verification message was requested. The token is not stored in this log.',
-      objectType: 'account', objectId: userId, retentionClass: 'security',
-      metadata: { authenticationMethod: 'email' },
+    await writeActivity(client, request, { userId: account.id }, uuidv7(), {
+      eventType: purpose === 'verification' ? 'account.email_verification_requested' : 'account.password_reset_requested',
+      category: 'account', title: 'You requested account recovery',
+      explanation: 'A time-limited mailbox proof was queued. Provider acceptance and delivery are separate states.',
+      objectType: 'account', objectId: account.id, retentionClass: 'security',
+      reasonCode: plan, metadata: { authenticationMethod: 'email' },
     });
-  });
+    return 'queued';
+  }));
+  logEvent({ service: 'lythaus-public-api', event: 'auth_recovery_intake', outcome, correlationId: correlationId(request) });
 }
 
 async function emailAuth(request: Request, env: Env): Promise<Response> {
+  sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
   const input = await readJson<EmailAuthInput>(request, 16 * 1024);
   const attempt = prepareEmailAuthAttempt(input);
   const { email, password, mode } = attempt;
+  if (mode === 'register') await requireUncompromisedPassword(password);
   const acceptance = await acceptanceContext(request, env);
   const turnstileObservation = mode === 'register' || mode === 'resend_verification'
-    ? await verifyTurnstile(env, attempt.turnstileToken)
+    ? await verifyTurnstile(env, attempt.turnstileToken, mode === 'register' ? 'account_signup' : 'verification_resend')
     : undefined;
   await recordAcceptanceTurnstile(env, acceptance, turnstileObservation);
   const secrets = requireAuthSecrets(env);
   const lookup = hmacLookup(email, secrets.hmacKey);
+  await enforceRateLimit(request, env, `auth-address:${mode}`, 10, lookup);
   const existing = await query<{ id: string; status: string; password_hash: PasswordHash; verified_at: string | null }>(env.DB_APP_FRESH,
     `SELECT u.id, u.status, c.password_hash, c.verified_at
        FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id
@@ -447,11 +468,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
        FROM identity.contact_emails c JOIN identity.users u ON u.id = c.user_id
       WHERE c.email_lookup_hmac = decode($1, 'base64')`, [lookup])).rows[0];
   if (mode === 'resend_verification') {
-    if (account && !account.verified_at) {
-      try {
-        await queueAccountVerificationEmail(request, env, account.id, email, acceptance);
-      } catch { /* Keep resend enumeration-safe when queueing fails. */ }
-    }
+    await queueRecoveryEmail(request, env, lookup, 'verification', acceptance);
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
   if (mode === 'register') {
@@ -461,11 +478,11 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     );
     if (registrationPlan === 'resend_verification') {
       if (!account) throw new Error('account_unavailable');
-      await queueAccountVerificationEmail(request, env, account.id, email, acceptance);
+      await queueRecoveryEmail(request, env, lookup, 'verification', acceptance);
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     if (registrationPlan === 'neutral_existing_account') {
-      return privateResponse(request, env, { state: 'check_email' }, { status: 202 });
+      return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     const encrypted = await encryptField(email, secrets.encryptionKey, 'v1');
     const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
@@ -473,54 +490,16 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     const challengeId = uuidv7();
     const sourceEventId = uuidv7();
     if (registrationPlan === 'attach_email_credential') {
-      if (!contactOwner) throw new Error('account_unavailable');
-      await transaction(env.DB_APP_FRESH, async (client) => {
-        await client.query(
-          `UPDATE identity.email_verification_tokens
-              SET superseded_at = now()
-            WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
-          [contactOwner.id]);
-        await client.query(
-          `INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
-           VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`,
-          [contactOwner.id, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
-        await client.query(
-          `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-          [challengeId, contactOwner.id, hashAuthToken(verificationToken, 'verification')]);
-        await queueTransactionalEmail(client, {
-          userId: contactOwner.id,
-          purpose: 'verification',
-          challengeId,
-          token: verificationToken,
-          recipient: email,
-          deliveryEncryptionKey: requiredTransactionalEmailKey(env),
-          correlationId: acceptance?.runId ?? correlationId(request),
-          acceptance,
-        });
-        if (acceptance) {
-          const bound = await client.query(
-            `UPDATE system.production_auth_acceptance_runs
-                SET primary_user_id = $2, status = 'in_progress'
-              WHERE id = $1 AND primary_user_id IS NULL AND expires_at > now()`,
-            [acceptance.runId, contactOwner.id],
-          );
-          if (bound.rowCount !== 1) throw new Error('acceptance_run_identity_binding_failed');
-        }
-        await client.query(
-          `INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_relink_started', '{"source":"contact_email"}'::jsonb)`,
-          [uuidv7(), contactOwner.id]);
-        await writeActivity(client, request, { userId: contactOwner.id }, sourceEventId, {
-          eventType: 'account.email_verification_requested', category: 'account',
-          title: 'You started email account recovery',
-          explanation: 'A password credential was attached to your preserved account and awaits email verification.',
-          result: 'pending', objectType: 'account', objectId: contactOwner.id, retentionClass: 'security',
-          metadata: { authenticationMethod: 'email', recoveryMethod: 'verified_contact_email' },
-        });
-      });
+      if (acceptance) throw new Error('acceptance_identity_collision');
+      await queueRecoveryEmail(request, env, lookup, 'verification');
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     const userId = uuidv7();
     await transaction(env.DB_APP_FRESH, async (client) => {
+      if (!await claimRegistrationAddress(client, lookup)) {
+        if (acceptance) throw new Error('acceptance_identity_collision');
+        return;
+      }
       await client.query(`INSERT INTO identity.users (id, is_production_acceptance) VALUES ($1, $2)`, [userId, acceptance !== undefined]);
       await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
       await client.query(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`, [userId, encrypted.ciphertext, lookup]);
@@ -554,21 +533,23 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
     });
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
+  const passwordMatches = verifyLoginPassword(password, account?.password_hash, secrets.pepper);
   const loginPlan = planEmailLogin(account ? {
     status: account.status,
     verifiedAt: account.verified_at,
-    passwordMatches: verifyPassword(password, account.password_hash, secrets.pepper),
+    passwordMatches,
   } : undefined);
   if (loginPlan === 'invalid_credentials') throw new Error('invalid_credentials');
   if (loginPlan === 'email_verification_required') throw new Error('email_verification_required');
-  if (needsPasswordRehash(account.password_hash, 'v1')) {
-    const upgradedHash = hashConfiguredPassword(env, password, secrets.pepper);
-    await query(env.DB_APP_FRESH,
-      `UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`,
-      [JSON.stringify(upgradedHash), account.id]);
-  }
+  const upgradedHash = needsPasswordRehash(account.password_hash, 'v1')
+    ? hashConfiguredPassword(env, password, secrets.pepper) : undefined;
   const sourceEventId = uuidv7();
-  const tokens = await issueSession(env, account.id, [], async (client) => {
+  const tokens = await issueSession(env, account.id, account.password_hash, [], async (client) => {
+    if (upgradedHash) {
+      await client.query(
+        `UPDATE identity.email_credentials SET password_hash = $1::jsonb, updated_at = now() WHERE user_id = $2`,
+        [JSON.stringify(upgradedHash), account.id]);
+    }
     await client.query(
       `INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_login', '{}'::jsonb)`,
       [uuidv7(), account.id]);
@@ -578,7 +559,8 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
       retentionClass: 'security', metadata: { authenticationMethod: 'email' },
     });
   });
-  return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
+  const result = sessionTransportResult(request, env.CORS_ALLOWED_ORIGINS, tokens);
+  return privateResponse(request, env, result.body, { headers: result.headers });
 }
 
 async function createAcceptanceResendFixture(request: Request, env: Env): Promise<Response> {
@@ -602,15 +584,10 @@ async function createAcceptanceResendFixture(request: Request, env: Env): Promis
     if (row.resend_fixture_user_id) return;
     const userId = uuidv7();
     const challengeId = uuidv7();
-    await client.query(`INSERT INTO identity.users (id, is_production_acceptance) VALUES ($1, true)`, [userId]);
+    await client.query(`INSERT INTO identity.users (id, status, is_production_acceptance) VALUES ($1, 'relink_required', true)`, [userId]);
     await client.query(
-      `INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
-       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`,
-      [userId, (await encryptField(email, secrets.encryptionKey, 'v1')).ciphertext, hmacLookup(email, secrets.hmacKey), JSON.stringify(hashConfiguredPassword(env, randomToken(32), secrets.pepper))],
-    );
-    await client.query(
-      `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
-       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`,
+      `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider, verified_at)
+       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email', now())`,
       [userId, (await encryptField(email, secrets.encryptionKey, 'v1')).ciphertext, hmacLookup(email, secrets.hmacKey)],
     );
     await client.query(
@@ -631,15 +608,51 @@ async function createAcceptanceResendFixture(request: Request, env: Env): Promis
       [uuidv7(), acceptance.runId],
     );
   });
-  return privateResponse(request, env, { state: 'resend_fixture_ready' }, { status: 202 });
+  const cooldown = await query<{ seconds: number }>(env.DB_APP_FRESH,
+    `SELECT GREATEST(0, CEIL(EXTRACT(EPOCH FROM t.created_at + interval '30 seconds' - now())))::integer AS seconds
+     FROM system.production_auth_acceptance_runs r JOIN identity.email_verification_tokens t ON t.id=r.resend_previous_challenge_id
+     WHERE r.id=$1`, [acceptance.runId]);
+  return privateResponse(request, env, { state: 'resend_fixture_ready', retryAfterSeconds: cooldown.rows[0]?.seconds ?? 30 }, { status: 202 });
+}
+
+async function observeAcceptanceChallenge(request: Request, env: Env): Promise<Response> {
+  const acceptance = await acceptanceContext(request, env);
+  if (!acceptance) throw new Error('authentication_required');
+  const input = await readJson<{ token?: string; purpose?: string }>(request, 8 * 1024);
+  if (!['verification', 'password_reset'].includes(input.purpose ?? '')) throw new Error('invalid_request');
+  const reset = input.purpose === 'password_reset';
+  const token = requireToken(input.token, reset ? 'reset_token_invalid' : 'verification_token_invalid');
+  const result = await query<{ flow: string; delivered: boolean; consumed: boolean; legacy_recovered: boolean }>(env.DB_APP_FRESH,
+    `SELECT CASE WHEN t.id=r.initial_verification_challenge_id THEN 'initial'
+       WHEN t.id=r.resend_verification_challenge_id THEN 'resend' ELSE 'reset' END AS flow,
+       o.state='delivered' AND o.provider='cloudflare-email' AND o.provider_message_id IS NOT NULL
+         AND o.accepted_at IS NOT NULL AND o.delivered_at IS NOT NULL AND o.delivered_at<=now() AS delivered,
+       t.consumed_at IS NOT NULL AS consumed,
+       u.is_production_acceptance AND u.status='active' AND c.verified_at IS NOT NULL
+         AND u.id=r.resend_fixture_user_id AS legacy_recovered
+     FROM system.production_auth_acceptance_runs r
+     JOIN identity.${reset ? 'password_reset_tokens' : 'email_verification_tokens'} t ON
+       t.id=ANY(ARRAY[${reset ? 'r.password_reset_challenge_id' : 'r.initial_verification_challenge_id,r.resend_verification_challenge_id'}])
+     JOIN identity.users u ON u.id=t.user_id
+     LEFT JOIN identity.email_credentials c ON c.user_id=u.id
+     JOIN system.transactional_email_outbox o ON o.challenge_id=t.id AND o.acceptance_run_id=r.id
+     WHERE r.id=$1 AND t.token_hash=decode($2,'base64')`,
+    [acceptance.runId, hashAuthToken(token, reset ? 'password_reset' : 'verification')]);
+  if (result.rows.length !== 1) throw new Error('authentication_required');
+  const row = result.rows[0];
+  return privateResponse(request, env, { flow: row.flow, delivered: row.delivered, consumed: row.consumed, legacyRecovered: row.legacy_recovered });
 }
 
 async function verifyEmail(request: Request, env: Env): Promise<Response> {
   await acceptanceContext(request, env);
   const url = new URL(request.url);
   if (request.method !== 'POST') throw new Error('method_not_allowed');
-  const input = await readJson<{ token?: string }>(request, 8 * 1024);
+  const input = await readJson<{ token?: string; password?: string }>(request, 8 * 1024);
   const token = requireToken(url.searchParams.get('token') ?? input.token, 'verification_token_invalid');
+  if (input.password === undefined) throw new Error('password_setup_required');
+  const password = await requireUncompromisedPassword(input.password);
+  const secrets = requireAuthSecrets(env);
+  const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   const tokenHash = hashAuthToken(token, 'verification');
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
@@ -649,11 +662,8 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
     );
     if (!owner.rows[0]) throw new Error('verification_token_invalid');
     const userId = owner.rows[0].user_id;
-    const account = await client.query<{ status: string }>(
-      `SELECT status FROM identity.users WHERE id = $1 FOR UPDATE`,
-      [userId],
-    );
-    if (!account.rows[0] || !['active', 'relink_required'].includes(account.rows[0].status)) throw new Error('verification_token_invalid');
+    const account = await lockRecoveryAccount(client, userId);
+    if (!account || recoveryPlan(account) !== 'credential_setup') throw new Error('verification_token_invalid');
     const found = await client.query<{ id: string }>(
       `SELECT id FROM identity.email_verification_tokens
         WHERE token_hash = decode($1, 'base64')
@@ -664,9 +674,8 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
     if (!found.rows[0]) throw new Error('verification_token_invalid');
     await client.query(`UPDATE identity.email_verification_tokens SET consumed_at = now() WHERE id = $1`, [found.rows[0].id]);
     await client.query(`UPDATE identity.email_verification_tokens SET superseded_at = now() WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`, [userId]);
-    await client.query(`UPDATE identity.email_credentials SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [userId]);
-    await client.query(`UPDATE identity.contact_emails SET verified_at = COALESCE(verified_at, now()), updated_at = now() WHERE user_id = $1`, [userId]);
-    await client.query(`UPDATE identity.users SET status = 'active', updated_at = now() WHERE id = $1 AND status = 'relink_required'`, [userId]);
+    await establishVerifiedCredential(client, account, passwordHash);
+    await cancelPendingAuthEmails(client, userId, 'verification');
     await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'email_verified', '{}'::jsonb)`, [uuidv7(), userId]);
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
@@ -684,28 +693,17 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
 }
 
 async function refreshSession(request: Request, env: Env): Promise<Response> {
+  const transport = sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
   await acceptanceContext(request, env);
   const input = await readJson<{ refreshToken?: string; refresh_token?: string }>(request, 16 * 1024);
-  const refreshToken = requireRefreshToken(input);
+  const refreshToken = transport === 'cookie' ? refreshCookie(request) : requireRefreshToken(input);
   const secrets = requireAuthSecrets(env);
   const sourceEventId = uuidv7();
-  const tokens = await rotateAuthSession({
-    findRefreshSession: async (tokenHash) => {
-      const current = await query<{ session_id: string; user_id: string; family_id: string; status: string; token_state: 'active' | 'revoked' | 'expired' | 'family_revoked' }>(env.DB_APP_FRESH,
-        `SELECT s.id AS session_id, s.user_id, s.refresh_family_id AS family_id, u.status,
-                CASE
-                  WHEN s.revoked_at IS NOT NULL THEN 'revoked'
-                  WHEN s.expires_at <= now() THEN 'expired'
-                  WHEN f.revoked_at IS NOT NULL THEN 'family_revoked'
-                  ELSE 'active'
-                END AS token_state
-           FROM identity.auth_sessions s JOIN identity.refresh_token_families f ON f.id = s.refresh_family_id
-           JOIN identity.users u ON u.id = s.user_id
-          WHERE s.refresh_token_hash = decode($1, 'base64')`, [tokenHash]);
-      const session = current.rows[0];
-      return session ? { sessionId: session.session_id, userId: session.user_id, familyId: session.family_id, status: session.status, tokenState: session.token_state } : undefined;
-    },
-    rotatePresentedSession: async (rotation) => transaction(env.DB_APP_FRESH, async (client) => {
+  const outcome = await transaction(env.DB_APP_FRESH, async (client) => {
+    try {
+      return { tokens: await rotateAuthSession({
+    findRefreshSession: (tokenHash) => lockRefreshSession(client, tokenHash),
+    rotatePresentedSession: async (rotation) => {
       const revoked = await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, [rotation.sessionId]);
       if (revoked.rowCount !== 1) return false;
       await client.query(`UPDATE identity.refresh_token_families SET last_used_at = now() WHERE id = $1`, [rotation.familyId]);
@@ -717,12 +715,12 @@ async function refreshSession(request: Request, env: Env): Promise<Response> {
         metadata: { sessionAction: 'refresh' },
       });
       return true;
-    }),
+    },
     revokeRefreshFamily: async (familyId) => {
-      await query(env.DB_APP_FRESH, `UPDATE identity.refresh_token_families SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, [familyId]);
+      await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, [familyId]);
     },
     loadActiveTokenVersion: async (subjectId: string) => {
-      const tokenVersion = await query<{ token_version: number }>(env.DB_APP_FRESH,
+      const tokenVersion = await client.query<{ token_version: number }>(
         `SELECT token_version FROM identity.users WHERE id = $1 AND status = 'active'`, [subjectId]);
       return tokenVersion.rows[0]?.token_version;
     },
@@ -730,15 +728,30 @@ async function refreshSession(request: Request, env: Env): Promise<Response> {
     hashRefreshToken: hashResetToken,
     newId: uuidv7,
     signAccessToken: ({ userId: subjectId, roles, tokenVersion }) => signAccessToken({ userId: subjectId, roles: [...roles], tokenVersion, privateKeyPem: secrets.privateKey, keyId: secrets.keyId }),
-  }, refreshToken);
-  return privateResponse(request, env, { ...tokens, tokenType: 'Bearer' });
+  }, refreshToken) };
+    } catch (error) {
+      if (error instanceof Error && error.message === 'refresh_token_reuse') return { error };
+      throw error;
+    }
+  });
+  if (outcome.error) throw outcome.error;
+  const result = sessionTransportResult(request, env.CORS_ALLOWED_ORIGINS, outcome.tokens);
+  return privateResponse(request, env, result.body, { headers: result.headers });
 }
 
 async function logout(request: Request, env: Env): Promise<Response> {
+  const transport = sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
   await acceptanceContext(request, env);
-  const user = await principal(request, env);
+  const input = request.body ? await readJson<{ refreshToken?: string; refresh_token?: string }>(request, 8 * 1024) : {};
+  const refreshToken = transport === 'cookie' ? refreshCookie(request)
+    : input.refreshToken !== undefined || input.refresh_token !== undefined ? requireRefreshToken(input) : undefined;
+  const nativeUser = transport === 'native' && !refreshToken ? await principal(request, env) : undefined;
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
+    const session = refreshToken ? await lockRefreshSession(client, hashResetToken(refreshToken)) : undefined;
+    if (refreshToken && (!session || !['active','revoked'].includes(session.tokenState))) return;
+    const user = nativeUser ?? { userId: session!.userId };
+    await client.query(`SELECT id FROM identity.users WHERE id = $1 FOR UPDATE`, [user.userId]);
     await revokeAllAuthSessions({
       revokeAllSessions: async (subjectId) => { await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
       revokeAllRefreshFamilies: async (subjectId) => { await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
@@ -750,53 +763,20 @@ async function logout(request: Request, env: Env): Promise<Response> {
       retentionClass: 'security', metadata: { sessionAction: 'revoke_all' },
     });
   });
-  return privateResponse(request, env, { loggedOut: true });
+  return privateResponse(request, env, { loggedOut: true }, { headers: transport === 'cookie' ? { 'set-cookie': expiredRefreshCookie() } : {} });
 }
 
 async function requestPasswordReset(request: Request, env: Env): Promise<Response> {
   const input = await readJson<{ email?: string; turnstileToken?: string }>(request, 8 * 1024);
-  const acceptance = await acceptanceContext(request, env);
-  const turnstileObservation = await verifyTurnstile(env, input.turnstileToken);
-  await recordAcceptanceTurnstile(env, acceptance, turnstileObservation);
   const email = normalizeEmailAddress(input.email);
-  if (!env.PII_HMAC_KEY_V1 || !env.PII_ENCRYPTION_KEY_V1) throw new Error('authentication_not_configured');
-  const encryptionKey = env.PII_ENCRYPTION_KEY_V1;
-  const lookup = hmacLookup(email, env.PII_HMAC_KEY_V1);
-  const account = await query<{ id: string }>(env.DB_APP_FRESH,
-    `SELECT u.id FROM identity.email_credentials c JOIN identity.users u ON u.id = c.user_id
-      WHERE c.email_lookup_hmac = decode($1, 'base64') AND u.status = 'active'`, [lookup]);
-  if (account.rows[0]) {
-    const token = randomToken(32);
-    const challengeId = uuidv7();
-    const sourceEventId = uuidv7();
-    await transaction(env.DB_APP_FRESH, async (client) => {
-      const locked = await client.query<{ id: string; status: string }>(`SELECT id, status FROM identity.users WHERE id = $1 FOR UPDATE`, [account.rows[0].id]);
-      if (!locked.rows[0] || locked.rows[0].status !== 'active') return;
-      await client.query(
-        `UPDATE identity.password_reset_tokens SET superseded_at = now() WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
-        [account.rows[0].id]);
-      await client.query(
-        `INSERT INTO identity.password_reset_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-        [challengeId, account.rows[0].id, hashAuthToken(token, 'password_reset')]);
-      await queueTransactionalEmail(client, {
-        userId: account.rows[0].id,
-        purpose: 'password_reset',
-        challengeId,
-        token,
-        recipient: email,
-        deliveryEncryptionKey: requiredTransactionalEmailKey(env),
-        correlationId: acceptance?.runId ?? correlationId(request),
-        acceptance,
-      });
-      await writeActivity(client, request, { userId: account.rows[0].id }, sourceEventId, {
-        eventType: 'account.password_reset_requested', category: 'account', title: 'A password reset was requested',
-        explanation: 'A time-limited reset message was issued. No password or reset token is stored in this log.',
-        objectType: 'account', objectId: account.rows[0].id, retentionClass: 'security',
-        metadata: { authenticationMethod: 'email' },
-      });
-    });
-  }
-  return response(request, env, { state: 'reset_if_eligible' }, { status: 202 });
+  const acceptance = await acceptanceContext(request, env);
+  const observation = await verifyTurnstile(env, input.turnstileToken, 'password_reset_request');
+  await recordAcceptanceTurnstile(env, acceptance, observation);
+  const secrets = requireAuthSecrets(env);
+  const lookup = hmacLookup(email, secrets.hmacKey);
+  await enforceRateLimit(request, env, 'auth-address:password_reset', 10, lookup);
+  await queueRecoveryEmail(request, env, lookup, 'recovery', acceptance);
+  return privateResponse(request, env, { state: 'reset_if_eligible' }, { status: 202 });
 }
 
 async function completePasswordReset(request: Request, env: Env): Promise<Response> {
@@ -805,14 +785,15 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
   const input = await readJson<{ token?: string; password?: string }>(request, 16 * 1024);
   const token = requireToken(url.searchParams.get('token') ?? input.token, 'reset_token_invalid');
   const password = requireResetPassword(input.password);
+  await requireUncompromisedPassword(password);
   const secrets = requireAuthSecrets(env);
   const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
     const owner = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.password_reset_tokens WHERE token_hash = decode($1, 'base64')`, [hashAuthToken(token, 'password_reset')]);
     if (!owner.rows[0]) throw new Error('reset_token_invalid');
-    const account = await client.query<{ status: string }>(`SELECT status FROM identity.users WHERE id = $1 FOR UPDATE`, [owner.rows[0].user_id]);
-    if (!account.rows[0] || account.rows[0].status !== 'active') throw new Error('reset_token_invalid');
+    const account = await lockRecoveryAccount(client, owner.rows[0].user_id);
+    if (!account || recoveryPlan(account) !== 'reset_password') throw new Error('reset_token_invalid');
     const found = await client.query<{ id: string; user_id: string }>(
       `SELECT id, user_id FROM identity.password_reset_tokens
         WHERE token_hash = decode($1, 'base64') AND consumed_at IS NULL AND superseded_at IS NULL AND expires_at > now()
@@ -828,6 +809,13 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
       revokeAllRefreshFamilies: async (subjectId) => { await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
       bumpTokenVersion: async (subjectId) => { await client.query(`UPDATE identity.users SET token_version = token_version + 1, updated_at = now() WHERE id = $1`, [subjectId]); },
     }, found.rows[0].user_id);
+    await cancelPendingAuthEmails(client, account.id, 'password_reset');
+    const recipient = normalizeEmailAddress(await decryptField({ ciphertext: account.contact_ciphertext!, encryptionKeyVersion: account.contact_key_version! }, secrets.encryptionKey));
+    if (hmacLookup(recipient, secrets.hmacKey) !== account.contact_lookup) throw new Error('authentication_not_configured');
+    await queueTransactionalEmail(client, {
+      userId: account.id, purpose: 'password_changed', token: '', recipient,
+      deliveryEncryptionKey: requiredTransactionalEmailKey(env), correlationId: correlationId(request),
+    });
     await client.query(`INSERT INTO identity.account_events (id, user_id, event_type, metadata) VALUES ($1, $2, 'password_reset_completed', '{}'::jsonb)`, [uuidv7(), found.rows[0].user_id]);
     await writeActivity(client, request, { userId: found.rows[0].user_id }, sourceEventId, {
       eventType: 'account.password_reset', category: 'account', title: 'You reset your password',
@@ -836,7 +824,7 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
       metadata: { authenticationMethod: 'email', sessionAction: 'revoke_all' },
     });
   });
-  return response(request, env, { state: 'password_reset_completed' });
+  return privateResponse(request, env, { state: 'password_reset_completed' });
 }
 
 function corsOrigin(request: Request, env: Env): string | undefined {
@@ -3047,13 +3035,28 @@ async function dispatchAlpha(request: Request, env: Env): Promise<Response> {
   return result;
 }
 
+async function authIntake(request: Request, env: Env, reset = false): Promise<Response> {
+  const payload = await readJson<EmailAuthInput>(request.clone() as Request, 16 * 1024);
+  const action = () => reset ? requestPasswordReset(request, env) : emailAuth(request, env);
+  if (!reset && !['register','resend_verification'].includes(payload.mode ?? 'login')) return action();
+  const result = await idempotentAuthIntake({
+    request, payload, scope: reset ? 'password_reset' : payload.mode!, candidateVersion: env.WORKER_VERSION.id,
+    key: env.PII_HMAC_KEY_V1 ?? '', database: env.DB_APP_FRESH, work: action,
+  });
+  return privateResponse(request, env, await result.json(), { status: result.status });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const id = correlationId(request);
+    const headers = new Headers(request.headers);
+    headers.set('x-correlation-id', id);
+    request = new Request(request, { headers });
     try {
       assertExpectedHostname(request, env.EXPECTED_HOSTNAMES);
       const url = new URL(request.url);
-      if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode' } });
+      if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode, X-Lythaus-Auth-Transport' } });
+      validateAuthRequestOrigin(request, env.CORS_ALLOWED_ORIGINS);
       if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) return response(request, env, { status: 'ok', service: 'lythaus-public-api', environment: env.ENVIRONMENT ?? 'unknown' });
       if (request.method === 'GET' && (url.pathname === '/internal/readiness/database-identity' || url.pathname === '/api/internal/readiness/database-identity')) {
         if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
@@ -3297,10 +3300,11 @@ export default {
       if (url.pathname === '/api/auth/email' || url.pathname.startsWith('/api/auth/email/verify') || url.pathname.startsWith('/api/auth/password/reset')) {
         if (env.EMAIL_PROVIDER_MODE === 'disabled') return response(request, env, { error: 'provider_unavailable', provider: 'email', correlationId: id }, { status: 404 });
       }
-      if (request.method === 'POST' && url.pathname === '/api/auth/email') return await emailAuth(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/email') return await authIntake(request, env);
       if (request.method === 'POST' && url.pathname === '/internal/production-auth-acceptance/resend-fixture') return await createAcceptanceResendFixture(request, env);
+      if (request.method === 'POST' && url.pathname === '/internal/production-auth-acceptance/challenge-observation') return await observeAcceptanceChallenge(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/email/verify') return await verifyEmail(request, env);
-      if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/request') return await requestPasswordReset(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/request') return await authIntake(request, env, true);
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/complete') return await completePasswordReset(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/refresh') return await refreshSession(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/logout') return await logout(request, env);
@@ -3340,7 +3344,12 @@ export default {
         internalErrorCode: classified.internalCode,
         route: new URL(request.url).pathname,
       });
-      return privateResponse(request, env, { error: classified.exposedCode, correlationId: id }, { status: classified.status });
+      const clearCookie = new URL(request.url).pathname === '/api/auth/refresh'
+        && request.headers.get('x-lythaus-auth-transport') === 'cookie-v1' && classified.status === 401;
+      return privateResponse(request, env, { error: classified.exposedCode, correlationId: id }, { status: classified.status, headers: {
+        ...(clearCookie ? { 'set-cookie': expiredRefreshCookie() } : {}),
+        ...(classified.status === 429 ? { 'retry-after': String(60 - Math.floor(Date.now() / 1000) % 60) } : {}),
+      } });
     }
   },
 };

@@ -29,6 +29,7 @@ const internalRouteKeys = new Set([
   'GET /internal/readiness/database-identity',
   'POST /internal/readiness/transactional-email-key-compatibility',
   'POST /internal/production-auth-acceptance/resend-fixture',
+  'POST /internal/production-auth-acceptance/challenge-observation',
 ]);
 const intentionalStartsWithPrefixes = new Set([
   '/api/auth/email/verify',

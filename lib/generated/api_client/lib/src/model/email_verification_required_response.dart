@@ -13,15 +13,11 @@ part 'email_verification_required_response.g.dart';
 ///
 /// Properties:
 /// * [state]
-/// * [userId]
 @BuiltValue()
 abstract class EmailVerificationRequiredResponse implements Built<EmailVerificationRequiredResponse, EmailVerificationRequiredResponseBuilder> {
   @BuiltValueField(wireName: r'state')
   EmailVerificationRequiredResponseStateEnum get state;
   // enum stateEnum {  verification_required,  };
-
-  @BuiltValueField(wireName: r'userId')
-  String? get userId;
 
   EmailVerificationRequiredResponse._();
 
@@ -51,13 +47,6 @@ class _$EmailVerificationRequiredResponseSerializer implements PrimitiveSerializ
       object.state,
       specifiedType: const FullType(EmailVerificationRequiredResponseStateEnum),
     );
-    if (object.userId != null) {
-      yield r'userId';
-      yield serializers.serialize(
-        object.userId,
-        specifiedType: const FullType(String),
-      );
-    }
   }
 
   @override
@@ -87,13 +76,6 @@ class _$EmailVerificationRequiredResponseSerializer implements PrimitiveSerializ
             specifiedType: const FullType(EmailVerificationRequiredResponseStateEnum),
           ) as EmailVerificationRequiredResponseStateEnum;
           result.state = valueDes;
-          break;
-        case r'userId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.userId = valueDes;
           break;
         default:
           unhandled.add(key);

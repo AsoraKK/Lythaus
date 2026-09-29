@@ -12,6 +12,7 @@ void main() {
       // TODO
     });
 
+    // Unicode code points; no trimming or normalization. Screened against compromised passwords before token consumption.
     // String password
     test('to test the property `password`', () async {
       // TODO

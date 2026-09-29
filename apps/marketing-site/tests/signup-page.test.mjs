@@ -10,7 +10,8 @@ test('signup page exposes the real production email registration flow', () => {
   assert.match(signup, /Create your account\./);
   assert.match(signup, /mode: 'register'/);
   assert.match(signup, /turnstileToken/);
-  assert.match(signup, /action: 'account_signup'/);
+  assert.match(signup, /widgetAction = 'account_signup'/);
+  assert.match(signup, /action: widgetAction/);
   assert.match(signup, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js/);
   assert.match(signup, /email_verification_required/);
   assert.match(signup, /account_exists/);
@@ -20,7 +21,7 @@ test('signup page exposes the real production email registration flow', () => {
   assert.match(signup, /failureReference = typeof body\.correlationId/);
   assert.match(signup, /setResendVisible\(shouldOfferResend\(code\)\)/);
   assert.match(signup, /autocomplete="new-password"/);
-  assert.match(signup, /minlength="15"/);
+  assert.match(signup, /acceptsPassword\(password.value, 'creation'\)/);
   assert.match(signup, /queued or is on its way/);
   assert.doesNotMatch(signup, /This email is already registered/);
   assert.doesNotMatch(signup, /CLOUDFLARE_API_TOKEN|TURNSTILE_SECRET_KEY/);

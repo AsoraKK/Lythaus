@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:lythaus_api_client/src/model/api_error.dart';
 import 'package:lythaus_api_client/src/model/auth_jwks_get200_response.dart';
 import 'package:lythaus_api_client/src/model/auth_logout200_response.dart';
+import 'package:lythaus_api_client/src/model/auth_logout_request.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_complete200_response.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_complete_request.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_request202_response.dart';
@@ -39,6 +40,8 @@ class AuthApi {
   ///
   /// Parameters:
   /// * [emailAuthRequest]
+  /// * [xLythausAuthTransport] - Browser clients send cookie-v1 with credentials included and an exact allowed Origin. Refresh credentials use an HttpOnly Secure SameSite=Strict host-only cookie; native and older clients retain the JSON token transport. Never persist browser refresh or access credentials in Web Storage.
+  /// * [idempotencyKey] - Random per-operation key for registration or resend. Replaying the same accepted payload does not reuse Turnstile or mint another challenge. Ambiguous outcomes return 409; login responses are never cached.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -50,6 +53,8 @@ class AuthApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<EmailSessionResponse>> authEmail({
     EmailAuthRequest? emailAuthRequest,
+    String? xLythausAuthTransport,
+    String? idempotencyKey,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -61,6 +66,8 @@ class AuthApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        if (xLythausAuthTransport != null) r'X-Lythaus-Auth-Transport': xLythausAuthTransport,
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -130,7 +137,7 @@ class AuthApi {
   }
 
   /// Verify an email address with a JSON token
-  /// Consumes a single-use email-verification token and returns only a private verification state.
+  /// An intentional POST atomically consumes mailbox proof and establishes the mailbox owner&#39;s chosen credential on the existing user ID. GET/HEAD never mutates. Password policy is checked before token consumption; omitted password returns password_setup_required without consuming the link. No automatic session or bearer redirect is issued.
   ///
   /// Parameters:
   /// * [emailVerificationRequest]
@@ -298,9 +305,11 @@ class AuthApi {
   }
 
   /// Revoke all active sessions for the authenticated user
-  ///
+  /// Native clients may send their refresh credential to revoke sessions even after access-token expiry; bearer-only logout remains supported for deployed clients. Browser clients send cookie-v1 with credentials included, an exact allowed Origin and an empty JSON object. This globally revokes the account&#39;s sessions, not only this device, and expires the refresh cookie. Local sign-out or HTTP 401 alone does not prove server revocation during an outage.
   ///
   /// Parameters:
+  /// * [xLythausAuthTransport]
+  /// * [authLogoutRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -311,6 +320,8 @@ class AuthApi {
   /// Returns a [Future] containing a [Response] with a [AuthLogout200Response] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AuthLogout200Response>> authLogout({
+    String? xLythausAuthTransport,
+    AuthLogoutRequest? authLogoutRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -322,11 +333,17 @@ class AuthApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        if (xLythausAuthTransport != null) r'X-Lythaus-Auth-Transport': xLythausAuthTransport,
         ...?headers,
       },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {
+            'type': 'apiKey',
+            'name': 'refreshCookie',
+            'keyName': '__Host-lythaus_refresh',
+            'where': '',
+          },{
             'type': 'http',
             'scheme': 'bearer',
             'name': 'bearerAuth',
@@ -334,11 +351,31 @@ class AuthApi {
         ],
         ...?extra,
       },
+      contentType: 'application/json',
       validateStatus: validateStatus,
     );
 
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AuthLogoutRequest);
+      _bodyData = authLogoutRequest == null ? null : _serializers.serialize(authLogoutRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
     final _response = await _dio.request<Object>(
       _path,
+      data: _bodyData,
       options: _options,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
@@ -472,10 +509,11 @@ class AuthApi {
   }
 
   /// Request an opaque password reset message
-  /// Always returns the same neutral state so account existence is not disclosed.
+  /// Valid accepted requests return the same neutral state for known, unknown and restricted accounts. This proves intake only, not provider acceptance or mailbox delivery. Eligible pending or credentialless legacy accounts receive mailbox-owned credential setup on their existing ID. Dependency failures are not reported as delivered mail.
   ///
   /// Parameters:
   /// * [authPasswordResetRequestRequest]
+  /// * [idempotencyKey]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -487,6 +525,7 @@ class AuthApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AuthPasswordResetRequest202Response>> authPasswordResetRequest({
     required AuthPasswordResetRequestRequest authPasswordResetRequestRequest,
+    String? idempotencyKey,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -498,6 +537,7 @@ class AuthApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -567,10 +607,11 @@ class AuthApi {
   }
 
   /// Rotate a refresh token
-  ///
+  /// Browser cookie-v1 transport requires an allowed Origin, credentials included, and an empty JSON object. Native clients supply the opaque token. Refresh credentials rotate; reused revoked credentials revoke their family.
   ///
   /// Parameters:
   /// * [refreshSessionRequest]
+  /// * [xLythausAuthTransport]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -582,6 +623,7 @@ class AuthApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<EmailSessionResponse>> authRefresh({
     required RefreshSessionRequest refreshSessionRequest,
+    String? xLythausAuthTransport,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -593,6 +635,7 @@ class AuthApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        if (xLythausAuthTransport != null) r'X-Lythaus-Auth-Transport': xLythausAuthTransport,
         ...?headers,
       },
       extra: <String, dynamic>{

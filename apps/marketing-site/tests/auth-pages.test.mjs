@@ -21,8 +21,8 @@ test('password recovery request is neutral, protected, and Turnstile-backed', ()
   assert.match(forgotPassword, /action: 'password_reset_request'/);
   assert.match(forgotPassword, /\/api\/auth\/password\/reset\/request/);
   assert.match(forgotPassword, /body\.state !== 'reset_if_eligible'/);
-  assert.match(forgotPassword, /queued or is on its way/);
-  assert.match(forgotPassword, /Delivery is not confirmed yet/);
+  assert.match(forgotPassword, /request was accepted/);
+  assert.match(forgotPassword, /does not confirm email delivery/);
   assert.doesNotMatch(forgotPassword, /account exists|user not found/i);
 });
 
@@ -34,7 +34,8 @@ test('password reset completion consumes the token once and clears it after succ
   assert.match(resetPassword, /body: JSON\.stringify\(\{ token, password: password\.value \}\)/);
   assert.match(resetPassword, /reset_token_invalid/);
   assert.match(resetPassword, /existing sessions were signed out/);
-  assert.match(resetPassword, /minlength="15"/);
+  assert.match(resetPassword, /acceptsPassword\(password.value, 'creation'\)/);
+  assert.doesNotMatch(resetPassword, /minlength=/);
 });
 
 test('verification resend is Turnstile-backed and neutral', () => {
@@ -65,7 +66,9 @@ test('verification page never mutates on GET and consumes the token with deliber
   assert.match(verifyEmail, /Confirm your email/);
   assert.match(verifyEmail, /window\.history\.replaceState\(null, '', '\/verify-email'\)/);
   assert.match(verifyEmail, /method: 'POST'/);
-  assert.match(verifyEmail, /body: JSON\.stringify\(\{ token \}\)/);
+  assert.match(verifyEmail, /body: JSON\.stringify\(\{ token, password: password.value \}\)/);
+  assert.match(verifyEmail, /window.addEventListener\('hashchange', captureLink\)/);
+  assert.match(verifyEmail, /generation !== linkGeneration/);
   assert.doesNotMatch(verifyEmail, /method:\s*['"]GET['"]/);
   assert.match(verifyEmail, /verification_token_invalid/);
   assert.match(verifyEmail, /already used/);
@@ -88,7 +91,8 @@ test('auth pages expose accessible status and password-policy guidance', () => {
     assert.match(page, /role="status"/);
     assert.match(page, /tabindex="-1"/);
   }
-  assert.match(signup, /minlength="15"/);
+  assert.match(signup, /acceptsPassword\(password.value, 'creation'\)/);
+  assert.doesNotMatch(signup, /minlength=/);
   assert.match(signup, /Password managers, paste, and autofill are supported/);
   assert.match(resetPassword, /Longer passphrases are welcome/);
   assert.doesNotMatch(signup, /uppercase.*symbol|symbol.*uppercase/i);

@@ -13,7 +13,8 @@ part 'email_session_response.g.dart';
 ///
 /// Properties:
 /// * [accessToken] - Short-lived JWT bearer token (15 minutes).
-/// * [refreshToken] - Rotating opaque refresh token.
+/// * [refreshToken] - Rotating opaque refresh token, only in native/legacy transport. Never returned to cookie-v1 clients.
+/// * [sessionTransport]
 /// * [tokenType]
 /// * [expiresIn] - Access-token lifetime in seconds.
 @BuiltValue()
@@ -22,9 +23,13 @@ abstract class EmailSessionResponse implements Built<EmailSessionResponse, Email
   @BuiltValueField(wireName: r'accessToken')
   String get accessToken;
 
-  /// Rotating opaque refresh token.
+  /// Rotating opaque refresh token, only in native/legacy transport. Never returned to cookie-v1 clients.
   @BuiltValueField(wireName: r'refreshToken')
-  String get refreshToken;
+  String? get refreshToken;
+
+  @BuiltValueField(wireName: r'sessionTransport')
+  EmailSessionResponseSessionTransportEnum? get sessionTransport;
+  // enum sessionTransportEnum {  cookie-v1,  };
 
   @BuiltValueField(wireName: r'tokenType')
   EmailSessionResponseTokenTypeEnum get tokenType;
@@ -62,11 +67,20 @@ class _$EmailSessionResponseSerializer implements PrimitiveSerializer<EmailSessi
       object.accessToken,
       specifiedType: const FullType(String),
     );
-    yield r'refreshToken';
-    yield serializers.serialize(
-      object.refreshToken,
-      specifiedType: const FullType(String),
-    );
+    if (object.refreshToken != null) {
+      yield r'refreshToken';
+      yield serializers.serialize(
+        object.refreshToken,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.sessionTransport != null) {
+      yield r'sessionTransport';
+      yield serializers.serialize(
+        object.sessionTransport,
+        specifiedType: const FullType(EmailSessionResponseSessionTransportEnum),
+      );
+    }
     yield r'tokenType';
     yield serializers.serialize(
       object.tokenType,
@@ -114,6 +128,13 @@ class _$EmailSessionResponseSerializer implements PrimitiveSerializer<EmailSessi
           ) as String;
           result.refreshToken = valueDes;
           break;
+        case r'sessionTransport':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(EmailSessionResponseSessionTransportEnum),
+          ) as EmailSessionResponseSessionTransportEnum;
+          result.sessionTransport = valueDes;
+          break;
         case r'tokenType':
           final valueDes = serializers.deserialize(
             value,
@@ -155,6 +176,19 @@ class _$EmailSessionResponseSerializer implements PrimitiveSerializer<EmailSessi
     );
     return result.build();
   }
+}
+
+class EmailSessionResponseSessionTransportEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'cookie-v1')
+  static const EmailSessionResponseSessionTransportEnum cookieV1 = _$emailSessionResponseSessionTransportEnum_cookieV1;
+
+  static Serializer<EmailSessionResponseSessionTransportEnum> get serializer => _$emailSessionResponseSessionTransportEnumSerializer;
+
+  const EmailSessionResponseSessionTransportEnum._(String name): super(name);
+
+  static BuiltSet<EmailSessionResponseSessionTransportEnum> get values => _$emailSessionResponseSessionTransportEnumValues;
+  static EmailSessionResponseSessionTransportEnum valueOf(String name) => _$emailSessionResponseSessionTransportEnumValueOf(name);
 }
 
 class EmailSessionResponseTokenTypeEnum extends EnumClass {

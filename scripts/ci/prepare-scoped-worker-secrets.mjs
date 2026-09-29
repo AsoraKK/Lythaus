@@ -104,6 +104,7 @@ export function buildScopedSecretPayloads({
   coordinatorManaged = true,
   lifecycleReadToken = '',
   acceptanceEmailBase = '',
+  acceptanceSecondaryEmailBase = '',
   transactionalEmailKey = '',
   acceptanceStateKey = '',
 }) {
@@ -119,7 +120,9 @@ export function buildScopedSecretPayloads({
   if (coordinatorManaged) {
     if (!lifecycleReadToken) throw new Error('CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN is required');
     if (!acceptanceEmailBase) throw new Error('AUTH_ACCEPTANCE_EMAIL_BASE is required');
+    if (!acceptanceSecondaryEmailBase) throw new Error('AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE is required');
     coordinatorSecrets.AUTH_ACCEPTANCE_EMAIL_BASE = acceptanceEmailBase;
+    coordinatorSecrets.AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE = acceptanceSecondaryEmailBase;
     coordinatorSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN = lifecycleReadToken;
   }
   if (transactionalEmailKey) {
@@ -153,6 +156,7 @@ async function main() {
     coordinatorManaged,
     lifecycleReadToken: coordinatorManaged ? requiredEnvironment('CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN') : '',
     acceptanceEmailBase: coordinatorManaged ? requiredEnvironment('AUTH_ACCEPTANCE_EMAIL_BASE') : '',
+    acceptanceSecondaryEmailBase: coordinatorManaged ? requiredEnvironment('AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE') : '',
     transactionalEmailKey: lifecycle.transactionalEmail.action === 'bootstrap' ? randomBytes(32).toString('base64') : '',
     acceptanceStateKey: lifecycle.acceptanceState.action === 'bootstrap' ? randomBytes(32).toString('base64') : '',
   });

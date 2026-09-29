@@ -11,6 +11,9 @@
   ],
   "keep_vars": false,
   "version_metadata": { "binding": "WORKER_VERSION" },
+  "services": [
+    { "binding": "AUTH_EMAIL_ENVELOPE", "service": "lythaus-public-api-development", "entrypoint": "AuthEmailEnvelope" }
+  ],
   "observability": { "enabled": true, "head_sampling_rate": 0.25 },
   "vars": {
     "AUTHENTICITY_BETA_ENABLED": "false",
@@ -25,9 +28,9 @@
     "ACCESS_AUDIENCES": "REPLACE_WITH_ADMIN_UI_ACCESS_AUDIENCE,REPLACE_WITH_ADMIN_API_ACCESS_AUDIENCE",
     "ACCESS_JWKS_URL": "REPLACE_WITH_ACCESS_JWKS_URL",
     "EXPECTED_DATABASE_TARGET": "main",
-    "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "REPLACE_WITH_POST_0017_SCHEMA_FINGERPRINT",
-    "EXPECTED_DATABASE_RELATION_COUNT": "REPLACE_WITH_POST_0017_RELATION_COUNT",
-    "EXPECTED_DATABASE_SCHEMA_VERSION": "0017_authenticity_beta.sql",
+    "EXPECTED_DATABASE_SCHEMA_FINGERPRINT": "REPLACE_WITH_POST_0020_SCHEMA_FINGERPRINT",
+    "EXPECTED_DATABASE_RELATION_COUNT": "REPLACE_WITH_POST_0020_RELATION_COUNT",
+    "EXPECTED_DATABASE_SCHEMA_VERSION": "0020_auth_recovery_delivery.sql",
     "EXPECTED_DATABASE_ROLE_CLASS": "login_non_superuser",
     "EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED": "true",
     "AUTHENTICATED_ACCEPTANCE_PROVEN": "false"
@@ -46,6 +49,9 @@
       "workers_dev": true,
       "preview_urls": true,
       "routes": [],
+      "services": [
+        { "binding": "AUTH_EMAIL_ENVELOPE", "service": "lythaus-public-api-development", "entrypoint": "AuthEmailEnvelope" }
+      ],
       "hyperdrive": [
         { "binding": "DB_ADMIN_FRESH", "id": "6bfbb0eab42642e8ad294dbf59294ed3" },
         { "binding": "DB_PRIVACY_FRESH", "id": "bae909aa72e244bfa8ca8a948053b6" }

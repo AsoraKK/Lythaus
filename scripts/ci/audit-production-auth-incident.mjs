@@ -13,6 +13,7 @@ const cloudflareZoneId = process.env.CLOUDFLARE_ZONE_ID ?? '';
 const sendingDomain = process.env.AUTH_EMAIL_SENDING_DOMAIN ?? 'mail.lythaus.co';
 const sendingFrom = process.env.AUTH_EMAIL_FROM ?? `no-reply@${sendingDomain}`;
 const acceptanceEmail = process.env.CODEX_TEST_EMAIL ?? '';
+const sendProbe = process.env.AUTH_INCIDENT_SEND_PROBE === 'true';
 
 function sanitizeProviderMessage(value) {
   return String(value ?? '')
@@ -99,6 +100,20 @@ async function capturePlanetScale(report) {
        GROUP BY event_type
        ORDER BY event_type`);
 
+    const emailOperations = await client.query(`
+      SELECT purpose,state,provider_error_category,COUNT(*)::int AS count,
+        max(EXTRACT(EPOCH FROM now()-created_at)) FILTER (WHERE state IN ('queued','processing'))::int AS oldest_pending_seconds,
+        COUNT(*) FILTER (WHERE state IN ('queued','processing') AND created_at<now()-interval '2 minutes')::int AS pending_overdue,
+        COUNT(*) FILTER (WHERE state='processing' AND updated_at<now()-interval '5 minutes')::int AS abandoned_leases,
+        COUNT(*) FILTER (WHERE provider_error_category='configuration')::int AS configuration_failures
+      FROM system.transactional_email_outbox WHERE created_at>=now()-interval '24 hours'
+      GROUP BY purpose,state,provider_error_category`);
+    const recoveryIntake = await client.query(`SELECT reason_code,COUNT(*)::int AS count
+      FROM system.audit_events WHERE action='auth.recovery.intake' AND created_at>=now()-interval '24 hours'
+      GROUP BY reason_code`);
+    const acceptance = await client.query(`SELECT COUNT(*)::int AS expired_incomplete
+      FROM system.production_auth_acceptance_runs WHERE expires_at<now() AND status IN ('pending','in_progress','expired','blocked')`);
+
     await client.query('ROLLBACK');
     report.planetscale = {
       status: 'VERIFIED_READ_ONLY',
@@ -107,6 +122,9 @@ async function capturePlanetScale(report) {
       emailCredentialCounts: credentials.rows,
       verificationTokenCounts24h: verificationTokens.rows[0] ?? {},
       authEventCounts24h: recentEvents.rows,
+      emailOperations24h: emailOperations.rows,
+      recoveryIntake24h: recoveryIntake.rows,
+      acceptance: acceptance.rows[0],
       piiIncluded: false,
     };
   } catch (error) {
@@ -189,6 +207,10 @@ async function captureCloudflare(report) {
     };
   }
 
+  if (!sendProbe) {
+    report.cloudflare.arbitraryRecipientProbe = {attempted:false,reason:'explicit_send_approval_required'};
+    return;
+  }
   if (!acceptanceEmail) throw new Error('CODEX_TEST_EMAIL is required for the arbitrary-recipient probe');
   const probeRecipient = buildArbitraryRecipientProbe(acceptanceEmail);
   report.cloudflare.arbitraryRecipientProbe.attempted = true;
@@ -250,11 +272,12 @@ try {
 if (report.cloudflare?.subdomainApi?.success !== true || report.cloudflare?.subdomainApi?.enabled !== true) {
   failures.push('cloudflare_sending_domain_not_enabled');
 }
-if (report.cloudflare?.arbitraryRecipientProbe?.success !== true) {
+if (sendProbe && report.cloudflare?.arbitraryRecipientProbe?.success !== true) {
   failures.push('cloudflare_arbitrary_recipient_probe_failed');
 }
 
 report.failures = [...new Set(failures)];
+report.mode = sendProbe ? 'approved_provider_send_probe' : 'read_only';
 report.status = report.failures.length === 0 ? 'DIAGNOSTIC_PASS' : 'DIAGNOSTIC_FAIL';
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });

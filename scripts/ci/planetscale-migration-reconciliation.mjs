@@ -287,6 +287,9 @@ const artifacts = {
   '0019_authenticity_alpha_hardening.sql': [
     { artifact: 'authenticity_alpha_purge_index', kind: 'schema_artifact', sql: "SELECT to_regclass('moderation.authenticity_alpha_purge_idx') IS NOT NULL AS present" },
   ],
+  '0020_auth_recovery_delivery.sql': [
+    { artifact: 'password_changed_notification_purpose', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='system.transactional_email_outbox'::regclass AND conname='transactional_email_outbox_purpose_check' AND convalidated AND pg_get_constraintdef(oid) ILIKE '%password_changed%') AS present" },
+  ],
 };
 
 export const migrationPostconditions = Object.fromEntries(

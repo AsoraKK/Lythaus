@@ -2,6 +2,12 @@ name: Production auth incident audit
 
 on:
   workflow_dispatch:
+    inputs:
+      send_probe:
+        description: 'Explicitly approve sending one entitlement probe to the dedicated acceptance mailbox'
+        type: boolean
+        default: false
+        required: true
 
 permissions:
   contents: read
@@ -27,6 +33,7 @@ jobs:
       AUTH_EMAIL_SENDING_DOMAIN: mail.lythaus.co
       AUTH_EMAIL_FROM: no-reply@mail.lythaus.co
       AUTH_INCIDENT_AUDIT_OUTPUT: .artifacts/auth-incident/production-auth-incident.json
+      AUTH_INCIDENT_SEND_PROBE: ${{ inputs.send_probe }}
     steps:
       - name: Checkout exact main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

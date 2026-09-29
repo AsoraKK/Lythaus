@@ -58,6 +58,7 @@ import 'package:lythaus_api_client/src/model/appeal_reviewer_assignments.dart';
 import 'package:lythaus_api_client/src/model/appeal_reviewer_assignments_items_inner.dart';
 import 'package:lythaus_api_client/src/model/auth_jwks_get200_response.dart';
 import 'package:lythaus_api_client/src/model/auth_logout200_response.dart';
+import 'package:lythaus_api_client/src/model/auth_logout_request.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_complete200_response.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_complete_request.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_request202_response.dart';
@@ -254,6 +255,7 @@ part 'serializers.g.dart';
   AppealReviewerAssignmentsItemsInner,
   AuthJwksGet200Response,
   AuthLogout200Response,
+  AuthLogoutRequest,
   AuthPasswordResetComplete200Response,
   AuthPasswordResetCompleteRequest,
   AuthPasswordResetRequest202Response,

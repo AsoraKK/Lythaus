@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:lythaus_api_client/src/model/refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/legacy_refresh_token_request.dart';
+import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 import 'package:one_of/one_of.dart';
@@ -18,7 +19,7 @@ part 'refresh_session_request.g.dart';
 /// * [refreshToken]
 @BuiltValue()
 abstract class RefreshSessionRequest implements Built<RefreshSessionRequest, RefreshSessionRequestBuilder> {
-  /// One Of [LegacyRefreshTokenRequest], [RefreshTokenRequest]
+  /// One Of [JsonObject], [LegacyRefreshTokenRequest], [RefreshTokenRequest]
   OneOf get oneOf;
 
   RefreshSessionRequest._();
@@ -64,7 +65,7 @@ class _$RefreshSessionRequestSerializer implements PrimitiveSerializer<RefreshSe
   }) {
     final result = RefreshSessionRequestBuilder();
     Object? oneOfDataSrc;
-    final targetType = const FullType(OneOf, [FullType(RefreshTokenRequest), FullType(LegacyRefreshTokenRequest), ]);
+    final targetType = const FullType(OneOf, [FullType(RefreshTokenRequest), FullType(LegacyRefreshTokenRequest), FullType(JsonObject), ]);
     oneOfDataSrc = serialized;
     result.oneOf = serializers.deserialize(oneOfDataSrc, specifiedType: targetType) as OneOf;
     return result.build();

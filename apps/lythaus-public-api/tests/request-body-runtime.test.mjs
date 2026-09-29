@@ -3,6 +3,12 @@ import test from 'node:test';
 
 import { readBoundedJson } from '../src/request-body-runtime.ts';
 
+test('rejects null, arrays, scalars and malformed UTF-8 before domain handlers', async () => {
+  for (const body of ['null', '[]', 'true', '12', '"text"', new Uint8Array([123,34,120,34,58,34,255,34,125])]) {
+    await assert.rejects(readBoundedJson(new Request('https://fixture.invalid', {method:'POST',body}), 64), /invalid_json/);
+  }
+});
+
 const encoder = new TextEncoder();
 
 function requestFromChunks(chunks, contentLength) {

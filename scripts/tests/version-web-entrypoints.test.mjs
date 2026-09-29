@@ -50,3 +50,15 @@ test('all app routes revalidate cached documents without clearing session storag
   assert.match(globalRules, /^\/\*\r?\n  Cache-Control: no-cache, max-age=0, must-revalidate/m);
   assert.doesNotMatch(headers, /Clear-Site-Data/);
 });
+
+test('canonical web builds keep the renderer in the reviewed first-party artifact', () => {
+  const script = readFileSync(new URL('../cf-pages-build.sh', import.meta.url), 'utf8');
+  assert.match(script, /flutter build web --release --no-tree-shake-icons --no-web-resources-cdn/);
+});
+
+test('app anchors Flutter semantics at the view origin without changing the marketing homepage', () => {
+  const html = readFileSync(new URL('../../web/index.html', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../web/flutter-semantics.css', import.meta.url), 'utf8');
+  assert.match(html, /<link rel="stylesheet" href="flutter-semantics.css">/);
+  assert.match(css, /flt-semantics-host\s*\{\s*left:\s*0;\s*top:\s*0;\s*\}/);
+});

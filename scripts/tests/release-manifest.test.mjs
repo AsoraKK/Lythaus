@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { REQUIRED_RELEASE_SCHEMA_VERSION } from '../ci/product-integrity-schema-contract.mjs';
 
 const root = process.cwd();
 const releaseSha = '0123456789abcdef0123456789abcdef01234567';
@@ -27,7 +28,7 @@ test('release manifest records partial provider evidence without inventing live 
   assert.ok(manifest.evidence.platformLimitations.every((value) => !value.includes('native branch protection')));
   assert.equal(manifest.cloudflare.inventoryStatus, 'UNKNOWN/BLOCKED');
   assert.equal(manifest.planetscale.inventoryStatus, 'UNKNOWN/BLOCKED');
-  assert.equal(manifest.planetscale.latestMigration, '0019_authenticity_alpha_hardening.sql');
+  assert.equal(manifest.planetscale.latestMigration, REQUIRED_RELEASE_SCHEMA_VERSION);
   assert.match(manifest.planetscale.migrationSetSha256, /^[a-f0-9]{64}$/);
 });
 

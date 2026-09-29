@@ -231,24 +231,34 @@ Future<void> runWithDeviceGuard(
   IntegrityUseCase useCase,
   Future<void> Function() action,
 ) async {
+  final isAuthentication =
+      useCase == IntegrityUseCase.signIn || useCase == IntegrityUseCase.signUp;
   DeviceIntegrityDecision decision;
   try {
     final guard = ref.read(deviceIntegrityGuardProvider);
-
-    // If the device security state is not yet available (async), do not block
-    // the UI/actions waiting for a potentially slow platform check. Instead,
-    // proceed immediately and evaluate the guard in background. If a cached
-    // value exists (AsyncData), evaluate synchronously to enforce policy.
-    final asyncState = ref.read(deviceSecurityStateProvider);
-    if (asyncState is! AsyncData<DeviceSecurityState>) {
-      // Device state not yet available — allow action immediately to avoid
-      // blocking UI/tests. Skip background evaluation to prevent timers in
-      // test environments.
-      decision = DeviceIntegrityDecision.allow();
+    if (isAuthentication) {
+      decision = await guard
+          .evaluate(useCase)
+          .timeout(const Duration(seconds: 8));
     } else {
-      decision = await guard.evaluate(useCase);
+      final asyncState = ref.read(deviceSecurityStateProvider);
+      decision = asyncState is! AsyncData<DeviceSecurityState>
+          ? DeviceIntegrityDecision.allow()
+          : await guard.evaluate(useCase);
     }
   } catch (e, st) {
+    if (isAuthentication) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'The security check could not finish. Please try again.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
     // If evaluation fails (platform/channel issues in tests or runtime),
     // log telemetry and default to allowing the action to avoid blocking
     // critical flows unexpectedly.
@@ -265,8 +275,9 @@ Future<void> runWithDeviceGuard(
     decision = DeviceIntegrityDecision.allow();
   }
 
-  if (!decision.allow && decision.showBlockingUi) {
-    if (context.mounted) {
+  if (!context.mounted) return;
+  if (!decision.allow) {
+    if (decision.showBlockingUi) {
       await showDeviceIntegrityBlockedDialog(
         context,
         messageKey: decision.messageKey,
@@ -301,8 +312,10 @@ Future<void> runWithDeviceGuard(
         result: 'action_error',
         environment: Environment.development,
         useCase: useCase.name,
-        reason: e.toString(),
-        metadata: {'error': e.toString(), 'stack': st.toString()},
+        reason: isAuthentication ? 'auth_action_failed' : e.toString(),
+        metadata: isAuthentication
+            ? const {}
+            : {'error': e.toString(), 'stack': st.toString()},
       ),
     );
     rethrow;

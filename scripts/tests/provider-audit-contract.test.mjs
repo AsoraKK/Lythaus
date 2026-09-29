@@ -12,6 +12,16 @@ const planetscaleContractAudit = read('scripts/planetscale/audit-production-cont
 const planetscaleWorkflow = read('.github/workflows/planetscale-account-audit.yml');
 const authIncidentAudit = read('scripts/ci/audit-production-auth-incident.mjs');
 
+test('incident diagnostics default to read-only aggregates and require explicit approval to send',()=>{
+  assert.match(authIncidentAudit,/AUTH_INCIDENT_SEND_PROBE === 'true'/);
+  assert.ok(authIncidentAudit.indexOf('if (!sendProbe)')<authIncidentAudit.indexOf("method: 'POST',",authIncidentAudit.indexOf('if (!sendProbe)')));
+  assert.match(authIncidentAudit,/reason:'explicit_send_approval_required'/);
+  assert.match(authIncidentAudit,/oldest_pending_seconds/);
+  assert.match(authIncidentAudit,/abandoned_leases/);
+  assert.match(authIncidentAudit,/recoveryIntake24h/);
+  assert.doesNotMatch(authIncidentAudit,/SELECT[^;]+provider_message_id/);
+});
+
 test('Cloudflare inventory prefers canonical deployment token and throttles account reads', () => {
   assert.match(cloudflareAudit, /CLOUDFLARE_API_TOKEN \|\| process\.env\.CLOUDFLARE_AUDIT_API_TOKEN/);
   assert.match(cloudflareAudit, /response\.status === 429/);

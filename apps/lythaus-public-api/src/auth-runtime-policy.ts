@@ -1,4 +1,4 @@
-import { planCanonicalRegistration } from '@lythaus/contracts';
+import { planCanonicalRegistration, requirePasswordInput } from '@lythaus/contracts';
 
 export type EmailAuthMode = 'register' | 'login' | 'resend_verification';
 
@@ -50,7 +50,8 @@ const PUBLIC_ERROR_CODES = new Set([
   'invalid_comment', 'invalid_comment_parent', 'invalid_credentials', 'invalid_cursor',
   'invalid_custom_feed', 'invalid_custom_feed_rule', 'invalid_custom_feed_rules',
   'invalid_display_name', 'invalid_email', 'invalid_flag', 'invalid_follow',
-  'invalid_consent_version',
+  'invalid_consent_version', 'invalid_auth_mode', 'invalid_session_transport', 'auth_origin_not_allowed',
+  'password_compromised', 'password_screening_unavailable', 'password_setup_required',
   'invalid_geo_scope', 'invalid_idempotency_key', 'invalid_json', 'invalid_mute',
   'invalid_notification_device', 'invalid_page_limit', 'invalid_password', 'invalid_post',
   'invalid_post_visibility', 'invalid_privacy_request', 'invalid_profile_visibility',
@@ -80,7 +81,7 @@ export function classifyPublicError(error: unknown): { exposedCode: string; inte
   const exposedCode = expected ? internalCode : 'request_failed';
   const status = exposedCode === 'request_failed' ? 500
     : ['authentication_required', 'invalid_credentials', 'refresh_token_invalid', 'refresh_token_reuse'].includes(exposedCode) ? 401
-      : ['news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed'].includes(exposedCode) ? 403
+      : ['news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed', 'auth_origin_not_allowed'].includes(exposedCode) ? 403
         : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
           : exposedCode === 'method_not_allowed' ? 405
             : ['idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed'].includes(exposedCode) ? 409
@@ -93,7 +94,7 @@ export function classifyPublicError(error: unknown): { exposedCode: string; inte
                   || exposedCode === 'privacy_request_active' ? 429
                 : /^email_delivery_failed(?:_[1-5][0-9]{2})?$/.test(exposedCode) ? 502
                   : exposedCode.endsWith('_unavailable') || exposedCode.endsWith('_not_configured') ? 503 : 400;
-  return { exposedCode, internalCode, status };
+  return { exposedCode, internalCode: expected ? internalCode : 'unexpected_failure', status };
 }
 
 export function normalizeEmailAddress(value: unknown): string {
@@ -108,13 +109,11 @@ export function prepareEmailAuthAttempt(input: {
   password?: unknown;
   turnstileToken?: unknown;
 }): EmailAuthAttempt {
-  const mode: EmailAuthMode = input.mode === 'register' || input.mode === 'resend_verification'
-    ? input.mode
-    : 'login';
-  const password = typeof input.password === 'string' ? input.password : '';
-  if (mode !== 'resend_verification' && (password.length < 15 || password.length > 128)) {
-    throw new Error('invalid_password');
+  if (input.mode !== undefined && input.mode !== 'register' && input.mode !== 'login' && input.mode !== 'resend_verification') {
+    throw new Error('invalid_auth_mode');
   }
+  const mode: EmailAuthMode = input.mode ?? 'login';
+  const password = mode === 'resend_verification' ? '' : requirePasswordInput(input.password, mode === 'register' ? 'creation' : 'login');
   return {
     mode,
     email: normalizeEmailAddress(input.email),
@@ -168,18 +167,17 @@ export function requiresTurnstileVerification(required: unknown, secret: unknown
 }
 
 export function requireToken(value: unknown, errorCode: 'verification_token_invalid' | 'reset_token_invalid'): string {
-  if (typeof value !== 'string' || value.length < 32) throw new Error(errorCode);
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{32,256}$/.test(value)) throw new Error(errorCode);
   return value;
 }
 
 export function requireResetPassword(value: unknown): string {
-  if (typeof value !== 'string' || value.length < 15 || value.length > 128) throw new Error('invalid_password');
-  return value;
+  return requirePasswordInput(value, 'creation');
 }
 
 export function requireRefreshToken(input: { refreshToken?: unknown; refresh_token?: unknown }): string {
   const token = input.refreshToken ?? input.refresh_token;
-  if (typeof token !== 'string' || token.length === 0) throw new Error('refresh_token_required');
+  if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(token)) throw new Error('refresh_token_required');
   return token;
 }
 
@@ -190,8 +188,9 @@ export function isCurrentActivePrincipal(
   return Boolean(account && account.status === 'active' && Number(account.token_version) === claimedTokenVersion);
 }
 
-export function rateLimitPlan(pathname: string): { scope: 'auth' | 'public-api'; limit: number } {
-  return pathname.startsWith('/api/auth') ? { scope: 'auth', limit: 10 } : { scope: 'public-api', limit: 120 };
+export function rateLimitPlan(pathname: string): { scope: string; limit: number } {
+  const authPaths = ['/api/auth/email', '/api/auth/email/verify', '/api/auth/password/reset/request', '/api/auth/password/reset/complete', '/api/auth/refresh', '/api/auth/logout'];
+  return authPaths.includes(pathname) ? { scope: `auth:${pathname}`, limit: 10 } : { scope: 'public-api', limit: 120 };
 }
 
 export function idempotencyKey(value: string | null): string | undefined {

@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -60,19 +61,20 @@ String? resolveAppRedirect({
 /// Provides the application [GoRouter] that is refreshed when auth state
 /// changes. Stage A: top-level routes wrapping existing screen widgets.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final isGuest = ref.watch(guestModeProvider);
-  final pendingCode = ref.watch(pendingInviteCodeProvider);
-
-  return GoRouter(
+  final refresh = ValueNotifier<int>(0);
+  ref.listen(authStateProvider, (_, _) => refresh.value += 1);
+  ref.listen(guestModeProvider, (_, _) => refresh.value += 1);
+  ref.listen(pendingInviteCodeProvider, (_, _) => refresh.value += 1);
+  final router = GoRouter(
     debugLogDiagnostics: false,
     initialLocation: '/',
+    refreshListenable: refresh,
     redirect: (context, state) {
       return resolveAppRedirect(
         matchedLocation: state.matchedLocation,
-        user: authState.valueOrNull,
-        isGuest: isGuest,
-        pendingCode: pendingCode,
+        user: ref.read(authStateProvider).valueOrNull,
+        isGuest: ref.read(guestModeProvider),
+        pendingCode: ref.read(pendingInviteCodeProvider),
       );
     },
     routes: [
@@ -120,7 +122,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/',
         builder: (context, state) => AdaptiveShell(
           initialIndex: switch (state.uri.queryParameters['tab']) {
-            'create' => isGuest ? 0 : 1,
+            'create' => ref.read(guestModeProvider) ? 0 : 1,
             'profile' => 2,
             'rewards' => 3,
             _ => 0,
@@ -169,4 +171,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
+  return router;
 });

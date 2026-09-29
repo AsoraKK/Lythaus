@@ -113,6 +113,7 @@ function validEvidence() {
     releaseSha,
     acceptanceRunId: '99999999-9999-4999-8999-999999999999',
     candidate: { ...candidate },
+    mailboxProviders: { source: 'dns_mx_observation', initial: 'google', resend: 'microsoft', observedAt: at(43) },
     lifecycleSubscription: {
       source: 'cloudflare_email_sending_queue_subscription_observation',
       domain: 'mail.lythaus.co',
@@ -145,6 +146,13 @@ test('generated runtime observation accepts complete exact-candidate proof', () 
   assert.equal(evidence.status, 'PASSED');
   assert.equal(evidence.candidate.workerVersionId, candidate.workerVersionId);
   assert.equal(evidence.initialVerification.outbox.provider, 'cloudflare-email');
+});
+
+test('two aliases or domains on the same mailbox provider cannot certify restoration', () => {
+  const evidence=validEvidence();delete evidence.mailboxProviders;
+  assert.throws(()=>parseRealEmailAcceptanceEvidence(evidence,releaseSha,candidate),/mailbox_providers_missing/);
+  evidence.mailboxProviders={source:'dns_mx_observation',initial:'google',resend:'google',observedAt:at(43)};
+  assert.throws(()=>parseRealEmailAcceptanceEvidence(evidence,releaseSha,candidate),/independent_mailbox_providers_required/);
 });
 
 test('runtime observation preserves the exact candidate and reused dependency set', () => {

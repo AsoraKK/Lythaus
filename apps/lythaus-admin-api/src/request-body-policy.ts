@@ -1,6 +1,8 @@
 const DEFAULT_MAX_JSON_BYTES = 16 * 1024;
 
-async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint8Array> {
+type JsonBody = Pick<Request, 'headers' | 'body'>;
+
+async function readBoundedBody(request: JsonBody, maxBytes: number): Promise<Uint8Array> {
   const declaredLength = request.headers.get('content-length');
   if (declaredLength !== null) {
     const parsedLength = Number(declaredLength);
@@ -37,7 +39,7 @@ async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint
   return body;
 }
 
-export async function readBoundedJson<T>(request: Request, maxBytes = DEFAULT_MAX_JSON_BYTES): Promise<T> {
+export async function readBoundedJson<T>(request: JsonBody, maxBytes = DEFAULT_MAX_JSON_BYTES): Promise<T> {
   const bytes = await readBoundedBody(request, maxBytes);
   try {
     return JSON.parse(new TextDecoder().decode(bytes)) as T;

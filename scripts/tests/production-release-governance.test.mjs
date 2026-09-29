@@ -129,7 +129,7 @@ test('every production deployment entrypoint remains bound to exact CI and secur
 });
 
 test('refreshes generated Worker types after deployment identity materialization', () => {
-  const materialize = workersWorkflow.indexOf('- name: Materialize approved post-0017 deployment identity');
+  const materialize = workersWorkflow.indexOf('- name: Materialize approved post-0020 deployment identity');
   const refresh = workersWorkflow.indexOf('- name: Refresh generated Worker types after deployment identity materialization');
   const validate = workersWorkflow.indexOf('- name: Validate provisioned native Worker configuration');
   assert.ok(materialize >= 0, 'deployment identity materialization must remain explicit');
