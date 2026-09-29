@@ -77,6 +77,7 @@ const authRepairPaths = new Set([
   'apps/lythaus-public-api/src/request-body-runtime.ts',
   'apps/lythaus-public-api/tests/request-body-runtime.test.mjs',
   'packages/contracts/src/index.ts',
+  'packages/cloudflare-env/src/index.ts',
   'packages/contracts/src/transactional-email.ts',
   'packages/contracts/tests/auth-state-and-email-policy.test.mjs',
   'packages/db/src/index.ts',
@@ -130,9 +131,24 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
       .replaceAll('0020_auth_recovery_delivery', '0017_authenticity_beta')
       .replaceAll('POST_0020', 'POST_0017').replaceAll('post-0020', 'post-0017')
       .replaceAll('migration 0020', 'migration 0017')
+      .replace('"main": "src/worker.ts"', '"main": "src/index.ts"')
       .replaceAll('approvedReleaseExpectation', 'approvedPost0017Expectation');
     assert.equal(updated.trim(), git('show', `${upstreamBaselineSha}:${file}`));
   }
+  const bindingFile = 'packages/cloudflare-env/src/index.ts';
+  assert.equal(readFileSync(path.join(root, bindingFile), 'utf8').replace(/\r\n/g, '\n')
+    .replace('  AUTH_EMAIL_ENVELOPE?: ServiceBinding;\n', '').trim(), git('show', `${upstreamBaselineSha}:${bindingFile}`),
+  'Only the private Admin auth service binding type may change');
+  assert.equal(readFileSync(path.join(root, 'apps/lythaus-public-api/src/worker.ts'), 'utf8').replace(/\r\n/g, '\n').trim(), `import { WorkerEntrypoint } from 'cloudflare:workers';
+import type { EnvBindings } from '@lythaus/cloudflare-env';
+import { handleEmailEnvelope } from './email-envelope-entrypoint.ts';
+export { default } from './index.ts';
+
+export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
+  fetch(request: Request): Promise<Response> {
+    return handleEmailEnvelope(request, this.env);
+  }
+}`, 'The wrapper must preserve the unchanged public/waitlist default export');
   for (const [file, script] of [['package.json', 'marketing:test'], ['apps/marketing-site/package.json', 'test']]) {
     const revision = file === 'package.json' ? upstreamBaselineSha : baselineSha;
     const before = JSON.parse(git('show', `${revision}:${file}`));

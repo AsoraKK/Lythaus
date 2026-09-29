@@ -91,12 +91,26 @@ runtime role also needs the narrowly declared audit-intake INSERT grant in
 `database/planetscale/grants/roles.sql`. Retain compatible additive schema on
 software rollback; never undo a user's verification or password change.
 
+Read-only baseline on 2026-09-29: production PostgreSQL 17.11 has one `main`
+branch, migration ledger 0000–0016, 97 relations, and fingerprint
+`6bb63d99dfe7ff8da6885e1a578b2128c3df65777ffe1bdbd1219ec796aa5099`.
+The runtime relation/ledger algorithm and every approved checksum matched.
+The transactional email outbox had zero rows; all ten acceptance records had
+expired (seven still labeled pending, three labeled expired). No row-security
+filter obscured those two counts. These are dated diagnostic observations,
+not current release certification. Requery before rollout. Production DDL,
+test identities/mail and traffic activation were not performed by this repair.
+
 Local checks use disposable PostgreSQL 17, synthetic addresses under
 `example.invalid`, an in-process email capture, and local-only Turnstile
 fixtures. The rendered Flutter test uses real local HTTPS/cookie transport,
 with an ephemeral TLS key outside the checkout; it never contacts production.
 OpenSSL and Playwright Chromium/WebKit are required for that test. Browser
 viewport emulation is not evidence from an Android/iOS device.
+The canonical web build bundles CanvasKit with `--no-web-resources-cdn`.
+The browser gate rejects an artifact that still depends on Google's renderer
+CDN before attempting sign-in; do not whitelist that external dependency in
+the isolated test or substitute a different local artifact.
 
 ## Recovery semantics
 
@@ -138,7 +152,18 @@ early. Rollback to an older Public version without this entrypoint leaves the
 Admin action explicitly unavailable (503), never falsely queued.
 
 
-Deploy the backward-compatible API before serving the new app/auth pages.
+The v8 contract deliberately changes new-password creation and intentional
+email verification: creation/reset require at least 15 Unicode code points,
+and verification POST requires the mailbox owner's chosen password. Do not
+claim those operations are compatible with old forms or make that password
+optional to accommodate them. Stage the v8 API and matching verification/reset
+pages together through the canonical acceptance process. After approval,
+activate the API before publishing the matching app/auth pages, then verify
+both fresh and cached entrypoints. Old verification pages must present a safe
+retry/update path; they must never activate a pre-registrant's credential.
+Existing login, omitted login mode, and native JSON session transport remain
+compatible; stored 12–14-character passwords must still authenticate.
+
 Native/deployed clients retain the JSON token contract; `cookie-v1` web clients
 receive only an in-memory access token and a host-only HttpOnly/Secure/Strict
 refresh cookie. Exact allowed origins and the explicit transport header are

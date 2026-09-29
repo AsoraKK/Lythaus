@@ -50,3 +50,8 @@ test('all app routes revalidate cached documents without clearing session storag
   assert.match(globalRules, /^\/\*\r?\n  Cache-Control: no-cache, max-age=0, must-revalidate/m);
   assert.doesNotMatch(headers, /Clear-Site-Data/);
 });
+
+test('canonical web builds keep the renderer in the reviewed first-party artifact', () => {
+  const script = readFileSync(new URL('../cf-pages-build.sh', import.meta.url), 'utf8');
+  assert.match(script, /flutter build web --release --no-tree-shake-icons --no-web-resources-cdn/);
+});

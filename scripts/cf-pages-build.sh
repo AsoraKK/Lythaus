@@ -100,7 +100,7 @@ echo "==> Getting dependencies"
 flutter pub get
 
 echo "==> Building web release"
-flutter build web --release --no-tree-shake-icons \
+flutter build web --release --no-tree-shake-icons --no-web-resources-cdn \
   --dart-define=ENVIRONMENT="${ENVIRONMENT}" \
   --dart-define=API_BASE_URL="${API_BASE_URL}" \
   --dart-define=AUTH_URL="${AUTH_URL}"
