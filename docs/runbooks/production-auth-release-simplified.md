@@ -37,8 +37,31 @@ Turnstile -> signup -> delivered email -> verification -> replay rejected
 -> login/refresh -> resend -> password reset -> session revocation/logout
 ```
 
-The workflow will not activate until server-derived acceptance evidence is
-`PASSED`. The acceptance user is isolated and excluded from product metrics.
+The certified authentication path will not activate until server-derived
+acceptance evidence is `PASSED`. The acceptance user is isolated and excluded
+from product metrics.
+
+## Owner-directed initial app test (uncertified)
+
+For the owner-authorized first live test from the ordinary `app.lythaus.co`
+signup/recovery screens, select `owner_testing_deployment=true` on the
+canonical `production-release.yml` dispatch, keep `acceptance_run_id` empty,
+and explicitly set `confirm_production=true`. The computed release class must
+remain `AUTH_CRITICAL_RELEASE`; the input is not a downgrade or certification
+bypass. Exact-main source/security evidence, provider/schema checks, protected
+environment approvals, candidate readiness, rollback, activation, and public
+production smoke remain required.
+
+This path does not create or activate a Keeper/coordinator candidate, does not
+require either `CODEX_TEST_EMAIL` mailbox secret, and does not send a test email
+or create an account. Only the owner enters private email/password data through
+the ordinary public Lythaus UI. The release manifest must remain `NO-GO` with
+`authAcceptance.status=OWNER_TEST_PENDING` and no acceptance run ID; after
+successful deployment/smoke it may record `DEPLOYED_UNCERTIFIED`. This is
+deployment readiness for owner testing only, not proof of mailbox delivery or
+authentication certification. Keep issue #720 open and complete the separate
+certification journey—including the independent second-mailbox-provider
+requirement—before any certified GO claim.
 
 The initial restoration requires two authorized mailboxes on independent
 providers. `CODEX_TEST_EMAIL` remains the primary protected secret;

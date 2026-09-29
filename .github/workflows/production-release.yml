@@ -47,6 +47,11 @@ on:
         required: true
         default: false
         type: boolean
+      owner_testing_deployment:
+        description: Deploy an AUTH_CRITICAL_RELEASE for owner-led app testing only; final auth status remains pending and NO-GO
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -324,8 +329,34 @@ jobs:
             --base-sha "$PREVIOUS_PRODUCTION_SHA" \
             --output "$RUNNER_TEMP/release-plan.json"
           jq -e --arg sha "$RELEASE_SHA" '.releaseSha == $sha and (.releaseClass == "STANDARD_RELEASE" or .releaseClass == "AUTH_CRITICAL_RELEASE")' "$RUNNER_TEMP/release-plan.json" >/dev/null
+      - name: Validate owner-testing deployment scope
+        if: inputs.owner_testing_deployment == true
+        env:
+          RELEASE_CLASS: ${{ steps.release_plan.outputs.release_class }}
+          ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
+          CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE || {
+            echo 'Owner testing is permitted only for a deterministically classified AUTH_CRITICAL_RELEASE.' >&2
+            exit 1
+          }
+          test -z "$ACCEPTANCE_RUN_ID" || {
+            echo 'Owner testing cannot resume or replace an acceptance run.' >&2
+            exit 1
+          }
+          test "$CONFIRM_PRODUCTION" = true || {
+            echo 'Owner testing requires explicit confirm_production=true.' >&2
+            exit 1
+          }
+          {
+            echo '## Owner authentication testing deployment'
+            echo
+            echo 'This remains AUTH_CRITICAL_RELEASE. It deploys the reviewed app for the owner’s ordinary signup test only; no Keeper evidence is created, authenticated acceptance remains PENDING, and the canonical manifest must remain NO-GO.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Require authorized independent acceptance mailboxes for critical releases
-        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
+        if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE' && inputs.owner_testing_deployment != true
         env:
           PRIMARY_ACCEPTANCE_MAILBOX: ${{ secrets.CODEX_TEST_EMAIL }}
           SECONDARY_ACCEPTANCE_MAILBOX: ${{ secrets.CODEX_TEST_SECONDARY_EMAIL }}
@@ -347,6 +378,7 @@ jobs:
           CHANGED_FILES_JSON: ${{ steps.release_plan.outputs.changed_files_json }}
           RELEASE_CLASSIFICATION_RULES_VERSION: ${{ steps.release_plan.outputs.classification_rules_version }}
           FORCE_AUTH_CRITICAL: ${{ steps.release_plan.outputs.force_auth_critical }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
       - name: Create sanitized manifest integrity digest
         run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256
       - name: Upload preflight manifest
@@ -559,6 +591,7 @@ jobs:
       previous_production_sha: ${{ inputs.previous_production_sha }}
       source_evidence_verified: true
       force_auth_critical: ${{ inputs.force_auth_critical }}
+      owner_testing_deployment: ${{ inputs.owner_testing_deployment }}
       ci_run_id: ${{ inputs.ci_run_id }}
       codeql_run_id: ${{ inputs.codeql_run_id }}
       dependency_review_run_id: ${{ inputs.dependency_review_run_id }}
@@ -585,6 +618,7 @@ jobs:
       contents: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
+      OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
       WEB_BASE_URL: https://app.lythaus.co
       API_BASE_URL: https://api.lythaus.co
       ADMIN_API_URL: https://admin-api.lythaus.co
@@ -665,7 +699,7 @@ jobs:
       actions: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
-      CHANGED_COMPONENTS_JSON: ${{ needs.preflight.outputs.changed_components_json }}
+      CHANGED_COMPONENTS_JSON: ${{ needs.workers.outputs.rollback_components_json || needs.preflight.outputs.changed_components_json }}
       PAGES_PRODUCTION_STATE_JSON: ${{ needs.provider_evidence.outputs.pages_production_state_json || '{}' }}
       ADMIN_PAGES_PROJECT: ${{ needs.preflight.outputs.admin_pages_project }}
       MARKETING_RESULT: ${{ needs.marketing.result }}
@@ -943,7 +977,7 @@ jobs:
       COORDINATOR_WORKER_STATUS: ${{ needs.workers.outputs.coordinator_worker_status }}
       ROLLBACK_ARTIFACTS_PROVEN: ${{ needs.workers.outputs.rollback_artifacts_proven || 'false' }}
       ROLLBACK_STATE: ${{ needs.workers.outputs.rollback_state || 'UNKNOWN' }}
-      ROLLBACK_COMPONENTS_JSON: ${{ needs.rollback.outputs.rollback_components_json || needs.preflight.outputs.changed_components_json || '[]' }}
+      ROLLBACK_COMPONENTS_JSON: ${{ needs.rollback.outputs.rollback_components_json || needs.workers.outputs.rollback_components_json || needs.preflight.outputs.changed_components_json || '[]' }}
       ROLLBACK_EVIDENCE_PATH: ${{ needs.rollback.outputs.rollback_evidence_path || '' }}
       PRODUCTION_SMOKE_MARKETING: ${{ needs.production_smoke.outputs.marketing || 'BLOCKED' }}
       PRODUCTION_SMOKE_WWW: ${{ needs.production_smoke.outputs.www || 'BLOCKED' }}
@@ -984,6 +1018,7 @@ jobs:
           ROLLBACK_RESULT: ${{ needs.rollback.result }}
           ROLLBACK_STATE: ${{ needs.rollback.outputs.rollback_state || needs.workers.outputs.rollback_state || 'READY' }}
           ROLLBACK_HISTORY_JSON: ${{ needs.rollback.outputs.release_state_history_json || '' }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
         shell: bash
         run: |
           set -euo pipefail
@@ -992,6 +1027,8 @@ jobs:
             echo 'state=ROLLED_BACK' >> "$GITHUB_OUTPUT"
             echo "RELEASE_STATE_HISTORY_JSON=$ROLLBACK_HISTORY_JSON" >> "$GITHUB_ENV"
             echo "history_json=$ROLLBACK_HISTORY_JSON" >> "$GITHUB_OUTPUT"
+          elif [[ "$PRODUCTION_SMOKE_RESULT" == 'success' && "$OWNER_TESTING_DEPLOYMENT" == 'true' ]]; then
+            node scripts/ci/transition-release-state.mjs OWNER_TEST_DEPLOYED_UNCERTIFIED
           elif [[ "$PRODUCTION_SMOKE_RESULT" == 'success' ]]; then
             node scripts/ci/transition-release-state.mjs VERIFIED
           elif jq -e '.[-1].state == "ROLLED_BACK"' <<<"$RELEASE_STATE_HISTORY_JSON" >/dev/null 2>&1; then
@@ -1011,7 +1048,26 @@ jobs:
           RELEASE_STATE: ${{ steps.verified_state.outputs.state || 'BLOCKED' }}
           RELEASE_STATE_HISTORY_JSON: ${{ steps.verified_state.outputs.history_json || '[]' }}
           FAILURE_DOMAIN_EVIDENCE_JSON: ${{ steps.upstream_failure_domain.outputs.failure_domain_evidence_json || needs.workers.outputs.failure_domain_evidence_json || '[]' }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
         run: node scripts/ci/build-release-manifest.mjs
+      - name: Assert owner testing remains uncertified
+        if: inputs.owner_testing_deployment == true
+        run: |
+          set -euo pipefail
+          jq -e '
+            .status == "NO-GO" and .productionStatus == "NO-GO" and
+            .releaseClass == "AUTH_CRITICAL_RELEASE" and
+            .authAcceptance.required == true and
+            .authAcceptance.status == "OWNER_TEST_PENDING" and
+            .authAcceptance.acceptanceRunId == null and
+            .authAcceptance.ownerTesting.enabled == true and
+            .authAcceptance.ownerTesting.status == "DEPLOYED_UNCERTIFIED"
+          ' .artifacts/release/release-manifest.json >/dev/null
+          {
+            echo '## Authentication certification status'
+            echo
+            echo 'Owner-test deployment and smoke checks completed. Authentication certification remains PENDING; this release is explicitly NO-GO until real owner journey evidence is collected and independently verified.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Create sanitized manifest integrity digest
         run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256
       - name: Upload canonical release manifest

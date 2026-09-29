@@ -184,14 +184,24 @@ if (nativeWorkers) {
   ]) {
     if (!nativeWorkers.includes(required)) failures.push(`native-workers-deploy.yml: missing simplified release control ${required}`);
   }
-  if (nativeWorkers.includes('triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc') && !nativeWorkers.includes('if component_changed coordinator')) {
+  if (nativeWorkers.includes('triggers deploy --config apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc') && !nativeWorkers.includes('if component_changed coordinator && [[ "$OWNER_TESTING_DEPLOYMENT" != true ]]')) {
     failures.push('native-workers-deploy.yml: coordinator route deployment is not component-scoped');
   }
-  if (!nativeWorkers.includes('if component_changed coordinator; then list_coordinator_secrets')) {
+  if (!nativeWorkers.includes('if coordinator_managed; then list_coordinator_secrets')) {
     failures.push('native-workers-deploy.yml: unchanged Coordinator secret inventory is not reused');
   }
-  if (!nativeWorkers.includes('if component_changed coordinator; then upload_candidate')) {
+  if (!nativeWorkers.includes('if coordinator_managed; then upload_candidate')) {
     failures.push('native-workers-deploy.yml: Coordinator candidate upload is not component-scoped');
+  }
+  const workerDispatchInputs = nativeWorkers.slice(0, nativeWorkers.indexOf('workflow_call:'));
+  if (workerDispatchInputs.includes('owner_testing_deployment') || !nativeWorkers.includes('owner_testing_deployment:')) {
+    failures.push('native-workers-deploy.yml: owner-test mode must be available only to the canonical reusable workflow');
+  }
+  if (!nativeWorkers.includes('OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}')
+    || !nativeWorkers.includes('OWNER_TEST_DEPLOYMENT_DEFERRED')
+    || !nativeWorkers.includes('authenticated_acceptance_status=OWNER_TEST_PENDING')
+    || !nativeWorkers.includes('rollback_components_json=$rollback_components')) {
+    failures.push('native-workers-deploy.yml: owner test must preserve pending acceptance and exclude deferred components from rollback');
   }
   if (!nativeWorkers.includes('AUTH_ACCEPTANCE_DEPENDENCIES_JSON')) {
     failures.push('native-workers-deploy.yml: exact acceptance dependency provenance is missing');
