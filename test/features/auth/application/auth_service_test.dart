@@ -28,14 +28,16 @@ void main() {
         final service = AuthService(
           authUrl: 'https://api.lythaus.co/api',
           httpClient: MockClient((request) async {
-            if (request.url.path.endsWith('/refresh'))
+            if (request.url.path.endsWith('/refresh')) {
               return http.Response(
                 '{"access_token":"new-access","refresh_token":"rotated-refresh"}',
                 200,
               );
+            }
             userinfoCalls++;
-            if (initialUnauthorized && userinfoCalls == 1)
+            if (initialUnauthorized && userinfoCalls == 1) {
               return http.Response('{}', 401);
+            }
             return http.Response(
               jsonEncode({
                 'id': '018f0000-0000-7000-8000-000000000001',
@@ -104,10 +106,12 @@ void main() {
         authUrl: 'https://api.lythaus.co/api',
         requestTimeout: const Duration(milliseconds: 10),
         httpClient: MockClient((_) async {
-          if (failure == 'offline')
+          if (failure == 'offline') {
             throw StateError('private transport details');
-          if (failure == 'timeout')
+          }
+          if (failure == 'timeout') {
             await Future<void>.delayed(const Duration(milliseconds: 25));
+          }
           return http.Response('{"error":"turnstile_failed"}', 400);
         }),
       );

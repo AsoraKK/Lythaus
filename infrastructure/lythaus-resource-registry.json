@@ -146,7 +146,7 @@
       "environment": "production-promoted",
       "region": "global",
       "purpose": "administrative API",
-      "workerBinding": "DB_ADMIN_FRESH,DB_PRIVACY_FRESH",
+      "workerBinding": "DB_ADMIN_FRESH,DB_PRIVACY_FRESH; planned AUTH_EMAIL_ENVELOPE -> existing lythaus-public-api-development/AuthEmailEnvelope (private, release-gated)",
       "authoritativeOwner": "Lythaus runtime",
       "currentStatus": "active; canonical exact-SHA deployment is release-controlled",
       "expectedCostClass": "existing Worker usage",

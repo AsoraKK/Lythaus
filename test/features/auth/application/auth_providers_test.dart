@@ -91,8 +91,9 @@ void main() {
       final before = container.read(tokenVersionProvider);
       await notifier.refreshToken();
       expect(container.read(authStateProvider).hasError, !valid);
-      if (valid)
+      if (valid) {
         expect(container.read(tokenVersionProvider), greaterThan(before));
+      }
       when(() => authService.getCurrentUser()).thenAnswer((_) async => user);
       await notifier.validateToken();
       expect(container.read(currentUserProvider), valid ? user : null);

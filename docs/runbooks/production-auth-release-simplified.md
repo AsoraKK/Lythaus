@@ -122,6 +122,22 @@ viewport emulation is not evidence from an Android/iOS device.
 
 ## Session rollout
 
+Keeper invitation/resend must also use the scoped delivery envelope. The Admin
+Worker's private `AUTH_EMAIL_ENVELOPE` service binding targets the existing
+Public Worker's named `AuthEmailEnvelope` entrypoint. Public rechecks the active
+administrative membership and performs the identity/token/scoped-envelope/outbox
+transaction with its existing runtime grants; failure rolls everything back.
+Admin never needs password-table grants or product keys for these operations.
+No email-encryption key is copied to Admin,
+no general PII key is given to Jobs, and no anonymous HTTP route is added.
+Candidate requests forward only the Public version override and reject a
+mismatched version response. Before activation, the protected release must
+prove the named binding resolves against the reviewed Public candidate. An
+unavailable entrypoint is a release blocker, not permission to activate Public
+early. Rollback to an older Public version without this entrypoint leaves the
+Admin action explicitly unavailable (503), never falsely queued.
+
+
 Deploy the backward-compatible API before serving the new app/auth pages.
 Native/deployed clients retain the JSON token contract; `cookie-v1` web clients
 receive only an in-memory access token and a host-only HttpOnly/Secure/Strict

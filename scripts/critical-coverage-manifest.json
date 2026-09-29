@@ -50,6 +50,13 @@
   },
   "modules": [
     {
+      "id": "admin-private-email-envelope",
+      "priority": "P1",
+      "sources": ["apps/lythaus-admin-api/src/auth-email-dispatch-adapter.ts", "apps/lythaus-public-api/src/email-envelope-entrypoint.ts"],
+      "tests": ["apps/lythaus-admin-api/tests/auth-email-dispatch.test.mjs"],
+      "rationale": "Private, bounded and candidate-aware identity/outbox delegation without copying keys or widening Admin grants; PostgreSQL separately proves transactions."
+    },
+    {
       "id": "jobs-transactional-email-runtime",
       "priority": "P1",
       "runtimeSeam": true,

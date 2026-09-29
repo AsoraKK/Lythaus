@@ -69,6 +69,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit
       - run: npm run typecheck:native
+      - name: Verify private auth-email service boundary in workerd
+        run: node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
       - run: npm run test:native-architecture
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs

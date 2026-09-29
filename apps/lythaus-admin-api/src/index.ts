@@ -1113,6 +1113,8 @@ async function updateAccountStatus(request: Request, env: Env, actor: { userId: 
   return json({ userId: result, status: requestedStatus }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
 
+import { dispatchKeeperEmail } from './auth-email-dispatch-adapter.ts';
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const id = correlationId(request);
@@ -1124,6 +1126,7 @@ export default {
       if (request.method === 'GET' && url.pathname === '/health') return cors(json({ status: 'ok', service: 'lythaus-admin-api' }));
       if (request.method === 'GET' && url.pathname === '/internal/readiness/database-identity') {
         if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+        const emailBinding = await dispatchKeeperEmail(env, request, { operation: 'probe' });
         const [admin, privacy] = await Promise.all([
           inspectDatabaseIdentity(env.DB_ADMIN_FRESH, databaseExpectationsFromEnv(env)),
           inspectDatabaseIdentity(env.DB_PRIVACY_FRESH, databaseExpectationsFromEnv(env)),
@@ -1133,6 +1136,7 @@ export default {
           service: 'lythaus-admin-api',
           workerVersionId: env.WORKER_VERSION.id,
           releaseTag: env.WORKER_VERSION.tag,
+          emailBinding,
           databases: {
             admin: databaseReadinessResponse(admin, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
             privacy: databaseReadinessResponse(privacy, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
