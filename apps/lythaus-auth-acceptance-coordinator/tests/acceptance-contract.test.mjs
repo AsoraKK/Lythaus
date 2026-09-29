@@ -80,6 +80,12 @@ test('human mutations cannot use the observer service token and mailbox lookup n
   assert.match(coordinator, /acceptanceContextDigest\(acceptanceContextToken\(context\)\)/);
   assert.match(coordinator, /completed.body.legacyRecovered !== true/);
   assert.match(publicApi, /'relink_required', true/);
+  const challengeObserver = publicApi.slice(publicApi.indexOf('async function observeAcceptanceChallenge'), publicApi.indexOf('async function verifyEmail'));
+  assert.match(challengeObserver, /await acceptanceContext\(request, env\)/);
+  assert.match(challengeObserver, /if \(!acceptance\) throw new Error\('authentication_required'\)/);
+  assert.match(challengeObserver, /o.acceptance_run_id=r.id/);
+  assert.match(challengeObserver, /WHERE r.id=\$1 AND t.token_hash=decode\(\$2,'base64'\)/);
+  assert.doesNotMatch(challengeObserver, /return.*token_hash|return.*email_ciphertext/);
 });
 
 test('candidate registration binds only a production-acceptance identity to its run', () => {

@@ -267,6 +267,10 @@ test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixtu
     ...(body===undefined?{}:{body:JSON.stringify(body)})}),coordinatorEnv);
   const checked=async(response,status)=>{const body=await response.json();assert.equal(response.status,status,`${body.error?.code??'coordinator response'}; database codes ${JSON.stringify(databaseErrors)}`);return body;};
   try {
+    const anonymousObservation=await worker.fetch(new Request('https://api.lythaus.test/internal/production-auth-acceptance/challenge-observation',{
+      method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({purpose:'verification',token:'a'.repeat(64)}),
+    }),publicEnv);
+    await expectStatus(anonymousObservation,401);
     const staged=new Date(Date.now()-1000).toISOString();
     const candidateDependencies=Object.fromEntries(['public','admin','jobs','coordinator'].map(component=>[component,{
       workerName:component==='coordinator'?'lythaus-auth-acceptance-coordinator-development':`lythaus-${component==='jobs'?'jobs':`${component}-api`}-development`,
