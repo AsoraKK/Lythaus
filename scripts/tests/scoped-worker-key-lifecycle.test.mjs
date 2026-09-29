@@ -79,23 +79,20 @@ test('lifecycle observer credentials are coordinator-only and optional for runti
   assert.equal(standard.jobsSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN, undefined);
   assert.equal(standard.coordinatorSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN, undefined);
   assert.throws(() => buildScopedSecretPayloads({ base: { ...base, CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: 'observer-token' }, coordinatorManaged: false }), /must not be included in base runtime secret payload/);
-  assert.throws(() => buildScopedSecretPayloads({ base, coordinatorManaged: true, acceptanceEmailBase: 'test@example.com' }), /CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN/);
+  assert.throws(() => buildScopedSecretPayloads({ base, coordinatorManaged: true }), /CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN/);
   const critical = buildScopedSecretPayloads({
     base,
     coordinatorManaged: true,
     lifecycleReadToken: 'observer-token',
-    acceptanceEmailBase: 'test@example.com',
-    acceptanceSecondaryEmailBase: 'test@second.invalid',
   });
   assert.equal(critical.publicSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN, undefined);
   assert.equal(critical.jobsSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN, undefined);
   assert.equal(critical.coordinatorSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN, 'observer-token');
-  assert.equal(critical.coordinatorSecrets.AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE, 'test@second.invalid');
+  assert.equal(critical.coordinatorSecrets.AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE, undefined);
   assert.equal(critical.publicSecrets.AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE, undefined);
   assert.equal(critical.jobsSecrets.AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE, undefined);
-  assert.throws(()=>buildScopedSecretPayloads({base,coordinatorManaged:true,lifecycleReadToken:'fixture',acceptanceEmailBase:'test@example.invalid'}),/AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE/);
   const workflow = fs.readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
-  assert.match(workflow, /AUTH_ACCEPTANCE_EMAIL_BASE: \$\{\{ contains\(steps\.release_plan\.outputs\.changed_components_json, '\"coordinator\"'\) && secrets\.CODEX_TEST_EMAIL/);
+  assert.doesNotMatch(workflow, /secrets\.CODEX_TEST_(?:EMAIL|SECONDARY_EMAIL|PASSWORD)/);
   assert.match(workflow, /CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: \$\{\{ contains\(steps\.release_plan\.outputs\.changed_components_json, '\"coordinator\"'\) && secrets\.CLOUDFLARE_API_TOKEN/);
 });
 

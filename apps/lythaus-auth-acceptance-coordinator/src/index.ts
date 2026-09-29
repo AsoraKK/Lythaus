@@ -3,6 +3,8 @@ import { query, transaction, type DatabaseClient, type HyperdriveBinding } from 
 import { constantTimeEqual, decryptField, encryptField, randomToken, uuidv7 } from '@lythaus/security';
 import { accessSubject } from './access-policy.ts';
 import { observeMailboxProviders } from './mailbox-provider.ts';
+import { runOwnerProductChecks, OWNER_PRODUCT_CASES } from './product-checks.ts';
+import { destinationEmail, emptyDestination, readDestination, requireDestinationOwner, reserveDestinationAttempt, safeDestination, type OwnerDestination } from './owner-destinations.ts';
 import { acceptanceEmailLanding, requireEmailCompletionOrigin } from './email-landing.ts';
 import { acceptanceContextToken, requireAcceptanceRejection, requirePasswordInput } from '@lythaus/contracts';
 
@@ -11,8 +13,6 @@ interface Env extends EnvBindings {
   DB_ADMIN_FRESH: HyperdriveBinding;
   AUTH_ACCEPTANCE_PUBLIC_API_URL: string;
   AUTH_ACCEPTANCE_ROUTE_BASE_URL: string;
-  AUTH_ACCEPTANCE_EMAIL_BASE?: string;
-  AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE?: string;
 }
 
 interface RunRow {
@@ -135,13 +135,6 @@ function strictTimestamp(value: unknown, code: string): string {
 async function acceptanceContextDigest(context: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(context));
   return btoa(String.fromCharCode(...new Uint8Array(digest)));
-}
-
-function aliases(base: string, runId: string): { primary: string; resend: string } {
-  const match = /^([^@+\s]{1,120})(?:\+[^@\s]+)?@([^@\s]+\.[^@\s]+)$/i.exec(base.trim());
-  if (!match) throw new Error('auth_acceptance_email_base_invalid');
-  const suffix = runId.replace(/-/g, '');
-  return { primary: `${match[1]}+lythaus-${suffix}@${match[2]}`, resend: `${match[1]}+lythaus-resend-${suffix}@${match[2]}` };
 }
 
 async function readJson(request: Request): Promise<Record<string, unknown>> {
@@ -316,10 +309,67 @@ async function rollbackSnapshot(env: Env, run: RunRow): Promise<AcceptanceRollba
   return acceptanceContextPayload(await runContext(env, run), run.release_sha).rollbackSnapshot;
 }
 
-async function runEmail(env: Env, run: RunRow, kind: 'primary' | 'resend'): Promise<string> {
+async function runDestination(env: Env, run: RunRow, kind: 'primary' | 'resend'): Promise<OwnerDestination> {
   const ciphertext = kind === 'primary' ? run.primary_email_ciphertext : run.resend_email_ciphertext;
   const keyVersion = kind === 'primary' ? run.primary_email_encryption_key_version : run.resend_email_encryption_key_version;
-  return decryptField({ ciphertext, encryptionKeyVersion: keyVersion }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
+  return readDestination(await decryptField({ ciphertext, encryptionKeyVersion: keyVersion }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1')), run, kind);
+}
+
+async function runEmail(env: Env, run: RunRow, kind: 'primary' | 'resend'): Promise<string> {
+  const destination = await runDestination(env, run, kind);
+  if (destination.state !== 'authorized') throw new Error('acceptance_owner_destinations_required');
+  return destinationEmail(destination.email);
+}
+
+async function requireRunOwner(request: Request, env: Env, run: RunRow): Promise<void> {
+  const subject = await accessSubject(request, env);
+  requireEmailCompletionOrigin(request);
+  for (const kind of ['primary', 'resend'] as const) {
+    const destination = await runDestination(env, run, kind);
+    if (destination.state !== 'authorized') throw new Error('acceptance_owner_destinations_required');
+    requireDestinationOwner(destination, subject);
+  }
+}
+
+async function authorizeDestinations(request: Request, env: Env, id: string): Promise<Response> {
+  const subject = await accessSubject(request, env);
+  requireEmailCompletionOrigin(request);
+  const body = await readJson(request);
+  if (Object.keys(body).sort().join(',') !== 'authorize,candidateVersion,primaryEmail,releaseSha,secondaryEmail'
+    || body.authorize !== true) throw new Error('acceptance_destination_authorization_required');
+  const run = await loadRun(env, id);
+  if (body.releaseSha !== run.release_sha || body.candidateVersion !== run.candidate_version) throw new Error('acceptance_destination_binding_invalid');
+  const primaryEmail = destinationEmail(body.primaryEmail);
+  const secondaryEmail = destinationEmail(body.secondaryEmail);
+  const key = requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1');
+  const reserved = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    const locked = await client.query<RunRow>(
+      `SELECT primary_email_ciphertext, primary_email_encryption_key_version, resend_email_ciphertext, resend_email_encryption_key_version
+         FROM system.production_auth_acceptance_runs WHERE id=$1 AND expires_at>now() AND status='pending'
+         AND primary_user_id IS NULL AND resend_fixture_user_id IS NULL FOR UPDATE`, [id]);
+    if (!locked.rows[0]) throw new Error('acceptance_destinations_locked');
+    const current = { ...run, ...locked.rows[0] };
+    const primary = reserveDestinationAttempt(await runDestination(env, current, 'primary'), subject, Date.now());
+    const secondary = await runDestination(env, current, 'resend');
+    requireDestinationOwner(secondary, subject);
+    if (secondary.state !== 'pending') throw new Error('acceptance_destinations_locked');
+    const encrypted = await encryptField(JSON.stringify(primary), key, 'v1');
+    await client.query(`UPDATE system.production_auth_acceptance_runs SET primary_email_ciphertext=$2 WHERE id=$1`, [id, encrypted.ciphertext]);
+    return { primary, secondary, ciphertext: encrypted.ciphertext };
+  });
+  await observeMailboxProviders(primaryEmail, secondaryEmail);
+  const authorizedAt = await observationTime(env);
+  const values = await Promise.all([
+    encryptField(JSON.stringify({ ...reserved.primary, state: 'authorized', authorizedAt, email: primaryEmail }), key, 'v1'),
+    encryptField(JSON.stringify({ ...reserved.secondary, state: 'authorized', ownerSubject: subject, authorizedAt, email: secondaryEmail }), key, 'v1'),
+  ]);
+  const updated = await query(env.DB_ADMIN_FRESH,
+    `UPDATE system.production_auth_acceptance_runs SET primary_email_ciphertext=$3, resend_email_ciphertext=$4
+      WHERE id=$1 AND primary_email_ciphertext=$2 AND expires_at>now() AND status='pending'
+        AND primary_user_id IS NULL AND resend_fixture_user_id IS NULL`,
+    [id, reserved.ciphertext, values[0].ciphertext, values[1].ciphertext]);
+  if (updated.rowCount !== 1) throw new Error('acceptance_destinations_locked');
+  return json({ state: 'owner_destinations_authorized', references: [reserved.primary.reference, reserved.secondary.reference] });
 }
 
 async function recordEvent(env: Env, runId: string, eventType: string): Promise<void> {
@@ -402,12 +452,12 @@ async function createRun(request: Request, env: Env): Promise<Response> {
   }
   const id = uuidv7();
   const context = JSON.stringify({ context: randomToken(32), releaseSha, candidateSourceSha, ...(candidateDependencies ? { candidateDependencies } : {}), ...(rollbackSnapshot ? { rollbackSnapshot } : {}) });
-  const email = aliases(requiredSecret(env, 'AUTH_ACCEPTANCE_EMAIL_BASE'), id);
-  email.resend = aliases(requiredSecret(env, 'AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE'), id).resend;
-  await observeMailboxProviders(email.primary, email.resend);
+  const binding = { id, release_sha: releaseSha, candidate_version: candidateVersion };
   const encryptionKey = requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1');
   const [encryptedContext, encryptedPrimary, encryptedResend] = await Promise.all([
-    encryptField(context, encryptionKey, 'v1'), encryptField(email.primary, encryptionKey, 'v1'), encryptField(email.resend, encryptionKey, 'v1'),
+    encryptField(context, encryptionKey, 'v1'),
+    encryptField(JSON.stringify(emptyDestination(binding, 'primary')), encryptionKey, 'v1'),
+    encryptField(JSON.stringify(emptyDestination(binding, 'resend')), encryptionKey, 'v1'),
   ]);
   const expiresAt = new Date(Date.now() + RUN_TTL_MS).toISOString();
   await query(env.DB_ADMIN_FRESH,
@@ -420,10 +470,10 @@ async function createRun(request: Request, env: Env): Promise<Response> {
              decode($8, 'base64'), $9, $10, $11, $12, decode($13, 'base64'), $14, $15, decode($16, 'base64'))`,
     [id, releaseSha, candidateWorker, candidateVersion, uploadedAt, stagedAt, expiresAt,
       await acceptanceContextDigest(acceptanceContextToken(context)), encryptedContext.ciphertext, encryptedContext.encryptionKeyVersion,
-      encryptedPrimary.ciphertext, encryptedPrimary.encryptionKeyVersion, await acceptanceContextDigest(email.primary),
-      encryptedResend.ciphertext, encryptedResend.encryptionKeyVersion, await acceptanceContextDigest(email.resend)],
+      encryptedPrimary.ciphertext, encryptedPrimary.encryptionKeyVersion, await acceptanceContextDigest(randomToken(32)),
+      encryptedResend.ciphertext, encryptedResend.encryptionKeyVersion, await acceptanceContextDigest(randomToken(32))],
   );
-  return json({ acceptanceRunId: id, expiresAt, keeperUrl: `${env.AUTH_ACCEPTANCE_ROUTE_BASE_URL}/production-auth-acceptance?run=${encodeURIComponent(id)}` }, { status: 201 });
+  return json({ acceptanceRunId: id, expiresAt, destinationInput: 'keeper_owner_runtime', keeperUrl: `${env.AUTH_ACCEPTANCE_ROUTE_BASE_URL}/production-auth-acceptance?run=${encodeURIComponent(id)}` }, { status: 201 });
 }
 
 async function runSummary(request: Request, env: Env, id: string): Promise<Response> {
@@ -451,6 +501,8 @@ async function runSummary(request: Request, env: Env, id: string): Promise<Respo
     candidateDependencies: await candidateDependencies(env, run) ?? null,
     rollbackSnapshot: await rollbackSnapshot(env, run) ?? null,
     expiresAt: asIso(run.expires_at), status: run.status,
+    destinationInput: 'keeper_owner_runtime',
+    destinations: { primary: safeDestination(await runDestination(env, run, 'primary')), secondary: safeDestination(await runDestination(env, run, 'resend')) },
     turnstile: run.turnstile_verified_at ? { status: 'verified', observedAt: asIso(run.turnstile_verified_at), hostname: run.turnstile_hostname, action: run.turnstile_action } : { status: 'human_required' },
     events: events.rows.map((event) => ({ type: event.event_type, occurredAt: asIso(event.occurred_at) })),
     emailLifecycle: outbox.rows.map((row) => ({
@@ -470,6 +522,7 @@ async function startRegistration(request: Request, env: Env, id: string): Promis
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
   const run = await loadRun(env, id);
   const email = await runEmail(env, run, 'primary');
+  await requireRunOwner(request, env, run);
   const candidate = await candidateJson(env, run, '/api/auth/email', { mode: 'register', email, password, turnstileToken });
   if (candidate.response.status !== 202) throw new Error('candidate_registration_rejected');
   await setChallenge(env, id, 'initial');
@@ -484,6 +537,7 @@ async function prepareResend(request: Request, env: Env, id: string): Promise<Re
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
   const run = await loadRun(env, id);
   const email = await runEmail(env, run, 'resend');
+  await requireRunOwner(request, env, run);
   const fixture = await candidateJson(env, run, '/internal/production-auth-acceptance/resend-fixture', { email });
   if (fixture.response.status !== 202) throw new Error('candidate_resend_fixture_rejected');
   if (typeof fixture.body?.retryAfterSeconds === 'number' && fixture.body.retryAfterSeconds > 0) {
@@ -502,6 +556,7 @@ async function requestReset(request: Request, env: Env, id: string): Promise<Res
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
   const run = await loadRun(env, id);
   const email = await runEmail(env, run, 'primary');
+  await requireRunOwner(request, env, run);
   const candidate = await candidateJson(env, run, '/api/auth/password/reset/request', { email, turnstileToken });
   if (candidate.response.status !== 202) throw new Error('candidate_password_reset_request_rejected');
   await setChallenge(env, id, 'reset');
@@ -551,6 +606,7 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
   const token = typeof form.get('token') === 'string' ? String(form.get('token')) : '';
   if (!/^[a-f0-9]{64}$/.test(context) || !purpose || !/^[a-f0-9]{64}$/.test(token)) throw new Error('acceptance_email_link_invalid');
   const run = await runForEmailContext(env, context);
+  await requireRunOwner(request, env, run);
   const observed = await candidateJson(env, run, '/internal/production-auth-acceptance/challenge-observation', { token, purpose });
   if (!observed.response.ok || observed.body?.delivered !== true) throw new Error('acceptance_delivery_not_ready');
   const path = purpose === 'verification' ? '/api/auth/email/verify' : '/api/auth/password/reset/complete';
@@ -579,6 +635,13 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
   return new Response('<!doctype html><title>Lythaus</title><p>Completed. Return to the Keeper acceptance screen.</p>', { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
 }
 
+async function observationTime(env: Env): Promise<string> {
+  const result = await query<{ observed_at: Date }>(env.DB_ADMIN_FRESH, 'SELECT clock_timestamp() AS observed_at');
+  const observed = asIso(result.rows[0]?.observed_at);
+  if (!observed) throw new Error('acceptance_observation_clock_unavailable');
+  return observed;
+}
+
 async function requireCandidateIdentity(env: Env, run: RunRow, access: string, expectedId: string | null): Promise<void> {
   const response = await candidateFetch(env, run, '/api/auth/userinfo', { method: 'GET', headers: { authorization: `Bearer ${access}` } });
   const body = await response.json().catch(() => null) as { id?: unknown } | null;
@@ -591,6 +654,7 @@ async function initialSessionProof(request: Request, env: Env, id: string): Prom
   const password = requirePasswordInput(body.password, 'login');
   const run = await loadRun(env, id);
   const email = await runEmail(env, run, 'primary');
+  await requireRunOwner(request, env, run);
   const login = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password });
   const accessToken = typeof login.body?.accessToken === 'string' ? login.body.accessToken : '';
   const refreshToken = typeof login.body?.refreshToken === 'string' ? login.body.refreshToken : '';
@@ -619,6 +683,7 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
   const oldPassword = requirePasswordInput(body.oldPassword, 'login');
   const newPassword = requirePasswordInput(body.newPassword, 'creation');
   const run = await loadRun(env, id);
+  await requireRunOwner(request, env, run);
   const prerequisites = ['initial_verification_completed', 'initial_verification_replay_rejected', 'login_completed', 'refresh_completed',
     'resend_verification_completed', 'resend_verification_replay_rejected', 'password_reset_completed', 'password_reset_replay_rejected'];
   const ready = await query<{ count: string }>(env.DB_ADMIN_FRESH,
@@ -642,19 +707,29 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
   if (!login.response.ok || !accessToken) throw new Error('candidate_new_password_login_rejected');
   await requireCandidateIdentity(env, run, accessToken, run.primary_user_id);
   await recordEvent(env, id, 'password_reset_new_password_accepted');
-  const logout = await candidateJson(env, run, '/api/auth/logout', {}, { headers: { authorization: `Bearer ${accessToken}` } });
-  if (!logout.response.ok) throw new Error('candidate_logout_rejected');
+  const productChecks = await runOwnerProductChecks({
+    runId: run.id, userId: run.primary_user_id!, accessToken,
+    observeTime: () => observationTime(env),
+    login: () => candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password: newPassword }),
+    call: async (path, method, body, headers) => {
+      if (method !== 'GET') return candidateJson(env, run, path, body ?? {}, { method, headers });
+      const response = await candidateFetch(env, run, path, { method, headers });
+      return { response, body: await response.json().catch(() => null) as Record<string, unknown> | null };
+    },
+  });
+  const destination = await runDestination(env, run, 'primary');
+  const encryptedDestination = await encryptField(JSON.stringify({ ...destination, productChecks }), requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'), 'v1');
   await recordEvent(env, id, 'logout_completed');
   await query(env.DB_ADMIN_FRESH,
     `UPDATE system.production_auth_acceptance_runs
-        SET status = 'completed',
+        SET status = 'completed', primary_email_ciphertext = $2,
             completed_at = now(),
             pre_reset_refresh_ciphertext = NULL,
             pre_reset_refresh_encryption_key_version = NULL,
             pre_reset_refresh_captured_at = NULL
       WHERE id = $1
         AND status IN ('pending', 'in_progress')`,
-    [id],
+    [id, encryptedDestination.ciphertext],
   );
   return json({ state: 'post_reset_session_proof_completed' });
 }
@@ -717,8 +792,10 @@ async function observer(request: Request, env: Env): Promise<Response> {
   const events = await query<{ event_type: string; occurred_at: string | Date }>(env.DB_ADMIN_FRESH, `SELECT event_type, occurred_at FROM system.production_auth_acceptance_events WHERE run_id = $1`, [run.id]);
   const at = new Map(events.rows.map((event) => [event.event_type, asIso(event.occurred_at)!]));
   const required = ['account_created', 'turnstile_verified', 'initial_verification_requested', 'initial_verification_completed', 'initial_verification_replay_rejected', 'resend_fixture_created', 'resend_requested', 'resend_verification_completed', 'resend_verification_replay_rejected', 'password_reset_requested', 'password_reset_completed', 'password_reset_replay_rejected', 'password_reset_sessions_revoked', 'password_reset_old_password_rejected', 'password_reset_new_password_accepted', 'login_completed', 'refresh_completed', 'logout_completed'];
+  const primaryDestination = await runDestination(env, run, 'primary');
+  const secondaryDestination = await runDestination(env, run, 'resend');
   if (required.some((event) => !at.has(event))) {
-    return json({ formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'keeper_flow_incomplete', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, ...(dependencies ? { candidateDependencies: dependencies } : {}) }, { status: 428 });
+    return json({ formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: primaryDestination.state === 'pending' || secondaryDestination.state === 'pending' ? 'owner_destinations_required' : 'keeper_flow_incomplete', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, ...(dependencies ? { candidateDependencies: dependencies } : {}) }, { status: 428 });
   }
   const challenges = [run.initial_verification_challenge_id, run.resend_previous_challenge_id, run.resend_verification_challenge_id, run.password_reset_challenge_id];
   if (challenges.some((challenge) => !challenge)) return json({ formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'candidate_challenge_pending', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, ...(dependencies ? { candidateDependencies: dependencies } : {}) }, { status: 428 });
@@ -779,9 +856,16 @@ async function observer(request: Request, env: Env): Promise<Response> {
       GROUP BY purpose, state, provider, provider_error_category`, [run.id, [run.initial_verification_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!], asIso(run.candidate_staged_at)!]);
   const lifecycle = await lifecycleSubscription(env);
   const mailboxProviders = await observeMailboxProviders(await runEmail(env, run, 'primary'), await runEmail(env, run, 'resend'));
+  if (!primaryDestination.ownerSubject || primaryDestination.ownerSubject !== secondaryDestination.ownerSubject
+    || !primaryDestination.authorizedAt || primaryDestination.authorizedAt !== secondaryDestination.authorizedAt
+    || Date.parse(primaryDestination.authorizedAt) < new Date(run.created_at).getTime()
+    || !primaryDestination.productChecks || primaryDestination.productChecks.length !== OWNER_PRODUCT_CASES.length
+    || OWNER_PRODUCT_CASES.some(id => !primaryDestination.productChecks!.some(item => item.id === id))) throw new Error('acceptance_owner_evidence_incomplete');
   const evidence = {
     formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'PASSED', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, lifecycleSubscription: lifecycle, mailboxProviders,
     ...(dependencies ? { candidateDependencies: dependencies } : {}),
+    ownerAuthorization: { source: 'keeper_human_runtime', runCreatedAt: asIso(run.created_at), authorizedAt: primaryDestination.authorizedAt, primaryReference: primaryDestination.reference, secondaryReference: secondaryDestination.reference },
+    productAcceptance: { source: 'exact_candidate_keeper_session', cases: primaryDestination.productChecks },
     outboxSummary: { source: 'read_only_database_query', lifecycleSource: 'authenticated_lifecycle_handler', capturedAt: new Date().toISOString(), rows: summaryRows.rows.map((row) => ({ purpose: row.purpose, state: row.state, provider: row.provider, providerErrorCategory: row.provider_error_category, rowCount: Number(row.row_count), providerMessageIdCount: Number(row.provider_message_id_count), distinctProviderMessageIdCount: Number(row.distinct_provider_message_id_count), acceptedCount: Number(row.accepted_count), deliveredCount: Number(row.delivered_count) })) },
     acceptanceAccount: { class: 'production_acceptance', createdAt: asIso(primary.rows[0].created_at), metricIsolation: 'excluded' },
     turnstile: { status: 'verified', observedAt: asIso(run.turnstile_verified_at), hostname: run.turnstile_hostname, action: run.turnstile_action },
@@ -795,11 +879,13 @@ async function observer(request: Request, env: Env): Promise<Response> {
 
 function failure(error: unknown): Response {
   const message = error instanceof Error ? error.message : 'acceptance_request_failed';
-  const status = ['access_required', 'access_assertion_invalid', 'admin_role_required', 'authentication_required'].includes(message) ? 401
+  const status = message === 'acceptance_destination_rate_limited' ? 429
+    : message === 'acceptance_owner_mismatch' ? 403
+    : ['access_required', 'access_assertion_invalid', 'admin_role_required', 'authentication_required'].includes(message) ? 401
     : ['acceptance_run_not_found'].includes(message) ? 404
       : ['acceptance_run_expired'].includes(message) ? 410
         : message.includes('candidate') || message.includes('lifecycle') || message.includes('delivery') ? 502 : 400;
-  return json({ error: { code: /^[a-z0-9_:-]{3,120}$/i.test(message) ? message : 'acceptance_request_failed' } }, { status });
+  return json({ error: { code: /^[a-z0-9_:-]{3,120}$/i.test(message) ? message : 'acceptance_request_failed' } }, { status, ...(status === 429 ? { headers: { 'retry-after': '30' } } : {}) });
 }
 
 export default {
@@ -818,7 +904,8 @@ export default {
         if (!siteKey || !/^[A-Za-z0-9_-]{20,64}$/.test(siteKey)) throw new Error('turnstile_not_configured');
         return json({ siteKey });
       }
-      const match = new RegExp(`^${base}/runs/([0-9a-f-]{36})(?:/(register|resend|reset|initial-session|session-proof))?$`, 'i').exec(url.pathname);
+      const match = new RegExp(`^${base}/runs/([0-9a-f-]{36})(?:/(destinations|register|resend|reset|initial-session|session-proof))?$`, 'i').exec(url.pathname);
+      if (match && request.method === 'POST' && match[2] === 'destinations') return await authorizeDestinations(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
       if (match && request.method === 'GET' && !match[2]) return await runSummary(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
       if (match && request.method === 'POST' && match[2] === 'register') return await startRegistration(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
       if (match && request.method === 'POST' && match[2] === 'resend') return await prepareResend(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));

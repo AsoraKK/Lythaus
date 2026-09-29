@@ -19,6 +19,7 @@ if (Boolean(accessClientId) !== Boolean(accessClientSecret)) {
   throw new Error('auth_acceptance_observer_access_service_token_incomplete');
 }
 const expectedCandidate = {
+  ownerOperated: process.env.ADR003_OWNER_OPERATED === 'true',
   workerName,
   workerVersionId,
   sourceReleaseSha: process.env.ADR003_CANDIDATE_SOURCE_SHA?.trim() || releaseSha,

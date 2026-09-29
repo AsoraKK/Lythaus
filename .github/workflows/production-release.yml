@@ -324,18 +324,9 @@ jobs:
             --base-sha "$PREVIOUS_PRODUCTION_SHA" \
             --output "$RUNNER_TEMP/release-plan.json"
           jq -e --arg sha "$RELEASE_SHA" '.releaseSha == $sha and (.releaseClass == "STANDARD_RELEASE" or .releaseClass == "AUTH_CRITICAL_RELEASE")' "$RUNNER_TEMP/release-plan.json" >/dev/null
-      - name: Require authorized independent acceptance mailboxes for critical releases
+      - name: Validate private owner-input acceptance contract for critical releases
         if: steps.release_plan.outputs.release_class == 'AUTH_CRITICAL_RELEASE'
-        env:
-          PRIMARY_ACCEPTANCE_MAILBOX: ${{ secrets.CODEX_TEST_EMAIL }}
-          SECONDARY_ACCEPTANCE_MAILBOX: ${{ secrets.CODEX_TEST_SECONDARY_EMAIL }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "$PRIMARY_ACCEPTANCE_MAILBOX" || -z "$SECONDARY_ACCEPTANCE_MAILBOX" ]]; then
-            echo 'Two owner-authorized mailbox secrets are required before production auth acceptance: CODEX_TEST_EMAIL and CODEX_TEST_SECONDARY_EMAIL.' >&2
-            exit 1
-          fi
+        run: node --test scripts/tests/keeper-owner-input-contract.test.mjs
       - name: Validate release manifest contract
         run: node scripts/ci/build-release-manifest.mjs
         env:

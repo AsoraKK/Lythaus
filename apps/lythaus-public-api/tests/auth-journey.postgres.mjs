@@ -44,8 +44,9 @@ mock.module('@lythaus/observability', { namedExports: { ...telemetry, logEvent: 
 const { default: worker } = await import('../src/index.ts');
 mock.module('../../lythaus-auth-acceptance-coordinator/src/access-policy.ts', { namedExports: {
   accessSubject: async request => {
-    if (request.headers.get('cf-access-jwt-assertion') !== 'local-synthetic-human') throw new Error('access_required');
-    return 'local-synthetic-human';
+    const subject = request.headers.get('cf-access-jwt-assertion');
+    if (!['local-synthetic-human','local-second-human'].includes(subject)) throw new Error('access_required');
+    return subject;
   },
 } });
 const { default: coordinator } = await import('../../lythaus-auth-acceptance-coordinator/src/index.ts');
@@ -246,14 +247,13 @@ test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixtu
   const publicEnv={...env,WORKER_VERSION:{id:version,tag:releaseSha},DATABASE_READINESS_TOKEN:randomBytes(32).toString('hex')};
   const coordinatorEnv={WORKER_VERSION:{id:uuidv7(),tag:releaseSha},DB_ADMIN_FRESH:{role:'lythaus_admin'},
     AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1:randomBytes(32).toString('base64'),DATABASE_READINESS_TOKEN:publicEnv.DATABASE_READINESS_TOKEN,
-    AUTH_ACCEPTANCE_EMAIL_BASE:`fixture-${uuidv7()}@example.invalid`,AUTH_ACCEPTANCE_PUBLIC_API_URL:'https://api.lythaus.test',
-    AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE:`fixture-${uuidv7()}@second.invalid`,
+    AUTH_ACCEPTANCE_PUBLIC_API_URL:'https://api.lythaus.test',
     AUTH_ACCEPTANCE_ROUTE_BASE_URL:'https://admin.lythaus.co',CLOUDFLARE_ACCOUNT_ID:'synthetic',CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN:'synthetic-local-only'};
   publicEnv.AUTH_ACCEPTANCE_EMAIL_LINK_BASE_URL='https://admin.lythaus.co/api/admin/production-auth-acceptance/email';
   const events=['message.delivered','message.deferred','message.bounced','message.failed','message.rejected','message.complained'];
   const base='https://admin.lythaus.co/api/admin/production-auth-acceptance';
   globalThis.fetch=async(url,init)=>{
-    if(String(url).startsWith('https://cloudflare-dns.com/dns-query'))return Response.json({Status:0,Answer:[{type:15,data:`10 ${String(url).includes('second.invalid')?'fixture.mail.protection.outlook.com':'smtp.google.com'}.`}]});
+    if(String(url).startsWith('https://cloudflare-dns.com/dns-query'))return Response.json({Status:0,Answer:[{type:15,data:`10 ${String(url).includes('second.invalid')?'mx.zoho.com':'smtp.google.com'}.`}]});
     if(String(url).startsWith('https://api.lythaus.test/')) {
       assert.equal(new Headers(init.headers).get('Cloudflare-Workers-Version-Overrides'),`lythaus-public-api-development="${version}"`);
       return worker.fetch(new Request(url,init),publicEnv);
@@ -262,8 +262,8 @@ test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixtu
     if(String(url).includes('/accounts/synthetic/event_subscriptions'))return Response.json({success:true,result:[{destination:{queue_id:'synthetic-queue'},source:{type:'email.sending',domain:'mail.lythaus.co'},enabled:true,events}]});
     return previousFetch(url,init);
   };
-  const call=(path,body,{service=false,method}={})=>coordinator.fetch(new Request(`${base}${path}`,{
-    method:method??(body===undefined?'GET':'POST'),headers:{'content-type':'application/json',...(service?{'x-lythaus-readiness-token':publicEnv.DATABASE_READINESS_TOKEN}:{'cf-access-jwt-assertion':'local-synthetic-human'})},
+  const call=(path,body,{service=false,method,subject='local-synthetic-human',origin='https://admin.lythaus.co'}={})=>coordinator.fetch(new Request(`${base}${path}`,{
+    method:method??(body===undefined?'GET':'POST'),headers:{origin,'content-type':'application/json',...(service?{'x-lythaus-readiness-token':publicEnv.DATABASE_READINESS_TOKEN}:{'cf-access-jwt-assertion':subject})},
     ...(body===undefined?{}:{body:JSON.stringify(body)})}),coordinatorEnv);
   const checked=async(response,status)=>{const body=await response.json();assert.equal(response.status,status,`${body.error?.code??'coordinator response'}; database codes ${JSON.stringify(databaseErrors)}`);return body;};
   try {
@@ -323,6 +323,19 @@ test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixtu
     const mismatch=new Request(observerUrl.replace(releaseSha,'a'.repeat(40)),observerRequest());
     await checked(await coordinator.fetch(mismatch,coordinatorEnv),400);
     const password='synthetic keeper first passphrase',changed='synthetic keeper changed passphrase';
+    const destinations={releaseSha,candidateVersion:version,primaryEmail:`fixture+${run.acceptanceRunId.replace(/-/g,'')}@example.invalid`,secondaryEmail:`fixture+${run.acceptanceRunId.replace(/-/g,'')}@second.invalid`,authorize:true};
+    assert.equal((await checked(await call(prefix),200)).destinations.primary.status,'pending');
+    await checked(await call(`${prefix}/register`,{password,turnstileToken:'account_signup'}),400);
+    await checked(await call(`${prefix}/destinations`,destinations,{service:true}),401);
+    await checked(await call(`${prefix}/destinations`,destinations,{origin:'https://unrelated.invalid'}),400);
+    for(const mutation of [{releaseSha:'b'.repeat(40)},{candidateVersion:uuidv7()},{authorize:false},{primaryEmail:'invalid'},{unexpected:true}]) await checked(await call(`${prefix}/destinations`,{...destinations,...mutation}),400);
+    const competing=await Promise.all([call(`${prefix}/destinations`,destinations),call(`${prefix}/destinations`,destinations)]);
+    assert.equal(competing.filter(result=>result.status===200).length,1);
+    assert.ok(competing.every(result=>[200,400,429].includes(result.status)));
+    await checked(await call(`${prefix}/destinations`,destinations),400);
+    await checked(await call(`${prefix}/register`,{password,turnstileToken:'account_signup'},{subject:'local-second-human'}),403);
+    const safeSummary=JSON.stringify(await checked(await call(prefix,undefined,{service:true}),200));
+    for(const privateValue of [destinations.primaryEmail,destinations.secondaryEmail,'local-synthetic-human'])assert.ok(!safeSummary.includes(privateValue));
     await checked(await call(`${prefix}/session-proof`,{oldPassword:password,newPassword:changed}),400);
     for(const path of ['register','resend','reset'])await checked(await call(`${prefix}/${path}`,{password}),400);
     const originalVersion=publicEnv.WORKER_VERSION;
@@ -365,9 +378,11 @@ test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixtu
     await checked(await call(`${prefix}/session-proof`,{oldPassword:password,newPassword:changed}),200);
     const evidence=await checked(await coordinator.fetch(observerRequest(),coordinatorEnv),200);
     await checked(await call(prefix),200);
-    assert.equal(parseRealEmailAcceptanceEvidence(evidence,releaseSha,{workerVersionId:version,sourceReleaseSha:releaseSha}).status,'PASSED');
+    assert.equal(parseRealEmailAcceptanceEvidence(evidence,releaseSha,{workerVersionId:version,sourceReleaseSha:releaseSha,ownerOperated:true}).status,'PASSED');
+    assert.equal(evidence.mailboxProviders.resend,'zoho');
+    assert.equal(evidence.ownerAuthorization.source,'keeper_human_runtime');
     const serialized=JSON.stringify(evidence);
-    for(const secret of [password,changed,first.get('context'),first.get('token'),coordinatorEnv.AUTH_ACCEPTANCE_EMAIL_BASE])assert.ok(!serialized.includes(secret));
+    for(const secret of [password,changed,first.get('context'),first.get('token'),destinations.primaryEmail,destinations.secondaryEmail,'local-synthetic-human'])assert.ok(!serialized.includes(secret));
     await sql("UPDATE system.production_auth_acceptance_runs SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE id=$1",[run.acceptanceRunId]);
     await checked(await coordinator.fetch(observerRequest(),coordinatorEnv),410);
     await checked(await call(`${prefix}/initial-session`,{password:changed}),410);

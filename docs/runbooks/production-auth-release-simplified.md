@@ -40,15 +40,86 @@ Turnstile -> signup -> delivered email -> verification -> replay rejected
 The workflow will not activate until server-derived acceptance evidence is
 `PASSED`. The acceptance user is isolated and excluded from product metrics.
 
-The initial restoration requires two authorized mailboxes on independent
-providers. `CODEX_TEST_EMAIL` remains the primary protected secret;
-`CODEX_TEST_SECONDARY_EMAIL` supplies the second authorized mailbox to the
-Coordinator only. No mailbox password is required or stored. Do not create an
-account at a new email provider or send to an unapproved address. The current
-reviewed MX classifier supports Google/Workspace and Microsoft/Outlook; other
-or mixed MX families fail closed until explicitly reviewed. Two domains hosted
-by the same provider are not independent. DNS classifies the provider only;
-it does not prove delivery or inbox placement.
+The initial restoration requires two owner-operated mailboxes on independent
+receiving providers. Enter both destinations only in the protected Keeper page;
+the canonical owner-input path does not require `CODEX_TEST_EMAIL`,
+`CODEX_TEST_SECONDARY_EMAIL` or a GitHub-stored acceptance password. Existing
+secrets are neither read nor deleted by this path. No mailbox password is needed.
+Google/Workspace plus Zoho is supported; Microsoft/Outlook remains supported but
+is not required. Two domains hosted by the same provider are not independent.
+An email client, address suffix, neutral response or MX observation does not
+prove message receipt. Complete the real mailbox steps yourself.
+
+## Private owner-input procedure
+
+1. Wait until both owner-controlled mailboxes are available before requesting
+   the 45-minute live acceptance window. Code, CI, provider/schema preparation
+   can finish independently; no one-provider certification is permitted.
+2. Open only the Keeper URL emitted by the canonical release and authenticate
+   through the Admin UI Cloudflare Access application. Check the displayed run,
+   release SHA, candidate and expiry. The CI service identity cannot authorize
+   recipients or operate the human steps.
+3. Privately enter two unused Lythaus test addresses. You may supply unused
+   aliases you already control. The coordinator uses each exact address; it
+   does not strip plus tags, rewrite dots or invent an address. Existing ordinary
+   identities must not be overwritten: a collision requires a fresh run with
+   different unused destinations, not deletion or account conversion.
+4. Authorize both destinations for this candidate. This is permission to send,
+   not an assertion of successful acceptance. Server-side live MX lookup must
+   establish independent reviewed providers before binding succeeds. No email
+   is sent by this operation. On failure, wait at least 30 seconds before retry;
+   five setup attempts exhaust the run's allowance. Unknown/mixed DNS fails
+   closed without exposing the domain in diagnostics.
+5. Complete registration Turnstile and request the real verification message.
+   Open your primary inbox yourself and use the newest run-specific message.
+   The scanner-safe page requires explicit password confirmation. Return to
+   Keeper and prove the initial sign-in/refresh using that password.
+6. Select resend, complete a fresh real challenge, respect the fixture cooldown,
+   and open the distinct message in your second-provider inbox. Confirm its
+   credential setup. The original isolated legacy-fixture ID must be preserved.
+7. Select reset and complete its challenge. Open the primary mailbox reset
+   message, choose a new password, and return to Keeper. Enter old/new passwords
+   locally to prove rejection, session revocation and new-password sign-in.
+   The coordinator also executes the existing fixed ADR-003 profile, post,
+   moderation, export, refresh/replay and logout checks for the isolated identity.
+   Passwords/session tokens never reach CI; only server-observed case IDs and
+   database-clock timestamps appear in evidence.
+8. Share only run ID, random destination references, provider classes, step,
+   sanitized error code, receipt time and whether the message appeared in inbox
+   or spam. Never share addresses, passwords, OTPs, email links or message bodies.
+   Feedback cannot replace lifecycle, token-consumption, replay or session proof.
+9. Resume the same unexpired candidate/run through the canonical release. An
+   expired or incompatible run cannot certify a release. Do not activate traffic
+   or close incident #720 until both real provider journeys and all gates pass.
+
+Destinations are versioned encrypted envelopes in the existing acceptance
+ledger under its purpose-specific key. Pending envelopes contain no recipient;
+their lookup slots are random digests, not email hashes. Authorization is
+same-origin, human-JWT protected, atomically one-time and bound to run ID,
+release SHA, candidate version and the authorizing human subject. Subsequent
+human operations require that same subject. Summaries contain only random
+references/status/timestamps. The run TTL and existing encrypted-state retention
+apply; this change does not extend retention or add logs of sensitive fields.
+Pre-adaptation runs cannot be reinterpreted as owner-authorized runs.
+No migration, DNS change, new mailbox, provider account, secret rotation or
+inbox integration is introduced. Previously pending schema approvals are still
+separate prerequisites for deployment.
+
+## Receiving-provider recognition
+
+Zoho's official [MX configuration guidance](https://www.zoho.com/mail/help/adminconsole/configure-email-delivery.html)
+defines the `mx`, `mx2`, `mx3` receiving records and notes regional variation.
+Its [data-center documentation](https://www.zoho.com/mail/help/api/getting-started-with-api.html)
+identifies the regional domains. The reviewed exact-host allowlist covers US,
+EU, India, Australia, Japan and Canada; it also covers the `smtpin`, `smtpin2`,
+`smtpin3` US/India hosts actually advertised in public MX records. On 2026-09-29,
+DNS-over-HTTPS checks of `zoho.com`, `zohomail.com`, `zoho.eu`, `zohomail.eu`,
+`zoho.in`, `zoho.com.au`, `zoho.jp` and `zohocloud.ca` confirmed those families.
+Every private destination is independently resolved again at binding and final
+observation; the historical lookup is not live owner-mailbox evidence. Unknown
+regions/hosts, lookalikes, mixed-provider answers, truncation, malformed priorities
+and unavailable DNS fail closed. Review official documentation and actual DNS
+before adding another exact host. Do not change business-mail DNS to satisfy a test.
 
 The resend fixture uses the second mailbox and starts as an isolated
 `relink_required` identity with trusted contact linkage and no credential.

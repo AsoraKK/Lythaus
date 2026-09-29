@@ -345,7 +345,7 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
   assertOnlyKeys(evidence, [
     'formatVersion', 'source', 'status', 'reason', 'releaseSha', 'acceptanceRunId', 'candidate',
     'candidateDependencies',
-    'lifecycleSubscription', 'outboxSummary', 'mailboxProviders',
+    'lifecycleSubscription', 'outboxSummary', 'mailboxProviders', 'ownerAuthorization', 'productAcceptance',
     'acceptanceAccount', 'turnstile', 'initialVerification', 'resendVerification', 'passwordReset',
     'login', 'refresh', 'logout',
   ], 'real_email_acceptance_evidence_unknown_field');
@@ -375,9 +375,36 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
   assertObject(evidence.mailboxProviders, 'real_email_acceptance_mailbox_providers_missing');
   assertOnlyKeys(evidence.mailboxProviders, ['source', 'initial', 'resend', 'observedAt'], 'real_email_acceptance_mailbox_providers_unknown_field');
   const mailboxes = evidence.mailboxProviders;
-  if (mailboxes.source !== 'dns_mx_observation' || !['google', 'microsoft'].includes(mailboxes.initial)
-    || !['google', 'microsoft'].includes(mailboxes.resend) || mailboxes.initial === mailboxes.resend) throw new Error('real_email_acceptance_independent_mailbox_providers_required');
+  if (mailboxes.source !== 'dns_mx_observation' || !['google', 'microsoft', 'zoho'].includes(mailboxes.initial)
+    || !['google', 'microsoft', 'zoho'].includes(mailboxes.resend) || mailboxes.initial === mailboxes.resend) throw new Error('real_email_acceptance_independent_mailbox_providers_required');
   assertAtOrAfter(mailboxes.observedAt, evidence.candidate.stagedAt, 'real_email_acceptance_mailbox_observation_before_candidate');
+  if (expectedCandidate.ownerOperated === true || evidence.ownerAuthorization !== undefined || evidence.productAcceptance !== undefined) {
+    const owner = evidence.ownerAuthorization;
+    assertObject(owner, 'real_email_acceptance_owner_authorization_missing');
+    assertOnlyKeys(owner, ['source', 'runCreatedAt', 'authorizedAt', 'primaryReference', 'secondaryReference'], 'real_email_acceptance_owner_authorization_unknown_field');
+    if (owner.source !== 'keeper_human_runtime') throw new Error('real_email_acceptance_owner_authorization_source_invalid');
+    identifier(owner.primaryReference, 'real_email_acceptance_owner_reference_invalid', { uuid: true });
+    identifier(owner.secondaryReference, 'real_email_acceptance_owner_reference_invalid', { uuid: true });
+    if (owner.primaryReference === owner.secondaryReference) throw new Error('real_email_acceptance_owner_reference_reused');
+    assertAtOrAfter(owner.runCreatedAt, evidence.candidate.stagedAt, 'real_email_acceptance_run_before_candidate');
+    assertAtOrAfter(owner.authorizedAt, owner.runCreatedAt, 'real_email_acceptance_authorization_before_run');
+    assertAtOrAfter(evidence.acceptanceAccount.createdAt, owner.authorizedAt, 'real_email_acceptance_account_before_authorization');
+    const product = evidence.productAcceptance;
+    assertObject(product, 'real_email_acceptance_product_checks_missing');
+    assertOnlyKeys(product, ['source', 'cases'], 'real_email_acceptance_product_checks_unknown_field');
+    const cases = ['A03', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10', 'A11', 'A12', 'A13', 'A14'];
+    if (product.source !== 'exact_candidate_keeper_session' || !Array.isArray(product.cases)
+      || product.cases.length !== cases.length) throw new Error('real_email_acceptance_product_checks_invalid');
+    const seen = new Set();
+    for (const item of product.cases) {
+      assertObject(item, 'real_email_acceptance_product_check_invalid');
+      assertOnlyKeys(item, ['id', 'completedAt'], 'real_email_acceptance_product_check_unknown_field');
+      if (!cases.includes(item.id) || seen.has(item.id)) throw new Error('real_email_acceptance_product_check_invalid');
+      seen.add(item.id);
+      assertAtOrAfter(item.completedAt, evidence.passwordReset.reset.newPasswordAcceptedAt, 'real_email_acceptance_product_check_before_session');
+      assertAtOrAfter(evidence.logout.completedAt, item.completedAt, 'real_email_acceptance_product_check_after_logout');
+    }
+  }
   return evidence;
 }
 

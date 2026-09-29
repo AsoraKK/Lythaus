@@ -142,6 +142,8 @@ jobs:
       - run: npm run test:planetscale-production-migrations
       - run: npm run validate:planetscale-extensions
       - run: npm run test:native-architecture
+      - name: Validate private owner acceptance boundaries
+        run: node --experimental-strip-types --test scripts/tests/keeper-owner-input-contract.test.mjs apps/lythaus-auth-acceptance-coordinator/tests/mailbox-provider.test.mjs apps/lythaus-auth-acceptance-coordinator/tests/owner-destinations.test.mjs apps/lythaus-auth-acceptance-coordinator/tests/product-checks.test.mjs
       - run: node --test scripts/tests/provider-audit-contract.test.mjs
       - run: node --test scripts/tests/production-gates.test.mjs
       - run: npm run test:product-integrity-runtime

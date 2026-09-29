@@ -704,8 +704,6 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
-          AUTH_ACCEPTANCE_EMAIL_BASE: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_EMAIL || '' }}
-          AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_SECONDARY_EMAIL || '' }}
           CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CLOUDFLARE_API_TOKEN || '' }}
           AUTHENTICITY_BETA_DISPATCH_SECRET: ${{ secrets.AUTHENTICITY_BETA_DISPATCH_SECRET }}
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -721,8 +719,6 @@ jobs:
             jq -e --arg component "$1" --argjson components "$CHANGED_COMPONENTS_JSON" '$components | index($component) != null' <<< '{}' >/dev/null
           }
           test -n "$DATABASE_READINESS_TOKEN"
-          if component_changed coordinator; then test -n "$AUTH_ACCEPTANCE_EMAIL_BASE"; fi
-          if component_changed coordinator; then test -n "$AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE"; fi
           if component_changed coordinator; then test -n "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN"; fi
           umask 077
           base_secrets_file="$RUNNER_TEMP/production-cutover/base-secrets.json"
@@ -797,8 +793,6 @@ jobs:
             JOBS_SECRETS_FILE="$jobs_secrets_file" \
             COORDINATOR_SECRETS_FILE="$coordinator_secrets_file" \
             SCOPED_KEY_LIFECYCLE_EVIDENCE_PATH="$scoped_key_evidence" \
-            AUTH_ACCEPTANCE_EMAIL_BASE="$AUTH_ACCEPTANCE_EMAIL_BASE" \
-            AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE="$AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE" \
             SKIP_ACCEPTANCE_COORDINATOR="$(if component_changed coordinator; then echo false; else echo true; fi)" \
             PLANETSCALE_SCHEMA_READ_DATABASE_URL="$PLANETSCALE_SCHEMA_READ_DATABASE_URL" \
             node scripts/ci/prepare-scoped-worker-secrets.mjs
@@ -1188,6 +1182,7 @@ jobs:
           if [[ -n "$EXISTING_ACCEPTANCE_RUN_ID" ]]; then
             [[ "$EXISTING_ACCEPTANCE_RUN_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || exit 1
             run_json="$(coordinator_request GET "$base/runs/$EXISTING_ACCEPTANCE_RUN_ID")"
+            jq -e '.destinationInput == "keeper_owner_runtime"' <<<"$run_json" >/dev/null
             jq -e --arg sha "$RELEASE_SHA" --arg version "$PUBLIC_WORKER_VERSION_ID" '
               .acceptanceRunId != null and .releaseSha == $sha and .candidate.workerName == "lythaus-public-api-development"
               and .candidate.workerVersionId == $version and (.status == "pending" or .status == "in_progress" or .status == "completed" or .status == "expired")
@@ -1233,7 +1228,7 @@ jobs:
             rollback_snapshot="$(cat "$ACCEPTANCE_ROLLBACK_SNAPSHOT_PATH")"
             payload="$(jq -n --arg releaseSha "$RELEASE_SHA" --arg candidateSourceSha "$candidate_source_sha" --arg candidateWorker lythaus-public-api-development --arg candidateVersion "$PUBLIC_WORKER_VERSION_ID" --arg candidateUploadedAt "$uploaded_at" --arg candidateStagedAt "$staged_at" --argjson candidateDependencies "$candidate_dependencies" --argjson rollbackSnapshot "$rollback_snapshot" '{releaseSha:$releaseSha,candidateSourceSha:$candidateSourceSha,candidateWorker:$candidateWorker,candidateVersion:$candidateVersion,candidateUploadedAt:$candidateUploadedAt,candidateStagedAt:$candidateStagedAt,candidateDependencies:$candidateDependencies,rollbackSnapshot:$rollbackSnapshot}')"
             run_json="$(coordinator_request POST "$base/runs" "$payload")"
-            jq -e '.acceptanceRunId and .keeperUrl and .expiresAt' <<<"$run_json" >/dev/null
+            jq -e '.acceptanceRunId and .keeperUrl and .expiresAt and .destinationInput == "keeper_owner_runtime"' <<<"$run_json" >/dev/null
             run_id="$(jq -r '.acceptanceRunId' <<<"$run_json")"
             keeper_url="$(jq -r '.keeperUrl' <<<"$run_json")"
             expires_at="$(jq -r '.expiresAt' <<<"$run_json")"
@@ -1253,7 +1248,7 @@ jobs:
             echo
             echo "Exact candidate: \`$PUBLIC_WORKER_VERSION_ID\` from source \`$candidate_source_sha\`, certified for release \`$RELEASE_SHA\`."
             echo "Keeper URL (Cloudflare Access required): $keeper_url"
-            echo "Complete real Turnstile and mailbox actions there, then re-dispatch this same exact SHA with \`acceptance_run_id\`."
+            echo "Privately authorize two unused owner-controlled destinations in Keeper (Google and Zoho supported), then complete real Turnstile and mailbox actions. No destination secrets or addresses in Actions are needed. Re-dispatch this same exact SHA with \`acceptance_run_id\` only while unexpired."
           } >> "$GITHUB_STEP_SUMMARY"
       - name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence
         id: auth_acceptance_observation
@@ -1303,8 +1298,7 @@ jobs:
           EXPECTED_DATABASE_SCHEMA_VERSION: 0020_auth_recovery_delivery.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
-          ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}
-          ADR003_TEST_PASSWORD: ${{ secrets.CODEX_TEST_PASSWORD }}
+          ADR003_OWNER_OPERATED: 'true'
         run: |
           # shellcheck disable=SC2129
           set -euo pipefail

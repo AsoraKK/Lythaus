@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   parseRealEmailAcceptanceEvidence,
@@ -153,6 +157,62 @@ test('two aliases or domains on the same mailbox provider cannot certify restora
   assert.throws(()=>parseRealEmailAcceptanceEvidence(evidence,releaseSha,candidate),/mailbox_providers_missing/);
   evidence.mailboxProviders={source:'dns_mx_observation',initial:'google',resend:'google',observedAt:at(43)};
   assert.throws(()=>parseRealEmailAcceptanceEvidence(evidence,releaseSha,candidate),/independent_mailbox_providers_required/);
+});
+
+test('owner-entered Google and Zoho require complete private authorization and candidate product proof', () => {
+  const evidence=validEvidence();
+  evidence.mailboxProviders.resend='zoho';
+  evidence.logout.completedAt=at(43);
+  evidence.ownerAuthorization={source:'keeper_human_runtime',runCreatedAt:at(1),authorizedAt:at(1.5),primaryReference:'aaaa1111-1111-4111-8111-111111111111',secondaryReference:'bbbb1111-1111-4111-8111-111111111111'};
+  evidence.productAcceptance={source:'exact_candidate_keeper_session',cases:['A03','A05','A06','A07','A08','A09','A10','A11','A12','A13','A14'].map(id=>({id,completedAt:at(42)}))};
+  const expected={...candidate,ownerOperated:true};
+  assert.equal(parseRealEmailAcceptanceEvidence(evidence,releaseSha,expected).status,'PASSED');
+  for(const change of [
+    v=>{delete v.ownerAuthorization;},v=>{delete v.productAcceptance;},
+    v=>{v.ownerAuthorization.email='private@example.invalid';},v=>{v.ownerAuthorization.source='manual';},
+    v=>{v.ownerAuthorization.primaryReference=v.ownerAuthorization.secondaryReference;},
+    v=>{v.ownerAuthorization.authorizedAt=at(0);},v=>{v.ownerAuthorization.authorizedAt=at(3);},
+    v=>{v.productAcceptance.cases.pop();},v=>{v.productAcceptance.cases[0].completedAt=at(0);},
+    v=>{v.productAcceptance.cases[0].completedAt=at(44);},v=>{v.productAcceptance.cases[0].token='sensitive';},
+    v=>{v.productAcceptance.cases[0].id='A05';},v=>{v.mailboxProviders.resend='google';},
+  ]) { const invalid=structuredClone(evidence);change(invalid);assert.throws(()=>parseRealEmailAcceptanceEvidence(invalid,releaseSha,expected)); }
+  assert.throws(()=>parseRealEmailAcceptanceEvidence(validEvidence(),releaseSha,expected),/owner_authorization_missing/);
+});
+
+test('canonical ADR-003 executes with no destination/password secrets and fails on incomplete owner proof', () => {
+  const directory=mkdtempSync(join(tmpdir(),'lythaus-owner-harness-'));
+  const input=join(directory,'observer.json'),output=join(directory,'evidence.json');
+  const evidence=validEvidence();evidence.logout.completedAt=at(43);evidence.mailboxProviders.resend='zoho';
+  evidence.ownerAuthorization={source:'keeper_human_runtime',runCreatedAt:at(1),authorizedAt:at(1.5),primaryReference:'aaaa1111-1111-4111-8111-111111111111',secondaryReference:'bbbb1111-1111-4111-8111-111111111111'};
+  evidence.productAcceptance={source:'exact_candidate_keeper_session',cases:['A03','A05','A06','A07','A08','A09','A10','A11','A12','A13','A14'].map(id=>({id,completedAt:at(42)}))};
+  const script=`globalThis.fetch=async(url,options)=>{
+    const path=new URL(url).pathname;
+    if(path==='/internal/readiness/database-identity')return Response.json({branchFingerprint:'unknown',schemaFingerprint:'fixture',relationCount:97,identityContactEmails:true,budgetLedgerApplied:true,schemaVersion:'fixture.sql',roleClass:'login_non_superuser',readiness:'pass'});
+    if(path==='/api/health'&&options.method==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':'https://app.example.invalid'}});
+    if(path==='/api/auth/email/verify'||path==='/api/auth/password/reset/complete')return Response.json({}, {status:400});
+    if(path==='/')return new Response('local fixture',{headers:{'content-security-policy':"default-src 'self'"}});
+    throw new Error('Unexpected network operation');
+  };await import('./scripts/ci/run-adr003-authenticated-acceptance.mjs');`;
+  const env={...process.env,RELEASE_SHA:releaseSha,GITHUB_SHA:releaseSha,ADR003_OWNER_OPERATED:'true',ADR003_TEST_EMAIL:'',ADR003_TEST_PASSWORD:'',
+    ADR003_API_BASE_URL:'https://api.example.invalid/api',DATABASE_READINESS_TOKEN:'synthetic-readiness',EXPECTED_DATABASE_RELATION_COUNT:'97',
+    EXPECTED_DATABASE_SCHEMA_FINGERPRINT:'fixture',EXPECTED_DATABASE_SCHEMA_VERSION:'fixture.sql',EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED:'true',
+    HYPERDRIVE_VERIFIED_MAIN:'true',ADR003_WORKER_NAME:candidate.workerName,ADR003_WORKER_VERSION_ID:candidate.workerVersionId,
+    ADR003_ACCEPTANCE_RUN_ID:evidence.acceptanceRunId,ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH:input,ADR003_EVIDENCE_PATH:output,
+    ADR003_GUEST_ACCEPTED:'true',ADR003_WEB_ORIGIN:'https://app.example.invalid',ADR003_WEB_HEALTH_URL:'https://app.example.invalid/',
+    ADR003_RUN_DESTRUCTIVE_ACCOUNT_DELETION:'false'};
+  try {
+    writeFileSync(input,JSON.stringify(evidence));
+    let result=spawnSync(process.execPath,['--input-type=module','-e',script],{env,encoding:'utf8'});
+    assert.equal(result.status,0,result.stdout+result.stderr);
+    const parsed=JSON.parse(readFileSync(output,'utf8'));
+    assert.equal(parsed.status,'PASSED');
+    assert.equal(parsed.cases.filter(item=>item.acceptanceNote==='exact_candidate_keeper_session:runtime_observed').length,11);
+    delete evidence.productAcceptance;
+    writeFileSync(input,JSON.stringify(evidence));
+    result=spawnSync(process.execPath,['--input-type=module','-e',script],{env,encoding:'utf8'});
+    assert.equal(result.status,1);
+    assert.equal(JSON.parse(readFileSync(output,'utf8')).status,'BLOCKED');
+  } finally {rmSync(directory,{recursive:true,force:true});}
 });
 
 test('runtime observation preserves the exact candidate and reused dependency set', () => {

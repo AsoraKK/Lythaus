@@ -202,6 +202,8 @@ jobs:
         run: node --test --test-timeout=60000 apps/marketing-site/tests/auth-journey.browser.mjs
       - name: Verify protected email confirmation controls
         run: node --experimental-strip-types --test --test-timeout=60000 apps/lythaus-auth-acceptance-coordinator/tests/email-landing.browser.mjs
+      - name: Verify private owner-operated Keeper controls
+        run: node --test --test-timeout=60000 apps/lythaus-auth-acceptance-coordinator/tests/keeper-owner-input.browser.mjs
 
   dependency_audit:
     name: Dependency audit

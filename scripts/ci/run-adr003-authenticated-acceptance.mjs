@@ -22,6 +22,8 @@ const candidateDependencies = process.env.ADR003_CANDIDATE_DEPENDENCIES_JSON
   ? JSON.parse(process.env.ADR003_CANDIDATE_DEPENDENCIES_JSON)
   : undefined;
 const acceptanceRunId = process.env.ADR003_ACCEPTANCE_RUN_ID?.trim() ?? '';
+const ownerOperated = process.env.ADR003_OWNER_OPERATED === 'true';
+const ownerProductCases = new Set(['A03', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10', 'A11', 'A12', 'A13', 'A14']);
 const candidateReadinessEvidencePath = process.env.ADR003_DATABASE_READINESS_EVIDENCE_PATH?.trim() ?? '';
 const authAcceptanceEvidencePath = process.env.ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH?.trim() ?? '';
 const evidencePath = process.env.ADR003_EVIDENCE_PATH;
@@ -121,6 +123,7 @@ function authAcceptanceEvidence() {
   if (!authAcceptanceEvidencePath) throw new BlockedCase('HUMAN_ACCEPTANCE_REQUIRED');
   const releaseSha = required('RELEASE_SHA');
   const expectedCandidate = {
+    ownerOperated,
     workerName: candidateWorkerName,
     workerVersionId: candidateWorkerVersionId,
     sourceReleaseSha: candidateSourceSha,
@@ -201,6 +204,13 @@ function failureReason(error) {
 
 async function runCase(id, action) {
   try {
+    if (ownerOperated && ownerProductCases.has(id)) {
+      requireReady();
+      const observed = requireAuthAcceptance().productAcceptance?.cases.find(item => item.id === id);
+      expect(observed?.completedAt, 'keeper_product_check_missing');
+      results.push({ id, outcome: 'passed', acceptanceNote: 'exact_candidate_keeper_session:runtime_observed' });
+      return;
+    }
     const result = await action();
     if (result?.outcome === 'skipped') {
       results.push({ id, outcome: 'skipped', reason: result.reason ?? 'optional_case_skipped' });

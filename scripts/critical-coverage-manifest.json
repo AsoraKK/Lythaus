@@ -95,6 +95,22 @@
       "rationale": "Independent recipient provider classification; mailbox receipt still requires consumed real challenges."
     },
     {
+      "id": "acceptance-owner-destinations",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-auth-acceptance-coordinator/src/owner-destinations.ts"],
+      "tests": ["apps/lythaus-auth-acceptance-coordinator/tests/owner-destinations.test.mjs"],
+      "rationale": "Exact-run encrypted recipient binding, human ownership, immutable authorization and bounded retry controls."
+    },
+    {
+      "id": "acceptance-owner-product-checks",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-auth-acceptance-coordinator/src/product-checks.ts"],
+      "tests": ["apps/lythaus-auth-acceptance-coordinator/tests/product-checks.test.mjs"],
+      "rationale": "Fixed credentialed ADR-003 probes run inside Keeper without exporting private destinations or credentials."
+    },
+    {
       "id": "acceptance-human-access",
       "priority": "P1",
       "runtimeSeam": true,
