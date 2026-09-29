@@ -81,13 +81,26 @@ function sourceRoute(payload, component) {
 
 export function validateAcceptanceRollbackSnapshot(value, { candidateDependencies } = {}) {
   assertObject(value, 'acceptance_rollback_snapshot_invalid');
-  assertExactKeys(value, ['schemaVersion', 'workers', 'routes'], 'acceptance_rollback_snapshot_unknown_field');
+  const snapshotKeys = Object.keys(value).sort().join(',');
+  if (snapshotKeys !== ['schemaVersion', 'workers', 'routes'].sort().join(',')
+    && snapshotKeys !== ['schemaVersion', 'workers', 'routes', 'deferredComponents'].sort().join(',')) {
+    throw new Error('acceptance_rollback_snapshot_unknown_field');
+  }
   if (value.schemaVersion !== ACCEPTANCE_ROLLBACK_SNAPSHOT_SCHEMA) throw new Error('acceptance_rollback_snapshot_schema_invalid');
+  const deferredComponents = value.deferredComponents ?? [];
+  if (!Array.isArray(deferredComponents)
+    || deferredComponents.some((component) => !ACCEPTANCE_WORKER_COMPONENTS.includes(component))
+    || new Set(deferredComponents).size !== deferredComponents.length) {
+    throw new Error('acceptance_rollback_deferred_components_invalid');
+  }
   assertObject(value.workers, 'acceptance_rollback_snapshot_workers_invalid');
   assertExactKeys(value.workers, ACCEPTANCE_WORKER_COMPONENTS, 'acceptance_rollback_snapshot_workers_unknown_field');
   const workers = Object.fromEntries(ACCEPTANCE_WORKER_COMPONENTS.map((component) => {
     const allowEmpty = component === 'coordinator';
     const versions = validateWorkerVersions(value.workers[component]?.versions, component, { allowEmpty });
+    if (deferredComponents.includes(component) && versions.length !== 0) {
+      throw new Error(`acceptance_rollback_${component}_deferred_versions_present`);
+    }
     if (candidateDependencies?.[component]?.status === 'REUSED_PRODUCTION' && versions.length === 0) {
       throw new Error(`acceptance_rollback_${component}_reused_snapshot_empty`);
     }
@@ -95,24 +108,48 @@ export function validateAcceptanceRollbackSnapshot(value, { candidateDependencie
   }));
   assertObject(value.routes, 'acceptance_rollback_snapshot_routes_invalid');
   assertExactKeys(value.routes, ACCEPTANCE_ROUTE_COMPONENTS, 'acceptance_rollback_snapshot_routes_unknown_field');
+  if (deferredComponents.includes('coordinator') && value.routes.coordinator !== null) {
+    throw new Error('acceptance_rollback_coordinator_deferred_route_present');
+  }
   const routes = Object.fromEntries(ACCEPTANCE_ROUTE_COMPONENTS.map((component) => [component, validateRoute(value.routes[component], component)]));
   return Object.freeze({
     schemaVersion: ACCEPTANCE_ROLLBACK_SNAPSHOT_SCHEMA,
     workers: Object.freeze(workers),
     routes: Object.freeze(routes),
+    ...(deferredComponents.length > 0 ? { deferredComponents: Object.freeze([...deferredComponents]) } : {}),
   });
 }
 
-export function createAcceptanceRollbackSnapshot({ workerDeployments, routeSnapshots } = {}) {
+export function createAcceptanceRollbackSnapshot({ workerDeployments, routeSnapshots, deferredComponents = [] } = {}) {
   assertObject(workerDeployments, 'acceptance_rollback_worker_deployments_missing');
   assertObject(routeSnapshots, 'acceptance_rollback_route_snapshots_missing');
-  const workers = Object.fromEntries(ACCEPTANCE_WORKER_COMPONENTS.map((component) => [component, { versions: sourceVersions(workerDeployments[component], component) }]));
-  const routes = Object.fromEntries(ACCEPTANCE_ROUTE_COMPONENTS.map((component) => [component, sourceRoute(routeSnapshots[component], component)]));
-  return validateAcceptanceRollbackSnapshot({ schemaVersion: ACCEPTANCE_ROLLBACK_SNAPSHOT_SCHEMA, workers, routes });
+  const deferred = new Set(deferredComponents);
+  const workers = Object.fromEntries(ACCEPTANCE_WORKER_COMPONENTS.map((component) => {
+    if (deferred.has(component)) {
+      assertObject(workerDeployments[component], `acceptance_rollback_${component}_deferred_state_invalid`);
+      if (workerDeployments[component].status !== 'NOT_INSPECTED_OWNER_TEST') {
+        throw new Error(`acceptance_rollback_${component}_deferred_state_unproven`);
+      }
+      return [component, { versions: [] }];
+    }
+    return [component, { versions: sourceVersions(workerDeployments[component], component) }];
+  }));
+  const routes = Object.fromEntries(ACCEPTANCE_ROUTE_COMPONENTS.map((component) => {
+    if (component === 'coordinator' && deferred.has('coordinator')) {
+      assertObject(routeSnapshots[component], 'acceptance_rollback_coordinator_deferred_route_state_invalid');
+      if (routeSnapshots[component].status !== 'NOT_TOUCHED_OWNER_TEST') {
+        throw new Error('acceptance_rollback_coordinator_deferred_route_state_unproven');
+      }
+      return [component, null];
+    }
+    return [component, sourceRoute(routeSnapshots[component], component)];
+  }));
+  return validateAcceptanceRollbackSnapshot({ schemaVersion: ACCEPTANCE_ROLLBACK_SNAPSHOT_SCHEMA, workers, routes, deferredComponents: [...deferred] });
 }
 
 export function deploymentPayloadForRollback(snapshot, component) {
   const validated = validateAcceptanceRollbackSnapshot(snapshot);
   if (!ACCEPTANCE_WORKER_COMPONENTS.includes(component)) throw new Error(`unknown acceptance rollback component ${component}`);
+  if (validated.deferredComponents?.includes(component)) throw new Error(`acceptance_rollback_${component}_deferred`);
   return { versions: validated.workers[component].versions.map(({ versionId, percentage }) => ({ version_id: versionId, percentage })) };
 }

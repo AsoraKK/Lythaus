@@ -35,6 +35,47 @@ test('final production gates fail closed when exact-run evidence is absent', () 
   assert.match(result.stderr, /DATABASE_IDENTITY_VERIFIED=true is required from this exact deployment run/);
 });
 
+test('owner testing permits deployment only with auth acceptance explicitly pending and no run', () => {
+  const result = runFinal({
+    OWNER_TESTING_DEPLOYMENT: 'true',
+    AUTHENTICATED_ACCEPTANCE_PROVEN: 'false',
+    AUTH_ACCEPTANCE_STATUS: 'OWNER_TEST_PENDING',
+    AUTH_ACCEPTANCE_RUN_ID: '',
+  });
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+});
+
+test('owner testing cannot claim acceptance or skip other final production gates', () => {
+  const claimed = runFinal({
+    OWNER_TESTING_DEPLOYMENT: 'true',
+    AUTHENTICATED_ACCEPTANCE_PROVEN: 'true',
+    AUTH_ACCEPTANCE_STATUS: 'PASSED',
+    AUTH_ACCEPTANCE_RUN_ID: '22222222-2222-4222-8222-222222222222',
+  });
+  assert.notEqual(claimed.status, 0);
+  assert.match(claimed.stderr, /owner-testing deployment must remain AUTH_CRITICAL_RELEASE with pending, unrun authentication acceptance/);
+
+  const missingDatabaseEvidence = runFinal({
+    OWNER_TESTING_DEPLOYMENT: 'true',
+    AUTHENTICATED_ACCEPTANCE_PROVEN: 'false',
+    AUTH_ACCEPTANCE_STATUS: 'OWNER_TEST_PENDING',
+    AUTH_ACCEPTANCE_RUN_ID: '',
+    DATABASE_IDENTITY_VERIFIED: 'false',
+  });
+  assert.notEqual(missingDatabaseEvidence.status, 0);
+  assert.match(missingDatabaseEvidence.stderr, /DATABASE_IDENTITY_VERIFIED=true is required/);
+});
+
+test('owner-test pending evidence cannot leak into a normal release', () => {
+  const result = runFinal({
+    OWNER_TESTING_DEPLOYMENT: 'false',
+    AUTHENTICATED_ACCEPTANCE_PROVEN: 'true',
+    AUTH_ACCEPTANCE_STATUS: 'OWNER_TEST_PENDING',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /OWNER_TEST_PENDING requires explicit OWNER_TESTING_DEPLOYMENT=true/);
+});
+
 test('deployment identity derives canonical database values and Access JWKS without stale release variables', () => {
   const result = spawnSync(process.execPath, ['scripts/ci/validate-product-integrity-deploy-identity.mjs'], {
     cwd: root,

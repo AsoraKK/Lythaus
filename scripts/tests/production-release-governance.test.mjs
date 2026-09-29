@@ -285,10 +285,11 @@ test('STANDARD_RELEASE bypasses human acceptance and reuses an unchanged Coordin
     assert.match(section, /if:[^\n]*steps\.release_plan\.outputs\.release_class == 'AUTH_CRITICAL_RELEASE'/);
   }
   assert.match(workersWorkflow, /- name: PRODUCT_ACCEPTANCE - Mark standard acceptance not required\n\s+if: steps\.release_plan\.outputs\.release_class == 'STANDARD_RELEASE'/);
-  assert.match(workersWorkflow, /if component_changed coordinator; then upload_candidate/);
-  assert.match(workersWorkflow, /if component_changed coordinator; then list_coordinator_secrets/);
-  assert.match(workersWorkflow, /if component_changed coordinator; then echo "COORDINATOR_WORKER_STATUS=ACTIVATED"/);
-  assert.match(workersWorkflow, /SKIP_ACCEPTANCE_COORDINATOR="\$\(if component_changed coordinator; then echo false; else echo true; fi\)"/);
+  assert.match(workersWorkflow, /coordinator_managed\(\)[\s\S]*component_changed coordinator[\s\S]*OWNER_TESTING_DEPLOYMENT/);
+  assert.match(workersWorkflow, /if coordinator_managed; then upload_candidate/);
+  assert.match(workersWorkflow, /if coordinator_managed; then list_coordinator_secrets/);
+  assert.match(workersWorkflow, /if component_changed coordinator && \[\[ "\$OWNER_TESTING_DEPLOYMENT" != true \]\]; then echo "COORDINATOR_WORKER_STATUS=ACTIVATED"/);
+  assert.match(workersWorkflow, /SKIP_ACCEPTANCE_COORDINATOR="\$\(if coordinator_managed; then echo false; else echo true; fi\)"/);
   assert.match(workersWorkflow, /Reverify scoped secret evidence for acceptance resume/);
   assert.match(workersWorkflow, /write-scoped-worker-secret-evidence\.mjs/);
   assert.match(workersWorkflow, /acceptance rollback snapshot/i);
@@ -346,6 +347,42 @@ test('canonical manifest retains the exact deterministic release plan provenance
 test('the canonical v2 manifest has no competing push-triggered manifest workflow', () => {
   assert.equal(fs.existsSync('.github/workflows/release-manifest.yml'), false);
   assert.match(workflow, /build-release-manifest\.mjs/);
+});
+
+test('owner testing remains an AUTH_CRITICAL deployment without mailbox secrets or Keeper certification', () => {
+  const workerDispatchInputs = workersWorkflow.slice(workersWorkflow.indexOf('on:'), workersWorkflow.indexOf('workflow_call:'));
+  const keeper = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: Validate or create the exact-candidate Keeper acceptance run'),
+    workersWorkflow.indexOf('- name: PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence'),
+  );
+  const coordinatorActivation = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: Stage candidate Worker versions at zero traffic'),
+    workersWorkflow.indexOf('- name: Prove staged Public and Jobs transactional-email key compatibility'),
+  );
+  const ownerAssertion = workflow.slice(workflow.indexOf('- name: Assert owner testing remains uncertified'));
+
+  assert.doesNotMatch(workerDispatchInputs, /owner_testing_deployment/);
+  assert.match(workflow, /release_mode:[\s\S]*type: choice[\s\S]*- owner_testing/);
+  assert.match(workflow, /RELEASE_CLASS: \$\{\{ steps\.release_plan\.outputs\.release_class \}\}/);
+  assert.match(workflow, /test "\$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE/);
+  assert.match(workflow, /test -z "\$ACCEPTANCE_RUN_ID"/);
+  assert.match(workflow, /test "\$CONFIRM_PRODUCTION" = true/);
+  assert.match(workflow, /Require authorized independent acceptance mailboxes for critical releases[\s\S]*inputs\.release_mode != 'owner_testing'/);
+  assert.match(keeper, /inputs\.owner_testing_deployment != true/);
+  assert.match(workersWorkflow, /PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence[\s\S]*inputs\.owner_testing_deployment != true/);
+  assert.match(workersWorkflow, /PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance[\s\S]*inputs\.owner_testing_deployment != true/);
+  assert.match(coordinatorActivation, /component_changed coordinator && \[\[ "\$OWNER_TESTING_DEPLOYMENT" != true \]\]/);
+  assert.match(coordinatorActivation, /component_changed public/);
+  assert.match(coordinatorActivation, /component_changed admin/);
+  assert.match(workersWorkflow, /NOT_INSPECTED_OWNER_TEST/);
+  assert.match(workersWorkflow, /NOT_TOUCHED_OWNER_TEST/);
+  assert.match(workersWorkflow, /--defer-coordinator/);
+  assert.match(workersWorkflow, /rollback_components_json=\$rollback_components/);
+  assert.match(workersWorkflow, /rollback_components="\$\(jq -c 'map\(select\(\. != "coordinator"\)\)'/);
+  assert.match(workflow, /CHANGED_COMPONENTS_JSON: \$\{\{ needs\.workers\.outputs\.rollback_components_json \|\| needs\.preflight\.outputs\.changed_components_json \}\}/);
+  assert.match(ownerAssertion, /\.authAcceptance\.status == "OWNER_TEST_PENDING"/);
+  assert.match(ownerAssertion, /\.authAcceptance\.acceptanceRunId == null/);
+  assert.match(ownerAssertion, /\.status == "NO-GO"/);
 });
 
 test('failed or paused Worker releases still export exact candidate metadata', () => {
@@ -585,11 +622,11 @@ test('Admin-only Worker changes prepare and verify the Admin candidate secret bo
     workersWorkflow.indexOf('- name: Upload immutable public Worker candidate'),
     workersWorkflow.indexOf('- name: Resolve changed candidates and reused production versions'),
   );
-  assert.match(uploadSegment, /if component_changed public \|\| component_changed admin \|\| component_changed jobs \|\| component_changed coordinator/);
+  assert.match(uploadSegment, /if component_changed public \|\| component_changed admin \|\| component_changed jobs \|\| coordinator_managed/);
   assert.match(uploadSegment, /if component_changed admin; then upload_candidate apps\/lythaus-admin-api\/wrangler\.jsonc/);
   assert.match(uploadSegment, /verify-scoped-worker-secret-bindings\.mjs/);
-  assert.match(workersWorkflow, /if component_changed public \|\| component_changed jobs \|\| component_changed coordinator; then\n\s+test -s "\$scoped_key_evidence"/);
-  assert.match(workersWorkflow, /if component_changed public \|\| component_changed admin \|\| component_changed jobs \|\| component_changed coordinator; then\n\s+test -s "\$scoped_binding_evidence"/);
+  assert.match(workersWorkflow, /if component_changed public \|\| component_changed jobs \|\| coordinator_managed; then\n\s+test -s "\$scoped_key_evidence"/);
+  assert.match(workersWorkflow, /if component_changed public \|\| component_changed admin \|\| component_changed jobs \|\| coordinator_managed; then\n\s+test -s "\$scoped_binding_evidence"/);
   assert.match(workersWorkflow, /inputs\.acceptance_run_id != ''.*contains\(steps\.release_plan\.outputs\.changed_components_json, '\"admin\"'\)/s);
 });
 

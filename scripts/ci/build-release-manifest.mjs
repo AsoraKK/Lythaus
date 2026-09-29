@@ -103,6 +103,11 @@ const previousProductionSha = valueOrNull('PREVIOUS_PRODUCTION_SHA') ?? 'NONE';
 if (previousProductionSha !== 'NONE' && !/^[0-9a-f]{40}$/i.test(previousProductionSha)) throw new Error('PREVIOUS_PRODUCTION_SHA must be a full 40-character SHA or NONE');
 const releaseClass = valueOrNull('RELEASE_CLASS') ?? RELEASE_CLASSES.AUTH_CRITICAL;
 if (!Object.values(RELEASE_CLASSES).includes(releaseClass)) throw new Error(`RELEASE_CLASS must be ${Object.values(RELEASE_CLASSES).join(' or ')}`);
+const ownerTestingDeployment = booleanValue('OWNER_TESTING_DEPLOYMENT');
+if (ownerTestingDeployment && releaseClass !== RELEASE_CLASSES.AUTH_CRITICAL) throw new Error('OWNER_TESTING_DEPLOYMENT requires AUTH_CRITICAL_RELEASE');
+if (ownerTestingDeployment && (booleanValue('AUTHENTICATED_ACCEPTANCE_PROVEN') || valueOrNull('AUTH_ACCEPTANCE_RUN_ID') || valueOrNull('AUTH_ACCEPTANCE_EXPIRES_AT'))) {
+  throw new Error('owner-testing deployment cannot include or claim an acceptance run');
+}
 
 const changedComponents = componentList('CHANGED_COMPONENTS_JSON', RELEASE_COMPONENTS);
 const changedSet = new Set(changedComponents);
@@ -163,15 +168,19 @@ const workerConfig = {
   jobs: { env: 'JOBS', name: 'lythaus-jobs-development' },
   coordinator: { env: 'COORDINATOR', name: 'lythaus-auth-acceptance-coordinator-development' },
 };
+const ownerTestingCoordinatorDeferred = ownerTestingDeployment;
 const workers = Object.fromEntries(Object.entries(workerConfig).map(([component, config]) => {
-  const changed = changedSet.has(component);
+  const deferredForOwnerTest = component === 'coordinator' && ownerTestingCoordinatorDeferred;
+  const changed = changedSet.has(component) && !deferredForOwnerTest;
   const versionId = versionIdOrNull(`${config.env}_WORKER_VERSION`) ?? versionIdOrNull(`${config.env}_API_WORKER_VERSION`);
-  const sourceSha = shaOrNull(`${config.env}_WORKER_SOURCE_SHA`) ?? shaOrNull('WORKER_SOURCE_SHA');
-  const status = changed
-    ? (process.env[`${config.env}_WORKER_STATUS`] === COMPONENT_DISPOSITIONS.ACTIVATED ? COMPONENT_DISPOSITIONS.ACTIVATED : COMPONENT_DISPOSITIONS.NEW_CANDIDATE)
-    : COMPONENT_DISPOSITIONS.REUSED_PRODUCTION;
+  const sourceSha = deferredForOwnerTest ? null : shaOrNull(`${config.env}_WORKER_SOURCE_SHA`) ?? shaOrNull('WORKER_SOURCE_SHA');
+  const status = deferredForOwnerTest
+    ? 'DEFERRED_OWNER_TEST'
+    : changed
+      ? (process.env[`${config.env}_WORKER_STATUS`] === COMPONENT_DISPOSITIONS.ACTIVATED ? COMPONENT_DISPOSITIONS.ACTIVATED : COMPONENT_DISPOSITIONS.NEW_CANDIDATE)
+      : COMPONENT_DISPOSITIONS.REUSED_PRODUCTION;
   const provenance = valueOrNull(`${config.env}_WORKER_PROVENANCE`)
-    ?? (changed ? 'BUILT_FROM_RELEASE_SHA' : 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION');
+    ?? (deferredForOwnerTest ? 'OWNER_TEST_DEPLOYMENT_DEFERRED' : changed ? 'BUILT_FROM_RELEASE_SHA' : 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION');
   return [component, {
     component,
     name: config.name,
@@ -217,7 +226,7 @@ const security = {
 const authAcceptanceRequired = releaseClass === RELEASE_CLASSES.AUTH_CRITICAL;
 const authenticatedAcceptanceProven = booleanValue('AUTHENTICATED_ACCEPTANCE_PROVEN');
 const authAcceptanceStatus = authAcceptanceRequired
-  ? (valueOrNull('AUTH_ACCEPTANCE_STATUS') ?? valueOrNull('AUTHENTICATED_ACCEPTANCE_STATUS') ?? (authenticatedAcceptanceProven ? 'PASSED' : 'BLOCKED'))
+  ? (ownerTestingDeployment ? 'OWNER_TEST_PENDING' : valueOrNull('AUTH_ACCEPTANCE_STATUS') ?? valueOrNull('AUTHENTICATED_ACCEPTANCE_STATUS') ?? (authenticatedAcceptanceProven ? 'PASSED' : 'BLOCKED'))
   : 'NOT_REQUIRED';
 const acceptanceRunId = authAcceptanceRequired ? uuidOrNull('AUTH_ACCEPTANCE_RUN_ID') : null;
 const acceptanceExpiresAt = authAcceptanceRequired ? timestampOrNull('AUTH_ACCEPTANCE_EXPIRES_AT') : null;
@@ -340,10 +349,13 @@ const pagesReady = (component) => {
 };
 const workerReady = (component) => {
   const evidence = workers[component];
-  const changed = changedSet.has(component);
+  const deferredForOwnerTest = component === 'coordinator' && ownerTestingCoordinatorDeferred;
+  const changed = changedSet.has(component) && !deferredForOwnerTest;
   return evidence.versionId !== null
     && evidence.sourceSha !== null
-    && (changed
+    && (deferredForOwnerTest
+      ? evidence.status === 'DEFERRED_OWNER_TEST' && evidence.provenance === 'OWNER_TEST_DEPLOYMENT_DEFERRED' && /^[0-9a-f]{40}$/i.test(evidence.sourceSha)
+      : changed
       ? evidence.status === COMPONENT_DISPOSITIONS.ACTIVATED && evidence.provenance === 'BUILT_FROM_RELEASE_SHA' && evidence.sourceSha.toLowerCase() === releaseSha.toLowerCase()
       : evidence.status === COMPONENT_DISPOSITIONS.REUSED_PRODUCTION && evidence.provenance === 'REUSED_KNOWN_GOOD_PRODUCTION_VERSION' && /^[0-9a-f]{40}$/i.test(evidence.sourceSha));
 };
@@ -366,7 +378,7 @@ const requiredEvidence = [
   process.env.DATABASE_IDENTITY_VERIFIED === 'true',
   process.env.BUDGET_ENFORCEMENT_VERIFIED === 'true',
   authAcceptanceRequired
-    ? authenticatedAcceptanceProven && authAcceptanceStatus === 'PASSED' && acceptanceRunId !== null && acceptanceExpiresAt !== null && acceptanceDependenciesPresent && acceptanceDependenciesValid
+    ? !ownerTestingDeployment && authenticatedAcceptanceProven && authAcceptanceStatus === 'PASSED' && acceptanceRunId !== null && acceptanceExpiresAt !== null && acceptanceDependenciesPresent && acceptanceDependenciesValid
     : authAcceptanceStatus === 'NOT_REQUIRED',
   releaseStateHistoryValid,
   fingerprintOrNull('PLANETSCALE_SCHEMA_FINGERPRINT') !== null,
@@ -381,12 +393,14 @@ const requiredEvidence = [
   process.env.ROLLBACK_ARTIFACTS_PROVEN === 'true',
   process.env.CREDENTIAL_ROTATION_COMPLETED === 'true',
 ];
-const readinessStatus = requiredEvidence.every(Boolean)
+const readinessStatus = ownerTestingDeployment
+  ? 'owner-test-pending'
+  : requiredEvidence.every(Boolean)
   ? 'ready'
   : [cloudflareStatus, planetscaleStatus].some((value) => value === 'UNKNOWN/BLOCKED' || value === 'BLOCKED')
     ? 'blocked'
     : 'partial';
-const productionStatus = readinessStatus === 'ready' ? 'GO' : 'NO-GO';
+const productionStatus = !ownerTestingDeployment && readinessStatus === 'ready' ? 'GO' : 'NO-GO';
 const unknowns = [
   cloudflareStatus === 'VERIFIED' ? null : `Cloudflare live inventory status is ${cloudflareStatus}`,
   planetscaleStatus === 'VERIFIED' ? null : `PlanetScale live inventory status is ${planetscaleStatus}`,
@@ -397,7 +411,7 @@ const unknowns = [
   Object.values(componentEvidence).some(({ versionId }) => versionId === null) ? 'One or more candidate or reused version IDs are unavailable' : null,
   Object.values(componentEvidence).some(({ sourceSha }) => sourceSha === null) ? 'One or more component source SHA proofs are unavailable' : null,
   Object.values(productionSmoke).every((value) => value === 'PASS') ? null : 'One or more canonical production smoke checks are unavailable',
-  authAcceptanceRequired ? (authenticatedAcceptanceProven ? null : 'Auth-critical real acceptance proof is unavailable') : 'Human auth acceptance is not required for STANDARD_RELEASE',
+  authAcceptanceRequired ? (authenticatedAcceptanceProven ? null : ownerTestingDeployment ? 'Owner authentication testing is pending; this deployment is not certified' : 'Auth-critical real acceptance proof is unavailable') : 'Human auth acceptance is not required for STANDARD_RELEASE',
   authAcceptanceRequired && (!acceptanceDependenciesPresent || !acceptanceDependenciesValid) ? 'Exact acceptance candidate/reused dependency evidence is unavailable or mismatched' : null,
   releaseStateHistoryValid ? null : 'Release state history is unavailable or malformed',
   failureDomainsSchemaValid ? null : 'Failure-domain evidence is malformed',
@@ -477,6 +491,13 @@ const manifest = {
   authAcceptance: {
     required: authAcceptanceRequired,
     status: authAcceptanceStatus,
+    ownerTesting: {
+      enabled: ownerTestingDeployment,
+      status: ownerTestingDeployment
+        ? (releaseState === 'OWNER_TEST_DEPLOYED_UNCERTIFIED' ? 'DEPLOYED_UNCERTIFIED' : 'PENDING')
+        : 'NOT_REQUESTED',
+      deferredComponents: ownerTestingCoordinatorDeferred ? ['coordinator'] : [],
+    },
     releaseSha,
     acceptanceRunId,
     expiresAt: acceptanceExpiresAt,
