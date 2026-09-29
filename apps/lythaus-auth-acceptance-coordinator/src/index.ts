@@ -1,9 +1,10 @@
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
-import { constantTimeEqual, decryptField, encryptField, hashAuthToken, randomToken, uuidv7 } from '@lythaus/security';
+import { constantTimeEqual, decryptField, encryptField, randomToken, uuidv7 } from '@lythaus/security';
 import { accessSubject } from './access-policy.ts';
+import { observeMailboxProviders } from './mailbox-provider.ts';
 import { acceptanceEmailLanding, requireEmailCompletionOrigin } from './email-landing.ts';
-import { requirePasswordInput } from '@lythaus/contracts';
+import { acceptanceContextToken, requireAcceptanceRejection, requirePasswordInput } from '@lythaus/contracts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -11,6 +12,7 @@ interface Env extends EnvBindings {
   AUTH_ACCEPTANCE_PUBLIC_API_URL: string;
   AUTH_ACCEPTANCE_ROUTE_BASE_URL: string;
   AUTH_ACCEPTANCE_EMAIL_BASE?: string;
+  AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE?: string;
 }
 
 interface RunRow {
@@ -138,7 +140,7 @@ async function acceptanceContextDigest(context: string): Promise<string> {
 function aliases(base: string, runId: string): { primary: string; resend: string } {
   const match = /^([^@+\s]{1,120})(?:\+[^@\s]+)?@([^@\s]+\.[^@\s]+)$/i.exec(base.trim());
   if (!match) throw new Error('auth_acceptance_email_base_invalid');
-  const suffix = runId.replace(/-/g, '').slice(0, 12);
+  const suffix = runId.replace(/-/g, '');
   return { primary: `${match[1]}+lythaus-${suffix}@${match[2]}`, resend: `${match[1]}+lythaus-resend-${suffix}@${match[2]}` };
 }
 
@@ -170,8 +172,8 @@ async function loadRun(env: Env, id: string, markExpired = true): Promise<RunRow
        FROM system.production_auth_acceptance_runs WHERE id = $1`, [id]);
   const run = result.rows[0];
   if (!run) throw new Error('acceptance_run_not_found');
-  if (new Date(run.expires_at).getTime() <= Date.now() && ['pending', 'in_progress'].includes(run.status)) {
-    if (markExpired) await query(env.DB_ADMIN_FRESH, `UPDATE system.production_auth_acceptance_runs SET status = 'expired' WHERE id = $1`, [id]);
+  if (new Date(run.expires_at).getTime() <= Date.now()) {
+    if (markExpired && ['pending', 'in_progress'].includes(run.status)) await query(env.DB_ADMIN_FRESH, `UPDATE system.production_auth_acceptance_runs SET status = 'expired' WHERE id = $1`, [id]);
     if (markExpired) throw new Error('acceptance_run_expired');
   }
   return run;
@@ -382,6 +384,7 @@ async function createRun(request: Request, env: Env): Promise<Response> {
   const uploadedAt = strictTimestamp(body.candidateUploadedAt, 'acceptance_candidate_uploaded_at_invalid');
   const stagedAt = strictTimestamp(body.candidateStagedAt, 'acceptance_candidate_staged_at_invalid');
   if (Date.parse(stagedAt) < Date.parse(uploadedAt)) throw new Error('acceptance_candidate_stage_before_upload');
+  if (Date.parse(stagedAt) > Date.now()) throw new Error('acceptance_candidate_stage_in_future');
   const candidateDependencies = body.candidateDependencies === undefined
     ? undefined
     : strictCandidateDependencies(body.candidateDependencies, candidateSourceSha, releaseSha);
@@ -400,6 +403,8 @@ async function createRun(request: Request, env: Env): Promise<Response> {
   const id = uuidv7();
   const context = JSON.stringify({ context: randomToken(32), releaseSha, candidateSourceSha, ...(candidateDependencies ? { candidateDependencies } : {}), ...(rollbackSnapshot ? { rollbackSnapshot } : {}) });
   const email = aliases(requiredSecret(env, 'AUTH_ACCEPTANCE_EMAIL_BASE'), id);
+  email.resend = aliases(requiredSecret(env, 'AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE'), id).resend;
+  await observeMailboxProviders(email.primary, email.resend);
   const encryptionKey = requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1');
   const [encryptedContext, encryptedPrimary, encryptedResend] = await Promise.all([
     encryptField(context, encryptionKey, 'v1'), encryptField(email.primary, encryptionKey, 'v1'), encryptField(email.resend, encryptionKey, 'v1'),
@@ -414,7 +419,7 @@ async function createRun(request: Request, env: Env): Promise<Response> {
      VALUES ($1, $2, $3, $4, $5::timestamptz, $6::timestamptz, $7::timestamptz,
              decode($8, 'base64'), $9, $10, $11, $12, decode($13, 'base64'), $14, $15, decode($16, 'base64'))`,
     [id, releaseSha, candidateWorker, candidateVersion, uploadedAt, stagedAt, expiresAt,
-      await acceptanceContextDigest(context), encryptedContext.ciphertext, encryptedContext.encryptionKeyVersion,
+      await acceptanceContextDigest(acceptanceContextToken(context)), encryptedContext.ciphertext, encryptedContext.encryptionKeyVersion,
       encryptedPrimary.ciphertext, encryptedPrimary.encryptionKeyVersion, await acceptanceContextDigest(email.primary),
       encryptedResend.ciphertext, encryptedResend.encryptionKeyVersion, await acceptanceContextDigest(email.resend)],
   );
@@ -459,7 +464,7 @@ async function runSummary(request: Request, env: Env, id: string): Promise<Respo
 }
 
 async function startRegistration(request: Request, env: Env, id: string): Promise<Response> {
-  await requireKeeper(request, env);
+  await accessSubject(request, env);
   const body = await readJson(request);
   const password = requirePasswordInput(body.password, 'login');
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
@@ -474,13 +479,16 @@ async function startRegistration(request: Request, env: Env, id: string): Promis
 }
 
 async function prepareResend(request: Request, env: Env, id: string): Promise<Response> {
-  await requireKeeper(request, env);
+  await accessSubject(request, env);
   const body = await readJson(request);
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
   const run = await loadRun(env, id);
   const email = await runEmail(env, run, 'resend');
   const fixture = await candidateJson(env, run, '/internal/production-auth-acceptance/resend-fixture', { email });
   if (fixture.response.status !== 202) throw new Error('candidate_resend_fixture_rejected');
+  if (typeof fixture.body?.retryAfterSeconds === 'number' && fixture.body.retryAfterSeconds > 0) {
+    return json({ state: 'resend_fixture_cooldown', retryAfterSeconds: fixture.body.retryAfterSeconds }, { status: 202 });
+  }
   const candidate = await candidateJson(env, run, '/api/auth/email', { mode: 'resend_verification', email, turnstileToken });
   if (candidate.response.status !== 202) throw new Error('candidate_resend_rejected');
   await setChallenge(env, id, 'resend');
@@ -489,7 +497,7 @@ async function prepareResend(request: Request, env: Env, id: string): Promise<Re
 }
 
 async function requestReset(request: Request, env: Env, id: string): Promise<Response> {
-  await requireKeeper(request, env);
+  await accessSubject(request, env);
   const body = await readJson(request);
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
   const run = await loadRun(env, id);
@@ -514,33 +522,28 @@ async function runForEmailContext(env: Env, context: string): Promise<RunRow> {
       WHERE context_lookup_hmac = decode($1, 'base64')`, [await acceptanceContextDigest(context)]);
   const run = result.rows[0];
   if (!run) throw new Error('acceptance_context_invalid');
-  const actual = await runContext(env, run);
+  const actual = acceptanceContextToken(await runContext(env, run));
   if (!constantTimeEqual(new TextEncoder().encode(actual), new TextEncoder().encode(context))) throw new Error('acceptance_context_invalid');
   return loadRun(env, run.id);
 }
 
-async function markEmailCompletion(env: Env, run: RunRow, purpose: 'verification' | 'password_reset', token: string): Promise<void> {
-  const hash = hashAuthToken(token, purpose === 'verification' ? 'verification' : 'password_reset');
-  const table = purpose === 'verification' ? 'identity.email_verification_tokens' : 'identity.password_reset_tokens';
-  const found = await query<{ id: string }>(env.DB_ADMIN_FRESH, `SELECT id FROM ${table} WHERE token_hash = decode($1, 'base64')`, [hash]);
-  const id = found.rows[0]?.id;
-  if (!id) throw new Error('acceptance_challenge_not_found');
-  if (purpose === 'password_reset') {
-    if (id !== run.password_reset_challenge_id) throw new Error('acceptance_challenge_run_mismatch');
+async function markEmailCompletion(env: Env, run: RunRow, flow: string): Promise<void> {
+  if (flow === 'reset') {
     await recordEvent(env, run.id, 'password_reset_completed');
     await recordEvent(env, run.id, 'password_reset_replay_rejected');
     return;
   }
-  if (id === run.initial_verification_challenge_id) {
+  if (flow === 'initial') {
     await recordEvent(env, run.id, 'initial_verification_completed');
     await recordEvent(env, run.id, 'initial_verification_replay_rejected');
-  } else if (id === run.resend_verification_challenge_id) {
+  } else if (flow === 'resend') {
     await recordEvent(env, run.id, 'resend_verification_completed');
     await recordEvent(env, run.id, 'resend_verification_replay_rejected');
   } else throw new Error('acceptance_challenge_run_mismatch');
 }
 
 async function completeEmail(request: Request, env: Env): Promise<Response> {
+  await accessSubject(request, env);
   requireEmailCompletionOrigin(request);
   const form = await request.formData();
   const context = typeof form.get('context') === 'string' ? String(form.get('context')) : '';
@@ -548,20 +551,42 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
   const token = typeof form.get('token') === 'string' ? String(form.get('token')) : '';
   if (!/^[a-f0-9]{64}$/.test(context) || !purpose || !/^[a-f0-9]{64}$/.test(token)) throw new Error('acceptance_email_link_invalid');
   const run = await runForEmailContext(env, context);
+  const observed = await candidateJson(env, run, '/internal/production-auth-acceptance/challenge-observation', { token, purpose });
+  if (!observed.response.ok || observed.body?.delivered !== true) throw new Error('acceptance_delivery_not_ready');
   const path = purpose === 'verification' ? '/api/auth/email/verify' : '/api/auth/password/reset/complete';
   const password = requirePasswordInput(form.get('password'), 'creation');
   if (password !== form.get('passwordConfirmation')) throw new Error('invalid_password');
   const body = { token, password };
-  const first = await candidateJson(env, run, path, body);
-  if (!first.response.ok) throw new Error('candidate_email_completion_rejected');
+  if (observed.body.consumed !== true) {
+    const first = await candidateJson(env, run, path, body);
+    if (!first.response.ok) throw new Error('candidate_email_completion_rejected');
+  }
   const replay = await candidateJson(env, run, path, body);
-  if (replay.response.ok) throw new Error('candidate_email_replay_not_rejected');
-  await markEmailCompletion(env, run, purpose, token);
+  requireAcceptanceRejection({ status: replay.response.status, body: replay.body }, 400,
+    [purpose === 'verification' ? 'verification_token_invalid' : 'reset_token_invalid']);
+  const completed = await candidateJson(env, run, '/internal/production-auth-acceptance/challenge-observation', { token, purpose });
+  if (!completed.response.ok || completed.body?.consumed !== true || completed.body.flow !== observed.body.flow
+    || (completed.body.flow === 'resend' && completed.body.legacyRecovered !== true)) throw new Error('acceptance_challenge_state_invalid');
+  if (completed.body.flow === 'resend') {
+    const login = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email: await runEmail(env, run, 'resend'), password });
+    const access = typeof login.body?.accessToken === 'string' ? login.body.accessToken : '';
+    if (!login.response.ok || !access) throw new Error('candidate_legacy_login_rejected');
+    await requireCandidateIdentity(env, run, access, run.resend_fixture_user_id);
+    const logout = await candidateJson(env, run, '/api/auth/logout', {}, { headers: { authorization: `Bearer ${access}` } });
+    if (!logout.response.ok) throw new Error('candidate_legacy_logout_rejected');
+  }
+  await markEmailCompletion(env, run, String(completed.body.flow));
   return new Response('<!doctype html><title>Lythaus</title><p>Completed. Return to the Keeper acceptance screen.</p>', { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
 }
 
+async function requireCandidateIdentity(env: Env, run: RunRow, access: string, expectedId: string | null): Promise<void> {
+  const response = await candidateFetch(env, run, '/api/auth/userinfo', { method: 'GET', headers: { authorization: `Bearer ${access}` } });
+  const body = await response.json().catch(() => null) as { id?: unknown } | null;
+  if (!response.ok || !expectedId || body?.id !== expectedId) throw new Error('candidate_session_identity_mismatch');
+}
+
 async function initialSessionProof(request: Request, env: Env, id: string): Promise<Response> {
-  await requireKeeper(request, env);
+  await accessSubject(request, env);
   const body = await readJson(request);
   const password = requirePasswordInput(body.password, 'login');
   const run = await loadRun(env, id);
@@ -570,6 +595,7 @@ async function initialSessionProof(request: Request, env: Env, id: string): Prom
   const accessToken = typeof login.body?.accessToken === 'string' ? login.body.accessToken : '';
   const refreshToken = typeof login.body?.refreshToken === 'string' ? login.body.refreshToken : '';
   if (!login.response.ok || !accessToken || !refreshToken) throw new Error('candidate_initial_login_rejected');
+  await requireCandidateIdentity(env, run, accessToken, run.primary_user_id);
   await recordEvent(env, id, 'login_completed');
   const refreshed = await candidateJson(env, run, '/api/auth/refresh', { refreshToken });
   const refreshedToken = typeof refreshed.body?.refreshToken === 'string' ? refreshed.body.refreshToken : '';
@@ -588,32 +614,33 @@ async function initialSessionProof(request: Request, env: Env, id: string): Prom
 }
 
 async function sessionProof(request: Request, env: Env, id: string): Promise<Response> {
-  await requireKeeper(request, env);
+  await accessSubject(request, env);
   const body = await readJson(request);
   const oldPassword = requirePasswordInput(body.oldPassword, 'login');
   const newPassword = requirePasswordInput(body.newPassword, 'creation');
   const run = await loadRun(env, id);
+  const prerequisites = ['initial_verification_completed', 'initial_verification_replay_rejected', 'login_completed', 'refresh_completed',
+    'resend_verification_completed', 'resend_verification_replay_rejected', 'password_reset_completed', 'password_reset_replay_rejected'];
+  const ready = await query<{ count: string }>(env.DB_ADMIN_FRESH,
+    `SELECT count(DISTINCT event_type)::text AS count FROM system.production_auth_acceptance_events
+     WHERE run_id=$1 AND event_type=ANY($2::text[])`, [id, prerequisites]);
+  if (Number(ready.rows[0]?.count) !== prerequisites.length) throw new Error('acceptance_steps_incomplete');
   if (!run.pre_reset_refresh_ciphertext || !run.pre_reset_refresh_encryption_key_version) throw new Error('candidate_initial_session_proof_required');
   const preResetRefresh = await decryptField({
     ciphertext: run.pre_reset_refresh_ciphertext,
     encryptionKeyVersion: run.pre_reset_refresh_encryption_key_version,
   }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
   const revokedRefresh = await candidateJson(env, run, '/api/auth/refresh', { refreshToken: preResetRefresh });
-  if (revokedRefresh.response.ok) throw new Error('candidate_pre_reset_refresh_accepted');
+  requireAcceptanceRejection({ status: revokedRefresh.response.status, body: revokedRefresh.body }, 401, ['refresh_token_invalid', 'refresh_token_reuse']);
   await recordEvent(env, id, 'password_reset_sessions_revoked');
-  await query(env.DB_ADMIN_FRESH,
-    `UPDATE system.production_auth_acceptance_runs
-        SET pre_reset_refresh_ciphertext = NULL,
-            pre_reset_refresh_encryption_key_version = NULL,
-            pre_reset_refresh_captured_at = NULL
-      WHERE id = $1`, [id]);
   const email = await runEmail(env, run, 'primary');
   const oldLogin = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password: oldPassword });
-  if (oldLogin.response.ok) throw new Error('candidate_old_password_accepted');
+  requireAcceptanceRejection({ status: oldLogin.response.status, body: oldLogin.body }, 401, ['invalid_credentials']);
   await recordEvent(env, id, 'password_reset_old_password_rejected');
   const login = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password: newPassword });
   const accessToken = typeof login.body?.accessToken === 'string' ? login.body.accessToken : '';
   if (!login.response.ok || !accessToken) throw new Error('candidate_new_password_login_rejected');
+  await requireCandidateIdentity(env, run, accessToken, run.primary_user_id);
   await recordEvent(env, id, 'password_reset_new_password_accepted');
   const logout = await candidateJson(env, run, '/api/auth/logout', {}, { headers: { authorization: `Bearer ${accessToken}` } });
   if (!logout.response.ok) throw new Error('candidate_logout_rejected');
@@ -621,7 +648,10 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
   await query(env.DB_ADMIN_FRESH,
     `UPDATE system.production_auth_acceptance_runs
         SET status = 'completed',
-            completed_at = now()
+            completed_at = now(),
+            pre_reset_refresh_ciphertext = NULL,
+            pre_reset_refresh_encryption_key_version = NULL,
+            pre_reset_refresh_captured_at = NULL
       WHERE id = $1
         AND status IN ('pending', 'in_progress')`,
     [id],
@@ -672,7 +702,7 @@ async function lifecycleSubscription(env: Env): Promise<{ source: string; domain
   const subscription = matches[0] as { enabled?: boolean; events?: unknown[] } | undefined;
   const events = Array.isArray(subscription?.events) ? subscription!.events.filter((event): event is string => typeof event === 'string').sort() : [];
   if (matches.length !== 1 || subscription?.enabled !== true || JSON.stringify(events) !== JSON.stringify([...REQUIRED_EVENTS].sort())) throw new Error('cloudflare_lifecycle_subscription_drift');
-  return { source: 'cloudflare_email_sending_queue_subscription_observation', domain: 'mail.lythaus.co', status: 'enabled', events, observedAt: new Date().toISOString() };
+  return { source: 'cloudflare_email_sending_queue_subscription_observation', domain: 'mail.lythaus.co', status: 'enabled', events: events.map(event => event.replace(/^message\./, '')), observedAt: new Date().toISOString() };
 }
 
 async function observer(request: Request, env: Env): Promise<Response> {
@@ -680,6 +710,7 @@ async function observer(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const runId = strictUuid(request.headers.get('x-lythaus-acceptance-run-id'), 'acceptance_run_id_invalid');
   const run = await loadRun(env, runId, false);
+  if (Date.parse(asIso(run.expires_at)!) <= Date.now()) throw new Error('acceptance_run_expired');
   if (url.searchParams.get('releaseSha') !== run.release_sha || url.searchParams.get('candidateWorker') !== run.candidate_worker || url.searchParams.get('candidateVersion') !== run.candidate_version) throw new Error('acceptance_observer_binding_mismatch');
   const candidate = { workerName: run.candidate_worker, workerVersionId: run.candidate_version, sourceReleaseSha: await candidateSourceSha(env, run), uploadedAt: asIso(run.candidate_uploaded_at), stagedAt: asIso(run.candidate_staged_at) };
   const dependencies = await candidateDependencies(env, run);
@@ -698,12 +729,12 @@ async function observer(request: Request, env: Env): Promise<Response> {
               WHEN challenge_id = $4::uuid THEN 'reset'
             END AS flow,
             purpose, created_at, provider,
-            encode(digest(provider_message_id, 'sha256'), 'hex') AS provider_message_digest,
-            encode(digest(id::text, 'sha256'), 'hex') AS outbox_digest,
+            encode(sha256(convert_to(provider_message_id, 'UTF8')), 'hex') AS provider_message_digest,
+            encode(sha256(convert_to(id::text, 'UTF8')), 'hex') AS outbox_digest,
             accepted_at, delivered_at, state
        FROM system.transactional_email_outbox
       WHERE acceptance_run_id = $1
-        AND correlation_id = $1
+        AND correlation_id = $1::text
         AND challenge_id = ANY($5::uuid[])`,
     [run.id, run.initial_verification_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!, [run.initial_verification_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!]],
   );
@@ -730,7 +761,8 @@ async function observer(request: Request, env: Env): Promise<Response> {
     if (!token || !outbox || outbox.state !== 'delivered' || outbox.provider !== 'cloudflare-email' || !outbox.provider_message_digest || !outbox.accepted_at || !outbox.delivered_at || !token.consumed_at) throw new Error('acceptance_delivery_not_ready');
     const safeChallenge = await opaqueUuid(env, challengeId);
     const safeMessage = opaqueReferenceFromDigest(outbox.provider_message_digest);
-    return { requestedAt, challenge: { id: safeChallenge, createdAt: asIso(token.created_at), ...(token.superseded_at ? { supersededAt: asIso(token.superseded_at) } : {}) }, outbox: { id: opaqueUuidFromDigest(outbox.outbox_digest), purpose: outbox.purpose, challengeId: safeChallenge, createdAt: asIso(outbox.created_at), provider: 'cloudflare-email', providerMessageId: safeMessage, acceptedAt: asIso(outbox.accepted_at), lifecycle: { eventType: 'message.delivered', providerMessageId: safeMessage, occurredAt: asIso(outbox.delivered_at), observedAt: new Date().toISOString() } }, verification: { challengeId: safeChallenge, completedAt: verifiedAt, consumedAt: asIso(token.consumed_at) }, replay: { attemptedAt: replayAt, rejectedAt: replayAt } };
+    if (Date.parse(verifiedAt) < new Date(token.consumed_at).getTime()) throw new Error('acceptance_completion_observation_before_consumption');
+    return { requestedAt, challenge: { id: safeChallenge, createdAt: asIso(token.created_at), ...(token.superseded_at ? { supersededAt: asIso(token.superseded_at) } : {}) }, outbox: { id: opaqueUuidFromDigest(outbox.outbox_digest), purpose: outbox.purpose, challengeId: safeChallenge, createdAt: asIso(outbox.created_at), provider: 'cloudflare-email', providerMessageId: safeMessage, acceptedAt: asIso(outbox.accepted_at), lifecycle: { eventType: 'message.delivered', providerMessageId: safeMessage, occurredAt: asIso(outbox.delivered_at), observedAt: new Date().toISOString() } }, verification: { challengeId: safeChallenge, completedAt: asIso(token.consumed_at), consumedAt: asIso(token.consumed_at) }, replay: { attemptedAt: replayAt, rejectedAt: replayAt } };
   };
   const initial = await buildFlow('initial', run.initial_verification_challenge_id!, at.get('initial_verification_requested')!, at.get('initial_verification_completed')!, at.get('initial_verification_replay_rejected')!);
   const resend = await buildFlow('resend', run.resend_verification_challenge_id!, at.get('resend_requested')!, at.get('resend_verification_completed')!, at.get('resend_verification_replay_rejected')!);
@@ -746,15 +778,16 @@ async function observer(request: Request, env: Env): Promise<Response> {
         AND provider = 'cloudflare-email' AND state = 'delivered'
       GROUP BY purpose, state, provider, provider_error_category`, [run.id, [run.initial_verification_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!], asIso(run.candidate_staged_at)!]);
   const lifecycle = await lifecycleSubscription(env);
+  const mailboxProviders = await observeMailboxProviders(await runEmail(env, run, 'primary'), await runEmail(env, run, 'resend'));
   const evidence = {
-    formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'PASSED', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, lifecycleSubscription: lifecycle,
+    formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'PASSED', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, lifecycleSubscription: lifecycle, mailboxProviders,
     ...(dependencies ? { candidateDependencies: dependencies } : {}),
     outboxSummary: { source: 'read_only_database_query', lifecycleSource: 'authenticated_lifecycle_handler', capturedAt: new Date().toISOString(), rows: summaryRows.rows.map((row) => ({ purpose: row.purpose, state: row.state, provider: row.provider, providerErrorCategory: row.provider_error_category, rowCount: Number(row.row_count), providerMessageIdCount: Number(row.provider_message_id_count), distinctProviderMessageIdCount: Number(row.distinct_provider_message_id_count), acceptedCount: Number(row.accepted_count), deliveredCount: Number(row.delivered_count) })) },
     acceptanceAccount: { class: 'production_acceptance', createdAt: asIso(primary.rows[0].created_at), metricIsolation: 'excluded' },
     turnstile: { status: 'verified', observedAt: asIso(run.turnstile_verified_at), hostname: run.turnstile_hostname, action: run.turnstile_action },
     initialVerification: initial,
     resendVerification: { ...resend, fixtureCreatedAt: at.get('resend_fixture_created'), previousChallenge: { id: await opaqueUuid(env, run.resend_previous_challenge_id!), createdAt: asIso(previous.created_at), supersededAt: asIso(previous.superseded_at) } },
-    passwordReset: { ...reset, reset: { completedAt: at.get('password_reset_completed'), consumedAt: asIso(tokenByFlow.get('reset')?.consumed_at), replayAttemptedAt: at.get('password_reset_replay_rejected'), replayRejectedAt: at.get('password_reset_replay_rejected'), sessionsRevokedAt: at.get('password_reset_sessions_revoked'), oldPasswordRejectedAt: at.get('password_reset_old_password_rejected'), newPasswordAcceptedAt: at.get('password_reset_new_password_accepted') } },
+    passwordReset: { ...reset, reset: { completedAt: asIso(tokenByFlow.get('reset')?.consumed_at), consumedAt: asIso(tokenByFlow.get('reset')?.consumed_at), replayAttemptedAt: at.get('password_reset_replay_rejected'), replayRejectedAt: at.get('password_reset_replay_rejected'), sessionsRevokedAt: at.get('password_reset_sessions_revoked'), oldPasswordRejectedAt: at.get('password_reset_old_password_rejected'), newPasswordAcceptedAt: at.get('password_reset_new_password_accepted') } },
     login: { completedAt: at.get('login_completed') }, refresh: { completedAt: at.get('refresh_completed') }, logout: { completedAt: at.get('logout_completed') },
   };
   return json(evidence);
@@ -777,8 +810,8 @@ export default {
       if (request.method === 'GET' && url.pathname === `${base}/email`) {
         return acceptanceEmailLanding();
       }
-      if (request.method === 'POST' && url.pathname === `${base}/email/complete`) return completeEmail(request, env);
-      if (request.method === 'POST' && url.pathname === `${base}/runs`) return createRun(request, env);
+      if (request.method === 'POST' && url.pathname === `${base}/email/complete`) return await completeEmail(request, env);
+      if (request.method === 'POST' && url.pathname === `${base}/runs`) return await createRun(request, env);
       if (request.method === 'GET' && url.pathname === `${base}/turnstile`) {
         await requireKeeper(request, env);
         const siteKey = env.AUTH_ACCEPTANCE_TURNSTILE_SITE_KEY;
@@ -786,13 +819,13 @@ export default {
         return json({ siteKey });
       }
       const match = new RegExp(`^${base}/runs/([0-9a-f-]{36})(?:/(register|resend|reset|initial-session|session-proof))?$`, 'i').exec(url.pathname);
-      if (match && request.method === 'GET' && !match[2]) return runSummary(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
-      if (match && request.method === 'POST' && match[2] === 'register') return startRegistration(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
-      if (match && request.method === 'POST' && match[2] === 'resend') return prepareResend(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
-      if (match && request.method === 'POST' && match[2] === 'reset') return requestReset(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
-      if (match && request.method === 'POST' && match[2] === 'initial-session') return initialSessionProof(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
-      if (match && request.method === 'POST' && match[2] === 'session-proof') return sessionProof(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
-      if (request.method === 'GET' && url.pathname === `${base}/observer`) return observer(request, env);
+      if (match && request.method === 'GET' && !match[2]) return await runSummary(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
+      if (match && request.method === 'POST' && match[2] === 'register') return await startRegistration(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
+      if (match && request.method === 'POST' && match[2] === 'resend') return await prepareResend(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
+      if (match && request.method === 'POST' && match[2] === 'reset') return await requestReset(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
+      if (match && request.method === 'POST' && match[2] === 'initial-session') return await initialSessionProof(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
+      if (match && request.method === 'POST' && match[2] === 'session-proof') return await sessionProof(request, env, strictUuid(match[1], 'acceptance_run_id_invalid'));
+      if (request.method === 'GET' && url.pathname === `${base}/observer`) return await observer(request, env);
       return json({ error: { code: 'not_found' } }, { status: 404 });
     } catch (error) {
       return failure(error);

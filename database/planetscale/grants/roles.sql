@@ -67,7 +67,7 @@ GRANT SELECT, INSERT, UPDATE ON system.rate_limit_windows TO lythaus_admin;
 GRANT SELECT, INSERT, UPDATE ON system.production_auth_acceptance_runs, system.production_auth_acceptance_events TO lythaus_admin;
 GRANT SELECT (id, user_id, created_at, expires_at, consumed_at, superseded_at) ON identity.email_verification_tokens, identity.password_reset_tokens TO lythaus_admin;
 GRANT SELECT (id, user_id, purpose, challenge_id, state, provider, provider_message_id, provider_error_category,
-              accepted_at, delivered_at, created_at, acceptance_run_id)
+              accepted_at, delivered_at, created_at, acceptance_run_id, correlation_id)
   ON system.transactional_email_outbox TO lythaus_admin;
 GRANT USAGE ON SCHEMA marketing TO lythaus_admin;
 GRANT SELECT (id, email_ciphertext, encryption_key_version, status, source, created_at, retention_hold)

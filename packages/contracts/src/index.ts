@@ -162,3 +162,4 @@ export const REWARD_CATALOG: readonly RewardCatalogItem[] = [
   { id: 'level-4-editorial', rewardLevel: 4, title: 'Editorial toolkit', description: 'Advanced editorial and long-form publishing tools.', partnerName: 'Lythaus Editorial' },
   { id: 'level-5-professional', rewardLevel: 5, title: 'Professional suite', description: 'Professional tooling for established contributors.', partnerName: 'Lythaus Professional' },
 ];
+export { acceptanceContextToken, requireAcceptanceRejection } from './acceptance-context.ts';

@@ -40,6 +40,43 @@ Turnstile -> signup -> delivered email -> verification -> replay rejected
 The workflow will not activate until server-derived acceptance evidence is
 `PASSED`. The acceptance user is isolated and excluded from product metrics.
 
+The initial restoration requires two authorized mailboxes on independent
+providers. `CODEX_TEST_EMAIL` remains the primary protected secret;
+`CODEX_TEST_SECONDARY_EMAIL` supplies the second authorized mailbox to the
+Coordinator only. No mailbox password is required or stored. Do not create an
+account at a new email provider or send to an unapproved address. The current
+reviewed MX classifier supports Google/Workspace and Microsoft/Outlook; other
+or mixed MX families fail closed until explicitly reviewed. Two domains hosted
+by the same provider are not independent. DNS classifies the provider only;
+it does not prove delivery or inbox placement.
+
+The resend fixture uses the second mailbox and starts as an isolated
+`relink_required` identity with trusted contact linkage and no credential.
+Mailbox-owned setup must preserve that ID, then candidate userinfo and logout
+are verified before its completion event is recorded. Wait for the genuine
+30-second resend cooldown and complete a fresh Turnstile challenge; the
+coordinator never backdates a token to evade the cooldown.
+
+Mailbox links contain only a random opaque context, purpose and one-time
+credential in the fragment. Release/version/rollback metadata stays encrypted
+in the ledger and on the authenticated server-side candidate path, never in
+an email link. Completed evidence includes server-observed distinct MX provider
+classes, delivered lifecycle records and consumed challenges for both mailboxes.
+An operator must still observe actual messages in those authorized mailboxes;
+no neutral HTTP response or DNS observation substitutes for receipt. Negative
+tests require the precise token/credential rejection, not a 429/5xx response.
+Expired runs cannot produce passing observer evidence, even if marked completed.
+
+The stricter v2 evidence reader now requires `mailboxProviders` on passing
+observations. Historical observations without it do not certify this restoration.
+No existing challenge, lifecycle, chronology or outbox-count check is relaxed.
+Acceptance and lifecycle timestamps in the outbox are database-clock observations
+of the provider response/event, not claims about an SMTP server's internal clock.
+Using one clock prevents cross-host clock skew from inventing backwards delivery
+chronology. Credential completion time comes from the atomic token consumption;
+the later coordinator observation is checked separately. No timestamp is backdated
+or replaced with a fixture value to make production evidence pass.
+
 ## Reuse and resume
 
 The cutover artifact and Release Manifest v2 show every component's version ID,
@@ -90,6 +127,8 @@ path, with a read-only preflight and the existing production approval. The
 runtime role also needs the narrowly declared audit-intake INSERT grant in
 `database/planetscale/grants/roles.sql`. Retain compatible additive schema on
 software rollback; never undo a user's verification or password change.
+The existing admin observer needs SELECT on the random outbox `correlation_id`
+for its run filter; it does not receive token-hash or product-PII access.
 
 Read-only baseline on 2026-09-29: production PostgreSQL 17.11 has one `main`
 branch, migration ledger 0000–0016, 97 relations, and fingerprint

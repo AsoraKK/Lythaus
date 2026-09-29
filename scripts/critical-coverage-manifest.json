@@ -80,6 +80,29 @@
       "rationale": "Scanner-safe Keeper email handoff and exact same-origin completion."
     },
     {
+      "id": "acceptance-context-boundary",
+      "priority": "P1",
+      "sources": ["packages/contracts/src/acceptance-context.ts"],
+      "tests": ["packages/contracts/tests/acceptance-context.test.mjs"],
+      "rationale": "Opaque mailbox context and typed fail-closed negative evidence shared by exact-candidate handlers."
+    },
+    {
+      "id": "acceptance-mailbox-provider",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-auth-acceptance-coordinator/src/mailbox-provider.ts"],
+      "tests": ["apps/lythaus-auth-acceptance-coordinator/tests/mailbox-provider.test.mjs"],
+      "rationale": "Independent recipient provider classification; mailbox receipt still requires consumed real challenges."
+    },
+    {
+      "id": "acceptance-human-access",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-auth-acceptance-coordinator/src/access-policy.ts"],
+      "tests": ["apps/lythaus-auth-acceptance-coordinator/tests/access-policy.test.mjs"],
+      "rationale": "Real RSA signature, issuer, audience and human-identity checks; service tokens cannot act as Keeper."
+    },
+    {
       "id": "public-auth-recovery",
       "priority": "P1",
       "runtimeSeam": true,

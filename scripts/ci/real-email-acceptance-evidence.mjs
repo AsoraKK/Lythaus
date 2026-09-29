@@ -345,7 +345,7 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
   assertOnlyKeys(evidence, [
     'formatVersion', 'source', 'status', 'reason', 'releaseSha', 'acceptanceRunId', 'candidate',
     'candidateDependencies',
-    'lifecycleSubscription', 'outboxSummary',
+    'lifecycleSubscription', 'outboxSummary', 'mailboxProviders',
     'acceptanceAccount', 'turnstile', 'initialVerification', 'resendVerification', 'passwordReset',
     'login', 'refresh', 'logout',
   ], 'real_email_acceptance_evidence_unknown_field');
@@ -372,6 +372,12 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
   }
   if (evidence.reason !== undefined) throw new Error('real_email_acceptance_pass_reason_forbidden');
   validateCompleteEvidence(evidence, releaseSha);
+  assertObject(evidence.mailboxProviders, 'real_email_acceptance_mailbox_providers_missing');
+  assertOnlyKeys(evidence.mailboxProviders, ['source', 'initial', 'resend', 'observedAt'], 'real_email_acceptance_mailbox_providers_unknown_field');
+  const mailboxes = evidence.mailboxProviders;
+  if (mailboxes.source !== 'dns_mx_observation' || !['google', 'microsoft'].includes(mailboxes.initial)
+    || !['google', 'microsoft'].includes(mailboxes.resend) || mailboxes.initial === mailboxes.resend) throw new Error('real_email_acceptance_independent_mailbox_providers_required');
+  assertAtOrAfter(mailboxes.observedAt, evidence.candidate.stagedAt, 'real_email_acceptance_mailbox_observation_before_candidate');
   return evidence;
 }
 

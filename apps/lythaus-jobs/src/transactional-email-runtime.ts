@@ -233,10 +233,10 @@ async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: Claimed
   await client.query(
     `UPDATE system.transactional_email_outbox
         SET state = 'provider_accepted', provider = $2, provider_message_id = $3,
-            accepted_at = $4::timestamptz, delivery_envelope_ciphertext = NULL,
+            accepted_at = clock_timestamp(), delivery_envelope_ciphertext = NULL,
             delivery_envelope_encryption_key_version = NULL, updated_at = now()
       WHERE id = $1 AND state = 'processing'`,
-    [row.id, delivery.provider, delivery.messageId, delivery.acceptedAt],
+    [row.id, delivery.provider, delivery.messageId],
   );
   });
 }
@@ -335,7 +335,7 @@ export async function applyTransactionalEmailLifecycle(
         SET state = $2,
             provider_error_code = COALESCE($3, provider_error_code),
             provider_error_category = CASE WHEN $4 THEN 'permanent' ELSE provider_error_category END,
-            delivered_at = CASE WHEN $2 = 'delivered' THEN COALESCE(delivered_at, now()) ELSE delivered_at END,
+            delivered_at = CASE WHEN $2 = 'delivered' THEN COALESCE(delivered_at, clock_timestamp()) ELSE delivered_at END,
             terminal_at = CASE WHEN $4 THEN COALESCE(terminal_at, now()) ELSE terminal_at END,
             updated_at = now()
       WHERE provider_message_id = $1

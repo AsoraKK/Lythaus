@@ -705,6 +705,7 @@ jobs:
           PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           AUTH_ACCEPTANCE_EMAIL_BASE: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_EMAIL || '' }}
+          AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CODEX_TEST_SECONDARY_EMAIL || '' }}
           CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: ${{ contains(steps.release_plan.outputs.changed_components_json, '"coordinator"') && secrets.CLOUDFLARE_API_TOKEN || '' }}
           AUTHENTICITY_BETA_DISPATCH_SECRET: ${{ secrets.AUTHENTICITY_BETA_DISPATCH_SECRET }}
           RELEASE_SHA: ${{ inputs.release_sha }}
@@ -721,6 +722,7 @@ jobs:
           }
           test -n "$DATABASE_READINESS_TOKEN"
           if component_changed coordinator; then test -n "$AUTH_ACCEPTANCE_EMAIL_BASE"; fi
+          if component_changed coordinator; then test -n "$AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE"; fi
           if component_changed coordinator; then test -n "$CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN"; fi
           umask 077
           base_secrets_file="$RUNNER_TEMP/production-cutover/base-secrets.json"
@@ -796,6 +798,7 @@ jobs:
             COORDINATOR_SECRETS_FILE="$coordinator_secrets_file" \
             SCOPED_KEY_LIFECYCLE_EVIDENCE_PATH="$scoped_key_evidence" \
             AUTH_ACCEPTANCE_EMAIL_BASE="$AUTH_ACCEPTANCE_EMAIL_BASE" \
+            AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE="$AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE" \
             SKIP_ACCEPTANCE_COORDINATOR="$(if component_changed coordinator; then echo false; else echo true; fi)" \
             PLANETSCALE_SCHEMA_READ_DATABASE_URL="$PLANETSCALE_SCHEMA_READ_DATABASE_URL" \
             node scripts/ci/prepare-scoped-worker-secrets.mjs
