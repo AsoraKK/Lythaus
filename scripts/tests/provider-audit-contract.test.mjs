@@ -11,15 +11,17 @@ const cloudflareWorkflow = read('.github/workflows/cloudflare-domain-audit.yml')
 const planetscaleContractAudit = read('scripts/planetscale/audit-production-contract.mjs');
 const planetscaleWorkflow = read('.github/workflows/planetscale-account-audit.yml');
 const authIncidentAudit = read('scripts/ci/audit-production-auth-incident.mjs');
+const authIncidentDatabase = read('scripts/ci/auth-incident-database-contract.mjs');
 
 test('incident diagnostics default to read-only aggregates and require explicit approval to send',()=>{
   assert.match(authIncidentAudit,/AUTH_INCIDENT_SEND_PROBE === 'true'/);
   assert.ok(authIncidentAudit.indexOf('if (!sendProbe)')<authIncidentAudit.indexOf("method: 'POST',",authIncidentAudit.indexOf('if (!sendProbe)')));
   assert.match(authIncidentAudit,/reason:'explicit_send_approval_required'/);
-  assert.match(authIncidentAudit,/oldest_pending_seconds/);
-  assert.match(authIncidentAudit,/abandoned_leases/);
-  assert.match(authIncidentAudit,/recoveryIntake24h/);
-  assert.doesNotMatch(authIncidentAudit,/SELECT[^;]+provider_message_id/);
+  assert.match(authIncidentAudit,/captureIncidentDatabaseEvidence\(client\)/);
+  assert.match(authIncidentDatabase,/oldest_pending_seconds/);
+  assert.match(authIncidentDatabase,/abandoned_leases/);
+  assert.match(authIncidentDatabase,/recoveryIntake24h/);
+  assert.doesNotMatch(authIncidentDatabase,/SELECT[^;]+provider_message_id/);
 });
 
 test('Cloudflare inventory prefers canonical deployment token and throttles account reads', () => {
@@ -66,9 +68,11 @@ test('PlanetScale account audit supplies verifier evidence without mutation or D
 });
 
 test('production auth incident audit uses only aggregate-safe verifier columns', () => {
-  assert.match(authIncidentAudit, /COUNT\(status\)/);
-  assert.match(authIncidentAudit, /COUNT\(verification_state\)/);
-  assert.match(authIncidentAudit, /COUNT\(created_at\)/);
-  assert.match(authIncidentAudit, /COUNT\(event_type\)/);
-  assert.doesNotMatch(authIncidentAudit, /email_ciphertext|password_hash|email_lookup_hmac/);
+  for (const column of ['status', 'verification_state', 'created_at', 'event_type', 'purpose', 'action']) {
+    assert.ok(authIncidentDatabase.includes(`COUNT(${column})`));
+  }
+  assert.doesNotMatch(authIncidentDatabase, /COUNT\(\*\)|SELECT\s+\*/);
+  assert.doesNotMatch(authIncidentDatabase, /email_ciphertext|password_hash|email_lookup_hmac/);
+  assert.match(authIncidentAudit, /BEGIN READ ONLY/);
+  assert.match(authIncidentDatabase, /SHOW transaction_read_only/);
 });

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
+import { captureIncidentDatabaseEvidence } from './auth-incident-database-contract.mjs';
 
 const { Client } = pg;
 
@@ -66,67 +67,9 @@ async function capturePlanetScale(report) {
   await client.connect();
   try {
     await client.query('BEGIN READ ONLY');
-    const readOnly = await client.query('SHOW transaction_read_only');
-    if (readOnly.rows[0]?.transaction_read_only !== 'on') {
-      throw new Error('PlanetScale incident audit did not enter a read-only transaction');
-    }
-
-    const users = await client.query(`
-      SELECT status, COUNT(status)::int AS count
-        FROM identity.users
-       GROUP BY status
-       ORDER BY status`);
-    const credentials = await client.query(`
-      SELECT verification_state,
-             COUNT(verification_state)::int AS count
-        FROM (
-          SELECT CASE WHEN verified_at IS NULL THEN 'unverified' ELSE 'verified' END AS verification_state
-            FROM identity.email_credentials
-        ) categorized
-       GROUP BY verification_state
-       ORDER BY verification_state`);
-    const verificationTokens = await client.query(`
-      SELECT
-        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours')::int AS created_24h,
-        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NULL AND expires_at > now())::int AS active_unconsumed_24h,
-        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NULL AND expires_at <= now())::int AS expired_unconsumed_24h,
-        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NOT NULL)::int AS consumed_24h
-      FROM identity.email_verification_tokens`);
-    const recentEvents = await client.query(`
-      SELECT event_type, COUNT(event_type)::int AS count
-        FROM identity.account_events
-       WHERE created_at >= now() - interval '24 hours'
-         AND event_type IN ('email_registration_started', 'email_relink_started', 'email_verified', 'email_login', 'password_reset_completed')
-       GROUP BY event_type
-       ORDER BY event_type`);
-
-    const emailOperations = await client.query(`
-      SELECT purpose,state,provider_error_category,COUNT(*)::int AS count,
-        max(EXTRACT(EPOCH FROM now()-created_at)) FILTER (WHERE state IN ('queued','processing'))::int AS oldest_pending_seconds,
-        COUNT(*) FILTER (WHERE state IN ('queued','processing') AND created_at<now()-interval '2 minutes')::int AS pending_overdue,
-        COUNT(*) FILTER (WHERE state='processing' AND updated_at<now()-interval '5 minutes')::int AS abandoned_leases,
-        COUNT(*) FILTER (WHERE provider_error_category='configuration')::int AS configuration_failures
-      FROM system.transactional_email_outbox WHERE created_at>=now()-interval '24 hours'
-      GROUP BY purpose,state,provider_error_category`);
-    const recoveryIntake = await client.query(`SELECT reason_code,COUNT(*)::int AS count
-      FROM system.audit_events WHERE action='auth.recovery.intake' AND created_at>=now()-interval '24 hours'
-      GROUP BY reason_code`);
-    const acceptance = await client.query(`SELECT COUNT(*)::int AS expired_incomplete
-      FROM system.production_auth_acceptance_runs WHERE expires_at<now() AND status IN ('pending','in_progress','expired','blocked')`);
-
+    const evidence = await captureIncidentDatabaseEvidence(client);
     await client.query('ROLLBACK');
-    report.planetscale = {
-      status: 'VERIFIED_READ_ONLY',
-      transactionReadOnly: true,
-      userStatusCounts: users.rows,
-      emailCredentialCounts: credentials.rows,
-      verificationTokenCounts24h: verificationTokens.rows[0] ?? {},
-      authEventCounts24h: recentEvents.rows,
-      emailOperations24h: emailOperations.rows,
-      recoveryIntake24h: recoveryIntake.rows,
-      acceptance: acceptance.rows[0],
-      piiIncluded: false,
-    };
+    report.planetscale = evidence;
   } catch (error) {
     await client.query('ROLLBACK').catch(() => undefined);
     throw error;
