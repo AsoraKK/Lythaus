@@ -13,7 +13,7 @@ release SHA without rechecking it.
    and historical-reconciliation run IDs for that SHA.
 3. Supply the previous canonical production SHA, or `NONE` only for the first
    canonical release.
-4. Set `confirm_production=true`. Set `force_auth_critical=true` only when an
+4. Set `confirm_production=true`. Set `release_mode=force_auth_critical` only when an
    otherwise standard change should receive the critical ceremony.
 
 The workflow computes `releaseClass`, `changedComponents`, and
@@ -44,7 +44,7 @@ from product metrics.
 ## Owner-directed initial app test (uncertified)
 
 For the owner-authorized first live test from the ordinary `app.lythaus.co`
-signup/recovery screens, select `owner_testing_deployment=true` on the
+signup/recovery screens, select `release_mode=owner_testing` on the
 canonical `production-release.yml` dispatch, keep `acceptance_run_id` empty,
 and explicitly set `confirm_production=true`. The computed release class must
 remain `AUTH_CRITICAL_RELEASE`; the input is not a downgrade or certification

@@ -362,12 +362,12 @@ test('owner testing remains an AUTH_CRITICAL deployment without mailbox secrets 
   const ownerAssertion = workflow.slice(workflow.indexOf('- name: Assert owner testing remains uncertified'));
 
   assert.doesNotMatch(workerDispatchInputs, /owner_testing_deployment/);
-  assert.match(workflow, /owner_testing_deployment:[\s\S]*default: false[\s\S]*type: boolean/);
+  assert.match(workflow, /release_mode:[\s\S]*type: choice[\s\S]*- owner_testing/);
   assert.match(workflow, /RELEASE_CLASS: \$\{\{ steps\.release_plan\.outputs\.release_class \}\}/);
   assert.match(workflow, /test "\$RELEASE_CLASS" = AUTH_CRITICAL_RELEASE/);
   assert.match(workflow, /test -z "\$ACCEPTANCE_RUN_ID"/);
   assert.match(workflow, /test "\$CONFIRM_PRODUCTION" = true/);
-  assert.match(workflow, /Require authorized independent acceptance mailboxes for critical releases[\s\S]*owner_testing_deployment != true/);
+  assert.match(workflow, /Require authorized independent acceptance mailboxes for critical releases[\s\S]*inputs\.release_mode != 'owner_testing'/);
   assert.match(keeper, /inputs\.owner_testing_deployment != true/);
   assert.match(workersWorkflow, /PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence[\s\S]*inputs\.owner_testing_deployment != true/);
   assert.match(workersWorkflow, /PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance[\s\S]*inputs\.owner_testing_deployment != true/);

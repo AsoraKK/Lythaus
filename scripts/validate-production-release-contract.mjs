@@ -72,7 +72,7 @@ if (canonical) {
       failures.push(`production-release.yml: missing ${name} child workflow`);
     }
   }
-  for (const required of ['confirm_production', 'ci_run_id', 'previous_production_sha', 'force_auth_critical', 'resolve-release-plan.mjs', 'changed_components_json', 'reused_components_json', 'origin/main', '.conclusion', 'success']) {
+  for (const required of ['confirm_production', 'ci_run_id', 'previous_production_sha', 'release_mode', 'resolve-release-plan.mjs', 'changed_components_json', 'reused_components_json', 'origin/main', '.conclusion', 'success']) {
     if (!canonical.includes(required)) failures.push(`production-release.yml: missing ${required} gate`);
   }
   for (const required of ['provider_evidence', 'CLOUDFLARE_INVENTORY_STATUS', 'PLANETSCALE_INVENTORY_STATUS', 'MARKETING_DEPLOYMENT_ID', 'WEB_DEPLOYMENT_ID', 'ADMIN_DEPLOYMENT_ID']) {
