@@ -213,16 +213,23 @@ test('migration data preconditions reject unresolved open-appeal conflicts only'
 
 test('dedicated schema verifier grants metadata and aggregate-safe evidence columns only', async () => {
   const source = await (await import('node:fs/promises')).readFile('scripts/ci/reconcile-planetscale-schema-verifier.mjs', 'utf8');
+  const { incidentAggregateColumns } = await import('../ci/auth-incident-database-contract.mjs');
   assert.match(source, /PLANETSCALE_VERIFIER_DATABASE_URL/);
   assert.match(source, /GRANT USAGE ON SCHEMA/);
   assert.match(source, /GRANT REFERENCES ON TABLE/);
   assert.match(source, /GRANT SELECT ON TABLE system\.schema_migrations/);
-  assert.match(source, /table: 'users', columns: \['status'\]/);
-  assert.match(source, /table: 'email_credentials', columns: \['verified_at'\]/);
-  assert.match(source, /table: 'email_verification_tokens'[\s\S]*columns: \['created_at', 'consumed_at', 'expires_at'\]/);
-  assert.match(source, /table: 'account_events', columns: \['event_type', 'created_at'\]/);
-  assert.match(source, /table: 'transactional_email_outbox', columns: \['purpose', 'created_at'\]/);
-  assert.match(source, /table: 'production_auth_acceptance_runs', columns: \['created_at'\]/);
+  assert.deepEqual(incidentAggregateColumns, [
+    { schema: 'identity', table: 'users', columns: ['status'] },
+    { schema: 'identity', table: 'email_credentials', columns: ['verified_at'] },
+    { schema: 'identity', table: 'email_verification_tokens', columns: ['created_at', 'consumed_at', 'expires_at'] },
+    { schema: 'identity', table: 'account_events', columns: ['event_type', 'created_at'] },
+    { schema: 'system', table: 'transactional_email_outbox', columns: ['purpose', 'created_at', 'state', 'provider_error_category', 'updated_at'] },
+    { schema: 'system', table: 'audit_events', columns: ['action', 'created_at', 'reason_code'] },
+    { schema: 'system', table: 'production_auth_acceptance_runs', columns: ['created_at', 'expires_at', 'status'] },
+  ]);
+  assert.match(source, /for \(const aggregate of incidentAggregateColumns\)/);
+  assert.match(source, /captureIncidentDatabaseEvidence\(proof\)/);
+  assert.match(source, /verifyIncidentAggregatePrivileges\(proof\)/);
   assert.match(source, /bootstrap_outbox_purpose_read/);
   assert.match(source, /bootstrap_outbox_created_at_read/);
   assert.match(source, /bootstrap_acceptance_created_at_read/);

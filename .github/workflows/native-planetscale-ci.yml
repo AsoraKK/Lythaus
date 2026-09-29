@@ -25,6 +25,10 @@ on:
       - 'packages/db/src/authenticity-alpha.ts'
       - 'packages/db/src/budget.ts'
       - 'scripts/ci/planetscale-migration-*.mjs'
+      - 'scripts/ci/auth-incident-database-contract.mjs'
+      - 'scripts/ci/audit-production-auth-incident.mjs'
+      - 'scripts/ci/reconcile-planetscale-schema-verifier.mjs'
+      - 'scripts/tests/auth-incident-grants.postgres.mjs'
       - 'scripts/ci/validate-authenticity-beta-postgres17.mjs'
       - '.github/workflows/native-planetscale-ci.yml'
 
@@ -68,6 +72,10 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: node scripts/ci/validate-first-admin-bootstrap-postgres17.mjs
+      - name: Prove column-only incident audit grants on real PostgreSQL
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: node --test scripts/tests/auth-incident-grants.postgres.mjs
       - name: Prove authentication and email races on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

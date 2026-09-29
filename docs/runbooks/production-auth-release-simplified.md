@@ -243,6 +243,18 @@ failure, or any expired incomplete acceptance run. Use counts and oldest age,
 not percentages from tiny samples. These operator thresholds are diagnostic
 alerts, not proof that a provider or mailbox failed.
 
+If the incident audit reports `permission denied`, do not replace the verifier
+credential with the admin credential or grant table-wide SELECT. Its shared
+query/grant contract is `scripts/ci/auth-incident-database-contract.mjs`.
+After protected review and merge, dispatch
+`planetscale-schema-verifier-grants.yml` with the exact current `main` SHA and
+approve its `production` environment job. This reconciles only metadata and
+listed aggregate columns; it neither applies pending migrations nor deploys
+Workers. It executes the actual incident queries using the read-only verifier
+before reporting success. Then rerun `production-auth-incident-audit.yml` with
+`send_probe=false`. Local PostgreSQL regression tests must prove both successful
+aggregates and denied access to every unlisted column before any grant rollout.
+
 | Observation | Meaning / next action |
 | --- | --- |
 | Request rejected before intake | Inspect sanitized validation, Turnstile, origin, rate-limit and deadline codes; do not infer account state |
