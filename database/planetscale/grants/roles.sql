@@ -37,6 +37,7 @@ GRANT SELECT, INSERT ON moderation.appeal_review_votes TO lythaus_runtime;
 GRANT SELECT, INSERT ON privacy.requests TO lythaus_runtime;
 GRANT SELECT ON privacy.export_manifests, privacy.retention_rules TO lythaus_runtime;
 GRANT SELECT, INSERT ON system.outbox_events TO lythaus_runtime;
+GRANT INSERT (id, action, reason_code, correlation_id, metadata) ON system.audit_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.transactional_email_outbox TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.production_auth_acceptance_runs, system.production_auth_acceptance_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON system.idempotency_keys TO lythaus_runtime;
@@ -79,6 +80,8 @@ GRANT USAGE ON SCHEMA identity, content, moderation, feed, social, trust, media,
 GRANT SELECT ON identity.users, identity.email_credentials, identity.contact_emails, identity.admin_memberships TO lythaus_jobs;
 GRANT SELECT, INSERT, UPDATE ON content.posts, content.comments, content.content_declarations, moderation.cases, moderation.decisions, moderation.detector_runs, moderation.appeals, moderation.enforcement_events, feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.topic_memberships, feed.regional_memberships, feed.notifications, media.upload_sessions, media.objects, media.storage_ledger, media.variants, media.moderation_results, media.deletion_events, system.outbox_events, system.consumer_inbox TO lythaus_jobs;
 GRANT SELECT, UPDATE ON system.transactional_email_outbox TO lythaus_jobs;
+GRANT SELECT (id, user_id, expires_at, consumed_at, superseded_at)
+  ON identity.email_verification_tokens, identity.password_reset_tokens TO lythaus_jobs;
 GRANT DELETE ON feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.notifications, media.storage_ledger, system.consumer_inbox TO lythaus_jobs;
 GRANT SELECT, DELETE ON feed.notification_preferences, feed.notification_devices TO lythaus_jobs;
 GRANT SELECT, DELETE ON trust.accountability_signals TO lythaus_jobs;

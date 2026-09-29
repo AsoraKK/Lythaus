@@ -49,6 +49,7 @@ doc/AppealsApi.md
 doc/AuthApi.md
 doc/AuthJwksGet200Response.md
 doc/AuthLogout200Response.md
+doc/AuthLogoutRequest.md
 doc/AuthPasswordResetComplete200Response.md
 doc/AuthPasswordResetCompleteRequest.md
 doc/AuthPasswordResetRequest202Response.md
@@ -285,6 +286,7 @@ lib/src/model/appeal_reviewer_assignments.dart
 lib/src/model/appeal_reviewer_assignments_items_inner.dart
 lib/src/model/auth_jwks_get200_response.dart
 lib/src/model/auth_logout200_response.dart
+lib/src/model/auth_logout_request.dart
 lib/src/model/auth_password_reset_complete200_response.dart
 lib/src/model/auth_password_reset_complete_request.dart
 lib/src/model/auth_password_reset_request202_response.dart
@@ -484,6 +486,7 @@ test/appeals_api_test.dart
 test/auth_api_test.dart
 test/auth_jwks_get200_response_test.dart
 test/auth_logout200_response_test.dart
+test/auth_logout_request_test.dart
 test/auth_password_reset_complete200_response_test.dart
 test/auth_password_reset_complete_request_test.dart
 test/auth_password_reset_request202_response_test.dart

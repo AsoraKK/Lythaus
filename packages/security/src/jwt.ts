@@ -35,14 +35,17 @@ export async function verifyAccessToken(token: string, jwksJson: string): Promis
     algorithms: ['ES256'],
     issuer: LYTHAUS_ACCESS_TOKEN_ISSUER,
     audience: LYTHAUS_ACCESS_TOKEN_AUDIENCE,
+    requiredClaims: ['iat', 'exp'],
+    maxTokenAge: 900,
   });
   const subject = verified.payload.sub;
   if (!subject) throw new Error('token_subject_missing');
   const roles = Array.isArray(verified.payload.roles)
     ? verified.payload.roles.filter((role): role is string => typeof role === 'string')
     : [];
-  const tokenVersion = typeof verified.payload.tokenVersion === 'number' && Number.isInteger(verified.payload.tokenVersion)
-    ? verified.payload.tokenVersion
-    : 1;
+  const tokenVersion = verified.payload.tokenVersion === undefined ? 1 : verified.payload.tokenVersion;
+  if (typeof tokenVersion !== 'number' || !Number.isSafeInteger(tokenVersion) || tokenVersion < 1) {
+    throw new Error('token_version_invalid');
+  }
   return { userId: subject, roles, tokenVersion };
 }

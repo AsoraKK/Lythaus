@@ -2,6 +2,8 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import { constantTimeEqual, decryptField, encryptField, hashAuthToken, randomToken, uuidv7 } from '@lythaus/security';
 import { accessSubject } from './access-policy.ts';
+import { acceptanceEmailLanding, requireEmailCompletionOrigin } from './email-landing.ts';
+import { requirePasswordInput } from '@lythaus/contracts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -459,7 +461,7 @@ async function runSummary(request: Request, env: Env, id: string): Promise<Respo
 async function startRegistration(request: Request, env: Env, id: string): Promise<Response> {
   await requireKeeper(request, env);
   const body = await readJson(request);
-  const password = typeof body.password === 'string' && body.password.length >= 15 && body.password.length <= 128 ? body.password : (() => { throw new Error('invalid_password'); })();
+  const password = requirePasswordInput(body.password, 'login');
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
   const run = await loadRun(env, id);
   const email = await runEmail(env, run, 'primary');
@@ -499,11 +501,6 @@ async function requestReset(request: Request, env: Env, id: string): Promise<Res
   return json({ state: 'password_reset_email_requested' }, { status: 202 });
 }
 
-function linkPage(context: string, purpose: string, token: string): Response {
-  const escaped = (value: string) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character] ?? character));
-  const reset = purpose === 'password_reset';
-  return new Response(`<!doctype html><html><head><meta name="referrer" content="no-referrer"><meta name="robots" content="noindex"><title>Lythaus secure confirmation</title></head><body><main><h1>${reset ? 'Choose a new password' : 'Verify your email'}</h1><p>This link only proceeds when you explicitly confirm.</p><form method="post" action="/api/admin/production-auth-acceptance/email/complete"><input type="hidden" name="context" value="${escaped(context)}"><input type="hidden" name="purpose" value="${escaped(purpose)}"><input type="hidden" name="token" value="${escaped(token)}">${reset ? '<label>New password <input name="password" type="password" minlength="15" maxlength="128" required></label>' : ''}<button type="submit">${reset ? 'Reset password' : 'Verify email'}</button></form></main></body></html>`, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-robots-tag': 'noindex', 'x-content-type-options': 'nosniff' } });
-}
 
 async function runForEmailContext(env: Env, context: string): Promise<RunRow> {
   const result = await query<RunRow>(env.DB_ADMIN_FRESH,
@@ -544,16 +541,17 @@ async function markEmailCompletion(env: Env, run: RunRow, purpose: 'verification
 }
 
 async function completeEmail(request: Request, env: Env): Promise<Response> {
+  requireEmailCompletionOrigin(request);
   const form = await request.formData();
   const context = typeof form.get('context') === 'string' ? String(form.get('context')) : '';
   const purpose = form.get('purpose') === 'password_reset' ? 'password_reset' : form.get('purpose') === 'verification' ? 'verification' : '';
   const token = typeof form.get('token') === 'string' ? String(form.get('token')) : '';
-  if (!context || !purpose || token.length < 32) throw new Error('acceptance_email_link_invalid');
+  if (!/^[a-f0-9]{64}$/.test(context) || !purpose || !/^[a-f0-9]{64}$/.test(token)) throw new Error('acceptance_email_link_invalid');
   const run = await runForEmailContext(env, context);
   const path = purpose === 'verification' ? '/api/auth/email/verify' : '/api/auth/password/reset/complete';
-  const body = purpose === 'verification'
-    ? { token }
-    : { token, password: typeof form.get('password') === 'string' ? String(form.get('password')) : '' };
+  const password = requirePasswordInput(form.get('password'), 'creation');
+  if (password !== form.get('passwordConfirmation')) throw new Error('invalid_password');
+  const body = { token, password };
   const first = await candidateJson(env, run, path, body);
   if (!first.response.ok) throw new Error('candidate_email_completion_rejected');
   const replay = await candidateJson(env, run, path, body);
@@ -565,8 +563,7 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
 async function initialSessionProof(request: Request, env: Env, id: string): Promise<Response> {
   await requireKeeper(request, env);
   const body = await readJson(request);
-  const password = typeof body.password === 'string' ? body.password : '';
-  if (password.length < 15 || password.length > 128) throw new Error('invalid_password');
+  const password = requirePasswordInput(body.password, 'login');
   const run = await loadRun(env, id);
   const email = await runEmail(env, run, 'primary');
   const login = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password });
@@ -593,9 +590,8 @@ async function initialSessionProof(request: Request, env: Env, id: string): Prom
 async function sessionProof(request: Request, env: Env, id: string): Promise<Response> {
   await requireKeeper(request, env);
   const body = await readJson(request);
-  const oldPassword = typeof body.oldPassword === 'string' ? body.oldPassword : '';
-  const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
-  if (oldPassword.length < 15 || newPassword.length < 15 || newPassword.length > 128) throw new Error('invalid_password');
+  const oldPassword = requirePasswordInput(body.oldPassword, 'login');
+  const newPassword = requirePasswordInput(body.newPassword, 'creation');
   const run = await loadRun(env, id);
   if (!run.pre_reset_refresh_ciphertext || !run.pre_reset_refresh_encryption_key_version) throw new Error('candidate_initial_session_proof_required');
   const preResetRefresh = await decryptField({
@@ -779,12 +775,7 @@ export default {
     const base = '/api/admin/production-auth-acceptance';
     try {
       if (request.method === 'GET' && url.pathname === `${base}/email`) {
-        const context = url.searchParams.get('context') ?? '';
-        const purpose = url.searchParams.get('purpose') ?? '';
-        const token = url.searchParams.get('token') ?? '';
-        await runForEmailContext(env, context);
-        if (!['verification', 'password_reset'].includes(purpose) || token.length < 32) throw new Error('acceptance_email_link_invalid');
-        return linkPage(context, purpose, token);
+        return acceptanceEmailLanding();
       }
       if (request.method === 'POST' && url.pathname === `${base}/email/complete`) return completeEmail(request, env);
       if (request.method === 'POST' && url.pathname === `${base}/runs`) return createRun(request, env);

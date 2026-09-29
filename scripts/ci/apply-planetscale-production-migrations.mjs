@@ -170,7 +170,7 @@ try {
     }
     mode = 'bootstrap';
     pending = migrations;
-  } else if (incrementalRegistryHead(registry) === '0017_authenticity_beta.sql') {
+  } else if (incrementalRegistryHead(registry) === migrations.at(-1).name) {
     mode = 'verified';
     pending = [];
   } else if (incrementalRegistryHead(registry)) {
@@ -206,7 +206,7 @@ try {
     if (!currentRegistry || !exactRegistryPrefix(currentRegistry, migration.name)) throw new Error(`registry prefix verification failed after ${migration.name}`);
   }
   const finalRegistry = await registryRows(client);
-  if (!finalRegistry || !exactRegistryPrefix(finalRegistry, '0017_authenticity_beta.sql')) throw new Error('production migration registry is incomplete after apply');
+  if (!finalRegistry || !exactRegistryPrefix(finalRegistry, migrations.at(-1).name)) throw new Error('production migration registry is incomplete after apply');
   await applyGrants(client);
   await verifyWaitlistPrivileges(client);
   await verifyRuntimeRateLimitPrivileges(client);

@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
@@ -13,11 +15,15 @@ import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:lythaus/features/auth/domain/password_policy.dart';
 import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
 import 'package:lythaus/screens/security_debug_screen.dart';
 
 class AuthChoiceScreen extends ConsumerStatefulWidget {
-  const AuthChoiceScreen({super.key});
+  const AuthChoiceScreen({super.key, this.launchAuthPage});
+
+  final Future<bool> Function(Uri)? launchAuthPage;
 
   @override
   ConsumerState<AuthChoiceScreen> createState() => _AuthChoiceScreenState();
@@ -48,7 +54,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
 
   void _logScreenView() {
     if (_screenViewLogged) return;
-    _analyticsClient.logEvent(
+    _track(
       AnalyticsEvents.screenView,
       properties: {
         AnalyticsEvents.propScreenName: 'auth_choice',
@@ -58,6 +64,25 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     _screenViewLogged = true;
   }
 
+  void _track(String event, {Map<String, Object?>? properties}) {
+    unawaited(
+      Future<void>.sync(
+        () => _analyticsClient.logEvent(event, properties: properties),
+      ).timeout(const Duration(seconds: 2)).catchError((Object _) {}),
+    );
+  }
+
+  Future<bool> _launch(Uri uri) =>
+      (widget.launchAuthPage?.call(uri) ??
+              launchUrl(
+                uri,
+                mode: kIsWeb
+                    ? LaunchMode.platformDefault
+                    : LaunchMode.externalApplication,
+                webOnlyWindowName: kIsWeb ? '_self' : null,
+              ))
+          .timeout(const Duration(seconds: 10));
+
   Future<void> _handleEmailSignIn() async {
     if (ref.read(authStateProvider).isLoading || _isRecoveryActionLoading) {
       return;
@@ -65,17 +90,15 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     FocusScope.of(context).unfocus();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    if (email.isEmpty || password.length < 12) {
+    if (!_isValidEmail(email) || !PasswordPolicy.acceptsLogin(password)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Enter a valid email and a password of at least 12 characters.',
-          ),
+          content: Text('Enter a valid email and your existing password.'),
         ),
       );
       return;
     }
-    await _analyticsClient.logEvent(
+    _track(
       AnalyticsEvents.authStarted,
       properties: {AnalyticsEvents.propMethod: 'email'},
     );
@@ -89,7 +112,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     );
     if (!mounted) return;
     if (ref.read(authStateProvider).valueOrNull != null) {
-      await _analyticsClient.logEvent(
+      _track(
         AnalyticsEvents.authCompleted,
         properties: {
           AnalyticsEvents.propMethod: 'email',
@@ -100,12 +123,12 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _handleGuestContinue() async {
-    await _analyticsClient.logEvent(
+    _track(
       AnalyticsEvents.authChoiceSelected,
       properties: {AnalyticsEvents.propMethod: 'guest'},
     );
     await ref.read(authStateProvider.notifier).continueAsGuest();
-    await _analyticsClient.logEvent(
+    _track(
       AnalyticsEvents.authCompleted,
       properties: {
         AnalyticsEvents.propMethod: 'guest',
@@ -120,14 +143,9 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _openPasswordReset() async {
-    final email = _emailController.text.trim();
-    final uri = Uri.https(
-      'lythaus.co',
-      '/forgot-password',
-      email.isEmpty ? null : {'email': email},
-    );
+    final uri = Uri.https('lythaus.co', '/forgot-password');
     try {
-      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final opened = await _launch(uri);
       if (!opened && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to open password recovery.')),
@@ -142,14 +160,9 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _openResendVerification() async {
-    final email = _emailController.text.trim();
-    final uri = Uri.https(
-      'lythaus.co',
-      '/resend-verification',
-      email.isEmpty ? null : {'email': email},
-    );
+    final uri = Uri.https('lythaus.co', '/resend-verification');
     try {
-      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final opened = await _launch(uri);
       if (!opened && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to open email verification.')),
@@ -164,16 +177,8 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _handleResendVerificationEmail() async {
-    final email = _emailController.text.trim();
-    if (!_isValidEmail(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid email address first.')),
-      );
-      return;
-    }
-
     setState(() => _isRecoveryActionLoading = true);
-    await _analyticsClient.logEvent(
+    _track(
       AnalyticsEvents.authStarted,
       properties: {AnalyticsEvents.propMethod: 'resend_verification'},
     );
@@ -185,11 +190,12 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _openSignup() async {
-    final opened = await launchUrl(
-      _signupUri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!opened && mounted) {
+    try {
+      if (await _launch(_signupUri)) return;
+    } catch (_) {
+      // The bounded launch failure is reported below.
+    }
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Unable to open account creation.')),
       );
@@ -200,7 +206,9 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final error = authState.hasError
-        ? 'Unable to sign in. Check your details and connection, then try again.'
+        ? (authState.error is AuthFailure
+              ? (authState.error! as AuthFailure).message
+              : 'Unable to sign in. Check your details and connection, then try again.')
         : null;
     final isBusy = authState.isLoading || _isRecoveryActionLoading;
     return ReadingPane(

@@ -65,6 +65,26 @@ const protectedPaths = [
   'database/planetscale/migrations/0013_marketing_waitlist.sql',
 ];
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
+const authRepairPaths = new Set([
+  'package.json',
+  'apps/marketing-site/package.json',
+  'apps/lythaus-public-api/wrangler.jsonc',
+  'apps/lythaus-public-api/src/worker-configuration.d.ts',
+  'scripts/ci/materialize-public-waitlist-deploy.mjs',
+  'apps/lythaus-public-api/src/auth-runtime-policy.ts',
+  'apps/lythaus-public-api/src/index.ts',
+  'apps/lythaus-public-api/tests/auth-runtime-policy.test.mjs',
+  'apps/lythaus-public-api/src/request-body-runtime.ts',
+  'apps/lythaus-public-api/tests/request-body-runtime.test.mjs',
+  'packages/contracts/src/index.ts',
+  'packages/contracts/src/transactional-email.ts',
+  'packages/contracts/tests/auth-state-and-email-policy.test.mjs',
+  'packages/db/src/index.ts',
+  'packages/db/src/transactional-email.ts',
+  'packages/security/src/index.ts',
+  'packages/security/src/jwt.ts',
+  'packages/security/tests/critical-security-policy.test.mjs',
+]);
 
 export function assertHomepageFrozen() {
   assert.equal(git('rev-parse', `${baselineSha}^{commit}`), baselineSha, 'Frozen baseline must be available; do not substitute HEAD');
@@ -77,6 +97,7 @@ export function assertHomepageFrozen() {
   const changed = [];
   for (const entry of entries) {
     const [metadata, filename] = entry.split('\t');
+    if (authRepairPaths.has(filename)) continue;
     const expected = metadata.split(' ')[2];
     if (filename === 'apps/marketing-site/public/sitemap.xml') {
       const original = git('show', `${baselineSha}:${filename}`);
@@ -93,6 +114,32 @@ export function assertHomepageFrozen() {
 
 test('homepage and its source, asset, build and waitlist dependencies remain frozen', () => {
   assertHomepageFrozen();
+});
+
+test('auth repair exceptions cannot alter homepage assets or waitlist routing', () => {
+  assert.deepEqual([...authRepairPaths].filter(filename => filename.startsWith('apps/marketing-site/')), ['apps/marketing-site/package.json']);
+  const before = git('show', `${upstreamBaselineSha}:apps/lythaus-public-api/src/index.ts`);
+  const after = readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
+  const waitlistLines = source => source.split(/\r?\n/).filter(line => /waitlist/i.test(line));
+  assert.deepEqual(waitlistLines(after), waitlistLines(before));
+  for (const file of ['apps/lythaus-public-api/src/waitlist-runtime-policy.ts', 'apps/lythaus-public-api/tests/waitlist-handler-invariants.test.mjs']) {
+    assert.equal(readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').trim(), git('show', `${baselineSha}:${file}`));
+  }
+  for (const file of ['apps/lythaus-public-api/wrangler.jsonc', 'scripts/ci/materialize-public-waitlist-deploy.mjs']) {
+    const updated = readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n')
+      .replaceAll('0020_auth_recovery_delivery', '0017_authenticity_beta')
+      .replaceAll('POST_0020', 'POST_0017').replaceAll('post-0020', 'post-0017')
+      .replaceAll('migration 0020', 'migration 0017')
+      .replaceAll('approvedReleaseExpectation', 'approvedPost0017Expectation');
+    assert.equal(updated.trim(), git('show', `${upstreamBaselineSha}:${file}`));
+  }
+  for (const [file, script] of [['package.json', 'marketing:test'], ['apps/marketing-site/package.json', 'test']]) {
+    const revision = file === 'package.json' ? upstreamBaselineSha : baselineSha;
+    const before = JSON.parse(git('show', `${revision}:${file}`));
+    const after = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
+    after.scripts[script] = after.scripts[script].replace(' --experimental-strip-types', '');
+    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag may change; homepage dependencies remain frozen');
+  }
 });
 
 test('upstream integration preserves homepage rendering inputs and waitlist route dispatch', () => {

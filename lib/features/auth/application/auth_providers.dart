@@ -2,21 +2,20 @@
 
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/application/session_platform.dart';
 import 'package:lythaus/features/auth/application/invite_redeem_service.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 
 final enhancedAuthServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(
-    secureStorage: const FlutterSecureStorage(),
-    httpClient: http.Client(),
-  );
+  return AuthService(secureStorage: const FlutterSecureStorage());
 });
 
 final inviteRedeemServiceProvider = Provider<InviteRedeemService>((ref) {
@@ -36,10 +35,20 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   AuthStateNotifier(this._ref, this._authService)
     : super(const AsyncValue.loading()) {
     _loadCurrentUser();
+    _otherTabSignOut = browserSignOutEvents().listen((_) {
+      if (!mounted) return;
+      _operation += 1;
+      unawaited(_authService.clearAfterOtherTabSignOut());
+      state = const AsyncValue.data(null);
+      _bumpTokenVersion();
+    });
   }
 
   final Ref _ref;
   final AuthService _authService;
+  int _operation = 0;
+  StreamSubscription<void>? _otherTabSignOut;
+  bool _current(int operation) => mounted && operation == _operation;
 
   void _bumpTokenVersion() {
     final notifier = _ref.read(tokenVersionProvider.notifier);
@@ -47,84 +56,125 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   void setUser(User user) {
+    _operation += 1;
     _ref.read(guestModeProvider.notifier).state = false;
     state = AsyncValue.data(user);
     _bumpTokenVersion();
   }
 
   Future<void> _loadCurrentUser() async {
+    final operation = ++_operation;
     try {
-      state = AsyncValue.data(await _authService.getCurrentUser());
+      final user = await _authService.getCurrentUser();
+      if (!_current(operation)) return;
+      state = AsyncValue.data(user);
     } catch (error, stackTrace) {
+      if (!_current(operation)) return;
       state = AsyncValue.error(error, stackTrace);
     }
   }
 
   Future<void> signInWithEmail(String email, String password) async {
+    final operation = ++_operation;
     try {
       _ref.read(guestModeProvider.notifier).state = false;
       state = const AsyncValue.loading();
       final user = await _authService.loginWithEmail(email, password);
+      if (!_current(operation)) return;
       state = AsyncValue.data(user);
       _bumpTokenVersion();
     } on AuthFailure catch (error, stackTrace) {
+      if (!_current(operation)) return;
       state = AsyncValue.error(error, stackTrace);
     } catch (error, stackTrace) {
+      if (!_current(operation)) return;
       state = AsyncValue.error(
-        AuthFailure.serverError('Email sign-in failed: ${error.toString()}'),
+        AuthFailure.serverError('Unable to sign in. Please try again.'),
         stackTrace,
       );
     }
   }
 
   Future<void> refreshToken() async {
+    final operation = ++_operation;
     try {
       if (!await _authService.refreshSession()) {
         throw AuthFailure.invalidCredentials('Session expired');
       }
+      if (!_current(operation)) return;
       _bumpTokenVersion();
     } on AuthFailure catch (error, stackTrace) {
+      if (!_current(operation)) return;
       state = AsyncValue.error(error, stackTrace);
     } catch (error, stackTrace) {
+      if (!_current(operation)) return;
       state = AsyncValue.error(
-        AuthFailure.serverError('Token refresh failed: ${error.toString()}'),
+        AuthFailure.serverError(
+          'Unable to refresh your session. Please sign in again.',
+        ),
         stackTrace,
       );
     }
   }
 
   Future<void> signOut() async {
+    final operation = ++_operation;
     _ref.read(guestModeProvider.notifier).state = false;
+    state = const AsyncValue.data(null);
+    _bumpTokenVersion();
     try {
       await _authService.logout();
     } finally {
-      state = const AsyncValue.data(null);
-      _bumpTokenVersion();
+      if (_current(operation)) {
+        state = _authService.remoteLogoutConfirmed
+            ? const AsyncValue.data(null)
+            : AsyncValue.error(
+                AuthFailure.networkError(
+                  'Signed out here. The server session could not be revoked yet; reconnect and sign out again.',
+                ),
+                StackTrace.current,
+              );
+        _bumpTokenVersion();
+      }
     }
   }
 
   Future<void> continueAsGuest() async {
+    final operation = ++_operation;
     try {
       await _authService.logout();
     } catch (_) {
       // Guest mode remains available when remote logout is unavailable.
     }
+    if (!_current(operation)) return;
     _ref.read(guestModeProvider.notifier).state = true;
     state = const AsyncValue.data(null);
     _bumpTokenVersion();
   }
 
   Future<void> validateToken() async {
+    final operation = ++_operation;
     try {
       if (!await _authService.validateAndRefreshToken()) {
+        if (!_current(operation)) return;
         state = const AsyncValue.data(null);
       } else {
-        state = AsyncValue.data(await _authService.getCurrentUser());
+        final user = await _authService.getCurrentUser();
+        if (!_current(operation)) return;
+        state = AsyncValue.data(user);
       }
       _bumpTokenVersion();
     } catch (error, stackTrace) {
+      if (!_current(operation)) return;
       state = AsyncValue.error(error, stackTrace);
     }
+  }
+
+  @override
+  void dispose() {
+    _operation += 1;
+    unawaited(_otherTabSignOut?.cancel());
+    super.dispose();
   }
 }
 

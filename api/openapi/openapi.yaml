@@ -354,6 +354,15 @@ paths:
   /auth/email:
     post:
       operationId: authEmail
+      parameters:
+        - name: X-Lythaus-Auth-Transport
+          in: header
+          description: Browser clients send cookie-v1 with credentials included and an exact allowed Origin. Refresh credentials use an HttpOnly Secure SameSite=Strict host-only cookie; native and older clients retain the JSON token transport. Never persist browser refresh or access credentials in Web Storage.
+          schema: { type: string, enum: [cookie-v1] }
+        - name: Idempotency-Key
+          in: header
+          description: Random per-operation key for registration or resend. Replaying the same accepted payload does not reuse Turnstile or mint another challenge. Ambiguous outcomes return 409; login responses are never cached.
+          schema: { type: string, minLength: 8, maxLength: 128 }
       summary: Register, sign in, or resend email verification
       description: >
         Registers an email account, signs in a verified account, or resends a
@@ -387,6 +396,7 @@ paths:
                 value:
                   mode: resend_verification
                   email: alice@example.com
+                  turnstileToken: turnstile_verified_token
       responses:
         '200':
           description: Authenticated token response
@@ -412,7 +422,6 @@ paths:
                 registration:
                   value:
                     state: verification_required
-                    userId: 018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a
                 resend:
                   value:
                     state: verification_required
@@ -429,11 +438,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: The email account already exists.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: './product-integrity.yaml#/components/responses/IdempotencyConflict'
         '429':
           description: Rate limit enforced
           content:
@@ -564,6 +569,11 @@ paths:
     post:
       operationId: authRefresh
       summary: Rotate a refresh token
+      description: Browser cookie-v1 transport requires an allowed Origin, credentials included, and an empty JSON object. Native clients supply the opaque token. Refresh credentials rotate; reused revoked credentials revoke their family.
+      parameters:
+        - name: X-Lythaus-Auth-Transport
+          in: header
+          schema: { type: string, enum: [cookie-v1] }
       tags:
         - Auth
       security: []
@@ -608,9 +618,25 @@ paths:
     post:
       operationId: authLogout
       summary: Revoke all active sessions for the authenticated user
+      description: Native clients may send their refresh credential to revoke sessions even after access-token expiry; bearer-only logout remains supported for deployed clients. Browser clients send cookie-v1 with credentials included, an exact allowed Origin and an empty JSON object. This globally revokes the account's sessions, not only this device, and expires the refresh cookie. Local sign-out or HTTP 401 alone does not prove server revocation during an outage.
+      parameters:
+        - name: X-Lythaus-Auth-Transport
+          in: header
+          schema: { type: string, enum: [cookie-v1] }
       tags: [Auth]
       security:
         - bearerAuth: []
+        - refreshCookie: []
+        - {}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                refreshToken: { type: string, minLength: 32, maxLength: 256, writeOnly: true }
       responses:
         '200':
           description: All active refresh families and sessions were revoked.
@@ -630,7 +656,11 @@ paths:
     post:
       operationId: authPasswordResetRequest
       summary: Request an opaque password reset message
-      description: Always returns the same neutral state so account existence is not disclosed.
+      description: Valid accepted requests return the same neutral state for known, unknown and restricted accounts. This proves intake only, not provider acceptance or mailbox delivery. Eligible pending or credentialless legacy accounts receive mailbox-owned credential setup on their existing ID. Dependency failures are not reported as delivered mail.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema: { type: string, minLength: 8, maxLength: 128 }
       tags: [Auth]
       security: []
       requestBody:
@@ -651,7 +681,7 @@ paths:
                   turnstileToken: turnstile-token
       responses:
         '202':
-          description: A reset message was issued if the account is eligible.
+          description: Recovery intake accepted; this does not assert that a message was sent or delivered.
           content:
             application/json:
               schema:
@@ -668,6 +698,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ValidationErrorResponse' }
+        '409':
+          $ref: './product-integrity.yaml#/components/responses/IdempotencyConflict'
         '429':
           description: Neutral authentication rate limit.
           content:
@@ -688,8 +720,8 @@ paths:
               additionalProperties: false
               required: [token, password]
               properties:
-                token: { type: string, minLength: 32, writeOnly: true }
-                password: { type: string, minLength: 12, maxLength: 128, writeOnly: true }
+                token: { type: string, minLength: 32, maxLength: 256, writeOnly: true }
+                password: { type: string, minLength: 15, maxLength: 128, writeOnly: true, description: 'Unicode code points; no trimming or normalization. Screened against compromised passwords before token consumption.' }
       responses:
         '200':
           description: Password reset completed and prior sessions revoked.
@@ -1333,6 +1365,11 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1users~1{userId}~1status'
 components:
   securitySchemes:
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-lythaus_refresh
+      description: HttpOnly Secure SameSite=Strict host-only refresh credential; mutations additionally require cookie-v1 and an exact allowed Origin.
     bearerAuth:
       type: http
       scheme: bearer
@@ -2051,7 +2088,6 @@ components:
       additionalProperties: false
       required:
         - accessToken
-        - refreshToken
         - tokenType
         - expiresIn
       properties:
@@ -2060,7 +2096,10 @@ components:
           description: Short-lived JWT bearer token (15 minutes).
         refreshToken:
           type: string
-          description: Rotating opaque refresh token.
+          description: Rotating opaque refresh token, only in native/legacy transport. Never returned to cookie-v1 clients.
+        sessionTransport:
+          type: string
+          enum: [cookie-v1]
         tokenType:
           type: string
           enum: [Bearer]
@@ -2076,28 +2115,26 @@ components:
         state:
           type: string
           enum: [verification_required]
-        userId:
-          type: string
-          format: uuid
     EmailAuthRequest:
       description: Email registration, login, or verification-resend request.
       type: object
       additionalProperties: false
       required:
-        - mode
         - email
       properties:
         mode:
           type: string
           enum: [login, register, resend_verification]
+          default: login
         email:
           type: string
           format: email
           maxLength: 254
         password:
           type: string
-          minLength: 12
+          minLength: 1
           maxLength: 128
+          description: Login verifies existing 12–14 character credentials without imposing the new-creation minimum. Registration requires 15–128 Unicode code points, preserved exactly.
           writeOnly: true
         turnstileToken:
           type: string
@@ -2107,18 +2144,28 @@ components:
         - title: Login
           properties:
             mode: { type: string, enum: [login] }
+          required: [mode, password]
+        - title: Legacy login without mode
           required: [password]
+          not:
+            required: [mode]
         - title: Registration
           properties:
             mode: { type: string, enum: [register] }
-          required: [password, turnstileToken]
+            password: { type: string, minLength: 15, maxLength: 128, writeOnly: true }
+          required: [mode, password, turnstileToken]
         - title: Verification resend
           properties:
             mode: { type: string, enum: [resend_verification] }
+          required: [mode, turnstileToken]
     RefreshSessionRequest:
       oneOf:
         - $ref: '#/components/schemas/RefreshTokenRequest'
         - $ref: '#/components/schemas/LegacyRefreshTokenRequest'
+        - type: object
+          additionalProperties: false
+          maxProperties: 0
+          description: cookie-v1 only; refresh credential is supplied exclusively by the protected cookie.
     RefreshTokenRequest:
       type: object
       additionalProperties: false

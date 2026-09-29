@@ -73,6 +73,7 @@ export 'package:lythaus_api_client/src/model/appeal_reviewer_assignments.dart';
 export 'package:lythaus_api_client/src/model/appeal_reviewer_assignments_items_inner.dart';
 export 'package:lythaus_api_client/src/model/auth_jwks_get200_response.dart';
 export 'package:lythaus_api_client/src/model/auth_logout200_response.dart';
+export 'package:lythaus_api_client/src/model/auth_logout_request.dart';
 export 'package:lythaus_api_client/src/model/auth_password_reset_complete200_response.dart';
 export 'package:lythaus_api_client/src/model/auth_password_reset_complete_request.dart';
 export 'package:lythaus_api_client/src/model/auth_password_reset_request202_response.dart';

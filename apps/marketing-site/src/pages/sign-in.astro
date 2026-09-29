@@ -15,7 +15,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
     <div class="auth-intro">
       <span class="pill">Lythaus account</span>
       <h1 id="sign-in-title">Sign in to Lythaus.</h1>
-      <p>Use your verified email address and password to continue. A session is created by the Lythaus app after your credentials are accepted.</p>
+      <p>Use your verified email address and existing password. After sign-in, continue directly to the Lythaus app.</p>
     </div>
 
     <form
@@ -29,7 +29,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
       <input id="sign-in-email" name="email" type="email" autocomplete="email" maxlength="320" value={emailPrefill} required />
 
       <label for="sign-in-password">Password</label>
-      <input id="sign-in-password" name="password" type="password" autocomplete="current-password" maxlength="128" aria-describedby="sign-in-password-note" required />
+      <input id="sign-in-password" name="password" type="password" autocomplete="current-password" maxlength="256" aria-describedby="sign-in-password-note" required />
       <p class="auth-field-note" id="sign-in-password-note">Enter your existing password. Password policy applies when you create or change a password.</p>
 
       <a class="text-link auth-forgot-link" href="/forgot-password">Forgot password?</a>
@@ -45,12 +45,13 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
       </div>
 
       <p class="auth-footnote">Need an account? <a href="/signup">Create one</a>.</p>
-      <p class="auth-footnote"><a href="https://app.lythaus.co/login">Open the Lythaus app sign in</a> to establish your session.</p>
+      <p class="auth-footnote"><a href="https://app.lythaus.co/">Open the Lythaus app</a>.</p>
     </form>
   </section>
 
   {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
-  <script is:inline>
+  <script>
+    import { authFetch, withAuthDeadline, acceptsPassword, transportErrorMessage } from '../scripts/auth-request';
     const form = document.querySelector('[data-sign-in-form]');
     if (form instanceof HTMLFormElement) {
       const email = form.querySelector('#sign-in-email');
@@ -121,13 +122,15 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
       const requestToken = async () => {
         const rendered = widgetId !== undefined || renderTurnstile();
         if (!siteKey || !rendered || widgetId === undefined || !window.turnstile) throw new Error('turnstile_unavailable');
-        return new Promise((resolve, reject) => {
+        return withAuthDeadline(new Promise((resolve, reject) => {
           tokenResolve = resolve;
           tokenReject = reject;
           window.turnstile.execute(widgetId);
-        });
+        }));
       };
       const messageFor = (code) => {
+        const transportMessage = transportErrorMessage(code);
+        if (transportMessage) return transportMessage;
         if (code === 'turnstile_failed' || code === 'turnstile_required' || code === 'turnstile_unavailable') return 'We could not verify this request. Please try again.';
         if (code === 'rate_limit_exceeded') return 'Too many sign-in attempts. Please wait and try again.';
         return 'We could not sign you in. Check your details and try again.';
@@ -155,7 +158,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
         setStatus('Checking the request...', 'submitting');
         try {
           const turnstileToken = await requestToken();
-          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+          const response = await authFetch(`${apiBaseUrl}/api/auth/email`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ mode: 'resend_verification', email: email.value, turnstileToken }),
@@ -188,7 +191,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
           setStatus('Enter a valid email address.', 'error');
           return;
         }
-        if (!password.value) {
+        if (!acceptsPassword(password.value, 'login')) {
           password.setAttribute('aria-invalid', 'true');
           password.reportValidity();
           setStatus('Enter your password.', 'error');
@@ -201,19 +204,21 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
         setResendVisible(false);
         setStatus('Signing in...', 'submitting');
         try {
-          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+          const response = await authFetch(`${apiBaseUrl}/api/auth/email`, {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers: { 'content-type': 'application/json', 'x-lythaus-auth-transport': 'cookie-v1' },
             body: JSON.stringify({ mode: 'login', email: email.value, password: password.value }),
             cache: 'no-store',
-            credentials: 'omit',
+            credentials: 'include',
             referrerPolicy: 'no-referrer',
           });
           const body = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'request_failed');
-          const hasSession = Boolean(body.accessToken || body.access_token) && Boolean(body.refreshToken || body.refresh_token);
+          const hasSession = Boolean(body.accessToken) && body.sessionTransport === 'cookie-v1';
           if (!hasSession) throw new Error('request_failed');
-          setStatus('Your credentials were accepted. Open the Lythaus app to continue and establish your session there.', 'success');
+          password.value = '';
+          setStatus('Signed in. Opening the Lythaus app...', 'success');
+          window.location.assign('https://app.lythaus.co/');
         } catch (error) {
           const code = error instanceof Error ? error.message : 'request_failed';
           if (code === 'email_verification_required') {

@@ -1,13 +1,16 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/core/security/device_integrity.dart';
+import 'package:lythaus/core/security/device_security_service.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockDeviceIntegrityService extends Mock
     implements DeviceIntegrityService {}
+
+class _MockDeviceSecurityService extends Mock
+    implements DeviceSecurityService {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +19,103 @@ void main() {
     registerFallbackValue(RequestOptions(path: ''));
   });
 
+  group('CanonicalApiPathInterceptor', () {
+    for (final (baseUrl, path, expected) in [
+      (
+        'https://api.lythaus.co/api',
+        '/api/users/me',
+        'https://api.lythaus.co/api/users/me',
+      ),
+      (
+        'https://api.lythaus.co/api/',
+        '/api/users/me',
+        'https://api.lythaus.co/api/users/me',
+      ),
+      (
+        'https://api.lythaus.co/api',
+        '/feed/discover',
+        'https://api.lythaus.co/api/feed/discover',
+      ),
+      (
+        'https://api.lythaus.co',
+        '/api/users/me',
+        'https://api.lythaus.co/api/users/me',
+      ),
+      (
+        'https://api.lythaus.co/api',
+        '/api/users/me?limit=2',
+        'https://api.lythaus.co/api/users/me?limit=2',
+      ),
+      (
+        'https://api.lythaus.co/api',
+        'https://example.test/api/health',
+        'https://example.test/api/health',
+      ),
+    ]) {
+      test('$baseUrl + $path resolves exactly once', () async {
+        final dio = Dio(BaseOptions(baseUrl: baseUrl));
+        addTearDown(dio.close);
+        dio.interceptors.add(CanonicalApiPathInterceptor());
+        dio.interceptors.add(CanonicalApiPathInterceptor());
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              handler.resolve(
+                Response<String>(
+                  requestOptions: options,
+                  data: options.uri.toString(),
+                ),
+              );
+            },
+          ),
+        );
+        expect((await dio.get<String>(path)).data, expected);
+      });
+    }
+  });
+
   group('secureDioProvider', () {
+    test(
+      'platform fallback retains explicit integrity headers without logging payloads',
+      () async {
+        final legacy = _MockDeviceIntegrityService();
+        final current = _MockDeviceSecurityService();
+        when(
+          () => legacy.checkIntegrity(),
+        ).thenThrow(StateError('Platform unavailable'));
+        when(() => current.evaluateSecurity()).thenAnswer(
+          (_) async => DeviceSecurityState(
+            isRootedOrJailbroken: false,
+            isEmulator: false,
+            isDebugBuild: true,
+            lastCheckedAt: DateTime.utc(2026, 9, 29),
+          ),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            deviceIntegrityServiceProvider.overrideWithValue(legacy),
+            deviceSecurityServiceProvider.overrideWithValue(current),
+          ],
+        );
+        addTearDown(container.dispose);
+        final dio = container.read(secureDioProvider);
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              expect(options.headers['X-Device-Rooted'], 'false');
+              expect(options.headers['X-Device-Emulator'], 'false');
+              expect(options.headers['X-Device-Debug'], 'true');
+              handler.resolve(
+                Response<void>(requestOptions: options, statusCode: 200),
+              );
+            },
+          ),
+        );
+        await dio.get<void>('/feed/discover');
+        verify(() => current.evaluateSecurity()).called(1);
+      },
+    );
+
     test('creates Dio instance with correct base URL in debug mode', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
@@ -68,17 +167,12 @@ void main() {
       );
     });
 
-    test('includes logging interceptor in debug mode', () {
+    test('does not log credentials, response bodies or credential URLs', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       final dio = container.read(secureDioProvider);
-      if (kDebugMode) {
-        final hasLogInterceptor = dio.interceptors.any(
-          (i) => i is LogInterceptor,
-        );
-        expect(hasLogInterceptor, isTrue);
-      }
+      expect(dio.interceptors.whereType<LogInterceptor>(), isEmpty);
     });
   });
 

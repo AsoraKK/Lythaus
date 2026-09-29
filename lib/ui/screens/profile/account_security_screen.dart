@@ -57,7 +57,7 @@ class AccountSecurityScreen extends ConsumerWidget {
                       }
                     },
               icon: const Icon(Icons.logout),
-              label: const Text('Sign out on this device'),
+              label: const Text('Sign out of all sessions'),
             ),
           ],
         ),

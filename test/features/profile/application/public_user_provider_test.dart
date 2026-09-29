@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
@@ -20,6 +22,7 @@ void main() {
     when(
       () => dio.get<Map<String, dynamic>>(
         '/api/users/u1',
+        cancelToken: any(named: 'cancelToken'),
         options: any(named: 'options'),
       ),
     ).thenAnswer(
@@ -61,6 +64,7 @@ void main() {
     when(
       () => dio.get<Map<String, dynamic>>(
         '/api/users/u1',
+        cancelToken: any(named: 'cancelToken'),
         options: any(named: 'options'),
       ),
     ).thenAnswer(
@@ -85,11 +89,57 @@ void main() {
     expect(result.displayName, 'Guest Visible');
   });
 
+  test(
+    'discarding an authenticated profile cancels its pending request',
+    () async {
+      final dio = MockDio();
+      final entered = Completer<CancelToken>();
+      final response = Completer<Response<Map<String, dynamic>>>();
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          '/api/users/u1',
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer((invocation) {
+        entered.complete(
+          invocation.namedArguments[#cancelToken] as CancelToken,
+        );
+        return response.future;
+      });
+      final container = ProviderContainer(
+        overrides: [
+          secureDioProvider.overrideWithValue(dio),
+          jwtProvider.overrideWith((ref) async => 'synthetic-token'),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        publicUserProvider('u1'),
+        (_, _) {},
+      );
+      final cancelToken = await entered.future;
+      subscription.close();
+      await container.pump();
+      expect(cancelToken.isCancelled, isTrue);
+      response.complete(
+        Response(
+          requestOptions: RequestOptions(path: '/api/users/u1'),
+          data: {
+            'user': {'id': 'u1', 'displayName': 'Discarded'},
+          },
+        ),
+      );
+      await container.pump();
+    },
+  );
+
   test('publicUserProvider throws on invalid response', () async {
     final dio = MockDio();
     when(
       () => dio.get<Map<String, dynamic>>(
         '/api/users/u1',
+        cancelToken: any(named: 'cancelToken'),
         options: any(named: 'options'),
       ),
     ).thenAnswer(

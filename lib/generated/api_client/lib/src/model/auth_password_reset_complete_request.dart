@@ -12,12 +12,13 @@ part 'auth_password_reset_complete_request.g.dart';
 ///
 /// Properties:
 /// * [token]
-/// * [password]
+/// * [password] - Unicode code points; no trimming or normalization. Screened against compromised passwords before token consumption.
 @BuiltValue()
 abstract class AuthPasswordResetCompleteRequest implements Built<AuthPasswordResetCompleteRequest, AuthPasswordResetCompleteRequestBuilder> {
   @BuiltValueField(wireName: r'token')
   String get token;
 
+  /// Unicode code points; no trimming or normalization. Screened against compromised passwords before token consumption.
   @BuiltValueField(wireName: r'password')
   String get password;
 

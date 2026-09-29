@@ -38,6 +38,7 @@ export {
   type EmailRegistrationState,
 } from './auth-state-policy.ts';
 export { validateTurnstileResponse, type TurnstileSiteverifyResponse } from './turnstile-policy.ts';
+export { PASSWORD_POLICY, requirePasswordInput } from './password-policy.ts';
 
 export interface TransactionalEmailProvider {
   sendVerification(input: { to: string; token: string }): Promise<EmailDeliveryReference>;
