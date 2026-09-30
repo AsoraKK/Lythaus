@@ -70,6 +70,30 @@ test('every secondary route opts into its isolated layout without local styling'
   assert.match(layout, /noindex, nofollow, noarchive/);
 });
 
+test('marketing distinguishes plans, authorship, safety and staff appeals without rollout promises', () => {
+  const pages = ['index.astro', 'features/index.astro', 'about/index.astro', 'pricing/index.astro'];
+  for (const file of pages) {
+    const source = read('src/pages/' + file);
+    assert.match(source, /Join the waitlist/);
+    assert.match(source, /does not guarantee an invitation\s+or an access date/);
+    assert.doesNotMatch(source, /private beta|invite-only beta|Full access to all features|AI-powered moderation|sync seamlessly|No hidden algorithms|rewarded for their early support/);
+  }
+  for (const file of pages.slice(0, 3)) {
+    const source = read('src/pages/' + file);
+    assert.match(source, /authorised staff review appeals/);
+    assert.match(source, /rollout|development work/);
+    assert.match(source, /authorship/i);
+    assert.match(source, /harmful[- ]content/i);
+  }
+});
+
+test('approved pricing has no invented cadence, currency designation or paid entitlements', () => {
+  const source = read('src/pages/pricing/index.astro');
+  assert.match(source, /Free to join\. Benefits from \$5\./);
+  assert.doesNotMatch(source, /monthly|annually|per month|per year|one-time|USD|ZAR|full access|checkout/i);
+  assert.match(source, /Details of paid benefits will be shared when confirmed/);
+});
+
 test('contact has a real mail route and no unconnected submission form', () => {
   const contact = read('src/pages/contact/index.astro');
   assert.doesNotMatch(contact, /<form|<textarea|Send message/);

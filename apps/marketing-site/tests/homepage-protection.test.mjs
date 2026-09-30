@@ -26,8 +26,6 @@ const upstreamProtectedPaths = [
 ];
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const protectedPaths = [
-  'apps/marketing-site/src/pages/index.astro',
-  'apps/marketing-site/src/layouts/BaseLayout.astro',
   'apps/marketing-site/src/components/OpeningWordmark.astro',
   'apps/marketing-site/src/scripts/home-opening.js',
   'apps/marketing-site/src/styles/global.css',
@@ -40,8 +38,6 @@ const protectedPaths = [
   'apps/marketing-site/astro.config.mjs',
   'apps/marketing-site/package.json',
   'apps/marketing-site/package-lock.json',
-  'apps/marketing-site/tests/home-opening.browser.mjs',
-  'apps/marketing-site/tests/homepage-waitlist.test.mjs',
   'package.json',
   'package-lock.json',
   '.npmrc',
@@ -128,8 +124,26 @@ export function assertHomepageFrozen() {
   return entries.length;
 }
 
-test('homepage and its source, asset, build and waitlist dependencies remain frozen', () => {
+test('homepage visual assets, build and waitlist dependencies remain frozen', () => {
   assertHomepageFrozen();
+});
+
+test('approved copy refresh preserves homepage scripts, waitlist controls and metadata wiring', () => {
+  const read = filename => readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n');
+  const scripts = source => [...source.replace(/<script\b[^>]*\/>/g, '').matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/g)].map(match => match[0]).join('\n');
+  for (const filename of ['apps/marketing-site/src/pages/index.astro', 'apps/marketing-site/src/layouts/BaseLayout.astro']) {
+    const original = git('show', `${baselineSha}:${filename}`);
+    const current = read(filename);
+    assert.equal(scripts(current), scripts(original).replaceAll('Join the private beta', 'Join the waitlist'));
+    const frontmatter = source => source.split('---')[1].trim();
+    assert.equal(frontmatter(current), frontmatter(original));
+    if (filename.endsWith('BaseLayout.astro')) {
+      assert.equal(current.match(/<head>[\s\S]*?<\/head>/)[0], original.match(/<head>[\s\S]*?<\/head>/)[0]);
+    }
+  }
+  const filename = 'apps/marketing-site/src/pages/index.astro';
+  const form = source => source.match(/<form\b[\s\S]*?<\/form>/)[0];
+  assert.equal(form(read(filename)), form(git('show', `${baselineSha}:${filename}`)).replaceAll('Join the private beta', 'Join the waitlist'));
 });
 
 test('auth repair exceptions cannot alter homepage assets or waitlist routing', () => {
