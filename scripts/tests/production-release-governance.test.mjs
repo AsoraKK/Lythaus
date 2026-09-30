@@ -359,6 +359,10 @@ test('owner testing remains an AUTH_CRITICAL deployment without mailbox secrets 
     workersWorkflow.indexOf('- name: Stage candidate Worker versions at zero traffic'),
     workersWorkflow.indexOf('- name: Prove staged Public and Jobs transactional-email key compatibility'),
   );
+  const rollbackSnapshotStep = workersWorkflow.slice(
+    workersWorkflow.indexOf('- name: Preserve exact acceptance rollback snapshot across human windows'),
+    workersWorkflow.indexOf('\n      - name:', workersWorkflow.indexOf('- name: Preserve exact acceptance rollback snapshot across human windows') + 1),
+  );
   const ownerAssertion = workflow.slice(workflow.indexOf('- name: Assert owner testing remains uncertified'));
 
   assert.doesNotMatch(workerDispatchInputs, /owner_testing_deployment/);
@@ -372,6 +376,7 @@ test('owner testing remains an AUTH_CRITICAL deployment without mailbox secrets 
   assert.match(workersWorkflow, /PRODUCT_ACCEPTANCE - Collect generated candidate auth acceptance evidence[\s\S]*inputs\.owner_testing_deployment != true/);
   assert.match(workersWorkflow, /PRODUCT_ACCEPTANCE - Require generated candidate auth acceptance[\s\S]*inputs\.owner_testing_deployment != true/);
   assert.match(coordinatorActivation, /component_changed coordinator && \[\[ "\$OWNER_TESTING_DEPLOYMENT" != true \]\]/);
+  assert.match(rollbackSnapshotStep, /OWNER_TESTING_DEPLOYMENT: \$\{\{ inputs\.owner_testing_deployment \}\}/);
   assert.match(coordinatorActivation, /component_changed public/);
   assert.match(coordinatorActivation, /component_changed admin/);
   assert.match(workersWorkflow, /NOT_INSPECTED_OWNER_TEST/);

@@ -566,6 +566,7 @@ jobs:
       - name: Preserve exact acceptance rollback snapshot across human windows
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
           EXISTING_ACCEPTANCE_RUN_ID: ${{ inputs.acceptance_run_id }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
