@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { recoveryPlan, lockRecoveryAccount, findRecoveryUser, claimRegistrationAddress, establishVerifiedCredential, persistRecoveryIntake } from '../src/auth-recovery-policy.ts';
+import { recoveryPlan, recoverySupportReason, recoveryAddressReason, lockRecoveryAccount, findRecoveryUser, claimRegistrationAddress, establishVerifiedCredential, persistRecoveryIntake } from '../src/auth-recovery-policy.ts';
 
 const account = { id: 'synthetic', status: 'active', protected_identity: false, contact_ciphertext: 'encrypted', contact_key_version: 'v1', contact_lookup: 'synthetic-digest', contact_verified: true, credential_lookup: 'synthetic-digest', credential_verified: true };
 
@@ -62,5 +62,48 @@ test('credential establishment preserves the owner and revokes competing authori
 test('legacy setup requires trusted linkage and cannot claim protected/conflicting identities', () => {
   for (const override of [{ protected_identity: true }, { credential_lookup: 'conflicting-digest' }, { contact_ciphertext: null }, { contact_key_version: 'unknown' }, { contact_lookup: null }, { credential_lookup: null, contact_verified: false }]) {
     assert.equal(recoveryPlan({ ...account, ...override }), 'support_required');
+  }
+});
+
+test('every support branch records its exact reason without account data', async () => {
+  for (const [override, reason] of [
+    [{ protected_identity: true }, 'protected_administrative_identity'],
+    [{ contact_ciphertext: null }, 'missing_contact_data'],
+    [{ contact_lookup: null }, 'missing_contact_data'],
+    [{ contact_key_version: 'unsupported' }, 'unsupported_contact_key_version'],
+    [{ credential_lookup: 'conflict' }, 'credential_contact_mismatch'],
+    [{ credential_lookup: null, contact_verified: false }, 'missing_trusted_legacy_linkage'],
+  ]) {
+    const candidate = { ...account, ...override };
+    assert.equal(recoverySupportReason(candidate), reason);
+    assert.equal(recoveryPlan(candidate), 'support_required');
+    const calls = [];
+    const client = { query: async (sql, values) => { calls.push({sql,values}); return {rows:[],rowCount:1}; } };
+    const outcome = `support_required:${recoverySupportReason(candidate)}`;
+    assert.equal(await persistRecoveryIntake(client, 'synthetic-reference', async () => outcome), outcome);
+    assert.deepEqual(calls.at(-1).values.slice(1), [outcome, 'synthetic-reference']);
+    for (const privateValue of [account.id, account.contact_ciphertext, account.contact_lookup]) {
+      assert.ok(!JSON.stringify(calls).includes(`"${privateValue}"`));
+    }
+    assert.ok(!calls.some(call => /INSERT INTO identity\.|transactional_email_outbox/.test(call.sql)));
+  }
+  assert.equal(recoverySupportReason({ ...account, protected_identity:true, contact_ciphertext:null }), 'protected_administrative_identity');
+});
+
+test('decrypted address and request lookup failures remain distinct and fail closed', () => {
+  assert.equal(recoveryAddressReason(account, account.contact_lookup, 'conflicting-decryption'), 'decrypted_address_lookup_mismatch');
+  assert.equal(recoveryAddressReason(account, 'conflicting-request', account.contact_lookup), 'request_contact_lookup_mismatch');
+  assert.equal(recoveryAddressReason(account, account.contact_lookup, account.contact_lookup), undefined);
+});
+
+test('matching pending registrations can set credentials but protected or restricted ones cannot', async () => {
+  const pending = {...account, credential_verified:false, contact_verified:false};
+  assert.equal(recoverySupportReason(pending), undefined);
+  assert.equal(recoveryPlan(pending), 'credential_setup');
+  for (const override of [{protected_identity:true}, {status:'locked'}, {status:'suspended'}, {status:'deletion_pending'}, {credential_lookup:'conflicting'}]) {
+    const calls = [];
+    const client = {query:async sql => {calls.push(sql);return {rowCount:1};}};
+    await assert.rejects(establishVerifiedCredential(client, {...pending,...override}, {}), /verification_token_invalid/);
+    assert.deepEqual(calls, []);
   }
 });

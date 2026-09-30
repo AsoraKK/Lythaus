@@ -117,6 +117,23 @@ test('real PostgreSQL + real API handler: signup, mailbox-owned setup, cookie se
   const record = (await sql("SELECT u.id,c.verified_at FROM identity.users u JOIN identity.email_credentials c ON c.user_id=u.id WHERE c.email_lookup_hmac=decode($1,'base64')",[lookup])).rows[0];
   assert.equal(record.verified_at,null);
   assert.equal((await expectStatus(await request('email',{mode:'login',email,password:preregisteredPassword}),400)).error,'email_verification_required');
+  await sql("UPDATE identity.email_verification_tokens SET created_at=now()-interval '31 seconds' WHERE user_id=$1",[record.id]);
+  const recoveryKey=uuidv7(), suppliedReference=uuidv7();
+  const setupResponse=await request('password/reset/request',{email,turnstileToken:'password_reset_request'},
+    {headers:{'idempotency-key':recoveryKey,'x-correlation-id':suppliedReference}});
+  const setup=await expectStatus(setupResponse,202);
+  assert.equal(setup.state,'reset_if_eligible');
+  assert.notEqual(setup.correlationId,suppliedReference,'Anonymous callers cannot choose the support reference');
+  assert.equal(setupResponse.headers.get('x-correlation-id'),setup.correlationId);
+  const retryResponse=await request('password/reset/request',{email,turnstileToken:'unused-new-challenge'},
+    {headers:{'idempotency-key':recoveryKey}});
+  assert.deepEqual(await expectStatus(retryResponse,202),setup);
+  assert.equal(retryResponse.headers.get('x-correlation-id'),setup.correlationId);
+  const setupMessage=(await sql(`SELECT purpose,state,
+    EXISTS(SELECT 1 FROM identity.email_verification_tokens t WHERE t.id=o.challenge_id AND t.user_id=$2 AND t.consumed_at IS NULL AND t.superseded_at IS NULL) AS usable_challenge
+    FROM system.transactional_email_outbox o WHERE correlation_id=$1`,[setup.correlationId,record.id])).rows;
+  assert.deepEqual(setupMessage,[{purpose:'verification',state:'queued',usable_challenge:true}]);
+  assert.equal((await sql('SELECT count(*)::int n FROM identity.password_reset_tokens WHERE user_id=$1',[record.id])).rows[0].n,0);
   await relayTransactionalEmailOutbox(env);
   const initial = mailbox.find(message => message.to === email && message.subject.includes('Verify'));
   assert.ok(initial,'Local provider capture received verification');
@@ -204,7 +221,7 @@ test('legacy mailbox setup preserves the original user and restricted/unknown in
   await sql(`INSERT INTO identity.contact_emails(user_id,email_ciphertext,email_lookup_hmac,encryption_key_version,source_provider,verified_at)
     VALUES($1,convert_to($2,'utf8'),decode($3,'base64'),'v1','email',now())`,[id,encrypted.ciphertext,hmacLookup(email,env.PII_HMAC_KEY_V1)]);
   const neutral=await expectStatus(await request('password/reset/request',{email:`unknown-${uuidv7()}@example.invalid`,turnstileToken:'password_reset_request'}),202);
-  assert.deepEqual(await expectStatus(await request('password/reset/request',{email,turnstileToken:'password_reset_request'}),202),neutral);
+  assert.equal((await expectStatus(await request('password/reset/request',{email,turnstileToken:'password_reset_request'}),202)).state,neutral.state);
   assert.equal((await sql('SELECT count(*)::int AS n FROM identity.email_credentials WHERE user_id=$1',[id])).rows[0].n,0);
   await relayTransactionalEmailOutbox(env);
   const mail=mailbox.find(message=>message.to===email);
@@ -220,7 +237,7 @@ test('legacy mailbox setup preserves the original user and restricted/unknown in
   await sql("UPDATE identity.users SET status='suspended' WHERE id=$1",[id]);
   await expectStatus(await request('email',{mode:'login',email,password:'olderpass1234!'}),401);
   const before=mailbox.length;
-  assert.deepEqual(await expectStatus(await request('password/reset/request',{email,turnstileToken:'password_reset_request'}),202),neutral);
+  assert.equal((await expectStatus(await request('password/reset/request',{email,turnstileToken:'password_reset_request'}),202)).state,neutral.state);
   await relayTransactionalEmailOutbox(env);
   assert.equal(mailbox.length,before);
   assert.equal((await sql('SELECT status FROM identity.users WHERE id=$1',[id])).rows[0].status,'suspended');
@@ -234,10 +251,60 @@ test('corrupt account delivery data remains neutral and persists a failed intake
     VALUES($1,convert_to('invalid-encrypted-fixture','utf8'),decode($2,'base64'),'v1','email',now())`,[id,hmacLookup(email,env.PII_HMAC_KEY_V1)]);
   const correlation=uuidv7();
   const failed=await expectStatus(await request('password/reset/request',{email,turnstileToken:'password_reset_request'},{headers:{'x-correlation-id':correlation}}),202);
-  assert.deepEqual(failed,await expectStatus(await request('password/reset/request',{email:`unknown-${uuidv7()}@example.invalid`,turnstileToken:'password_reset_request'}),202));
-  assert.equal((await sql("SELECT reason_code FROM system.audit_events WHERE correlation_id=$1 AND action='auth.recovery.intake'",[correlation])).rows[0].reason_code,'failed');
+  assert.equal(failed.state,(await expectStatus(await request('password/reset/request',{email:`unknown-${uuidv7()}@example.invalid`,turnstileToken:'password_reset_request'}),202)).state);
+  assert.notEqual(failed.correlationId,correlation);
+  assert.equal((await sql("SELECT reason_code FROM system.audit_events WHERE correlation_id=$1 AND action='auth.recovery.intake'",[failed.correlationId])).rows[0].reason_code,'failed');
   assert.equal((await sql('SELECT count(*)::int n FROM identity.email_verification_tokens WHERE user_id=$1',[id])).rows[0].n,0);
   assert.equal((await sql('SELECT count(*)::int n FROM system.transactional_email_outbox WHERE contact_email_user_id=$1',[id])).rows[0].n,0);
+});
+
+test('real handler diagnoses each support blocker while keeping public intake neutral and issuing nothing',async t=>{
+  for(const [condition,reason] of [
+    ['protected','protected_administrative_identity'],
+    ['revoked_admin','protected_administrative_identity'],
+    ['missing_contact','missing_contact_data'],
+    ['unsupported_key','unsupported_contact_key_version'],
+    ['credential_conflict','credential_contact_mismatch'],
+    ['untrusted_legacy','missing_trusted_legacy_linkage'],
+    ['decrypted_mismatch','decrypted_address_lookup_mismatch'],
+    ['restricted',undefined],
+    ['conflicting_owners',undefined],
+  ]) await t.test(condition,async()=>{
+    fixtureIp=`2001:db8::${randomBytes(2).toString('hex')}`;
+    const email=`synthetic-${uuidv7()}@example.invalid`,id=uuidv7();
+    const status=condition==='restricted'?'suspended':'relink_required';
+    await sql('INSERT INTO identity.users(id,status) VALUES($1,$2)',[id,status]);
+    const encrypted=await encryptField(condition==='decrypted_mismatch'?`different-${uuidv7()}@example.invalid`:email,env.PII_ENCRYPTION_KEY_V1,'v1');
+    const lookup=hmacLookup(email,env.PII_HMAC_KEY_V1);
+    if(condition!=='missing_contact') await sql(`INSERT INTO identity.contact_emails(user_id,email_ciphertext,email_lookup_hmac,encryption_key_version,source_provider,verified_at)
+      VALUES($1,convert_to($2,'utf8'),decode($3,'base64'),$4,'email',$5)`,
+      [id,encrypted.ciphertext,lookup,condition==='unsupported_key'?'v2':'v1',condition==='untrusted_legacy'?null:new Date()]);
+    if(['missing_contact','credential_conflict','conflicting_owners'].includes(condition)) {
+      const credentialOwner=condition==='conflicting_owners'?uuidv7():id;
+      if(credentialOwner!==id) await sql("INSERT INTO identity.users(id,status) VALUES($1,'active')",[credentialOwner]);
+      await sql(`INSERT INTO identity.email_credentials(user_id,email_ciphertext,email_lookup_hmac,encryption_key_version,hmac_key_version,password_hash)
+        VALUES($1,convert_to($2,'utf8'),decode($3,'base64'),'v1','v1','{}'::jsonb)`,
+        [credentialOwner,encrypted.ciphertext,condition==='credential_conflict'?hmacLookup(`other-${uuidv7()}@example.invalid`,env.PII_HMAC_KEY_V1):lookup]);
+    }
+    if(['protected','revoked_admin'].includes(condition)) await sql(`INSERT INTO identity.admin_memberships(user_id,access_subject_hmac,role,active,revoked_at)
+      VALUES($1,decode($2,'base64'),'administrator',$3,$4)`,[id,randomBytes(32).toString('base64'),condition==='protected',condition==='revoked_admin'?new Date():null]);
+    const before=(await sql(`SELECT u.status,u.token_version,c.password_hash,c.verified_at,e.verified_at AS contact_verified_at
+      FROM identity.users u LEFT JOIN identity.email_credentials c ON c.user_id=u.id LEFT JOIN identity.contact_emails e ON e.user_id=u.id WHERE u.id=$1`,[id])).rows[0];
+    const response=await request('password/reset/request',{email,turnstileToken:'password_reset_request'});
+    const body=await expectStatus(response,202);
+    assert.deepEqual(Object.keys(body).sort(),['correlationId','state']);
+    assert.equal(body.state,'reset_if_eligible');
+    assert.equal(response.headers.get('x-correlation-id'),body.correlationId);
+    assert.equal((await sql("SELECT reason_code FROM system.audit_events WHERE correlation_id=$1 AND action='auth.recovery.intake'",[body.correlationId])).rows[0].reason_code,reason?`support_required:${reason}`:'suppressed');
+    const issued=(await sql(`SELECT
+      (SELECT count(*)::int FROM identity.email_verification_tokens WHERE user_id=$1) AS verification,
+      (SELECT count(*)::int FROM identity.password_reset_tokens WHERE user_id=$1) AS reset,
+      (SELECT count(*)::int FROM system.transactional_email_outbox WHERE correlation_id=$2) AS messages`,[id,body.correlationId])).rows[0];
+    assert.deepEqual(issued,{verification:0,reset:0,messages:0});
+    assert.deepEqual((await sql(`SELECT u.status,u.token_version,c.password_hash,c.verified_at,e.verified_at AS contact_verified_at
+      FROM identity.users u LEFT JOIN identity.email_credentials c ON c.user_id=u.id LEFT JOIN identity.contact_emails e ON e.user_id=u.id WHERE u.id=$1`,[id])).rows[0],before);
+    if(['protected','revoked_admin'].includes(condition)) assert.equal((await sql('SELECT count(*)::int n FROM identity.admin_memberships WHERE user_id=$1',[id])).rows[0].n,1);
+  });
 });
 
 test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixture, exact candidate and v2 observer', async () => {

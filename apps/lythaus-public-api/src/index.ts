@@ -12,7 +12,7 @@ import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './au
 import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction.ts';
 import { expiredRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
 import { requireUncompromisedPassword } from './auth-password-screen.ts';
-import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryPlan } from './auth-recovery-policy.ts';
+import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
 import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
@@ -409,7 +409,8 @@ async function queueRecoveryEmail(request: Request, env: Env, lookup: string, in
     const userId = await findRecoveryUser(client, lookup);
     const account = userId ? await lockRecoveryAccount(client, userId) : undefined;
     const plan = recoveryPlan(account);
-    if (!account || plan === 'suppressed' || plan === 'support_required') return plan;
+    if (!account || plan === 'suppressed') return plan;
+    if (plan === 'support_required') return `support_required:${recoverySupportReason(account)}`;
     if (intent === 'verification' && plan === 'reset_password') return 'suppressed';
     const purpose = plan === 'credential_setup' ? 'verification' : 'password_reset';
     const table = purpose === 'verification' ? 'identity.email_verification_tokens' : 'identity.password_reset_tokens';
@@ -420,7 +421,8 @@ async function queueRecoveryEmail(request: Request, env: Env, lookup: string, in
     const recipient = normalizeEmailAddress(await decryptField({
       ciphertext: account.contact_ciphertext!, encryptionKeyVersion: account.contact_key_version!,
     }, secrets.encryptionKey));
-    if (hmacLookup(recipient, secrets.hmacKey) !== account.contact_lookup || account.contact_lookup !== lookup) return 'support_required';
+    const addressReason = recoveryAddressReason(account, lookup, hmacLookup(recipient, secrets.hmacKey));
+    if (addressReason) return `support_required:${addressReason}`;
     const token = randomToken(32);
     const challengeId = uuidv7();
     await client.query(`UPDATE ${table} SET superseded_at=now() WHERE user_id=$1 AND consumed_at IS NULL AND superseded_at IS NULL`, [account.id]);
@@ -776,7 +778,7 @@ async function requestPasswordReset(request: Request, env: Env): Promise<Respons
   const lookup = hmacLookup(email, secrets.hmacKey);
   await enforceRateLimit(request, env, 'auth-address:password_reset', 10, lookup);
   await queueRecoveryEmail(request, env, lookup, 'recovery', acceptance);
-  return privateResponse(request, env, { state: 'reset_if_eligible' }, { status: 202 });
+  return privateResponse(request, env, { state: 'reset_if_eligible', correlationId: correlationId(request) }, { status: 202 });
 }
 
 async function completePasswordReset(request: Request, env: Env): Promise<Response> {
@@ -3043,12 +3045,16 @@ async function authIntake(request: Request, env: Env, reset = false): Promise<Re
     request, payload, scope: reset ? 'password_reset' : payload.mode!, candidateVersion: env.WORKER_VERSION.id,
     key: env.PII_HMAC_KEY_V1 ?? '', database: env.DB_APP_FRESH, work: action,
   });
-  return privateResponse(request, env, await result.json(), { status: result.status });
+  const body = await result.json() as { correlationId?: string };
+  const replay = privateResponse(request, env, body, { status: result.status });
+  if (body.correlationId) replay.headers.set('x-correlation-id', body.correlationId);
+  return replay;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const id = correlationId(request);
+    const resetRequest = /^(?:\/api)?\/auth\/password\/reset\/request$/.test(new URL(request.url).pathname);
+    const id = resetRequest ? crypto.randomUUID() : correlationId(request);
     const headers = new Headers(request.headers);
     headers.set('x-correlation-id', id);
     request = new Request(request, { headers });

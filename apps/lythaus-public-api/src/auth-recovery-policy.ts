@@ -28,12 +28,24 @@ export interface RecoveryAccount {
   credential_verified: boolean;
 }
 
+export function recoverySupportReason(account: RecoveryAccount): string | undefined {
+  if (account.protected_identity) return 'protected_administrative_identity';
+  if (!account.contact_ciphertext || !account.contact_lookup) return 'missing_contact_data';
+  if (account.contact_key_version !== 'v1') return 'unsupported_contact_key_version';
+  if (account.credential_lookup && account.credential_lookup !== account.contact_lookup) return 'credential_contact_mismatch';
+  if (!account.credential_lookup && !account.contact_verified) return 'missing_trusted_legacy_linkage';
+  return undefined;
+}
+
+export function recoveryAddressReason(account: RecoveryAccount, lookup: string, decryptedLookup: string): string | undefined {
+  if (decryptedLookup !== account.contact_lookup) return 'decrypted_address_lookup_mismatch';
+  if (account.contact_lookup !== lookup) return 'request_contact_lookup_mismatch';
+  return undefined;
+}
+
 export function recoveryPlan(account: RecoveryAccount | undefined): 'reset_password' | 'credential_setup' | 'suppressed' | 'support_required' {
   if (!account || !['active', 'relink_required'].includes(account.status)) return 'suppressed';
-  if (account.protected_identity) return 'support_required';
-  if (!account.contact_ciphertext || !account.contact_lookup || account.contact_key_version !== 'v1') return 'support_required';
-  if (account.credential_lookup && account.credential_lookup !== account.contact_lookup) return 'support_required';
-  if (!account.credential_lookup && !account.contact_verified) return 'support_required';
+  if (recoverySupportReason(account)) return 'support_required';
   return account.credential_verified && account.status === 'active' ? 'reset_password' : 'credential_setup';
 }
 

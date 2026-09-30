@@ -39,7 +39,8 @@ for(const [engine,type] of Object.entries({chromium,webkit})) for(const viewport
       window.turnstile={render:(_target,options)=>{const id=sequence++;widgets.set(id,options);return id;},
         execute:id=>queueMicrotask(()=>widgets.get(id).callback(`local-fixture:${widgets.get(id).action}`)),reset:()=>{},remove:id=>widgets.delete(id)};
     });
-    let loginStatus=400, verifyCount=0, resetCount=0, proxyError=false;
+    let loginStatus=400, verifyCount=0, resetCount=0, proxyError=false, resetRequestError=false;
+    const resetReference='3b8a5c5c-07c8-4b55-a0a5-7a66235648cc';
     await page.route('https://api.lythaus.co/**',async route=>{
       const request=route.request();const body=request.postDataJSON();
       requests.push({url:request.url(),body,headers:request.headers()});
@@ -49,7 +50,10 @@ for(const [engine,type] of Object.entries({chromium,webkit})) for(const viewport
         status=loginStatus;result=status===200?{accessToken:'synthetic-only',sessionTransport:'cookie-v1',expiresIn:900}:{error:'email_verification_required'};
       }else if(request.url().endsWith('/email/verify')){
         status=verifyCount++===0?200:400;result=status===200?{state:'verified'}:{error:'verification_token_invalid'};
-      }else if(request.url().endsWith('/password/reset/request')) result={state:'reset_if_eligible'};
+      }else if(request.url().endsWith('/password/reset/request')) {
+        status=resetRequestError?429:202;
+        result=resetRequestError?{error:'rate_limit_exceeded',correlationId:resetReference}:{state:'reset_if_eligible',correlationId:resetReference};
+      }
       else if(request.url().endsWith('/password/reset/complete')){
         status=resetCount++===0?200:400;result=status===200?{state:'password_reset_completed'}:{error:'reset_token_invalid'};
       }
@@ -79,6 +83,12 @@ for(const [engine,type] of Object.entries({chromium,webkit})) for(const viewport
     await page.locator('[data-reset-status]').filter({hasText:'accepted'}).waitFor();
     assert.equal(requests.at(-1).body.turnstileToken,'local-fixture:password_reset_request');
     assert.ok(requests.at(-1).headers['idempotency-key']);
+    assert.ok((await page.locator('[data-reset-status]').innerText()).includes(`Support reference: ${resetReference}`));
+    resetRequestError=true;
+    await page.getByRole('button',{name:'Send reset link',exact:true}).click();
+    await page.locator('[data-reset-status]').filter({hasText:'Too many requests'}).waitFor();
+    assert.ok((await page.locator('[data-reset-status]').innerText()).includes(`Support reference: ${resetReference}`));
+    resetRequestError=false;
     await navigate('/signup','Create your account');
     await page.locator('#signup-email').fill('synthetic@example.invalid');
     await page.locator('#signup-password').fill('🙂'.repeat(8));
