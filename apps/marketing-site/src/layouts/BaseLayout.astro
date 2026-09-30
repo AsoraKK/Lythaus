@@ -66,12 +66,12 @@ import homeOpening from '../scripts/home-opening.js?raw';
       <nav class="site-nav" aria-label="Main navigation">
         {homePage ? (
           <>
-            <a href="#problem" data-nav-link="problem">Problem</a>
-            <a href="#platform" data-nav-link="platform">Platform</a>
-            <a href="#authorship" data-nav-link="authorship">Authorship</a>
-            <a href="#discovery" data-nav-link="discovery">Discovery</a>
-            <a href="#reputation" data-nav-link="reputation">Reputation</a>
-            <a href="#why-lythaus" data-nav-link="why-lythaus">Why Lythaus</a>
+            <a href="#platform" data-nav-link="platform">Share</a>
+            <a href="#discovery" data-nav-link="discovery">Conversations</a>
+            <a href="#reputation" data-nav-link="reputation">Rewards</a>
+            <a href="#authorship" data-nav-link="authorship">Trust</a>
+            <a href="/about">About</a>
+            <a href="/pricing">Pricing</a>
           </>
         ) : (
           <>
@@ -85,12 +85,12 @@ import homeOpening from '../scripts/home-opening.js?raw';
         <nav aria-label="Mobile navigation">
           {homePage ? (
             <>
-              <a href="#problem" data-nav-link="problem">Problem</a>
-              <a href="#platform" data-nav-link="platform">Platform</a>
-              <a href="#authorship" data-nav-link="authorship">Authorship</a>
-              <a href="#discovery" data-nav-link="discovery">Discovery</a>
-              <a href="#reputation" data-nav-link="reputation">Reputation</a>
-              <a href="#why-lythaus" data-nav-link="why-lythaus">Why Lythaus</a>
+              <a href="#platform" data-nav-link="platform">Share</a>
+              <a href="#discovery" data-nav-link="discovery">Conversations</a>
+              <a href="#reputation" data-nav-link="reputation">Rewards</a>
+              <a href="#authorship" data-nav-link="authorship">Trust</a>
+              <a href="/about">About</a>
+              <a href="/pricing">Pricing</a>
             </>
           ) : (
             <>
@@ -105,7 +105,7 @@ import homeOpening from '../scripts/home-opening.js?raw';
         <button class="mobile-nav-toggle" type="button" data-mobile-nav-toggle aria-controls="mobile-nav-panel" aria-expanded="false">
           Menu
         </button>
-        <a class="header-cta" href="/#waitlist">{homePage ? 'Join private beta' : 'Request invite'}</a>
+        <a class="header-cta" href="/#waitlist">Join the waitlist</a>
       </div>
     </header>
 
@@ -117,7 +117,7 @@ import homeOpening from '../scripts/home-opening.js?raw';
       <footer class="site-footer home-footer">
         <p>© 2026 Lythaus</p>
         <div class="footer-links">
-          <a href="#why-lythaus">Why Lythaus</a>
+          <a href="/about">About</a>
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
         </div>

@@ -96,7 +96,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
           try {
             assert.equal(await page.getByRole('heading', { level: 1, name: 'Lythaus', exact: true }).count(), 1);
             assert.equal(await page.locator('h1 svg').getAttribute('aria-hidden'), 'true');
-            assert.equal(await page.locator('.pitch-section').count(), 10);
+            assert.equal(await page.locator('.pitch-section').count(), 4);
             await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved');
             const elapsed = await page.evaluate(() => window.openingTimes.resolved - window.openingTimes.playing);
             assert.ok(elapsed >= 1750, 'Document loading must not consume the opening timeline');
@@ -175,7 +175,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
           await page.goto(origin + '/privacy');
           await page.goBack({ waitUntil: 'domcontentloaded' });
           await finished(page);
-          await page.getByRole('link', { name: 'Join the private beta', exact: true }).click();
+          await page.locator('.pitch-intro-support').getByRole('link', { name: 'Join the waitlist', exact: true }).click();
           assert.equal(new URL(page.url()).hash, '#waitlist');
           assert.ok(await page.locator('#waitlist').isVisible());
         } finally { await context.close(); }

@@ -10,7 +10,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 ---
 <BaseLayout
   title="For the living internet"
-  description="Lythaus is a human-first social platform for public-interest conversation, built around clear authorship, accountable participation and feeds you can understand and control."
+  description="Human ideas. Conversations worth having. Lythaus is building a social platform for original perspectives, thoughtful discussion and meaningful contributions."
   canonicalPath="/"
   absoluteTitle={true}
   homePage={true}
@@ -18,234 +18,110 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   <section class="pitch-intro" id="top" aria-labelledby="pitch-wordmark">
     <div class="pitch-intro-inner">
       <OpeningWordmark />
-      <p class="pitch-intro-statement">For the living internet.</p>
+      <p class="pitch-intro-statement">Human ideas. Conversations worth having.</p>
       <div class="pitch-intro-support">
-        <p class="pitch-lede">Lythaus is a human-first social platform for public-interest conversation, built around clear authorship, accountable participation and feeds you can understand and control.</p>
-        <a class="button primary" href="#waitlist">Join the private beta</a>
+        <p>For the living internet.</p>
+        <p class="pitch-lede">We’re building a social platform where people share original perspectives, discover thoughtful discussion, and earn recognition through meaningful contributions.</p>
+        <a class="button primary" href="#waitlist">Join the waitlist</a>
       </div>
     </div>
-  </section>
-
-  <section class="pitch-section pitch-problem" id="problem" aria-labelledby="problem-title">
-    <div class="pitch-section-meta">01 / THE PROBLEM</div>
-    <div class="pitch-problem-grid">
-      <div class="pitch-copy-column">
-        <h2 id="problem-title">We are losing sight of who is speaking and what is real.</h2>
-        <p class="pitch-lede">The internet has made it easier than ever to publish, connect and participate.</p>
-        <p>It has also become harder to know what is genuine.</p>
-      </div>
-      <div class="pitch-story-copy">
-        <p>AI-generated content can be produced at enormous scale. Bots imitate participation. Engagement systems reward outrage. Spam competes with original thought. Algorithms decide what reaches us, often without explaining why.</p>
-        <p>The result is not simply more content.</p>
-        <p>It is less certainty about who made it, why it reached you and whether the person behind it is willing to stand behind what they said.</p>
-      </div>
-    </div>
-    <p class="pitch-result">Lythaus is being built around a different set of incentives.</p>
-  </section>
-
-  <section class="pitch-section pitch-human-first" id="human-first" aria-labelledby="human-first-title">
-    <div class="pitch-section-meta">02 / HUMAN FIRST</div>
-    <h2 id="human-first-title">Built for humans.</h2>
-    <div class="pitch-story-copy pitch-story-copy--narrow">
-      <p>Lythaus is not anti-AI.</p>
-      <p>AI can be useful. We use it ourselves.</p>
-      <p>The distinction that matters is between assistance and substitution.</p>
-      <p>Public conversation carries more meaning when authorship is clear, contribution has accountability and people can distinguish human expression from synthetic generation.</p>
-      <p>That principle shapes how Lythaus approaches publishing, reputation and discovery.</p>
-    </div>
-    <dl class="pitch-authorship-list">
-      <div>
-        <dt>Human-authored</dt>
-        <dd>Original human contribution.</dd>
-      </div>
-      <div>
-        <dt>AI-assisted</dt>
-        <dd>Limited, disclosed assistance where permitted by Lythaus policy.</dd>
-      </div>
-      <div>
-        <dt>AI-generated</dt>
-        <dd>Not permitted for public publication.</dd>
-      </div>
-      <div>
-        <dt>Under review</dt>
-        <dd>Used when an authorship decision requires further review.</dd>
-      </div>
-    </dl>
-    <p class="pitch-result">No public confidence scores. No false precision. Just clearer authorship.</p>
   </section>
 
   <section class="pitch-section pitch-platform" id="platform" aria-labelledby="platform-title">
-    <div class="pitch-section-meta">03 / THE PLATFORM</div>
+    <span id="problem"></span><span id="public-interest"></span>
+    <div class="pitch-section-meta">01 / PERSPECTIVE</div>
     <div class="pitch-platform-grid">
       <div>
-        <h2 id="platform-title">A place for information that matters.</h2>
-        <p class="pitch-lede">Lythaus is a social platform for people who want more signal and less manipulation in the way they discover and discuss the world.</p>
-      </div>
-      <div>
-        <ul class="pitch-clean-list" aria-label="What people can do on Lythaus">
-          <li>Follow people and subjects you care about.</li>
-          <li>Share reporting, analysis, experience, questions and perspective.</li>
-          <li>Discover conversations across technology, science, business, culture, policy, local affairs, current events and more.</li>
-          <li>And have meaningful control over what shapes your feed.</li>
-        </ul>
-      </div>
-    </div>
-    <div class="pitch-control-line">
-      <strong>The ambition is not to create the loudest public square.</strong>
-      <span>It is to create a more trustworthy one.</span>
-    </div>
-  </section>
-
-  <section class="pitch-section pitch-discovery" id="authorship" aria-labelledby="authorship-title">
-    <div class="pitch-section-meta">04 / AUTHORSHIP</div>
-    <div class="pitch-platform-grid">
-      <div>
-        <h2 id="authorship-title">Authorship should mean something.</h2>
+        <h2 id="platform-title">Share your perspective.</h2>
+        <p class="pitch-lede">Your experience can give someone else a new way to see things.</p>
       </div>
       <div class="pitch-story-copy">
-        <p>AI-generated public content isn't permitted on Lythaus.</p>
-        <p>To support that policy, we are building a layered authenticity system that can consider declarations, provenance, specialist classifiers and behavioural signals.</p>
-        <p>No single model is treated as an infallible judge of authorship.</p>
-        <p>Where AI assistance is permitted, it should be disclosed clearly.</p>
-        <p>Where content is assessed as human-authored, that contribution should be recognisable as such.</p>
-        <p>And where the system is uncertain, it should be able to say so.</p>
+        <p>Bring your experience, research, creative work and useful questions. Make room for thoughtful discussion, good sourcing and good-faith disagreement.</p>
+        <p>Lythaus is being built for people who want to contribute something of their own and learn from what others share.</p>
       </div>
     </div>
-    <p class="pitch-emphasis">Clear authorship. Not manufactured certainty.</p>
   </section>
 
   <section class="pitch-section pitch-discovery" id="discovery" aria-labelledby="discovery-title">
-    <div class="pitch-section-meta">05 / DISCOVERY</div>
+    <div class="pitch-section-meta">02 / CONVERSATION</div>
     <div class="pitch-discovery-grid">
       <div>
-        <h2 id="discovery-title">Your feed should not be a black box.</h2>
-        <p class="pitch-lede">Most social platforms decide what deserves your attention for you.</p>
-        <p>Lythaus is being designed so that discovery is more understandable and more deliberate.</p>
-        <p>Your feeds can reflect the people and subjects you choose to follow, while reputation and contribution quality help surface worthwhile discussion.</p>
+        <h2 id="discovery-title">Find conversations worth joining.</h2>
+        <p class="pitch-lede">Different ways to explore, with choices you can understand.</p>
+        <p>We’re building around these feed choices. Availability will depend on the rollout.</p>
       </div>
       <div>
-        <p class="pitch-small-heading">Discovery should not optimise for</p>
-        <ul class="pitch-clean-list">
-          <li>Not simply what generates the most reactions.</li>
-          <li>Not whatever keeps you scrolling longest.</li>
-          <li>Not outrage because outrage performs well.</li>
+        <ul class="pitch-clean-list" aria-label="Feed choices">
+          <li><strong>Discovery:</strong> explore eligible public posts, newest first.</li>
+          <li><strong>Following:</strong> catch up with people you follow.</li>
+          <li><strong>Custom feeds:</strong> choose filters to focus on the conversations that interest you.</li>
         </ul>
+        <p><a href="/features">Explore the features</a></p>
       </div>
-    </div>
-    <div class="pitch-control-line">
-      <strong>The objective is straightforward: help useful human contributions travel further.</strong>
     </div>
   </section>
 
   <section class="pitch-section pitch-reputation pitch-section--compact" id="reputation" aria-labelledby="reputation-title">
-    <div class="pitch-section-meta">06 / REPUTATION</div>
-    <h2 id="reputation-title">Contribution over attention.</h2>
+    <span id="editorial"></span>
+    <div class="pitch-section-meta">03 / RECOGNITION &amp; REWARDS</div>
+    <h2 id="reputation-title">Build reputation through contribution.</h2>
     <div class="pitch-reputation-grid">
       <div>
-        <p>On Lythaus, reputation is intended to reflect how you contribute, not simply how much attention you can attract.</p>
-        <div class="pitch-four-lines" aria-label="What contribution reputation considers">
-          <span>Human-authored contributions can build authorship reputation.</span>
-          <span>Consistent participation matters.</span>
-          <span>Good sourcing matters.</span>
-          <span>Accountability matters.</span>
-        </div>
+        <p class="pitch-lede">Recognition should grow from what you contribute.</p>
+        <p>Our reputation model values constructive human-authored contributions, useful sources and accountable participation.</p>
       </div>
       <div class="pitch-reputation-copy">
-        <p>Honest disclosure of permitted AI assistance does not automatically count against you, but it does not earn authorship reputation for work you did not author yourself.</p>
-        <p class="pitch-emphasis">Virality alone is not credibility. Followers alone are not reputation. And volume is not the same as value.</p>
+        <p>Rewards are part of that ambition. We’re developing ways to recognise sustained contributions; reward availability and eligibility will be explained as they roll out.</p>
+        <p>Paid membership does not buy reputation, Editorial recognition or different moderation treatment.</p>
+        <p><a href="/pricing">Free to join. Benefits from $5.</a></p>
       </div>
     </div>
   </section>
 
-  <section class="pitch-section pitch-platform pitch-section--compact" id="accountability" aria-labelledby="accountability-title">
-    <div class="pitch-section-meta">07 / ACCOUNTABILITY</div>
-    <div class="pitch-platform-grid">
-      <div>
-        <h2 id="accountability-title">Accountability has to work both ways.</h2>
-      </div>
-      <div class="pitch-story-copy">
-        <p>Lythaus will make decisions about authorship, moderation and participation.</p>
-        <p>Those decisions will sometimes be challenged.</p>
-        <p>They may sometimes be wrong.</p>
-        <p>That is why review and appeal are part of the system, with decisions assessed by peers rather than treated as an afterthought.</p>
-        <p>Authorship and moderation decisions are designed to have understandable reasons, durable records and routes for review.</p>
-        <p>Community reviewers can contribute to appeals, with additional adjudication for cases that require it.</p>
-        <p>No person, status or paid tier is intended to be above the rules.</p>
-      </div>
+  <section class="pitch-section pitch-human-first" id="authorship" aria-labelledby="authorship-title">
+    <span id="human-first"></span><span id="accountability"></span><span id="why-lythaus"></span>
+    <div class="pitch-section-meta">04 / TRUST</div>
+    <h2 id="authorship-title">Understand how trust works.</h2>
+    <div class="pitch-story-copy pitch-story-copy--narrow">
+      <p>Authorship tells you how a contribution was made. Safety moderation addresses harmful content. Both matter, and they serve different purposes.</p>
+      <p>Our authorship policy uses simple labels:</p>
     </div>
-    <p class="pitch-emphasis">If Lythaus expects accountability from its members, members should be able to expect accountability from Lythaus.</p>
-  </section>
-
-  <section class="pitch-section pitch-discovery" id="public-interest" aria-labelledby="public-interest-title">
-    <div class="pitch-section-meta">08 / PUBLIC INTEREST</div>
-    <div class="pitch-discovery-grid">
+    <dl class="pitch-authorship-list">
       <div>
-        <h2 id="public-interest-title">Not everything valuable goes viral.</h2>
-        <p class="pitch-lede">Lythaus is being built for conversations whose importance cannot always be measured in clicks.</p>
+        <dt>Human-authored</dt>
+        <dd>A person’s original contribution.</dd>
       </div>
       <div>
-        <ul class="pitch-clean-list">
-          <li>Original reporting.</li>
-          <li>Local knowledge.</li>
-          <li>Scientific discussion.</li>
-          <li>Analysis.</li>
-          <li>First-hand experience.</li>
-          <li>Good-faith disagreement.</li>
-          <li>Questions worth exploring.</li>
-          <li>Ideas that require more than a reaction button.</li>
-        </ul>
+        <dt>AI-assisted</dt>
+        <dd>Disclosed, human-led text with permitted AI assistance, limited to 249 characters.</dd>
       </div>
+      <div>
+        <dt>Under review</dt>
+        <dd>An authorship decision needs further review.</dd>
+      </div>
+    </dl>
+    <div class="pitch-story-copy pitch-story-copy--narrow">
+      <p>AI-generated content is not permitted for public publication. Spellcheck, grammar help, formatting and transcription of your own speech are not penalised solely for their use.</p>
+      <p>We’re developing automated authorship signals to support trained human review. These signals do not establish whether content is safe or true.</p>
+      <p>During alpha, authorised staff review appeals under our <a href="/terms">Terms</a>. The planned trained-reviewer and adjudicator process is subject to rollout readiness; it is not an open community vote.</p>
+      <p><a href="/about">Read more about our principles</a></p>
     </div>
-    <p class="pitch-result">Public-interest conversation does not have to mean institutional or political conversation. It means information and perspective that can be useful beyond the person posting it.</p>
-  </section>
-
-  <section class="pitch-section pitch-ai pitch-section--compact" id="editorial" aria-labelledby="editorial-title">
-    <div class="pitch-section-meta">09 / EDITORIAL</div>
-    <div class="pitch-ai-grid">
-      <div>
-        <h2 id="editorial-title">Credibility should be earned, not purchased.</h2>
-      </div>
-      <div class="pitch-ai-copy pitch-story-copy">
-        <p>Lythaus Editorial is intended for journalists, researchers, analysts, academics, independent writers and other contributors doing credible public-interest work.</p>
-        <p>It is not a paid tier.</p>
-        <p>It does not grant moderation immunity.</p>
-        <p>It does not make someone an authority over what is true.</p>
-        <p>Editorial recognition is earned, reviewable and revocable.</p>
-        <p>Its purpose is to help people find and recognise credible work more easily, while giving contributors a way to build trust through consistent, transparent and accountable participation.</p>
-        <p>It can help valuable reporting, research and analysis reach the audiences most likely to benefit from it, without reducing credibility to popularity or payment.</p>
-        <p>The people behind that work remain accountable to the same platform standards as everyone else.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="pitch-section pitch-principles" id="why-lythaus" aria-labelledby="why-title">
-    <div class="pitch-section-meta">10 / WHY LYTHAUS</div>
-    <h2 id="why-title">A different set of incentives.</h2>
-    <ol class="pitch-principle-list pitch-principle-list--plain">
-      <li>We are not trying to maximise how angry you become.</li>
-      <li>We are not trying to fill every empty space with content.</li>
-      <li>We are not trying to make synthetic participation indistinguishable from human participation.</li>
-      <li>And we are not trying to decide what you should believe.</li>
-    </ol>
-    <p class="pitch-result">We are building infrastructure for something simpler and increasingly valuable: people speaking for themselves, contributing with accountability and finding information without surrendering all control over how it reaches them.</p>
   </section>
 
   <section class="home-waitlist pitch-waitlist" id="waitlist" aria-labelledby="waitlist-title">
     <div class="home-waitlist-copy">
-      <p class="home-eyebrow"><span class="home-status-dot" aria-hidden="true"></span>Lythaus private beta</p>
+      <p class="home-eyebrow"><span class="home-status-dot" aria-hidden="true"></span>Lythaus waitlist</p>
       <h2 id="waitlist-title">For the living internet.</h2>
       <div class="pitch-story-copy">
-        <p>Not because everything humans make is good.</p>
-        <p>Not because technology is the enemy.</p>
-        <p>Because knowing that another person chose to say something, and is willing to stand behind it, still matters.</p>
-        <p>Lythaus is being built for that.</p>
+        <p>Join the waitlist for updates as we build Lythaus.</p>
+        <p>Joining does not guarantee an invitation or an access date.</p>
       </div>
     </div>
     <form class="home-waitlist-form" data-waitlist data-api-base-url={publicApiBaseUrl} data-turnstile-site-key={turnstileSiteKey} novalidate>
       <label class="sr-only" for="waitlist-email">Email address</label>
       <div class="home-waitlist-fields">
         <input id="waitlist-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="320" placeholder="Email address" aria-describedby="waitlist-consent waitlist-status" required />
-        <button class="button primary" type="submit" data-waitlist-submit>Join the private beta</button>
+        <button class="button primary" type="submit" data-waitlist-submit>Join the waitlist</button>
       </div>
       <div class="home-turnstile-shell" id="waitlist-turnstile" role="group" aria-label="Bot verification"></div>
       <p class="home-consent-note" id="waitlist-consent">By joining, you agree to receive waitlist and launch updates from Lythaus. You can unsubscribe at any time. Read our <a href="/privacy">Privacy Policy</a>.</p>
@@ -367,7 +243,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         } finally {
           resetVerification();
           button.disabled = false;
-          button.textContent = 'Join the private beta';
+          button.textContent = 'Join the waitlist';
         }
       });
     }

@@ -45,24 +45,22 @@ test('homepage public copy matches the living internet pitch and stays launch sa
   assert.doesNotMatch(visibleCopy, /lime|neon green|purple gradient|PlanetScale|Hyperdrive|Cloudflare|C2PA|stylometric|policy engine|appeal threshold|moderation weight/i);
   for (const phrase of [
     'For the living internet.',
-    'Lythaus is a human-first social platform for public-interest conversation',
-    '01 / THE PROBLEM',
-    '02 / HUMAN FIRST',
-    '03 / THE PLATFORM',
-    '04 / AUTHORSHIP',
-    '05 / DISCOVERY',
-    '06 / REPUTATION',
-    'Contribution over attention.',
-    '07 / ACCOUNTABILITY',
-    '08 / PUBLIC INTEREST',
-    '09 / EDITORIAL',
-    '10 / WHY LYTHAUS',
+    'Human ideas. Conversations worth having.',
+    'We’re building a social platform',
+    '01 / PERSPECTIVE',
+    '02 / CONVERSATION',
+    '03 / RECOGNITION &amp; REWARDS',
+    '04 / TRUST',
+    'Share your perspective.',
+    'Find conversations worth joining.',
+    'Build reputation through contribution.',
+    'Understand how trust works.',
     'Human-authored',
     'AI-assisted',
     'AI-generated',
-    'Not permitted for public publication.',
+    'not permitted for public publication.',
     'Under review',
-    'Join the private beta',
+    'Join the waitlist',
   ]) assert.match(homepage, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   assert.doesNotMatch(homepage, /The human internet is worth protecting\./);
   assert.doesNotMatch(homepage, /Not permitted as public content\. Blocked from public publication\./);
@@ -75,30 +73,24 @@ test('homepage public copy matches the living internet pitch and stays launch sa
 
 test('homepage story sections use the approved narrative labels and anchors', () => {
   for (const label of [
-    '01 / THE PROBLEM',
-    '02 / HUMAN FIRST',
-    '03 / THE PLATFORM',
-    '04 / AUTHORSHIP',
-    '05 / DISCOVERY',
-    '06 / REPUTATION',
-    '07 / ACCOUNTABILITY',
-    '08 / PUBLIC INTEREST',
-    '09 / EDITORIAL',
-    '10 / WHY LYTHAUS',
+    '01 / PERSPECTIVE',
+    '02 / CONVERSATION',
+    '03 / RECOGNITION &amp; REWARDS',
+    '04 / TRUST',
   ]) assert.match(homepage, new RegExp(label));
   for (const anchor of ['problem', 'human-first', 'platform', 'authorship', 'discovery', 'reputation', 'accountability', 'public-interest', 'editorial', 'why-lythaus', 'waitlist']) {
     assert.match(homepage, new RegExp(`id="${anchor}"`));
   }
-  assert.match(homepage, /class="pitch-section-meta">01 \/ THE PROBLEM<\/div>/);
-  assert.equal((homepage.match(/class="pitch-section /g) ?? []).length, 10);
+  assert.match(homepage, /class="pitch-section-meta">01 \/ PERSPECTIVE<\/div>/);
+  assert.equal((homepage.match(/class="pitch-section /g) ?? []).length, 4);
   assert.doesNotMatch(homepage, /story-section|story-section--tint/);
 });
 
 test('homepage story content is direct and withholds the product preview until the product is ready', () => {
   assert.match(homepage, /class="pitch-intro"/);
-  assert.match(homepage, /class="pitch-section pitch-problem"/);
-  assert.match(homepage, /Your feed should not be a black box\./);
-  assert.match(homepage, /Credibility should be earned, not purchased\./);
+  assert.match(homepage, /class="pitch-section pitch-platform"/);
+  assert.match(homepage, /Discovery:<\/strong> explore eligible public posts, newest first\./);
+  assert.match(homepage, /Paid membership does not buy reputation/);
   assert.doesNotMatch(homepage, /Experience Lythaus|Preview how Lythaus works|pitch-preview-shell|data-preview/);
   assert.doesNotMatch(homepage, /href="https?:\/\/app\.lythaus\.co/);
 });
@@ -135,7 +127,7 @@ test('homepage hero has a single named heading and decorative vector lighting', 
   assert.match(homepage, /<OpeningWordmark \/>/);
   assert.doesNotMatch(wordmark + openingScript, /pitch-letter|letter-index|letter-delay/);
   assert.doesNotMatch(homePitchStyles + openingStyles, /pitchSweep|pitch-presence|pitch-beam/);
-  assert.ok(homepage.includes('Lythaus is a human-first social platform for public-interest conversation, built around clear authorship, accountable participation and feeds you can understand and control.'));
+  assert.ok(homepage.includes('We’re building a social platform where people share original perspectives, discover thoughtful discussion, and earn recognition through meaningful contributions.'));
   assert.doesNotMatch(homepage, /hero-card--signal|label-card|signal-mark/);
 });
 
@@ -152,7 +144,7 @@ test('opening uses progressive enhancement without a new animation dependency', 
 
 test('homepage uses restrained authorship rows and natural copy wrapping', () => {
   assert.match(homepage, /<dl class="pitch-authorship-list">/);
-  for (const label of ['Human-authored', 'AI-assisted', 'AI-generated', 'Under review']) {
+  for (const label of ['Human-authored', 'AI-assisted', 'Under review']) {
     assert.match(homepage, new RegExp(`<dt>${label}<\\/dt>`));
   }
   assert.match(homePitchStyles, /\.pitch-authorship-list/);
@@ -170,8 +162,6 @@ test('homepage navigation has stable cross-browser hit areas', () => {
 
 test('secondary story sections use tighter pacing without flattening the primary chapters', () => {
   assert.match(homepage, /pitch-reputation pitch-section--compact/);
-  assert.match(homepage, /pitch-platform pitch-section--compact" id="accountability/);
-  assert.match(homepage, /pitch-ai pitch-section--compact" id="editorial/);
   assert.match(homePitchCompactStyles, /\.pitch-section--compact \{[\s\S]*padding: clamp\(68px, 7vw, 104px\) 0/);
   assert.match(homePitchCompactStyles, /\.pitch-section--compact h2/);
   assert.match(homePitchCompactStyles, /@media \(max-width: 700px\)/);
