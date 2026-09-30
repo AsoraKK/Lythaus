@@ -65,6 +65,19 @@ const protectedPaths = [
   'database/planetscale/migrations/0013_marketing_waitlist.sql',
 ];
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
+function assertRootToolingLockOnlyHasSecurityPatches() {
+  const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
+  const current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1']]) {
+    const packagePath = `node_modules/${name}`;
+    const patched = current.packages[packagePath];
+    assert.equal(patched?.version, version, `${name} must use the reviewed patched version`);
+    assert.ok(patched.resolved.endsWith(`${name}-${version}.tgz`), `${name} lock URL must match the patched version`);
+    assert.match(patched.integrity, /^sha512-[A-Za-z0-9+/]+={0,2}$/, `${name} must retain registry integrity metadata`);
+    current.packages[packagePath] = original.packages[packagePath];
+  }
+  assert.deepEqual(current, original, 'Root tooling lock may change only for the reviewed security patches');
+}
 const authRepairPaths = new Set([
   'package.json',
   'apps/marketing-site/package.json',
@@ -99,6 +112,7 @@ export function assertHomepageFrozen() {
   for (const entry of entries) {
     const [metadata, filename] = entry.split('\t');
     if (authRepairPaths.has(filename)) continue;
+    if (filename === 'package-lock.json') continue;
     const expected = metadata.split(' ')[2];
     if (filename === 'apps/marketing-site/public/sitemap.xml') {
       const original = git('show', `${baselineSha}:${filename}`);
@@ -110,6 +124,7 @@ export function assertHomepageFrozen() {
     if (!existsSync(path.join(root, filename)) || git('hash-object', `--path=${filename}`, filename) !== expected) changed.push(filename);
   }
   assert.deepEqual(changed, [], 'Homepage dependencies changed from the explicit frozen revision');
+  assertRootToolingLockOnlyHasSecurityPatches();
   return entries.length;
 }
 
@@ -154,6 +169,14 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     const before = JSON.parse(git('show', `${revision}:${file}`));
     const after = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     after.scripts[script] = after.scripts[script].replace(' --experimental-strip-types', '');
+    if (file === 'package.json') {
+      assert.equal(after.overrides['brace-expansion'], '5.0.12');
+      assert.equal(after.overrides.undici, '7.29.1');
+      assert.equal(after.overrides.miniflare.undici, '7.29.1');
+      before.overrides['brace-expansion'] = '5.0.12';
+      before.overrides.undici = '7.29.1';
+      before.overrides.miniflare.undici = '7.29.1';
+    }
     assert.deepEqual(after, before, 'Only the TypeScript test runtime flag may change; homepage dependencies remain frozen');
   }
 });
