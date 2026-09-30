@@ -467,7 +467,15 @@ jobs:
             fi
           fi
           if [[ -f .artifacts/release-provider-evidence/planetscale-production-contract.json ]] \
-            && jq -e '.transactionReadOnly == true and .verifierPassed == true and .post0016Required == true' .artifacts/release-provider-evidence/planetscale-production-contract.json >/dev/null; then
+            && jq -e \
+              --arg fingerprint "$EXPECTED_DATABASE_SCHEMA_FINGERPRINT" \
+              --arg relation_count "$EXPECTED_DATABASE_RELATION_COUNT" \
+              '.transactionReadOnly == true
+                and .verifierPassed == true
+                and .post0020Required == true
+                and any(.verifierOutput[]?; . == ("Observed post-0020 schema fingerprint: " + $fingerprint))
+                and any(.verifierOutput[]?; . == ("Observed post-0020 relation count: " + $relation_count))' \
+              .artifacts/release-provider-evidence/planetscale-production-contract.json >/dev/null; then
             ps_status='VERIFIED'
           fi
           contract='.artifacts/release-provider-evidence/planetscale-production-contract.json'
@@ -479,8 +487,8 @@ jobs:
           if [[ -f "$contract" ]]; then
             server_version="$(jq -r '.postgresVersion // empty' "$contract")"
             grants_verified="$(jq -r 'if .verifierPassed == true then "true" else "false" end' "$contract")"
-            schema_fingerprint="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0016 schema fingerprint:")) | sub("^Observed post-0016 schema fingerprint: "; "")' "$contract" | head -n 1)"
-            relation_count="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0016 relation count:")) | sub("^Observed post-0016 relation count: "; "")' "$contract" | head -n 1)"
+            schema_fingerprint="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0020 schema fingerprint:")) | sub("^Observed post-0020 schema fingerprint: "; "")' "$contract" | head -n 1)"
+            relation_count="$(jq -r '.verifierOutput[]? | select(startswith("Observed post-0020 relation count:")) | sub("^Observed post-0020 relation count: "; "")' "$contract" | head -n 1)"
             migration_set="$(jq -r '.verifierOutput[]? | select(startswith("Approved migration-set SHA-256:")) | sub("^Approved migration-set SHA-256: "; "")' "$contract" | head -n 1)"
           fi
           pages_state='{}'
