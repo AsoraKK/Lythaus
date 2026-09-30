@@ -164,7 +164,7 @@
     "glob@10.5.0": {
       "minimatch": "10.2.6"
     },
-    "brace-expansion": "5.0.9",
+    "brace-expansion": "5.0.12",
     "fast-xml-parser": "5.10.1",
     "fast-uri": "3.1.7",
     "form-data": "4.0.6",
@@ -174,14 +174,14 @@
       "minimatch": "5.1.9"
     },
     "typescript": "5.5.4",
-    "undici": "7.29.0",
+    "undici": "7.29.1",
     "js-yaml": "4.3.2",
     "@istanbuljs/load-nyc-config": {
       "js-yaml": "3.15.2"
     },
     "sharp": "0.35.4",
     "miniflare": {
-      "undici": "7.29.0"
+      "undici": "7.29.1"
     }
   },
   "workspaces": [
