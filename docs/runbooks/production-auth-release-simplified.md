@@ -192,6 +192,17 @@ upgrade, forced control click, or marketing homepage style change is used.
   are `queued`, `cooldown`, `suppressed`, `support_required`, or `failed` in a
   restricted audit record. A savepoint rolls back partial account-specific work
   before recording `failed`; inability to persist intake must not be accepted.
+- `support_required:<reason>` distinguishes `protected_administrative_identity`,
+  `missing_contact_data`, `unsupported_contact_key_version`,
+  `credential_contact_mismatch`, `missing_trusted_legacy_linkage`,
+  `decrypted_address_lookup_mismatch`, and `request_contact_lookup_mismatch`.
+  These fixed internal codes use the existing restricted audit `reason_code`
+  column; the anonymous response always remains `reset_if_eligible`.
+- The ordinary reset form displays the server-generated `correlationId` on
+  accepted requests and JSON errors. Completed idempotent retries return the
+  original operation's reference. The reference grants no access and contains
+  no account data. Predeployment generic `support_required` records cannot
+  establish a branch or identify a request from aggregate timestamps.
 - Legacy setup uses the existing trusted contact and user ID. Conflicting,
   untrusted, protected or restricted identities require protected support, never
   a bulk update. No account is recreated.

@@ -43,6 +43,21 @@ test('password reset replays neutral reset state and missing key preserves older
   assert.equal(f.runs, 2);
 });
 
+test('accepted reset retries retain the server operation reference without repeating recovery', async () => {
+  const f = fixture();
+  f.input.scope = 'password_reset';
+  const reference = '3b8a5c5c-07c8-4b55-a0a5-7a66235648cc';
+  f.input.work = async () => Response.json({state:'reset_if_eligible',correlationId:reference},{status:202});
+  const first = await (await idempotentAuthIntake(f.input, f.query)).json();
+  f.input.request.headers.set('x-correlation-id','57b98e96-7109-4a9b-a716-77ca7c5fc8dd');
+  f.input.work = async () => { throw new Error('must not repeat recovery'); };
+  const replay = await (await idempotentAuthIntake(f.input, f.query)).json();
+  assert.deepEqual(first, {state:'reset_if_eligible',correlationId:reference});
+  assert.deepEqual(replay, first);
+  assert.equal(f.row.response.correlationId, reference);
+  assert.deepEqual(Object.keys(f.row.response).sort(), ['correlationId','requestHash','state']);
+});
+
 test('payload, candidate, run and expiry bindings cannot be reused', async () => {
   for (const change of [f => { f.input.payload.password += '!'; }, f => { f.input.candidateVersion += 'other'; },
     f => { f.input.request.headers.set('x-lythaus-acceptance-run-id', 'another-run'); }, f => { f.row.recent = false; }]) {

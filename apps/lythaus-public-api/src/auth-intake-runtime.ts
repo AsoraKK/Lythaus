@@ -27,20 +27,25 @@ export async function idempotentAuthIntake(input: {
     `INSERT INTO system.idempotency_keys(scope,key,response) VALUES($1,$2,$3::jsonb)
      ON CONFLICT(scope,key) DO NOTHING RETURNING key`, [scope, key, JSON.stringify({ state:'processing',requestHash })]);
   if (inserted.rowCount !== 1) {
-    const previous = (await runQuery<{ response: { state: string; requestHash: string }; recent: boolean }>(input.database,
+    const previous = (await runQuery<{ response: { state: string; requestHash: string; correlationId?: string }; recent: boolean }>(input.database,
       `SELECT response,created_at>now()-interval '24 hours' AS recent FROM system.idempotency_keys WHERE scope=$1 AND key=$2`, [scope,key])).rows[0];
     if (!previous || previous.response.requestHash !== requestHash || !previous.recent) throw new Error('idempotency_key_conflict');
     if (previous.response.state !== 'completed') throw new Error('idempotency_outcome_unknown');
-    return Response.json({ state: input.scope === 'password_reset' ? 'reset_if_eligible' : 'verification_required' }, {
+    return Response.json({
+      state: input.scope === 'password_reset' ? 'reset_if_eligible' : 'verification_required',
+      ...(input.scope === 'password_reset' && previous.response.correlationId ? { correlationId: previous.response.correlationId } : {}),
+    }, {
       status:202, headers:{'cache-control':'private, no-store'},
     });
   }
   try {
     const response = await input.work();
     if (response.status !== 202) throw new Error('auth_intake_response_invalid');
+    const correlation = input.scope === 'password_reset' ? (await response.clone().json() as { correlationId?: string }).correlationId : undefined;
+    const reference = typeof correlation === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(correlation) ? correlation : undefined;
     await runQuery(input.database,
       `UPDATE system.idempotency_keys SET response=$3::jsonb WHERE scope=$1 AND key=$2`,
-      [scope,key,JSON.stringify({ state:'completed',requestHash })]);
+      [scope,key,JSON.stringify({ state:'completed',requestHash, ...(reference ? { correlationId: reference } : {}) })]);
     return response;
   } catch (error) {
     await runQuery(input.database,

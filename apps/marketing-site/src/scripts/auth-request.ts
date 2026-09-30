@@ -17,6 +17,12 @@ export function acceptsPassword(value: string, purpose: 'creation' | 'login'): b
   try { requirePasswordInput(value, purpose); return true; } catch { return false; }
 }
 
+export function authSupportReference(body: { correlationId?: unknown }): string | undefined {
+  return typeof body.correlationId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.correlationId)
+    ? body.correlationId
+    : undefined;
+}
+
 export async function withAuthDeadline<T>(operation: Promise<T>, timeoutMs = 120_000): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

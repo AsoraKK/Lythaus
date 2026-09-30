@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { acceptsPassword, authFetch, withAuthDeadline } from '../src/scripts/auth-request.ts';
+import { acceptsPassword, authFetch, authSupportReference, withAuthDeadline } from '../src/scripts/auth-request.ts';
 
 test('website consumes the same Unicode and legacy-password fixtures as API and Flutter', () => {
   const fixtures = JSON.parse(readFileSync(new URL('../../../packages/contracts/fixtures/password-policy.json', import.meta.url)));
@@ -21,6 +21,17 @@ test('auth transport is non-cacheable and preserves typed JSON errors', async ()
   assert.deepEqual(await result.json(), { error: 'email_verification_required' });
   assert.equal(options.cache, 'no-store');
   assert.equal(options.referrerPolicy, 'no-referrer');
+});
+
+test('reset references are server UUIDs and never arbitrary account or reason strings', async () => {
+  const correlationId = '3b8a5c5c-07c8-4b55-a0a5-7a66235648cc';
+  for (const body of [{state:'reset_if_eligible',correlationId},{error:'rate_limit_exceeded',correlationId}]) {
+    const result = await authFetch('https://api.example.invalid/auth', {method:'POST'}, async () => Response.json(body));
+    assert.equal(authSupportReference(await result.json()),correlationId);
+  }
+  for (const correlationId of [undefined, null, 123, 'synthetic@example.invalid', 'support_required:protected_administrative_identity', '<script>unsafe</script>']) {
+    assert.equal(authSupportReference({correlationId}),undefined);
+  }
 });
 
 test('auth transport rejects gateway HTML, malformed, primitive, and oversized JSON', async () => {
