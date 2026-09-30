@@ -121,6 +121,7 @@ test('shared layout provides an accessible mobile navigation fallback', () => {
 });
 
 test('homepage hero has a single named heading and decorative vector lighting', () => {
+  assert.match(homepage, /<div class="pitch-lede">\s*<p>For the living internet\.<\/p>\s*<p>We’re building a social platform/);
   assert.equal((wordmark.match(/<h1\b/g) ?? []).length, 1);
   assert.match(wordmark, /aria-label="Lythaus"/);
   assert.match(wordmark, /<svg[^>]*aria-hidden="true"[^>]*focusable="false"/);
