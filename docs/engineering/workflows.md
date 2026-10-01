@@ -84,7 +84,7 @@ Access decisions use these terms:
 | File / displayed name | Purpose, triggers, and 90-day run evidence | Dependencies, artifacts, and release use | Access | Lifecycle decision |
 | --- | --- | --- | --- | --- |
 | alpha-feed-performance.yml / Alpha feed performance gate | Paid/live feed performance gate; Manual; runs 0; last observed UNKNOWN; last success UNKNOWN | Uses alpha profile variables and smoke helpers; performance evidence | Protected provider; dev environment; secrets MVP_SMOKE_EMAIL, MVP_SMOKE_PASSWORD; vars ALPHA_* profile IDs | Keep distinct; verify environment and helper assumptions in PR3 |
-| api-contract.yml / API Contract | API contract wrapper; PR, Push; runs 100+; last 36348005680 at 2026-09-27T20:26:00Z; last success 36348005680 at 2026-09-27T20:28:39Z | OpenAPI lint, Spectral, bundle, route drift, examples, Dart client, contract tests; openapi-contract-artifacts | Read-only; no secrets | Consolidate into CI OpenAPI contract job after equivalence |
+| api-contract.yml / API Contract | API contract wrapper; PR, Push; runs 100+; last 36348005680 at 2026-09-27T20:26:00Z; last success 36348005680 at 2026-09-27T20:28:39Z | OpenAPI lint, Spectral, bundle, route drift, examples, Dart client, contract tests; openapi-contract-artifacts | Read-only; no secrets | Retired in PR2; responsibilities moved to CI OpenAPI contract |
 | beta-smoke.yml / MVP Preview Browser Smoke | Browser acceptance after staging or Manual; runs 0; last observed UNKNOWN; last success UNKNOWN | Playwright smoke and report artifact; release acceptance signal | Protected provider; dev environment; secrets CF_Access_Client_Id, CF_Access_Client_Secret, MVP_SMOKE_EMAIL, MVP_SMOKE_PASSWORD | Keep pending PR3 environment and URL verification |
 | branch-retirement-apply.yml / Apply verified Lythaus branch retirement | Approved branch deletion operation; Manual; runs 0; last observed UNKNOWN; last success UNKNOWN | Consumes branch-retirement evidence; mutates repository branches | Protected GitHub operation; access settings UNKNOWN | Keep separate; never fold into PR validation |
 | branch-retirement.yml / Branch disposition and safe retirement | Read-only branch inventory and disposition; Manual, Push, Schedule; runs 11; last 35587384029 at 2026-09-21T10:11:12Z; last success 35587384029 at 2026-09-21T10:11:44Z | Produces branch retirement evidence | Read-only; no secrets | Keep as operational audit |
@@ -103,7 +103,7 @@ Access decisions use these terms:
 | deploy-control-panel.yml / Deploy Lythaus control panel | Control-panel deployment; Manual, Call; runs 3; last 33991059145 at 2026-09-05T20:45:41Z; last success 33991059145 at 2026-09-05T20:46:33Z | Reusable release component; Pages artifact | Protected provider; production environment; secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID; var LYTHAUS_ADMIN_PAGES_PROJECT | Keep separate |
 | deploy-marketing.yml / Deploy Lythaus marketing | Marketing deployment; Manual, Call; runs 26; last 35198156120 at 2026-09-17T08:09:11Z; last success 35198156120 at 2026-09-17T08:10:14Z | Reusable release component; exact homepage artifact | Protected provider; production environment; secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID | Keep separate |
 | deploy-public-waitlist.yml / Deploy Lythaus public waitlist | Public waitlist deployment and schema evidence; Manual; runs 11; last 31967205401 at 2026-08-16T19:18:54Z; last success 31967205401 at 2026-08-16T19:30:55Z | Uses database contract artifacts and deployment evidence | Protected provider; production environment; secrets CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, PLANETSCALE_SCHEMA_READ_DATABASE_URL, PSCALE_ROLE_IDENTIFIERS; schema fingerprint/count vars | Keep separate |
-| flutter-ci.yml / Flutter CI | Formatting, analysis, coverage, web build, auth/navigation smoke, marketing output; Push, PR; runs 100+; last 36348165253 at 2026-09-27T20:28:36Z; last success 36348163939 at 2026-09-27T20:42:31Z | Overlaps CI Flutter and frontend jobs; no provider artifact consumer identified | Read-only; no secrets | Consolidate into CI Flutter and frontend jobs after equivalence |
+| flutter-ci.yml / Flutter CI | Formatting, analysis, coverage, web build, auth/navigation smoke, marketing output; Push, PR; runs 100+; last 36348165253 at 2026-09-27T20:28:36Z; last success 36348163939 at 2026-09-27T20:42:31Z | Overlaps CI Flutter and frontend jobs; no provider artifact consumer identified | Read-only; no secrets | Retired in PR2; responsibilities moved to CI Flutter and Web frontends |
 | github-controls-audit.yml / GitHub controls audit | Repository settings and controls audit; Manual, Schedule, Push; runs 22; last 35585660242 at 2026-09-21T09:52:16Z; last success 35585660242 at 2026-09-21T09:52:31Z | Sanitized GitHub controls artifact | Read-only; no secrets | Keep as operational audit |
 | historical-branch-reconciliation.yml / Historical branch reconciliation | Exact-main branch reconciliation required by release contract; Manual, Push; runs 100+; last 36348345649 at 2026-09-27T20:31:25Z; last success 36348345649 at 2026-09-27T20:32:31Z | Successful run ID is a production-release prerequisite | Read-only; no secrets | Keep unchanged |
 | launch-readiness-gate.yml / launch-readiness-gate | Manual launch readiness aggregation; Manual; runs 0; last observed UNKNOWN; last success UNKNOWN | Consumes release, smoke, and performance evidence | Read-only plus release secrets for checks; secret names ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEYSTORE_PASSWORD, IOS_CERTIFICATE_P12_BASE64, IOS_CERTIFICATE_PASSWORD, IOS_PROVISIONING_PROFILE_BASE64; vars IOS_PUSH_IMPLEMENTED, IOS_PUSH_REQUIRED | Keep separate |
@@ -113,18 +113,18 @@ Access decisions use these terms:
 | native-admin-bootstrap-activation.yml / Protected first-admin bootstrap activation | First-admin activation and rollback; Manual; runs 5; last 33986051632 at 2026-09-05T19:05:30Z; last success 33986051632 at 2026-09-05T19:06:25Z | Consumes exact candidate evidence; provider/admin mutation | Protected provider; production environment; secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_AUDIT_API_TOKEN, PLANETSCALE_ADMIN_DATABASE_URL | Retire only after completion and recovery dependency review |
 | native-adr003-acceptance.yml / Native ADR-003 authenticated acceptance | Real email/auth acceptance; Manual; runs 13; last 33222217427 at 2026-08-29T00:00:37Z; last success 33222217427 at 2026-08-29T00:01:37Z | Release acceptance and privacy evidence | Protected provider; production environment; secret names include Cloudflare, PlanetScale, access, database readiness, and test-account credentials; vars include ADR003_* | Keep separate |
 | native-budget-acceptance.yml / Native budget and AI gateway acceptance | AI Gateway and budget acceptance; Manual; runs 0; last observed UNKNOWN; last success UNKNOWN | Paid/provider acceptance evidence | Protected provider; secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, PLANETSCALE_API_TOKEN, PLANETSCALE_SCHEMA_READ_DATABASE_URL, PLANETSCALE_DEVELOPMENT_SCHEMA_READ_DATABASE_URL, DATABASE_READINESS_TOKEN; schema vars | Keep separate and manual |
-| native-migrations-validation.yml / Native PlanetScale migrations | Migration and manifest validation wrapper; Manual, PR, Push; runs 100+; last 36348165165 at 2026-09-27T20:28:36Z; last success 36348164107 at 2026-09-27T20:33:16Z | Migration, extension, production-schema manifest, architecture checks | Read-only; no secrets | Consolidate into canonical migration validation |
+| native-migrations-validation.yml / Native PlanetScale migrations | Migration and manifest validation wrapper; Manual, PR, Push; runs 100+; last 36348165165 at 2026-09-27T20:28:36Z; last success 36348164107 at 2026-09-27T20:33:16Z | Migration, extension, production-schema manifest, architecture checks | Read-only; no secrets | Retired in PR2; responsibilities moved to CI Native Workers and PlanetScale |
 | native-planetscale-ci.yml / Native PlanetScale PostgreSQL 17 validation | PostgreSQL 17 service integration; Manual, PR; runs 77; last 36339818861 at 2026-09-27T18:13:01Z; last success 36339818861 at 2026-09-27T18:13:44Z | Applies migrations and proves first-admin rollback, concurrency, and closure | Read-only disposable database service; no provider secrets | Keep distinct |
 | native-secret-scan.yml / Native secret scan | Required secret scan and sanitized receipt; Manual, PR, Push; runs 100+; last 36348165116 at 2026-09-27T20:28:36Z; last success 36348155108 at 2026-09-27T20:32:54Z | Required scan context and security-run-evidence artifact | Read-only; GITHUB_TOKEN | Keep as canonical secret scan |
 | native-workers-deploy.yml / native-workers-deploy | Reusable native Worker deployment and rollback; Manual, Call; runs 13; last 33864074093 at 2026-09-04T10:37:02Z; last success 30795126367 at 2026-08-03T07:52:29Z | Production release component; candidate, route, migration, and rollback artifacts | Protected provider; production environments; Cloudflare/PlanetScale/access/database secrets and release vars | Keep separate |
-| native-workers-validation.yml / native-workers-validation | Native Worker and PlanetScale validation wrapper; Manual, PR, Push; runs 100+; last 36348165427 at 2026-09-27T20:28:36Z; last success 36348165427 at 2026-09-27T20:32:52Z | Hyperdrive, AI Gateway, migration, provider, architecture, critical coverage, identity, and budget checks | Read-only; no secrets | Consolidate into CI Native Workers and PlanetScale job |
-| openapi.yml / OpenAPI | OpenAPI drift, semver, docs, generated client, and contract wrapper; PR; runs 100+; last 36348147234 at 2026-09-27T20:28:19Z; last success 36348147234 at 2026-09-27T20:31:35Z | openapi.json and openapi-docs artifacts; overlap with CI and API Contract | Read-only; no secrets | Consolidate into CI OpenAPI contract job |
+| native-workers-validation.yml / native-workers-validation | Native Worker and PlanetScale validation wrapper; Manual, PR, Push; runs 100+; last 36348165427 at 2026-09-27T20:28:36Z; last success 36348165427 at 2026-09-27T20:32:52Z | Hyperdrive, AI Gateway, migration, provider, architecture, critical coverage, identity, and budget checks | Read-only; no secrets | Retired in PR2; responsibilities moved to CI Native Workers and PlanetScale |
+| openapi.yml / OpenAPI | OpenAPI drift, semver, docs, generated client, and contract wrapper; PR; runs 100+; last 36348147234 at 2026-09-27T20:28:19Z; last success 36348147234 at 2026-09-27T20:31:35Z | openapi.json and openapi-docs artifacts; overlap with CI and API Contract | Read-only; no secrets | Retired in PR2; responsibilities moved to CI OpenAPI contract |
 | planetscale-account-audit.yml / PlanetScale account audit | Sanitized read-only production inventory; Manual, Push; runs 57; last 36348005716 at 2026-09-27T20:26:00Z; last success 33353819734 at 2026-08-31T03:46:34Z | Provider inventory and production-contract artifact; no DDL or mutation | Production environment; read-only secrets PLANETSCALE_API_TOKEN, PLANETSCALE_SCHEMA_READ_DATABASE_URL, PSCALE_ROLE_IDENTIFIERS; schema fingerprint/count vars | Keep separate |
 | planetscale-production-migrations.yml / PlanetScale production migrations | Approved production migration operation; Manual; runs 25; last 33957514105 at 2026-09-05T09:16:02Z; last success 33957514105 at 2026-09-05T09:20:12Z | Migration and rollback evidence; release prerequisite | Protected provider; production environment; PlanetScale admin/service/read secrets and backup/limit vars | Keep separate |
 | planetscale-schema-verifier-grants.yml / PlanetScale schema verifier grant reconciliation | Schema verifier grant repair/reconciliation; Manual; runs 2; last 33406427233 at 2026-08-31T15:05:28Z; last success 33406427233 at 2026-08-31T15:06:29Z | Grant reconciliation evidence | Protected provider; production environment; PlanetScale admin/read and role-identifier secrets | Keep separate until setup completion verified |
 | production-auth-incident-audit.yml / Production auth incident audit | Read-only incident audit; Manual; runs 2; last 33221079404 at 2026-08-28T23:38:04Z; last success 33221079404 at 2026-08-28T23:38:43Z | Sanitized incident artifact | Protected provider read-only; production environment; secrets CLOUDFLARE_API_TOKEN, PLANETSCALE_SCHEMA_READ_DATABASE_URL, CODEX_TEST_EMAIL | Keep separate |
 | production-release.yml / Canonical production release | Exact reviewed release orchestration; Manual; runs 76; last 34051741301 at 2026-09-06T18:26:51Z; last success 33223948045 at 2026-08-29T00:48:24Z | Consumes historical reconciliation, migration, acceptance, and deployment artifacts | Protected provider; production environments; Cloudflare/PlanetScale/access secrets and release vars | Keep unchanged |
-| schema-check.yml / schema-check | Migration contract wrapper; PR; runs 100+; last 36339818818 at 2026-09-27T18:13:01Z; last success 36339818818 at 2026-09-27T18:13:11Z | Runs validate:planetscale-migrations | Read-only; no secrets | Consolidate into canonical migration validation |
+| schema-check.yml / schema-check | Migration contract wrapper; PR; runs 100+; last 36339818818 at 2026-09-27T18:13:01Z; last success 36339818818 at 2026-09-27T18:13:11Z | Runs validate:planetscale-migrations | Read-only; no secrets | Retired in PR2; responsibility moved to CI Native Workers and PlanetScale |
 | wp004a-cloudflare-access-preflight.yml / WP004A Cloudflare Workers AI access preflight | Manual provider access preflight; Manual; runs 5; last 34678539347 at 2026-09-12T06:35:46Z; last success 34678539347 at 2026-09-12T06:36:11Z | Research access evidence | Provider access; secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID | Keep or retire after research requirement review |
 | wp004a-cloudflare-rest-smoke.yml / WP004A Cloudflare REST research smoke | Manual paid/provider REST smoke; Manual; runs 15; last 34683557446 at 2026-09-12T08:33:06Z; last success 34683557446 at 2026-09-12T08:33:47Z | Sanitized research evidence | Provider and paid AI access; secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, OPENAI_API_KEY | Keep manual or retire after evidence preservation |
 | wp004a-openai-moderation-smoke.yml / WP004A OpenAI moderation smoke | Manual moderation provider smoke; Manual; runs 2; last 34596766973 at 2026-09-11T12:00:42Z; last success 34596766973 at 2026-09-11T12:01:16Z | Research provider evidence | Paid provider; secret OPENAI_API_KEY | Keep manual or retire after evidence preservation |
@@ -231,3 +231,78 @@ of scope for workflow cleanup.
 The mapping is a deletion gate. A wrapper is not removed until its command,
 failure behaviour, permissions, artifact, and required evidence have passed on
 the replacement path.
+
+PR2 keeps `ci.yml` job names unchanged, retains
+`native-planetscale-ci.yml` and `mobile-security-check.yml`, and
+moves the six wrapper responsibilities into the existing required jobs. GitHub
+replacement-run and negative-test receipts are recorded with this inventory.
+
+Successful GitHub replacement receipts:
+
+| Review | CI run | Result |
+| --- | --- | --- |
+| PR1 #863 | 36351426482 | All seven canonical CI jobs passed; retained contract, security, CodeQL, scan, and dependency-review checks also passed |
+| PR2 #864 | 36351621200 | All seven canonical CI jobs passed; CodeQL run 36351621204 and retained security/dependency checks also passed |
+
+## PR2 local validation receipts
+
+| Validation | Result |
+| --- | --- |
+| actionlint 1.7.7 and immutable action pins | Pass |
+| Production release contract and retired-provider scan | Pass |
+| Release governance suite | Pass |
+| OpenAPI lint, examples, route-parity contract tests | Pass; 33 Jest tests passed and 17 platform-skipped tests were reported |
+| Native architecture, migration, product-integrity, critical-coverage, identity, budget, provider, production-gate, and waitlist suites | Pass |
+| Authenticity beta TypeScript and JavaScript suites | Pass |
+| Python container checks and Docker image execution | Not run locally; Python and the Docker Linux daemon are unavailable on this Windows host; required CI jobs remain authoritative |
+
+The native, migration, contract, security, and coverage suites retain
+fail-closed negative-path assertions; no continue-on-error or threshold
+relaxation was added.
+
+## PR2 current-main reconciliation
+
+PR1 merged as `1fce58cd931d666900388592d0e4e0b56d6c3156` after all ten
+required contexts and all 17 check runs passed on
+`9b8a1dcc1c877773fe731d40fc47c084690cb8db` (CI run 36822467919).
+PR2 incorporates that exact main before fresh replacement checks.
+
+The replacement preserves every existing current-main CI step and adds the
+unique responsibilities of the six wrappers. Private-alpha hardening now runs
+through `npm run test:authenticity-private-alpha`, including
+`packages/authenticity/tests/private-alpha.test.mjs`; CPU orchestration runs
+through its canonical npm command. Both were added to the native wrapper after
+the original PR2 baseline and remain required through the native CI job.
+
+`scripts/test-with-coverage.sh` runs unfiltered `flutter test --coverage` with
+`set -euo pipefail`. All seven former Flutter smoke files remain under `test/`
+and run in that suite, so a second individual invocation of each is unnecessary.
+Formatting, total/module coverage gates, rendered browser auth, immutable web
+artifacts, host/security guards, marketing critical-file checks, and current
+marketing output validation all remain. The Flutter SDK and repaired lockfile
+are unchanged.
+
+CI retains its main PR, main push, and manual triggers, all existing required
+job names and dependency edges, read-only permissions, and no provider secrets.
+No surviving workflow calls a retired wrapper or consumes tag-only canary
+releases. OpenAPI artifact names, generator/oasdiff pins, drift failures, and
+breaking-change/version enforcement remain. The native PostgreSQL service,
+mobile security, manual evaluation, and production workflows stay separate;
+no release approval or exact-main evidence requirement is relaxed. Removing
+the six wrappers leaves 48 workflow files after PR1.
+
+Current Linux reconciliation validation (2026-10-01): actionlint 1.7.7,
+immutable action pins, exact-SHA release contract, and retired-provider scan
+pass. Release governance: 153 passed; private alpha: 22 passed; CPU
+orchestration: 9 passed; production migrations: 22 passed; provider,
+production-gate, and waitlist contracts: 21 passed. OpenAPI lint/examples pass;
+contract Jest: 33 passed, 17 existing platform-skipped tests. Runtime TypeScript
+checks pass. Python artifact, CPU-smoke, and supervisor suites: 9 passed.
+The code-validation container runs as `65532:65532` with network disabled,
+256 MiB, one CPU, and 32 PIDs: 4 passed. The saved workspace has restrictive
+file modes, so this local build uses `git archive` of the staged tree to match
+checkout permissions. GitHub runner-capacity metadata is validated only in
+Actions, where the required event environment exists. A structural comparison
+confirms every current-main CI step remains in order and all trigger,
+permission, job-name, concurrency, and dependency contracts are unchanged.
+Fresh GitHub checks remain the merge gate; historical receipts do not satisfy it.

@@ -95,7 +95,7 @@ const standardPathRules = [
   /^(?:test|integration_test)\//i,
   /^functions\//i,
   /^scripts\/cloudflare\/(?:execute-lythaus-pages-cutover|execute-lythaus-web-source-hygiene|validate-marketing-output|verify-pages-deployment)\.mjs$/i,
-  /^\.github\/workflows\/(?:deploy-marketing|deploy-alpha-web|deploy-control-panel|flutter-ci|mobile-release-build|mvp-preview-validate)\.yml$/i,
+  /^\.github\/workflows\/(?:deploy-marketing|deploy-alpha-web|deploy-control-panel|mobile-release-build|mvp-preview-validate)\.yml$/i,
   /^\.github\/(?:dependabot|CODEOWNERS)/i,
   /^(?:README|CONTRIBUTING|LICENSE)(?:\..*)?$/i,
   /^\.(?:gitattributes|gitignore|yamllint|spectral\.yaml)$/i,

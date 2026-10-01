@@ -68,6 +68,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit
+      - run: npm run validate:cloudflare-hyperdrive-targets:manifest
+      - run: npm run validate:ai-gateway-paths
       - run: npm run typecheck:native
       - name: Verify private auth-email service boundary in workerd
         run: node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
@@ -80,6 +82,23 @@ jobs:
       - run: npm run test:authenticity-foundation
       - run: npm run test:database-identity
       - run: npm run test:budget
+      - run: npm ci --ignore-scripts --prefix apps/lythaus-authenticity-runtime
+      - run: npx tsc -p apps/lythaus-authenticity-runtime/tsconfig.json --noEmit
+      - run: node --experimental-strip-types --test packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs
+      - name: Exercise private alpha hardening regressions
+        run: npm run test:authenticity-private-alpha
+      - run: node --test scripts/tests/authenticity-beta-release.test.mjs
+      - run: python3 apps/lythaus-authenticity-runtime/container/test_artifacts.py
+      - run: python3 scripts/tests/test_beta_cpu_smoke.py
+      - run: npm run test:authenticity-cpu-orchestration
+      - run: python3 apps/lythaus-authenticity-runtime/container/test_supervisor.py
+      - name: Record code-only Linux capacity
+        run: python3 scripts/ci/authenticity-linux-capacity.py
+      - name: Validate non-root process supervision without model artifacts
+        run: |
+          docker build --target code-validation -f apps/lythaus-authenticity-runtime/container/Dockerfile -t lythaus-beta-code-validation .
+          test "$(docker inspect lythaus-beta-code-validation --format '{{.Config.User}}')" = '65532:65532'
+          docker run --rm --network none --memory 256m --cpus 1 --pids-limit 32 lythaus-beta-code-validation
       - name: Validate release manifest contract
         env:
           RELEASE_SHA: ${{ github.sha }}
@@ -88,7 +107,13 @@ jobs:
       - run: npm run validate:native-scope
       - run: npm run validate:no-retired-provider-dependencies
       - run: npm run validate:planetscale-migrations
+      - run: node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
+      - run: npm run test:planetscale-production-migrations
       - run: npm run validate:planetscale-extensions
+      - run: node --test scripts/tests/provider-audit-contract.test.mjs
+      - run: node --test scripts/tests/production-gates.test.mjs
+      - run: npm run validate:production-gates
+      - run: node --test scripts/tests/public-waitlist-cutover.test.mjs
 
   openapi:
     name: OpenAPI contract
@@ -111,9 +136,52 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit
       - run: flutter pub get
       - run: npm run openapi:lint
+      - name: Spectral lint
+        run: npx spectral lint api/openapi/openapi.yaml
       - run: npm run openapi:bundle
       - run: npm run openapi:check:bundle
       - run: npm run openapi:validate:examples
+      - name: Install pinned oasdiff
+        env:
+          OASDIFF_VERSION: 1.23.0
+          OASDIFF_SHA256: 972b10535c3db4366b9dc3ebc11ca021279af3095267c3cffdca854a3a3c4f89
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/oasdiff.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/Tufin/oasdiff/releases/download/v${OASDIFF_VERSION}/oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz" \
+            --output "$archive"
+          echo "${OASDIFF_SHA256}  $archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" oasdiff
+          chmod +x "$RUNNER_TEMP/oasdiff"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Prepare base OpenAPI contract
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          git fetch origin ${{ github.base_ref }} --depth=1
+          git show origin/${{ github.base_ref }}:api/openapi/dist/openapi.json \
+            > "$RUNNER_TEMP/openapi-base.json"
+      - name: Report OpenAPI diff
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          oasdiff changelog \
+            "$RUNNER_TEMP/openapi-base.json" \
+            api/openapi/dist/openapi.json \
+            --format githubactions
+      - name: Enforce semver when breaking
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          BASE_SPEC="$RUNNER_TEMP/openapi-base.json"
+          if oasdiff breaking "$BASE_SPEC" api/openapi/dist/openapi.json --fail-on ERR --format githubactions; then
+            exit 0
+          fi
+          CURR=$(node -pe 'JSON.parse(require("node:fs").readFileSync("api/openapi/dist/openapi.json","utf8")).info?.version ?? ""')
+          PREV=$(node -pe 'JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")).info?.version ?? ""' "$BASE_SPEC")
+          echo "Breaking changes detected. Prev=$PREV Curr=$CURR"
+          node -e "const parse=(value)=>{const match=String(value).trim().match(/^v?(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?$/i);if(!match)return null;return [Number(match[1]),Number(match[2]||0),Number(match[3]||0)];};const prevRaw=process.argv[1];const currRaw=process.argv[2];const prev=parse(prevRaw);const curr=parse(currRaw);if(!prev||!curr){console.error("Unable to compare versions: Prev=" + prevRaw + " Curr=" + currRaw);process.exit(1);}const greater=curr[0]>prev[0]||(curr[0]===prev[0]&&(curr[1]>prev[1]||(curr[1]===prev[1]&&curr[2]>prev[2])));process.exit(greater ? 0 : 1);" "$PREV" "$CURR"
       - name: Pin OpenAPI generator version
         env:
           OPENAPI_GENERATOR_CLI_SEARCH_URL: DEFAULT
@@ -121,7 +189,25 @@ jobs:
       - run: npm run openapi:gen:dart
       - run: npm run openapi:check:dart
       - run: npm run openapi:test:dart
+      - name: Generate OpenAPI docs pre-release bundle
+        run: npm run openapi:docs
       - run: npm run openapi:test:contract
+      - name: Upload OpenAPI contract artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: openapi-contract-artifacts
+          path: |
+            api/openapi/dist/openapi.json
+      - name: Upload bundled OpenAPI spec
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: openapi.json
+          path: api/openapi/dist/openapi.json
+      - name: Upload OpenAPI docs
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: openapi-docs
+          path: api/openapi/dist/index.html
 
   flutter:
     name: Flutter analyze and test
@@ -134,6 +220,13 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Check Dart formatting
+        run: |
+          rg --files -g '*.dart' \
+            -g '!lib/generated/api_client.dart' \
+            -g '!lib/generated/api_client/**' \
+            -g '!.dart_tool/**' \
+            | xargs -r dart format --output=none --set-exit-if-changed
       - run: flutter analyze
       - run: node --test scripts/tests/version-web-entrypoints.test.mjs
       - run: bash scripts/test-with-coverage.sh
@@ -191,6 +284,18 @@ jobs:
       - run: node --test apps/marketing-site/tests/*.test.mjs
       - run: npm --prefix apps/control-panel run build
       - run: npm --prefix apps/marketing-site run build
+      - name: Verify critical marketing output files
+        working-directory: apps/marketing-site
+        run: |
+          test -f dist/index.html
+          test -f dist/robots.txt
+          test -f dist/sitemap.xml
+          test -f dist/features/index.html
+          test -f dist/pricing/index.html
+          test -f dist/about/index.html
+          test -f dist/ai-moderation/index.html
+          test -f dist/contact/index.html
+          echo "All critical marketing site files present"
       - run: node scripts/cloudflare/validate-marketing-output.mjs apps/marketing-site/dist
       - name: Install homepage test browsers
         run: npx playwright install --with-deps chromium firefox webkit
