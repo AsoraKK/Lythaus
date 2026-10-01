@@ -168,7 +168,24 @@ test('real PostgreSQL + real API handler: signup, mailbox-owned setup, cookie se
   await expectStatus(await request('userinfo',undefined,{access:refreshed.accessToken}),401);
   const relogin=await request('email',{mode:'login',email,password:newPassword},{headers:{origin:'https://app.lythaus.test','x-lythaus-auth-transport':'cookie-v1'}});
   await expectStatus(relogin,200);
+  const browserHeaders={origin:'https://app.lythaus.test','x-lythaus-auth-transport':'cookie-v1'};
+  const stateBeforeEmptyLogout=(await sql(`SELECT token_version,
+    (SELECT count(*)::int FROM identity.auth_sessions WHERE user_id=$1 AND revoked_at IS NULL) AS sessions
+    FROM identity.users WHERE id=$1`,[record.id])).rows[0];
+  const emptyLogout=await request('logout',{}, {headers:browserHeaders});
+  assert.deepEqual(await expectStatus(emptyLogout,200),{loggedOut:true,sessionRevocation:'no_browser_session'});
+  assert.match(emptyLogout.headers.get('set-cookie'),/Max-Age=0/);
+  assert.deepEqual((await sql(`SELECT token_version,
+    (SELECT count(*)::int FROM identity.auth_sessions WHERE user_id=$1 AND revoked_at IS NULL) AS sessions
+    FROM identity.users WHERE id=$1`,[record.id])).rows[0],stateBeforeEmptyLogout);
+  await expectStatus(await request('logout',{}, {headers:{...browserHeaders,origin:'https://untrusted.lythaus.test'}}),403);
+  await expectStatus(await request('logout',{}, {headers:{'x-lythaus-auth-transport':'cookie-v1'}}),403);
+  await expectStatus(await request('logout',{}),401);
+  for(const cookie of ['__Host-lythaus_refresh=short',`${cookieOf(relogin)}; ${cookieOf(relogin)}`]) {
+    await expectStatus(await request('logout',{}, {headers:{...browserHeaders,cookie}}),401);
+  }
   await expectStatus(await request('logout',{}, {cookie:cookieOf(relogin)}),200);
+  assert.deepEqual(await expectStatus(await request('logout',{}, {headers:browserHeaders}),200),{loggedOut:true,sessionRevocation:'no_browser_session'});
   await expectStatus(await request('refresh',{}, {cookie:cookieOf(relogin)}),401);
   await relayTransactionalEmailOutbox(env);
   const notice=mailbox.find(message=>message.to===email&&message.subject==='Your Lythaus password changed');

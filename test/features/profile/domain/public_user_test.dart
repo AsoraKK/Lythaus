@@ -33,6 +33,34 @@ void main() {
     expect(user.badges, isEmpty);
   });
 
+  test('fromJson accepts the canonical structured reputation response', () {
+    final user = PublicUser.fromJson(const {
+      'id': 'u1',
+      'displayName': 'Test',
+      'reputationLevel': 2,
+      'reputation': {
+        'level': 2,
+        'label': 'Contributor',
+        'status': 'active',
+        'policyVersion': 'synthetic',
+      },
+    });
+
+    expect(user.displayName, 'Test');
+    expect(user.reputationScore, 0);
+  });
+
+  test('fromJson preserves legacy numeric reputation responses', () {
+    for (final key in ['reputationScore', 'reputation']) {
+      final user = PublicUser.fromJson({
+        'id': 'u1',
+        'displayName': 'Test',
+        key: 42,
+      });
+      expect(user.reputationScore, 42);
+    }
+  });
+
   test('fromJson uses username fallback for handle', () {
     final user = PublicUser.fromJson(const {
       'id': 'u2',
