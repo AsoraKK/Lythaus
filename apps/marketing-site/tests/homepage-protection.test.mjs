@@ -64,7 +64,7 @@ const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8'
 function assertRootToolingLockOnlyHasSecurityPatches() {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
   const current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
-  for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1']]) {
+  for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
     const packagePath = `node_modules/${name}`;
     const patched = current.packages[packagePath];
     assert.equal(patched?.version, version, `${name} must use the reviewed patched version`);
@@ -73,6 +73,19 @@ function assertRootToolingLockOnlyHasSecurityPatches() {
     current.packages[packagePath] = original.packages[packagePath];
   }
   assert.deepEqual(current, original, 'Root tooling lock may change only for the reviewed security patches');
+}
+function assertMarketingLockOnlyHasSecurityPatch() {
+  const filename = 'apps/marketing-site/package-lock.json';
+  const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
+  const current = JSON.parse(readFileSync(path.join(root, filename), 'utf8'));
+  assert.deepEqual(current.packages['node_modules/devalue'], {
+    version: '5.9.3',
+    resolved: 'https://registry.npmjs.org/devalue/-/devalue-5.9.3.tgz',
+    integrity: 'sha512-xRumYOCUZN/EesqHEU3WOXanOZNvfZFZ/o1AHVFDX1yI0UAkZkOgDXt341CzKoBVIkgQba55/+DjGBKrIoKcHw==',
+    license: 'MIT',
+  }, 'devalue must use the exact reviewed security patch');
+  current.packages['node_modules/devalue'] = original.packages['node_modules/devalue'];
+  assert.deepEqual(current, original, 'Marketing lock may change only for the reviewed devalue security patch');
 }
 const authRepairPaths = new Set([
   'package.json',
@@ -109,6 +122,7 @@ export function assertHomepageFrozen() {
     const [metadata, filename] = entry.split('\t');
     if (authRepairPaths.has(filename)) continue;
     if (filename === 'package-lock.json') continue;
+    if (filename === 'apps/marketing-site/package-lock.json') continue;
     const expected = metadata.split(' ')[2];
     if (filename === 'apps/marketing-site/public/sitemap.xml') {
       const original = git('show', `${baselineSha}:${filename}`);
@@ -121,6 +135,7 @@ export function assertHomepageFrozen() {
   }
   assert.deepEqual(changed, [], 'Homepage dependencies changed from the explicit frozen revision');
   assertRootToolingLockOnlyHasSecurityPatches();
+  assertMarketingLockOnlyHasSecurityPatch();
   return entries.length;
 }
 
@@ -187,11 +202,13 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
       assert.equal(after.overrides.undici, '7.29.1');
       assert.equal(after.overrides.miniflare.undici, '7.29.1');
+      assert.deepEqual(after.overrides['get-uri@8.0.1'], { 'basic-ftp': '6.2.1' });
       before.overrides['brace-expansion'] = '5.0.12';
       before.overrides.undici = '7.29.1';
       before.overrides.miniflare.undici = '7.29.1';
+      before.overrides['get-uri@8.0.1'] = { 'basic-ftp': '6.2.1' };
     }
-    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag may change; homepage dependencies remain frozen');
+    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and reviewed security overrides may change; homepage dependencies remain frozen');
   }
 });
 

@@ -113,6 +113,7 @@ jobs:
       - run: npm run test:planetscale-production-migrations
       - run: npm run validate:planetscale-extensions
       - run: node --test scripts/tests/provider-audit-contract.test.mjs
+      - run: node --test scripts/tests/production-worker-probe.test.mjs
       - run: node --test scripts/tests/production-gates.test.mjs
       - run: npm run validate:production-gates
       - run: node --test scripts/tests/public-waitlist-cutover.test.mjs

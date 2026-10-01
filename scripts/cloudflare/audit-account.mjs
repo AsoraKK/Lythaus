@@ -156,6 +156,7 @@ const zoneBase = `https://api.cloudflare.com/client/v4/zones/${zoneId}`;
 const endpoints = {
   pages: `${accountBase}/pages/projects`,
   workers: `${accountBase}/workers/scripts`,
+  workerDomains: `${accountBase}/workers/domains`,
   hyperdrives: `${accountBase}/hyperdrive/configs`,
   r2: `${accountBase}/r2/buckets`,
   queues: `${accountBase}/queues?per_page=100`,
@@ -176,6 +177,17 @@ for (const [name, url] of Object.entries(endpoints)) {
 const rawPages = arrayResult(responses.pages);
 const rawWorkers = arrayResult(responses.workers);
 const rawAccess = arrayResult(responses.access);
+const adminCustomDomain = {
+  hostname: 'admin-api.lythaus.co',
+  expectedService: 'lythaus-admin-api-development',
+  mappings: arrayResult(responses.workerDomains)
+    .filter((domain) => domain.hostname === 'admin-api.lythaus.co')
+    .map((domain) => ({ hostname: domain.hostname, service: domain.service ?? null, environment: domain.environment ?? null })),
+};
+adminCustomDomain.mappingVerified = responses.workerDomains.ok
+  && adminCustomDomain.mappings.length === 1
+  && adminCustomDomain.mappings[0].service === adminCustomDomain.expectedService
+  && adminCustomDomain.mappings[0].environment === 'production';
 
 const pages = rawPages.map((project) => {
   const source = project.source?.config ?? {};
@@ -522,6 +534,7 @@ const report = {
   failedEndpoints: requiredLythausFailures,
   endpointState: endpointStates,
   adminWorkerSettings: { state: adminSettings.state, access: adminSettingsAccess },
+  adminCustomDomain,
   pages: { detailState: pageDetailStates, details: pageDetails },
   workerDetails: { settings: workerSettings, deployments: workerDeployments, builds: workerBuilds, buildState: workerBuildStates },
   accessPolicies: accessPolicyStates,
