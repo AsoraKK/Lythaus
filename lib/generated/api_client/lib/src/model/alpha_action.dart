@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -14,6 +15,10 @@ part 'alpha_action.g.dart';
 /// * [caseId]
 /// * [status]
 /// * [accepted]
+/// * [purgeStatus]
+/// * [adviser]
+/// * [publicationEligible]
+/// * [rewardsEligible]
 @BuiltValue()
 abstract class AlphaAction implements Built<AlphaAction, AlphaActionBuilder> {
   @BuiltValueField(wireName: r'caseId')
@@ -24,6 +29,20 @@ abstract class AlphaAction implements Built<AlphaAction, AlphaActionBuilder> {
 
   @BuiltValueField(wireName: r'accepted')
   bool? get accepted;
+
+  @BuiltValueField(wireName: r'purgeStatus')
+  AlphaActionPurgeStatusEnum? get purgeStatus;
+  // enum purgeStatusEnum {  completed,  pending,  blocked,  };
+
+  @BuiltValueField(wireName: r'adviser')
+  AlphaActionAdviserEnum? get adviser;
+  // enum adviserEnum {  GPT_OSS_PRIVATE_ALPHA_EXPLAINER,  };
+
+  @BuiltValueField(wireName: r'publicationEligible')
+  bool? get publicationEligible;
+
+  @BuiltValueField(wireName: r'rewardsEligible')
+  bool? get rewardsEligible;
 
   AlphaAction._();
 
@@ -66,6 +85,34 @@ class _$AlphaActionSerializer implements PrimitiveSerializer<AlphaAction> {
       yield r'accepted';
       yield serializers.serialize(
         object.accepted,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.purgeStatus != null) {
+      yield r'purgeStatus';
+      yield serializers.serialize(
+        object.purgeStatus,
+        specifiedType: const FullType(AlphaActionPurgeStatusEnum),
+      );
+    }
+    if (object.adviser != null) {
+      yield r'adviser';
+      yield serializers.serialize(
+        object.adviser,
+        specifiedType: const FullType(AlphaActionAdviserEnum),
+      );
+    }
+    if (object.publicationEligible != null) {
+      yield r'publicationEligible';
+      yield serializers.serialize(
+        object.publicationEligible,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.rewardsEligible != null) {
+      yield r'rewardsEligible';
+      yield serializers.serialize(
+        object.rewardsEligible,
         specifiedType: const FullType(bool),
       );
     }
@@ -113,6 +160,34 @@ class _$AlphaActionSerializer implements PrimitiveSerializer<AlphaAction> {
           ) as bool;
           result.accepted = valueDes;
           break;
+        case r'purgeStatus':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AlphaActionPurgeStatusEnum),
+          ) as AlphaActionPurgeStatusEnum;
+          result.purgeStatus = valueDes;
+          break;
+        case r'adviser':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AlphaActionAdviserEnum),
+          ) as AlphaActionAdviserEnum;
+          result.adviser = valueDes;
+          break;
+        case r'publicationEligible':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.publicationEligible = valueDes;
+          break;
+        case r'rewardsEligible':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.rewardsEligible = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -140,4 +215,34 @@ class _$AlphaActionSerializer implements PrimitiveSerializer<AlphaAction> {
     );
     return result.build();
   }
+}
+
+class AlphaActionPurgeStatusEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'completed')
+  static const AlphaActionPurgeStatusEnum completed = _$alphaActionPurgeStatusEnum_completed;
+  @BuiltValueEnumConst(wireName: r'pending')
+  static const AlphaActionPurgeStatusEnum pending = _$alphaActionPurgeStatusEnum_pending;
+  @BuiltValueEnumConst(wireName: r'blocked')
+  static const AlphaActionPurgeStatusEnum blocked = _$alphaActionPurgeStatusEnum_blocked;
+
+  static Serializer<AlphaActionPurgeStatusEnum> get serializer => _$alphaActionPurgeStatusEnumSerializer;
+
+  const AlphaActionPurgeStatusEnum._(String name): super(name);
+
+  static BuiltSet<AlphaActionPurgeStatusEnum> get values => _$alphaActionPurgeStatusEnumValues;
+  static AlphaActionPurgeStatusEnum valueOf(String name) => _$alphaActionPurgeStatusEnumValueOf(name);
+}
+
+class AlphaActionAdviserEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'GPT_OSS_PRIVATE_ALPHA_EXPLAINER')
+  static const AlphaActionAdviserEnum GPT_OSS_PRIVATE_ALPHA_EXPLAINER = _$alphaActionAdviserEnum_GPT_OSS_PRIVATE_ALPHA_EXPLAINER;
+
+  static Serializer<AlphaActionAdviserEnum> get serializer => _$alphaActionAdviserEnumSerializer;
+
+  const AlphaActionAdviserEnum._(String name): super(name);
+
+  static BuiltSet<AlphaActionAdviserEnum> get values => _$alphaActionAdviserEnumValues;
+  static AlphaActionAdviserEnum valueOf(String name) => _$alphaActionAdviserEnumValueOf(name);
 }

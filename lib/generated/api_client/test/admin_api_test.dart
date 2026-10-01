@@ -315,6 +315,8 @@ void main() {
 
     // Request one bounded private alpha explanation
     //
+    // The current administrator role cannot create a measured advice reservation. This route returns alpha_owner_advice_required; the owner requests advice through the authenticated owner route.
+    //
     //Future<AlphaAction> requestAdminAuthenticityPrivateAlphaAdvice(String caseId, AlphaFeedback alphaFeedback) async
     test('test requestAdminAuthenticityPrivateAlphaAdvice', () async {
       // TODO

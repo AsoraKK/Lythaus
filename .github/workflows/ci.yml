@@ -265,6 +265,8 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Verify rendered Flutter authentication journey
         run: node --test --test-timeout=120000 scripts/tests/flutter-auth.browser.mjs
+      - name: Verify private alpha unavailable and deletion journey
+        run: node --experimental-strip-types --test --test-timeout=120000 scripts/tests/flutter-authenticity-alpha.browser.mjs
 
   frontends:
     name: Web frontends

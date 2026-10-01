@@ -8,6 +8,8 @@ import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
+import 'package:dio/dio.dart';
+import 'package:lythaus/features/authenticity/alpha_api.dart';
 
 import 'package:lythaus/core/routing/app_router.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
@@ -25,6 +27,16 @@ User _user() => User(
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockIntegrityGuard extends Mock implements DeviceIntegrityGuard {}
+
+class _AlphaApi extends PrivateAlphaApi {
+  _AlphaApi() : super(Dio(), () async => 'route-fixture');
+  @override
+  Future<Map<String, dynamic>> request(
+    String suffix, {
+    String method = 'GET',
+    Map<String, dynamic>? data,
+  }) async => {'items': <Map<String, dynamic>>[]};
+}
 
 void main() {
   testWidgets('auth loading/errors retain router and entered email', (
@@ -88,6 +100,54 @@ void main() {
       isNull,
     );
   });
+
+  test('guest users cannot enter the private alpha', () {
+    expect(
+      resolveAppRedirect(
+        matchedLocation: '/authenticity',
+        user: null,
+        isGuest: true,
+      ),
+      '/',
+    );
+  });
+
+  testWidgets(
+    'private alpha destination survives authenticated session restoration',
+    (tester) async {
+      final service = _MockAuthService();
+      when(() => service.getCurrentUser()).thenAnswer((_) async => null);
+      final container = ProviderContainer(
+        overrides: [
+          enhancedAuthServiceProvider.overrideWithValue(service),
+          privateAlphaApiProvider.overrideWithValue(_AlphaApi()),
+          analyticsClientProvider.overrideWithValue(
+            const NullAnalyticsClient(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: Consumer(
+            builder: (_, ref, _) =>
+                MaterialApp.router(routerConfig: ref.watch(appRouterProvider)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final router = container.read(appRouterProvider);
+      router.go('/authenticity');
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/login');
+      container.read(authStateProvider.notifier).setUser(_user());
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/authenticity');
+      expect(find.text('Private authenticity alpha'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   test('email-authenticated users leave the login route', () {
     expect(

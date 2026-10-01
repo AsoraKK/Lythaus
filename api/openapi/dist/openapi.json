@@ -2588,6 +2588,7 @@
       "post": {
         "operationId": "requestAdminAuthenticityPrivateAlphaAdvice",
         "summary": "Request one bounded private alpha explanation",
+        "description": "The current administrator role cannot create a measured advice reservation. This route returns alpha_owner_advice_required; the owner requests advice through the authenticated owner route.",
         "tags": [
           "Admin"
         ],
@@ -11769,6 +11770,32 @@
           },
           "accepted": {
             "type": "boolean"
+          },
+          "purgeStatus": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "pending",
+              "blocked"
+            ]
+          },
+          "adviser": {
+            "type": "string",
+            "enum": [
+              "GPT_OSS_PRIVATE_ALPHA_EXPLAINER"
+            ]
+          },
+          "publicationEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "rewardsEligible": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
           }
         }
       },

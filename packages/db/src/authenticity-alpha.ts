@@ -114,6 +114,12 @@ export async function scheduleAlphaPurge(
       );
     }
     await client.query(
+      `UPDATE system.cost_budget_reservations SET status='released',updated_at=now()
+        WHERE id=$1 AND operation='authenticity_alpha_advice' AND status='reserved'
+          AND NOT EXISTS (SELECT 1 FROM moderation.authenticity_alpha_steps WHERE case_id=$2 AND component='adviser')`,
+      [row.advice_reservation_id ?? null, caseId],
+    );
+    await client.query(
       `UPDATE moderation.authenticity_alpha
           SET state=$3,revision=revision+1,deleted_at=coalesce(deleted_at,now()),result=NULL,text_body=NULL,
               components='{"deleted":true}'::jsonb,lease_token=NULL,lease_until=NULL,
@@ -153,10 +159,10 @@ export async function purgeAlphaMedia(
   bucket: AlphaPurgeBucket | undefined,
   caseId: string | null = null,
 ): Promise<{ pending: number; completed: number; failed: number }> {
-  const rows = await query<AlphaPurgeRow & { upload_key: string | null; byte_size: string | null; storage_released_at: Date | null }>(
+  const rows = await query<AlphaPurgeRow & { upload_key: string | null; upload_expires_at: Date | null; byte_size: string | null; storage_released_at: Date | null }>(
     binding,
     `SELECT a.case_id,a.owner_id,a.state,a.object_id,a.upload_session_id,a.original_key,a.purge_state,
-            a.purge_attempts,a.storage_released_at,u.object_key AS upload_key,o.byte_size
+            a.purge_attempts,a.storage_released_at,u.object_key AS upload_key,u.expires_at AS upload_expires_at,o.byte_size
        FROM moderation.authenticity_alpha a
        LEFT JOIN media.upload_sessions u ON u.id=a.upload_session_id
        LEFT JOIN media.objects o ON o.id=a.object_id
@@ -174,6 +180,11 @@ export async function purgeAlphaMedia(
       if (hold.rows[0]?.active === true) continue;
       await query(binding, `UPDATE moderation.authenticity_alpha SET purge_state='pending',purge_last_error=NULL,updated_at=now() WHERE case_id=$1 AND purge_state='blocked'`, [row.case_id]);
     }
+    const hold = await query<{ active: boolean }>(binding, `SELECT privacy.alpha_subject_has_hold($1) AS active`, [row.owner_id]);
+    if (hold.rows[0]?.active === true) {
+      await query(binding, `UPDATE moderation.authenticity_alpha SET purge_state='blocked',purge_last_error='RETENTION_HOLD',updated_at=now() WHERE case_id=$1`, [row.case_id]);
+      continue;
+    }
     const keys = uniqueKeys([row.original_key, row.upload_key]);
     if (bucket && keys.length) {
       try {
@@ -185,7 +196,7 @@ export async function purgeAlphaMedia(
           `UPDATE moderation.authenticity_alpha
               SET purge_attempts=purge_attempts+1,purge_last_error=$2,updated_at=now()
             WHERE case_id=$1 AND purge_state='pending'`,
-          [row.case_id, error instanceof Error ? error.message.slice(0, 500) : 'R2_DELETE_FAILED'],
+          [row.case_id, 'R2_DELETE_FAILED'],
         );
         continue;
       }
@@ -200,6 +211,7 @@ export async function purgeAlphaMedia(
       );
       continue;
     }
+    if (row.upload_expires_at && new Date(row.upload_expires_at).getTime() + 120_000 > Date.now()) continue;
     try {
       const finalized = await transaction(binding, async (client) => {
         const locked = await client.query<AlphaPurgeRow & { storage_released_at: Date | null; byte_size: string | null }>(
@@ -241,7 +253,7 @@ export async function purgeAlphaMedia(
       await query(
         binding,
         `UPDATE moderation.authenticity_alpha SET purge_attempts=purge_attempts+1,purge_last_error=$2,updated_at=now() WHERE case_id=$1 AND purge_state='pending'`,
-        [row.case_id, error instanceof Error ? error.message.slice(0, 500) : 'PURGE_FINALIZE_FAILED'],
+        [row.case_id, 'PURGE_FINALIZE_FAILED'],
       );
     }
   }

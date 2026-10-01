@@ -162,3 +162,12 @@ test('author view redacts detector internals while exposing execution and limita
   assert.equal(dto.publicationEligible, false);
   assert.equal(dto.rewardsEligible, false);
 });
+
+test('queued and failed cases do not claim completed processing or pending provider work', () => {
+  const input = { id: caseId, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', expiresAt: '2026-01-01T00:15:00Z', contentKind: 'text_image', result: null, reviewState: 'none', textPresent: true, imagePresent: true };
+  assert.match(authorPrivateAlphaView({ ...input, state: 'queued' }).explanation, /has not completed/);
+  const failed = authorPrivateAlphaView({ ...input, state: 'failed' });
+  assert.match(failed.explanation, /unavailable/);
+  assert.equal(failed.execution.safety_text.interpretation, 'unavailable');
+  assert.equal(failed.execution.safe.execution, 'skipped');
+});

@@ -321,7 +321,7 @@ export interface VisionObserver {
 }
 
 export interface CloudflareAiRunOptions {
-  run(model: string, input: unknown, options?: { gateway?: { id: string; skipCache?: boolean; cacheTtl?: number }; collectLog?: boolean; metadata?: Record<string, string> }): Promise<unknown>;
+  run(model: string, input: unknown, options?: { gateway?: { id: string; skipCache?: boolean; cacheTtl?: number; collectLog?: boolean; retries?: { maxAttempts: 1 }; metadata?: Record<string, string> }; signal?: AbortSignal; metadata?: Record<string, string> }): Promise<unknown>;
 }
 
 export interface VisionRoutingPolicy {
@@ -1015,6 +1015,7 @@ function createVisionObserver(options: {
 
 export function createCloudflareVisionObserver(options: {
   ai: CloudflareAiRunOptions;
+  gatewayId?: string;
   model?: string;
   maxImageBytes?: number;
   timeoutMs?: number;
@@ -1025,7 +1026,7 @@ export function createCloudflareVisionObserver(options: {
     provider: 'cloudflare-workers-ai',
     maxImageBytes: options.maxImageBytes,
     timeoutMs: options.timeoutMs,
-    run: async (selectedModel, payload) => ({ value: await options.ai.run(selectedModel, payload, { metadata: { protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION, observerTemperature: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.temperature), observerMaxTokens: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.maxTokens), observerStream: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.stream) } }), httpStatus: null, transportSucceeded: true }),
+    run: async (selectedModel, payload) => ({ value: await options.ai.run(selectedModel, payload, { signal: AbortSignal.timeout(options.timeoutMs ?? 30_000), ...(options.gatewayId ? { gateway: { id: options.gatewayId, skipCache: true, collectLog: false, retries: { maxAttempts: 1 }, metadata: { protocolVersion: VISION_OBSERVER_PROTOCOL_VERSION, promptVersion: VISION_OBSERVER_PROMPT_VERSION, observerTemperature: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.temperature), observerMaxTokens: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.maxTokens), observerStream: String(VISION_OBSERVER_QUERY_GENERATION_CONFIG.stream) } } } : {}) }), httpStatus: null, transportSucceeded: true }),
   });
 }
 

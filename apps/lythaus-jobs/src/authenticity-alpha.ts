@@ -53,13 +53,13 @@ const fence = "case_id=$1 AND revision=$2 AND lease_token=$3 AND lease_until>now
 
 async function active(env: AlphaEnv, row: AlphaRow): Promise<void> {
   const config = await readBetaConfig(env);
-  if (env.AUTHENTICITY_ALPHA_ENABLED !== 'true' || env.COST_BUDGET_ENABLED !== 'true' || !config.enabled || !config.allowlist.includes(row.owner_id)) throw new Error('alpha_paused');
+  if (env.AUTHENTICITY_ALPHA_ENABLED !== 'true' || env.AUTHENTICITY_ALPHA_STORAGE_ENABLED !== 'true' || env.COST_BUDGET_ENABLED !== 'true' || !config.enabled || !config.allowlist.includes(row.owner_id)) throw new Error('alpha_paused');
   try {
     measuredAlphaBudget(config, { observer: row.observer_requested, adviser: row.explanation_requested });
   } catch {
     throw new Error('alpha_paused');
   }
-  const reservation = await query(env.DB_JOBS_FRESH, "SELECT id FROM system.cost_budget_reservations WHERE operation='authenticity_alpha_case' AND correlation_id=$1 AND status IN ('committed','reconciled') AND NOT EXISTS (SELECT 1 FROM system.cost_kill_switches WHERE enabled AND key=ANY($2::text[]))", [row.case_id, ['global', 'authenticity', 'operation:authenticity_alpha_case', 'provider:lythaus-safe-container', 'provider:cloudflare-workers-ai', 'provider:openai']]);
+  const reservation = await query(env.DB_JOBS_FRESH, "SELECT id FROM system.cost_budget_reservations WHERE operation='authenticity_alpha_case' AND correlation_id=$1 AND status IN ('committed','reconciled') AND NOT EXISTS (SELECT 1 FROM system.cost_kill_switches WHERE enabled AND key=ANY($2::text[]))", [row.case_id, ['global', 'authenticity', 'operation:authenticity_alpha_case', ...(row.result ? ['operation:authenticity_alpha_advice'] : []), 'provider:lythaus-safe-container', 'provider:cloudflare-workers-ai', 'provider:openai']]);
   if (!reservation.rowCount) throw new Error('alpha_paused');
   const current = await query(env.DB_JOBS_FRESH, "SELECT case_id FROM moderation.authenticity_alpha WHERE " + fence, [row.case_id, row.revision, row.lease_token]);
   if (!current.rowCount) throw new Error('alpha_stale');
@@ -91,6 +91,7 @@ async function step<T>(env: AlphaEnv, row: AlphaRow, component: AlphaComponent, 
     return result;
   } catch (error) {
     await query(env.DB_JOBS_FRESH, "UPDATE moderation.authenticity_alpha_steps SET state='ambiguous',error_code='ATTEMPT_CONSUMED',completed_at=now() WHERE id=$1 AND state='started'", [started.id]);
+    if (error instanceof Error && (error.name === 'TimeoutError' || error.message === 'alpha_advice_timeout')) throw new Error('alpha_component_timeout');
     throw error instanceof Error && ['alpha_stale', 'alpha_paused', 'alpha_attempt_consumed'].includes(error.message) ? error : new Error('alpha_attempt_consumed');
   }
 }
@@ -188,11 +189,13 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
     await active(env, row);
     const config = await readBetaConfig(env);
     if (operation === 'advice') {
+      try { measuredAlphaBudget(config, { observer: false, adviser: true }); } catch { throw new Error('alpha_paused'); }
+      if (!row.advice_reservation_id) throw new Error('alpha_advice_reservation_missing');
       if (!row.result || row.result.explanation.status !== 'not_requested' || env.AUTHENTICITY_ALPHA_ADVISER_ENABLED !== 'true' || !env.AI || !env.AI_GATEWAY_ID) {
         if (row.result) {
           row.result.explanation = { status: 'disabled', role: 'GPT_OSS_PRIVATE_ALPHA_EXPLAINER' };
           setComponent(row.result, 'adviser', { execution: 'skipped', interpretation: 'unavailable', requested: true, reason: 'adviser_disabled' });
-          await reconcileAdviceReservation(env, row, 'adviser_disabled_before_execution');
+          await query(env.DB_JOBS_FRESH, "UPDATE system.cost_budget_reservations SET status='released',updated_at=now() WHERE id=$1 AND status='reserved' AND NOT EXISTS (SELECT 1 FROM moderation.authenticity_alpha_steps WHERE case_id=$2 AND component='adviser')", [row.advice_reservation_id, row.case_id]);
           await saveResult(env, row, row.result, true);
         }
         return;
@@ -205,7 +208,7 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
           let timer: ReturnType<typeof setTimeout> | undefined;
           try {
             const raw = await Promise.race([
-              env.AI!.run('@cf/openai/gpt-oss-20b', request, { gateway: { id: env.AI_GATEWAY_ID!, skipCache: true }, collectLog: false }),
+              env.AI!.run('@cf/openai/gpt-oss-20b', request, { gateway: { id: env.AI_GATEWAY_ID!, skipCache: true, collectLog: false, retries: { maxAttempts: 1 } }, signal: AbortSignal.timeout(PRIVATE_ALPHA_LIMITS.adviceMs) }),
               new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('alpha_advice_timeout')), PRIVATE_ALPHA_LIMITS.adviceMs); }),
             ]);
             return { recommendation: parsePrivateAlphaExplanation(raw, result.packet), usage: usage(raw) };
@@ -216,10 +219,10 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
         await reconcileAdviceReservation(env, row, 'adviser_attempt_completed');
         result.explanation = { status: 'complete', role: 'GPT_OSS_PRIVATE_ALPHA_EXPLAINER', ...advice };
         setComponent(result, 'adviser', { execution: 'completed', interpretation: 'available', requested: true });
-      } catch {
+      } catch (error) {
         await reconcileAdviceReservation(env, row, 'adviser_attempt_ambiguous_or_failed').catch(() => undefined);
         result.explanation = { status: 'attempt_consumed', role: 'GPT_OSS_PRIVATE_ALPHA_EXPLAINER' };
-        setComponent(result, 'adviser', { execution: 'failed', interpretation: 'unavailable', requested: true, reason: 'provider_failure' });
+        setComponent(result, 'adviser', { execution: error instanceof Error && error.message === 'alpha_component_timeout' ? 'timed_out' : 'failed', interpretation: 'unavailable', requested: true, reason: 'provider_failure' });
       }
       await saveResult(env, row, result, true);
       return;
@@ -247,10 +250,11 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
         : { provider: 'openai', result: 'PROVIDER_FAILURE', reasonCodes: ['OPENAI_MODERATION_MISSING_CREDENTIAL'], modelVersion: 'omni-moderation-latest', executionMs: 0, costEstimateUsd: 0 };
     }
     const blocked = [safetyText, safetyImage].some((value) => value?.result === 'BLOCK' || value?.result === 'REVIEW');
+    const safetyUnavailable = [safetyText, safetyImage].some((value) => value?.result === 'PROVIDER_FAILURE');
     let observer: VisionObserverResult | null = null;
     let observerFailure = false;
-    if (!blocked && safetyImage?.result === 'ALLOW' && row.observer_requested && image && bytes && env.AUTHENTICITY_ALPHA_OBSERVER_ENABLED === 'true' && env.AI) {
-      const vision = createCloudflareVisionObserver({ ai: env.AI, model: env.AUTHENTICITY_VISION_OBSERVER_MODEL, timeoutMs: PRIVATE_ALPHA_LIMITS.observerMs, maxImageBytes: BETA_LIMITS.bytes });
+    if (!blocked && !safetyUnavailable && safetyImage?.result === 'ALLOW' && row.observer_requested && image && bytes && env.AUTHENTICITY_ALPHA_OBSERVER_ENABLED === 'true' && env.AI && env.AI_GATEWAY_ID) {
+      const vision = createCloudflareVisionObserver({ ai: env.AI, gatewayId: env.AI_GATEWAY_ID, model: env.AUTHENTICITY_VISION_OBSERVER_MODEL, timeoutMs: PRIVATE_ALPHA_LIMITS.observerMs, maxImageBytes: BETA_LIMITS.bytes });
       try {
         observer = await step(env, row, 'observer', reuse + ':observer', async () => vision.observe({ sampleId: row.case_id, inputHash: row.input_hash, mime: row.content_type, bytes: bytes! }));
       } catch {
@@ -261,25 +265,32 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
     if (!image) {
       result = compilePrivateAlphaText({ caseId: row.case_id, runId: row.case_id, inputHash: row.input_hash, moderation: safetyText! });
       setComponent(result, 'safety_text', { execution: 'completed', interpretation: safetyText?.result === 'PROVIDER_FAILURE' ? 'unavailable' : 'available', requested: true });
-    } else if (blocked || !safetyImage || safetyImage.result !== 'ALLOW') {
+    } else if (blocked || safetyUnavailable || !safetyImage || safetyImage.result !== 'ALLOW') {
       result = noSafeResult({ row, moderation: safetyImage, observer, failed: false });
       setComponent(result, 'safe', { execution: 'skipped', interpretation: 'unavailable', requested: true, reason: blocked ? 'safety_gate' : 'safety_unavailable' });
       setComponent(result, 'forensics', { execution: 'skipped', interpretation: 'unavailable', requested: true, reason: 'safe_not_run' });
     } else if (env.AUTHENTICITY_BETA_CONTAINER && env.AUTHENTICITY_BETA_DISPATCH_SECRET && config.safeEnabled && config.rightsApproval && config.runtimeApproval) {
-      const safe = await step<SafeResult>(env, row, 'safe', reuse + ':safe', async (runId) => {
-        const response = await env.AUTHENTICITY_BETA_CONTAINER!.getByName('safe-a-beta-v1').fetch(new Request('http://safe/infer', {
-          method: 'POST',
-          headers: { authorization: 'Bearer ' + env.AUTHENTICITY_BETA_DISPATCH_SECRET, 'content-type': row.content_type, 'x-beta-binding': JSON.stringify({ caseId: row.case_id, runId, inputHash: row.input_hash, revision: row.revision }) },
-          body: bytes!,
-          signal: AbortSignal.timeout(BETA_LIMITS.inferenceMs),
-        }));
-        if (!response.ok) throw new Error('alpha_runtime_failed');
-        const received = JSON.parse(new TextDecoder().decode(await readBoundedBytes(response.body, 8 * 1024 * 1024))) as { result: SafeResult };
-        assertSafeResult(received.result, { caseId: row.case_id, runId, inputHash: row.input_hash, revision: row.revision, runtimeDigest: config.runtimeDigest, preprocessingHash: config.preprocessingHash });
-        return received.result;
-      });
-      result = compilePrivateAlphaImage({ safe, moderation: safetyImage, observer });
-      if (observer) result = attachAlphaObserver(result, observer, true);
+      try {
+        const safe = await step<SafeResult>(env, row, 'safe', reuse + ':safe', async (runId) => {
+          const response = await env.AUTHENTICITY_BETA_CONTAINER!.getByName('safe-a-beta-v1').fetch(new Request('http://safe/infer', {
+            method: 'POST',
+            headers: { authorization: 'Bearer ' + env.AUTHENTICITY_BETA_DISPATCH_SECRET, 'content-type': row.content_type, 'x-beta-binding': JSON.stringify({ caseId: row.case_id, runId, inputHash: row.input_hash, revision: row.revision }) },
+            body: bytes!,
+            signal: AbortSignal.timeout(BETA_LIMITS.inferenceMs),
+          }));
+          if (!response.ok) throw new Error('alpha_runtime_failed');
+          const received = JSON.parse(new TextDecoder().decode(await readBoundedBytes(response.body, 8 * 1024 * 1024))) as { result: SafeResult };
+          assertSafeResult(received.result, { caseId: row.case_id, runId, inputHash: row.input_hash, revision: row.revision, runtimeDigest: config.runtimeDigest, preprocessingHash: config.preprocessingHash });
+          return received.result;
+        });
+        result = compilePrivateAlphaImage({ safe, moderation: safetyImage, observer });
+        if (observer) result = attachAlphaObserver(result, observer, true);
+      } catch (error) {
+        if (error instanceof Error && ['alpha_paused', 'alpha_stale'].includes(error.message)) throw error;
+        result = noSafeResult({ row, moderation: safetyImage, observer, failed: true });
+        setComponent(result, 'safe', { execution: error instanceof Error && error.message === 'alpha_component_timeout' ? 'timed_out' : 'failed', interpretation: 'unavailable', requested: true, reason: 'runtime_unavailable' });
+        setComponent(result, 'forensics', { execution: 'skipped', interpretation: 'unavailable', requested: true, reason: 'safe_not_run' });
+      }
     } else {
       result = noSafeResult({ row, moderation: safetyImage, observer, failed: false });
       setComponent(result, 'safe', { execution: 'skipped', interpretation: 'unavailable', requested: true, reason: 'runtime_not_enabled' });
@@ -308,13 +319,17 @@ export async function processAlphaEvent(env: AlphaEnv, eventId: string, payload:
 async function saveResult(env: AlphaEnv, row: AlphaRow, result: PrivateAlphaResult, terminal: boolean): Promise<void> {
   await active(env, row);
   const state = terminal ? (result.status === 'failed' ? 'failed' : result.status === 'inconclusive' ? 'inconclusive' : result.status === 'unsupported' ? 'unsupported' : 'complete') : 'analyzing';
-  const saved = await query(env.DB_JOBS_FRESH, "UPDATE moderation.authenticity_alpha SET result=$4::jsonb,components=$5::jsonb,state=$6,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE " + fence, [row.case_id, row.revision, row.lease_token, JSON.stringify(result), JSON.stringify(result.components), state]);
-  if (!saved.rowCount) throw new Error('alpha_stale');
+  const queueAdvice = terminal && row.explanation_requested && Boolean(row.advice_reservation_id) && result.explanation.status === 'not_requested';
+  await transaction(env.DB_JOBS_FRESH, async (client) => {
+    const saved = await client.query("UPDATE moderation.authenticity_alpha SET result=$4::jsonb,components=$5::jsonb,state=$6,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE " + fence, [row.case_id, row.revision, row.lease_token, JSON.stringify(result), JSON.stringify(result.components), queueAdvice ? 'queued' : state]);
+    if (!saved.rowCount) throw new Error('alpha_stale');
+    if (queueAdvice) await client.query("INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,actor_id,payload) VALUES($1,'moderation.authenticity_alpha.requested','authenticity_alpha_case',$2,$3,$4::jsonb)", [uuidv7(), row.case_id, row.owner_id, JSON.stringify({ caseId: row.case_id, revision: row.revision, operation: 'advice' })]);
+  });
 }
 
 export async function expireAlphaWork(env: AlphaEnv): Promise<void> {
   await query(env.DB_JOBS_FRESH, "UPDATE moderation.authenticity_alpha_steps s SET state='ambiguous',error_code='PROVIDER_OUTCOME_UNKNOWN',completed_at=now() FROM moderation.authenticity_alpha a WHERE a.case_id=s.case_id AND s.state='started' AND (a.expires_at<=now() OR a.lease_until<now() OR a.deleted_at IS NOT NULL OR a.state='cancelled')");
-  const expired = await query<{ case_id: string; owner_id: string }>(env.DB_JOBS_FRESH, "SELECT case_id,owner_id FROM moderation.authenticity_alpha WHERE expires_at<=now() AND state IN ('uploading','queued','analyzing','paused') AND deleted_at IS NULL");
+  const expired = await query<{ case_id: string; owner_id: string }>(env.DB_JOBS_FRESH, "SELECT case_id,owner_id FROM moderation.authenticity_alpha WHERE expires_at<=now() AND state NOT IN ('cancelled','deleted','expired') AND deleted_at IS NULL");
   for (const row of expired.rows) {
     try {
       await scheduleAlphaPurge(env.DB_JOBS_FRESH, row.owner_id, row.case_id, 'expired');

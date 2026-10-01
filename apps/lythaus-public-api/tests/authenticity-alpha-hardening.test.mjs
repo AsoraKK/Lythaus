@@ -124,6 +124,26 @@ test('cross-account access cannot read or delete the owner case', async () => {
   assert.deepEqual(state.schedule, []);
 });
 
+test('mixed input types, whitespace and modality mismatches are rejected before reservation', async () => {
+  const valid = { contentKind: 'text', text: 'Private fixture', consentVersion: 'lythaus-authenticity-private-alpha-v0.1.0', trainingConsent: false };
+  for (const patch of [{ text: {} }, { text: 42 }, { text: '  ' }, { text: 'a'.repeat(20001) }, { contentKind: 'image' }, { contentKind: 'text_image', text: null }, { size: 1 }, { observerRequested: 'true' }]) {
+    reset();
+    const response = await handleAlphaApi(request('/api/authenticity/alpha/cases', { method: 'POST', body: JSON.stringify({ ...valid, ...patch }) }), env(), OWNER);
+    assert.equal(response.status, 400, JSON.stringify(patch));
+    assert.equal(state.queries.some((entry) => entry.sql.includes('INSERT')), false);
+  }
+});
+
+test('malformed and oversized JSON fail with private sanitized errors', async () => {
+  for (const payload of ['[1]', '{', JSON.stringify({ text: 'a'.repeat(65536) })]) {
+    reset();
+    const response = await handleAlphaApi(request('/api/authenticity/alpha/cases', { method: 'POST', body: payload }), env(), OWNER);
+    assert.equal(response.status, 400);
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(await response.json(), { error: 'alpha_input_invalid' });
+  }
+});
+
 test('advice acceptance rolls back when durable outbox insertion fails', async () => {
   reset();
   state.outboxFailure = true;

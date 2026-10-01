@@ -53,7 +53,7 @@ jobs:
           BUNDLE_PATH: ${{ runner.temp }}/authenticity-evaluation.tgz
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --max-redirs 0 --max-filesize 268435456 \
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 90 --max-redirs 0 --max-filesize 268435456 \
             -H "Authorization: Bearer ${EVALUATION_BUNDLE_TOKEN}" \
             "$EVALUATION_BUNDLE_URL" -o "$BUNDLE_PATH"
           python3 scripts/authenticity/validate-private-evaluation-bundle.py --archive "$BUNDLE_PATH"

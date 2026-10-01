@@ -3,7 +3,6 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { uuidv7 } from '@lythaus/security';
 import { authorPrivateAlphaView, PRIVATE_ALPHA_POLICY, type PrivateAlphaResult } from '../../../packages/authenticity/src/private-alpha.ts';
 import { SAFE_THRESHOLD } from '../../../packages/authenticity/src/beta.ts';
-import { readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import type { AdminActor } from './admin-access-runtime-policy.ts';
 
@@ -101,25 +100,15 @@ async function routeAdminAlpha(request: Request, env: Env, actor: AdminActor): P
     return json({ ...view(row), feedback: feedback.rows });
   }
   if (request.method !== 'POST' || !['review', 'advice'].includes(action ?? '')) return json({ error: 'not_found' }, 404);
+  if (action === 'advice') return json({ error: 'alpha_owner_advice_required' }, 409);
   const input = await readBoundedJson<{ message?: unknown }>(request);
   const message = typeof input.message === 'string' ? input.message.trim() : '';
   if (!message || message.length > 2000) return json({ error: 'review_explanation_required' }, 400);
-  if (action === 'advice') {
-    const config = await readBetaConfig(env);
-    if (!config.enabled || !config.allowlist.includes(row.owner_id) || env.AUTHENTICITY_ALPHA_ADVISER_ENABLED !== 'true' || !config.budgetApproval) return json({ error: 'alpha_paused' }, 409);
-  }
   await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const current = await client.query<Row>(`SELECT * FROM moderation.authenticity_alpha WHERE case_id=$1 AND deleted_at IS NULL FOR UPDATE`, [caseId]);
     if (!current.rows[0]) throw new Error('alpha_not_found');
-    if (action === 'advice') {
-      if (!current.rows[0].result) throw new Error('alpha_advice_ineligible');
-      const changed = await client.query(`UPDATE moderation.authenticity_alpha SET state='analyzing',advice_attempts=advice_attempts+1,updated_at=now() WHERE case_id=$1 AND state IN ('complete','inconclusive','unsupported','failed') AND advice_attempts=0 AND attempts<3 AND expires_at>now() AND lease_token IS NULL RETURNING revision`, [caseId]);
-      if (!changed.rowCount) throw new Error('alpha_attempt_consumed');
-      await client.query(`INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,actor_id,payload) VALUES($1,'moderation.authenticity_alpha.requested','authenticity_alpha_case',$2,$3,$4::jsonb)`, [uuidv7(), caseId, row.owner_id, JSON.stringify({ caseId, revision: changed.rows[0].revision, operation: 'advice' })]);
-    } else {
       await client.query(`INSERT INTO moderation.authenticity_alpha_feedback(id,case_id,actor_id,kind,message,policy_version) VALUES($1,$2,$3,'review',$4,$5)`, [uuidv7(), caseId, actor.userId, message, PRIVATE_ALPHA_POLICY]);
       await client.query(`UPDATE moderation.authenticity_alpha SET review_state='reviewed',updated_at=now() WHERE case_id=$1`, [caseId]);
-    }
     await client.query(`INSERT INTO system.audit_events(id,actor_id,action,target_type,target_id,reason_code,correlation_id,metadata) VALUES($1,$2,$3,'authenticity_alpha_case',$4,'ALPHA_NON_ENFORCING',$4::uuid::text,$5::jsonb)`, [uuidv7(), actor.userId, `authenticity.alpha.${action}`, caseId, JSON.stringify({ role: actor.role, policyVersion: PRIVATE_ALPHA_POLICY })]);
   });
   return json({ accepted: true, publicationEligible: false, rewardsEligible: false }, 202);

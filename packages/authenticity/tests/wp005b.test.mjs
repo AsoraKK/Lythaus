@@ -161,3 +161,21 @@ test('Observer adapter rejects non-text chat blocks without persisting their con
   assert.equal(result.responseDiagnostics.messageContentType, 'array');
   assert.equal(JSON.stringify(result).includes(privateContent), false);
 });
+
+test('Private observer disables provider logs and gateway caching', async () => {
+  let options;
+  await createCloudflareVisionObserver({
+    gatewayId: 'private-protocol-gateway',
+    ai: { run: async (_model, _payload, received) => { options = received; return observerEnvelope([], 'answer'); } },
+  }).observe({
+    sampleId: 'private-protocol-case', inputHash: 'c'.repeat(64), mime: 'image/png', bytes: new Uint8Array([1, 2, 3]),
+    request: { queryId: 'TEXT_03', category: 'TEXT', task: 'query', question: 'Read visible text.', reasoningMode: 'DIRECT', regionPolicy: 'CANONICAL' },
+  });
+  assert.equal(options.gateway.collectLog, false);
+  assert.equal(options.gateway.id, 'private-protocol-gateway');
+  assert.equal(options.gateway.skipCache, true);
+  assert.deepEqual(options.gateway.retries, { maxAttempts: 1 });
+  assert.ok(options.signal instanceof AbortSignal);
+  assert.equal(JSON.stringify(options).includes('private-protocol-case'), false);
+  assert.equal(JSON.stringify(options).includes('Read visible text.'), false);
+});

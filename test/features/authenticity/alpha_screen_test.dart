@@ -19,56 +19,62 @@ class _Api extends PrivateAlphaApi {
   String adviserStatus = 'not_requested';
   String contentKind = 'image';
   bool hasImage = true;
-  final imageBytes = Uint8List.fromList(base64Decode(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-  ));
+  final imageBytes = Uint8List.fromList(
+    base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    ),
+  );
 
   Map<String, dynamic> get item => {
-        'caseId': 'alpha-case',
-        'contentKind': contentKind,
-        'status': status,
-        'finding': 'INCONCLUSIVE',
+    'caseId': 'alpha-case',
+    'contentKind': contentKind,
+    'status': status,
+    'finding': 'INCONCLUSIVE',
+    'interpretation': 'inconclusive',
+    'explanation': 'Processing completed; authorship remains unavailable.',
+    'adviserStatus': adviserStatus,
+    'reviewState': 'none',
+    'hasImage': hasImage,
+    'observer': {
+      'observations': [
+        {
+          'category': 'scene',
+          'status': 'available',
+          'observation': 'A bounded visual observation.',
+        },
+      ],
+    },
+    'execution': {
+      'safety_image': {
+        'execution': 'completed',
+        'interpretation': 'available',
+        'reason': null,
+      },
+      'safe': {
+        'execution': 'completed',
         'interpretation': 'inconclusive',
-        'explanation': 'Processing completed; authorship remains unavailable.',
-        'adviserStatus': adviserStatus,
-        'reviewState': 'none',
-        'hasImage': hasImage,
-        'observer': {
-          'observations': [
-            {
-              'category': 'scene',
-              'status': 'available',
-              'observation': 'A bounded visual observation.',
-            },
-          ],
-        },
-        'execution': {
-          'safety_image': {
-            'execution': 'completed',
-            'interpretation': 'available',
-            'reason': null,
-          },
-          'safe': {
-            'execution': 'completed',
-            'interpretation': 'inconclusive',
-            'reason': 'history_unknown',
-          },
-          'observer': {
-            'execution': 'completed',
-            'interpretation': 'available',
-            'reason': null,
-          },
-          'adviser': {
-            'execution': adviserStatus == 'not_requested' ? 'skipped' : 'completed',
-            'interpretation': adviserStatus == 'complete' ? 'available' : 'not_requested',
-            'reason': adviserStatus == 'not_requested' ? 'explanation_not_requested' : null,
-          },
-        },
-        'limitations': [
-          'This private alpha does not establish human authorship.',
-          'JPEG and unknown processing history may make SAFE interpretation inconclusive.',
-        ],
-      };
+        'reason': 'history_unknown',
+      },
+      'observer': {
+        'execution': 'completed',
+        'interpretation': 'available',
+        'reason': null,
+      },
+      'adviser': {
+        'execution': adviserStatus == 'not_requested' ? 'skipped' : 'completed',
+        'interpretation': adviserStatus == 'complete'
+            ? 'available'
+            : 'not_requested',
+        'reason': adviserStatus == 'not_requested'
+            ? 'explanation_not_requested'
+            : null,
+      },
+    },
+    'limitations': [
+      'This private alpha does not establish human authorship.',
+      'JPEG and unknown processing history may make SAFE interpretation inconclusive.',
+    ],
+  };
 
   @override
   Future<Map<String, dynamic>> request(
@@ -84,7 +90,9 @@ class _Api extends PrivateAlphaApi {
       adviserStatus = 'complete';
     }
     if (suffix.isEmpty) {
-      return {'items': empty ? <Map<String, dynamic>>[] : [item]};
+      return {
+        'items': empty ? <Map<String, dynamic>>[] : [item],
+      };
     }
     return item;
   }
@@ -141,7 +149,8 @@ Future<void> _openScreen(
     ProviderScope(
       overrides: [
         privateAlphaApiProvider.overrideWithValue(api),
-        if (picker != null) privateAlphaImagePickerProvider.overrideWithValue(picker),
+        if (picker != null)
+          privateAlphaImagePickerProvider.overrideWithValue(picker),
       ],
       child: const MaterialApp(home: AuthenticityPrivateAlphaScreen()),
     ),
@@ -165,7 +174,10 @@ void main() {
     await _openScreen(tester, api);
 
     expect(find.text('No private alpha cases yet.'), findsOneWidget);
-    expect(find.textContaining('text authorship is unavailable'), findsOneWidget);
+    expect(
+      find.textContaining('text authorship is unavailable'),
+      findsOneWidget,
+    );
     expect(
       tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNull,
@@ -188,61 +200,81 @@ void main() {
 
     await tester.enterText(find.byType(TextField).last, 'Please review.');
     await _tapVisible(tester, find.widgetWithText(TextButton, 'Send feedback'));
-    await _tapVisible(tester, find.widgetWithText(TextButton, 'Request review'));
-    await _tapVisible(tester, find.widgetWithText(TextButton, 'Request explanation'));
+    await _tapVisible(
+      tester,
+      find.widgetWithText(TextButton, 'Request review'),
+    );
+    await _tapVisible(
+      tester,
+      find.widgetWithText(TextButton, 'Request explanation'),
+    );
     expect(api.calls, contains('POST /alpha-case/advice'));
-    expect(find.widgetWithText(TextButton, 'Request explanation'), findsNothing);
+    expect(
+      find.widgetWithText(TextButton, 'Request explanation'),
+      findsNothing,
+    );
 
     await _tapVisible(tester, find.widgetWithText(TextButton, 'Delete case'));
     expect(find.text('No private alpha cases yet.'), findsOneWidget);
   });
 
-  testWidgets('image alpha preserves upload progress and renders observations', (
-    tester,
-  ) async {
-    final api = _Api()..empty = true;
-    final bytes = api.imageBytes;
-    await _openScreen(
-      tester,
-      api,
-      picker: () async => XFile.fromData(bytes, name: 'authorized.png'),
-    );
+  testWidgets(
+    'image alpha preserves upload progress and renders observations',
+    (tester) async {
+      final api = _Api()..empty = true;
+      final bytes = api.imageBytes;
+      await _openScreen(
+        tester,
+        api,
+        picker: () async => XFile.fromData(bytes, name: 'authorized.png'),
+      );
 
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Image only').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
-    await _tapVisible(tester, find.widgetWithText(FilledButton, 'Select and submit'));
-    expect(api.calls, contains('UPLOAD image/png'));
-    expect(find.textContaining('image: queued'), findsOneWidget);
-    await _tapVisible(tester, find.textContaining('image: queued'));
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Image only').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await _tapVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Select and submit'),
+      );
+      expect(api.calls, contains('UPLOAD image/png'));
+      expect(find.textContaining('image: queued'), findsOneWidget);
+      await _tapVisible(tester, find.textContaining('image: queued'));
 
-    expect(find.text('Moondream observations'), findsOneWidget);
-    expect(find.text('scene: available — A bounded visual observation.'), findsOneWidget);
-    expect(find.bySemanticsLabel('Private alpha image'), findsOneWidget);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pumpAndSettle();
-    expect(api.calls, contains('GET /alpha-case'));
-  });
+      expect(find.text('Moondream observations'), findsOneWidget);
+      expect(
+        find.text('scene: available — A bounded visual observation.'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Private alpha image'), findsOneWidget);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('GET /alpha-case'));
+    },
+  );
 
-  testWidgets('alpha reports unavailable and action failures without crashing', (
-    tester,
-  ) async {
-    final api = _Api()..fail = true;
-    await _openScreen(tester, api);
-    expect(
-      find.textContaining('Private alpha is unavailable'),
-      findsOneWidget,
-    );
+  testWidgets(
+    'alpha reports unavailable and action failures without crashing',
+    (tester) async {
+      final api = _Api()..fail = true;
+      await _openScreen(tester, api);
+      expect(
+        find.textContaining('Private alpha is unavailable'),
+        findsOneWidget,
+      );
 
-    api.fail = false;
-    await _tapVisible(tester, find.byTooltip('Refresh cases'));
-    await _tapVisible(tester, find.textContaining('image: complete'));
-    api.fail = true;
-    await _tapVisible(tester, find.widgetWithText(TextButton, 'Send feedback'));
-    expect(find.text('That case action could not finish.'), findsOneWidget);
-  });
+      api.fail = false;
+      await _tapVisible(tester, find.byTooltip('Refresh cases'));
+      await _tapVisible(tester, find.textContaining('image: complete'));
+      api.fail = true;
+      await _tapVisible(
+        tester,
+        find.widgetWithText(TextButton, 'Send feedback'),
+      );
+      expect(find.text('That case action could not finish.'), findsOneWidget);
+    },
+  );
 }
