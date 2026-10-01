@@ -64,7 +64,7 @@ const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8'
 function assertRootToolingLockOnlyHasSecurityPatches() {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
   const current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
-  for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1']]) {
+  for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
     const packagePath = `node_modules/${name}`;
     const patched = current.packages[packagePath];
     assert.equal(patched?.version, version, `${name} must use the reviewed patched version`);
@@ -187,11 +187,13 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
       assert.equal(after.overrides.undici, '7.29.1');
       assert.equal(after.overrides.miniflare.undici, '7.29.1');
+      assert.deepEqual(after.overrides['get-uri@8.0.1'], { 'basic-ftp': '6.2.1' });
       before.overrides['brace-expansion'] = '5.0.12';
       before.overrides.undici = '7.29.1';
       before.overrides.miniflare.undici = '7.29.1';
+      before.overrides['get-uri@8.0.1'] = { 'basic-ftp': '6.2.1' };
     }
-    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag may change; homepage dependencies remain frozen');
+    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and reviewed security overrides may change; homepage dependencies remain frozen');
   }
 });
 
