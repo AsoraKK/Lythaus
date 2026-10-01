@@ -1057,6 +1057,7 @@ jobs:
             echo 'history_json=[]' >> "$GITHUB_OUTPUT"
           fi
       - name: Build canonical release manifest
+        if: always()
         env:
           RELEASE_STATE: ${{ steps.verified_state.outputs.state || 'BLOCKED' }}
           RELEASE_STATE_HISTORY_JSON: ${{ steps.verified_state.outputs.history_json || '[]' }}
@@ -1064,7 +1065,7 @@ jobs:
           OWNER_TESTING_DEPLOYMENT: ${{ inputs.release_mode == 'owner_testing' }}
         run: node scripts/ci/build-release-manifest.mjs
       - name: Assert owner testing remains uncertified
-        if: inputs.release_mode == 'owner_testing'
+        if: always() && inputs.release_mode == 'owner_testing'
         run: |
           set -euo pipefail
           jq -e '
@@ -1074,16 +1075,24 @@ jobs:
             .authAcceptance.status == "OWNER_TEST_PENDING" and
             .authAcceptance.acceptanceRunId == null and
             .authAcceptance.ownerTesting.enabled == true and
-            .authAcceptance.ownerTesting.status == "DEPLOYED_UNCERTIFIED"
+            .authAcceptance.ownerTesting.status ==
+              (if .state == "OWNER_TEST_DEPLOYED_UNCERTIFIED" then "DEPLOYED_UNCERTIFIED" else "PENDING" end)
           ' .artifacts/release/release-manifest.json >/dev/null
           {
             echo '## Authentication certification status'
             echo
-            echo 'Owner-test deployment and smoke checks completed. Authentication certification remains PENDING; this release is explicitly NO-GO until real owner journey evidence is collected and independently verified.'
+            if jq -e '.state == "OWNER_TEST_DEPLOYED_UNCERTIFIED"' .artifacts/release/release-manifest.json >/dev/null; then
+              echo 'Owner-test deployment and smoke checks completed. Authentication certification remains PENDING; this release is explicitly NO-GO until real owner journey evidence is collected and independently verified.'
+            else
+              state="$(jq -r '.state' .artifacts/release/release-manifest.json)"
+              echo "Owner-test release did not complete deployment and smoke checks (state: ${state}). Authentication certification remains PENDING and this release remains NO-GO. Original failure evidence is preserved in the manifest."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Create sanitized manifest integrity digest
+        if: always()
         run: sha256sum .artifacts/release/release-manifest.json > .artifacts/release/release-manifest.sha256
       - name: Upload canonical release manifest
+        if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: lythaus-release-manifest-${{ inputs.release_sha }}

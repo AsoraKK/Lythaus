@@ -214,6 +214,54 @@ test('owner-test mode rejects any acceptance proof or acceptance run', () => {
   }), /owner-testing deployment cannot include or claim an acceptance run/);
 });
 
+for (const state of ['ROLLED_BACK', 'BLOCKED']) {
+  test(`failed owner-test ${state} publishes a NO-GO manifest with the original blocker`, (t) => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-owner-test-failure-'));
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const outputDirectory = path.join(directory, '.artifacts', 'release');
+    fs.mkdirSync(outputDirectory, { recursive: true });
+    const output = path.join(outputDirectory, 'release-manifest.json');
+    const blocker = { gate: 'CANDIDATE', code: 'admin_candidate_runtime_probe_failed', domain: 'SAFETY_BLOCKER', message: 'Admin candidate readiness or runtime probe failed' };
+    const history = ['PREFLIGHT', 'INFRASTRUCTURE_VERIFIED', 'BLOCKED', ...(state === 'ROLLED_BACK' ? ['ROLLED_BACK'] : [])]
+      .map((state, index) => ({ state, at: new Date(Date.UTC(2026, 9, 1, 0, 0, index)).toISOString() }));
+    execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], {
+      cwd: root,
+      env: {
+        ...process.env, RELEASE_SHA: releaseSha, RELEASE_CLASS: 'AUTH_CRITICAL_RELEASE', OWNER_TESTING_DEPLOYMENT: 'true',
+        AUTHENTICATED_ACCEPTANCE_PROVEN: 'false', AUTH_ACCEPTANCE_RUN_ID: '',
+        RELEASE_STATE: state, RELEASE_STATE_HISTORY_JSON: JSON.stringify(history), ROLLBACK_STATE: state,
+        FAILURE_DOMAIN_EVIDENCE_JSON: JSON.stringify([blocker]), LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS: 'true', CI: 'false',
+      },
+      stdio: 'pipe',
+    });
+    const manifest = JSON.parse(fs.readFileSync(output, 'utf8'));
+    assert.equal(manifest.state, state);
+    assert.equal(manifest.rollback.state, state);
+    assert.equal(manifest.status, 'NO-GO');
+    assert.equal(manifest.productionStatus, 'NO-GO');
+    assert.equal(manifest.authAcceptance.status, 'OWNER_TEST_PENDING');
+    assert.equal(manifest.authAcceptance.ownerTesting.status, 'PENDING');
+    assert.deepEqual(manifest.failureDomains, [blocker]);
+    const workflow = fs.readFileSync('.github/workflows/production-release.yml', 'utf8');
+    const assertion = workflow.split('- name: Assert owner testing remains uncertified')[1].split('\n      - name:')[0]
+      .split('run: |\n')[1].split('\n').map((line) => line.replace(/^          /, '')).join('\n');
+    const summary = path.join(directory, 'summary.md');
+    execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary }, stdio: 'pipe' });
+    assert.match(fs.readFileSync(summary, 'utf8'), /did not complete deployment/);
+    assert.doesNotMatch(fs.readFileSync(summary, 'utf8'), /smoke checks completed/);
+    for (const field of ['status', 'productionStatus']) {
+      fs.writeFileSync(output, JSON.stringify({ ...manifest, [field]: 'GO' }));
+      assert.throws(() => execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary }, stdio: 'pipe' }));
+    }
+    fs.writeFileSync(output, JSON.stringify({ ...manifest, authAcceptance: { ...manifest.authAcceptance, status: 'PASSED' } }));
+    assert.throws(() => execFileSync('bash', ['-euo', 'pipefail', '-c', assertion], { cwd: directory, env: { ...process.env, GITHUB_STEP_SUMMARY: summary }, stdio: 'pipe' }));
+    for (const name of ['Create sanitized manifest integrity digest', 'Upload canonical release manifest']) {
+      const step = workflow.split('\n  manifest:')[1].split(`- name: ${name}`)[1].split('\n      - name:')[0];
+      assert.match(step, /if: always\(\)/);
+    }
+  });
+}
+
 test('release manifest rejects rollback components that were not changed', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-invalid-rollback-components-'));
   const output = path.join(directory, 'release-manifest.json');

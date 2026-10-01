@@ -64,6 +64,19 @@ admin route remain deployment operations requiring separate owner approval.
 Activating Jobs resumes live queue/cron work; rollback cannot reverse delivered
 emails or completed background work.
 
+Candidate probe artifacts retain sanitized expected and observed Worker version
+IDs and release tags, service/path, HTTP status and Cloudflare Ray ID before
+rejecting a mismatch. The Cloudflare inventory includes the read-only custom
+domain mapping for `admin-api.lythaus.co`; inspect this evidence before diagnosing
+an override failure as propagation. Identity, private Public-binding and Access
+checks remain fail-closed. Do not blindly retry a mismatched candidate or change
+routing based on an unverified mapping.
+
+Failed owner-testing releases still publish their canonical manifest and integrity
+digest. A rolled-back release retains `ROLLED_BACK`, the original failure domains
+and `NO-GO`; only a completed owner-test activation and smoke can report
+`DEPLOYED_UNCERTIFIED`. Authentication acceptance remains `OWNER_TEST_PENDING`.
+
 The local real browser/handler test requires disposable PostgreSQL 17, a built
 marketing artifact and the canonical Flutter web artifact. It routes all browser
 hosts through a local TLS proxy, uses the actual API handlers and restricted

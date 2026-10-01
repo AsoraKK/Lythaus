@@ -20,6 +20,23 @@ const expectedWorkerVersionId = process.env.PRODUCTION_WORKER_VERSION_ID ?? '';
 const expectedPublicVersion = process.env.PUBLIC_WORKER_VERSION_ID ?? '';
 const accessClientId = process.env.CF_ACCESS_CLIENT_ID ?? '';
 const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET ?? '';
+const outputPath = process.env.PRODUCTION_WORKER_EVIDENCE_PATH;
+
+function redact(value) {
+  let text = String(value);
+  for (const secret of [token, accessClientId, accessClientSecret]) {
+    if (secret) text = text.replaceAll(secret, '[REDACTED]');
+  }
+  return text;
+}
+
+function writeEvidence() {
+  if (outputPath) fs.writeFileSync(outputPath, `${redact(JSON.stringify(evidence, null, 2))}\n`, 'utf8');
+}
+
+function identity(value, pattern) {
+  return typeof value === 'string' && pattern.test(value) ? value : null;
+}
 
 if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
@@ -65,17 +82,50 @@ if (targets.some(({ probe, baseUrl }) => probe && !baseUrl)) {
   throw new Error('public and admin Workers require explicit protected probe routes');
 }
 
-async function fetchJson(url, options = {}) {
+async function fetchJson(url, options = {}, service = requestedWorker) {
   const headers = new Headers(options.headers);
   headers.set('Cloudflare-Workers-Version-Overrides', `${requestedWorker}="${expectedWorkerVersionId}"${requestedWorker === 'lythaus-admin-api-development' ? `, lythaus-public-api-development="${expectedPublicVersion}"` : ''}`);
   if (requestedWorker === 'lythaus-admin-api-development') {
     headers.set('CF-Access-Client-Id', accessClientId);
     headers.set('CF-Access-Client-Secret', accessClientSecret);
   }
-  const response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15_000) });
-  const text = await response.text();
+  const observation = {
+    service,
+    path: new URL(url).pathname,
+    httpStatus: null,
+    cfRay: null,
+    expected: {
+      workerVersionId: expectedWorkerVersionId,
+      releaseTag: expectedWorkerSourceSha,
+      ...(service === 'lythaus-admin-api-development' ? { publicWorkerVersion: expectedPublicVersion } : {}),
+    },
+    observed: { workerVersionId: null, releaseTag: null },
+  };
+  evidence.requests.push(observation);
+  writeEvidence();
+  let response;
+  let text;
+  try {
+    response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(15_000) });
+    observation.httpStatus = response.status;
+    observation.cfRay = identity(response.headers.get('cf-ray'), /^[a-f0-9]{16}-[A-Z]{3}$/);
+    text = await response.text();
+  } catch {
+    throw new Error(`${service}${observation.path} probe request failed`);
+  }
   let body = null;
   try { body = JSON.parse(text); } catch { /* response details are not evidence */ }
+  observation.observed = {
+    workerVersionId: identity(body?.workerVersionId, /^[0-9a-f-]{36}$/),
+    releaseTag: identity(body?.releaseTag, /^[0-9a-f]{40}$/),
+    ...(service === 'lythaus-admin-api-development' ? {
+      emailBinding: {
+        bindingVerified: typeof body?.emailBinding?.bindingVerified === 'boolean' ? body.emailBinding.bindingVerified : null,
+        publicWorkerVersion: identity(body?.emailBinding?.publicWorkerVersion, /^[0-9a-f-]{36}$/),
+      },
+    } : {}),
+  };
+  writeEvidence();
   if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
   if (!body || typeof body !== 'object') throw new Error(`${url} returned a non-object response`);
   return body;
@@ -111,6 +161,7 @@ function assertDatabaseReport(report, worker, label) {
 }
 
 const evidence = {
+  status: 'pending',
   releaseSha,
   capturedAt: new Date().toISOString(),
   branchFingerprint: expectedBranch,
@@ -122,65 +173,77 @@ const evidence = {
     budgetLedgerApplied: expectedBudgetLedgerApplied,
   },
   workers: [],
+  requests: [],
 };
 
-for (const target of targets) {
-  if (!target.probe) {
+async function probeTargets() {
+  for (const target of targets) {
+    if (!target.probe) {
+      evidence.workers.push({
+        worker: target.worker,
+        workerVersionId: expectedWorkerVersionId,
+        releaseTag: expectedWorkerSourceSha,
+        sourceSha: expectedWorkerSourceSha,
+        baseUrl: null,
+        databaseCount: 0,
+        readiness: 'not_applicable_no_public_route',
+        branchFingerprint: expectedBranch,
+        readyForAuthentication: authenticatedAcceptanceProven,
+      });
+      continue;
+    }
+    const base = `${new URL(target.baseUrl).origin}${target.routePrefix}`;
+    for (const path of target.anonymousPaths) await fetchJson(`${base}${path}`, {}, target.worker);
+    const body = await fetchJson(`${base}/internal/readiness/database-identity`, {
+      headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+    }, target.worker);
+    if (body.workerVersionId !== expectedWorkerVersionId || body.releaseTag !== expectedWorkerSourceSha) {
+      throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
+    }
+    if (target.worker === 'lythaus-admin-api-development'
+      && (body.emailBinding?.bindingVerified !== true || body.emailBinding?.publicWorkerVersion !== expectedPublicVersion)) {
+      throw new Error('Admin private email binding did not execute the exact Public candidate');
+    }
+    const reports = body.databases && typeof body.databases === 'object'
+      ? Object.entries(body.databases)
+      : [['primary', body]];
+    for (const [label, report] of reports) assertDatabaseReport(report, target.worker, label);
+    const primaryReport = reports[0]?.[1];
+    if (!primaryReport) throw new Error(`${target.worker} candidate probe returned no database report`);
+    if (body.branchFingerprint !== 'unknown') throw new Error(`${target.worker} top-level probe must not self-assert a branch`);
+    if (typeof body.readyForAuthentication !== 'boolean') throw new Error(`${target.worker} top-level authentication readiness is invalid`);
+    if (authenticatedAcceptanceProven && body.readyForAuthentication !== true) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
     evidence.workers.push({
       worker: target.worker,
-      workerVersionId: expectedWorkerVersionId,
-      releaseTag: expectedWorkerSourceSha,
-      sourceSha: expectedWorkerSourceSha,
-      baseUrl: null,
-      databaseCount: 0,
-      readiness: 'not_applicable_no_public_route',
+      workerVersionId: body.workerVersionId,
+      releaseTag: body.releaseTag,
+      sourceSha: body.releaseTag,
+      ...(target.worker === 'lythaus-admin-api-development' ? { emailBinding: { bindingVerified: true, publicWorkerVersion: expectedPublicVersion } } : {}),
+      baseUrl: base,
+      databaseCount: reports.length,
+      databaseEnvironment: primaryReport.databaseEnvironment,
+      schemaFingerprint: primaryReport.schemaFingerprint,
+      relationCount: primaryReport.relationCount,
+      identityContactEmails: primaryReport.identityContactEmails,
+      budgetLedgerApplied: primaryReport.budgetLedgerApplied,
+      schemaVersion: primaryReport.schemaVersion,
+      roleClass: primaryReport.roleClass,
+      readiness: body.readiness,
       branchFingerprint: expectedBranch,
-      readyForAuthentication: authenticatedAcceptanceProven,
+      readyForAuthentication: body.readyForAuthentication === true,
     });
-    continue;
   }
-  const base = `${new URL(target.baseUrl).origin}${target.routePrefix}`;
-  for (const path of target.anonymousPaths) await fetchJson(`${base}${path}`);
-  const body = await fetchJson(`${base}/internal/readiness/database-identity`, {
-    headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
-  });
-  if (body.workerVersionId !== expectedWorkerVersionId || body.releaseTag !== expectedWorkerSourceSha) {
-    throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
-  }
-  if (target.worker === 'lythaus-admin-api-development'
-    && (body.emailBinding?.bindingVerified !== true || body.emailBinding?.publicWorkerVersion !== expectedPublicVersion)) {
-    throw new Error('Admin private email binding did not execute the exact Public candidate');
-  }
-  const reports = body.databases && typeof body.databases === 'object'
-    ? Object.entries(body.databases)
-    : [['primary', body]];
-  for (const [label, report] of reports) assertDatabaseReport(report, target.worker, label);
-  const primaryReport = reports[0]?.[1];
-  if (!primaryReport) throw new Error(`${target.worker} candidate probe returned no database report`);
-  if (body.branchFingerprint !== 'unknown') throw new Error(`${target.worker} top-level probe must not self-assert a branch`);
-  if (typeof body.readyForAuthentication !== 'boolean') throw new Error(`${target.worker} top-level authentication readiness is invalid`);
-  if (authenticatedAcceptanceProven && body.readyForAuthentication !== true) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
-  evidence.workers.push({
-    worker: target.worker,
-    workerVersionId: body.workerVersionId,
-    releaseTag: body.releaseTag,
-    sourceSha: body.releaseTag,
-    ...(target.worker === 'lythaus-admin-api-development' ? { emailBinding: { bindingVerified: true, publicWorkerVersion: expectedPublicVersion } } : {}),
-    baseUrl: base,
-    databaseCount: reports.length,
-    databaseEnvironment: primaryReport.databaseEnvironment,
-    schemaFingerprint: primaryReport.schemaFingerprint,
-    relationCount: primaryReport.relationCount,
-    identityContactEmails: primaryReport.identityContactEmails,
-    budgetLedgerApplied: primaryReport.budgetLedgerApplied,
-    schemaVersion: primaryReport.schemaVersion,
-    roleClass: primaryReport.roleClass,
-    readiness: body.readiness,
-    branchFingerprint: expectedBranch,
-    readyForAuthentication: body.readyForAuthentication === true,
-  });
 }
 
-const outputPath = process.env.PRODUCTION_WORKER_EVIDENCE_PATH;
-if (outputPath) fs.writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
-console.log(JSON.stringify({ status: 'pass', workers: evidence.workers, branchFingerprint: evidence.branchFingerprint, readyForAuthentication: evidence.readyForAuthentication }));
+try {
+  await probeTargets();
+  evidence.status = 'pass';
+  writeEvidence();
+  console.log(redact(JSON.stringify({ status: 'pass', workers: evidence.workers, branchFingerprint: evidence.branchFingerprint, readyForAuthentication: evidence.readyForAuthentication })));
+} catch (error) {
+  evidence.status = 'fail';
+  evidence.failure = redact(String(error.message));
+  writeEvidence();
+  console.error(redact(JSON.stringify({ status: 'fail', failure: evidence.failure, requests: evidence.requests })));
+  process.exitCode = 1;
+}
