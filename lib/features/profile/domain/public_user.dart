@@ -42,6 +42,7 @@ class PublicUser {
 
   factory PublicUser.fromJson(Map<String, dynamic> json) {
     final visibility = json['trustPassportVisibility'] as String?;
+    final reputation = json['reputation'];
     return PublicUser(
       id: json['id'] as String,
       displayName: json['displayName'] as String,
@@ -54,8 +55,7 @@ class PublicUser {
           : 'public_minimal',
       reputationScore:
           (json['reputationScore'] as num?)?.toInt() ??
-          (json['reputation'] as num?)?.toInt() ??
-          0,
+          (reputation is num ? reputation.toInt() : 0),
       journalistVerified: json['journalistVerified'] as bool? ?? false,
       badges:
           (json['badges'] as List<dynamic>?)?.whereType<String>().toList() ??

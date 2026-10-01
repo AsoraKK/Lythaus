@@ -221,6 +221,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 35
+    env:
+      OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+      AUTHENTICITY_BETA_RELEASE_RECEIPT_PRESENT: ${{ vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' }}
     outputs:
       public_worker_version: ${{ steps.release_metadata.outputs.public_worker_version }}
       admin_worker_version: ${{ steps.release_metadata.outputs.admin_worker_version }}
@@ -286,6 +289,8 @@ jobs:
             echo "Refusing deployment: checked-out main is not current origin/main." >&2
             exit 1
           fi
+      - name: Restrict owner testing to authentication deployment
+        run: node scripts/ci/verify-owner-testing-auth-scope.mjs
       - name: SOURCE - Require exact successful CI and security evidence
         if: inputs.source_evidence_verified != true
         env:
@@ -405,7 +410,11 @@ jobs:
           echo 'RELEASE_FAILURE_CODE=provider_configuration_validation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=production Turnstile provider configuration validation failed' >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/production-cutover"
-          node scripts/cloudflare/waitlist-turnstile.mjs ensure
+          if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+            node scripts/ci/prepare-owner-testing-turnstile.mjs ensure
+          else
+            node scripts/cloudflare/waitlist-turnstile.mjs ensure
+          fi
       - name: Materialize approved post-0020 deployment identity
         env:
           PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
@@ -424,7 +433,7 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=approved post-0020 deployment identity materialization failed' >> "$GITHUB_ENV"
           node scripts/ci/validate-product-integrity-deploy-identity.mjs
       - name: Prepare approved authenticity runtime
-        if: inputs.acceptance_run_id == '' && vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' && contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
+        if: inputs.owner_testing_deployment != true && inputs.acceptance_run_id == '' && vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' && contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           AUTHENTICITY_BETA_RELEASE_RECEIPT: ${{ secrets.AUTHENTICITY_BETA_RELEASE_RECEIPT }}
@@ -1696,7 +1705,7 @@ jobs:
             echo "rollback_artifacts_proven=true"
           } >> "$GITHUB_OUTPUT"
       - name: Activate approved private authenticity cohort
-        if: vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' && contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
+        if: inputs.owner_testing_deployment != true && vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' && contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
           AUTHENTICITY_BETA_RELEASE_RECEIPT: ${{ secrets.AUTHENTICITY_BETA_RELEASE_RECEIPT }}

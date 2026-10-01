@@ -23,12 +23,19 @@ export function sessionTransport(request: Request, allowedOrigins: string | unde
   return 'native';
 }
 
-export function refreshCookie(request: Request): string {
+export function optionalRefreshCookie(request: Request): string | undefined {
   const matches = (request.headers.get('cookie') ?? '').split(';')
     .map(part => part.trim()).filter(part => part.startsWith(`${REFRESH_COOKIE_NAME}=`));
+  if (matches.length === 0) return undefined;
   if (matches.length !== 1) throw new Error('refresh_token_invalid');
   const value = matches[0].slice(REFRESH_COOKIE_NAME.length + 1);
   if (!/^[A-Za-z0-9_-]{32,256}$/.test(value)) throw new Error('refresh_token_invalid');
+  return value;
+}
+
+export function refreshCookie(request: Request): string {
+  const value = optionalRefreshCookie(request);
+  if (value === undefined) throw new Error('refresh_token_invalid');
   return value;
 }
 

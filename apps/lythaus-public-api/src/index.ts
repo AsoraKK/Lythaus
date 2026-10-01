@@ -10,7 +10,7 @@ import { handleBetaApi } from './authenticity-beta.ts';
 import { handleAlphaApi } from './authenticity-alpha.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction.ts';
-import { expiredRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
+import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
 import { requireUncompromisedPassword } from './auth-password-screen.ts';
 import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
@@ -745,8 +745,13 @@ async function logout(request: Request, env: Env): Promise<Response> {
   const transport = sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
   await acceptanceContext(request, env);
   const input = request.body ? await readJson<{ refreshToken?: string; refresh_token?: string }>(request, 8 * 1024) : {};
-  const refreshToken = transport === 'cookie' ? refreshCookie(request)
+  const refreshToken = transport === 'cookie' ? optionalRefreshCookie(request)
     : input.refreshToken !== undefined || input.refresh_token !== undefined ? requireRefreshToken(input) : undefined;
+  if (transport === 'cookie' && refreshToken === undefined) {
+    return privateResponse(request, env, { loggedOut: true, sessionRevocation: 'no_browser_session' }, {
+      headers: { 'set-cookie': expiredRefreshCookie() },
+    });
+  }
   const nativeUser = transport === 'native' && !refreshToken ? await principal(request, env) : undefined;
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {

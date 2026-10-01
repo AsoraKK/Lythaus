@@ -10,6 +10,7 @@ const LIFECYCLE_QUEUE = 'lythaus-email-lifecycle-dev';
 const LIFECYCLE_DLQ = 'lythaus-email-lifecycle-dlq-dev';
 const SENDING_DOMAIN = 'mail.lythaus.co';
 const SUBSCRIPTION_NAME = 'lythaus-email-lifecycle-mail-lythaus-co';
+const verifyExisting = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
 const REQUIRED_EVENTS = [
   'message.delivered',
   'message.deferred',
@@ -76,6 +77,7 @@ export function assertConsumerDeclaration() {
 }
 
 async function cloudflare(pathname, init = {}) {
+  if (verifyExisting && (init.method ?? 'GET') !== 'GET') throw new Error('owner_testing_prohibits_email_lifecycle_mutation');
   const token = required('CLOUDFLARE_API_TOKEN');
   const response = await fetch(`https://api.cloudflare.com/client/v4${pathname}`, {
     ...init,
@@ -104,6 +106,7 @@ async function queues(accountId) {
 async function ensureQueue(accountId, name) {
   let matches = (await queues(accountId)).filter((queue) => queueName(queue) === name);
   if (matches.length === 0) {
+    if (verifyExisting) throw new Error(`owner_testing_requires_existing_queue_${name}`);
     await cloudflare(`/accounts/${accountId}/queues`, {
       method: 'POST',
       body: JSON.stringify({ queue_name: name }),
@@ -121,6 +124,7 @@ async function subscriptions(accountId) {
 }
 
 function createSubscription(queueNameValue, zoneId) {
+  if (verifyExisting) throw new Error('owner_testing_requires_existing_email_lifecycle_subscription');
   const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
   const result = spawnSync(command, [
     '--yes', 'wrangler@4.123.0', 'queues', 'subscription', 'create', queueNameValue,
@@ -145,6 +149,7 @@ async function ensureSubscription(accountId, lifecycleQueue, zoneId) {
   const subscription = matching[0];
   if (!isExactSubscription(subscription, lifecycleQueueId, zoneId)) throw new Error('cloudflare_email_lifecycle_subscription_source_or_domain_drift');
   if (!expectedEvents(subscription) || subscription.enabled !== true || subscription.name !== SUBSCRIPTION_NAME) {
+    if (verifyExisting) throw new Error('owner_testing_email_lifecycle_subscription_drift');
     await cloudflare(`/accounts/${accountId}/event_subscriptions/subscriptions/${encodeURIComponent(subscription.id)}`, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -173,6 +178,7 @@ async function main() {
   const subscription = await ensureSubscription(accountId, lifecycleQueue, zoneId);
   const evidence = {
     status: 'VERIFIED',
+    infrastructureMode: verifyExisting ? 'verify_existing' : 'ensure',
     observedAt: new Date().toISOString(),
     queues: {
       lifecycle: { name: LIFECYCLE_QUEUE, idHash: hashIdentifier(queueId(lifecycleQueue)) },

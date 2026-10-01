@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { expiredRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from '../src/auth-session-transport.ts';
+import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from '../src/auth-session-transport.ts';
 
 const allowed = 'https://app.lythaus.co,https://lythaus.co';
 const token = 'synthetic-not-a-real-refresh-token-00000000';
@@ -43,5 +43,15 @@ test('refresh cookie parser rejects absent, duplicate, malformed or oversized cr
   assert.equal(refreshCookie(request({ cookie: `other=1; __Host-lythaus_refresh=${token}` })), token);
   for (const cookie of ['', '__Host-lythaus_refresh=short', `__Host-lythaus_refresh=${token}; __Host-lythaus_refresh=${token}`, '__Host-lythaus_refresh=%3Bunsafe', `__Host-lythaus_refresh=${'a'.repeat(257)}`]) {
     assert.throws(() => refreshCookie(request({ cookie })), /refresh_token_invalid/);
+  }
+});
+
+test('optional logout cookie permits absence without weakening credential parsing', () => {
+  assert.equal(optionalRefreshCookie(request()), undefined);
+  assert.equal(optionalRefreshCookie(request({ cookie: 'other=1' })), undefined);
+  assert.equal(optionalRefreshCookie(request({ cookie: `__Host-lythaus_refresh=${token}` })), token);
+  for (const cookie of ['__Host-lythaus_refresh=', '__Host-lythaus_refresh=short',
+    `__Host-lythaus_refresh=${token}; __Host-lythaus_refresh=${token}`, `__Host-lythaus_refresh=${'a'.repeat(257)}`]) {
+    assert.throws(() => optionalRefreshCookie(request({ cookie })), /refresh_token_invalid/);
   }
 });
