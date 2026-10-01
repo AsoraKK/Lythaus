@@ -2,7 +2,7 @@ import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { uuidv7 } from '@lythaus/security';
 import { BETA_ADVISER, BETA_ADVISER_ROLE, BETA_LIMITS, BETA_VERSION, SAFE_CHECKPOINT, SAFE_PREPROCESSING, assertSafeResult, betaAdviceEligible, betaAdviceRequest, betaReuseKey, compileBetaResult, parseBetaAdvice, readBoundedBytes, type BetaResult, type SafeResult } from '../../../packages/authenticity/src/beta.ts';
-import { readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
+import { measuredAlphaBudget, readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { sha256Hex } from '../../../packages/authenticity/src/forensics.ts';
 import { validateMediaPayload } from '../../../packages/authenticity/src/media-intake.ts';
 import { createOpenAIModerationProvider } from '../../../packages/authenticity/src/openai-moderation.ts';
@@ -19,6 +19,7 @@ async function current(env: Env, row: CaseRow): Promise<void> {
   const config = await readBetaConfig(env);
   if (!config.enabled || !config.allowlist.includes(row.owner_id)) throw new Error('beta_paused');
   if (env.COST_BUDGET_ENABLED !== 'true' || !config.budgetApproval) throw new Error('beta_paused');
+  try { measuredAlphaBudget(config); } catch { throw new Error('beta_paused'); }
   const budget = await query(env.DB_JOBS_FRESH,`SELECT id FROM system.cost_budget_reservations WHERE operation='authenticity_beta_case' AND correlation_id=$1 AND status IN ('committed','reconciled') AND NOT EXISTS(SELECT 1 FROM system.cost_kill_switches WHERE enabled AND key=ANY($2::text[]))`,[row.case_id,['global','authenticity','operation:authenticity_beta_case','provider:lythaus-safe-container','provider:cloudflare-workers-ai','provider:openai']]);
   if (!budget.rowCount) throw new Error('beta_paused');
   const failures = await query<{count:string}>(env.DB_JOBS_FRESH, `SELECT count(DISTINCT case_id)::text AS count FROM moderation.authenticity_beta_steps WHERE step='safe' AND state='ambiguous' AND completed_at>now()-interval '15 minutes'`);

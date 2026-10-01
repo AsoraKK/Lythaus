@@ -13,6 +13,11 @@ export interface BudgetConfig {
   deepScanStopUsd: number;
 }
 
+export interface BudgetScope {
+  operationNames: string[];
+  limitUsd: number;
+}
+
 export interface ReserveBudgetInput {
   period: string;
   operation: string;
@@ -21,6 +26,7 @@ export interface ReserveBudgetInput {
   idempotencyKey: string;
   provider?: string;
   correlationId?: string;
+  scope?: BudgetScope;
   config: BudgetConfig;
 }
 
@@ -60,6 +66,15 @@ function assertConfig(config: BudgetConfig): void {
     && config.deepScanStopUsd <= config.limitUsd)) throw new Error('budget_thresholds_invalid');
 }
 
+function assertScope(scope: BudgetScope | undefined): void {
+  if (!scope) return;
+  assertMoney(scope.limitUsd, 'budget_scope_limit');
+  if (!Array.isArray(scope.operationNames) || scope.operationNames.length === 0
+    || scope.operationNames.some((operation) => typeof operation !== 'string' || operation.length === 0)) {
+    throw new Error('budget_scope_operations_required');
+  }
+}
+
 export function isBudgetOperationAdmitted(
   input: Pick<ReserveBudgetInput, 'operation' | 'operationClass' | 'config'>,
   projectedSpendUsd: number,
@@ -85,75 +100,105 @@ function reservationFromRow(row: { id: string; period_key: string; status: Budge
 }
 
 export async function reserveBudget(binding: HyperdriveBinding, input: ReserveBudgetInput): Promise<BudgetReservation> {
+  return transaction(binding, async (client: Client) => reserveBudgetInTransaction(client, input));
+}
+
+/**
+ * Reserve through an existing transaction. Callers that are also changing a
+ * case and enqueueing work use this entry point so admission and durable work
+ * cannot commit independently.
+ */
+export async function reserveBudgetInTransaction(client: Client, input: ReserveBudgetInput): Promise<BudgetReservation> {
   assertConfig(input.config);
+  assertScope(input.scope);
   assertMoney(input.estimatedCostUsd, 'estimated_cost');
   if (!/^\d{4}-\d{2}$/.test(input.period)) throw new Error('budget_period_invalid');
   if (!input.operation || !input.idempotencyKey) throw new Error('budget_identity_required');
-  return transaction(binding, async (client: Client) => {
-    await client.query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
-    await client.query(
-      `INSERT INTO system.cost_budget_periods
-        (period_key, limit_usd, warning_usd, optional_analysis_usd, essential_only_usd, deep_scan_stop_usd)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (period_key) DO NOTHING`,
-      [input.period, input.config.limitUsd, input.config.warningUsd, input.config.optionalAnalysisUsd, input.config.essentialOnlyUsd, input.config.deepScanStopUsd]
-    );
-    await client.query(`SELECT period_key FROM system.cost_budget_periods WHERE period_key = $1 FOR UPDATE`, [input.period]);
-    const existing = await client.query<{ id: string; period_key: string; status: BudgetReservationStatus; estimated_cost_usd: string }>(
-      `SELECT id, period_key, status, estimated_cost_usd
-         FROM system.cost_budget_reservations
-        WHERE idempotency_key = $1`, [input.idempotencyKey]
-    );
-    if (existing.rows[0]) return reservationFromRow(existing.rows[0], Number(existing.rows[0].estimated_cost_usd));
-    await client.query(
-      `UPDATE system.cost_budget_reservations
-          SET status = 'expired', updated_at = now()
-        WHERE period_key = $1 AND status = 'reserved' AND expires_at <= now()`,
-      [input.period]
-    );
-    const switches = await client.query<{ key: string }>(
-      `SELECT key FROM system.cost_kill_switches
-        WHERE enabled = true AND key = ANY($1::text[])`, [[
-          'global',
-          'authenticity',
-          `operation:${input.operation}`,
-          ...(input.provider ? [`provider:${input.provider}`] : []),
-        ]]
-    );
-    const committed = await client.query<{ total: string }>(
+  await client.query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+  await client.query(
+    `INSERT INTO system.cost_budget_periods
+      (period_key, limit_usd, warning_usd, optional_analysis_usd, essential_only_usd, deep_scan_stop_usd)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (period_key) DO NOTHING`,
+    [input.period, input.config.limitUsd, input.config.warningUsd, input.config.optionalAnalysisUsd, input.config.essentialOnlyUsd, input.config.deepScanStopUsd]
+  );
+  await client.query(`SELECT period_key FROM system.cost_budget_periods WHERE period_key = $1 FOR UPDATE`, [input.period]);
+  const existing = await client.query<{ id: string; period_key: string; status: BudgetReservationStatus; estimated_cost_usd: string }>(
+    `SELECT id, period_key, status, estimated_cost_usd
+       FROM system.cost_budget_reservations
+      WHERE idempotency_key = $1`, [input.idempotencyKey]
+  );
+  if (existing.rows[0]) return reservationFromRow(existing.rows[0], Number(existing.rows[0].estimated_cost_usd));
+  await client.query(
+    `UPDATE system.cost_budget_reservations
+        SET status = 'expired', updated_at = now()
+      WHERE period_key = $1 AND status = 'reserved' AND expires_at <= now()`,
+    [input.period]
+  );
+  const switches = await client.query<{ key: string }>(
+    `SELECT key FROM system.cost_kill_switches
+      WHERE enabled = true AND key = ANY($1::text[])`, [[
+        'global',
+        'authenticity',
+        `operation:${input.operation}`,
+        ...(input.provider ? [`provider:${input.provider}`] : []),
+      ]]
+  );
+  const committed = await client.query<{ total: string }>(
+    `SELECT COALESCE(SUM(amount_usd), 0)::text AS total
+       FROM system.cost_usage_events WHERE period_key = $1`, [input.period]
+  );
+  const reserved = await client.query<{ total: string }>(
+    `SELECT COALESCE(SUM(estimated_cost_usd), 0)::text AS total
+       FROM system.cost_budget_reservations
+      WHERE period_key = $1 AND ((status = 'reserved' AND expires_at > now())
+        OR (status IN ('committed', 'reconciled') AND actual_cost_usd IS NULL))`, [input.period]
+  );
+  const currentSpend = Number(committed.rows[0]?.total ?? 0) + Number(reserved.rows[0]?.total ?? 0);
+  const projectedSpendUsd = currentSpend + input.estimatedCostUsd;
+  let scopeProjectedSpendUsd: number | null = null;
+  if (input.scope) {
+    const scopedUsage = await client.query<{ total: string }>(
       `SELECT COALESCE(SUM(amount_usd), 0)::text AS total
-         FROM system.cost_usage_events WHERE period_key = $1`, [input.period]
+         FROM system.cost_usage_events
+        WHERE period_key = $1 AND operation = ANY($2::text[])`,
+      [input.period, input.scope.operationNames],
     );
-    const reserved = await client.query<{ total: string }>(
+    const scopedReserved = await client.query<{ total: string }>(
       `SELECT COALESCE(SUM(estimated_cost_usd), 0)::text AS total
          FROM system.cost_budget_reservations
-        WHERE period_key = $1 AND ((status = 'reserved' AND expires_at > now())
-          OR (status IN ('committed', 'reconciled') AND actual_cost_usd IS NULL))`, [input.period]
+        WHERE period_key = $1 AND operation = ANY($2::text[])
+          AND ((status = 'reserved' AND expires_at > now())
+            OR (status IN ('committed', 'reconciled') AND actual_cost_usd IS NULL))`,
+      [input.period, input.scope.operationNames],
     );
-    const currentSpend = Number(committed.rows[0]?.total ?? 0) + Number(reserved.rows[0]?.total ?? 0);
-    const projectedSpendUsd = currentSpend + input.estimatedCostUsd;
-    const admitted = switches.rowCount === 0 && isBudgetOperationAdmitted(input, projectedSpendUsd);
-    const id = crypto.randomUUID();
-    const status: BudgetReservationStatus = admitted ? 'reserved' : 'rejected';
-    await client.query(
-      `INSERT INTO system.cost_budget_reservations
-        (id, period_key, idempotency_key, operation, operation_class, estimated_cost_usd, status, correlation_id, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now() + interval '15 minutes')`,
-      [id, input.period, input.idempotencyKey, input.operation, input.operationClass, input.estimatedCostUsd, status, input.correlationId ?? null]
-    );
-    await client.query(
-      `UPDATE system.cost_budget_periods
-          SET state = CASE
-            WHEN $2 >= limit_usd THEN 'halted'
-            WHEN $2 >= deep_scan_stop_usd THEN 'critical'
-            WHEN $2 >= warning_usd THEN 'warning'
-            ELSE 'open'
-          END,
-          updated_at = now()
-        WHERE period_key = $1`, [input.period, projectedSpendUsd]
-    );
-    return { id, period: input.period, status, estimatedCostUsd: input.estimatedCostUsd, projectedSpendUsd, reused: false };
-  });
+    scopeProjectedSpendUsd = Number(scopedUsage.rows[0]?.total ?? 0)
+      + Number(scopedReserved.rows[0]?.total ?? 0)
+      + input.estimatedCostUsd;
+  }
+  const admitted = switches.rowCount === 0
+    && isBudgetOperationAdmitted(input, projectedSpendUsd)
+    && (scopeProjectedSpendUsd === null || scopeProjectedSpendUsd < input.scope!.limitUsd);
+  const id = crypto.randomUUID();
+  const status: BudgetReservationStatus = admitted ? 'reserved' : 'rejected';
+  await client.query(
+    `INSERT INTO system.cost_budget_reservations
+      (id, period_key, idempotency_key, operation, operation_class, estimated_cost_usd, status, correlation_id, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now() + interval '15 minutes')`,
+    [id, input.period, input.idempotencyKey, input.operation, input.operationClass, input.estimatedCostUsd, status, input.correlationId ?? null]
+  );
+  await client.query(
+    `UPDATE system.cost_budget_periods
+        SET state = CASE
+          WHEN $2 >= limit_usd THEN 'halted'
+          WHEN $2 >= deep_scan_stop_usd THEN 'critical'
+          WHEN $2 >= warning_usd THEN 'warning'
+          ELSE 'open'
+        END,
+        updated_at = now()
+      WHERE period_key = $1`, [input.period, projectedSpendUsd]
+  );
+  return { id, period: input.period, status, estimatedCostUsd: input.estimatedCostUsd, projectedSpendUsd, reused: false };
 }
 
 export async function settleBudgetReservation(binding: HyperdriveBinding, input: SettleBudgetInput): Promise<void> {

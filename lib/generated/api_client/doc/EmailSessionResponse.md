@@ -9,7 +9,8 @@ import 'package:lythaus_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **accessToken** | **String** | Short-lived JWT bearer token (15 minutes). |
-**refreshToken** | **String** | Rotating opaque refresh token. |
+**refreshToken** | **String** | Rotating opaque refresh token, only in native/legacy transport. Never returned to cookie-v1 clients. | [optional]
+**sessionTransport** | **String** |  | [optional]
 **tokenType** | **String** |  |
 **expiresIn** | **int** | Access-token lifetime in seconds. |
 

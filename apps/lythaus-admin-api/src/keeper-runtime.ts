@@ -2,7 +2,7 @@ import { query, transaction, type DatabaseClient, type HyperdriveBinding } from 
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { encodeCursor } from '@lythaus/contracts';
 import { json } from '@lythaus/observability';
-import { decryptField, encryptField, hashAuthToken, hashPassword, hmacLookup, randomToken, uuidv7 } from '@lythaus/security';
+import { decryptField, encryptField, hmacLookup, uuidv7 } from '@lythaus/security';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, requireWaitlistEncryptionKey } from './waitlist-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import {
@@ -17,7 +17,7 @@ import {
   requireConfirmation,
   type AdminUserPageRequest,
 } from './admin-runtime-policy.ts';
-import { createAuthEmailDispatchAdapter } from './auth-email-dispatch-adapter.ts';
+import { dispatchKeeperEmail } from './auth-email-dispatch-adapter.ts';
 
 export interface KeeperEnv extends EnvBindings {
   DB_ADMIN_FRESH: HyperdriveBinding;
@@ -63,11 +63,9 @@ function requireKeeperAdmin(actor: AdminActorLike): void {
   if (!['administrator', 'owner'].includes(actor.role)) throw new Error('admin_role_required');
 }
 
-function requireAuthData(env: KeeperEnv): { encryptionKey: string; hmacKey: string; pepper: string } {
-  if (!env.PII_ENCRYPTION_KEY_V1 || !env.PII_HMAC_KEY_V1 || !env.AUTH_PASSWORD_PEPPER_V1) {
-    throw new Error('auth_data_unavailable');
-  }
-  return { encryptionKey: env.PII_ENCRYPTION_KEY_V1, hmacKey: env.PII_HMAC_KEY_V1, pepper: env.AUTH_PASSWORD_PEPPER_V1 };
+function requireAuthData(env: KeeperEnv): { encryptionKey: string; hmacKey: string } {
+  if (!env.PII_ENCRYPTION_KEY_V1 || !env.PII_HMAC_KEY_V1) throw new Error('auth_data_unavailable');
+  return { encryptionKey: env.PII_ENCRYPTION_KEY_V1, hmacKey: env.PII_HMAC_KEY_V1 };
 }
 
 function iso(value: string | Date | null | undefined): string | null {
@@ -293,104 +291,27 @@ export async function patchAdminUser(request: Request, env: KeeperEnv, actor: Ad
   return json({ userId, ...result }, { headers: mutationHeaders(correlation) });
 }
 
-async function prepareVerificationToken(client: DatabaseClient, userId: string): Promise<{ token: string; challengeId: string }> {
-  const token = randomToken(32);
-  const challengeId = uuidv7();
-  await client.query(
-    `UPDATE identity.email_verification_tokens
-        SET superseded_at = now()
-      WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
-    [userId],
-  );
-  await client.query(
-    `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-    [challengeId, userId, hashAuthToken(token, 'verification')]);
-  return { token, challengeId };
-}
-
-function encryptedToken(token: string, encryptionKey: string): Promise<{ ciphertext: string; encryptionKeyVersion: string }> {
-  return encryptField(token, encryptionKey, 'v1');
-}
-
 export async function inviteAdminUser(request: Request, env: KeeperEnv, actor: AdminActorLike, correlation: string): Promise<Response> {
   requireKeeperAdmin(actor);
-  const keys = requireAuthData(env);
   const input = objectBody(await readBoundedJson(request));
   rejectUnknownFields(input, ['email', 'displayName', 'handle', 'reasonCode', 'confirmation']);
-  const email = normalizeEmail(input.email);
-  const displayName = input.displayName === undefined ? '' : parseDisplayName(input.displayName);
-  const handle = input.handle === undefined ? undefined : parseHandle(input.handle);
-  const reasonCode = parseReasonCode(input.reasonCode);
   requireConfirmation(input.confirmation, 'INVITE ACCOUNT');
-  const temporaryPasswordHash = hashPassword(randomToken(32), keys.pepper, { fallbackToScrypt: env.PASSWORD_HASH_ALLOW_SCRYPT_FALLBACK === 'true', pepperVersion: 'v1' });
-  const dispatcher = createAuthEmailDispatchAdapter(env);
-  const userId = uuidv7();
-  const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
-    const duplicate = await client.query(`SELECT user_id FROM identity.email_credentials WHERE email_lookup_hmac = decode($1, 'base64') UNION ALL SELECT user_id FROM identity.contact_emails WHERE email_lookup_hmac = decode($1, 'base64') LIMIT 1`, [hmacLookup(email, keys.hmacKey)]);
-    if (duplicate.rowCount) throw new Error('user_email_exists');
-    await client.query(`INSERT INTO identity.users (id, status, display_name) VALUES ($1, 'active', $2)`, [userId, displayName]);
-    if (handle !== undefined) await client.query(`INSERT INTO identity.handles (user_id, handle, handle_normalized) VALUES ($1, $2, lower($2))`, [userId, handle]);
-    const verificationToken = randomToken(32);
-    const challengeId = uuidv7();
-    const encrypted = await encryptedToken(verificationToken, keys.encryptionKey);
-    const encryptedEmail = await encryptField(email, keys.encryptionKey, 'v1');
-    await client.query(
-      `INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
-       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`,
-      [userId, encryptedEmail.ciphertext, hmacLookup(email, keys.hmacKey), JSON.stringify(temporaryPasswordHash)]);
-    await client.query(
-      `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
-       VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`,
-      [userId, encryptedEmail.ciphertext, hmacLookup(email, keys.hmacKey)]);
-    await client.query(
-      `UPDATE identity.email_verification_tokens
-          SET superseded_at = now()
-        WHERE user_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`, [userId]);
-    await client.query(
-      `INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`,
-      [challengeId, userId, hashAuthToken(verificationToken, 'verification')]);
-    await dispatcher.enqueue(client, {
-      actorId: actor.userId, correlationId: correlation, kind: 'account_invitation', userId, challengeId,
-      tokenCiphertext: encrypted.ciphertext, tokenKeyVersion: encrypted.encryptionKeyVersion,
-    });
-    await client.query(
-      `INSERT INTO identity.account_events (id, user_id, actor_id, event_type, metadata) VALUES ($1, $2, $3, 'account_invited', $4::jsonb)`,
-      [uuidv7(), userId, actor.userId, JSON.stringify({ verificationState: 'pending_verification' })]);
-    await client.query(
-      `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
-       VALUES ($1, $2, 'identity.account_invited', 'user', $3, $4, $5, $6::jsonb)`,
-      [uuidv7(), actor.userId, userId, reasonCode, correlation, JSON.stringify({ verificationState: 'pending_verification' })]);
-    return { userId, status: 'active', verificationState: 'pending_verification' };
+  const result = await dispatchKeeperEmail(env, request, {
+    operation: 'invite', actorId: actor.userId, correlationId: correlation,
+    email: normalizeEmail(input.email), displayName: input.displayName === undefined ? '' : parseDisplayName(input.displayName),
+    handle: input.handle === undefined ? undefined : parseHandle(input.handle), reasonCode: parseReasonCode(input.reasonCode),
   });
   return json(result, { status: 201, headers: mutationHeaders(correlation) });
 }
 
 export async function resendAdminVerification(request: Request, env: KeeperEnv, actor: AdminActorLike, rawUserId: string, correlation: string): Promise<Response> {
   requireKeeperAdmin(actor);
-  const keys = requireAuthData(env);
-  const userId = parseAdminUserId(rawUserId);
   const input = objectBody(await readBoundedJson(request));
   rejectUnknownFields(input, ['reasonCode', 'confirmation']);
-  const reasonCode = parseReasonCode(input.reasonCode);
   requireConfirmation(input.confirmation, 'RESEND VERIFICATION');
-  const dispatcher = createAuthEmailDispatchAdapter(env);
-  const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
-    const current = await client.query<{ status: string; verified_at: string | null }>(
-      `SELECT u.status, e.verified_at FROM identity.users u LEFT JOIN identity.email_credentials e ON e.user_id = u.id WHERE u.id = $1 FOR UPDATE`, [userId]);
-    if (!current.rows[0]) throw new Error('user_not_found');
-    if (current.rows[0].verified_at) throw new Error('email_already_verified');
-    if (['deleted', 'suspended', 'locked'].includes(current.rows[0].status)) throw new Error('invalid_account_status');
-    const prepared = await prepareVerificationToken(client, userId);
-    const encrypted = await encryptedToken(prepared.token, keys.encryptionKey);
-    await dispatcher.enqueue(client, { actorId: actor.userId, correlationId: correlation, kind: 'verification_resend', userId, challengeId: prepared.challengeId, tokenCiphertext: encrypted.ciphertext, tokenKeyVersion: encrypted.encryptionKeyVersion });
-    await client.query(
-      `INSERT INTO identity.account_events (id, user_id, actor_id, event_type, metadata) VALUES ($1, $2, $3, 'email_verification_requested', $4::jsonb)`,
-      [uuidv7(), userId, actor.userId, JSON.stringify({ deliveryState: 'queued' })]);
-    await client.query(
-      `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
-       VALUES ($1, $2, 'identity.email_verification_resent', 'user', $3, $4, $5, $6::jsonb)`,
-      [uuidv7(), actor.userId, userId, reasonCode, correlation, JSON.stringify({ deliveryState: 'queued' })]);
-    return { userId, deliveryState: 'queued' };
+  const result = await dispatchKeeperEmail(env, request, {
+    operation: 'resend', actorId: actor.userId, correlationId: correlation,
+    userId: parseAdminUserId(rawUserId), reasonCode: parseReasonCode(input.reasonCode),
   });
   return json(result, { headers: mutationHeaders(correlation) });
 }

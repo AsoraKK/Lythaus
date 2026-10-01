@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
+import { captureIncidentDatabaseEvidence } from './auth-incident-database-contract.mjs';
 
 const { Client } = pg;
 
@@ -13,6 +14,7 @@ const cloudflareZoneId = process.env.CLOUDFLARE_ZONE_ID ?? '';
 const sendingDomain = process.env.AUTH_EMAIL_SENDING_DOMAIN ?? 'mail.lythaus.co';
 const sendingFrom = process.env.AUTH_EMAIL_FROM ?? `no-reply@${sendingDomain}`;
 const acceptanceEmail = process.env.CODEX_TEST_EMAIL ?? '';
+const sendProbe = process.env.AUTH_INCIDENT_SEND_PROBE === 'true';
 
 function sanitizeProviderMessage(value) {
   return String(value ?? '')
@@ -65,50 +67,9 @@ async function capturePlanetScale(report) {
   await client.connect();
   try {
     await client.query('BEGIN READ ONLY');
-    const readOnly = await client.query('SHOW transaction_read_only');
-    if (readOnly.rows[0]?.transaction_read_only !== 'on') {
-      throw new Error('PlanetScale incident audit did not enter a read-only transaction');
-    }
-
-    const users = await client.query(`
-      SELECT status, COUNT(status)::int AS count
-        FROM identity.users
-       GROUP BY status
-       ORDER BY status`);
-    const credentials = await client.query(`
-      SELECT verification_state,
-             COUNT(verification_state)::int AS count
-        FROM (
-          SELECT CASE WHEN verified_at IS NULL THEN 'unverified' ELSE 'verified' END AS verification_state
-            FROM identity.email_credentials
-        ) categorized
-       GROUP BY verification_state
-       ORDER BY verification_state`);
-    const verificationTokens = await client.query(`
-      SELECT
-        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours')::int AS created_24h,
-        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NULL AND expires_at > now())::int AS active_unconsumed_24h,
-        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NULL AND expires_at <= now())::int AS expired_unconsumed_24h,
-        COUNT(created_at) FILTER (WHERE created_at >= now() - interval '24 hours' AND consumed_at IS NOT NULL)::int AS consumed_24h
-      FROM identity.email_verification_tokens`);
-    const recentEvents = await client.query(`
-      SELECT event_type, COUNT(event_type)::int AS count
-        FROM identity.account_events
-       WHERE created_at >= now() - interval '24 hours'
-         AND event_type IN ('email_registration_started', 'email_relink_started', 'email_verified', 'email_login', 'password_reset_completed')
-       GROUP BY event_type
-       ORDER BY event_type`);
-
+    const evidence = await captureIncidentDatabaseEvidence(client);
     await client.query('ROLLBACK');
-    report.planetscale = {
-      status: 'VERIFIED_READ_ONLY',
-      transactionReadOnly: true,
-      userStatusCounts: users.rows,
-      emailCredentialCounts: credentials.rows,
-      verificationTokenCounts24h: verificationTokens.rows[0] ?? {},
-      authEventCounts24h: recentEvents.rows,
-      piiIncluded: false,
-    };
+    report.planetscale = evidence;
   } catch (error) {
     await client.query('ROLLBACK').catch(() => undefined);
     throw error;
@@ -189,6 +150,10 @@ async function captureCloudflare(report) {
     };
   }
 
+  if (!sendProbe) {
+    report.cloudflare.arbitraryRecipientProbe = {attempted:false,reason:'explicit_send_approval_required'};
+    return;
+  }
   if (!acceptanceEmail) throw new Error('CODEX_TEST_EMAIL is required for the arbitrary-recipient probe');
   const probeRecipient = buildArbitraryRecipientProbe(acceptanceEmail);
   report.cloudflare.arbitraryRecipientProbe.attempted = true;
@@ -250,11 +215,12 @@ try {
 if (report.cloudflare?.subdomainApi?.success !== true || report.cloudflare?.subdomainApi?.enabled !== true) {
   failures.push('cloudflare_sending_domain_not_enabled');
 }
-if (report.cloudflare?.arbitraryRecipientProbe?.success !== true) {
+if (sendProbe && report.cloudflare?.arbitraryRecipientProbe?.success !== true) {
   failures.push('cloudflare_arbitrary_recipient_probe_failed');
 }
 
 report.failures = [...new Set(failures)];
+report.mode = sendProbe ? 'approved_provider_send_probe' : 'read_only';
 report.status = report.failures.length === 0 ? 'DIAGNOSTIC_PASS' : 'DIAGNOSTIC_FAIL';
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });

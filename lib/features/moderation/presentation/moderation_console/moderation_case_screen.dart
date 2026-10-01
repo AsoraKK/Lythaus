@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 
 import 'package:lythaus/design_system/components/lyth_button.dart';
 import 'package:lythaus/design_system/components/lyth_card.dart';
@@ -31,78 +32,80 @@ class ModerationCaseScreen extends ConsumerWidget {
     final state = ref.watch(moderationCaseProvider(caseId));
     final notifier = ref.read(moderationCaseProvider(caseId).notifier);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Moderation Case')),
-      body: Builder(
-        builder: (context) {
-          if (state.isLoading && state.caseDetail == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state.errorMessage != null && state.caseDetail == null) {
-            return Center(child: Text(state.errorMessage!));
-          }
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Moderation Case')),
+        body: Builder(
+          builder: (context) {
+            if (state.isLoading && state.caseDetail == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state.errorMessage != null && state.caseDetail == null) {
+              return Center(child: Text(state.errorMessage!));
+            }
 
-          final caseDetail = state.caseDetail;
-          if (caseDetail == null) {
-            return const Center(child: Text('Case data is unavailable.'));
-          }
+            final caseDetail = state.caseDetail;
+            if (caseDetail == null) {
+              return const Center(child: Text('Case data is unavailable.'));
+            }
 
-          return SingleChildScrollView(
-            padding: EdgeInsets.all(context.spacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (state.errorMessage != null)
-                  Padding(
-                    padding: EdgeInsets.only(bottom: context.spacing.md),
-                    child: Text(
-                      state.errorMessage!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(context.spacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (state.errorMessage != null)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: context.spacing.md),
+                      child: Text(
+                        state.errorMessage!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ),
+                  _buildHeader(context, caseDetail),
+                  SizedBox(height: context.spacing.lg),
+                  _buildContentPanel(caseDetail, context),
+                  SizedBox(height: context.spacing.lg),
+                  _buildReportSection(context, caseDetail),
+                  SizedBox(height: context.spacing.lg),
+                  if (caseDetail.appealDetails != null)
+                    _buildAppealSummary(context, caseDetail.appealDetails!),
+                  SizedBox(height: context.spacing.lg),
+                  ModerationDecisionPanel(
+                    isSubmitting: state.decisionSubmitting,
+                    onSubmit: (input) async {
+                      await notifier.submitDecision(input);
+                    },
                   ),
-                _buildHeader(context, caseDetail),
-                SizedBox(height: context.spacing.lg),
-                _buildContentPanel(caseDetail, context),
-                SizedBox(height: context.spacing.lg),
-                _buildReportSection(context, caseDetail),
-                SizedBox(height: context.spacing.lg),
-                if (caseDetail.appealDetails != null)
-                  _buildAppealSummary(context, caseDetail.appealDetails!),
-                SizedBox(height: context.spacing.lg),
-                ModerationDecisionPanel(
-                  isSubmitting: state.decisionSubmitting,
-                  onSubmit: (input) async {
-                    await notifier.submitDecision(input);
-                  },
-                ),
-                SizedBox(height: context.spacing.lg),
-                LythButton.secondary(
-                  label: caseDetail.escalation != null
-                      ? 'Escalated to ${caseDetail.escalation!.targetQueue}'
-                      : 'Escalate Case',
-                  icon: Icons.arrow_upward,
-                  onPressed: state.escalating
-                      ? null
-                      : () async {
-                          final result = await _showEscalationDialog(context);
-                          if (result != null) {
-                            await notifier.escalate(result);
-                          }
-                        },
-                ),
-                SizedBox(height: context.spacing.xl),
-                Text(
-                  'Audit trail',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                SizedBox(height: context.spacing.sm),
-                ModerationAuditTimeline(entries: caseDetail.auditTrail),
-              ],
-            ),
-          );
-        },
+                  SizedBox(height: context.spacing.lg),
+                  LythButton.secondary(
+                    label: caseDetail.escalation != null
+                        ? 'Escalated to ${caseDetail.escalation!.targetQueue}'
+                        : 'Escalate Case',
+                    icon: Icons.arrow_upward,
+                    onPressed: state.escalating
+                        ? null
+                        : () async {
+                            final result = await _showEscalationDialog(context);
+                            if (result != null) {
+                              await notifier.escalate(result);
+                            }
+                          },
+                  ),
+                  SizedBox(height: context.spacing.xl),
+                  Text(
+                    'Audit trail',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  SizedBox(height: context.spacing.sm),
+                  ModerationAuditTimeline(entries: caseDetail.auditTrail),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

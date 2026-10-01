@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
@@ -68,51 +69,53 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
 
     final errorMessage = state.error;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Privacy')),
-      body: Stack(
-        children: [
-          ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              PrivacyExportSection(
-                isBusy: isBusy,
-                isCoolingDown: state.isCoolingDown,
-                buttonLabel: buttonLabel,
-                onRequest: canTap
-                    ? () => runWithDeviceGuard(
-                        context,
-                        ref,
-                        IntegrityUseCase.privacyDsr,
-                        () => controller.export(),
-                      )
-                    : null,
-                onRefresh: () => controller.refreshStatus(),
-                cooldownRow: PrivacyCooldownRow(
-                  lastRequestLabel: lastRequestLabel,
-                  nextAvailableLabel: nextAvailableLabel,
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Privacy')),
+        body: Stack(
+          children: [
+            ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                PrivacyExportSection(
+                  isBusy: isBusy,
+                  isCoolingDown: state.isCoolingDown,
+                  buttonLabel: buttonLabel,
+                  onRequest: canTap
+                      ? () => runWithDeviceGuard(
+                          context,
+                          ref,
+                          IntegrityUseCase.privacyDsr,
+                          () => controller.export(),
+                        )
+                      : null,
+                  onRefresh: () => controller.refreshStatus(),
+                  cooldownRow: PrivacyCooldownRow(
+                    lastRequestLabel: lastRequestLabel,
+                    nextAvailableLabel: nextAvailableLabel,
+                  ),
                 ),
-              ),
-              if (errorMessage != null &&
-                  (state.exportStatus == ExportStatus.failed ||
-                      state.deleteStatus == DeleteStatus.failed)) ...[
-                const SizedBox(height: 12),
-                PrivacyErrorBanner(message: errorMessage),
+                if (errorMessage != null &&
+                    (state.exportStatus == ExportStatus.failed ||
+                        state.deleteStatus == DeleteStatus.failed)) ...[
+                  const SizedBox(height: 12),
+                  PrivacyErrorBanner(message: errorMessage),
+                ],
+                const SizedBox(height: 24),
+                const AnalyticsSettingsCard(),
+                const SizedBox(height: 24),
+                PrivacyDeleteSection(
+                  onDelete: () => _confirmDelete(controller),
+                  isProcessing: state.deleteStatus == DeleteStatus.deleting,
+                ),
+                const SizedBox(height: 24),
+                const PrivacyInfoCard(),
               ],
-              const SizedBox(height: 24),
-              const AnalyticsSettingsCard(),
-              const SizedBox(height: 24),
-              PrivacyDeleteSection(
-                onDelete: () => _confirmDelete(controller),
-                isProcessing: state.deleteStatus == DeleteStatus.deleting,
-              ),
-              const SizedBox(height: 24),
-              const PrivacyInfoCard(),
-            ],
-          ),
-          if (state.deleteStatus == DeleteStatus.deleting)
-            const PrivacyBlockingOverlay(),
-        ],
+            ),
+            if (state.deleteStatus == DeleteStatus.deleting)
+              const PrivacyBlockingOverlay(),
+          ],
+        ),
       ),
     );
   }

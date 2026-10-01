@@ -28,6 +28,8 @@ import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 /// )
 /// ```
 class LythIconButton extends StatelessWidget {
+  final int _variant;
+
   /// The icon to display
   final IconData icon;
 
@@ -54,7 +56,7 @@ class LythIconButton extends StatelessWidget {
     this.tooltip,
     this.iconSize = 24,
     super.key,
-  });
+  }) : _variant = 0;
 
   /// Create a filled icon button variant
   const LythIconButton.filled({
@@ -64,7 +66,8 @@ class LythIconButton extends StatelessWidget {
     this.tooltip,
     this.iconSize = 24,
     super.key,
-  }) : disabled = false;
+  }) : disabled = false,
+       _variant = 1;
 
   /// Create an outlined icon button variant
   const LythIconButton.outlined({
@@ -74,23 +77,40 @@ class LythIconButton extends StatelessWidget {
     this.tooltip,
     this.iconSize = 24,
     super.key,
-  }) : disabled = false;
+  }) : disabled = false,
+       _variant = 2;
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = color ?? context.colorScheme.onSurface;
-
-    return Tooltip(
-      message: tooltip ?? '',
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: IconButton(
-          icon: Icon(icon, size: iconSize, color: iconColor),
-          onPressed: disabled ? null : onPressed,
-          splashRadius: 24,
+    final style = IconButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      foregroundColor: color,
+    );
+    final child = Icon(icon, size: iconSize);
+    final callback = disabled ? null : onPressed;
+    return switch (_variant) {
+      1 => IconButton.filled(
+        icon: child,
+        onPressed: callback,
+        tooltip: tooltip,
+        style: style,
+      ),
+      2 => IconButton.outlined(
+        icon: child,
+        onPressed: callback,
+        tooltip: tooltip,
+        style: style.copyWith(
+          side: WidgetStatePropertyAll(
+            BorderSide(color: context.colorScheme.outline),
+          ),
         ),
       ),
-    );
+      _ => IconButton(
+        icon: child,
+        onPressed: callback,
+        tooltip: tooltip,
+        style: style,
+      ),
+    };
   }
 }

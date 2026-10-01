@@ -107,7 +107,7 @@ void main() {
 
     expect(find.text('Ada Lovelace'), findsWidgets);
     expect(find.text('@ada'), findsOneWidget);
-    expect(find.text('gold'), findsOneWidget);
+    expect(find.text('Subscription: gold'), findsOneWidget);
     expect(find.text('120 points'), findsNothing);
     expect(find.text('Founding member'), findsNothing);
     expect(find.text('Reputation'), findsNothing);

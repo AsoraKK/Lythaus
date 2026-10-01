@@ -18,7 +18,7 @@
     "openapi:test:contract": "jest -c jest.contract.config.cjs --runInBand",
     "openapi:docs": "npx @redocly/cli build-docs api/openapi/dist/openapi.json -o api/openapi/dist/index.html",
     "marketing:validate": "node scripts/cloudflare/validate-marketing-output.mjs",
-    "marketing:test": "node --test apps/marketing-site/tests/*.test.mjs",
+    "marketing:test": "node --experimental-strip-types --test apps/marketing-site/tests/*.test.mjs",
     "marketing:test:browser": "node --test apps/marketing-site/tests/home-opening.browser.mjs",
     "k6:diagnose": "bash scripts/diagnose-k6-failures.sh",
     "todo:triage": "node scripts/generate-todo-triage.js",
@@ -53,6 +53,8 @@
     "test:database-identity": "node --experimental-strip-types --test scripts/tests/db-identity-contract.test.mjs",
     "test:budget": "node --experimental-strip-types --test scripts/tests/budget-contract.test.mjs",
     "test:authenticity": "node --experimental-strip-types --test packages/authenticity/tests/evaluation.test.mjs",
+    "test:authenticity-private-alpha": "node --experimental-strip-types --experimental-test-module-mocks --test packages/authenticity/tests/private-alpha.test.mjs apps/lythaus-public-api/tests/authenticity-alpha-hardening.test.mjs apps/lythaus-jobs/tests/authenticity-alpha-hardening.test.mjs packages/db/tests/authenticity-alpha-lifecycle.test.mjs scripts/tests/budget-scope.test.mjs scripts/tests/private-evaluation-receipt.test.mjs",
+    "test:authenticity-cpu-orchestration": "node --test scripts/tests/authenticity-cpu-orchestration.test.mjs scripts/tests/private-evaluation-receipt.test.mjs",
     "test:authenticity-foundation": "node --experimental-strip-types --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test packages/authenticity/tests/evaluation.test.mjs packages/authenticity/tests/foundation.test.mjs packages/authenticity/tests/wp002.test.mjs packages/authenticity/tests/wp003.test.mjs packages/authenticity/tests/wp006b.test.mjs",
     "test:authenticity-wp003": "node --experimental-strip-types --test packages/authenticity/tests/wp003.test.mjs",
     "test:authenticity-wp004a": "node --experimental-strip-types --test packages/authenticity/tests/wp004a.test.mjs",
@@ -162,7 +164,7 @@
     "glob@10.5.0": {
       "minimatch": "10.2.6"
     },
-    "brace-expansion": "5.0.9",
+    "brace-expansion": "5.0.12",
     "fast-xml-parser": "5.10.1",
     "fast-uri": "3.1.7",
     "form-data": "4.0.6",
@@ -172,14 +174,14 @@
       "minimatch": "5.1.9"
     },
     "typescript": "5.5.4",
-    "undici": "7.29.0",
+    "undici": "7.29.1",
     "js-yaml": "4.3.2",
     "@istanbuljs/load-nyc-config": {
       "js-yaml": "3.15.2"
     },
     "sharp": "0.35.4",
     "miniflare": {
-      "undici": "7.29.0"
+      "undici": "7.29.1"
     }
   },
   "workspaces": [

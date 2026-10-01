@@ -16,6 +16,9 @@ const argument = (name) => {
 
 const mode = args[0];
 const outputPath = argument('--output');
+if (args.includes('--defer-coordinator') && mode !== 'capture') {
+  throw new Error('--defer-coordinator is only valid for capture mode');
+}
 const read = (name) => {
   const value = argument(name);
   if (!value) throw new Error(`${name} is required`);
@@ -39,6 +42,7 @@ if (mode === 'capture') {
       adminApi: read('--admin-route'),
       coordinator: read('--coordinator-route'),
     },
+    deferredComponents: args.includes('--defer-coordinator') ? ['coordinator'] : [],
   });
 } else if (mode === 'from-run') {
   const run = read('--run');

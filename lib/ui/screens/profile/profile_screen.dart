@@ -3,6 +3,8 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/components/lyth_avatar.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -15,6 +17,7 @@ import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/components/lyth_empty_state.dart';
 import 'package:lythaus/design_system/components/lyth_snackbar.dart';
 import 'package:lythaus/ui/components/tier_badge.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
@@ -37,10 +40,12 @@ class ProfileScreen extends ConsumerWidget {
     final targetUserId = userId ?? currentUser?.id;
 
     if (targetUserId == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Profile')),
-        body: const Center(
-          child: Text('Sign in to view your profile details.'),
+      return ReadingPane(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Profile')),
+          body: const Center(
+            child: Text('Sign in to view your profile details.'),
+          ),
         ),
       );
     }
@@ -48,23 +53,38 @@ class ProfileScreen extends ConsumerWidget {
     final profileState = ref.watch(publicUserProvider(targetUserId));
     return profileState.when(
       data: (profile) => _buildProfile(context, ref, profile),
-      loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Profile')),
-        body: const Center(child: CircularProgressIndicator()),
+      loading: () => ReadingPane(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Profile')),
+          body: const Center(child: CircularProgressIndicator()),
+        ),
       ),
-      error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Profile')),
-        body: Center(
-          child: Text(
-            'Unable to load profile: ${error.toString()}',
-            textAlign: TextAlign.center,
+      error: (error, stack) => ReadingPane(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Profile')),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const LythEmptyState(
+                  icon: Icons.person_off_outlined,
+                  title: 'Unable to load profile',
+                  subtitle: 'Please try again.',
+                ),
+                TextButton(
+                  onPressed: () =>
+                      ref.invalidate(publicUserProvider(targetUserId)),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Scaffold _buildProfile(
+  Widget _buildProfile(
     BuildContext context,
     WidgetRef ref,
     PublicUser profile,
@@ -79,123 +99,123 @@ class ProfileScreen extends ConsumerWidget {
       _logProfileComplete(ref, profile, currentUser.id);
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(profile.displayName),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(publicUserProvider(profile.id));
-              if (isOwner) {
-                ref.invalidate(reputationProvider);
-              }
-            },
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Spacing.lg),
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundImage: profile.avatarUrl != null
-                    ? NetworkImage(profile.avatarUrl!)
-                    : null,
-                child: profile.avatarUrl == null
-                    ? Text(
-                        profile.displayName.isNotEmpty
-                            ? profile.displayName[0]
-                            : profile.handleLabel[0],
-                      )
-                    : null,
-              ),
-              const SizedBox(width: Spacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile.displayName,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: Spacing.xs),
-                    Text(
-                      profile.handleLabel,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: Spacing.xs),
-                    TierBadge(label: profile.tier, highlight: true),
-                    if (isOwner) ...[
-                      const SizedBox(height: Spacing.xs),
-                      _ReputationStateBadge(),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (!isOwner && currentUser != null) ...[
-            const SizedBox(height: Spacing.lg),
-            _FollowSection(
-              profileId: profile.id,
-              currentUserId: currentUser.id,
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(profile.displayName),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh profile',
+              onPressed: () {
+                ref.invalidate(publicUserProvider(profile.id));
+                if (isOwner) {
+                  ref.invalidate(reputationProvider);
+                }
+              },
             ),
           ],
-          const SizedBox(height: Spacing.lg),
-          if (isOwner) ...[
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit profile'),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => EditProfileScreen(profile: profile),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(Spacing.lg),
+          children: [
+            Row(
+              children: [
+                LythAvatar(
+                  name: profile.displayName.isEmpty
+                      ? profile.handleLabel
+                      : profile.displayName,
+                  imageUrl: profile.avatarUrl,
                 ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.insights_outlined),
-              title: const Text('Activity & Audit Log'),
-              subtitle: const Text('Private reputation and account activity'),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ReputationLedgerScreen(),
+                const SizedBox(width: Spacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        profile.displayName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: Spacing.xs),
+                      Text(
+                        profile.handleLabel,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: Spacing.xs),
+                      TierBadge(label: 'Subscription: ${profile.tier}'),
+                      if (isOwner) ...[
+                        const SizedBox(height: Spacing.xs),
+                        _ReputationStateBadge(),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            if (canModerate)
+            if (profile.bio?.trim().isNotEmpty == true) ...[
+              const SizedBox(height: Spacing.lg),
+              Text(profile.bio!, style: Theme.of(context).textTheme.bodyLarge),
+            ],
+            if (!isOwner && currentUser != null) ...[
+              const SizedBox(height: Spacing.lg),
+              _FollowSection(
+                profileId: profile.id,
+                currentUserId: currentUser.id,
+              ),
+            ],
+            const SizedBox(height: Spacing.lg),
+            if (isOwner) ...[
+              const Divider(),
               ListTile(
-                leading: const Icon(Icons.shield_outlined),
-                title: const Text('Moderation hub'),
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit profile'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => EditProfileScreen(profile: profile),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.insights_outlined),
+                title: const Text('Activity & Audit Log'),
+                subtitle: const Text('Private reputation and account activity'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ReputationLedgerScreen(),
+                  ),
+                ),
+              ),
+              if (canModerate)
+                ListTile(
+                  leading: const Icon(Icons.shield_outlined),
+                  title: const Text('Moderation hub'),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ModerationConsoleScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Settings'),
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const ModerationConsoleScreen(),
+                      builder: (_) => const SettingsScreen(),
                     ),
                   );
                 },
               ),
-            ListTile(
-              leading: const Icon(Icons.settings_outlined),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SettingsScreen(),
-                  ),
-                );
-              },
-            ),
+            ],
+            const SizedBox(height: Spacing.lg),
           ],
-          const SizedBox(height: Spacing.lg),
-        ],
+        ),
       ),
     );
   }

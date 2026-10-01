@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 FROM node:24.6.0-bookworm-slim@sha256:9b741b28148b0195d62fa456ed84dd6c953c1f17a3761f3e6e6797a754d9edff AS node
 FROM python:3.13.5-slim-bookworm@sha256:4c2cf9917bd1cbacc5e9b07320025bdb7cdf2df7b0ceaccb55e9dd7e30987419 AS source
+ARG RELEASE_SHA
+LABEL org.opencontainers.image.revision="$RELEASE_SHA"
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 COPY packages/authenticity/src /app/packages/authenticity/src

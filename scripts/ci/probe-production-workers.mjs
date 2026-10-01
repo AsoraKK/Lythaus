@@ -1,14 +1,14 @@
 import fs from 'node:fs';
-import { approvedPost0017Expectation } from './product-integrity-schema-contract.mjs';
+import { approvedReleaseExpectation } from './product-integrity-schema-contract.mjs';
 
 const token = process.env.DATABASE_READINESS_TOKEN ?? '';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
-const post0017Expectation = approvedPost0017Expectation(
+const releaseExpectation = approvedReleaseExpectation(
   process.env.EXPECTED_DATABASE_SCHEMA_FINGERPRINT ?? '',
   process.env.EXPECTED_DATABASE_RELATION_COUNT ?? '',
 );
-const expectedRelationCount = post0017Expectation.relationCount;
-const expectedSchemaFingerprint = post0017Expectation.fingerprint;
+const expectedRelationCount = releaseExpectation.relationCount;
+const expectedSchemaFingerprint = releaseExpectation.fingerprint;
 const expectedSchemaVersion = process.env.EXPECTED_DATABASE_SCHEMA_VERSION ?? '';
 const expectedBudgetLedgerApplied = requireBudgetMigration;
 const expectedBranch = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true' ? 'main' : 'unknown';
@@ -17,6 +17,7 @@ const requestedWorker = process.env.PRODUCTION_WORKER_SCOPE ?? 'all';
 const releaseSha = process.env.RELEASE_SHA ?? '';
 const expectedWorkerSourceSha = process.env.EXPECTED_WORKER_SOURCE_SHA ?? releaseSha;
 const expectedWorkerVersionId = process.env.PRODUCTION_WORKER_VERSION_ID ?? '';
+const expectedPublicVersion = process.env.PUBLIC_WORKER_VERSION_ID ?? '';
 const accessClientId = process.env.CF_ACCESS_CLIENT_ID ?? '';
 const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET ?? '';
 
@@ -24,7 +25,8 @@ if (!token) throw new Error('DATABASE_READINESS_TOKEN is required');
 if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the exact merged main commit');
 if (!/^[0-9a-f]{40}$/.test(expectedWorkerSourceSha)) throw new Error('EXPECTED_WORKER_SOURCE_SHA must be a full source SHA');
 if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTION_WORKER_VERSION_ID is required');
-if (expectedSchemaVersion !== '0017_authenticity_beta.sql') throw new Error('production probes require migration 0017');
+if (requestedWorker === 'lythaus-admin-api-development' && !/^[0-9a-f-]{36}$/.test(expectedPublicVersion)) throw new Error('PUBLIC_WORKER_VERSION_ID is required for the private Admin email binding proof');
+if (expectedSchemaVersion !== '0020_auth_recovery_delivery.sql') throw new Error('production probes require migration 0020');
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
 
 const allTargets = [
@@ -65,7 +67,7 @@ if (targets.some(({ probe, baseUrl }) => probe && !baseUrl)) {
 
 async function fetchJson(url, options = {}) {
   const headers = new Headers(options.headers);
-  headers.set('Cloudflare-Workers-Version-Overrides', `${requestedWorker}="${expectedWorkerVersionId}"`);
+  headers.set('Cloudflare-Workers-Version-Overrides', `${requestedWorker}="${expectedWorkerVersionId}"${requestedWorker === 'lythaus-admin-api-development' ? `, lythaus-public-api-development="${expectedPublicVersion}"` : ''}`);
   if (requestedWorker === 'lythaus-admin-api-development') {
     headers.set('CF-Access-Client-Id', accessClientId);
     headers.set('CF-Access-Client-Secret', accessClientSecret);
@@ -145,6 +147,10 @@ for (const target of targets) {
   if (body.workerVersionId !== expectedWorkerVersionId || body.releaseTag !== expectedWorkerSourceSha) {
     throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
   }
+  if (target.worker === 'lythaus-admin-api-development'
+    && (body.emailBinding?.bindingVerified !== true || body.emailBinding?.publicWorkerVersion !== expectedPublicVersion)) {
+    throw new Error('Admin private email binding did not execute the exact Public candidate');
+  }
   const reports = body.databases && typeof body.databases === 'object'
     ? Object.entries(body.databases)
     : [['primary', body]];
@@ -159,6 +165,7 @@ for (const target of targets) {
     workerVersionId: body.workerVersionId,
     releaseTag: body.releaseTag,
     sourceSha: body.releaseTag,
+    ...(target.worker === 'lythaus-admin-api-development' ? { emailBinding: { bindingVerified: true, publicWorkerVersion: expectedPublicVersion } } : {}),
     baseUrl: base,
     databaseCount: reports.length,
     databaseEnvironment: primaryReport.databaseEnvironment,

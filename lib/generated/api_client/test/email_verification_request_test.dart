@@ -13,5 +13,11 @@ void main() {
       // TODO
     });
 
+    // Mailbox owner chooses the usable credential here, preventing activation of an attacker-chosen pre-registration password. Unicode code points are preserved, not normalized.
+    // String password
+    test('to test the property `password`', () async {
+      // TODO
+    });
+
   });
 }

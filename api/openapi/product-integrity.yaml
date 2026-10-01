@@ -1137,12 +1137,20 @@ components:
     EmailVerificationRequest:
       type: object
       additionalProperties: false
-      required: [token]
+      required: [token, password]
       properties:
         token:
           type: string
           minLength: 32
+          maxLength: 256
+          writeOnly: true
           description: Single-use opaque email-verification token.
+        password:
+          type: string
+          minLength: 15
+          maxLength: 128
+          writeOnly: true
+          description: Mailbox owner chooses the usable credential here, preventing activation of an attacker-chosen pre-registration password. Unicode code points are preserved, not normalized.
     EmailVerificationResponse:
       type: object
       description: Private verification result. The response contains no user or email identifier.
@@ -3717,7 +3725,7 @@ paths:
     post:
       operationId: authEmailVerifyPost
       summary: Verify an email address with a JSON token
-      description: Consumes a single-use email-verification token and returns only a private verification state.
+      description: An intentional POST atomically consumes mailbox proof and establishes the mailbox owner's chosen credential on the existing user ID. GET/HEAD never mutates. Password policy is checked before token consumption; omitted password returns password_setup_required without consuming the link. No automatic session or bearer redirect is issued.
       tags: [Auth]
       security: []
       requestBody:

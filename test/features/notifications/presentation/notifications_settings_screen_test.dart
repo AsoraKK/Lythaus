@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:lythaus/features/notifications/application/notification_api_service.dart';
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart';
@@ -6,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:lythaus/design_system/index.dart';
 
 class MockNotificationApiService extends Mock
     implements NotificationApiService {}
@@ -59,6 +62,78 @@ void main() {
   });
 
   group('NotificationsSettingsScreen', () {
+    for (final dark in [false, true]) {
+      testWidgets('quiet hours reflow at 320px and 200% in $dark theme', (
+        tester,
+      ) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(320, 900);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final api = MockNotificationApiService();
+        when(
+          () => api.getPreferences(),
+        ).thenAnswer((_) async => _samplePreferences());
+        when(
+          () => api.getDevices(activeOnly: true),
+        ).thenAnswer((_) async => [_sampleDevice()]);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [notificationApiServiceProvider.overrideWithValue(api)],
+            child: MaterialApp(
+              theme: dark ? LythausTheme.dark() : LythausTheme.light(),
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!,
+              ),
+              home: const NotificationsSettingsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.text('01'), 200);
+        expect(tester.takeException(), isNull);
+        final hours = find.byType(FilterChip);
+        expect(hours, findsNWidgets(24));
+        for (final element in hours.evaluate()) {
+          final size = tester.getSize(find.byWidget(element.widget));
+          expect(size.width, greaterThanOrEqualTo(48));
+          expect(size.height, greaterThanOrEqualTo(48));
+        }
+        await _scrollToDevices(tester);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('saving prevents duplicate preference requests', (
+      tester,
+    ) async {
+      final api = MockNotificationApiService();
+      final pending = Completer<UserNotificationPreferences>();
+      when(
+        () => api.getPreferences(),
+      ).thenAnswer((_) async => _samplePreferences());
+      when(() => api.getDevices(activeOnly: true)).thenAnswer((_) async => []);
+      when(
+        () => api.updatePreferences(any()),
+      ).thenAnswer((_) => pending.future);
+      await tester.pumpWidget(_buildTestWidget(api: api));
+      await tester.pumpAndSettle();
+      final toggle = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'Marketing'),
+      );
+      toggle.onChanged!(true);
+      toggle.onChanged!(true);
+      await tester.pump();
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      verify(() => api.updatePreferences(any())).called(1);
+      pending.complete(_samplePreferences());
+      await tester.pumpAndSettle();
+      expect(find.text('Preferences updated'), findsOneWidget);
+    });
+
     testWidgets('renders sections and device card', (tester) async {
       final api = MockNotificationApiService();
       when(

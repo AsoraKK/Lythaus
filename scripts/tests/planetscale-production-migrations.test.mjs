@@ -5,10 +5,10 @@ import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions
 
 test('loads the immutable canonical migration payload and checksum set', () => {
   const manifest = loadApprovedMigrations();
-  assert.equal(manifest.migrations.length, 18);
+  assert.equal(manifest.migrations.length, APPROVED_MIGRATIONS.length);
   assert.equal(manifest.bytes, EXPECTED_MIGRATION_BYTES);
   assert.equal(manifest.checksum, EXPECTED_MIGRATION_SET_SHA256);
-  assert.equal(manifest.migrations.at(-1)?.name, '0017_authenticity_beta.sql');
+  assert.equal(manifest.migrations.at(-1)?.name, '0020_auth_recovery_delivery.sql');
 });
 
 test('classifies catalog evidence without treating vacuous data invariants as applied structure', () => {
@@ -69,6 +69,34 @@ test('requires both 0016 envelope columns and its key-version constraint', async
   const [state] = await classifyMigrationState(missingConstraintClient, ['0016_transactional_email_envelope_boundary.sql']);
   assert.equal(state.state, 'PARTIALLY_APPLIED');
   assert.throws(() => assertCompleteMigrationPostconditions(state), /transactional_email_outbox_delivery_envelope_key_check/);
+});
+
+test('keeps 0017 upload-session postconditions valid after 0018 evolves the relation', async () => {
+  const checks = migrationPostconditions['0017_authenticity_beta.sql'];
+  assert.ok(!checks.some(({ artifact }) => artifact === 'relation:media.upload_sessions'));
+  assert.ok(checks.some(({ artifact }) => artifact === 'beta_upload_session_purpose_not_null'));
+  assert.ok(checks.some(({ artifact }) => artifact === 'beta_upload_session_purpose_check'));
+
+  const queries = [];
+  const completeClient = {
+    async query(sql) {
+      queries.push(sql);
+      return { rows: [{ present: true }] };
+    },
+  };
+  const [complete] = await classifyMigrationState(completeClient, ['0017_authenticity_beta.sql']);
+  assert.equal(complete.state, 'FULLY_APPLIED');
+  assert.ok(queries.some((sql) => sql.includes("format_type(attribute.atttypid, attribute.atttypmod) = 'text'") && sql.includes('attribute.attnotnull')));
+  assert.ok(queries.some((sql) => sql.includes("pg_get_constraintdef(constraint_entry.oid) ILIKE '%authenticity_beta%'")));
+
+  const missingCheckClient = {
+    async query(sql) {
+      return { rows: [{ present: !sql.includes("constraint_entry.conname = 'upload_sessions_purpose_check'") }] };
+    },
+  };
+  const [missingCheck] = await classifyMigrationState(missingCheckClient, ['0017_authenticity_beta.sql']);
+  assert.equal(missingCheck.state, 'PARTIALLY_APPLIED');
+  assert.throws(() => assertCompleteMigrationPostconditions(missingCheck), /beta_upload_session_purpose_check/);
 });
 
 test('function postconditions verify canonical PL/pgSQL semantics without pg_get_functiondef', async () => {
@@ -213,16 +241,23 @@ test('migration data preconditions reject unresolved open-appeal conflicts only'
 
 test('dedicated schema verifier grants metadata and aggregate-safe evidence columns only', async () => {
   const source = await (await import('node:fs/promises')).readFile('scripts/ci/reconcile-planetscale-schema-verifier.mjs', 'utf8');
+  const { incidentAggregateColumns } = await import('../ci/auth-incident-database-contract.mjs');
   assert.match(source, /PLANETSCALE_VERIFIER_DATABASE_URL/);
   assert.match(source, /GRANT USAGE ON SCHEMA/);
   assert.match(source, /GRANT REFERENCES ON TABLE/);
   assert.match(source, /GRANT SELECT ON TABLE system\.schema_migrations/);
-  assert.match(source, /table: 'users', columns: \['status'\]/);
-  assert.match(source, /table: 'email_credentials', columns: \['verified_at'\]/);
-  assert.match(source, /table: 'email_verification_tokens'[\s\S]*columns: \['created_at', 'consumed_at', 'expires_at'\]/);
-  assert.match(source, /table: 'account_events', columns: \['event_type', 'created_at'\]/);
-  assert.match(source, /table: 'transactional_email_outbox', columns: \['purpose', 'created_at'\]/);
-  assert.match(source, /table: 'production_auth_acceptance_runs', columns: \['created_at'\]/);
+  assert.deepEqual(incidentAggregateColumns, [
+    { schema: 'identity', table: 'users', columns: ['status'] },
+    { schema: 'identity', table: 'email_credentials', columns: ['verified_at'] },
+    { schema: 'identity', table: 'email_verification_tokens', columns: ['created_at', 'consumed_at', 'expires_at'] },
+    { schema: 'identity', table: 'account_events', columns: ['event_type', 'created_at'] },
+    { schema: 'system', table: 'transactional_email_outbox', columns: ['purpose', 'created_at', 'state', 'provider_error_category', 'updated_at'] },
+    { schema: 'system', table: 'audit_events', columns: ['action', 'created_at', 'reason_code'] },
+    { schema: 'system', table: 'production_auth_acceptance_runs', columns: ['created_at', 'expires_at', 'status'] },
+  ]);
+  assert.match(source, /for \(const aggregate of incidentAggregateColumns\)/);
+  assert.match(source, /captureIncidentDatabaseEvidence\(proof\)/);
+  assert.match(source, /verifyIncidentAggregatePrivileges\(proof\)/);
   assert.match(source, /bootstrap_outbox_purpose_read/);
   assert.match(source, /bootstrap_outbox_created_at_read/);
   assert.match(source, /bootstrap_acceptance_created_at_read/);

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class TrustStripRow extends StatelessWidget {
   const TrustStripRow({super.key, required this.summary, required this.onTap});
@@ -36,22 +37,23 @@ class TrustStripRow extends StatelessWidget {
         ),
     ];
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 8, bottom: 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(children: chips),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _StatusChip(status: summary.trustStatus),
-          ],
+    return Semantics(
+      button: true,
+      label: 'View content history',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(context.radius.sm),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ...chips,
+              _StatusChip(status: summary.trustStatus),
+            ],
+          ),
         ),
       ),
     );
@@ -77,7 +79,7 @@ class _TimelineChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: colors.background,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(context.radius.sm),
         border: Border.all(color: colors.border),
       ),
       child: Row(
@@ -85,11 +87,13 @@ class _TimelineChip extends StatelessWidget {
         children: [
           Icon(icon, size: 12, color: colors.foreground),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.foreground,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              '$label: ${state.replaceAll('_', ' ')}',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.foreground,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -117,7 +121,7 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: colors.background,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(context.radius.sm),
         border: Border.all(color: colors.border),
       ),
       child: Text(

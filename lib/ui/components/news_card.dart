@@ -23,9 +23,13 @@ class NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Padding(
+          padding: EdgeInsets.only(left: Spacing.lg, top: Spacing.sm),
+          child: TierBadge(label: 'News'),
+        ),
         FeedCard(
           item: item,
           onTap: onTap,
@@ -33,20 +37,6 @@ class NewsCard extends StatelessWidget {
           canEdit: canEdit,
           onEdit: onEdit,
         ),
-        const Positioned(
-          top: Spacing.sm,
-          right: Spacing.lg,
-          child: TierBadge(label: 'News', highlight: true),
-        ),
-        if (item.isPinned)
-          Positioned(
-            top: Spacing.sm,
-            left: Spacing.sm,
-            child: Icon(
-              Icons.workspace_premium_outlined,
-              color: theme.colorScheme.secondary,
-            ),
-          ),
       ],
     );
   }

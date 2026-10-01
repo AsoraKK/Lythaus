@@ -42,10 +42,15 @@ Method | HTTP request | Description
 [**adminWaitlistStatusUpdate**](AdminApi.md#adminwaitliststatusupdate) | **POST** /admin/waitlist/{waitlistId}/status | Update a waitlist signup status
 [**getAdminAuthenticityBetaCase**](AdminApi.md#getadminauthenticitybetacase) | **GET** /admin/authenticity/cases/{caseId} | Read audited diagnostics and review history
 [**getAdminAuthenticityBetaImage**](AdminApi.md#getadminauthenticitybetaimage) | **GET** /admin/authenticity/cases/{caseId}/image | Read the audited private display derivative
+[**getAdminAuthenticityPrivateAlphaCase**](AdminApi.md#getadminauthenticityprivatealphacase) | **GET** /admin/authenticity/alpha/cases/{caseId} | Read private alpha diagnostics
+[**getAdminAuthenticityPrivateAlphaImage**](AdminApi.md#getadminauthenticityprivatealphaimage) | **GET** /admin/authenticity/alpha/cases/{caseId}/image | Read a quarantined private alpha image
 [**listAdminAuthenticityBetaCases**](AdminApi.md#listadminauthenticitybetacases) | **GET** /admin/authenticity/cases | List private beta review cases
+[**listAdminAuthenticityPrivateAlphaCases**](AdminApi.md#listadminauthenticityprivatealphacases) | **GET** /admin/authenticity/alpha/cases | List private alpha cases for authorized administrators
 [**productIntegrityAdminAuditList**](AdminApi.md#productintegrityadminauditlist) | **GET** /admin/audit | List admin audit events
 [**productIntegrityAdminUsersSearch**](AdminApi.md#productintegrityadminuserssearch) | **GET** /admin/users/search | Search users
 [**requestAdminAuthenticityBetaAdvice**](AdminApi.md#requestadminauthenticitybetaadvice) | **POST** /admin/authenticity/cases/{caseId}/advice | Request one bounded explanation of eligible persisted evidence
+[**requestAdminAuthenticityPrivateAlphaAdvice**](AdminApi.md#requestadminauthenticityprivatealphaadvice) | **POST** /admin/authenticity/alpha/cases/{caseId}/advice | Request one bounded private alpha explanation
+[**reviewAdminAuthenticityPrivateAlphaCase**](AdminApi.md#reviewadminauthenticityprivatealphacase) | **POST** /admin/authenticity/alpha/cases/{caseId}/review | Record an administrator private alpha review
 
 
 # **adminAppealsAdjudicate**
@@ -1575,6 +1580,87 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getAdminAuthenticityPrivateAlphaCase**
+> AlphaAdminCase getAdminAuthenticityPrivateAlphaCase(caseId)
+
+Read private alpha diagnostics
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getAdminAuthenticityPrivateAlphaCase(caseId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->getAdminAuthenticityPrivateAlphaCase: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+
+### Return type
+
+[**AlphaAdminCase**](AlphaAdminCase.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAdminAuthenticityPrivateAlphaImage**
+> getAdminAuthenticityPrivateAlphaImage(caseId)
+
+Read a quarantined private alpha image
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    api.getAdminAuthenticityPrivateAlphaImage(caseId);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->getAdminAuthenticityPrivateAlphaImage: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: image/png, image/jpeg, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **listAdminAuthenticityBetaCases**
 > BetaCaseList listAdminAuthenticityBetaCases()
 
@@ -1610,6 +1696,43 @@ This endpoint does not need any parameter.
 ### Authorization
 
 [cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listAdminAuthenticityPrivateAlphaCases**
+> AlphaAdminCaseList listAdminAuthenticityPrivateAlphaCases()
+
+List private alpha cases for authorized administrators
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.listAdminAuthenticityPrivateAlphaCases();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->listAdminAuthenticityPrivateAlphaCases: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AlphaAdminCaseList**](AlphaAdminCaseList.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 
@@ -1745,6 +1868,92 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **requestAdminAuthenticityPrivateAlphaAdvice**
+> AlphaAction requestAdminAuthenticityPrivateAlphaAdvice(caseId, alphaFeedback)
+
+Request one bounded private alpha explanation
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final AlphaFeedback alphaFeedback = ; // AlphaFeedback |
+
+try {
+    final response = api.requestAdminAuthenticityPrivateAlphaAdvice(caseId, alphaFeedback);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->requestAdminAuthenticityPrivateAlphaAdvice: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+ **alphaFeedback** | [**AlphaFeedback**](AlphaFeedback.md)|  |
+
+### Return type
+
+[**AlphaAction**](AlphaAction.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **reviewAdminAuthenticityPrivateAlphaCase**
+> AlphaAction reviewAdminAuthenticityPrivateAlphaCase(caseId, alphaFeedback)
+
+Record an administrator private alpha review
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAdminApi();
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final AlphaFeedback alphaFeedback = ; // AlphaFeedback |
+
+try {
+    final response = api.reviewAdminAuthenticityPrivateAlphaCase(caseId, alphaFeedback);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->reviewAdminAuthenticityPrivateAlphaCase: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **caseId** | **String**|  |
+ **alphaFeedback** | [**AlphaFeedback**](AlphaFeedback.md)|  |
+
+### Return type
+
+[**AlphaAction**](AlphaAction.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 

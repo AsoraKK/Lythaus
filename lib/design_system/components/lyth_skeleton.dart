@@ -100,21 +100,16 @@ class _LythSkeletonState extends State<LythSkeleton>
   }
 
   void _setupAnimation() {
-    final mediaQuery = MediaQuery.of(context);
-    final shouldAnimate = widget.animate && !mediaQuery.disableAnimations;
-
-    if (shouldAnimate) {
-      _controller = AnimationController(
-        duration: const Duration(milliseconds: 1500),
-        vsync: this,
-      )..repeat(reverse: true);
-
-      _opacity = Tween<double>(
-        begin: 0.5,
-        end: 1.0,
-      ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeInOut));
-    } else {
-      _opacity = const AlwaysStoppedAnimation<double>(0.7);
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _opacity = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeInOut));
+    if (widget.animate && !context.disableAnimations) {
+      _controller!.repeat(reverse: true);
     }
   }
 
@@ -127,10 +122,9 @@ class _LythSkeletonState extends State<LythSkeleton>
       return;
     }
     // Re-check animation settings if they change
-    final mediaQuery = MediaQuery.of(context);
     final ctrl = _controller;
-    if (ctrl != null && ctrl.isAnimating == mediaQuery.disableAnimations) {
-      if (mediaQuery.disableAnimations) {
+    if (ctrl != null) {
+      if (context.disableAnimations || !widget.animate) {
         ctrl.stop();
       } else if (!ctrl.isAnimating) {
         ctrl.repeat(reverse: true);
@@ -145,10 +139,8 @@ class _LythSkeletonState extends State<LythSkeleton>
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
-    final baseColor = context.colorScheme.surface;
-    final color = Color.lerp(baseColor, context.colorScheme.outline, 0.1)!;
+    final color = context.colorScheme.outlineVariant;
 
     return AnimatedBuilder(
       animation: _opacity,
@@ -157,7 +149,9 @@ class _LythSkeletonState extends State<LythSkeleton>
         height: widget.height,
         child: Container(
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.7 * _opacity.value),
+            color: color.withValues(
+              alpha: context.disableAnimations ? 1 : _opacity.value,
+            ),
             // borderRadius and BoxShape.circle are mutually exclusive in Flutter.
             borderRadius:
                 widget.borderRadius != null &&

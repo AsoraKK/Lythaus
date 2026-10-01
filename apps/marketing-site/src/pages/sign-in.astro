@@ -1,12 +1,12 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import SecondaryLayout from '../layouts/SecondaryLayout.astro';
 
 const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
 ---
 
-<BaseLayout
+<SecondaryLayout
   title="Sign in"
   description="Sign in to your Lythaus account."
   canonicalPath="/sign-in"
@@ -15,7 +15,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
     <div class="auth-intro">
       <span class="pill">Lythaus account</span>
       <h1 id="sign-in-title">Sign in to Lythaus.</h1>
-      <p>Use your verified email address and password to continue. A session is created by the Lythaus app after your credentials are accepted.</p>
+      <p>Use your verified email address and existing password. After sign-in, continue directly to the Lythaus app.</p>
     </div>
 
     <form
@@ -29,7 +29,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
       <input id="sign-in-email" name="email" type="email" autocomplete="email" maxlength="320" value={emailPrefill} required />
 
       <label for="sign-in-password">Password</label>
-      <input id="sign-in-password" name="password" type="password" autocomplete="current-password" maxlength="128" aria-describedby="sign-in-password-note" required />
+      <input id="sign-in-password" name="password" type="password" autocomplete="current-password" maxlength="256" aria-describedby="sign-in-password-note" required />
       <p class="auth-field-note" id="sign-in-password-note">Enter your existing password. Password policy applies when you create or change a password.</p>
 
       <a class="text-link auth-forgot-link" href="/forgot-password">Forgot password?</a>
@@ -45,12 +45,13 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
       </div>
 
       <p class="auth-footnote">Need an account? <a href="/signup">Create one</a>.</p>
-      <p class="auth-footnote"><a href="https://app.lythaus.co/login">Open the Lythaus app sign in</a> to establish your session.</p>
+      <p class="auth-footnote"><a href="https://app.lythaus.co/">Open the Lythaus app</a>.</p>
     </form>
   </section>
 
   {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
-  <script is:inline>
+  <script>
+    import { authFetch, withAuthDeadline, acceptsPassword, transportErrorMessage } from '../scripts/auth-request';
     const form = document.querySelector('[data-sign-in-form]');
     if (form instanceof HTMLFormElement) {
       const email = form.querySelector('#sign-in-email');
@@ -121,13 +122,15 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
       const requestToken = async () => {
         const rendered = widgetId !== undefined || renderTurnstile();
         if (!siteKey || !rendered || widgetId === undefined || !window.turnstile) throw new Error('turnstile_unavailable');
-        return new Promise((resolve, reject) => {
+        return withAuthDeadline(new Promise((resolve, reject) => {
           tokenResolve = resolve;
           tokenReject = reject;
           window.turnstile.execute(widgetId);
-        });
+        }));
       };
       const messageFor = (code) => {
+        const transportMessage = transportErrorMessage(code);
+        if (transportMessage) return transportMessage;
         if (code === 'turnstile_failed' || code === 'turnstile_required' || code === 'turnstile_unavailable') return 'We could not verify this request. Please try again.';
         if (code === 'rate_limit_exceeded') return 'Too many sign-in attempts. Please wait and try again.';
         return 'We could not sign you in. Check your details and try again.';
@@ -155,7 +158,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
         setStatus('Checking the request...', 'submitting');
         try {
           const turnstileToken = await requestToken();
-          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+          const response = await authFetch(`${apiBaseUrl}/api/auth/email`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ mode: 'resend_verification', email: email.value, turnstileToken }),
@@ -188,7 +191,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
           setStatus('Enter a valid email address.', 'error');
           return;
         }
-        if (!password.value) {
+        if (!acceptsPassword(password.value, 'login')) {
           password.setAttribute('aria-invalid', 'true');
           password.reportValidity();
           setStatus('Enter your password.', 'error');
@@ -201,19 +204,21 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
         setResendVisible(false);
         setStatus('Signing in...', 'submitting');
         try {
-          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+          const response = await authFetch(`${apiBaseUrl}/api/auth/email`, {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers: { 'content-type': 'application/json', 'x-lythaus-auth-transport': 'cookie-v1' },
             body: JSON.stringify({ mode: 'login', email: email.value, password: password.value }),
             cache: 'no-store',
-            credentials: 'omit',
+            credentials: 'include',
             referrerPolicy: 'no-referrer',
           });
           const body = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(typeof body.error === 'string' ? body.error : 'request_failed');
-          const hasSession = Boolean(body.accessToken || body.access_token) && Boolean(body.refreshToken || body.refresh_token);
+          const hasSession = Boolean(body.accessToken) && body.sessionTransport === 'cookie-v1';
           if (!hasSession) throw new Error('request_failed');
-          setStatus('Your credentials were accepted. Open the Lythaus app to continue and establish your session there.', 'success');
+          password.value = '';
+          setStatus('Signed in. Opening the Lythaus app...', 'success');
+          window.location.assign('https://app.lythaus.co/');
         } catch (error) {
           const code = error instanceof Error ? error.message : 'request_failed';
           if (code === 'email_verification_required') {
@@ -232,28 +237,4 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
       if (window.location.search) window.history.replaceState(null, '', '/sign-in');
     }
   </script>
-</BaseLayout>
-
-<style>
-  .auth-page { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.7fr); gap: clamp(48px, 10vw, 140px); align-items: start; padding: clamp(82px, 13vw, 150px) 0 120px; }
-  .auth-intro h1 { margin-top: 22px; }
-  .auth-intro p { max-width: 520px; color: var(--muted); font-size: 18px; line-height: 1.7; }
-  .auth-form { display: grid; gap: 10px; padding: 30px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-  .auth-form label { color: var(--muted); font-size: 13px; }
-  .auth-form input { width: 100%; min-height: 50px; padding: 0 15px; color: var(--text); background: #0d0f10; border: 1px solid var(--line-strong); border-radius: 10px; outline: none; }
-  .auth-form input:focus { border-color: rgba(223,231,220,.7); box-shadow: 0 0 0 3px rgba(223,231,220,.08); }
-  .auth-form input[aria-invalid='true'] { border-color: #f1a7a0; }
-  .auth-field-note, .auth-footnote { margin: 0 0 8px; color: var(--quiet); font-size: 12px; line-height: 1.5; }
-  .auth-forgot-link { justify-self: start; margin: 4px 0 8px; color: var(--muted); font-size: 13px; text-decoration: underline; }
-  .auth-turnstile-shell { min-height: 65px; margin: 8px 0; }
-  .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-  .auth-status:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
-  .auth-status[data-state='error'] { color: #f1a7a0; }
-  .auth-status[data-state='success'] { color: #b8d5b5; }
-  .auth-resend-region { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
-  .auth-resend-region[hidden] { display: none; }
-  .auth-resend { justify-self: start; border: 0; padding: 0; color: var(--muted); background: transparent; text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
-  .auth-resend:disabled { cursor: wait; opacity: .65; }
-  .auth-footnote { margin-top: 4px; }
-  @media (max-width: 760px) { .auth-page { grid-template-columns: 1fr; padding-top: 72px; } .auth-form { padding: 22px; } }
-</style>
+</SecondaryLayout>

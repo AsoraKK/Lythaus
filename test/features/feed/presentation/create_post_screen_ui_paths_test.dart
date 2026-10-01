@@ -12,6 +12,7 @@ import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/design_system/theme/lyth_theme.dart';
 
 class MockPostRepository extends Mock implements PostRepository {}
 
@@ -59,7 +60,12 @@ void main() {
 
   setUp(() => mockRepo = MockPostRepository());
 
-  Widget buildWithState(PostCreationState state, {User? user}) {
+  Widget buildWithState(
+    PostCreationState state, {
+    User? user,
+    ThemeData? theme,
+    double textScale = 1,
+  }) {
     final canCreate = user != null;
     return ProviderScope(
       overrides: [
@@ -73,11 +79,50 @@ void main() {
           (ref) async => user != null ? 'test-token' : null,
         ),
       ],
-      child: const MaterialApp(home: CreatePostScreen()),
+      child: MaterialApp(
+        theme: theme,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: const CreatePostScreen(),
+      ),
     );
   }
 
   group('_ContentBlockedBanner', () {
+    for (final dark in [false, true]) {
+      testWidgets('composer reflows at 320 pixels and 200% text, dark=$dark', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(320, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          buildWithState(
+            const PostCreationState(
+              text: 'A thoughtful contribution',
+              aiLabel: 'assisted',
+            ),
+            user: _testUser(),
+            theme: dark ? LythausTheme.dark() : LythausTheme.light(),
+            textScale: 2,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.drag(
+          find.byType(SingleChildScrollView).first,
+          const Offset(0, -1800),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text('Source attestation'), findsOneWidget);
+      });
+    }
     testWidgets('renders blocked banner with categories', (tester) async {
       await tester.pumpWidget(
         buildWithState(

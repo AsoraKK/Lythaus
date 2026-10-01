@@ -1,14 +1,15 @@
 # Lythaus Authenticity AI Model Rights and Evaluation - WP003
 
-**Status:** no external model artefact was downloaded, activated, or used for
-training. Code, weights, foundation encoders, datasets, dependencies, and
-derived-model rights were reviewed separately.
+**Status:** the pinned SAFE checkpoint was fetched only to verify the published
+bytes and was not activated, loaded for inference, or used for training.
+Code, weights, foundation encoders, datasets, dependencies, and derived-model
+rights remain separately reviewed.
 
 ## Ranked model decisions
 
 | Candidate | Role | Code licence | Weights/data | Technical fit | Decision |
 |---|---|---|---|---|---|
-| SAFE | Teacher | Apache-2.0 repository | Checkpoint and training-data rights unresolved | Strong transformation/generalisation research; upstream training uses four GPUs; CPU inference and RAM unmeasured | `NEEDS_PERMISSION` |
+| SAFE | Teacher | Apache-2.0 repository and published checkpoint path | Owner accepted bounded Apache-2.0 reliance; checkpoint-specific scope and training-data provenance remain explicitly uncertain | Strong transformation/generalisation research; upstream training uses four GPUs; CPU inference and RAM unmeasured | `OWNER_ACCEPTED_LICENCE_RELIANCE` |
 | GRIP CLIP | Control/teacher | Apache-2.0 repository | Git-LFS weights, upstream CLIP/open_clip and data rights unresolved | Lightweight CLIP strategy with reported degraded/unseen-generator robustness; upstream example is CUDA-oriented | `NEEDS_PERMISSION` |
 | LaRE2 | Reconstruction experiment | Apache-2.0 repository | DIFT/LASTED dependencies, weights and GenImage rights unresolved | Lower extraction cost than full reconstruction in the paper; still requires foundation models and GPU-oriented research stack | `RESEARCH_ONLY` |
 | DIRE | Reconstruction experiment | No repository licence verified | Diffusion reconstruction dependencies, weights and dataset rights unresolved | Established reconstruction evidence but high compute and latency for escalation-only use | `RESEARCH_ONLY` |
@@ -18,25 +19,29 @@ derived-model rights were reviewed separately.
 
 ## SAFE decision package
 
-- **Code licence:** Apache-2.0 is visible on the upstream repository.
-- **Weight licence:** `UNKNOWN`; the repository documents a pretrained
-  `checkpoint-best.pth`, but its separate weight grant was not verified.
-- **Training data rights:** `UNKNOWN`; the repository references several
-  external datasets with separate terms.
-- **Upstream model rights:** PyTorch/torchvision and any encoder/checkpoint
-  terms require separate review.
-- **Commercial research:** `UNKNOWN` until weight, data, and dependency rights
-  are documented.
-- **Distillation:** `DO_NOT_TRAIN`.
-- **CPU feasibility/RAM/weight/download size:** `UNKNOWN`; not downloaded or
-  measured.
-- **Artifact hash source:** unavailable because no artifact was acquired.
-- **Classification:** `NEEDS_PERMISSION`; do not download until all rights are
-  recorded and the owner approves the controlled research use.
+The detailed, owner-reviewable record is
+[`safe-a-v0.1-license-reliance.md`](../models/safe-a-v0.1-license-reliance.md).
 
-SAFE remains a possible **teacher**, not a production candidate. The upstream
-README describes a four-GPU training script and a supplied checkpoint; that is
-useful evidence of research value, not commercial clearance.
+- **Code and published checkpoint:** the pinned tree contains root Apache-2.0
+  `LICENSE`, `checkpoint/checkpoint-best.pth`, and a README instruction to run
+  that pretrained checkpoint for inference.
+- **Checkpoint identity:** the pinned bytes are 5,840,638 bytes and hash to
+  `b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e`, the
+  frozen Lythaus identity.
+- **Restrictions observed:** Apache notice and modification obligations,
+  trademark exclusion, patent-termination language, and warranty disclaimer.
+  No non-commercial, research-only, inference, or hosting prohibition was
+  found.
+- **Training data rights:** `UNKNOWN`; this is not treated as a proved ban on
+  inference from the published checkpoint.
+- **Dependencies:** PyTorch, torchvision, DWT, and other dependency terms are
+  reviewed separately.
+- **Distillation:** `DO_NOT_TRAIN`.
+- **Classification:** `OWNER_ACCEPTED_LICENCE_RELIANCE`; no separate maintainer
+  permission is presumed necessary on the evidence reviewed. The owner
+  acceptance covers bounded private evaluation and intended private
+  commercial-beta inference/hosting, while checkpoint-scope uncertainty and
+  training-data provenance remain visible and reopenable.
 
 ## GRIP decision package
 
@@ -70,9 +75,11 @@ This is an escalation-family review, not a production selection:
    describes perturbation-induced reconstruction discrepancy, but model/data
    rights and operational cost remain unresolved.
 
-No candidate is approved for download, distillation, deployment, or
-enforcement. A future experiment must compare generalisation, transformations,
-latency, localisation, memory, and licence terms on an approved corpus.
+No candidate is approved for training, distillation, deployment, or
+enforcement. SAFE's published checkpoint was fetched only for identity and
+licence-scope verification; it has not been loaded for inference. A future
+experiment must compare generalisation, transformations, latency, localisation,
+memory, and licence terms on an approved corpus.
 
 ## Research sources
 
@@ -82,5 +89,6 @@ latency, localisation, memory, and licence terms on an approved corpus.
 - [LaRE2 repository](https://github.com/luo3300612/LaRE)
 - [ADRD repository](https://github.com/ezell-chou/adrd)
 
-Repository pages establish code-level facts only. They do not establish the
-licence of included weights, upstream encoders, or training datasets.
+Repository pages establish the published licence and artifact facts recorded
+above. They do not establish the licence of unrelated upstream encoders,
+dependencies, or training datasets.

@@ -9,6 +9,7 @@ import 'package:lythaus/core/analytics/analytics_consent_storage.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/privacy/widgets/analytics_settings_card.dart';
+import 'package:lythaus/design_system/theme/lyth_theme.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +59,34 @@ void main() {
     expect(event.properties[AnalyticsEvents.propEnabled], true);
     expect(event.properties[AnalyticsEvents.propSource], 'privacy_settings');
   });
+
+  for (final dark in [false, true]) {
+    testWidgets(
+      'privacy controls reflow at 320 pixels and 200% text, dark=$dark',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          _buildHarness(
+            initialConsent: AnalyticsConsent(
+              enabled: false,
+              updatedAt: DateTime.utc(2024),
+              source: ConsentSource.unknown,
+            ),
+            analytics: _RecordingAnalyticsClient(),
+            theme: dark ? LythausTheme.dark() : LythausTheme.light(),
+            textScale: 2,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byType(Switch), findsOneWidget);
+        expect(find.text('Privacy Policy'), findsOneWidget);
+      },
+    );
+  }
 
   testWidgets('switch disable logs analytics consent event', (tester) async {
     final analytics = _RecordingAnalyticsClient();
@@ -110,6 +139,8 @@ void main() {
 Widget _buildHarness({
   required AnalyticsConsent initialConsent,
   required AnalyticsClient analytics,
+  ThemeData? theme,
+  double textScale = 1,
 }) {
   return ProviderScope(
     overrides: [
@@ -120,7 +151,18 @@ Widget _buildHarness({
       }),
       analyticsClientProvider.overrideWithValue(analytics),
     ],
-    child: const MaterialApp(home: Scaffold(body: AnalyticsSettingsCard())),
+    child: MaterialApp(
+      theme: theme,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
+      home: const Scaffold(
+        body: SingleChildScrollView(child: AnalyticsSettingsCard()),
+      ),
+    ),
   );
 }
 

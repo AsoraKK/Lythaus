@@ -20,7 +20,7 @@ Method | HTTP request | Description
 
 
 # **authEmail**
-> EmailSessionResponse authEmail(emailAuthRequest)
+> EmailSessionResponse authEmail(emailAuthRequest, xLythausAuthTransport, idempotencyKey)
 
 Register, sign in, or resend email verification
 
@@ -32,9 +32,11 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
 final EmailAuthRequest emailAuthRequest = {"mode":"login","email":"alice@example.com","password":"correct-horse-battery-staple"}; // EmailAuthRequest |
+final String xLythausAuthTransport = xLythausAuthTransport_example; // String | Browser clients send cookie-v1 with credentials included and an exact allowed Origin. Refresh credentials use an HttpOnly Secure SameSite=Strict host-only cookie; native and older clients retain the JSON token transport. Never persist browser refresh or access credentials in Web Storage.
+final String idempotencyKey = idempotencyKey_example; // String | Random per-operation key for registration or resend. Replaying the same accepted payload does not reuse Turnstile or mint another challenge. Ambiguous outcomes return 409; login responses are never cached.
 
 try {
-    final response = api.authEmail(emailAuthRequest);
+    final response = api.authEmail(emailAuthRequest, xLythausAuthTransport, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authEmail: $e\n');
@@ -46,6 +48,8 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **emailAuthRequest** | [**EmailAuthRequest**](EmailAuthRequest.md)|  |
+ **xLythausAuthTransport** | **String**| Browser clients send cookie-v1 with credentials included and an exact allowed Origin. Refresh credentials use an HttpOnly Secure SameSite=Strict host-only cookie; native and older clients retain the JSON token transport. Never persist browser refresh or access credentials in Web Storage. | [optional]
+ **idempotencyKey** | **String**| Random per-operation key for registration or resend. Replaying the same accepted payload does not reuse Turnstile or mint another challenge. Ambiguous outcomes return 409; login responses are never cached. | [optional]
 
 ### Return type
 
@@ -67,7 +71,7 @@ No authorization required
 
 Verify an email address with a JSON token
 
-Consumes a single-use email-verification token and returns only a private verification state.
+An intentional POST atomically consumes mailbox proof and establishes the mailbox owner's chosen credential on the existing user ID. GET/HEAD never mutates. Password policy is checked before token consumption; omitted password returns password_setup_required without consuming the link. No automatic session or bearer redirect is issued.
 
 ### Example
 ```dart
@@ -143,18 +147,26 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authLogout**
-> AuthLogout200Response authLogout()
+> AuthLogout200Response authLogout(xLythausAuthTransport, authLogoutRequest)
 
 Revoke all active sessions for the authenticated user
+
+Native clients may send their refresh credential to revoke sessions even after access-token expiry; bearer-only logout remains supported for deployed clients. Browser clients send cookie-v1 with credentials included, an exact allowed Origin and an empty JSON object. This globally revokes the account's sessions, not only this device, and expires the refresh cookie. Local sign-out or HTTP 401 alone does not prove server revocation during an outage.
 
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: refreshCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('refreshCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('refreshCookie').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAuthApi();
+final String xLythausAuthTransport = xLythausAuthTransport_example; // String |
+final AuthLogoutRequest authLogoutRequest = ; // AuthLogoutRequest |
 
 try {
-    final response = api.authLogout();
+    final response = api.authLogout(xLythausAuthTransport, authLogoutRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authLogout: $e\n');
@@ -162,7 +174,11 @@ try {
 ```
 
 ### Parameters
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **xLythausAuthTransport** | **String**|  | [optional]
+ **authLogoutRequest** | [**AuthLogoutRequest**](AuthLogoutRequest.md)|  | [optional]
 
 ### Return type
 
@@ -170,11 +186,11 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-[bearerAuth](../README.md#bearerAuth)
+[refreshCookie](../README.md#refreshCookie), [bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 
- - **Content-Type**: Not defined
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -221,11 +237,11 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authPasswordResetRequest**
-> AuthPasswordResetRequest202Response authPasswordResetRequest(authPasswordResetRequestRequest)
+> AuthPasswordResetRequest202Response authPasswordResetRequest(authPasswordResetRequestRequest, idempotencyKey)
 
 Request an opaque password reset message
 
-Always returns the same neutral state so account existence is not disclosed.
+Valid accepted requests return the same neutral state for known, unknown and restricted accounts. This proves intake only, not provider acceptance or mailbox delivery. Eligible pending or credentialless legacy accounts receive mailbox-owned credential setup on their existing ID. Dependency failures are not reported as delivered mail.
 
 ### Example
 ```dart
@@ -233,9 +249,10 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
 final AuthPasswordResetRequestRequest authPasswordResetRequestRequest = {"email":"member@example.com","turnstileToken":"turnstile-token"}; // AuthPasswordResetRequestRequest |
+final String idempotencyKey = idempotencyKey_example; // String |
 
 try {
-    final response = api.authPasswordResetRequest(authPasswordResetRequestRequest);
+    final response = api.authPasswordResetRequest(authPasswordResetRequestRequest, idempotencyKey);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authPasswordResetRequest: $e\n');
@@ -247,6 +264,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **authPasswordResetRequestRequest** | [**AuthPasswordResetRequestRequest**](AuthPasswordResetRequestRequest.md)|  |
+ **idempotencyKey** | **String**|  | [optional]
 
 ### Return type
 
@@ -264,9 +282,11 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authRefresh**
-> EmailSessionResponse authRefresh(refreshSessionRequest)
+> EmailSessionResponse authRefresh(refreshSessionRequest, xLythausAuthTransport)
 
 Rotate a refresh token
+
+Browser cookie-v1 transport requires an allowed Origin, credentials included, and an empty JSON object. Native clients supply the opaque token. Refresh credentials rotate; reused revoked credentials revoke their family.
 
 ### Example
 ```dart
@@ -274,9 +294,10 @@ import 'package:lythaus_api_client/api.dart';
 
 final api = LythausApiClient().getAuthApi();
 final RefreshSessionRequest refreshSessionRequest = {"refreshToken":"refresh_example_01K1LYTHAUS"}; // RefreshSessionRequest |
+final String xLythausAuthTransport = xLythausAuthTransport_example; // String |
 
 try {
-    final response = api.authRefresh(refreshSessionRequest);
+    final response = api.authRefresh(refreshSessionRequest, xLythausAuthTransport);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AuthApi->authRefresh: $e\n');
@@ -288,6 +309,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **refreshSessionRequest** | [**RefreshSessionRequest**](RefreshSessionRequest.md)|  |
+ **xLythausAuthTransport** | **String**|  | [optional]
 
 ### Return type
 

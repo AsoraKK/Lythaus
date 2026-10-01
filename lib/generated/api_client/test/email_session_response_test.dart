@@ -13,9 +13,14 @@ void main() {
       // TODO
     });
 
-    // Rotating opaque refresh token.
+    // Rotating opaque refresh token, only in native/legacy transport. Never returned to cookie-v1 clients.
     // String refreshToken
     test('to test the property `refreshToken`', () async {
+      // TODO
+    });
+
+    // String sessionTransport
+    test('to test the property `sessionTransport`', () async {
       // TODO
     });
 

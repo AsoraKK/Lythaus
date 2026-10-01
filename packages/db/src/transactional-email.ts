@@ -1,6 +1,10 @@
 import type { Client } from 'pg';
 
-export type TransactionalEmailPurpose = 'verification' | 'password_reset' | 'invite' | 'email_change';
+export type TransactionalEmailPurpose = 'verification' | 'password_reset' | 'invite' | 'email_change' | 'password_changed';
+
+export async function lockAuthDelivery(client: Client, userId: string): Promise<void> {
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,9272))', [userId]);
+}
 
 export interface TransactionalEmailOutboxInput {
   id: string;

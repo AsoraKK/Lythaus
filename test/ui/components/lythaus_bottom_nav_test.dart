@@ -69,8 +69,8 @@ void main() {
       find.byType(BottomNavigationBar),
     );
 
-    expect(nav.currentIndex, 2);
-    expect(nav.items.first.label, 'Profile');
+    expect(nav.currentIndex, 3);
+    expect(nav.items.first.label, 'Rewards');
     expect(nav.items.last.label, 'Discover');
 
     await tester.tap(find.text('Profile'));

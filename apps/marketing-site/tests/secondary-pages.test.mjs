@@ -1,0 +1,137 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+
+const root = path.resolve(import.meta.dirname, '..');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+const baselineSha = '8e3b3ebad2f846e61db2bfe819376723da7e9863';
+const baseline = {
+  "invite/index.astro": {
+    "kind": "scripts",
+    "sha256": "a1ad00c505031ec35ca3e972f29aa80d264dd53f6127a355b0dd2fe3a2d8525c"
+  },
+  "privacy/index.astro": {
+    "kind": "legal",
+    "sha256": "b61bd5e390107e7b44fbd27b14682d5798948a3e3301450e32d9eef5cd7ea5c1"
+  },
+  "terms/index.astro": {
+    "kind": "legal",
+    "sha256": "1e6cf582c093f51651668276ae2b409af8eb337d73eb2a8bde6465082d622d15"
+  },
+  "guidelines/index.astro": {
+    "kind": "legal",
+    "sha256": "8669b6087c600b1db858b23c3d6a73d56f0536cf6129d7585cf42155e99866ce"
+  }
+};
+
+test('repaired auth scripts use the bounded shared transport, never credential browser storage', () => {
+  for (const page of ['forgot-password', 'resend-verification', 'reset-password', 'sign-in', 'signup', 'verify-email']) {
+    const source = read(`src/pages/${page}.astro`);
+    assert.match(source, /from '..\/scripts\/auth-request'/);
+    assert.match(source, /await authFetch\(/);
+    assert.doesNotMatch(source, /localStorage|sessionStorage|await fetch\(/);
+  }
+  for (const page of ['reset-password', 'verify-email']) {
+    const source = read(`src/pages/${page}.astro`);
+    assert.match(source, /window.location.hash.slice\(1\)/);
+    assert.match(source, /history.replaceState/);
+    assert.match(source, /form.addEventListener\('submit'/);
+    assert.match(source, /generation !== linkGeneration/);
+  }
+});
+
+for (const [file, expected] of Object.entries(baseline)) {
+  test(`${file} preserves ${expected.kind} from ${baselineSha}`, () => {
+    const source = read(`src/pages/${file}`);
+    const content = expected.kind === 'scripts'
+      ? [...source.matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/g)].map((match) => match[0]).join('\n')
+      : source.match(/<section\b[\s\S]*?<\/section>/)[0].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    assert.equal(createHash('sha256').update(content).digest('hex'), expected.sha256);
+  });
+}
+
+test('every secondary route opts into its isolated layout without local styling', () => {
+  const files = fs.readdirSync(path.join(root, 'src/pages'), { recursive: true })
+    .filter((file) => file.endsWith('.astro') && file !== 'index.astro');
+  assert.equal(files.length, 18);
+  for (const file of files) {
+    const source = read(`src/pages/${file}`);
+    assert.match(source, /import SecondaryLayout from/);
+    assert.doesNotMatch(source, /BaseLayout|<style\b/);
+  }
+  const layout = read('src/layouts/SecondaryLayout.astro');
+  assert.match(layout, /design\/tokens\.json/);
+  assert.doesNotMatch(layout, /global\.css|home-opening|home-pitch|fonts\.google/);
+  assert.match(layout, /prefers-color-scheme:dark/);
+  assert.match(layout, /lythaus-secondary-appearance/);
+  assert.match(layout, /no-referrer/);
+  assert.match(layout, /noindex, nofollow, noarchive/);
+});
+
+test('marketing distinguishes plans, authorship, safety and staff appeals without rollout promises', () => {
+  const pages = ['index.astro', 'features/index.astro', 'about/index.astro', 'pricing/index.astro'];
+  for (const file of pages) {
+    const source = read('src/pages/' + file);
+    assert.match(source, /Join the waitlist/);
+    assert.match(source, /does not guarantee an invitation\s+or an access date/);
+    assert.doesNotMatch(source, /private beta|invite-only beta|Full access to all features|AI-powered moderation|sync seamlessly|No hidden algorithms|rewarded for their early support/);
+  }
+  for (const file of pages.slice(0, 3)) {
+    const source = read('src/pages/' + file);
+    assert.match(source, /authorised staff review appeals/);
+    assert.match(source, /rollout|development work/);
+    assert.match(source, /authorship/i);
+    assert.match(source, /harmful[- ]content/i);
+  }
+});
+
+test('approved pricing has no invented cadence, currency designation or paid entitlements', () => {
+  const source = read('src/pages/pricing/index.astro');
+  assert.match(source, /Free to join\. Benefits from \$5\./);
+  assert.doesNotMatch(source, /monthly|annually|per month|per year|one-time|USD|ZAR|full access|checkout/i);
+  assert.match(source, /Details of paid benefits will be shared when confirmed/);
+});
+
+test('contact has a real mail route and no unconnected submission form', () => {
+  const contact = read('src/pages/contact/index.astro');
+  assert.doesNotMatch(contact, /<form|<textarea|Send message/);
+  assert.match(contact, /mailto:support@lythaus\.app/);
+  assert.match(read('src/pages/terms/index.astro'), /mailto:support@lythaus\.app/);
+});
+
+test('article contents refer to real stable section IDs', () => {
+  for (const file of ['privacy', 'terms', 'guidelines']) {
+    const source = read(`src/pages/${file}/index.astro`);
+    const sections = JSON.parse(source.match(/const articleSections = ([\s\S]*?);/)[1]);
+    assert.ok(sections.length > 2);
+    for (const section of sections) assert.ok(source.includes(`id="${section.id}"`));
+  }
+});
+
+test('semantic theme pairs meet text and essential control contrast', () => {
+  const tokens = JSON.parse(fs.readFileSync(path.resolve(root, '../../design/tokens.json'), 'utf8'));
+  const luminance = (hex) => {
+    const rgb = hex.slice(1).match(/../g).map((part) => parseInt(part, 16) / 255)
+      .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+  };
+  const contrast = (a, b) => {
+    const values = [luminance(a), luminance(b)].sort((x, y) => x - y);
+    return (values[1] + 0.05) / (values[0] + 0.05);
+  };
+  assert.equal(contrast('#000000', '#FFFFFF'), 21);
+  assert.equal(contrast('#777777', '#777777'), 1);
+  for (const [name, colors] of Object.entries(tokens.color)) {
+    for (const background of ['canvas', 'surface', 'surfaceRaised']) {
+      for (const text of ['text', 'secondary', 'muted', 'accent']) {
+        assert.ok(contrast(colors[text], colors[background]) >= 4.5, `${name} ${text} on ${background}`);
+      }
+      assert.ok(contrast(colors.control, colors[background]) >= 3, `${name} essential control on ${background}`);
+    }
+    for (const [foreground, background] of [['onAccent', 'accent'], ['onSelection', 'selection'], ['danger', 'dangerSurface'], ['success', 'successSurface'], ['warning', 'warningSurface'], ['info', 'infoSurface']]) {
+      assert.ok(contrast(colors[foreground], colors[background]) >= 4.5, `${name} ${foreground} on ${background}`);
+    }
+  }
+});

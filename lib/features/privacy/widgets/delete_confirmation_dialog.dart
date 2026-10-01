@@ -45,6 +45,7 @@ class _DeleteConfirmationDialogState extends State<DeleteConfirmationDialog> {
     final spacing = context.spacing;
 
     return AlertDialog(
+      scrollable: true,
       title: const Text('Delete account'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -60,7 +61,7 @@ class _DeleteConfirmationDialogState extends State<DeleteConfirmationDialog> {
           ),
           SizedBox(height: spacing.sm),
           LythTextField(
-            label: null,
+            label: 'Confirmation',
             placeholder: 'DELETE',
             controller: _controller,
             onChanged: (_) => _handleChanged(),

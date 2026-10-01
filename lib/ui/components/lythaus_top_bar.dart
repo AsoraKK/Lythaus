@@ -5,7 +5,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:lythaus/design_system/components/lyth_icon_button.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
-import 'package:lythaus/design_system/widgets/lyth_wordmark.dart';
 
 class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   const LythausTopBar({
@@ -35,7 +34,7 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
     final theme = Theme.of(context);
     final spacing = context.spacing;
     return Container(
-      height: preferredSize.height,
+      constraints: BoxConstraints(minHeight: preferredSize.height),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: showDivider
@@ -45,52 +44,45 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
       padding: EdgeInsets.symmetric(horizontal: spacing.lg),
       child: Row(
         children: [
-          InkWell(
-            onTap: onLogoTap,
-            borderRadius: BorderRadius.circular(context.radius.md),
-            child: Container(
-              padding: EdgeInsets.all(spacing.xs),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(context.radius.md),
+          IconButton(
+            onPressed: onLogoTap,
+            tooltip: 'Feed controls',
+            icon: SvgPicture.asset(
+              'assets/brand/lythaus_mark.svg',
+              height: 20,
+              width: 20,
+              colorFilter: ColorFilter.mode(
+                theme.colorScheme.primary,
+                BlendMode.srcIn,
               ),
-              child: SvgPicture.asset(
-                'assets/brand/lythaus_mark.svg',
-                height: 20,
-                width: 20,
-                colorFilter: ColorFilter.mode(
-                  theme.colorScheme.primary,
-                  BlendMode.srcIn,
-                ),
-                placeholderBuilder: (context) => Icon(
-                  Icons.blur_on,
-                  size: 18,
-                  color: theme.colorScheme.primary,
-                ),
+              placeholderBuilder: (context) => Icon(
+                Icons.blur_on,
+                size: 18,
+                color: theme.colorScheme.primary,
               ),
             ),
           ),
           SizedBox(width: spacing.sm),
           Expanded(
-            child: GestureDetector(
-              onTap: onTitleTap,
-              child: Center(
-                child: useWordmark
-                    ? const LythWordmark()
-                    : Text(
-                        title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+            child: TextButton(
+              onPressed: onTitleTap,
+              style: TextButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                foregroundColor: theme.colorScheme.onSurface,
               ),
+              child: Text(title, style: theme.textTheme.titleLarge),
             ),
           ),
           Row(
             children: [
-              LythIconButton(icon: Icons.search, onPressed: onSearchTap),
+              LythIconButton(
+                icon: Icons.search,
+                tooltip: 'Search',
+                onPressed: onSearchTap,
+              ),
               LythIconButton(
                 icon: Icons.trending_up_outlined,
+                tooltip: 'Trending',
                 onPressed: onTrendingTap,
               ),
             ],

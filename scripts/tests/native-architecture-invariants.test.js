@@ -50,9 +50,12 @@ test('native public and admin APIs enforce configured hostnames', () => {
 
 test('public API dispatch awaits rejection-prone async handlers', () => {
   const source = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/index.ts'), 'utf8');
-  for (const handler of ['emailAuth', 'verifyEmail', 'requestPasswordReset']) {
+  for (const handler of ['verifyEmail', 'authIntake']) {
     assert.match(source, new RegExp(`return await ${handler}\\(`));
   }
+  assert.match(source, /const action = \(\) => reset \? requestPasswordReset\(request, env\) : emailAuth\(request, env\)/);
+  assert.match(source, /const result = await idempotentAuthIntake\(/);
+  assert.match(source, /return await authIntake\(request, env, true\)/);
   for (const handler of ['createPost', 'createUploadSession']) {
     assert.match(source, new RegExp(`return await idempotentMutation[\\s\\S]*${handler}\\(`));
   }
@@ -65,7 +68,10 @@ test('email registration retries recover accounts waiting for verification or le
   assert.match(source, /await queueTransactionalEmail\(client, \{/);
   assert.match(source, /registrationPlan === 'attach_email_credential'/);
   assert.match(source, /FROM identity\.contact_emails c JOIN identity\.users u/);
-  assert.match(source, /status = 'active'.*status = 'relink_required'/);
+  const recovery = fs.readFileSync(path.join(root, 'apps/lythaus-public-api/src/auth-recovery-policy.ts'), 'utf8');
+  assert.match(recovery, /\['active', 'relink_required'\]/);
+  assert.match(recovery, /protected_identity/);
+  assert.match(source, /establishVerifiedCredential\(client, account, passwordHash\)/);
   assert.match(source, /registrationPlan === 'neutral_existing_account'/);
 });
 
@@ -446,16 +452,16 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
   assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
   assert.match(verifier, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION/);
-  assert.match(verifier, /0017_authenticity_beta\.sql/);
-  assert.match(verifier, /production post-0017 schema fingerprint mismatch/);
-  assert.match(verifier, /production post-0017 relation count/);
+  assert.match(verifier, /0020_auth_recovery_delivery\.sql/);
+  assert.match(verifier, /production post-0020 schema fingerprint mismatch/);
+  assert.match(verifier, /production post-0020 relation count/);
   assert.match(verifier, /to_regclass\('marketing\.waitlist_signups'\)/);
   assert.match(verifier, /system\.rate_limit_windows/);
   const deployIdentity = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
   assert.match(workflow, /MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'true'/);
   assert.match(workflow, /node scripts\/ci\/validate-product-integrity-deploy-identity\.mjs[\s\S]*validate:native-workers:provisioned/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0017_SCHEMA_FINGERPRINT/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0017_RELATION_COUNT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0020_SCHEMA_FINGERPRINT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_0020_RELATION_COUNT/);
   assert.match(deployIdentity, /fs\.writeFileSync\(configPath, source/);
   assert.match(workflow, /Capture predeployment Worker state/);
   assert.match(workflow, /Roll back partial Worker deployment on failure/);

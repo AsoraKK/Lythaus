@@ -17,6 +17,27 @@ access boundaries, and lifecycle decisions. Secret values are never recorded.
 | Actions history limitation | The repository-wide endpoint reports 2,500 matches but exposes a maximum 1,000-run page range. Per-workflow endpoints were queried for last-observed and last-successful evidence; any unavailable result remains UNKNOWN. |
 | Repository canary consumer search | No repository consumer of canary-* tags was found on the pinned baseline. |
 
+## Current-main reconciliation (2026-10-01)
+
+The tables and run receipts below retain their pinned 2026-09-27 audit boundary;
+they are not a claim of fresh provider or registration inspection. PR1 was
+reconciled with main `b50c4f7ae6a23ab1d69caea23869f3edd440e3d3`, including
+the canonical Flutter lock/license repair (#882), marketing copy (#883), and
+synthetic authentication fixture repair (#884). Main has 55 workflow files;
+removing only `canary.yml` leaves 54.
+
+The additional `authenticity-cpu-evaluation.yml` workflow is retained. It is a
+separate manual evaluation path with its existing authorization controls, not
+ordinary PR validation. Current private-alpha regression and CPU-orchestration
+checks in `native-workers-validation.yml` must move into CI before PR2 deletes
+that wrapper. Current CI auth coverage, browser journeys, email-service boundary,
+web cache checks, and immutable release artifact handling must also remain.
+
+A fresh repository search still finds no consumer of the tag-only canary.
+`canary-k6.yml`, required security checks, manual production workflows, and
+reviewed exact-main deployment policy remain unchanged. No later cleanup phase
+is authorized by these two PRs.
+
 ## Open PR coordination
 
 Before removing the tag-only workflow, open changes touching the same surface

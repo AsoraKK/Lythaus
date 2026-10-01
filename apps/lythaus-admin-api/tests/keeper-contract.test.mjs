@@ -17,9 +17,12 @@ test('Keeper routes expose live summaries and paginated identity operations', ()
 });
 
 test('Keeper email actions use the canonical transactional outbox seam', () => {
-  assert.match(adapter, /enqueueTransactionalEmailIntent/);
-  assert.match(adapter, /secretEncryptionKeyVersion/);
-  assert.match(adapter, /contactEmailUserId/);
+  const privateRuntime = readFileSync('apps/lythaus-public-api/src/email-envelope-entrypoint.ts', 'utf8');
+  assert.match(privateRuntime, /enqueueTransactionalEmailIntent/);
+  assert.match(privateRuntime, /deliveryEnvelopeEncryptionKeyVersion/);
+  assert.match(adapter, /AUTH_EMAIL_ENVELOPE/);
+  assert.doesNotMatch(adapter, /PII_ENCRYPTION_KEY|TRANSACTIONAL_EMAIL_ENCRYPTION_KEY|secretCiphertext|crypto.randomUUID/);
+  assert.match(privateRuntime, /contactEmailUserId/);
   assert.doesNotMatch(adapter, /system\.outbox_events/);
   assert.doesNotMatch(adapter, /provider_message_id|provider_error_code/);
 });

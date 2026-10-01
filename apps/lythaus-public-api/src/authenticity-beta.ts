@@ -3,7 +3,7 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { createPresignedPutUrl } from '@lythaus/media';
 import { uuidv7 } from '@lythaus/security';
 import { authorBetaView, BETA_LIMITS, BETA_POLICY, BETA_VERSION, readBoundedBytes, type BetaResult, type BetaState } from '../../../packages/authenticity/src/beta.ts';
-import { readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
+import { measuredAlphaBudget, readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { sha256Hex } from '../../../packages/authenticity/src/forensics.ts';
 import { validateMediaPayload } from '../../../packages/authenticity/src/media-intake.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
@@ -43,25 +43,21 @@ async function routeBetaApi(request: Request, env: BetaEnv, userId: string): Pro
     return privateJson({ items: rows.rows.map(view) });
   }
   if (!caseId && request.method === 'POST') {
-    if (!config.budgetApproval) return privateJson({error:'beta_budget_paused'},503);
+    let measured;
+    try { measured = measuredAlphaBudget(config); } catch { return privateJson({error:'beta_budget_paused'},503); }
     const input = await body(request);
     if (input.consentVersion !== BETA_VERSION || input.trainingConsent !== false) return privateJson({ error: 'beta_processing_consent_required' }, 400);
     if (!['image/png', 'image/jpeg'].includes(String(input.contentType)) || !Number.isSafeInteger(input.size) || Number(input.size) < 1 || Number(input.size) > BETA_LIMITS.bytes || typeof input.checksumSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(input.checksumSha256)) return privateJson({ error: 'beta_image_invalid' }, 400);
     if (!env.MEDIA_QUARANTINE || !env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.MEDIA_QUARANTINE_BUCKET) return privateJson({ error: 'beta_upload_unavailable' }, 503);
     const id = uuidv7(); const key = `quarantine/${userId}/${id}`;
     const signed = await createPresignedPutUrl({ accountId: env.R2_ACCOUNT_ID, bucket: env.MEDIA_QUARANTINE_BUCKET, key, contentType: input.contentType as 'image/png' | 'image/jpeg', accessKeyId: env.R2_ACCESS_KEY_ID, secretAccessKey: env.R2_SECRET_ACCESS_KEY, expiresInSeconds: 600 });
-    if (config.caseReservationUsd === null) return privateJson({error:'beta_measured_reservation_required'},503);
-    const reservation = await reserveBudget(env.DB_APP_FRESH, { period: new Date().toISOString().slice(0, 7), operation: 'authenticity_beta_case', operationClass: 'experiment', estimatedCostUsd: config.caseReservationUsd, idempotencyKey: `beta:${id}`, correlationId: id, config: appBudget(env) });
+    const reservation = await reserveBudget(env.DB_APP_FRESH, { period: new Date().toISOString().slice(0, 7), operation: 'authenticity_beta_case', operationClass: 'experiment', estimatedCostUsd: measured.caseReservationUsd, idempotencyKey: `beta:${id}`, correlationId: id, provider: 'lythaus-authenticity-beta', scope: { operationNames: ['authenticity_alpha_case', 'authenticity_beta_case', 'authenticity_alpha_advice'], limitUsd: measured.authenticityLimitUsd }, config: appBudget(env) });
     if (reservation.status !== 'reserved') return privateJson({ error: 'beta_budget_paused' }, 429);
     try {
       await transaction(env.DB_APP_FRESH, async client => {
         await client.query(`SELECT pg_advisory_xact_lock(hashtext('authenticity-beta-admission'))`);
-        const experiments = await client.query<{ amount: string }>(`SELECT COALESCE(sum(COALESCE(actual_cost_usd,estimated_cost_usd)),0)::text AS amount FROM system.cost_budget_reservations WHERE operation_class='experiment' AND period_key=$1 AND status IN ('reserved','committed','reconciled')`, [new Date().toISOString().slice(0,7)]);
-        if (Number(experiments.rows[0].amount)>8) throw new Error('beta_budget_paused');
         const counts = await client.query<{ total: string; own: string }>(`SELECT count(*)::text AS total, count(*) FILTER (WHERE owner_id=$1)::text AS own FROM moderation.authenticity_beta WHERE created_at >= date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`, [userId]);
         if (Number(counts.rows[0].total) >= BETA_LIMITS.totalDaily || Number(counts.rows[0].own) >= BETA_LIMITS.userDaily) throw new Error('beta_daily_limit');
-        const costs = await client.query<{ amount: string }>(`SELECT COALESCE(sum(COALESCE(actual_cost_usd,estimated_cost_usd)),0)::text AS amount FROM system.cost_budget_reservations WHERE operation='authenticity_beta_case' AND period_key=$1 AND status IN ('reserved','committed','reconciled')`, [new Date().toISOString().slice(0, 7)]);
-        if (Number(costs.rows[0].amount) > BETA_LIMITS.monthlyUsd * (1 - BETA_LIMITS.headroom)) throw new Error('beta_budget_paused');
         const quota = Number(env.MEDIA_QUOTA_BYTES);
         if (!Number.isSafeInteger(quota) || quota < 1) throw new Error('beta_storage_unavailable');
         await client.query(`INSERT INTO media.storage_ledger(user_id) VALUES($1) ON CONFLICT DO NOTHING`, [userId]);

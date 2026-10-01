@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,7 +14,10 @@ import 'package:lythaus/features/moderation/presentation/screens/appeal_history_
 import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/ui/screens/profile/settings_screen.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/features/authenticity/beta_screen.dart';
+import 'package:lythaus/features/authenticity/alpha_screen.dart';
 
 /// Route name constants.
 abstract final class AppRoutes {
@@ -25,6 +29,8 @@ abstract final class AppRoutes {
   static const String moderation = 'moderation';
   static const String moderationAppeal = 'moderation-appeal';
   static const String notificationSettings = 'notification-settings';
+  static const String rewards = 'rewards';
+  static const String settings = 'settings';
 }
 
 String? resolveAppRedirect({
@@ -55,19 +61,20 @@ String? resolveAppRedirect({
 /// Provides the application [GoRouter] that is refreshed when auth state
 /// changes. Stage A: top-level routes wrapping existing screen widgets.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final isGuest = ref.watch(guestModeProvider);
-  final pendingCode = ref.watch(pendingInviteCodeProvider);
-
-  return GoRouter(
+  final refresh = ValueNotifier<int>(0);
+  ref.listen(authStateProvider, (_, _) => refresh.value += 1);
+  ref.listen(guestModeProvider, (_, _) => refresh.value += 1);
+  ref.listen(pendingInviteCodeProvider, (_, _) => refresh.value += 1);
+  final router = GoRouter(
     debugLogDiagnostics: false,
     initialLocation: '/',
+    refreshListenable: refresh,
     redirect: (context, state) {
       return resolveAppRedirect(
         matchedLocation: state.matchedLocation,
-        user: authState.valueOrNull,
-        isGuest: isGuest,
-        pendingCode: pendingCode,
+        user: ref.read(authStateProvider).valueOrNull,
+        isGuest: ref.read(guestModeProvider),
+        pendingCode: ref.read(pendingInviteCodeProvider),
       );
     },
     routes: [
@@ -75,7 +82,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         name: AppRoutes.login,
         path: '/login',
-        builder: (context, state) => const AuthChoiceScreen(),
+        builder: (context, state) =>
+            const ReadingPane(child: AuthChoiceScreen()),
       ),
 
       // Invite redemption — top-level public route so anonymous users can
@@ -87,15 +95,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             InviteRedeemScreen(inviteCode: state.pathParameters['code']),
       ),
 
-      // Alpha app shell (tabs: Discover, Create, Profile)
+      // Alpha app shell (tabs: Discover, Create, Profile, Rewards)
+      GoRoute(
+        name: AppRoutes.rewards,
+        path: '/rewards',
+        redirect: (context, state) => Uri(
+          path: '/',
+          queryParameters: {...state.uri.queryParameters, 'tab': 'rewards'},
+        ).toString(),
+      ),
+      GoRoute(
+        name: AppRoutes.settings,
+        path: '/settings',
+        builder: (context, state) => const ReadingPane(child: SettingsScreen()),
+      ),
       GoRoute(
         path: '/authenticity',
+        builder: (context, state) => const AuthenticityPrivateAlphaScreen(),
+      ),
+      GoRoute(
+        path: '/authenticity-beta',
         builder: (context, state) => const AuthenticityBetaScreen(),
       ),
       GoRoute(
         name: AppRoutes.shell,
         path: '/',
-        builder: (context, state) => const AdaptiveShell(),
+        builder: (context, state) => AdaptiveShell(
+          initialIndex: switch (state.uri.queryParameters['tab']) {
+            'create' => ref.read(guestModeProvider) ? 0 : 1,
+            'profile' => 2,
+            'rewards' => 3,
+            _ => 0,
+          },
+        ),
         routes: [
           // Post detail
           GoRoute(
@@ -139,4 +171,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
+  return router;
 });

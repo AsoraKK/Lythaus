@@ -29,6 +29,7 @@ const approvedAllowlistPaths = new Set([
   'docs/architecture/email-guest-authentication-adr.md',
   'docs/architecture/adr-003-lythaus-current-state.md',
   'docs/architecture/authenticity-v0.1-beta.md',
+  'docs/architecture/authenticity-private-alpha.md',
   'docs/models/safe-a-v0.1.md',
   'README.md',
   'AGENTS.md',

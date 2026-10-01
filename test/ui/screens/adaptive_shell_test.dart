@@ -3,8 +3,11 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 
 class _StaticLiveFeedNotifier extends LiveFeedController {
   _StaticLiveFeedNotifier(List<FeedItem> items)
@@ -59,6 +62,133 @@ List<Override> _baseOverrides({bool guest = false}) => [
 
 void main() {
   group('AdaptiveShell', () {
+    for (final outcome in ['opened', 'unavailable', 'exception']) {
+      testWidgets('desktop Help handles $outcome without losing rewards', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(1440, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        const channel = MethodChannel('plugins.flutter.io/url_launcher');
+        final launches = <String>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          (call) async {
+            if (call.method == 'launch' || call.method == 'launchUrl') {
+              launches.add((call.arguments as Map)['url'] as String);
+              if (outcome == 'exception') {
+                throw PlatformException(code: 'unavailable');
+              }
+              return outcome == 'opened';
+            }
+            return false;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            channel,
+            null,
+          ),
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ..._baseOverrides(guest: true),
+              currentUserProvider.overrideWithValue(null),
+            ],
+            child: const MaterialApp(home: AdaptiveShell(initialIndex: 3)),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Help'));
+        await tester.pumpAndSettle();
+        expect(launches, ['https://lythaus.co/help']);
+        expect(find.text('Sign in to view your rewards.'), findsOneWidget);
+        expect(
+          find.text('Help is available at lythaus.co/help.'),
+          outcome == 'opened' ? findsNothing : findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('desktop Settings returns to the selected rewards screen', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(guest: true),
+            currentUserProvider.overrideWithValue(null),
+          ],
+          child: const MaterialApp(home: AdaptiveShell(initialIndex: 3)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.text('Sign in to view your rewards.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'native back restores tab and query without losing route context',
+      (tester) async {
+        final router = GoRouter(
+          initialLocation: '/?source=fixture',
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, state) => AdaptiveShell(
+                initialIndex: switch (state.uri.queryParameters['tab']) {
+                  'profile' => 2,
+                  'rewards' => 3,
+                  _ => 0,
+                },
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ..._baseOverrides(guest: true),
+              currentUserProvider.overrideWithValue(null),
+            ],
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rewards'));
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.queryParameters, {
+          'source': 'fixture',
+          'tab': 'rewards',
+        });
+        await tester.tap(find.text('Profile'));
+        await tester.pumpAndSettle();
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.text('Sign in to view your rewards.'), findsOneWidget);
+        expect(router.routeInformationProvider.value.uri.queryParameters, {
+          'source': 'fixture',
+          'tab': 'rewards',
+        });
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(router.routeInformationProvider.value.uri.queryParameters, {
+          'source': 'fixture',
+          'tab': 'discover',
+        });
+      },
+    );
+
     testWidgets('renders bottom nav on narrow viewport', (tester) async {
       await tester.binding.setSurfaceSize(const Size(375, 812));
       addTearDown(() => tester.binding.setSurfaceSize(null));

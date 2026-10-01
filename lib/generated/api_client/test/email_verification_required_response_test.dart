@@ -12,10 +12,5 @@ void main() {
       // TODO
     });
 
-    // String userId
-    test('to test the property `userId`', () async {
-      // TODO
-    });
-
   });
 }

@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -10,6 +11,7 @@ import 'package:lythaus/features/reactions/presentation/reaction_bar.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/receipt_drawer.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
+import 'package:lythaus/ui/components/authorship_disclosure.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -54,98 +56,97 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Post')),
-      body: FutureBuilder<domain.Post>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return ReadingPane(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Post')),
+        body: FutureBuilder<domain.Post>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (snapshot.hasError) {
-            return _PostDetailError(
-              onRetry: () => setState(() {
-                _future = _loadPost();
-              }),
-            );
-          }
+            if (snapshot.hasError) {
+              return _PostDetailError(
+                onRetry: () => setState(() {
+                  _future = _loadPost();
+                }),
+              );
+            }
 
-          final post = snapshot.data;
-          if (post == null) {
-            return _PostDetailError(
-              message: 'Post unavailable',
-              onRetry: () => setState(() {
-                _future = _loadPost();
-              }),
-            );
-          }
+            final post = snapshot.data;
+            if (post == null) {
+              return _PostDetailError(
+                message: 'Post unavailable',
+                onRetry: () => setState(() {
+                  _future = _loadPost();
+                }),
+              );
+            }
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              final reloaded = _loadPost();
-              setState(() {
-                _future = reloaded;
-              });
-              await reloaded;
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              children: [
-                _PostHeader(post: post),
-                const SizedBox(height: 12),
-                Text(post.text, style: Theme.of(context).textTheme.bodyLarge),
-                const SizedBox(height: 8),
-                Chip(
-                  avatar: const Icon(Icons.auto_awesome_outlined, size: 16),
-                  label: Text(post.authorship.label.label),
-                ),
-                if ((post.mediaUrls?.isNotEmpty ?? false)) ...[
+            return RefreshIndicator(
+              onRefresh: () async {
+                final reloaded = _loadPost();
+                setState(() {
+                  _future = reloaded;
+                });
+                await reloaded;
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  _PostHeader(post: post),
                   const SizedBox(height: 12),
-                  _PostMedia(mediaUrls: post.mediaUrls!),
-                ],
-                const SizedBox(height: 12),
-                // ── Reaction Bar (Phase 2) ──
-                ReactionBar(contentId: post.id, authorUserId: post.authorId),
-                const SizedBox(height: 12),
-                TrustStripRow(
-                  summary: FeedTrustSummary(
-                    trustStatus: post.trustStatus,
-                    timeline: FeedTrustTimeline(
-                      created: post.timeline.created,
-                      mediaChecked: post.timeline.mediaChecked,
-                      moderation: post.timeline.moderation,
-                      appeal: post.timeline.appeal,
-                    ),
-                    hasAppeal: post.hasAppeal,
-                    proofSignalsProvided: post.proofSignalsProvided,
-                    verifiedContextBadgeEligible:
-                        post.verifiedContextBadgeEligible,
-                    featuredEligible: post.featuredEligible,
-                  ),
-                  onTap: () => ReceiptDrawer.show(context, post.id),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _openComments(context, post),
-                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                      label: Text('Comments (${post.commentCount})'),
-                    ),
-                    if (post.hasAppeal)
-                      const Chip(
-                        avatar: Icon(Icons.gavel, size: 16),
-                        label: Text('Appeal open'),
-                      ),
+                  Text(post.text, style: Theme.of(context).textTheme.bodyLarge),
+                  const SizedBox(height: 8),
+                  AuthorshipDisclosure(label: post.authorship.label.label),
+                  if ((post.mediaUrls?.isNotEmpty ?? false)) ...[
+                    const SizedBox(height: 12),
+                    _PostMedia(mediaUrls: post.mediaUrls!),
                   ],
-                ),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(height: 12),
+                  // ── Reaction Bar (Phase 2) ──
+                  ReactionBar(contentId: post.id, authorUserId: post.authorId),
+                  const SizedBox(height: 12),
+                  TrustStripRow(
+                    summary: FeedTrustSummary(
+                      trustStatus: post.trustStatus,
+                      timeline: FeedTrustTimeline(
+                        created: post.timeline.created,
+                        mediaChecked: post.timeline.mediaChecked,
+                        moderation: post.timeline.moderation,
+                        appeal: post.timeline.appeal,
+                      ),
+                      hasAppeal: post.hasAppeal,
+                      proofSignalsProvided: post.proofSignalsProvided,
+                      verifiedContextBadgeEligible:
+                          post.verifiedContextBadgeEligible,
+                      featuredEligible: post.featuredEligible,
+                    ),
+                    onTap: () => ReceiptDrawer.show(context, post.id),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => _openComments(context, post),
+                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                        label: Text('Comments (${post.commentCount})'),
+                      ),
+                      if (post.hasAppeal)
+                        const Chip(
+                          avatar: Icon(Icons.gavel, size: 16),
+                          label: Text('Appeal open'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -185,7 +186,7 @@ class _PostHeader extends StatelessWidget {
               Text(
                 _formatTimeAgo(post.createdAt),
                 style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.65),
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
