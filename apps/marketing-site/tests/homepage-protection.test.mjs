@@ -74,6 +74,19 @@ function assertRootToolingLockOnlyHasSecurityPatches() {
   }
   assert.deepEqual(current, original, 'Root tooling lock may change only for the reviewed security patches');
 }
+function assertMarketingLockOnlyHasSecurityPatch() {
+  const filename = 'apps/marketing-site/package-lock.json';
+  const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
+  const current = JSON.parse(readFileSync(path.join(root, filename), 'utf8'));
+  assert.deepEqual(current.packages['node_modules/devalue'], {
+    version: '5.9.3',
+    resolved: 'https://registry.npmjs.org/devalue/-/devalue-5.9.3.tgz',
+    integrity: 'sha512-xRumYOCUZN/EesqHEU3WOXanOZNvfZFZ/o1AHVFDX1yI0UAkZkOgDXt341CzKoBVIkgQba55/+DjGBKrIoKcHw==',
+    license: 'MIT',
+  }, 'devalue must use the exact reviewed security patch');
+  current.packages['node_modules/devalue'] = original.packages['node_modules/devalue'];
+  assert.deepEqual(current, original, 'Marketing lock may change only for the reviewed devalue security patch');
+}
 const authRepairPaths = new Set([
   'package.json',
   'apps/marketing-site/package.json',
@@ -109,6 +122,7 @@ export function assertHomepageFrozen() {
     const [metadata, filename] = entry.split('\t');
     if (authRepairPaths.has(filename)) continue;
     if (filename === 'package-lock.json') continue;
+    if (filename === 'apps/marketing-site/package-lock.json') continue;
     const expected = metadata.split(' ')[2];
     if (filename === 'apps/marketing-site/public/sitemap.xml') {
       const original = git('show', `${baselineSha}:${filename}`);
@@ -121,6 +135,7 @@ export function assertHomepageFrozen() {
   }
   assert.deepEqual(changed, [], 'Homepage dependencies changed from the explicit frozen revision');
   assertRootToolingLockOnlyHasSecurityPatches();
+  assertMarketingLockOnlyHasSecurityPatch();
   return entries.length;
 }
 
