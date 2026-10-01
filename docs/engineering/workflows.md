@@ -262,6 +262,11 @@ relaxation was added.
 
 ## PR2 current-main reconciliation
 
+PR1 merged as `1fce58cd931d666900388592d0e4e0b56d6c3156` after all ten
+required contexts and all 17 check runs passed on
+`9b8a1dcc1c877773fe731d40fc47c084690cb8db` (CI run 36822467919).
+PR2 incorporates that exact main before fresh replacement checks.
+
 The replacement preserves every existing current-main CI step and adds the
 unique responsibilities of the six wrappers. Private-alpha hardening now runs
 through `npm run test:authenticity-private-alpha`, including
