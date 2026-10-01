@@ -211,14 +211,28 @@ try {
       assert.equal(new URL(page.url()).search, '');
       assert.equal(await page.locator('meta[name="referrer"]').getAttribute('content'), 'no-referrer');
       await page.locator('[data-email-verification-submit]').click();
+      assert.equal(await page.locator('[data-email-verification-status]').innerText(), 'Passwords must match and contain 15–128 characters.');
+      assert.equal(requests.length, 0);
+      await page.locator('#verification-password').fill('fixture-only-passphrase');
+      await page.locator('#verification-password-confirmation').fill('mismatched-fixture');
+      await page.locator('[data-email-verification-submit]').click();
+      assert.equal(await page.locator('[data-email-verification-status]').innerText(), 'Passwords must match and contain 15–128 characters.');
+      assert.equal(requests.length, 0);
+      await page.locator('#verification-password-confirmation').fill('fixture-only-passphrase');
+      await page.locator('[data-email-verification-submit]').click();
       await page.locator('[data-email-verification-status][data-state="success"]').waitFor();
       assert.equal(requests.length, 1);
       assert.equal(requests[0].method, 'POST');
       assert.equal(await page.locator('[data-email-verification-submit]').isDisabled(), true);
     });
-    await fixtureCase('verify-invalid', theme, 'verify-email?token=fixture-token', () => ({ status: 400, body: { error: 'verification_token_invalid' } }), async ({ page }) => {
+    await fixtureCase('verify-invalid', theme, 'verify-email?token=fixture-token', () => ({ status: 400, body: { error: 'verification_token_invalid' } }), async ({ page, requests }) => {
+      await page.locator('#verification-password').fill('fixture-only-passphrase');
+      await page.locator('#verification-password-confirmation').fill('fixture-only-passphrase');
       await page.locator('[data-email-verification-submit]').click();
       await page.locator('[data-email-verification-status][data-state="error"]').waitFor();
+      assert.equal(requests.length, 1);
+      assert.equal(requests[0].method, 'POST');
+      assert.match(await page.locator('[data-email-verification-status]').innerText(), /invalid, expired, or already used/);
       assert.equal(await page.locator('[data-email-verification-resend]').isVisible(), true);
     });
     await fixtureCase('reset-success', theme, 'reset-password?token=fixture-token', () => ({ body: { state: 'password_reset_completed' } }), async ({ page, requests }) => {
@@ -234,7 +248,10 @@ try {
       assert.equal(await page.locator('#new-password').inputValue(), '');
       assert.equal(await page.locator('#new-password').isDisabled(), true);
     });
-    await fixtureCase('sign-in-success', theme, 'sign-in', () => ({ body: { accessToken: 'fixture-access', refreshToken: 'fixture-refresh' } }), async ({ page }) => {
+    await fixtureCase('sign-in-success', theme, 'sign-in', () => ({ body: { accessToken: 'fixture-access', expiresIn: 900, tokenType: 'Bearer', sessionTransport: 'cookie-v1' } }), async ({ page, requests }) => {
+      await page.route('https://app.lythaus.co/**', (route) => route.abort('aborted'));
+      const handoff = page.waitForRequest('https://app.lythaus.co/');
+      const login = page.waitForRequest('https://api.lythaus.co/api/auth/email');
       await page.locator('#sign-in-email').fill('visual-fixture@example.invalid');
       await page.locator('#sign-in-password').fill('fixture-only-passphrase');
       await page.getByRole('button', { name: 'Show password', exact: true }).click();
@@ -243,7 +260,26 @@ try {
       assert.equal(await page.locator('#sign-in-password').getAttribute('type'), 'password');
       await page.locator('[data-sign-in-submit]').click();
       await page.locator('[data-sign-in-status][data-state="success"]').waitFor();
-      assert.match(await page.locator('[data-sign-in-status]').innerText(), /establish your session there/);
+      assert.equal(await page.locator('[data-sign-in-status]').innerText(), 'Signed in. Opening the Lythaus app...');
+      assert.equal((await login).headers()['x-lythaus-auth-transport'], 'cookie-v1');
+      assert.equal((await handoff).isNavigationRequest(), true);
+      assert.equal(requests.length, 1);
+      assert.equal(requests[0].method, 'POST');
+      assert.equal(await page.locator('#sign-in-password').inputValue(), '');
+      assert.equal(await page.evaluate(() => sessionStorage.length), 0);
+    });
+    await fixtureCase('sign-in-invalid-session', theme, 'sign-in', () => ({ body: { accessToken: 'fixture-access', refreshToken: 'fixture-refresh' } }), async ({ page, requests }) => {
+      const handoffs = [];
+      page.on('request', (request) => { if (request.url().startsWith('https://app.lythaus.co/')) handoffs.push(request.url()); });
+      await page.locator('#sign-in-email').fill('visual-fixture@example.invalid');
+      await page.locator('#sign-in-password').fill('fixture-only-passphrase');
+      await page.locator('[data-sign-in-submit]').click();
+      await page.locator('[data-sign-in-status][data-state="error"]').waitFor();
+      assert.equal(await page.locator('[data-sign-in-status]').innerText(), 'We could not sign you in. Check your details and try again.');
+      assert.equal(requests.length, 1);
+      assert.equal(requests[0].method, 'POST');
+      assert.deepEqual(handoffs, []);
+      assert.equal(await page.locator('[data-sign-in-submit]').isEnabled(), true);
       assert.equal(await page.evaluate(() => sessionStorage.length), 0);
     });
     await fixtureCase('sign-in-verification-required', theme, 'sign-in', () => ({ status: 403, body: { error: 'email_verification_required' } }), async ({ page }) => {
@@ -268,7 +304,7 @@ try {
       assert.equal(new URL(page.url()).search, '');
       await page.locator('[data-reset-submit]').click();
       await page.locator('[data-reset-status][data-state="success"]').waitFor();
-      assert.match(await page.locator('[data-reset-status]').innerText(), /Delivery is not confirmed/);
+      assert.match(await page.locator('[data-reset-status]').innerText(), /Your request was accepted\. If eligible, check your email for recovery instructions\. This does not confirm email delivery\./);
     });
     await fixtureCase('resend-success', theme, 'resend-verification', () => ({ body: { state: 'verification_required' } }), async ({ page }) => {
       await page.locator('#verification-email').fill('visual-fixture@example.invalid');
