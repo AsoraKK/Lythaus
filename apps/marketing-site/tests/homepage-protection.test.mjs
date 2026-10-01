@@ -95,6 +95,12 @@ const authRepairPaths = new Set([
   'packages/security/src/jwt.ts',
   'packages/security/tests/critical-security-policy.test.mjs',
 ]);
+const privateAlphaRepairPaths = new Set([
+  'apps/lythaus-public-api/src/authenticity-alpha.ts',
+  'apps/lythaus-public-api/tests/authenticity-alpha-hardening.test.mjs',
+  'packages/db/src/authenticity-alpha.ts',
+  'packages/db/tests/authenticity-alpha-lifecycle.test.mjs',
+]);
 
 export function assertHomepageFrozen() {
   assert.equal(git('rev-parse', `${baselineSha}^{commit}`), baselineSha, 'Frozen baseline must be available; do not substitute HEAD');
@@ -107,7 +113,7 @@ export function assertHomepageFrozen() {
   const changed = [];
   for (const entry of entries) {
     const [metadata, filename] = entry.split('\t');
-    if (authRepairPaths.has(filename)) continue;
+    if (authRepairPaths.has(filename) || privateAlphaRepairPaths.has(filename)) continue;
     if (filename === 'package-lock.json') continue;
     const expected = metadata.split(' ')[2];
     if (filename === 'apps/marketing-site/public/sitemap.xml') {
@@ -166,8 +172,10 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
   }
   const bindingFile = 'packages/cloudflare-env/src/index.ts';
   assert.equal(readFileSync(path.join(root, bindingFile), 'utf8').replace(/\r\n/g, '\n')
-    .replace('  AUTH_EMAIL_ENVELOPE?: ServiceBinding;\n', '').trim(), git('show', `${upstreamBaselineSha}:${bindingFile}`),
-  'Only the private Admin auth service binding type may change');
+    .replace('  AUTH_EMAIL_ENVELOPE?: ServiceBinding;\n', '')
+    .replace('gateway?: { id: string; skipCache?: boolean; cacheTtl?: number; collectLog?: boolean; retries?: { maxAttempts: 1 }; metadata?: Record<string, string> };', 'gateway?: { id: string; skipCache?: boolean; cacheTtl?: number };')
+    .replace('    signal?: AbortSignal;\n', '').trim(), git('show', `${upstreamBaselineSha}:${bindingFile}`),
+  'Only the private Admin auth binding and exact private AI SDK option types may change');
   assert.equal(readFileSync(path.join(root, 'apps/lythaus-public-api/src/worker.ts'), 'utf8').replace(/\r\n/g, '\n').trim(), `import { WorkerEntrypoint } from 'cloudflare:workers';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { handleEmailEnvelope } from './email-envelope-entrypoint.ts';
@@ -184,6 +192,8 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     const after = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     after.scripts[script] = after.scripts[script].replace(' --experimental-strip-types', '');
     if (file === 'package.json') {
+      after.scripts['test:authenticity-private-alpha'] = after.scripts['test:authenticity-private-alpha']
+        .replace(' apps/lythaus-admin-api/tests/authenticity-alpha-hardening.test.mjs', '');
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
       assert.equal(after.overrides.undici, '7.29.1');
       assert.equal(after.overrides.miniflare.undici, '7.29.1');
@@ -191,7 +201,7 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       before.overrides.undici = '7.29.1';
       before.overrides.miniflare.undici = '7.29.1';
     }
-    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag may change; homepage dependencies remain frozen');
+    assert.deepEqual(after, before, 'Only the TypeScript runtime flag and private alpha admin test entry may change; homepage dependencies remain frozen');
   }
 });
 
