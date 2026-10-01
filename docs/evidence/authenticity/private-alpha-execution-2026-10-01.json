@@ -11,6 +11,49 @@
   "deployments": 0,
   "realInferenceCalls": 0,
   "paidProviderCalls": 0,
+  "ciObservation": {
+    "headSha": "eae12a639a3f49826b65f19e99a506c373e3d035",
+    "canonicalRun": "https://github.com/AsoraKK/Lythaus/actions/runs/36849900449",
+    "canonicalJobsPassed": 7,
+    "additionalPassedChecks": ["CodeQL", "dependency-review", "mobile-security", "secret-scan"],
+    "postgresRun": "https://github.com/AsoraKK/Lythaus/actions/runs/36849900247",
+    "postgresState": "FAIL_EXISTING_COORDINATOR_COVERAGE_BEFORE_ALPHA",
+    "postgresAlphaAndRollbackSteps": "SKIPPED",
+    "artifactLogAccess": "BLOCKED_HOST_403_NO_BYPASS",
+    "finalExactHeadChecksRequired": true
+  },
+  "supplementalValidation": [
+    {
+      "command": "node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-public-api/tests/*.postgres.mjs apps/lythaus-admin-api/tests/*.postgres.mjs",
+      "database": "local disposable lythaus_auth_test_alpha_sequence, PostgreSQL 17.11",
+      "prerequisites": ["node scripts/ci/validate-planetscale-postgres17.mjs", "node scripts/ci/validate-first-admin-bootstrap-postgres17.mjs", "node --test scripts/tests/auth-incident-grants.postgres.mjs"],
+      "state": "PASS",
+      "passed": 27,
+      "log": { "path": "/workspace/lythaus-alpha-evidence/final-ci/pg-sequence-auth.log", "sha256": "a116c6f6072ab6e7ce73b8c1622065087f7f22f689926cc9ee94c1ddbe7fa8e7", "bytes": 6168 }
+    },
+    {
+      "command": "node --experimental-strip-types --experimental-test-module-mocks --experimental-test-coverage --test-coverage-include=**/lythaus-auth-acceptance-coordinator/src/index.ts --test-coverage-lines=80 --test-coverage-branches=80 --test --test-name-pattern='real coordinator' --test-timeout=180000 apps/lythaus-public-api/tests/auth-journey.postgres.mjs",
+      "database": "same local database after the full canonical prerequisite sequence",
+      "state": "PASS",
+      "passed": 1,
+      "coveragePercent": { "lines": 99.52, "branches": 82.78, "functions": 97.26 },
+      "log": { "path": "/workspace/lythaus-alpha-evidence/final-ci/pg-sequence-coverage.log", "sha256": "a7d204e7f243e8fe1c1c6fe0ed6202560e49550ca77d8cca0f68fb6655633917", "bytes": 1481 }
+    },
+    {
+      "command": "node scripts/ci/run-coordinator-coverage.mjs",
+      "database": "same local database, same executable test/thresholds/timeout",
+      "state": "PASS",
+      "passed": 1,
+      "log": { "path": "/workspace/lythaus-alpha-evidence/final-ci/coordinator-runner.log", "sha256": "1cce15c742ece9a56c70641a4a49929150c32880391d4d7fbae8e2134e4f1356", "bytes": 1479 }
+    },
+    {
+      "command": "node --test scripts/tests/coordinator-coverage-diagnostics.test.mjs",
+      "state": "PASS",
+      "passed": 5,
+      "scope": "redaction, bounded diagnostics, executable coverage scope and actual child-failure propagation",
+      "log": { "path": "/workspace/lythaus-alpha-evidence/final-ci/coordinator-diagnostics.log", "sha256": "f161e9eb5fc0ce17d1190509f050bca22054eeccdba7202a9afd9aac08e7d4d3", "bytes": 1270 }
+    }
+  ],
   "validation": [
     {
       "command": "npm run test:authenticity-private-alpha",
