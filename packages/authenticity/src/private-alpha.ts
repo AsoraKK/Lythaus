@@ -415,6 +415,11 @@ export function authorPrivateAlphaView(input: {
     observerRequested: false,
     explanationRequested: false,
   });
+  if (!result && !['queued', 'analyzing', 'uploading'].includes(input.state)) {
+    for (const name of ALPHA_COMPONENTS) {
+      if (components[name].requested) components[name] = { ...components[name], execution: 'skipped', interpretation: 'unavailable', reason: 'case_result_unavailable' };
+    }
+  }
   const execution = Object.fromEntries(ALPHA_COMPONENTS.map((name) => [
     name,
     {
@@ -435,7 +440,13 @@ export function authorPrivateAlphaView(input: {
     reviewState: input.reviewState,
     finding: result?.finding ?? 'UNAVAILABLE',
     interpretation: result?.interpretation ?? 'unavailable',
-    explanation: result?.finding === 'SYNTHETIC_LIKE_EVIDENCE'
+    explanation: !result
+      ? ['queued', 'analyzing', 'uploading'].includes(input.state)
+        ? 'Processing has not completed. No authorship finding is available.'
+        : 'Processing is unavailable. No authorship finding is available.'
+      : result.finding === 'UNAVAILABLE'
+        ? 'The required evidence is unavailable. No authorship finding is available.'
+      : result.finding === 'SYNTHETIC_LIKE_EVIDENCE'
       ? 'Synthetic-like evidence was detected. This does not establish authorship or identify a generator.'
       : result?.finding === 'NO_POSITIVE_SAFE_EVIDENCE'
         ? 'No positive SAFE evidence was detected. This does not establish human authorship.'

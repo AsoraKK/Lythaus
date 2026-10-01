@@ -1,6 +1,6 @@
 # Lythaus private authenticity alpha
 
-Lythaus (formerly Asora) private alpha composes OpenAI Safety, the frozen SAFE-A image detector, deterministic forensic/provenance evidence, the versioned Moondream observer and a bounded GPT-OSS explanation step inside the existing Flutter, Workers, Jobs and PostgreSQL path. It is author/admin-only, private, and non-enforcing. `PUBLIC_ENFORCEMENT_NOT_APPROVED` remains in force.
+Lythaus private alpha composes OpenAI Safety, the frozen SAFE-A image detector, deterministic forensic/provenance evidence, the versioned Moondream observer and a bounded GPT-OSS explanation step inside the existing Flutter, Workers, Jobs and PostgreSQL path. It is author/admin-only, private, and non-enforcing. `PUBLIC_ENFORCEMENT_NOT_APPROVED` remains in force.
 
 ## Capability matrix
 
@@ -25,7 +25,7 @@ The only positive SAFE findings remain `SYNTHETIC_LIKE_EVIDENCE` and `NO_POSITIV
 3. Jobs verifies the outbox event, claims a five-minute lease under a single alpha runtime lock and initializes the component matrix. Text and image Safety steps use separate reuse keys. Safety is context only and can stop expensive image analysis.
 4. An eligible image may run SAFE-A through the existing internal Container binding. The binding includes case, run, revision, input hash, frozen preprocessing and runtime identities; the response is validated before persistence. Deterministic forensic arithmetic and the canonical Evidence Packet preserve missingness and independent origin axes.
 5. An explicitly requested observer step may call the existing Moondream adapter with a bounded visual-observation task. It cannot emit an authorship label, probability or generator identity. Its versioned observations remain separate evidence and do not repair unsupported SAFE interpretation.
-6. A persisted result may receive one explicit GPT-OSS explanation request. The packet is sanitized, canonical and reference-checked. The parser requires `INSUFFICIENT_EVIDENCE`, high uncertainty, review, no additional tests and no enforcement authority. SAFE is never rerun for advice.
+6. A persisted result may receive one explicit GPT-OSS explanation request. A create-time request reserves advice separately and dispatches it through the transactional outbox after analysis; a later owner request uses the same measured budget boundary. Admin advice returns `alpha_owner_advice_required` because the admin role cannot create reservations. The packet is sanitized, canonical and reference-checked. The parser requires `INSUFFICIENT_EVIDENCE`, high uncertainty, review, no additional tests and no enforcement authority. SAFE is never rerun for advice.
 7. The result is private and resumable. Review, feedback, cancellation and deletion are audited and fenced by owner, revision, lease and expiry. No alpha result enters public feeds, reputation, rewards or training data.
 
 ## Frozen identities and limitations
@@ -48,4 +48,4 @@ The 10 MiB byte and 16,777,216 decoded-pixel limits are enforced without resizin
 | Existing app route | `/authenticity` |
 | Protected frozen SAFE smoke preparation | `.github/workflows/authenticity-cpu-evaluation.yml`, `scripts/authenticity/materialize-private-evaluation.mjs`, `scripts/authenticity/sanitize-beta-cpu-receipt.mjs` |
 
-The implementation is code-complete for review and protocol-tested on this branch. Real provider calls, a checkpoint-bearing image, deployment, ordinary-input evaluation and live app acceptance remain separately approval-gated and are not claimed here.
+Current engineering and operational evidence is recorded in [the 2026-10-01 execution report](../reports/authenticity-private-alpha-execution-2026-10-01.md). Real provider calls, a checkpoint-bearing image, deployment, ordinary-input evaluation and live app acceptance remain separately gated.

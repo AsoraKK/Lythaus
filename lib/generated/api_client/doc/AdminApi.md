@@ -1881,6 +1881,8 @@ Name | Type | Description  | Notes
 
 Request one bounded private alpha explanation
 
+The current administrator role cannot create a measured advice reservation. This route returns alpha_owner_advice_required; the owner requests advice through the authenticated owner route.
+
 ### Example
 ```dart
 import 'package:lythaus_api_client/api.dart';

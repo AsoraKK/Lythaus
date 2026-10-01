@@ -22,5 +22,25 @@ void main() {
       // TODO
     });
 
+    // String purgeStatus
+    test('to test the property `purgeStatus`', () async {
+      // TODO
+    });
+
+    // String adviser
+    test('to test the property `adviser`', () async {
+      // TODO
+    });
+
+    // bool publicationEligible
+    test('to test the property `publicationEligible`', () async {
+      // TODO
+    });
+
+    // bool rewardsEligible
+    test('to test the property `rewardsEligible`', () async {
+      // TODO
+    });
+
   });
 }

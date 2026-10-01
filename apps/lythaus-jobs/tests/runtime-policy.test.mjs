@@ -230,6 +230,7 @@ test('routes every worker queue family and preserves a complete privacy data pas
     generatedAt: '2026-08-11T00:00:00.000Z', profile: { id: 'user-1' }, privateProfile: { accountabilityName: 'Private Name' },
     contactEmail: 'person@example.test',
     consentRecords: [{ id: 'consent-1', purpose: 'privacy', granted: true }],
+    authenticityAlpha: { cases: [{ case_id: 'alpha-1', text_body: 'Private submission' }], feedback: [{ message: 'Review requested' }], trainingConsent: false, publicationEligible: false },
     entitlement: { subscriptionTier: 'black' }, rewardRedemptions: [{ id: 'reward-1' }], accountEvents: [{ id: 'account-event-1', eventType: 'email_login' }],
     posts: [{ id: 'post-1' }], comments: [{ id: 'comment-1' }], follows: [{ followedId: 'user-2' }],
     reactions: [{ postId: 'post-1', reactionType: 'like' }], blocks: [{ blockedId: 'user-3' }],
@@ -244,6 +245,7 @@ test('routes every worker queue family and preserves a complete privacy data pas
   });
   assert.equal(passport.schemaVersion, 'lythaus-data-passport-v3');
   assert.equal(passport.contactEmail, 'person@example.test');
+  assert.deepEqual(passport.authenticityAlpha, { cases: [{ case_id: 'alpha-1', text_body: 'Private submission' }], feedback: [{ message: 'Review requested' }], trainingConsent: false, publicationEligible: false });
   assert.deepEqual(passport.consentRecords, [{ id: 'consent-1', purpose: 'privacy', granted: true }]);
   assert.deepEqual(passport.entitlement, { subscriptionTier: 'black' });
   assert.deepEqual(passport.rewardRedemptions, [{ id: 'reward-1' }]);

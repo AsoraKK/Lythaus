@@ -153,7 +153,8 @@ export interface KVNamespaceLike {
 
 export interface WorkersAiBinding {
   run(model: string, input: unknown, options?: {
-    gateway?: { id: string; skipCache?: boolean; cacheTtl?: number };
+    gateway?: { id: string; skipCache?: boolean; cacheTtl?: number; collectLog?: boolean; retries?: { maxAttempts: 1 }; metadata?: Record<string, string> };
+    signal?: AbortSignal;
     collectLog?: boolean;
     metadata?: Record<string, string>;
   }): Promise<unknown>;

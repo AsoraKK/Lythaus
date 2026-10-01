@@ -43,12 +43,14 @@ String? resolveAppRedirect({
   final isOnLogin = matchedLocation == '/login';
   final isOnInvite = matchedLocation.startsWith('/invite/');
   final isOnStaffModeration = matchedLocation == '/moderation';
+  final isOnPrivateAlpha = matchedLocation == '/authenticity';
   final canReviewModeration =
       user?.role == UserRole.moderator || user?.role == UserRole.admin;
 
   if (isOnInvite) {
     return null;
   }
+  if (isOnPrivateAlpha && user == null && isGuest) return '/';
   if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
     return '/invite/$pendingCode';
   }
@@ -62,6 +64,7 @@ String? resolveAppRedirect({
 /// changes. Stage A: top-level routes wrapping existing screen widgets.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
+  var pendingPrivateAlpha = false;
   ref.listen(authStateProvider, (_, _) => refresh.value += 1);
   ref.listen(guestModeProvider, (_, _) => refresh.value += 1);
   ref.listen(pendingInviteCodeProvider, (_, _) => refresh.value += 1);
@@ -70,12 +73,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
-      return resolveAppRedirect(
+      final user = ref.read(authStateProvider).valueOrNull;
+      final guest = ref.read(guestModeProvider);
+      if (guest) pendingPrivateAlpha = false;
+      if (state.matchedLocation == '/authenticity' && user == null && !guest) {
+        pendingPrivateAlpha = true;
+      }
+      final redirect = resolveAppRedirect(
         matchedLocation: state.matchedLocation,
-        user: ref.read(authStateProvider).valueOrNull,
-        isGuest: ref.read(guestModeProvider),
+        user: user,
+        isGuest: guest,
         pendingCode: ref.read(pendingInviteCodeProvider),
       );
+      if (pendingPrivateAlpha &&
+          user != null &&
+          state.matchedLocation == '/login' &&
+          redirect == '/') {
+        pendingPrivateAlpha = false;
+        return '/authenticity';
+      }
+      if (user != null && state.matchedLocation == '/authenticity') {
+        pendingPrivateAlpha = false;
+      }
+      return redirect;
     },
     routes: [
       // Login / auth choice

@@ -152,8 +152,12 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
     const input = await body(request);
     if (input.consentVersion !== PRIVATE_ALPHA_CONSENT || input.trainingConsent !== false) throw new Error('alpha_consent_required');
     const kind = contentKind(input.contentKind);
-    const text = input.text === undefined || input.text === null ? null : String(input.text);
-    if ((kind === 'text' || kind === 'text_image') && (!text || text.length < 1 || text.length > PRIVATE_ALPHA_LIMITS.maxTextCharacters)) throw new Error('alpha_text_invalid');
+    const text = input.text === undefined || input.text === null ? null : input.text;
+    if (text !== null && (typeof text !== 'string' || !text.trim() || text.length > PRIVATE_ALPHA_LIMITS.maxTextCharacters)) throw new Error('alpha_text_invalid');
+    if ((kind === 'text' || kind === 'text_image') && !text) throw new Error('alpha_text_invalid');
+    if (kind === 'image' && text !== null) throw new Error('alpha_text_invalid');
+    if (kind === 'text' && ['contentType', 'size', 'checksumSha256'].some((field) => input[field] !== undefined)) throw new Error('alpha_image_invalid');
+    if (['observerRequested', 'explanationRequested'].some((field) => input[field] !== undefined && typeof input[field] !== 'boolean')) throw new Error('alpha_input_invalid');
     if (kind === 'image' || kind === 'text_image') {
       if (!['image/png', 'image/jpeg'].includes(String(input.contentType)) || !Number.isSafeInteger(input.size) || Number(input.size) < 1 || Number(input.size) > 10 * 1024 * 1024 || typeof input.checksumSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(input.checksumSha256)) throw new Error('alpha_image_invalid');
     }
@@ -197,6 +201,8 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
     if (reservation.status !== 'reserved') return privateJson({ error: 'alpha_budget_paused' }, 429);
     try {
       await transaction(env.DB_APP_FRESH, async (client) => {
+        await client.query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('authenticity-alpha-admission:' || to_char(now() AT TIME ZONE 'UTC','YYYY-MM-DD')))");
         const counts = await client.query<{ total: string; own: string }>(
           `SELECT count(*)::text AS total, count(*) FILTER (WHERE owner_id=$1)::text AS own
              FROM moderation.authenticity_alpha
@@ -220,6 +226,16 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()+interval '15 minutes')`,
           [id, userId, kind, text, hash, image ? input.contentType : 'text/plain', uploadSessionId, originalKey, image ? 'uploading' : 'queued', PRIVATE_ALPHA_VERSION, observerRequested, explanationRequested],
         );
+        if (explanationRequested) {
+          const advice = await reserveBudgetInTransaction(client, {
+            period: new Date().toISOString().slice(0, 7), operation: 'authenticity_alpha_advice', operationClass: 'optional',
+            estimatedCostUsd: admission.measured.adviserReservationUsd, idempotencyKey: `alpha-advice:${id}:1`, correlationId: id,
+            provider: 'cloudflare-workers-ai', config: appBudget(env),
+            scope: { operationNames: ['authenticity_alpha_case', 'authenticity_beta_case', 'authenticity_alpha_advice'], limitUsd: admission.measured.authenticityLimitUsd },
+          });
+          if (advice.status !== 'reserved') throw new Error('alpha_budget_paused');
+          await client.query('UPDATE moderation.authenticity_alpha SET advice_attempts=1,advice_reservation_id=$2 WHERE case_id=$1', [id, advice.id]);
+        }
         await client.query(`UPDATE system.cost_budget_reservations SET status='committed',updated_at=now() WHERE id=$1`, [reservation.id]);
         if (!image) {
           await client.query(
@@ -251,6 +267,7 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
     return new Response(object.body, { headers: { 'content-type': row.content_type, 'cache-control': 'private, no-store', 'content-security-policy': "default-src 'none'; sandbox" } });
   }
   if (request.method === 'POST' && action === 'finalise') {
+    if (row.upload_session_id && row.original_etag && row.state !== 'uploading') return privateJson({ caseId, status: row.state }, 202);
     const config = await readBetaConfig(env);
     requireAlphaAdmission(env, config, userId, { observer: row.observer_requested, adviser: row.explanation_requested });
     if (!row.upload_session_id || row.state !== 'uploading' || !env.MEDIA_QUARANTINE) throw new Error('alpha_upload_expired');
@@ -264,8 +281,7 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
     const saved = await env.MEDIA_QUARANTINE.put(row.original_key!, bytes, { onlyIf: { etagDoesNotMatch: '*' }, httpMetadata: { contentType: session.rows[0].content_type } });
     const original = saved ?? await env.MEDIA_QUARANTINE.head(row.original_key!);
     if (!original) throw new Error('alpha_upload_unavailable');
-    try {
-      await transaction(env.DB_APP_FRESH, async (client) => {
+    await transaction(env.DB_APP_FRESH, async (client) => {
         const changed = await client.query(`UPDATE moderation.authenticity_alpha SET state='queued',original_etag=$3,updated_at=now() WHERE case_id=$1 AND owner_id=$2 AND state='uploading' AND expires_at>now() AND deleted_at IS NULL RETURNING case_id`, [caseId, userId, original.httpEtag]);
         if (changed.rowCount !== 1) throw new Error('alpha_case_not_ready');
         await client.query(`INSERT INTO media.objects(id,owner_id,object_key,content_type,byte_size,sha256,state) VALUES($1,$2,$3,$4,$5,$6,'alpha_private') ON CONFLICT (id) DO NOTHING`, [caseId, userId, row.original_key, session.rows[0].content_type, bytes.length, row.input_hash]);
@@ -275,12 +291,8 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
         await client.query(`UPDATE media.storage_ledger SET bytes_reserved=greatest(0,bytes_reserved-$2),bytes_approved=bytes_approved+$2,object_count=object_count+1 WHERE user_id=$1`, [userId, bytes.length]);
         await client.query(`INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,actor_id,payload) VALUES($1,'moderation.authenticity_alpha.requested','authenticity_alpha_case',$2,$3,$4::jsonb)`, [uuidv7(), caseId, userId, JSON.stringify({ caseId, revision: row.revision, operation: 'analysis' })]);
         await client.query(`SELECT privacy.record_alpha_location($1,$2)`, [userId, caseId]);
-      });
-    } catch (error) {
-      if (saved) await env.MEDIA_QUARANTINE.delete(row.original_key!);
-      throw error;
-    }
-    await env.MEDIA_QUARANTINE.delete(session.rows[0].object_key);
+    });
+    await env.MEDIA_QUARANTINE.delete(session.rows[0].object_key).catch(() => undefined);
     return privateJson({ caseId, status: 'queued' }, 202);
   }
   if (request.method === 'POST' && action === 'advice') {
@@ -304,7 +316,7 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
         config: appBudget(env),
       });
       if (reservation.status !== 'reserved') throw new Error('alpha_budget_paused');
-      const changed = await client.query<{ revision: number }>(`UPDATE moderation.authenticity_alpha SET state='analyzing',advice_attempts=advice_attempts+1,advice_reservation_id=$3,updated_at=now() WHERE case_id=$1 AND owner_id=$2 AND revision=$4 AND result IS NOT NULL AND advice_attempts=0 AND deleted_at IS NULL RETURNING revision`, [caseId, userId, reservation.id, current.revision]);
+      const changed = await client.query<{ revision: number }>(`UPDATE moderation.authenticity_alpha SET state='queued',advice_attempts=advice_attempts+1,advice_reservation_id=$3,updated_at=now() WHERE case_id=$1 AND owner_id=$2 AND revision=$4 AND result IS NOT NULL AND advice_attempts=0 AND deleted_at IS NULL RETURNING revision`, [caseId, userId, reservation.id, current.revision]);
       if (!changed.rowCount) throw new Error('alpha_advice_attempt_consumed');
       await client.query(`INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,actor_id,payload) VALUES($1,'moderation.authenticity_alpha.requested','authenticity_alpha_case',$2,$3,$4::jsonb)`, [uuidv7(), caseId, userId, JSON.stringify({ caseId, revision: current.revision, operation: 'advice' })]);
       return { reservationId: reservation.id };
@@ -338,7 +350,7 @@ async function routeAlphaApi(request: Request, env: AlphaEnv, userId: string): P
 }
 
 async function expireAlphaCases(env: AlphaEnv, userId: string): Promise<void> {
-  const expired = await query<{ case_id: string }>(env.DB_APP_FRESH, `SELECT case_id FROM moderation.authenticity_alpha WHERE owner_id=$1 AND expires_at<=now() AND state IN ('uploading','queued','analyzing','paused') AND deleted_at IS NULL`, [userId]);
+  const expired = await query<{ case_id: string }>(env.DB_APP_FRESH, `SELECT case_id FROM moderation.authenticity_alpha WHERE owner_id=$1 AND expires_at<=now() AND state NOT IN ('cancelled','deleted','expired') AND deleted_at IS NULL`, [userId]);
   for (const item of expired.rows) {
     try {
       await scheduleAlphaPurge(env.DB_APP_FRESH, userId, item.case_id, 'expired');

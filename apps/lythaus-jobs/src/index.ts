@@ -2274,6 +2274,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         notificationDevices,
         betaCases,
         betaFeedback,
+        alphaCases,
+        alphaFeedback,
       ] = await Promise.all([
         query(this.env.DB_JOBS_FRESH, `SELECT id, body, declared_creation_mode, visibility, moderation_state, geo_scope, place_id, published_at, created_at FROM content.posts WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, post_id, parent_id, body, moderation_state, created_at FROM content.comments WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
@@ -2318,6 +2320,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         query(this.env.DB_JOBS_FRESH, `SELECT id, platform, active, created_at, revoked_at FROM feed.notification_devices WHERE user_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT case_id, state, consent_version, review_state, created_at, updated_at, expires_at, result->>'finding' AS finding, result->'advisory'->>'status' AS advisory_status FROM moderation.authenticity_beta WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT f.id, f.case_id, f.kind, f.message, f.policy_version, f.created_at FROM moderation.authenticity_beta_feedback f JOIN moderation.authenticity_beta b ON b.case_id=f.case_id WHERE b.owner_id=$1 AND b.deleted_at IS NULL ORDER BY f.created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT case_id, content_kind, text_body, state, consent_version, review_state, created_at, updated_at, expires_at, result->>'finding' AS finding, result->'explanation'->>'status' AS adviser_status FROM moderation.authenticity_alpha WHERE owner_id=$1 AND deleted_at IS NULL ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, `SELECT f.id, f.case_id, f.kind, f.message, f.policy_version, f.created_at FROM moderation.authenticity_alpha_feedback f JOIN moderation.authenticity_alpha a ON a.case_id=f.case_id WHERE a.owner_id=$1 AND a.deleted_at IS NULL ORDER BY f.created_at`, [subjectId]),
       ]);
       return buildPrivacyDataPassport({
         generatedAt: new Date().toISOString(),
@@ -2346,6 +2350,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         notificationPreferences: notificationPreferences.rows[0] ?? null,
         notificationDevices: notificationDevices.rows,
         authenticityBeta: { cases: betaCases.rows, feedback: betaFeedback.rows, trainingConsent: false, publicationEligible: false },
+        authenticityAlpha: { cases: alphaCases.rows, feedback: alphaFeedback.rows, trainingConsent: false, publicationEligible: false },
         activity: userActivity.rows,
         submittedAppeals: submittedAppeals.rows,
         reviewerQualification: reviewerQualification.rows[0] ?? null,

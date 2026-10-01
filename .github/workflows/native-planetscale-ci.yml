@@ -18,6 +18,9 @@ on:
       - 'scripts/ci/validate-first-admin-bootstrap-postgres17.mjs'
       - 'scripts/ci/validate-authenticity-beta-postgres17.mjs'
       - 'scripts/ci/validate-authenticity-alpha-postgres17.mjs'
+      - 'scripts/ci/validate-authenticity-alpha-migrations-postgres17.mjs'
+      - 'scripts/ci/run-coordinator-coverage.mjs'
+      - 'scripts/tests/coordinator-coverage-diagnostics.test.mjs'
       - 'apps/lythaus-*/src/authenticity-beta.ts'
       - 'apps/lythaus-*/src/authenticity-alpha.ts'
       - 'packages/authenticity/src/beta*.ts'
@@ -64,6 +67,7 @@ jobs:
           npm ci --ignore-scripts
           npm run validate:planetscale-migrations
           npm run validate:planetscale-extensions
+          node --test scripts/tests/coordinator-coverage-diagnostics.test.mjs
       - name: Apply and verify complete PostgreSQL 17 baseline
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
@@ -83,13 +87,7 @@ jobs:
       - name: Enforce executable coordinator coverage on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
-        run: >-
-          node --experimental-strip-types --experimental-test-module-mocks
-          --experimental-test-coverage
-          '--test-coverage-include=**/lythaus-auth-acceptance-coordinator/src/index.ts'
-          --test-coverage-lines=80 --test-coverage-branches=80
-          --test --test-name-pattern='real coordinator' --test-timeout=180000
-          apps/lythaus-public-api/tests/auth-journey.postgres.mjs
+        run: node scripts/ci/run-coordinator-coverage.mjs
       - name: Exercise private beta handlers against PostgreSQL 17
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
@@ -98,3 +96,10 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: node --experimental-strip-types --experimental-test-module-mocks scripts/ci/validate-authenticity-alpha-postgres17.mjs
+      - name: Prove alpha migration transaction rollback on fresh PostgreSQL 17
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_alpha_rollbacks?sslmode=disable
+          PGPASSWORD: postgres
+        run: |
+          psql --host=127.0.0.1 --username=postgres --dbname=postgres --command='CREATE DATABASE lythaus_alpha_rollbacks'
+          node scripts/ci/validate-authenticity-alpha-migrations-postgres17.mjs

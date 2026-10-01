@@ -1,0 +1,301 @@
+{
+  "schemaVersion": "lythaus-private-alpha-software-execution-v1",
+  "observedAtUtc": "2026-10-01T10:18:14.691655+00:00",
+  "baseSha": "164725d5b186363395ebad9dcbbe99e9915430df",
+  "engineeringSourceSha": "9e1a4b7fc5e722cdba79742a2940955ad6a3bb37",
+  "branch": "codex/private-alpha-readiness-20261001",
+  "readiness": "BLOCKED_OWNER_ARTIFACT_PROVIDER_GATES",
+  "publicEnforcement": "PUBLIC_ENFORCEMENT_NOT_APPROVED",
+  "modelEvaluationPerformed": false,
+  "productionWrites": 0,
+  "deployments": 0,
+  "realInferenceCalls": 0,
+  "paidProviderCalls": 0,
+  "ciObservation": {
+    "headSha": "eae12a639a3f49826b65f19e99a506c373e3d035",
+    "canonicalRun": "https://github.com/AsoraKK/Lythaus/actions/runs/36849900449",
+    "canonicalJobsPassed": 7,
+    "additionalPassedChecks": ["CodeQL", "dependency-review", "mobile-security", "secret-scan"],
+    "postgresRun": "https://github.com/AsoraKK/Lythaus/actions/runs/36849900247",
+    "postgresState": "FAIL_EXISTING_COORDINATOR_COVERAGE_BEFORE_ALPHA",
+    "postgresAlphaAndRollbackSteps": "SKIPPED",
+    "artifactLogAccess": "BLOCKED_HOST_403_NO_BYPASS",
+    "finalExactHeadChecksRequired": true
+  },
+  "supplementalValidation": [
+    {
+      "command": "node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-public-api/tests/*.postgres.mjs apps/lythaus-admin-api/tests/*.postgres.mjs",
+      "database": "local disposable lythaus_auth_test_alpha_sequence, PostgreSQL 17.11",
+      "prerequisites": ["node scripts/ci/validate-planetscale-postgres17.mjs", "node scripts/ci/validate-first-admin-bootstrap-postgres17.mjs", "node --test scripts/tests/auth-incident-grants.postgres.mjs"],
+      "state": "PASS",
+      "passed": 27,
+      "log": { "path": "/workspace/lythaus-alpha-evidence/final-ci/pg-sequence-auth.log", "sha256": "a116c6f6072ab6e7ce73b8c1622065087f7f22f689926cc9ee94c1ddbe7fa8e7", "bytes": 6168 }
+    },
+    {
+      "command": "node --experimental-strip-types --experimental-test-module-mocks --experimental-test-coverage --test-coverage-include=**/lythaus-auth-acceptance-coordinator/src/index.ts --test-coverage-lines=80 --test-coverage-branches=80 --test --test-name-pattern='real coordinator' --test-timeout=180000 apps/lythaus-public-api/tests/auth-journey.postgres.mjs",
+      "database": "same local database after the full canonical prerequisite sequence",
+      "state": "PASS",
+      "passed": 1,
+      "coveragePercent": { "lines": 99.52, "branches": 82.78, "functions": 97.26 },
+      "log": { "path": "/workspace/lythaus-alpha-evidence/final-ci/pg-sequence-coverage.log", "sha256": "a7d204e7f243e8fe1c1c6fe0ed6202560e49550ca77d8cca0f68fb6655633917", "bytes": 1481 }
+    },
+    {
+      "command": "node scripts/ci/run-coordinator-coverage.mjs",
+      "database": "same local database, same executable test/thresholds/timeout",
+      "state": "PASS",
+      "passed": 1,
+      "log": { "path": "/workspace/lythaus-alpha-evidence/final-ci/coordinator-runner.log", "sha256": "1cce15c742ece9a56c70641a4a49929150c32880391d4d7fbae8e2134e4f1356", "bytes": 1479 }
+    },
+    {
+      "command": "node --test scripts/tests/coordinator-coverage-diagnostics.test.mjs",
+      "state": "PASS",
+      "passed": 5,
+      "scope": "redaction, bounded diagnostics, executable coverage scope and actual child-failure propagation",
+      "log": { "path": "/workspace/lythaus-alpha-evidence/final-ci/coordinator-diagnostics.log", "sha256": "f161e9eb5fc0ce17d1190509f050bca22054eeccdba7202a9afd9aac08e7d4d3", "bytes": 1270 }
+    }
+  ],
+  "validation": [
+    {
+      "command": "npm run test:authenticity-private-alpha",
+      "state": "PASS",
+      "passed": 29,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/alpha.log",
+        "sha256": "355aac5c8ced929c73f68e720a45ee850c47ef48af4dfa56946ef55d57346464",
+        "bytes": 7682
+      }
+    },
+    {
+      "command": "npm run test:native-architecture",
+      "state": "PASS",
+      "passed": 268,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/native.log",
+        "sha256": "00358b6b0f7f954c7a22ba7c7292b8925850273e737b1cd34ab79a7063985143",
+        "bytes": 73900
+      }
+    },
+    {
+      "command": "node --experimental-strip-types --test packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs",
+      "state": "PASS",
+      "passed": 30,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/protocol-matrix.log",
+        "sha256": "34069c71104b24850080a3dd64cf1d4d9ca3c26eff6c2c8bf0b4cb88c29fc37d",
+        "bytes": 6622
+      }
+    },
+    {
+      "command": "npm run typecheck:native",
+      "state": "PASS",
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/typecheck.log",
+        "sha256": "3091f025a2d92190b05208de4ed65a296e26747f4cf8e28fbd7946cd0243d47d",
+        "bytes": 83
+      }
+    },
+    {
+      "command": "npm run test:critical-coverage",
+      "state": "PASS",
+      "domainCategories": 13,
+      "productionModules": 36,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/critical.log",
+        "sha256": "e9d9528a7b453282eecb89f7ef790153bb17532e163a20747943772ee2b14568",
+        "bytes": 80588
+      }
+    },
+    {
+      "command": "PLANETSCALE_PG17_TEST_DATABASE_URL=<fresh-local-PG17-URL> npm run validate:planetscale-postgres17",
+      "state": "PASS",
+      "canonicalMigrations": 20,
+      "expectedTables": 102,
+      "localRelations": 103,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/pg17-baseline.log",
+        "sha256": "d6c1e1c89826b98695b86224f397800e9147aa3e8b439285e4e9777ddc392d62",
+        "bytes": 6277
+      }
+    },
+    {
+      "command": "PLANETSCALE_PG17_TEST_DATABASE_URL=<same-local-PG17-URL> node --experimental-strip-types --experimental-test-module-mocks scripts/ci/validate-authenticity-alpha-postgres17.mjs",
+      "state": "PASS",
+      "scenarioGroups": 6,
+      "protocolSafetyCalls": 7,
+      "protocolSafeCalls": 1,
+      "protocolAdviceCalls": 1,
+      "realInferenceCalls": 0,
+      "paidProviderCalls": 0,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/pg17-alpha.log",
+        "sha256": "e008b3e83c86bebaeef48e60974e5cb6e7570a09e00a9af207795d9b12eb7442",
+        "bytes": 956
+      }
+    },
+    {
+      "command": "PLANETSCALE_PG17_TEST_DATABASE_URL=<fresh-local-lythaus_alpha_-URL> node scripts/ci/validate-authenticity-alpha-migrations-postgres17.mjs",
+      "state": "PASS",
+      "forwardAndTransactionRollbackMigrations": [
+        "0017",
+        "0018",
+        "0019",
+        "0020"
+      ],
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/pg17-rollbacks.log",
+        "sha256": "789f136e0d312a17eec7b355a33e8e5d689bbecd68c04063ef365ad3137c29a0",
+        "bytes": 393
+      }
+    },
+    {
+      "command": "npm run openapi:test:contract",
+      "state": "PASS",
+      "passed": 33,
+      "skippedLiveTests": 17,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/openapi-contract.log",
+        "sha256": "f6108b47fb6c62e7498cd1117aa44592e84cc20ca28d478f7d39b3bbaaae62f8",
+        "bytes": 636
+      }
+    },
+    {
+      "command": "npm run openapi:test:dart",
+      "state": "PASS",
+      "passed": 939,
+      "existingNonfatalGeneratedAnalyzerFindings": 53,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/openapi-dart.log",
+        "sha256": "910cd392e45337cc6e50fa764244f2f5905ece62eb3765f54f05d1a8117c672f",
+        "bytes": 422797
+      }
+    },
+    {
+      "command": "flutter test test/features/authenticity/alpha_api_test.dart test/features/authenticity/alpha_screen_test.dart test/core/routing/app_router_test.dart",
+      "state": "PASS",
+      "passed": 12,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/flutter-alpha-final.log",
+        "sha256": "330ea8f3c034b36fe87ec46ed895345bcd692a515ecac1d5510a4be591c5017d",
+        "bytes": 6857
+      }
+    },
+    {
+      "command": "flutter analyze lib/features/authenticity lib/core/routing/app_router.dart test/core/routing/app_router_test.dart",
+      "state": "PASS",
+      "issues": 0,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/flutter-analyze.log",
+        "sha256": "1e26ed578650c35fb1d8b4de3d0d0ef343b62235cc537483311d59db2b1889bb",
+        "bytes": 5303
+      }
+    },
+    {
+      "command": "npm run format-check",
+      "state": "PASS",
+      "handMaintainedFiles": 491,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/dart-format.log",
+        "sha256": "91a38cf20025d4718a87c9f1853b569df91dc4e49b19a316643fdcb98fecc11b",
+        "bytes": 438
+      }
+    },
+    {
+      "command": "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1 AUTH_QA_DIR=/workspace/lythaus-alpha-evidence/screenshots node --experimental-strip-types --test --test-timeout=120000 scripts/tests/flutter-authenticity-alpha.browser.mjs",
+      "state": "PASS",
+      "passed": 2,
+      "viewports": [
+        "Chromium 1440x1100",
+        "WebKit 390x1100"
+      ],
+      "realProviderCalls": 0,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/browser-alpha.log",
+        "sha256": "877197cc00a1c1007c3c7c1871d586698c297ff967f0bd00847ff1013e9c42f4",
+        "bytes": 872
+      }
+    },
+    {
+      "command": "npm run test:authenticity-cpu-orchestration",
+      "state": "PASS",
+      "passed": 9,
+      "checkpointLoaded": false,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/cpu-controls.log",
+        "sha256": "37c62fcadbfaa0e079ec1e3d135355f3959495335db8274bb00ce9169a9c1a18",
+        "bytes": 2266
+      }
+    },
+    {
+      "command": "python3 scripts/tests/test_beta_cpu_smoke.py",
+      "state": "PASS",
+      "passed": 3,
+      "checkpointLoaded": false,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/cpu-preflight.log",
+        "sha256": "921b60a7fd52e978fbb551cacd29df2d6708879400278e1fcc70fceeb0c6f8e0",
+        "bytes": 101
+      }
+    },
+    {
+      "command": "python3 apps/lythaus-authenticity-runtime/container/test_supervisor.py",
+      "state": "PASS",
+      "passed": 4,
+      "checkpointLoaded": false,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/supervisor.log",
+        "sha256": "3f78fefd577dd2ff5c2ec538f4b11fcc1dae5a98ba78961a50605fdbefc79bd7",
+        "bytes": 102
+      }
+    },
+    {
+      "command": "npm run validate:production-release-contract",
+      "state": "PASS",
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/release-contract.log",
+        "sha256": "065b494812c6d31d955b9ea2fc09e37cb7b178e6e7ed97d8d720c17007445c19",
+        "bytes": 183
+      }
+    },
+    {
+      "command": "npm run validate:workflow-action-pins",
+      "state": "PASS",
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/workflow-pins.log",
+        "sha256": "d42525e65965b76a3dc9bf423c6b6a2506a11180ddf21bed0f8496ef0e147c0f",
+        "bytes": 183
+      }
+    },
+    {
+      "command": ".cache/tools/gitleaks protect --staged --no-banner --redact --config .gitleaks.toml",
+      "state": "PASS",
+      "leaks": 0,
+      "log": {
+        "path": "/workspace/lythaus-alpha-evidence/staged-secret-scan.log",
+        "sha256": "03e51780a7adbc465b85f1da4b6fed6ccd4ea6ccc7c806a7df22401dd71c9e9f",
+        "bytes": 149
+      }
+    }
+  ],
+  "browserScreenshots": [
+    {
+      "path": "/workspace/lythaus-alpha-evidence/screenshots/alpha-chromium-1440.png",
+      "sha256": "bdff3f291f92970af5c89fc134186e284b6f5cfc155e0d4a056ad8777b6be47b",
+      "bytes": 143527
+    },
+    {
+      "path": "/workspace/lythaus-alpha-evidence/screenshots/alpha-webkit-390.png",
+      "sha256": "21e143ee3f1b25d054a84d45d1da7e27ed573e1eff86dea7d1c9d27f4b74e02d",
+      "bytes": 127883
+    }
+  ],
+  "limitations": [
+    "Local API/Safety/R2/SAFE/adviser providers are explicit synthetic protocol fixtures, not model evidence.",
+    "Browser cookie fixture validates route restoration; live login/provider/native mobile file picking is not covered.",
+    "OpenAPI live tests are skipped; ordinary live private acceptance and rollback are NOT_RUN.",
+    "Local pinned code-only Docker build hit Docker Hub HTTP 429; no bypass attempted.",
+    "Real SAFE parity, cgroup peak, latency, serving digest and allowance are unmeasured.",
+    "Live flags/deployment and migration ledger/grants remain unverified; source defaults/schema metadata are not operational receipts.",
+    "September 29 evaluation approval expired and protected evaluation environment/private artifacts are missing.",
+    "CI final head/test-merge identities and results must be read from the draft PR checks."
+  ]
+}

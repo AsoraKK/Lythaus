@@ -3,7 +3,7 @@ import test, { mock } from 'node:test';
 
 const CASE_ID = '01990000-0000-7000-8000-000000000301';
 const OWNER = '01990000-0000-7000-8000-000000000302';
-const state = { hold: false, purgeFailure: true, queries: [], transactions: 0, mode: 'purge' };
+const state = { hold: false, purgeFailure: true, queries: [], transactions: 0, mode: 'purge', uploadExpiry: null };
 const result = (rows = [], rowCount = rows.length) => ({ rows, rowCount });
 
 function purgeRow() {
@@ -15,6 +15,7 @@ function purgeRow() {
     upload_session_id: CASE_ID,
     original_key: `alpha-original/${OWNER}/${CASE_ID}/1`,
     upload_key: `quarantine/${OWNER}/${CASE_ID}`,
+    upload_expires_at: state.uploadExpiry,
     purge_state: 'pending',
     purge_attempts: 0,
     storage_released_at: null,
@@ -26,6 +27,7 @@ mock.module(new URL('../src/index.ts', import.meta.url), { cache: true, namedExp
   query: async (_binding, sql) => {
     state.queries.push(sql);
     if (sql.includes('FROM moderation.authenticity_alpha a') && sql.includes('a.deleted_at IS NOT NULL')) return result([{ ...purgeRow(), purge_state: state.mode === 'blocked' ? 'blocked' : 'pending' }]);
+    if (sql.includes('privacy.alpha_subject_has_hold')) return result([{ active: state.hold }]);
     if (sql.includes('SELECT count(*)::text AS count')) return result([{ count: '1' }]);
     return result();
   },
@@ -107,4 +109,28 @@ test('cleanup worker retries a blocked purge after the legal hold clears', async
   const retried = await purgeAlphaMedia({ connectionString: 'postgres://unused' }, bucket, CASE_ID);
   assert.equal(retried.completed, 1);
   assert.ok(state.queries.some((sql) => sql.includes("SET purge_state='pending'")));
+});
+
+test('a live upload capability keeps purge retryable until expiry and drain grace', async () => {
+  state.mode = 'purge'; state.hold = false; state.queries = [];
+  state.uploadExpiry = new Date(Date.now() + 60000);
+  let deletes = 0;
+  const bucket = { delete: async () => { deletes += 1; } };
+  const early = await purgeAlphaMedia({ connectionString: 'postgres://unused' }, bucket, CASE_ID);
+  assert.equal(early.completed, 0);
+  assert.equal(deletes, 1);
+  assert.equal(state.queries.some((sql) => sql.includes("SET purge_state='completed'")), false);
+  state.uploadExpiry = new Date(Date.now() - 180000);
+  assert.equal((await purgeAlphaMedia({ connectionString: 'postgres://unused' }, bucket, CASE_ID)).completed, 1);
+  assert.equal(deletes, 2);
+  state.uploadExpiry = null;
+});
+
+test('a hold introduced after scheduling prevents R2 deletion', async () => {
+  state.mode = 'purge'; state.hold = true; state.queries = [];
+  let deletes = 0;
+  await purgeAlphaMedia({ connectionString: 'postgres://unused' }, { delete: async () => { deletes += 1; } }, CASE_ID);
+  assert.equal(deletes, 0);
+  assert.ok(state.queries.some((sql) => sql.includes("purge_state='blocked'")));
+  state.hold = false;
 });
