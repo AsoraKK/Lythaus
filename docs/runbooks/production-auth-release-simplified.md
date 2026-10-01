@@ -52,6 +52,58 @@ bypass. Exact-main source/security evidence, provider/schema checks, protected
 environment approvals, candidate readiness, rollback, activation, and public
 production smoke remain required.
 
+Owner testing is restricted to the existing authentication deployment. Both
+production entrypoints reject a configured authenticity beta release receipt
+before provider mutation, using only a presence boolean in evidence. Turnstile
+and email lifecycle checks run in verify-existing mode: missing widgets, queues
+or subscriptions and configuration drift stop the release without creating or
+patching resources. Existing transactional-email encryption keys are preserved;
+key bootstrap and coordinator key changes are prohibited in this mode. Normal
+candidate code/credential binding, Worker traffic activation and the existing
+admin route remain deployment operations requiring separate owner approval.
+Activating Jobs resumes live queue/cron work; rollback cannot reverse delivered
+emails or completed background work.
+
+The local real browser/handler test requires disposable PostgreSQL 17, a built
+marketing artifact and the canonical Flutter web artifact. It routes all browser
+hosts through a local TLS proxy, uses the actual API handlers and restricted
+database roles, and replaces only Turnstile/password screening/email providers
+with synthetic fixtures. Run it with an explicitly local
+`PLANETSCALE_PG17_TEST_DATABASE_URL` whose database name begins
+`lythaus_auth_test`, `AUTH_WEB_ARTIFACT_DIR` pointing to the web artifact, and
+`node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 --test-timeout=180000 apps/lythaus-public-api/tests/auth-journey.browser.postgres.mjs`.
+Use a dedicated fixture database and run email-relay suites separately against
+it so independent synthetic encryption keys cannot claim each other's outbox.
+This proves local cookie handoff and retry behavior, not production mail delivery.
+For an already installed WebKit executable, `WEBKIT_EXECUTABLE` may select its
+local wrapper when the workspace provides shared libraries outside the system
+library cache. No production hosts are contacted by this fixture.
+
+A trusted browser logout retry with no refresh cookie acknowledges
+`sessionRevocation=no_browser_session` and expires the device cookie without
+changing any account or recording an account revocation. This lets an
+interrupted logout finish after the browser applied the successful response's
+cookie deletion. Missing or untrusted origins, malformed/duplicate cookies,
+native credentials, and refresh requests keep their existing validation.
+
+The public signup and recovery handlers do not consult acceptance mailbox
+secrets or recipient/domain allowlists. Production email bindings in source
+restrict only the sender to `no-reply@mail.lythaus.co`; this is not a recipient
+restriction. `AUTHENTICATED_ACCEPTANCE_PROVEN` is protected readiness evidence,
+not a public signup admission flag. ADR003 manual attestations and dedicated
+mailbox credentials belong to acceptance execution; authenticity cohort
+allowlists govern the separate private authenticity APIs.
+
+Source configuration does not prove live sending permission. Cloudflare's
+[sending limits](https://developers.cloudflare.com/email-service/platform/limits/)
+allow arbitrary recipients after a sending domain is onboarded, subject to
+account quotas; before onboarding, only verified destinations are available.
+[Send binding restrictions](https://developers.cloudflare.com/email-service/configuration/send-bindings/)
+can separately constrain recipients. Inventory evidence that retains only
+binding name/type/presence cannot establish those live restrictions. An enabled
+domain record, local fixtures, or a no-send audit cannot certify mailbox
+delivery or general availability.
+
 This path does not create or activate a Keeper/coordinator candidate, does not
 require either `CODEX_TEST_EMAIL` mailbox secret, and does not send a test email
 or create an account. Only the owner enters private email/password data through

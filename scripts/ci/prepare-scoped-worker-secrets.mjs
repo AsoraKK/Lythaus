@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
+import { assertOwnerTestingScopedKeys } from './verify-owner-testing-auth-scope.mjs';
 
 const { Client } = pg;
 
@@ -144,6 +145,7 @@ async function main() {
     ? secretNames(readJson(requiredEnvironment('COORDINATOR_SECRET_INVENTORY_FILE')))
     : new Set();
   const lifecycle = classifyScopedKeyBindings({ publicNames, jobsNames, coordinatorNames, coordinatorManaged });
+  assertOwnerTestingScopedKeys(lifecycle, process.env.OWNER_TESTING_DEPLOYMENT === 'true');
   const requiresBootstrap = lifecycle.transactionalEmail.action === 'bootstrap' || lifecycle.acceptanceState.action === 'bootstrap';
   const counts = requiresBootstrap ? await readBootstrapLedgerCounts() : undefined;
   if (counts) assertBootstrapLedgerPreconditions(counts, lifecycle);

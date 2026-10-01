@@ -109,6 +109,11 @@ jobs:
           fetch-depth: 0
       - name: Require explicit production confirmation
         run: test "${{ inputs.confirm_production }}" = true
+      - name: Restrict owner testing to authentication deployment
+        env:
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.release_mode == 'owner_testing' }}
+          AUTHENTICITY_BETA_RELEASE_RECEIPT_PRESENT: ${{ vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' }}
+        run: node scripts/ci/verify-owner-testing-auth-scope.mjs
       - name: Resolve canonical Pages configuration from protected production variables
         id: canonical_config
         env:
