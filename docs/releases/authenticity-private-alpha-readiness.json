@@ -1,12 +1,14 @@
 {
   "schemaVersion": "lythaus-authenticity-private-alpha-readiness-v1",
   "source": {
-    "baseSha": "8c5f7ffed09653d05aeaed3c09a88e48e683071c",
-    "branch": "feat/authenticity-private-alpha",
-    "validatedSourceSha": null,
+    "baseSha": "164725d5b186363395ebad9dcbbe99e9915430df",
+    "branch": "codex/private-alpha-readiness-20261001",
+    "validatedSourceSha": "9e1a4b7fc5e722cdba79742a2940955ad6a3bb37",
     "productionSourceSha": null
   },
   "scope": "AUTHOR_AND_ADMIN_ONLY_PRIVATE_FLUTTER_ALPHA",
+  "readiness": "BLOCKED_OWNER_ARTIFACT_PROVIDER_GATES",
+  "executionReport": "docs/reports/authenticity-private-alpha-execution-2026-10-01.md",
   "publicEnforcement": "PUBLIC_ENFORCEMENT_NOT_APPROVED",
   "components": {
     "openaiSafety": { "text": "IMPLEMENTED_GATED", "image": "IMPLEMENTED_GATED", "liveCalls": 0 },
@@ -19,8 +21,8 @@
     "ef5": "UNAVAILABLE"
   },
   "limits": { "maxFileBytes": 10485760, "maxDecodedPixels": 16777216, "caseAgeMinutes": 15, "adviserAttemptsPerCase": 1 },
-  "testing": { "protocolTests": "PASSED", "flutterTargetedAnalyze": "PASSED", "evaluationWorkflow": "READY_NOT_RUN", "ordinaryInputEvaluation": "NOT_RUN", "liveAppAcceptance": "NOT_RUN", "rollbackObserved": "NOT_RUN" },
-  "deployment": { "worker": "NOT_DEPLOYED", "flutter": "NOT_DEPLOYED", "migration0018": "NOT_APPLIED", "migration0019": "NOT_APPLIED", "servingImageDigest": null },
+  "testing": { "protocolTests": "PASSED", "flutterTargetedAnalyze": "PASSED", "evaluationWorkflow": "BLOCKED_ENVIRONMENT_BUNDLE_AUTHORIZATION", "ordinaryInputEvaluation": "NOT_RUN", "liveAppAcceptance": "NOT_RUN", "rollbackObserved": "NOT_RUN", "localPg17ProtocolScenarioGroups": 6, "localPg17MigrationTransactionRollback": "PASSED_0017_THROUGH_0020", "realInferenceCallsThisExecution": 0, "paidProviderCallsThisExecution": 0 },
+  "deployment": { "worker": "UNKNOWN_PROVIDER_EVIDENCE_REQUIRED", "flutter": "UNKNOWN_PROVIDER_EVIDENCE_REQUIRED", "privateFlags": "SOURCE_DEFAULTS_OFF_LIVE_UNKNOWN", "migration0018": "OBSERVED_SCHEMA_PRESENT_LEDGER_GRANTS_UNVERIFIED", "migration0019": "OBSERVED_SCHEMA_PRESENT_LEDGER_GRANTS_UNVERIFIED", "currentCanonicalMigration": "0020_auth_recovery_delivery.sql", "servingImageDigest": null },
   "cost": { "providerCallsReserved": false, "measuredCaseReservationUsd": null, "billedUsd": null },
-  "ownerActions": ["Configure the protected private-evaluation bundle URL/token and retention scope", "Approve finite Safety/Moondream/GPT-OSS provider-call envelope", "Approve exact reviewed deployment and migration scope after CI", "Provide current usage evidence before activation" ]
+  "ownerActions": ["Supply exact permitted private SAFE original/descendant bundle, checkpoint, provenance and private evidence destination", "Configure reviewer-protected authenticity-private-evaluation and secure existing bundle/dispatch bindings", "Issue fresh one-use exact-current-main evaluation authorization; September 29 approval expired", "Provide current compute/price/usage evidence and approve finite real parity/sizing operations", "Supply authorized read-only live Worker/flag/binding and migration ledger/checksum/grant reconciliation receipts", "Approve exact reviewed disabled deployment and any separately reconciled missing migration scope after CI", "Approve finite text/image/mixed Safety/SAFE/Moondream/GPT-OSS acceptance and observe rollback" ]
 }
