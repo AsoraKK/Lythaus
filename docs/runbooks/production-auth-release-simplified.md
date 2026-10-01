@@ -71,7 +71,7 @@ database roles, and replaces only Turnstile/password screening/email providers
 with synthetic fixtures. Run it with an explicitly local
 `PLANETSCALE_PG17_TEST_DATABASE_URL` whose database name begins
 `lythaus_auth_test`, `AUTH_WEB_ARTIFACT_DIR` pointing to the web artifact, and
-`node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 --test-timeout=180000 apps/lythaus-public-api/tests/auth-journey.browser.postgres.mjs`.
+`node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 --test-timeout=180000 apps/lythaus-public-api/tests/auth-journey.browser.mjs`.
 Use a dedicated fixture database and run email-relay suites separately against
 it so independent synthetic encryption keys cannot claim each other's outbox.
 This proves local cookie handoff and retry behavior, not production mail delivery.

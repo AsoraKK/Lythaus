@@ -65,7 +65,7 @@ function runProvider(script, scenario, args = []) {
       CLOUDFLARE_API_TOKEN:'synthetic-only', CLOUDFLARE_ACCOUNT_ID:'e5b7ae46e04698f507b7e4b3d4ef1af0',
       CLOUDFLARE_ZONE_ID:'7bc572c8b7cd3c00be9c655176c29382',
       TURNSTILE_SECRET_FILE:path.join(directory,'synthetic-secret.json'), TURNSTILE_EVIDENCE_PATH:output,
-      CLOUDFLARE_EMAIL_LIFECYCLE_OUTPUT:output },
+      CLOUDFLARE_EMAIL_LIFECYCLE_OUTPUT:output, GITHUB_ENV:'', GITHUB_OUTPUT:'' },
   });
   try {
     const requests=readFileSync(calls,'utf8').trim().split('\n').map(JSON.parse);
@@ -77,15 +77,15 @@ function runProvider(script, scenario, args = []) {
 }
 
 test('owner testing verifies an existing Turnstile widget without provider mutation', () => {
-  const result=runProvider('scripts/cloudflare/waitlist-turnstile.mjs','matching',['ensure']);
+  const result=runProvider('scripts/ci/prepare-owner-testing-turnstile.mjs','matching',['ensure']);
   assert.equal(result.status,0,result.stderr);
   assert.equal(result.evidence.created,false);
 });
-for (const [scenario,reason] of [['missing-widget','requires_existing_turnstile'],['widget-drift','turnstile_configuration_drift']]) {
+for (const scenario of ['missing-widget','widget-drift']) {
   test(`owner testing stops on ${scenario} before creating or updating Turnstile`,()=>{
-    const result=runProvider('scripts/cloudflare/waitlist-turnstile.mjs',scenario,['ensure']);
+    const result=runProvider('scripts/ci/prepare-owner-testing-turnstile.mjs',scenario,['ensure']);
     assert.notEqual(result.status,0);
-    assert.match(result.stderr,new RegExp(reason));
+    assert.match(result.stderr,/owner_testing_prohibits_turnstile_mutation/);
   });
 }
 test('owner testing verifies exact existing email lifecycle infrastructure with GETs only',()=>{
@@ -109,6 +109,7 @@ test('both production entrypoints enforce the owner scope and exclude unrelated 
     assert.match(source,/node scripts\/ci\/verify-owner-testing-auth-scope\.mjs/);
   }
   assert.ok(native.indexOf('verify-owner-testing-auth-scope.mjs')<native.indexOf('Provision or verify the real production Turnstile widget'));
+  assert.match(native,/if \[\[ "\$OWNER_TESTING_DEPLOYMENT" == true \]\]; then\s+node scripts\/ci\/prepare-owner-testing-turnstile\.mjs ensure/);
   for (const name of ['Prepare approved authenticity runtime','Activate approved private authenticity cohort']) {
     const block=native.split(`- name: ${name}`)[1]?.split('\n      - name:')[0];
     assert.ok(block);

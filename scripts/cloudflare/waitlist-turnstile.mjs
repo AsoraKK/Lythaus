@@ -10,7 +10,6 @@ const apiToken = process.env.CLOUDFLARE_API_TOKEN ?? '';
 const githubEnv = process.env.GITHUB_ENV ?? '';
 const evidencePath = process.env.TURNSTILE_EVIDENCE_PATH ?? '';
 const secretFile = process.env.TURNSTILE_SECRET_FILE ?? '';
-const verifyExisting = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
 
 const widgetName = 'Lythaus Website Waitlist';
 const expectedDomains = Object.freeze(['admin.lythaus.co', 'lythaus.co', 'www.lythaus.co']);
@@ -35,7 +34,6 @@ function sameValues(left, right) {
 }
 
 async function cloudflare(path = '', init = {}) {
-  if (verifyExisting && (init.method ?? 'GET') !== 'GET') throw new Error('owner_testing_prohibits_turnstile_mutation');
   const headers = new Headers(init.headers);
   headers.set('authorization', `Bearer ${apiToken}`);
   if (init.body) headers.set('content-type', 'application/json');
@@ -78,7 +76,6 @@ let matches = await listExactWidgets();
 if (matches.length > 1) throw new Error('multiple production waitlist Turnstile widgets have the approved display name');
 
 if (matches.length === 0) {
-  if (verifyExisting) throw new Error('owner_testing_requires_existing_turnstile_widget');
   if (command !== 'ensure') throw new Error('production waitlist Turnstile widget does not exist');
   const createdWidget = await cloudflare('', {
     method: 'POST',
@@ -97,7 +94,6 @@ const listed = matches[0];
 const sitekey = listed?.sitekey;
 let detailed = await cloudflare(`/${encodeURIComponent(sitekey)}`);
 if (command === 'ensure' && !sameValues(normalizedDomains(detailed?.domains), expectedDomains)) {
-  if (verifyExisting) throw new Error('owner_testing_turnstile_configuration_drift');
   detailed = await cloudflare(`/${encodeURIComponent(sitekey)}`, {
     method: 'PUT',
     body: JSON.stringify({ name: widgetName, domains: expectedDomains, mode: expectedMode, clearance_level: 'no_clearance' }),

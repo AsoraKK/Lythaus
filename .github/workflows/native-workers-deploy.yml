@@ -410,7 +410,11 @@ jobs:
           echo 'RELEASE_FAILURE_CODE=provider_configuration_validation_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=production Turnstile provider configuration validation failed' >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/production-cutover"
-          node scripts/cloudflare/waitlist-turnstile.mjs ensure
+          if [[ "$OWNER_TESTING_DEPLOYMENT" == true ]]; then
+            node scripts/ci/prepare-owner-testing-turnstile.mjs ensure
+          else
+            node scripts/cloudflare/waitlist-turnstile.mjs ensure
+          fi
       - name: Materialize approved post-0020 deployment identity
         env:
           PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}

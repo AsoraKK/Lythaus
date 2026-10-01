@@ -14,7 +14,7 @@ import { localAuthBrowserServer } from '../../../scripts/tests/local-auth-browse
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const target = new URL(connectionString ?? 'file:///missing');
 if (!['localhost', '127.0.0.1'].includes(target.hostname) || !target.pathname.startsWith('/lythaus_auth_test')) {
-  throw new Error('Browser auth tests require an explicitly local disposable PostgreSQL database');
+  throw new Error('Local browser auth tests require an explicitly local disposable PostgreSQL database');
 }
 const web = path.resolve(process.env.AUTH_WEB_ARTIFACT_DIR ?? 'build/web');
 const marketing = path.resolve('apps/marketing-site/dist');
