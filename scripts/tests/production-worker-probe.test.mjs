@@ -31,6 +31,7 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development') {
       const readiness = String(url).endsWith('/internal/readiness/database-identity');
       if (!readiness) return new Response('{}', { status: 200 });
       const body = {
+        service: new URL(url).hostname === 'admin-api.lythaus.co' ? 'lythaus-admin-api' : 'lythaus-public-api',
         workerVersionId: '${version}', releaseTag: '${releaseSha}',
         emailBinding: { bindingVerified: true, publicWorkerVersion: '${publicVersion}' },
         databaseEnvironment: 'main', branchFingerprint: 'unknown',
@@ -47,6 +48,7 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development') {
       if (scenario === 'wrong-public') body.emailBinding.publicWorkerVersion = '${wrongVersion}';
       if (scenario === 'unverified-public') body.emailBinding.bindingVerified = false;
       if (scenario === 'redaction') {
+        body.service = process.env.CF_ACCESS_CLIENT_SECRET;
         body.workerVersionId = process.env.CF_ACCESS_CLIENT_SECRET;
         body.releaseTag = process.env.DATABASE_READINESS_TOKEN;
         body.emailBinding.publicWorkerVersion = process.env.CF_ACCESS_CLIENT_ID;
@@ -85,6 +87,7 @@ test('matching Admin identity preserves sanitized observations and both exact ov
   const observation = evidence.requests.at(-1);
   assert.deepEqual(observation.expected, { workerVersionId: version, releaseTag: releaseSha, publicWorkerVersion: publicVersion });
   assert.equal(observation.observed.workerVersionId, version);
+  assert.equal(observation.observed.service, 'lythaus-admin-api');
   assert.equal(observation.observed.releaseTag, releaseSha);
   assert.equal(observation.httpStatus, 200);
   assert.equal(observation.cfRay, '1234567890abcdef-FRA');
@@ -140,6 +143,7 @@ test('unexpected body fields and invalid identity/Ray fields cannot leak credent
   const { result, evidence } = runProbe(t, 'redaction');
   assert.equal(result.status, 1);
   assert.equal(evidence.requests.at(-1).observed.workerVersionId, null);
+  assert.equal(evidence.requests.at(-1).observed.service, null);
   assert.equal(evidence.requests.at(-1).observed.releaseTag, null);
   assert.equal(evidence.requests.at(-1).observed.emailBinding.publicWorkerVersion, null);
   assert.equal(evidence.requests.at(-1).cfRay, null);

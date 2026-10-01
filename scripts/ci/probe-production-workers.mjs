@@ -99,7 +99,7 @@ async function fetchJson(url, options = {}, service = requestedWorker) {
       releaseTag: expectedWorkerSourceSha,
       ...(service === 'lythaus-admin-api-development' ? { publicWorkerVersion: expectedPublicVersion } : {}),
     },
-    observed: { workerVersionId: null, releaseTag: null },
+    observed: { service: null, workerVersionId: null, releaseTag: null },
   };
   evidence.requests.push(observation);
   writeEvidence();
@@ -116,6 +116,7 @@ async function fetchJson(url, options = {}, service = requestedWorker) {
   let body = null;
   try { body = JSON.parse(text); } catch { /* response details are not evidence */ }
   observation.observed = {
+    service: identity(body?.service, /^lythaus-(public-api|admin-api|jobs)$/),
     workerVersionId: identity(body?.workerVersionId, /^[0-9a-f-]{36}$/),
     releaseTag: identity(body?.releaseTag, /^[0-9a-f]{40}$/),
     ...(service === 'lythaus-admin-api-development' ? {
